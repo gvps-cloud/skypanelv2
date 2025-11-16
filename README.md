@@ -490,6 +490,262 @@ pm2 logs
 - **SSH console fails**: Check JWT token permissions and SSH bridge accessibility at `/api/vps/:id/ssh`
 - **Email delivery issues**: Test SMTP configuration with `node scripts/test-smtp.js`
 
+### PaaS Marketplace Deployment Issues
+
+The PaaS marketplace deployment feature enables users to deploy applications from pre-configured templates. This section documents the complete troubleshooting process for resolving deployment issues where applications show as "created" but don't actually build and deploy.
+
+#### **Root Cause Analysis**
+
+Common deployment failures typically stem from one or more of these infrastructure issues:
+- **File System Permissions**: Build process cannot create required cache directories
+- **Missing Worker Process**: PaaS worker not running to process build/deploy jobs
+- **Redis Queue Issues**: Worker cannot connect to Redis for job processing
+- **Docker Infrastructure**: Swarm not initialized or build tools missing
+- **Environment Configuration**: Cached or incorrect Redis connection settings
+
+#### **Complete Infrastructure Setup**
+
+**1. PaaS Worker Process**
+```bash
+# Start worker (required for build/deploy job processing)
+npm run dev:worker  # Development mode
+# or include via: npm run dev:all  # All components
+
+# Verify worker is running
+ps aux | grep -E "(tsx|worker)" | grep -v grep
+```
+
+**2. Local Redis Instance**
+```bash
+# Install and start Redis for job queue processing
+sudo apt update && sudo apt install redis-server
+sudo service redis-server start
+
+# Verify Redis is working
+redis-cli ping  # Should return "PONG"
+
+# Configure environment
+echo "REDIS_URL=redis://127.0.0.1:6379" >> .env
+```
+
+**3. Docker Swarm Infrastructure**
+```bash
+# Initialize Docker Swarm and deploy PaaS infrastructure
+npm run paas:init
+
+# Verify Swarm is active
+docker node ls  # Should show active nodes
+docker service ls  # Should show running infrastructure services
+```
+
+**4. File System Permissions (Critical)**
+```bash
+# Fix permissions for all PaaS directories (replace $USER with your username)
+sudo chown -R $USER:$USER /var/paas/
+sudo chmod -R 777 /var/paas/  # Ensure Docker containers can access
+
+# Clean up any failed build artifacts
+sudo rm -rf /var/paas/storage/cache/*
+sudo rm -rf /var/paas/storage/builds/*
+
+# Verify permissions are correct
+ls -la /var/paas/
+```
+
+**5. Build Dependencies**
+```bash
+# Pull herokuish Docker image for buildpack support
+docker pull gliderlabs/herokuish
+
+# Verify Docker buildx is available
+docker buildx version
+
+# Verify image is available
+docker images | grep herokuish
+```
+
+#### **Comprehensive Troubleshooting Solutions**
+
+**Issue**: `EACCES: permission denied` when creating cache directories
+```bash
+# Complete permission fix
+sudo rm -rf /var/paas/storage/cache/* /var/paas/storage/builds/*
+sudo chown -R $USER:$USER /var/paas/
+sudo chmod -R 777 /var/paas/
+
+# Test directory creation
+mkdir -p /var/paas/storage/cache/test-dir
+echo "Permission test successful"
+rm -rf /var/paas/storage/cache/test-dir
+```
+
+**Issue**: Worker not connecting to local Redis
+```bash
+# Clear cached environment variables and restart with clean environment
+env -i PATH=$PATH HOME=$HOME USER=$USER REDIS_URL=redis://127.0.0.1:6379 npm run dev:all
+
+# Alternative: Clean restart method
+npm run kill-ports
+unset REDIS_URL REDIS_PASSWORD
+export REDIS_URL=redis://127.0.0.1:6379
+npm run dev:all
+```
+
+**Issue**: Build jobs queued but never processed
+```bash
+# Verify all components are working
+redis-cli ping  # Should return "PONG"
+npm run dev:worker  # Should show worker starting
+
+# Check worker logs for Redis connection
+tail -f api/worker/index.ts  # Look for "Redis URL: redis://127.0.0.1:6379"
+```
+
+**Issue**: Docker Swarm not initialized
+```bash
+# Complete Swarm setup
+npm run paas:init
+
+# Verify all services are running
+docker node ls
+docker service ls | grep paas-infra
+
+# Check Swarm status
+docker info | grep Swarm
+```
+
+**Issue**: Build logs not displaying or deployment stuck
+```bash
+# Ensure worker is running with correct environment
+# Check for these log messages:
+# "PaaS worker ready."
+# "Build queue: listening"
+# "Deploy queue: listening"
+
+# Monitor worker output
+env -i PATH=$PATH HOME=$HOME USER=$USER REDIS_URL=redis://127.0.0.1:6379 npm run dev:worker
+```
+
+#### **Complete Verification Checklist**
+
+- [ ] **PaaS Worker Process**: Running with local Redis connection
+  ```bash
+  ps aux | grep "tsx.*worker" | grep -v grep
+  # Should show: Redis URL: redis://127.0.0.1:6379
+  ```
+
+- [ ] **Redis Server**: Local instance responding correctly
+  ```bash
+  redis-cli ping  # Returns: PONG
+  ```
+
+- [ ] **Docker Swarm**: Active and healthy
+  ```bash
+  docker node ls  # Shows active manager node
+  docker service ls | wc -l  # Shows 5+ infrastructure services
+  ```
+
+- [ ] **File Permissions**: All PaaS directories accessible
+  ```bash
+  ls -la /var/paas/storage/  # Should show owner: $USER, permissions: rwxrwxrwx
+  ```
+
+- [ ] **Build Dependencies**: Docker images and tools ready
+  ```bash
+  docker images | grep herokuish  # Should show gliderlabs/herokuish
+  docker buildx version  # Should show version info
+  ```
+
+- [ ] **Infrastructure Services**: All required services running
+  ```bash
+  docker service ls | grep -E "(traefik|grafana|prometheus|loki)"
+  ```
+
+#### **End-to-End Testing Process**
+
+**1. Access Marketplace Frontend**
+```bash
+curl -I http://localhost:5173/paas/marketplace
+# Should return: HTTP/1.1 200 OK
+```
+
+**2. Verify API Health**
+```bash
+curl -s http://localhost:3001/api/health
+# Should return: {"success":true,"message":"API is healthy"}
+```
+
+**3. Test Deployment Workflow**
+1. Access: http://localhost:5173/paas/marketplace
+2. Login with admin credentials
+3. Select Node.js template from marketplace
+4. Configure deployment settings (name, Git URL, environment variables)
+5. Click deploy and monitor real-time progress
+6. Check worker logs for build process details
+7. Verify application appears in Docker Swarm services
+
+**4. Verify Successful Deployment**
+```bash
+# Check if application was deployed to Swarm
+docker service ls | grep your-app-name
+docker ps | grep your-app-name
+```
+
+#### **Environment Configuration Requirements**
+
+Essential `.env` variables for PaaS functionality:
+```bash
+# Redis Configuration
+REDIS_URL=redis://127.0.0.1:6379
+# REDIS_PASSWORD=  # Commented out for local Redis
+
+# PaaS Worker Settings
+PAAS_BUILD_CONCURRENCY=2
+PAAS_DOCKER_CMD_TIMEOUT=120000
+PAAS_SWARM_ADVERTISE_ADDR=your-server-ip
+PAAS_HEALTH_CHECK_CONCURRENCY=5
+PAAS_HEALTH_CHECK_TIMEOUT_MS=15000
+
+# PaaS Storage Paths
+PAAS_SLUG_CACHE_DIR=/tmp/paas-slugs  # Optional: override default storage
+```
+
+#### **Production Deployment Considerations**
+
+For production deployments:
+1. **Use Production Redis**: Configure Redis with authentication and TLS
+2. **Secure Docker Swarm**: Use proper network configuration and secrets management
+3. **Persistent Storage**: Configure external storage for build artifacts and slugs
+4. **Monitoring**: Set up logging and monitoring for build/deploy processes
+5. **Resource Limits**: Configure appropriate resource constraints for build containers
+
+#### **Advanced Troubleshooting**
+
+**Checking Build Process in Detail**
+```bash
+# Monitor Redis queue activity
+redis-cli monitor
+
+# Check Docker build logs
+docker logs $(docker ps -q --filter "name=herokuish")
+
+# Inspect failed build artifacts
+ls -la /var/paas/storage/cache/
+ls -la /var/paas/storage/builds/
+```
+
+**Debugging Worker Issues**
+```bash
+# Start worker with debug output
+DEBUG=paaS* npm run dev:worker
+
+# Check queue processing
+redis-cli llen "bull:build:waiting"
+redis-cli llen "bull:deploy:waiting"
+```
+
+This comprehensive troubleshooting guide addresses all known PaaS marketplace deployment issues and provides complete solutions for ensuring reliable application deployment from marketplace templates.
+
 ### Performance & Scaling
 - **Slow API responses**: Check database query performance and Redis caching configuration
 - **Memory issues**: Monitor Node.js heap usage, consider PM2 for production process management
