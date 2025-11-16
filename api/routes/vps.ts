@@ -1076,7 +1076,7 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
       let ownedScripts: any[] = [];
       const scriptMap = new Map<number, any>();
       try {
-        ownedScripts = await linodeService.getLinodeStackScripts(true);
+        ownedScripts = await linodeService.getLinodeStackScripts({ mineOnly: true });
         ownedScripts.forEach((script) => scriptMap.set(script.id, script));
       } catch (err) {
         console.warn(
@@ -1141,7 +1141,7 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
       return res.json({ stackscripts: enriched });
     }
 
-    const stackscripts = await linodeService.getLinodeStackScripts(mineOnly);
+    const stackscripts = await linodeService.getLinodeStackScripts({ mineOnly });
     return res.json({ stackscripts });
   } catch (err: any) {
     console.error("StackScripts fetch error:", err);

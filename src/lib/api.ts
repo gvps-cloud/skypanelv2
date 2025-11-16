@@ -15,25 +15,39 @@ export { API_BASE_URL };
  * @returns Complete API URL
  */
 export function buildApiUrl(path: string, baseUrl?: string): string {
-  const base = baseUrl || API_BASE_URL;
+  const base = (baseUrl || API_BASE_URL || "").trim();
 
-  // If path already starts with the base URL, return as is
-  if (path.startsWith(base)) {
+  // If path already starts with the base URL or is fully qualified, leave it
+  if (base && path.startsWith(base)) {
     return path;
   }
-
-  // If path already starts with http/https, return as is
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
   }
 
-  // Ensure path starts with /
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  // Normalize trailing slash on the base to simplify joining logic
+  const normalizedBase =
+    base.length > 1 && base.endsWith("/") ? base.slice(0, -1) : base;
 
-  // Combine base URL with path, avoiding double slashes
-  return base.endsWith("/")
-    ? `${base.slice(0, -1)}${normalizedPath}`
-    : `${base}${normalizedPath}`;
+  let normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  // When both base and path already contain `/api`, avoid duplicating the segment
+  if (
+    normalizedBase &&
+    normalizedBase.endsWith("/api") &&
+    normalizedPath.startsWith("/api/")
+  ) {
+    normalizedPath = normalizedPath.slice(4);
+    if (!normalizedPath.startsWith("/")) {
+      normalizedPath = `/${normalizedPath}`;
+    }
+  }
+
+  if (!normalizedBase) {
+    return normalizedPath;
+  }
+
+  return `${normalizedBase}${normalizedPath}`;
 }
 
 export interface PaymentIntent {

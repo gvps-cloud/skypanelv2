@@ -133,6 +133,7 @@ export interface LinodeStackScript {
   }>;
   deployments_active: number;
   deployments_total: number;
+  mine?: boolean;
 }
 
 export interface CreateStackScriptRequest {
@@ -199,6 +200,18 @@ export interface LinodeInstanceTransferResponse {
   billable: number;
 }
 
+const MARKETPLACE_CATEGORY_PATTERNS: Array<{ regex: RegExp; category: string }> = [
+  { regex: /(wordpress|ghost|drupal|joomla|cms)/i, category: 'CMS' },
+  { regex: /(mysql|postgres|postgresql|mongodb|redis|mariadb|database)/i, category: 'Databases' },
+  { regex: /(docker|kubernetes|jenkins|devops|ansible|terraform)/i, category: 'Developer Tools' },
+  { regex: /(grafana|prometheus|monitor|logging|loki|elk|splunk)/i, category: 'Monitoring' },
+  { regex: /(vpn|wireguard|openvpn|security|firewall)/i, category: 'Networking' },
+  { regex: /(email|mail|smtp|mailserver)/i, category: 'Email' },
+  { regex: /(cache|varnish|memcached)/i, category: 'Caching' },
+  { regex: /(node|next|react|django|laravel|rails|flask|express|php|python|ruby)/i, category: 'Frameworks' },
+  { regex: /(game|minecraft|valheim|terraria)/i, category: 'Gaming' },
+];
+
 export interface AccountTransferResponse {
   used: number;
   quota: number;
@@ -260,6 +273,7 @@ export interface LinodeEventsResponse {
 class LinodeService {
   private readonly apiToken: string;
   private readonly baseUrl = 'https://api.linode.com/v4';
+  private marketplaceAppsEndpointAvailable: boolean | null = null;
 
   constructor() {
     // Read directly from process.env first to avoid any timing issues
@@ -310,53 +324,181 @@ class LinodeService {
 
   /**
    * Fetch Linode Marketplace apps. Optionally filter by slug list.
-   * Also fetches the underlying StackScript details to get user_defined_fields.
+   * Falls back to StackScript discovery when the official apps endpoint
+   * is unavailable (e.g., older API deployments returning 404).
    */
   async listMarketplaceApps(slugs?: string[]): Promise<any[]> {
-    try {
-      if (!this.apiToken) throw new Error('Linode API token not configured');
-      const url = new URL(`${this.baseUrl}/linode/apps`);
-      // The API supports pagination; fetch first page which contains the needed slugs
-      const response = await fetch(url.toString(), { headers: this.getHeaders() });
-      if (!response.ok) {
-        const txt = await response.text().catch(() => '');
-        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${txt}`);
+    if (!this.apiToken) {
+      throw new Error('Linode API token not configured');
+    }
+
+    const slugFilter = this.buildMarketplaceSlugFilter(slugs);
+    const shouldUseOfficialEndpoint = this.marketplaceAppsEndpointAvailable !== false;
+
+    if (shouldUseOfficialEndpoint) {
+      try {
+        const apps = await this.fetchMarketplaceAppsFromOfficialEndpoint(slugFilter);
+        this.marketplaceAppsEndpointAvailable = true;
+        return apps;
+      } catch (error) {
+        if (this.shouldFallbackToStackScripts(error)) {
+          this.marketplaceAppsEndpointAvailable = false;
+          console.warn(
+            'Linode Marketplace apps endpoint unavailable (404). Falling back to StackScript discovery.'
+          );
+        } else {
+          console.error('Error fetching Linode Marketplace apps:', error);
+          throw error;
+        }
       }
-      const data = await response.json();
-      let apps: any[] = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-      if (Array.isArray(slugs) && slugs.length > 0) {
-        const set = new Set(slugs.map(s => String(s).toLowerCase()));
-        apps = apps.filter(a => set.has(String(a?.slug || '').toLowerCase()));
+    }
+
+    return this.fetchMarketplaceAppsFromStackScripts(slugFilter);
+  }
+
+  private shouldFallbackToStackScripts(error: any): boolean {
+    if (!error) return false;
+    if (typeof error?.status === 'number' && error.status === 404) {
+      return true;
+    }
+    const message = String(error?.message || '').toLowerCase();
+    return message.includes('404') || message.includes('not found');
+  }
+
+  private buildMarketplaceSlugFilter(slugs?: string[]): Set<string> | null {
+    if (!Array.isArray(slugs) || slugs.length === 0) {
+      return null;
+    }
+    const normalized = slugs
+      .map((value) => this.normalizeMarketplaceSlug(value))
+      .filter((value) => value.length > 0);
+    return normalized.length > 0 ? new Set(normalized) : null;
+  }
+
+  private filterAppsBySlug(apps: any[], slugFilter?: Set<string> | null): any[] {
+    if (!slugFilter || slugFilter.size === 0) {
+      return apps;
+    }
+    return apps.filter((app) => {
+      const candidates = new Set<string>();
+      const pushCandidate = (value: string | undefined | null) => {
+        const normalized = this.normalizeMarketplaceSlug(value);
+        if (normalized) {
+          candidates.add(normalized);
+        }
+      };
+
+      pushCandidate(app?.slug);
+      pushCandidate(app?.name);
+      pushCandidate(app?.display_name);
+      pushCandidate(app?.provider_name);
+
+      const primary = this.normalizeMarketplaceSlug(app?.slug || app?.name || app?.display_name);
+      if (primary) {
+        const trimmed = primary.replace(/-on-.+$/, '');
+        if (trimmed && trimmed !== primary) {
+          candidates.add(trimmed);
+        }
       }
 
-      // For each marketplace app, fetch the underlying StackScript to get user_defined_fields
-      const appsWithFields = await Promise.all(apps.map(async (app) => {
+      for (const candidate of candidates) {
+        if (slugFilter.has(candidate)) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }
+
+  private async fetchMarketplaceAppsFromOfficialEndpoint(slugFilter?: Set<string> | null): Promise<any[]> {
+    const response = await fetch(`${this.baseUrl}/linode/apps`, { headers: this.getHeaders() });
+    if (!response.ok) {
+      const txt = await response.text().catch(() => '');
+      const err: any = new Error(`Linode API error: ${response.status} ${response.statusText} ${txt}`);
+      err.status = response.status;
+      err.body = txt;
+      throw err;
+    }
+    const data = await response.json();
+    const apps: any[] = Array.isArray(data?.data)
+      ? data.data
+      : Array.isArray(data)
+        ? data
+        : [];
+
+    const enriched = await this.attachStackScriptFields(apps);
+    return this.filterAppsBySlug(enriched, slugFilter);
+  }
+
+  private async fetchMarketplaceAppsFromStackScripts(slugFilter?: Set<string> | null): Promise<any[]> {
+    const scripts = await this.getLinodeStackScripts({
+      filter: { username: 'linode', is_public: true },
+      pageSize: 500,
+    });
+    const apps = scripts.map((script) => this.mapStackScriptToMarketplaceApp(script));
+    return this.filterAppsBySlug(apps, slugFilter);
+  }
+
+  private async attachStackScriptFields(apps: any[]): Promise<any[]> {
+    return Promise.all(
+      apps.map(async (app) => {
         try {
           if (app.stackscript_id) {
             const stackscript = await this.getStackScript(app.stackscript_id);
             return {
               ...app,
-              user_defined_fields: stackscript?.user_defined_fields || []
+              user_defined_fields: stackscript?.user_defined_fields || [],
             };
           }
-          return {
-            ...app,
-            user_defined_fields: []
-          };
         } catch (error) {
           console.warn(`Failed to fetch StackScript ${app.stackscript_id} for app ${app.slug}:`, error);
-          return {
-            ...app,
-            user_defined_fields: []
-          };
         }
-      }));
+        return {
+          ...app,
+          user_defined_fields: Array.isArray(app?.user_defined_fields) ? app.user_defined_fields : [],
+        };
+      })
+    );
+  }
 
-      return appsWithFields;
-    } catch (error) {
-      console.error('Error fetching Linode Marketplace apps:', error);
-      throw error;
+  private mapStackScriptToMarketplaceApp(script: LinodeStackScript): any {
+    const slug = this.normalizeMarketplaceSlug(script.label) || `stackscript-${script.id}`;
+    return {
+      slug,
+      name: script.label,
+      display_name: script.label,
+      provider_name: script.label,
+      category: this.deriveMarketplaceCategory(`${script.label} ${script.description ?? ''}`),
+      description: script.description,
+      summary: script.rev_note || script.description,
+      stackscript_id: script.id,
+      user_defined_fields: script.user_defined_fields || [],
+      images: script.images,
+      deployments_active: script.deployments_active,
+      deployments_total: script.deployments_total,
+    };
+  }
+
+  private normalizeMarketplaceSlug(value: string | undefined | null): string {
+    if (!value) {
+      return '';
     }
+    return value
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  private deriveMarketplaceCategory(text: string): string {
+    if (!text) return 'Applications';
+    for (const { regex, category } of MARKETPLACE_CATEGORY_PATTERNS) {
+      if (regex.test(text)) {
+        return category;
+      }
+    }
+    return 'Applications';
   }
 
   /**
@@ -607,57 +749,83 @@ class LinodeService {
   /**
    * Fetch Linode StackScripts.
    * When mineOnly is true, use X-Filter to return only scripts owned by the account.
+   * Additional filters can be provided via the options parameter.
    */
-  async getLinodeStackScripts(mineOnly: boolean = false): Promise<LinodeStackScript[]> {
+  async getLinodeStackScripts(options: { mineOnly?: boolean; filter?: Record<string, any>; pageSize?: number } = {}): Promise<LinodeStackScript[]> {
     try {
       if (!this.apiToken) {
         throw new Error('Linode API token not configured');
       }
-      const isDebug = process.env.LOG_LEVEL === 'debug' || process.env.NODE_ENV !== 'production'
+      const isDebug = process.env.LOG_LEVEL === 'debug' || process.env.NODE_ENV !== 'production';
       if (isDebug) {
-        console.log('Fetching Linode stack scripts')
+        console.log('Fetching Linode stack scripts');
       }
+
       const headers: Record<string, string> = {
         ...(this.getHeaders() as Record<string, string>),
       };
-      if (mineOnly) {
-        // Use Linode's filter mechanism to fetch only owned StackScripts
-        headers['X-Filter'] = JSON.stringify({ mine: true });
+
+      const filter: Record<string, any> = { ...(options.filter || {}) };
+      if (options.mineOnly) {
+        filter.mine = true;
       }
-      const response = await fetch(`${this.baseUrl}/linode/stackscripts`, {
-        headers,
-      });
-      if (isDebug) {
-        console.log('Linode API response status:', response.status)
-      }
-      if (!response.ok) {
-        if (isDebug) {
-          const errorText = await response.text()
-          console.error('Linode API error response:', errorText)
-        }
-        throw new Error(`Linode API error: ${response.status} ${response.statusText}`);
+      if (Object.keys(filter).length > 0) {
+        headers['X-Filter'] = JSON.stringify(filter);
       }
 
-      const data = await response.json();
-      if (isDebug) {
-        console.log('Fetched Linode stack scripts:', data.data.length)
+      const pageSize = options.pageSize ?? 500;
+      let page = 1;
+      const scripts: LinodeStackScript[] = [];
+
+      while (true) {
+        const response = await fetch(`${this.baseUrl}/linode/stackscripts?page=${page}&page_size=${pageSize}`, {
+          headers,
+        });
+        if (isDebug) {
+          console.log('Linode API response status:', response.status, 'for StackScripts page', page);
+        }
+        if (!response.ok) {
+          if (isDebug) {
+            const errorText = await response.text();
+            console.error('Linode API error response:', errorText);
+          }
+          throw new Error(`Linode API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const rows: any[] = Array.isArray(data?.data) ? data.data : [];
+        if (isDebug) {
+          console.log(`Fetched ${rows.length} StackScripts on page ${data?.page ?? page} of ${data?.pages ?? '?'}`);
+        }
+
+        scripts.push(
+          ...rows.map((stackscript: any) => ({
+            id: stackscript.id,
+            username: stackscript.username,
+            label: stackscript.label,
+            description: stackscript.description,
+            images: stackscript.images,
+            is_public: stackscript.is_public,
+            created: stackscript.created,
+            updated: stackscript.updated,
+            rev_note: stackscript.rev_note,
+            script: stackscript.script,
+            user_defined_fields: stackscript.user_defined_fields || [],
+            deployments_active: stackscript.deployments_active,
+            deployments_total: stackscript.deployments_total,
+            mine: stackscript.mine === true,
+          }))
+        );
+
+        const currentPage = Number(data?.page ?? page);
+        const totalPages = Number(data?.pages ?? currentPage);
+        if (!rows.length || currentPage >= totalPages) {
+          break;
+        }
+        page += 1;
       }
-      return data.data.map((stackscript: any) => ({
-        id: stackscript.id,
-        label: stackscript.label,
-        description: stackscript.description,
-        images: stackscript.images,
-        is_public: stackscript.is_public,
-        created: stackscript.created,
-        updated: stackscript.updated,
-        rev_note: stackscript.rev_note,
-        script: stackscript.script,
-        user_defined_fields: stackscript.user_defined_fields || [],
-        deployments_active: stackscript.deployments_active,
-        deployments_total: stackscript.deployments_total,
-        // expose mine flag when available so callers can see ownership
-        mine: stackscript.mine === true,
-      }));
+
+      return scripts;
     } catch (error) {
       console.error('Error fetching Linode stack scripts:', error);
       throw error;

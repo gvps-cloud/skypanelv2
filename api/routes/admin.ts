@@ -2598,7 +2598,7 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const mine = String(req.query.mine || "").toLowerCase() === "true";
-      const stackscripts = await linodeService.getLinodeStackScripts(mine);
+      const stackscripts = await linodeService.getLinodeStackScripts({ mineOnly: mine });
       res.json({ stackscripts });
     } catch (err: any) {
       console.error("Error fetching upstream provider StackScripts:", err);

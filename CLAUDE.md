@@ -9,6 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install dependencies
 npm install
 
+# Kill ports and start development servers (convenience script)
+npm run dev-up
+
 # Start development servers (both frontend and backend)
 npm run dev
 
@@ -22,6 +25,7 @@ npm run kill-ports
 npm run client:dev    # Frontend only (Vite on :5173)
 npm run server:dev    # Backend only (Nodemon on :3001)
 npm run dev:worker    # PaaS Worker only
+npm run worker        # PaaS Worker in production mode
 ```
 
 ### Building and Testing
@@ -136,11 +140,13 @@ public/               # Static assets
 
 #### Backend (ESM + TypeScript)
 - **Entry Point**: `api/server.ts` initializes Express app, SSH WebSocket bridge, and schedules hourly billing
-- **Configuration**: Centralized in `api/config/index.ts` - use this instead of `process.env`
-- **Database**: Use helpers in `api/lib/database.ts` (`query`, `transaction`) for atomic operations
-- **Provider Abstraction**: Multi-cloud VPS through `ProviderFactory` in `api/services/providers/`
-- **Authentication**: JWT-based with middleware in `api/middleware/auth.ts`
-- **Real-time Features**: PostgreSQL LISTEN/NOTIFY with Server-Sent Events via `notificationService`
+- **Configuration**: Centralized in `api/config/index.ts` with dynamic proxy access - use this instead of `process.env`
+- **Database**: PostgreSQL with connection pooling (20 max connections), use helpers in `api/lib/database.ts` (`query`, `transaction`) for atomic operations
+- **Provider Abstraction**: Multi-cloud VPS through `ProviderFactory` in `api/services/providers/` - implementations extend `BaseProviderService` and implement `IProviderService`
+- **Authentication**: JWT-based with middleware chain: `authenticateToken` → `requireOrganization` → `requireAdmin`
+- **Real-time Features**: PostgreSQL LISTEN/NOTIFY with Server-Sent Events via `notificationService`, WebSocket SSH bridge for terminal access
+- **PaaS Infrastructure**: Docker Swarm-based platform services in `api/services/paas/` for application deployment and scaling
+- **Error Handling**: Global error handler in `api/app.ts` normalizes responses to `{ success: false, error }` format
 
 #### Frontend (React + TypeScript)
 - **Routing**: React Router v7 with protected routes (`ProtectedRoute`, `AdminRoute`)
@@ -152,15 +158,24 @@ public/               # Static assets
 ## Development Guidelines
 
 ### Database Operations
-- Always use `api/lib/database.ts` helpers for database operations
+- Always use `api/lib/database.ts` helpers (`query`, `transaction`) for database operations
+- PostgreSQL connection pooling with 20 max connections for optimal performance
 - Use transactions for billing and wallet operations to ensure atomicity
+- Single consolidated migration file: `migrations/001_initial_schema.sql`
 - Activity logging via `logActivity` in `api/services/activityLogger.ts` triggers notifications automatically
+- Database operations must handle connection cleanup in finally blocks
 
 ### Provider Integration
 - All provider operations go through `ProviderFactory.createProvider(type, token)`
 - Implementations extend `BaseProviderService` and implement `IProviderService`
 - Provider API tokens are encrypted with `SSH_CRED_SECRET` environment variable
 - Resource caching handled by `ProviderResourceCache` with TTL
+
+### ESM Import Patterns (Backend)
+- Runtime compilation via `tsx` - ESM imports must use explicit `.js` extensions
+- Use `import ./services/foo.js` instead of `import ./services/foo` for runtime modules
+- TypeScript compiles without explicit extensions but runtime requires them
+- This applies to all imports in `api/` directory for proper ESM execution
 
 ### Authentication & Authorization
 - JWT tokens stored in `localStorage` on frontend
@@ -195,22 +210,25 @@ public/               # Static assets
 
 ### Development vs Production
 - Use `.env.example` as template for required variables
-- Generate `SSH_CRED_SECRET` via `node scripts/generate-ssh-secret.js`
+- Generate `SSH_CRED_SECRET` (32+ chars) via `node scripts/generate-ssh-secret.js`
 - Set `NODE_ENV=production` for deployments
-- Configure `TRUST_PROXY` for reverse proxy setups
+- Configure `TRUST_PROXY` for reverse proxy setups - critical for IP-based features like rate limiting and geolocation
+- `SSH_CRED_SECRET` encrypts provider API tokens before database storage
 
 ## Testing
 
 ### Test Structure
-- **Unit Tests**: Vitest for components and utilities
-- **Component Tests**: React Testing Library for UI components
-- **API Tests**: Supertest for backend endpoints
-- **Admin Components**: Complete test coverage for organization management modals
+- **Unit Tests**: Vitest for components and utilities with mocking support
+- **Component Tests**: React Testing Library for UI components with user interaction simulation
+- **API Tests**: Supertest for backend endpoints with database transaction mocking
+- **Admin Components**: Complete test coverage for organization management modals including form validation and error handling
 
 ### Running Tests
 ```bash
 npm run test          # Run all tests once
 npm run test:watch    # Watch mode for development
+npm run lint          # ESLint validation
+npm run check         # TypeScript type checking
 ```
 
 ### Test Coverage Areas
@@ -218,6 +236,32 @@ npm run test:watch    # Watch mode for development
 - API integration and error handling
 - User interactions and modal management
 - Authentication and authorization flows
+
+## API Integration Patterns
+
+### Backend API Conventions
+- All API endpoints return `{ success: boolean, data?: any, error?: string }` on failures
+- Global error handler in `api/app.ts` normalizes responses and logs errors
+- Rate limiting applied via middleware chain with tiered limits (anonymous/authenticated/admin)
+- Helmet security headers with CSP configuration for XSS protection
+
+### Authentication & Authorization
+- JWT middleware chain: `authenticateToken` → `requireOrganization` → `requireAdmin`
+- Tokens stored in `localStorage` on frontend, sent via Authorization header
+- Admin impersonation handled via `ImpersonationContext` wrapper on frontend
+- Organization-based multi-tenancy with `req.user.organizationId`
+
+### Frontend API Client
+- Centralized API client in `src/lib/api.ts` with consistent auth headers
+- Smart URL construction with `buildApiUrl()` for different environments
+- TanStack Query integration for caching, retry logic, and optimistic updates
+- Error boundary handling with user-friendly error messages
+
+### Real-time Communication
+- Server-Sent Events via `/api/notifications/stream` with token authentication
+- WebSocket SSH bridge at `/api/vps/:id/ssh` for terminal access
+- PostgreSQL LISTEN/NOTIFY triggers automatic notifications
+- Activity logging via `logActivity()` emits real-time updates
 
 ## Deployment Notes
 
@@ -232,12 +276,14 @@ npm run test:watch    # Watch mode for development
 - Single consolidated schema file: `migrations/001_initial_schema.sql`
 
 ### Security Checklist
-- Strong `JWT_SECRET` (32+ characters)
-- Secure `ENCRYPTION_KEY` for provider tokens
-- PayPal live credentials (not sandbox)
-- `TRUST_PROXY` configured for infrastructure
-- Redis password and TLS enabled
-- PostgreSQL SSL for managed databases
+- Strong `JWT_SECRET` (32+ characters) for token signing
+- Secure `SSH_CRED_SECRET` (32+ characters) for provider token encryption
+- PayPal live credentials (not sandbox) for production
+- `TRUST_PROXY` configured for reverse proxy setups
+- Redis password and TLS enabled for caching and queues
+- PostgreSQL SSL enabled for managed database connections
+- Helmet CSP properly configured for XSS protection
+- Rate limiting tiers configured for different user types
 
 ## Common Issues and Solutions
 

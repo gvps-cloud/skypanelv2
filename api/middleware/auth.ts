@@ -10,6 +10,8 @@ export interface AuthenticatedRequest extends Request {
     role: string;
     organizationId?: string;
   };
+  userId?: string;
+  organizationId?: string;
 }
 
 export const authenticateToken = async (
@@ -79,6 +81,8 @@ export const authenticateToken = async (
       role: user.role,
       organizationId
     };
+    (req as any).userId = user.id;
+    (req as any).organizationId = organizationId;
 
     next();
   } catch (error) {
@@ -182,6 +186,8 @@ export const optionalAuth = async (
       role: user.role,
       organizationId
     };
+    (req as any).userId = user.id;
+    (req as any).organizationId = organizationId;
 
     next();
   } catch {

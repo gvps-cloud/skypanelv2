@@ -15,9 +15,43 @@ import { Textarea } from '@/components/ui/textarea';
 import { apiClient } from '@/lib/api';
 
 const SENSITIVE_PLACEHOLDER = '***REDACTED***';
+const LOCAL_STORAGE_DEFAULT_PATH = '/var/paas/storage';
 const isSensitiveKey = (key: string): boolean => {
   const lowered = key.toLowerCase();
   return lowered.includes('secret') || lowered.includes('token') || lowered.includes('password') || lowered.includes('key');
+};
+
+const normalizeStorageSettings = (
+  settings: Record<string, any>,
+  { ensurePath }: { ensurePath: boolean }
+): Record<string, any> => {
+  const nextSettings = { ...settings };
+  const storageType = nextSettings.storage_type || 'local';
+  nextSettings.storage_type = storageType;
+
+  if (storageType === 'local') {
+    const trimmedPath =
+      typeof nextSettings.local_storage_path === 'string'
+        ? nextSettings.local_storage_path.trim()
+        : '';
+    nextSettings.local_storage_path = ensurePath ? trimmedPath || LOCAL_STORAGE_DEFAULT_PATH : trimmedPath;
+  } else if (typeof nextSettings.local_storage_path === 'string') {
+    nextSettings.local_storage_path = nextSettings.local_storage_path.trim();
+  }
+
+  return nextSettings;
+};
+
+const applyUiDefaults = (settings: Record<string, any>): Record<string, any> => {
+  const nextSettings = normalizeStorageSettings(settings, { ensurePath: true });
+  if (!nextSettings.git_auth_type) {
+    nextSettings.git_auth_type = 'none';
+  }
+  return nextSettings;
+};
+
+const prepareSettingsForSave = (settings: Record<string, any>): Record<string, any> => {
+  return normalizeStorageSettings(settings, { ensurePath: true });
 };
 
 export const PaaSSettingsAdmin: React.FC = () => {
@@ -33,17 +67,15 @@ export const PaaSSettingsAdmin: React.FC = () => {
   const loadSettings = async () => {
     try {
       const data = await apiClient.get('/admin/paas/settings');
-      const nextSettings: Record<string, any> = {};
+      const rawSettings: Record<string, any> = {};
       (data.settings || []).forEach((setting: any) => {
-        nextSettings[setting.key] = parseSettingValue(setting);
+        rawSettings[setting.key] = parseSettingValue(setting);
       });
 
-      if (!nextSettings.git_auth_type) {
-        nextSettings.git_auth_type = 'none';
-      }
+      const settingsWithDefaults = applyUiDefaults(rawSettings);
 
-      setSettings(nextSettings);
-      setOriginalSettings({ ...nextSettings });
+      setSettings(settingsWithDefaults);
+      setOriginalSettings({ ...rawSettings });
     } catch (error) {
       toast.error('Failed to load settings');
     } finally {
@@ -84,21 +116,24 @@ export const PaaSSettingsAdmin: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const nextSettings = prepareSettingsForSave(settings);
       const changes: Record<string, any> = {};
-      for (const [key, value] of Object.entries(settings)) {
+      for (const [key, value] of Object.entries(nextSettings)) {
         if (originalSettings[key] !== value) {
           changes[key] = value;
         }
       }
 
       if (Object.keys(changes).length === 0) {
+        setSettings(nextSettings);
         toast.info('No changes to save');
         return;
       }
 
       await apiClient.put('/admin/paas/settings', { settings: changes });
       toast.success('Settings saved successfully');
-      setOriginalSettings({ ...settings });
+      setSettings(nextSettings);
+      setOriginalSettings({ ...nextSettings });
     } catch (error: any) {
       toast.error(error.message || 'Failed to save settings');
     } finally {

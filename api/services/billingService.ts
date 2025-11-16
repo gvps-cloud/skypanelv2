@@ -49,19 +49,77 @@ export class BillingService {
     try {
       const check = await query(
         `SELECT EXISTS (
-           SELECT 1 FROM information_schema.columns
-           WHERE table_name = 'vps_instances' AND column_name = 'last_billed_at'
+           SELECT 1
+           FROM pg_attribute
+           WHERE attrelid = to_regclass('vps_instances')
+             AND attname = 'last_billed_at'
+             AND NOT attisdropped
          ) AS exists`
       );
       const exists = Boolean(check.rows[0]?.exists);
       if (!exists) {
-        await query(`ALTER TABLE vps_instances ADD COLUMN IF NOT EXISTS last_billed_at TIMESTAMP WITH TIME ZONE`);
+        await query(`
+          ALTER TABLE vps_instances
+          ADD COLUMN IF NOT EXISTS last_billed_at TIMESTAMP WITH TIME ZONE
+        `);
         await query(`CREATE INDEX IF NOT EXISTS idx_vps_instances_last_billed_at ON vps_instances(last_billed_at)`);
         console.log('✅ Added missing column vps_instances.last_billed_at');
       }
       return true;
     } catch (err) {
       console.warn('⚠️ Could not verify or create last_billed_at column:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Ensure the vps_instances.backup_frequency column exists.
+   * Adds it and initializes safe defaults when missing.
+   */
+  private static async ensureBackupFrequencyColumnExists(): Promise<boolean> {
+    try {
+      const check = await query(
+        `SELECT EXISTS (
+           SELECT 1
+           FROM pg_attribute
+           WHERE attrelid = to_regclass('vps_instances')
+             AND attname = 'backup_frequency'
+             AND NOT attisdropped
+         ) AS exists`
+      );
+      const exists = Boolean(check.rows[0]?.exists);
+      if (!exists) {
+        await query(`
+          ALTER TABLE vps_instances
+          ADD COLUMN IF NOT EXISTS backup_frequency VARCHAR(20) DEFAULT 'weekly'
+          CHECK (backup_frequency IN ('daily', 'weekly', 'none'))
+        `);
+
+        // Backfill existing records so billing logic has accurate data
+        await query(`
+          UPDATE vps_instances
+          SET backup_frequency = 'weekly'
+          WHERE (configuration::jsonb->>'backups_enabled' = 'true' OR configuration::jsonb->>'backups_enabled' = 'TRUE')
+            AND (backup_frequency IS NULL OR backup_frequency = 'none')
+        `);
+
+        await query(`
+          UPDATE vps_instances
+          SET backup_frequency = 'none'
+          WHERE (configuration::jsonb->>'backups_enabled' = 'false' OR configuration::jsonb->>'backups_enabled' IS NULL)
+            AND (backup_frequency IS NULL OR backup_frequency = 'weekly')
+        `);
+
+        await query(`
+          UPDATE vps_instances
+          SET backup_frequency = 'none'
+          WHERE backup_frequency IS NULL
+        `);
+        console.log('✅ Added missing column vps_instances.backup_frequency and populated defaults');
+      }
+      return true;
+    } catch (err) {
+      console.warn('⚠️ Could not verify or create backup_frequency column:', err);
       return false;
     }
   }
@@ -82,9 +140,15 @@ export class BillingService {
 
     try {
       // Ensure schema prerequisites
-      const hasColumn = await this.ensureLastBilledColumnExists();
-      if (!hasColumn) {
+      const hasLastBilledColumn = await this.ensureLastBilledColumnExists();
+      if (!hasLastBilledColumn) {
         console.warn('Skipping hourly billing because last_billed_at column is missing.');
+        return result;
+      }
+
+      const hasBackupColumn = await this.ensureBackupFrequencyColumnExists();
+      if (!hasBackupColumn) {
+        console.warn('Skipping hourly billing because backup_frequency column is missing.');
         return result;
       }
       // Get all active VPS instances that need billing
@@ -423,6 +487,17 @@ export class BillingService {
     monthlyEstimate: number;
   }> {
     try {
+      const hasBackupColumn = await this.ensureBackupFrequencyColumnExists();
+      if (!hasBackupColumn) {
+        console.warn('Skipping billing summary because backup_frequency column is missing.');
+        return {
+          totalSpentThisMonth: 0,
+          totalSpentAllTime: 0,
+          activeVPSCount: 0,
+          monthlyEstimate: 0
+        };
+      }
+
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -606,4 +681,3 @@ export class BillingService {
     }
   }
 }
-
