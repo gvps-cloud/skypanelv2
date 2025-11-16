@@ -11,6 +11,7 @@ import {
   Server,
   ServerCog,
   Settings,
+  Store,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -96,18 +97,18 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               "networking",
               "stackscripts",
               "providers",
-              "marketplace",
               "regions",
               "vps-plans",
+              "marketplace",
             ].includes(activeAnchor),
             items: [
               { title: "Servers", url: `/admin#servers`, isActive: activeAnchor === "servers" },
               { title: "Networking", url: `/admin#networking`, isActive: activeAnchor === "networking" },
               { title: "StackScripts", url: `/admin#stackscripts`, isActive: activeAnchor === "stackscripts" },
-              { title: "Marketplace", url: `/admin#marketplace`, isActive: activeAnchor === "marketplace" },
               { title: "Regions", url: `/admin#regions`, isActive: activeAnchor === "regions" },
               { title: "Providers", url: `/admin#providers`, isActive: activeAnchor === "providers" },
               { title: "VPS Plans", url: `/admin#vps-plans`, isActive: activeAnchor === "vps-plans" },
+              { title: "Marketplace", url: `/admin#marketplace`, isActive: activeAnchor === "marketplace" },
             ],
           },
           {
@@ -150,6 +151,11 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               title: "Applications",
               url: "/paas",
               isActive: pathname === "/paas",
+            },
+            {
+              title: "Marketplace",
+              url: "/paas/marketplace",
+              isActive: pathname.startsWith("/paas/marketplace"),
             },
             {
               title: "Plans",

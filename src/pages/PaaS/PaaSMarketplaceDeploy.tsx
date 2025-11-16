@@ -266,7 +266,7 @@ const PaaSMarketplaceDeploy: React.FC = () => {
                   setSlugManuallyEdited(v.length > 0);
                 }}
                 placeholder="my-app"
-                pattern="[a-z0-9\\-]+"
+                pattern="[a-z0-9-]+"
                 required
               />
               <p className="text-sm text-muted-foreground">

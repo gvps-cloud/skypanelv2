@@ -6,14 +6,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Search, Star, Download, ArrowRight, ArrowLeft, Filter, Package } from 'lucide-react';
+import { Search, Star, Download, ArrowRight, ArrowLeft, Package } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MarketplaceCardSkeleton, MarketplaceGridSkeleton } from '@/components/ui/skeleton-card';
 import { apiClient } from '@/lib/api';
+import { useMarketplacePagination, type PaginatedResponse } from '@/hooks/useMarketplacePagination';
 
 interface Template {
   id: string;
@@ -23,11 +25,15 @@ interface Template {
   category: string;
   icon_url?: string;
   git_url: string;
-  buildpack: string;
-  recommended_plan_slug: string;
+  git_branch?: string;
+  buildpack?: string;
+  recommended_plan_slug?: string;
+  min_cpu_cores?: number;
+  min_ram_mb?: number;
   deploy_count: number;
   rating: number;
   is_featured: boolean;
+  created_at?: string;
 }
 
 const categoryIcons: Record<string, string> = {
@@ -52,64 +58,112 @@ const categoryLabels: Record<string, string> = {
   database: 'Database',
 };
 
+// API function to fetch templates with pagination
+const fetchMarketplaceTemplates = async (params: any) => {
+  const queryParams = new URLSearchParams({
+    page: params.page.toString(),
+    limit: params.limit.toString(),
+    ...(params.search && { search: params.search }),
+    ...(params.category && { category: params.category }),
+    ...(params.featured && { featured: 'true' }),
+  });
+
+  try {
+    const response = await apiClient.get(`/paas/marketplace/templates?${queryParams}`);
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
 const PaaSMarketplace: React.FC = () => {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [featuredOnly, setFeaturedOnly] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [featuredTemplates, setFeaturedTemplates] = useState<Template[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const navigate = useNavigate();
 
+  // Initialize pagination hook
+  const {
+    data: templates,
+    pagination,
+    isLoading,
+    isError,
+    error,
+    filters,
+    updateSearch,
+    updateCategory,
+    updateFeatured,
+    clearFilters,
+    nextPage,
+    prevPage,
+    isEmpty,
+    isFirstPage,
+    isLastPage,
+  } = useMarketplacePagination<Template>({
+    initialLimit: 12,
+    fetchFunction: fetchMarketplaceTemplates,
+    queryKey: ['marketplace-templates'],
+  });
+
+  
+  // Load categories and featured templates on mount
   useEffect(() => {
-    loadTemplates();
+    loadMetadata();
   }, []);
 
-  useEffect(() => {
-    filterTemplates();
-  }, [templates, search, categoryFilter, featuredOnly]);
-
-  const loadTemplates = async () => {
+  const loadMetadata = async () => {
     try {
-      setLoading(true);
-      const data = await apiClient.get('/paas/marketplace/templates');
-      setTemplates(data.templates || []);
-    } catch (error) {
-      toast.error('Failed to load marketplace templates');
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoadingCategories(true);
 
-  const filterTemplates = () => {
-    let filtered = [...templates];
+      // Load categories (we can get this from the first page or a separate endpoint)
+      const initialResponse = await apiClient.get('/paas/marketplace/templates?limit=100');
 
-    if (search) {
-      filtered = filtered.filter(
-        (t) =>
-          t.name.toLowerCase().includes(search.toLowerCase()) ||
-          t.description?.toLowerCase().includes(search.toLowerCase())
+      const templatesArray: Template[] = Array.isArray(initialResponse.data)
+        ? (initialResponse.data as Template[])
+        : [];
+      const allCategories = Array.from(
+        new Set(
+          templatesArray
+            .map((t) => (typeof t.category === 'string' ? t.category : ''))
+            .filter((cat) => cat.length > 0)
+        )
       );
-    }
+      setCategories(allCategories);
 
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter((t) => t.category === categoryFilter);
+      // Load featured templates
+      const featured = initialResponse.data?.filter((t: Template) => t.is_featured) || [];
+      setFeaturedTemplates(featured);
+    } catch (error) {
+      toast.error('Failed to load marketplace data');
+    } finally {
+      setLoadingCategories(false);
     }
-
-    if (featuredOnly) {
-      filtered = filtered.filter((t) => t.is_featured);
-    }
-
-    setFilteredTemplates(filtered);
   };
 
   const handleDeploy = (slug: string) => {
     navigate(`/paas/marketplace/deploy/${slug}`);
   };
 
-  const categories = Array.from(new Set(templates.map((t) => t.category)));
+  const handleSearch = (value: string) => {
+    updateSearch(value);
+  };
 
-  const featuredTemplates = templates.filter((t) => t.is_featured);
+  const handleCategoryChange = (category: string) => {
+    updateCategory(category === 'all' ? undefined : category);
+  };
+
+  const handleToggleFeatured = () => {
+    updateFeatured(!filters.featured);
+  };
+
+  const handleClearFilters = () => {
+    clearFilters();
+  };
+
+  const startIndex =
+    pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
+  const endIndex =
+    pagination.total === 0 ? 0 : Math.min(pagination.page * pagination.limit, pagination.total);
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -132,7 +186,7 @@ const PaaSMarketplace: React.FC = () => {
       </div>
 
       {/* Featured Templates */}
-      {featuredTemplates.length > 0 && !search && categoryFilter === 'all' && (
+      {featuredTemplates.length > 0 && !filters.search && !filters.category && !filters.featured && (
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
             <Star className="w-5 h-5 text-yellow-500" />
@@ -182,12 +236,15 @@ const PaaSMarketplace: React.FC = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search templates..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={filters.search || ''}
+            onChange={(e) => handleSearch(e.target.value)}
             className="pl-9"
           />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <Select
+          value={filters.category || 'all'}
+          onValueChange={handleCategoryChange}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
@@ -201,8 +258,8 @@ const PaaSMarketplace: React.FC = () => {
           </SelectContent>
         </Select>
         <Button
-          variant={featuredOnly ? 'default' : 'outline'}
-          onClick={() => setFeaturedOnly(!featuredOnly)}
+          variant={filters.featured ? 'default' : 'outline'}
+          onClick={handleToggleFeatured}
         >
           <Star className="w-4 h-4 mr-2" />
           Featured Only
@@ -212,11 +269,11 @@ const PaaSMarketplace: React.FC = () => {
       {/* Category Tabs */}
       <Tabs defaultValue="all" className="mb-6">
         <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="all" onClick={() => setCategoryFilter('all')}>
+          <TabsTrigger value="all" onClick={() => handleCategoryChange('all')}>
             All Templates
           </TabsTrigger>
           {categories.map((cat) => (
-            <TabsTrigger key={cat} value={cat} onClick={() => setCategoryFilter(cat)}>
+            <TabsTrigger key={cat} value={cat} onClick={() => handleCategoryChange(cat)}>
               {categoryIcons[cat] || ''} {categoryLabels[cat] || cat}
             </TabsTrigger>
           ))}
@@ -224,11 +281,29 @@ const PaaSMarketplace: React.FC = () => {
       </Tabs>
 
       {/* Templates Grid */}
-      {loading ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Loading templates...</p>
+      {isLoading && templates.length === 0 ? (
+        <div>
+          <div className="mb-6 text-sm text-muted-foreground">
+            Loading marketplace templates...
+          </div>
+          <MarketplaceGridSkeleton count={12} />
         </div>
-      ) : filteredTemplates.length === 0 ? (
+      ) : isError ? (
+        <Card className="py-12">
+          <CardContent>
+            <div className="text-center">
+              <Package className="w-12 h-12 mx-auto mb-4 text-red-500" />
+              <p className="text-lg font-medium mb-2">Failed to load templates</p>
+              <p className="text-muted-foreground mb-4">
+                {error instanceof Error ? error.message : 'An error occurred'}
+              </p>
+              <Button variant="outline" onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : isEmpty ? (
         <Card className="py-12">
           <CardContent>
             <div className="text-center">
@@ -237,61 +312,100 @@ const PaaSMarketplace: React.FC = () => {
               <p className="text-muted-foreground mb-4">
                 Try adjusting your search or filters
               </p>
-              <Button variant="outline" onClick={() => { setSearch(''); setCategoryFilter('all'); setFeaturedOnly(false); }}>
+              <Button variant="outline" onClick={handleClearFilters}>
                 Clear Filters
               </Button>
             </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTemplates.map((template) => (
-            <Card key={template.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{categoryIcons[template.category] || '📦'}</span>
-                    <div>
-                      <CardTitle className="text-lg">{template.name}</CardTitle>
-                      <Badge variant="outline" className="mt-1">
-                        {categoryLabels[template.category] || template.category}
-                      </Badge>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {templates.map((template) => (
+              <Card key={template.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{categoryIcons[template.category] || '📦'}</span>
+                      <div>
+                        <CardTitle className="text-lg">{template.name}</CardTitle>
+                        <Badge variant="outline" className="mt-1">
+                          {categoryLabels[template.category] || template.category}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                  {template.is_featured && (
-                    <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                  )}
-                </div>
-                <CardDescription className="line-clamp-2">{template.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Download className="w-4 h-4" />
-                      {template.deploy_count}
-                    </span>
-                    {template.buildpack && (
-                      <Badge variant="secondary" className="text-xs">
-                        {template.buildpack.split('/')[1]}
-                      </Badge>
+                    {template.is_featured && (
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                     )}
                   </div>
-                  <Button size="sm" onClick={() => handleDeploy(template.slug)}>
-                    Deploy
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <CardDescription className="line-clamp-2">{template.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Download className="w-4 h-4" />
+                        {template.deploy_count}
+                      </span>
+                      {template.buildpack && (
+                        <Badge variant="secondary" className="text-xs">
+                          {template.buildpack.split('/')[1]}
+                        </Badge>
+                      )}
+                    </div>
+                    <Button size="sm" onClick={() => handleDeploy(template.slug)}>
+                      Deploy
+                      <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Pagination Controls */}
+          {pagination.total > pagination.limit && (
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <div className="text-sm text-muted-foreground">
+                Showing {startIndex}-{endIndex} of {pagination.total} templates (Page{' '}
+                {pagination.page} of {Math.max(1, pagination.totalPages)})
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={prevPage}
+                  disabled={!pagination.hasPrevPage || isLoading || isFirstPage}
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={nextPage}
+                  disabled={!pagination.hasNextPage || isLoading || isLastPage}
+                >
+                  Next
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Results Count */}
-      {!loading && filteredTemplates.length > 0 && (
+      {!isLoading && !isEmpty && (
         <div className="mt-6 text-center text-sm text-muted-foreground">
-          Showing {filteredTemplates.length} of {templates.length} templates
+          <div>
+            Showing {startIndex}-{endIndex} of {pagination.total} templates
+            {pagination.page > 1 && ` (Page ${pagination.page} of ${Math.max(1, pagination.totalPages)})`}
+          </div>
+          {filters.search && (
+            <div className="text-xs mt-1">
+              Results for "{filters.search}"
+              {filters.category && ` in ${filters.category}`}
+            </div>
+          )}
         </div>
       )}
     </div>

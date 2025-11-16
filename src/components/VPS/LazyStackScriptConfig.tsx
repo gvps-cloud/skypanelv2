@@ -71,7 +71,11 @@ export default function LazyStackScriptConfig({
   }, [selectedStackScript?.user_defined_fields, stackscriptData]);
 
   if (!selectedStackScript || !processedFields.length) {
-    return null;
+    return (
+      <div className="p-4 border rounded-lg text-sm text-muted-foreground">
+        Select a deployment that requires configuration to continue.
+      </div>
+    );
   }
 
   const handleFieldChange = (fieldName: string, value: string) => {

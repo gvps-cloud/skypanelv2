@@ -347,7 +347,7 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
+          <Route
           path="/paas"
           element={
             <ProtectedRoute>

@@ -23,11 +23,26 @@ import {
   parseStoredAllowedRegions,
   shouldFilterByAllowedRegions,
 } from "../lib/providerRegions.js";
+import {
+  normalizeMarketplaceSlugs,
+  parseStoredAllowedMarketplaceApps,
+} from "../lib/providerMarketplace.js";
+import { fetchMarketplaceDisplayNames } from "../lib/providerMarketplaceLabels.js";
 const router = express.Router();
 
 router.use(authenticateToken, requireOrganization);
 
 const DEFAULT_RDNS_BASE_DOMAIN = "ip.rev.skyvps360.xyz";
+
+const isMissingMarketplaceOverridesTable = (err: unknown): boolean => {
+  const message = String((err as any)?.message || "").toLowerCase();
+  return (
+    message.includes("provider_marketplace_overrides") &&
+    (message.includes("does not exist") ||
+      message.includes("not exist") ||
+      message.includes("not find"))
+  );
+};
 
 async function loadActiveProviderToken(providerType: "linode"): Promise<string | null> {
   const providerInfo = await getProviderTokenByType(providerType);
@@ -949,6 +964,124 @@ router.get("/apps", async (req: Request, res: Response) => {
   }
 });
 
+router.get(
+  "/providers/:providerId/marketplace",
+  async (req: Request, res: Response) => {
+    try {
+      const { providerId } = req.params;
+      const providerResult = await query(
+        `SELECT id, name, type, allowed_marketplace_apps, active
+           FROM service_providers
+          WHERE id = $1
+          LIMIT 1`,
+        [providerId]
+      );
+
+      if (providerResult.rows.length === 0) {
+        return res.status(404).json({ error: "Provider not found" });
+      }
+
+      const providerRow = providerResult.rows[0];
+
+      if (!providerRow.active) {
+        return res.status(400).json({ error: "Provider is inactive" });
+      }
+
+      if (providerRow.type !== "linode") {
+        return res
+          .status(400)
+          .json({ error: "Marketplace apps are only available for Linode providers" });
+      }
+
+      let allowedSlugs: string[] = [];
+      try {
+        const overrides = await query(
+          "SELECT app_slug FROM provider_marketplace_overrides WHERE provider_id = $1",
+          [providerId]
+        );
+        if (overrides.rows.length > 0) {
+          allowedSlugs = normalizeMarketplaceSlugs(
+            overrides.rows
+              .map((row: any) => (typeof row.app_slug === "string" ? row.app_slug : ""))
+              .filter(Boolean)
+          );
+        }
+      } catch (overrideErr) {
+        if (!isMissingMarketplaceOverridesTable(overrideErr)) {
+          throw overrideErr;
+        }
+      }
+
+      if (allowedSlugs.length === 0) {
+        allowedSlugs = parseStoredAllowedMarketplaceApps(
+          providerRow.allowed_marketplace_apps ?? null
+        );
+      }
+
+      const displayNameMap = await fetchMarketplaceDisplayNames(providerId);
+
+      let apps = await linodeService.listMarketplaceApps(
+        allowedSlugs.length > 0 ? allowedSlugs : undefined
+      );
+
+      if (allowedSlugs.length > 0) {
+        const allowedSet = new Set(allowedSlugs);
+        apps = apps.filter((app: any) => {
+          const slug = typeof app?.slug === "string" ? app.slug.trim().toLowerCase() : "";
+          return slug && allowedSet.has(slug);
+        });
+      }
+
+      const categories: Record<string, number> = {};
+      const payloadApps = apps.map((app: any) => {
+        const slugRaw = typeof app?.slug === "string" ? app.slug.trim().toLowerCase() : "";
+        const category =
+          typeof app?.category === "string" && app.category.trim().length > 0
+            ? app.category.trim()
+            : "Applications";
+        categories[category] = (categories[category] || 0) + 1;
+        const displayName =
+          (slugRaw && displayNameMap.get(slugRaw)) ||
+          app.display_name ||
+          app.name ||
+          app.slug;
+        return {
+          slug: app.slug,
+          name: app.name,
+          display_name: displayName,
+          description: app.description,
+          summary: app.summary,
+          category,
+          deploy_count: app.deploy_count ?? 0,
+          stackscript_id: app.stackscript_id,
+          user_defined_fields: Array.isArray(app.user_defined_fields)
+            ? app.user_defined_fields
+            : [],
+          secret_fields: Array.isArray(app.secret_fields) ? app.secret_fields : [],
+          images: Array.isArray(app.images) ? app.images : [],
+        };
+      });
+
+      res.json({
+        provider: {
+          id: providerId,
+          name: providerRow.name,
+          type: providerRow.type,
+        },
+        mode: allowedSlugs.length > 0 ? "custom" : "default",
+        allowedApps: allowedSlugs,
+        apps: payloadApps,
+        categories,
+      });
+    } catch (err: any) {
+      console.error("Provider marketplace fetch error:", err);
+      res
+        .status(500)
+        .json({ error: err.message || "Failed to load provider marketplace apps" });
+    }
+  }
+);
+
 // Get available Linode images
 router.get("/images", async (req: Request, res: Response) => {
   try {
@@ -1565,6 +1698,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 
     // Determine provider type - default to 'linode' for backward compatibility
     const providerType = instanceRow.provider_type || "linode";
+    const isLinodeProvider = providerType === "linode";
     const providerInstanceId = Number(instanceRow.provider_instance_id);
 
     // Fetch provider metadata if provider_id exists
@@ -1587,7 +1721,7 @@ router.get("/:id", async (req: Request, res: Response) => {
     let providerDetail: LinodeInstance | null = null;
 
     // Route to appropriate provider based on provider_type
-    if (providerType === "linode" && Number.isFinite(providerInstanceId)) {
+    if (isLinodeProvider && Number.isFinite(providerInstanceId)) {
       try {
         providerDetail = await linodeService.getLinodeInstance(
           providerInstanceId

@@ -211,6 +211,8 @@ const MARKETPLACE_CATEGORY_PATTERNS: Array<{ regex: RegExp; category: string }> 
   { regex: /(node|next|react|django|laravel|rails|flask|express|php|python|ruby)/i, category: 'Frameworks' },
   { regex: /(game|minecraft|valheim|terraria)/i, category: 'Gaming' },
 ];
+const DEPRECATED_APP_REGEX = /\[\s*deprecated\s*\]/i;
+const SECRET_FIELD_MATCHERS = [/linode api token/i];
 
 export interface AccountTransferResponse {
   used: number;
@@ -274,6 +276,43 @@ class LinodeService {
   private readonly apiToken: string;
   private readonly baseUrl = 'https://api.linode.com/v4';
   private marketplaceAppsEndpointAvailable: boolean | null = null;
+
+  private static isDeprecatedAppName(name?: string): boolean {
+    if (!name) return false;
+    return DEPRECATED_APP_REGEX.test(name);
+  }
+
+  private static shouldAutofillLinodeToken(field: any): boolean {
+    const combined = `${field?.name ?? ''} ${field?.label ?? ''}`.toLowerCase();
+    if (!combined.trim()) {
+      return false;
+    }
+    return SECRET_FIELD_MATCHERS.some((regex) => regex.test(combined));
+  }
+
+  private static partitionUserDefinedFields(fields: any[]): {
+    visible: any[];
+    secret: Array<{ name: string; type: 'linode_api_token' }>;
+  } {
+    const visible: any[] = [];
+    const secret: Array<{ name: string; type: 'linode_api_token' }> = [];
+    if (!Array.isArray(fields)) {
+      return { visible, secret };
+    }
+
+    for (const field of fields) {
+      if (this.shouldAutofillLinodeToken(field)) {
+        const name = field?.name || field?.label;
+        if (typeof name === 'string' && name.trim().length > 0) {
+          secret.push({ name: name.trim(), type: 'linode_api_token' });
+        }
+        continue;
+      }
+      visible.push(field);
+    }
+
+    return { visible, secret };
+  }
 
   constructor() {
     // Read directly from process.env first to avoid any timing issues
@@ -427,7 +466,10 @@ class LinodeService {
         : [];
 
     const enriched = await this.attachStackScriptFields(apps);
-    return this.filterAppsBySlug(enriched, slugFilter);
+    const filtered = enriched.filter(
+      (app) => !LinodeService.isDeprecatedAppName(app?.display_name || app?.name || '')
+    );
+    return this.filterAppsBySlug(filtered, slugFilter);
   }
 
   private async fetchMarketplaceAppsFromStackScripts(slugFilter?: Set<string> | null): Promise<any[]> {
@@ -435,7 +477,9 @@ class LinodeService {
       filter: { username: 'linode', is_public: true },
       pageSize: 500,
     });
-    const apps = scripts.map((script) => this.mapStackScriptToMarketplaceApp(script));
+    const apps = scripts
+      .map((script) => this.mapStackScriptToMarketplaceApp(script))
+      .filter((app): app is any => Boolean(app));
     return this.filterAppsBySlug(apps, slugFilter);
   }
 
@@ -445,17 +489,25 @@ class LinodeService {
         try {
           if (app.stackscript_id) {
             const stackscript = await this.getStackScript(app.stackscript_id);
+            const partitioned = LinodeService.partitionUserDefinedFields(
+              stackscript?.user_defined_fields || []
+            );
             return {
               ...app,
-              user_defined_fields: stackscript?.user_defined_fields || [],
+              user_defined_fields: partitioned.visible,
+              secret_fields: partitioned.secret,
             };
           }
         } catch (error) {
           console.warn(`Failed to fetch StackScript ${app.stackscript_id} for app ${app.slug}:`, error);
         }
+        const partitioned = LinodeService.partitionUserDefinedFields(
+          Array.isArray(app?.user_defined_fields) ? app.user_defined_fields : []
+        );
         return {
           ...app,
-          user_defined_fields: Array.isArray(app?.user_defined_fields) ? app.user_defined_fields : [],
+          user_defined_fields: partitioned.visible,
+          secret_fields: partitioned.secret,
         };
       })
     );
@@ -463,6 +515,10 @@ class LinodeService {
 
   private mapStackScriptToMarketplaceApp(script: LinodeStackScript): any {
     const slug = this.normalizeMarketplaceSlug(script.label) || `stackscript-${script.id}`;
+    if (LinodeService.isDeprecatedAppName(script.label)) {
+      return null;
+    }
+    const partitioned = LinodeService.partitionUserDefinedFields(script.user_defined_fields || []);
     return {
       slug,
       name: script.label,
@@ -472,7 +528,8 @@ class LinodeService {
       description: script.description,
       summary: script.rev_note || script.description,
       stackscript_id: script.id,
-      user_defined_fields: script.user_defined_fields || [],
+      user_defined_fields: partitioned.visible,
+      secret_fields: partitioned.secret,
       images: script.images,
       deployments_active: script.deployments_active,
       deployments_total: script.deployments_total,
@@ -546,12 +603,34 @@ class LinodeService {
     }
 
     const udfs: any[] = Array.isArray(app?.user_defined_fields) ? app.user_defined_fields : [];
+    const secretFields: Array<{ name: string; type: string }> = Array.isArray(app?.secret_fields)
+      ? app.secret_fields
+      : [];
+    const secretNames = new Set(
+      secretFields
+        .map((field) => (typeof field?.name === 'string' ? field.name : null))
+        .filter((name): name is string => Boolean(name))
+    );
+
+    const resolvedAppData: Record<string, any> = { ...(appData || {}) };
+    for (const secret of secretFields) {
+      if (secret.type === 'linode_api_token') {
+        if (!this.apiToken) {
+          throw new Error('Linode API token not configured for marketplace deployment');
+        }
+        resolvedAppData[secret.name] = this.apiToken;
+      }
+    }
+
     const missing = udfs.filter(f => {
       const name = f?.name;
       if (!name) return false;
       const required = Boolean(f?.required) || String(f?.label || '').toLowerCase().includes('(required)');
       if (!required) return false;
-      const val = appData[name];
+      if (secretNames.has(name)) {
+        return false;
+      }
+      const val = resolvedAppData[name];
       return val === undefined || val === null || String(val).trim() === '';
     });
     if (missing.length > 0) {
@@ -569,7 +648,7 @@ class LinodeService {
       backups_enabled: backups,
       private_ip: privateIP,
       stackscript_id: Number(app?.stackscript_id),
-      stackscript_data: appData || {}
+      stackscript_data: resolvedAppData
     };
 
     return this.createLinodeInstance(createReq);

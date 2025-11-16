@@ -172,10 +172,32 @@ export class BuilderService {
     try {
       // 1. Validate repo + branch and clone
       await this.logBuild(deploymentId, '-----> Validating repository access...');
-      await this.validateRepository(options.gitUrl, options.gitBranch);
+      const branchInfo = await GitService.resolveBranch(options.gitUrl, options.gitBranch);
+      const branchToBuild = branchInfo.branch;
+
+      if (branchInfo.wasFallback) {
+        if (options.gitBranch && options.gitBranch !== branchToBuild) {
+          await this.logBuild(
+            deploymentId,
+            `-----> Requested branch "${options.gitBranch}" not found. Using default branch "${branchToBuild}".`
+          );
+        } else {
+          await this.logBuild(
+            deploymentId,
+            `-----> No branch specified. Using default branch "${branchToBuild}".`
+          );
+        }
+
+        if (app.git_branch !== branchToBuild) {
+          await pool.query('UPDATE paas_applications SET git_branch = $1 WHERE id = $2', [
+            branchToBuild,
+            app.id,
+          ]);
+        }
+      }
 
       await this.logBuild(deploymentId, '-----> Cloning repository...');
-      await this.cloneRepository(options.gitUrl, options.gitBranch, workDir);
+      await this.cloneRepository(options.gitUrl, branchToBuild, workDir);
 
       // 2. Detect buildpack
       await this.logBuild(deploymentId, '-----> Detecting buildpack...');
@@ -232,21 +254,6 @@ export class BuilderService {
       await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
       await fs.rm(cacheDir, { recursive: true, force: true }).catch(() => {});
       throw error;
-    }
-  }
-
-  /**
-   * Validate git repository access before cloning
-   */
-  private static async validateRepository(gitUrl: string, branch: string): Promise<void> {
-    try {
-      await GitService.validateRepository(gitUrl, branch);
-    } catch (error: any) {
-      throw new Error(
-        error?.message?.includes('not found')
-          ? `Git branch "${branch}" not found`
-          : 'Unable to access repository. Verify URL, credentials, and branch name.'
-      );
     }
   }
 

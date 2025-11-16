@@ -1,6 +1,6 @@
 /**
  * VPS Management Page
- * Handles Linode VPS instance creation, management, and monitoring
+ * Handles VPS instance creation, management, and monitoring
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -62,7 +62,7 @@ import {
 import { paymentService } from "@/services/paymentService";
 import { formatCurrency, formatGigabytes } from "@/lib/formatters";
 
-interface LinodeType {
+interface ProviderPlan {
   id: string;
   label: string;
   disk: number;
@@ -188,15 +188,18 @@ const VPS: React.FC = () => {
   // Performance monitoring
   const endRenderMeasurement = measureRenderTime("VPS");
 
-  const [linodeTypes, setLinodeTypes] = useState<LinodeType[]>([]);
-  const [linodeImages, setLinodeImages] = useState<any[]>([]);
-  const [linodeStackScripts, setLinodeStackScripts] = useState<any[]>([]);
+  const [providerPlans, setProviderPlans] = useState<ProviderPlan[]>([]);
+  const [providerImages, setProviderImages] = useState<any[]>([]);
+  const [providerStackScripts, setProviderStackScripts] = useState<any[]>([]);
   const [selectedStackScript, setSelectedStackScript] = useState<any | null>(
     null
   );
   const [stackscriptData, setStackscriptData] = useState<Record<string, any>>(
     {}
   );
+  const [marketplaceApps, setMarketplaceApps] = useState<any[]>([]);
+  const [marketplaceLoading, setMarketplaceLoading] = useState(false);
+  const [marketplaceError, setMarketplaceError] = useState<string | null>(null);
   const [providerOptions, setProviderOptions] = useState<ProviderOption[]>([]);
   const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
   // OS selection redesign: tabs, grouping, and per-OS version selection
@@ -214,6 +217,14 @@ const VPS: React.FC = () => {
     return map;
   }, [providerOptions]);
 
+  const deploymentConfigRequired = useMemo(() => {
+    if (!selectedStackScript) return false;
+    const fields = Array.isArray(selectedStackScript.user_defined_fields)
+      ? selectedStackScript.user_defined_fields
+      : [];
+    return fields.length > 0;
+  }, [selectedStackScript]);
+
   const providerIdsByType = useMemo(() => {
     const map = new Map<string, string[]>();
     providerOptions.forEach((provider) => {
@@ -224,7 +235,7 @@ const VPS: React.FC = () => {
     return map;
   }, [providerOptions]);
 
-  // Group Linode images into distributions with versions for cleaner selection cards
+  // Group provider images into distributions with versions for cleaner selection cards
   const osGroups = useMemo(() => {
     const groups: Record<
       string,
@@ -238,7 +249,7 @@ const VPS: React.FC = () => {
       if (!groups[key]) groups[key] = { key, name, versions: [] };
       groups[key].versions.push({ id, label });
     };
-    (linodeImages || []).forEach((img: any) => {
+    (providerImages || []).forEach((img: any) => {
       const id: string = img.id || "";
       const label: string = img.label || id;
       const lower = `${id} ${label}`.toLowerCase();
@@ -268,7 +279,7 @@ const VPS: React.FC = () => {
       );
     });
     return groups;
-  }, [linodeImages]);
+  }, [providerImages]);
 
   // Constrain visible OS versions when a WordPress StackScript specifies allowed base images
   const effectiveOsGroups = useMemo(() => {
@@ -276,7 +287,7 @@ const VPS: React.FC = () => {
       ? (selectedStackScript!.images as string[])
       : [];
     if (!selectedStackScript) return osGroups;
-    const knownIds = new Set((linodeImages || []).map((i: any) => i.id));
+    const knownIds = new Set((providerImages || []).map((i: any) => i.id));
     const allowedKnown = allowed.filter((id: string) => knownIds.has(id));
     // If the StackScript allows any/all (no specific known image IDs), show all OS groups
     if (allowed.length === 0 || allowedKnown.length === 0) return osGroups;
@@ -287,7 +298,7 @@ const VPS: React.FC = () => {
       if (versions.length > 0) filtered[key] = { ...group, versions };
     });
     return filtered;
-  }, [osGroups, selectedStackScript, linodeImages]);
+  }, [osGroups, selectedStackScript, providerImages]);
 
   // Display helper for StackScript allowed images (falls back to Any Linux distribution)
   const allowedImagesDisplay = useMemo(() => {
@@ -296,7 +307,7 @@ const VPS: React.FC = () => {
       ? (selectedStackScript.images as string[])
       : [];
     const byId = new Map(
-      (linodeImages || []).map((img: any) => [img.id, img.label || img.id])
+      (providerImages || []).map((img: any) => [img.id, img.label || img.id])
     );
     const knownLabels = allowed
       .filter((id) => byId.has(id))
@@ -304,7 +315,7 @@ const VPS: React.FC = () => {
     if (allowed.length === 0 || knownLabels.length === 0)
       return "Any Linux distribution";
     return knownLabels.join(", ");
-  }, [selectedStackScript, linodeImages]);
+  }, [selectedStackScript, providerImages]);
 
   const normalizeProviderType = useCallback((value: unknown): ProviderType => {
     const raw = typeof value === "string" ? value.toLowerCase() : "";
@@ -535,8 +546,8 @@ const VPS: React.FC = () => {
 
   // Sync default selection to current form image when images load
   useEffect(() => {
-    if (!linodeImages || linodeImages.length === 0) return;
-    const current = linodeImages.find((i: any) => i.id === createForm.image);
+    if (!providerImages || providerImages.length === 0) return;
+    const current = providerImages.find((i: any) => i.id === createForm.image);
     const src = `${createForm.image} ${current?.label || ""}`.toLowerCase();
     const key = src.includes("ubuntu")
       ? "ubuntu"
@@ -559,7 +570,7 @@ const VPS: React.FC = () => {
       setSelectedOSGroup((prev) => prev || key);
       setSelectedOSVersion((prev) => ({ ...prev, [key]: createForm.image }));
     }
-  }, [linodeImages, createForm.image]);
+  }, [providerImages, createForm.image]);
 
   const providerLabelsById = useMemo<Record<string, string>>(() => {
     const entries = providerOptions.map((provider) => {
@@ -607,7 +618,7 @@ const VPS: React.FC = () => {
     const allowed = Array.isArray(selectedStackScript.images)
       ? (selectedStackScript.images as string[])
       : [];
-    const knownIds = new Set((linodeImages || []).map((i: any) => i.id));
+    const knownIds = new Set((providerImages || []).map((i: any) => i.id));
     const allowedKnown = allowed.filter((id) => knownIds.has(id));
     // If unrestricted (any/all), don't force-change the current image
     if (allowed.length === 0 || allowedKnown.length === 0) return;
@@ -645,7 +656,7 @@ const VPS: React.FC = () => {
         setSelectedOSVersion((prev) => ({ ...prev, [key]: pick }));
       }
     }
-  }, [selectedStackScript, linodeImages, createForm.image, setCreateForm]);
+  }, [selectedStackScript, providerImages, createForm.image, setCreateForm]);
 
   const loadVPSPlans = useCallback(async () => {
     try {
@@ -655,8 +666,8 @@ const VPS: React.FC = () => {
       const payload = await res.json();
       if (!res.ok) throw new Error(payload.error || "Failed to load VPS plans");
 
-      // Map admin plans to LinodeType format
-      const mappedPlans: LinodeType[] = (payload.plans || []).map(
+      // Map admin plans to ProviderPlan format
+      const mappedPlans: ProviderPlan[] = (payload.plans || []).map(
         (plan: any) => {
           const specs = plan.specifications || {};
           const basePrice = Number(plan.base_price || 0);
@@ -714,28 +725,28 @@ const VPS: React.FC = () => {
         }
       );
 
-      setLinodeTypes(mappedPlans);
+      setProviderPlans(mappedPlans);
     } catch (error: any) {
       console.error("Failed to load VPS plans:", error);
       toast.error(error.message || "Failed to load VPS plans");
     }
   }, [token]);
 
-  const loadLinodeImages = useCallback(async () => {
+  const loadProviderImages = useCallback(async () => {
     try {
       const res = await fetch("/api/vps/images", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload.error || "Failed to load images");
-      setLinodeImages(payload.images || []);
+      setProviderImages(payload.images || []);
     } catch (error: any) {
-      console.error("Failed to load Linode images:", error);
+      console.error("Failed to load provider images:", error);
       toast.error(error.message || "Failed to load images");
     }
   }, [token]);
 
-  const loadLinodeStackScripts = useCallback(async () => {
+  const loadProviderStackScripts = useCallback(async () => {
     try {
       // Load admin-configured StackScripts for 1-Click deployments
       const res = await fetch("/api/vps/stackscripts?configured=true", {
@@ -748,7 +759,12 @@ const VPS: React.FC = () => {
       const scripts = Array.isArray(payload.stackscripts)
         ? payload.stackscripts
         : [];
-      setLinodeStackScripts(scripts);
+      const uniqueScripts = Array.from(
+        new Map(
+          scripts.map((script: any) => [String(script?.id ?? script?.label ?? Math.random()), script])
+        ).values()
+      );
+      setProviderStackScripts(uniqueScripts);
 
       // Auto-select ssh-key script as default (but display as "None")
       const sshKeyScript = scripts.find(
@@ -766,6 +782,42 @@ const VPS: React.FC = () => {
       toast.error(error.message || "Failed to load deployments");
     }
   }, [token]);
+
+  const loadMarketplaceApps = useCallback(
+    async (providerId: string) => {
+      if (!providerId || !token) {
+        setMarketplaceApps([]);
+        setMarketplaceError(null);
+        return;
+      }
+      try {
+        setMarketplaceLoading(true);
+        setMarketplaceError(null);
+        const res = await fetch(`/api/vps/providers/${providerId}/marketplace`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const payload = await res.json();
+        if (!res.ok) {
+          throw new Error(payload.error || "Failed to load marketplace apps");
+        }
+        const apps = Array.isArray(payload.apps) ? payload.apps : [];
+        setMarketplaceApps(apps);
+      } catch (error: any) {
+        console.error("Failed to load marketplace apps:", error);
+        setMarketplaceError(error?.message || "Failed to load marketplace apps");
+        setMarketplaceApps([]);
+      } finally {
+        setMarketplaceLoading(false);
+      }
+    },
+    [token]
+  );
+
+  const handleMarketplaceRefresh = useCallback(() => {
+    if (createForm.provider_type === "linode" && createForm.provider_id) {
+      loadMarketplaceApps(createForm.provider_id);
+    }
+  }, [createForm.provider_type, createForm.provider_id, loadMarketplaceApps]);
 
   const loadInstances = useCallback(async () => {
     setLoading(true);
@@ -798,7 +850,7 @@ const VPS: React.FC = () => {
             ? i.providerName
             : null;
         const providerId = typeof i.provider_id === "string" ? i.provider_id : null;
-        const planForType = linodeTypes.find(
+        const planForType = providerPlans.find(
           (t) => t.id === (i.configuration?.type || "")
         );
         const specs = apiSpecs
@@ -887,7 +939,7 @@ const VPS: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, linodeTypes]);
+  }, [token, providerPlans]);
 
   useEffect(() => {
     loadVPSPlans();
@@ -917,21 +969,33 @@ const VPS: React.FC = () => {
     return () => clearInterval(interval);
   }, [instances, loadInstances]);
 
-  // Calculate active steps for the Linode workflow
+  // Calculate active steps for the provider workflow
   useEffect(() => {
     const steps = getActiveSteps({
       providerType: createForm.provider_type,
       formData: createForm,
+      hasDeploymentConfig: deploymentConfigRequired,
     });
 
     setActiveSteps(steps);
-  }, [createForm.provider_type, createForm]);
+  }, [createForm.provider_type, createForm, deploymentConfigRequired]);
+
+  useEffect(() => {
+    if (activeSteps.length === 0) return;
+    const isActive = activeSteps.some(
+      (step) => step.originalStepNumber === createStep
+    );
+    if (!isActive) {
+      const fallback = activeSteps[0]?.originalStepNumber ?? 1;
+      setCreateStep(fallback);
+    }
+  }, [activeSteps, createStep]);
 
   // Load images and stack scripts when create modal opens
   useEffect(() => {
     if (showCreateModal) {
-      loadLinodeImages();
-      loadLinodeStackScripts();
+      loadProviderImages();
+      loadProviderStackScripts();
       setModalOpen(true);
 
       // Fetch organization name and generate unique label
@@ -967,13 +1031,22 @@ const VPS: React.FC = () => {
     }
   }, [
     showCreateModal,
-    loadLinodeImages,
-    loadLinodeStackScripts,
+    loadProviderImages,
+    loadProviderStackScripts,
     setModalOpen,
     getOrganization,
     instances,
     setCreateForm,
   ]);
+
+  useEffect(() => {
+    if (createForm.provider_type === "linode" && createForm.provider_id) {
+      loadMarketplaceApps(createForm.provider_id);
+    } else {
+      setMarketplaceApps([]);
+      setMarketplaceError(null);
+    }
+  }, [createForm.provider_type, createForm.provider_id, loadMarketplaceApps]);
 
   // Performance measurement cleanup - run once on mount
   useEffect(() => {
@@ -1302,7 +1375,7 @@ const VPS: React.FC = () => {
     }
 
     // Calculate total cost including backups
-    const selectedType = linodeTypes.find((t) => t.id === createForm.type);
+    const selectedType = providerPlans.find((t) => t.id === createForm.type);
     if (!selectedType) {
       mobileToast.error("Selected plan not found");
       return;
@@ -1364,7 +1437,7 @@ const VPS: React.FC = () => {
       // Enforce image compatibility and validate fields for Marketplace/StackScript
       if (selectedStackScript && Array.isArray(selectedStackScript.images)) {
         const allowed = selectedStackScript.images as string[];
-        const knownIds = new Set((linodeImages || []).map((i: any) => i.id));
+        const knownIds = new Set((providerImages || []).map((i: any) => i.id));
         const allowedKnown = allowed.filter((id) => knownIds.has(id));
         // If the script is unrestricted (any/all), skip strict enforcement
         if (allowedKnown.length > 0) {
@@ -1554,16 +1627,14 @@ const VPS: React.FC = () => {
     formatGigabytes(bytes, { fallback: "0 GB" });
 
   // Filter plans based on selected provider
-  const filteredLinodeTypes = useMemo(() => {
+  const filteredProviderPlans = useMemo(() => {
     if (!createForm.provider_id) {
-      return linodeTypes;
+      return providerPlans;
     }
-    // Filter plans to only show those matching the selected provider
-    // Also include plans without provider_id for backward compatibility
-    return linodeTypes.filter(
+    return providerPlans.filter(
       (plan) => !plan.provider_id || plan.provider_id === createForm.provider_id
     );
-  }, [linodeTypes, createForm.provider_id]);
+  }, [providerPlans, createForm.provider_id]);
 
   // Multi-step modal helpers
   const { currentDisplayStep, totalDisplaySteps } = useMemo(() => {
@@ -1695,7 +1766,7 @@ const VPS: React.FC = () => {
                 className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base"
               >
                 <option value="">Click to choose plan</option>
-                {filteredLinodeTypes.map((type) => (
+                {filteredProviderPlans.map((type) => (
                   <option key={type.id} value={type.id}>
                     {type.label}
                   </option>
@@ -1704,7 +1775,7 @@ const VPS: React.FC = () => {
 
               {createForm.type &&
                 (() => {
-                  const selectedType = linodeTypes.find(
+                  const selectedType = providerPlans.find(
                     (t) => t.id === createForm.type
                   );
                   if (!selectedType) return null;
@@ -1745,7 +1816,6 @@ const VPS: React.FC = () => {
                   Select the datacenter location for your VPS
                 </p>
                 <RegionSelector
-                  providerType={createForm.provider_type}
                   providerId={createForm.provider_id}
                   selectedRegion={createForm.region}
                   onSelect={(regionId) => setCreateForm({ region: regionId })}
@@ -1770,24 +1840,60 @@ const VPS: React.FC = () => {
           formData={createForm}
           onFormChange={setCreateForm}
           token={token || ""}
-          linodeStackScripts={linodeStackScripts}
+          linodeStackScripts={providerStackScripts}
+          marketplaceApps={marketplaceApps}
           selectedStackScript={selectedStackScript}
           onStackScriptSelect={setSelectedStackScript}
           stackscriptData={stackscriptData}
           onStackScriptDataChange={setStackscriptData}
           allowedImagesDisplay={allowedImagesDisplay}
+          marketplaceLoading={marketplaceLoading}
+          marketplaceError={marketplaceError}
+          onMarketplaceRefresh={handleMarketplaceRefresh}
         />
       ),
     },
-    {
-      id: "os",
-      title: getStepInfo(3)?.title || "Operating System",
+  ];
+
+  if (deploymentConfigRequired) {
+    creationSteps.push({
+      id: "deployment-config",
+      title: getStepInfo(3)?.title || "App Configuration",
       description:
         getStepInfo(3)?.description ||
-        "Pick the base operating system for this VPS.",
+        "Provide required credentials for the selected marketplace app.",
       content: (
         <CreateVPSSteps
           step={3}
+          providerType={createForm.provider_type}
+          formData={createForm}
+          onFormChange={setCreateForm}
+          token={token || ""}
+          linodeStackScripts={providerStackScripts}
+          marketplaceApps={marketplaceApps}
+          selectedStackScript={selectedStackScript}
+          onStackScriptSelect={setSelectedStackScript}
+          stackscriptData={stackscriptData}
+          onStackScriptDataChange={setStackscriptData}
+          allowedImagesDisplay={allowedImagesDisplay}
+          marketplaceLoading={marketplaceLoading}
+          marketplaceError={marketplaceError}
+          onMarketplaceRefresh={handleMarketplaceRefresh}
+        />
+      ),
+    });
+  }
+
+  creationSteps.push(
+    {
+      id: "os",
+      title: getStepInfo(4)?.title || "Operating System",
+      description:
+        getStepInfo(4)?.description ||
+        "Pick the base operating system for this VPS.",
+      content: (
+        <CreateVPSSteps
+          step={4}
           providerType={createForm.provider_type}
           formData={createForm}
           onFormChange={setCreateForm}
@@ -1806,21 +1912,21 @@ const VPS: React.FC = () => {
     },
     {
       id: "finalize",
-      title: getStepInfo(4)?.title || "Finalize & Review",
+      title: getStepInfo(5)?.title || "Finalize & Review",
       description:
-        getStepInfo(4)?.description ||
+        getStepInfo(5)?.description ||
         "Set credentials and optional add-ons before provisioning.",
       content: (
         <CreateVPSSteps
-          step={4}
+          step={5}
           providerType={createForm.provider_type}
           formData={createForm}
           onFormChange={setCreateForm}
           token={token || ""}
         />
       ),
-    },
-  ];
+    }
+  );
 
   const stackFooter = (
     <div className="flex items-center justify-between">

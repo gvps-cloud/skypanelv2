@@ -70,8 +70,29 @@ export const authenticateToken = async (
         if (ownerOrg.rows[0]) {
           organizationId = ownerOrg.rows[0].id;
         }
-  } catch {
+      } catch {
         console.warn('organizations lookup failed for owner fallback');
+      }
+    }
+
+    // If still no organization, create one automatically for the user
+    if (!organizationId) {
+      try {
+        const newOrg = await query(
+          `INSERT INTO organizations (name, slug, owner_id, created_at, updated_at)
+           VALUES ($1, $2, $3, NOW(), NOW())
+           RETURNING id`,
+          [
+            `${user.email}'s Organization`,
+            user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+            user.id
+          ]
+        );
+        organizationId = newOrg.rows[0].id;
+        console.log('Created automatic organization for user:', { userId: user.id, organizationId });
+      } catch (orgCreateError) {
+        console.error('Failed to create automatic organization:', orgCreateError);
+        // Continue without organization - this will be handled by requireOrganization middleware
       }
     }
 
@@ -177,6 +198,27 @@ export const optionalAuth = async (
         }
       } catch {
         console.warn('organizations lookup failed for owner fallback');
+      }
+    }
+
+    // If still no organization, create one automatically for the user
+    if (!organizationId) {
+      try {
+        const newOrg = await query(
+          `INSERT INTO organizations (name, slug, owner_id, created_at, updated_at)
+           VALUES ($1, $2, $3, NOW(), NOW())
+           RETURNING id`,
+          [
+            `${user.email}'s Organization`,
+            user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+            user.id
+          ]
+        );
+        organizationId = newOrg.rows[0].id;
+        console.log('Created automatic organization for user:', { userId: user.id, organizationId });
+      } catch (orgCreateError) {
+        console.error('Failed to create automatic organization:', orgCreateError);
+        // Continue without organization - this will be handled by requireOrganization middleware
       }
     }
 

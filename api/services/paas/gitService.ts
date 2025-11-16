@@ -23,6 +23,12 @@ interface GitContext {
   cleanup: (() => Promise<void>)[];
 }
 
+export interface BranchResolution {
+  branch: string;
+  wasFallback: boolean;
+  reason?: 'missing' | 'unspecified';
+}
+
 export class GitService {
   static async validateRepository(gitUrl: string, branch: string): Promise<void> {
     await this.withGitContext(gitUrl, async ({ url, env }) => {
@@ -33,6 +39,46 @@ export class GitService {
   static async cloneRepository(gitUrl: string, branch: string, targetDir: string): Promise<void> {
     await this.withGitContext(gitUrl, async ({ url, env }) => {
       await execAsync(`git clone --depth 1 --branch ${branch} ${url} ${targetDir}`, { env });
+    });
+  }
+
+  static async resolveBranch(gitUrl: string, requestedBranch?: string): Promise<BranchResolution> {
+    return await this.withGitContext(gitUrl, async ({ url, env }) => {
+      const trimmed = requestedBranch?.trim();
+
+      if (trimmed) {
+        const exists = await this.branchExists(url, env, trimmed);
+        if (exists) {
+          return {
+            branch: trimmed,
+            wasFallback: false,
+          };
+        }
+        const fallback = await this.detectDefaultBranch(url, env);
+        if (fallback) {
+          return {
+            branch: fallback,
+            wasFallback: true,
+            reason: 'missing',
+          };
+        }
+        throw new Error(`Git branch "${trimmed}" not found`);
+      }
+
+      const detected = await this.detectDefaultBranch(url, env);
+      if (detected) {
+        return {
+          branch: detected,
+          wasFallback: true,
+          reason: 'unspecified',
+        };
+      }
+
+      return {
+        branch: 'main',
+        wasFallback: true,
+        reason: 'unspecified',
+      };
     });
   }
 
@@ -118,5 +164,31 @@ export class GitService {
     env.GIT_SSH_COMMAND = sshCommand;
     cleanup.push(() => fs.rm(keyPath, { force: true }));
     cleanup.push(() => fs.rm(tempDir, { recursive: true, force: true }).catch(() => {}));
+  }
+
+  private static async branchExists(
+    url: string,
+    env: NodeJS.ProcessEnv,
+    branch: string
+  ): Promise<boolean> {
+    try {
+      await execAsync(`git ls-remote --heads ${url} ${branch}`, { env });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private static async detectDefaultBranch(
+    url: string,
+    env: NodeJS.ProcessEnv
+  ): Promise<string | null> {
+    try {
+      const { stdout } = await execAsync(`git ls-remote --symref ${url} HEAD`, { env });
+      const match = stdout.match(/ref:\s+refs\/heads\/([^\s]+)\s+HEAD/);
+      return match?.[1] || null;
+    } catch {
+      return null;
+    }
   }
 }

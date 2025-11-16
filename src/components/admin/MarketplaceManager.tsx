@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Search, RefreshCw, Store, ListChecks } from "lucide-react";
+import { Search, RefreshCw, Store, ListChecks, Loader2 } from "lucide-react";
 
 import { buildApiUrl } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface ProviderSummary {
   id: string;
@@ -94,14 +93,16 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
 
   const [config, setConfig] = useState<MarketplaceConfig | null>(null);
   const [mode, setMode] = useState<MarketplaceMode>("default");
-  const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
+  const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set<string>());
   const [renameDrafts, setRenameDrafts] = useState<Record<string, string>>({});
 
   const [loadingProviders, setLoadingProviders] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
 
   const baselineRef = useRef<{
     mode: MarketplaceMode;
@@ -109,9 +110,11 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
     renames: Record<string, string>;
   }>({
     mode: "default",
-    slugs: new Set(),
+    slugs: new Set<string>(),
     renames: {},
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const APPS_PER_PAGE = 25;
 
   const fetchProviders = useCallback(async () => {
     if (!token) return;
@@ -170,14 +173,14 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
 
         setConfig(data);
         const initialMode: MarketplaceMode = data.mode;
-        const appSlugs =
+        const appSlugs: Set<string> =
           initialMode === "custom"
-            ? new Set(
+            ? new Set<string>(
                 (Array.isArray(data.allowedApps) ? data.allowedApps : [])
                   .map(normalizeSlug)
                   .filter(Boolean)
               )
-            : new Set(
+            : new Set<string>(
                 (Array.isArray(data.apps) ? data.apps : [])
                   .map((app: MarketplaceApp) => normalizeSlug(app.slug))
                   .filter(Boolean)
@@ -190,7 +193,7 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
         setRenameDrafts(initialRenames);
         baselineRef.current = {
           mode: initialMode,
-          slugs: new Set(appSlugs),
+          slugs: new Set<string>(appSlugs),
           renames: initialRenames,
         };
       } catch (error: any) {
@@ -203,6 +206,15 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
     [token]
   );
 
+  // Debounce search functionality
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
   useEffect(() => {
     fetchProviders();
   }, [fetchProviders]);
@@ -213,10 +225,17 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
     }
   }, [loadMarketplaceConfig, selectedProviderId]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, categoryFilter, selectedProviderId, mode]);
+
   const filteredApps = useMemo(() => {
     if (!config) {
       return [];
     }
+
+    const searchTerm = debouncedSearch.trim().toLowerCase();
+
     return (config.apps || []).filter((app) => {
       const normalizedCategory =
         typeof app.category === "string" && app.category.trim().length > 0
@@ -228,10 +247,33 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
       const haystack = `${app.display_name || app.name} ${app.description || ""} ${
         app.slug
       }`.toLowerCase();
-      const matchesSearch = search.trim().length === 0 || haystack.includes(search.toLowerCase());
+      const matchesSearch = searchTerm.length === 0 || haystack.includes(searchTerm);
       return matchesCategory && matchesSearch;
     });
-  }, [categoryFilter, config, search]);
+  }, [categoryFilter, config, debouncedSearch]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredApps.length / APPS_PER_PAGE));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedApps = useMemo(() => {
+    const safePage = Math.min(currentPage, totalPages);
+    const start = (safePage - 1) * APPS_PER_PAGE;
+    return filteredApps.slice(start, start + APPS_PER_PAGE);
+  }, [filteredApps, currentPage, totalPages]);
+
+  const startDisplay =
+    filteredApps.length === 0
+      ? 0
+      : (Math.min(currentPage, totalPages) - 1) * APPS_PER_PAGE + 1;
+  const endDisplay =
+    filteredApps.length === 0
+      ? 0
+      : Math.min(startDisplay + APPS_PER_PAGE - 1, filteredApps.length);
 
   const currentRenames = useMemo(() => cleanRenameMap(renameDrafts), [renameDrafts]);
   const baselineRenames = baselineRef.current.renames;
@@ -331,6 +373,18 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
     return `${selectedSlugs.size} app${selectedSlugs.size === 1 ? "" : "s"} allowed`;
   }, [config, mode, selectedSlugs.size]);
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchProviders();
+      if (selectedProviderId) {
+        await loadMarketplaceConfig(selectedProviderId);
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
@@ -367,16 +421,11 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
               variant="outline"
               size="sm"
               className="gap-2"
-              onClick={() => {
-                fetchProviders();
-                if (selectedProviderId) {
-                  loadMarketplaceConfig(selectedProviderId);
-                }
-              }}
-              disabled={loadingProviders || loadingConfig}
+              onClick={handleRefresh}
+              disabled={isRefreshing || loadingConfig}
             >
-              <RefreshCw className="h-4 w-4" />
-              {loadingProviders || loadingConfig ? "Refreshing…" : "Refresh"}
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? "Refreshing…" : "Refresh"}
             </Button>
             <Button
               size="sm"
@@ -493,19 +542,31 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
           </div>
 
           {loadingConfig ? (
-            <div className="flex items-center justify-center rounded-lg border border-dashed p-8 text-muted-foreground">
-              Loading marketplace apps…
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin mb-4" />
+              <p>Loading marketplace apps…</p>
             </div>
           ) : filteredApps.length === 0 ? (
             <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-              {config
-                ? "No marketplace apps match your filters."
-                : "Select a provider to load marketplace data."}
+              <Store className="h-8 w-8 mx-auto mb-4 opacity-50" />
+              <p className="font-medium mb-2">
+                {config ? "No marketplace apps match your filters." : "Select a provider to load marketplace data."}
+              </p>
+              <p className="text-xs">
+                {config && debouncedSearch && "Try adjusting your search or category filter."}
+              </p>
             </div>
           ) : (
-            <ScrollArea className="max-h-[640px] rounded-lg border">
-              <div className="divide-y">
-                {filteredApps.map((app) => {
+            <>
+              <div className="mb-4 text-sm text-muted-foreground">
+                Showing {startDisplay}-{endDisplay} of {filteredApps.length} marketplace apps
+                {filteredApps.length > 0 &&
+                  ` (Page ${Math.min(currentPage, totalPages)} of ${totalPages})`}
+                {debouncedSearch && ` matching "${debouncedSearch}"`}
+                {categoryFilter !== "all" && ` in ${categoryFilter}`}
+              </div>
+              <div className="rounded-lg border divide-y">
+                {paginatedApps.map((app) => {
                   const normalizedSlug = normalizeSlug(app.slug);
                   const isSelected =
                     mode === "custom" ? selectedSlugs.has(normalizedSlug) : true;
@@ -573,9 +634,40 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
                     </div>
                   );
                 })}
+                {paginatedApps.length === 0 && (
+                  <div className="p-6 text-center text-sm text-muted-foreground">
+                    No apps on this page.
+                  </div>
+                )}
               </div>
-              <ScrollBar />
-            </ScrollArea>
+              {filteredApps.length > APPS_PER_PAGE && (
+                <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Page {Math.min(currentPage, totalPages)} of {totalPages}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage >= totalPages}
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                      }
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

@@ -1,0 +1,48 @@
+.bg-grid-pattern {
+  background-image:
+    linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .bg-grid-pattern {
+    background-size: 16px 16px;
+    opacity: 0.3;
+  }
+
+  /* Reduce motion on mobile for better performance */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Touch-friendly hover states */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Better scroll performance */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Performance optimizations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Better image handling */
+.responsive-image {
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
+}

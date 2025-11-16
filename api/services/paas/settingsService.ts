@@ -6,6 +6,8 @@
 import { HeadBucketCommand, S3Client } from '@aws-sdk/client-s3';
 import { pool, PaasSettings } from '../../lib/database.js';
 import { encrypt, decrypt } from '../../lib/crypto.js';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 type SettingValueType = 'string' | 'number' | 'boolean' | 'json';
 
@@ -382,9 +384,26 @@ export class PaasSettingsService {
         continue;
       }
 
+      let finalValue = definition.defaultValue;
+
+      // Special handling for local_storage_path - ensure it exists
+      if (definition.key === 'local_storage_path' && typeof finalValue === 'string') {
+        try {
+          await fs.mkdir(finalValue, { recursive: true });
+          console.log(`Created local storage directory: ${finalValue}`);
+        } catch (error) {
+          console.warn(`Failed to create local storage directory ${finalValue}:`, error);
+          // Fallback to a temporary directory
+          const fallbackPath = '/tmp/paas-storage';
+          await fs.mkdir(fallbackPath, { recursive: true });
+          finalValue = fallbackPath;
+          console.log(`Using fallback storage directory: ${fallbackPath}`);
+        }
+      }
+
       await this.set(
         definition.key,
-        definition.defaultValue as any,
+        finalValue as any,
         {
           category: definition.category,
           description: definition.description,
@@ -1057,12 +1076,18 @@ export class PaasSettingsService {
       clearTimeout(timeout);
 
       if (!response.ok) {
-        throw new Error(`received HTTP ${response.status}`);
+        // Don't fail the whole validation for Loki connectivity issues
+        console.warn(`Loki endpoint at ${endpoint} returned HTTP ${response.status}, logging may be limited`);
+        return;
       }
     } catch (error: any) {
-      throw new Error(
-        `Failed to reach Loki at ${endpoint}: ${error?.message || error}`
-      );
+      if (error.name === 'AbortError') {
+        console.warn(`Loki endpoint at ${endpoint} timed out, logging may be limited`);
+        return;
+      }
+      // Log warning but don't fail the validation
+      console.warn(`Failed to reach Loki at ${endpoint}: ${error?.message || error}, logging may be limited`);
+      return;
     }
   }
 }

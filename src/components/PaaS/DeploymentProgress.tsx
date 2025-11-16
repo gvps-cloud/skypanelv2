@@ -123,8 +123,11 @@ export const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
         onJobComplete?.({ success: data.state === 'completed', job: data });
       }
     } catch (error: any) {
-      if (String(error?.message || '').includes('404')) {
+      const message = String(error?.message || '');
+      const isNotFound = error?.status === 404 || /job not found/i.test(message);
+      if (isNotFound) {
         setJobStatus(null);
+        jobStateRef.current = 'missing';
         return;
       }
       console.error('Failed to poll job status:', error);
@@ -275,6 +278,12 @@ export const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
         <CardDescription>
           {jobInfo?.jobId ? `Tracking job ${jobInfo.jobId}` : 'Latest deployment status'}
         </CardDescription>
+        {deployment?.error_message && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <span>{deployment.error_message}</span>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid gap-3 md:grid-cols-3">

@@ -23,11 +23,15 @@ interface CreateVPSStepsProps {
   // Linode-specific props
   _linodeImages?: any[];
   linodeStackScripts?: any[];
+  marketplaceApps?: any[];
   selectedStackScript?: any | null;
   onStackScriptSelect?: (script: any | null) => void;
   stackscriptData?: Record<string, any>;
   onStackScriptDataChange?: (data: Record<string, any>) => void;
   allowedImagesDisplay?: string;
+  marketplaceLoading?: boolean;
+  marketplaceError?: string | null;
+  onMarketplaceRefresh?: () => void;
   _osGroups?: Record<
     string,
     {
@@ -59,11 +63,15 @@ export const CreateVPSSteps: React.FC<CreateVPSStepsProps> = ({
   token,
   _linodeImages = [],
   linodeStackScripts = [],
+  marketplaceApps = [],
   selectedStackScript = null,
   onStackScriptSelect = () => {},
   stackscriptData = {},
   onStackScriptDataChange = () => {},
   allowedImagesDisplay = "",
+  marketplaceLoading = false,
+  marketplaceError = null,
+  onMarketplaceRefresh = () => {},
   _osGroups = {},
   effectiveOsGroups = {},
   selectedOSGroup = null,
@@ -83,23 +91,32 @@ export const CreateVPSSteps: React.FC<CreateVPSStepsProps> = ({
           </label>
           <LazyDeploymentSelection
             stackScripts={linodeStackScripts}
+            marketplaceApps={marketplaceApps}
             selectedStackScript={selectedStackScript}
             onStackScriptSelect={onStackScriptSelect}
+            marketplaceLoading={marketplaceLoading}
+            marketplaceError={marketplaceError}
+            onMarketplaceRefresh={onMarketplaceRefresh}
           />
         </div>
-
-        <LazyStackScriptConfig
-          selectedStackScript={selectedStackScript}
-          stackscriptData={stackscriptData}
-          onStackScriptDataChange={onStackScriptDataChange}
-          allowedImagesDisplay={allowedImagesDisplay}
-        />
       </div>
     );
   }
 
-  // Step 3: OS selection
+  // Step 3: Deployment configuration (conditional)
   if (step === 3) {
+    return (
+      <LazyStackScriptConfig
+        selectedStackScript={selectedStackScript}
+        stackscriptData={stackscriptData}
+        onStackScriptDataChange={onStackScriptDataChange}
+        allowedImagesDisplay={allowedImagesDisplay}
+      />
+    );
+  }
+
+  // Step 4: OS selection
+  if (step === 4) {
     return (
       <div className="space-y-4">
         <div className="flex items-center space-x-2">
@@ -149,8 +166,8 @@ export const CreateVPSSteps: React.FC<CreateVPSStepsProps> = ({
     );
   }
 
-  // Step 4: Configuration/Finalization
-  if (step === 4) {
+  // Step 5: Configuration/Finalization
+  if (step === 5) {
     return (
       <div className="space-y-4">
         <LinodeConfiguration

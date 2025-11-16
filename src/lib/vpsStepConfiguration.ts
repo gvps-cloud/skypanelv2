@@ -34,6 +34,8 @@ export interface StepConfigurationOptions {
   providerType: ProviderType;
   /** Current form data for additional context */
   formData: Partial<CreateVPSForm>;
+  /** Whether the selected deployment requires an additional configuration step */
+  hasDeploymentConfig?: boolean;
 }
 
 /**
@@ -54,12 +56,18 @@ const ALL_STEPS = [
   },
   {
     originalStepNumber: 3,
+    id: "deployment-config",
+    title: "App Configuration",
+    description: "Provide credentials and options required by the selected marketplace app.",
+  },
+  {
+    originalStepNumber: 4,
     id: "os",
     title: "Operating System",
     description: "Pick the base operating system for this VPS.",
   },
   {
-    originalStepNumber: 4,
+    originalStepNumber: 5,
     id: "finalize",
     title: "Finalize & Review",
     description: "Set credentials and optional add-ons before provisioning.",
@@ -80,8 +88,12 @@ export function getActiveSteps(
   options: StepConfigurationOptions
 ): StepConfiguration[] {
   const { providerType } = options;
-
-  const activeSteps = ALL_STEPS;
+  const activeSteps = ALL_STEPS.filter((step) => {
+    if (step.id === "deployment-config" && !options.hasDeploymentConfig) {
+      return false;
+    }
+    return true;
+  });
 
   // Calculate total active steps for display
   const totalSteps = activeSteps.length;
