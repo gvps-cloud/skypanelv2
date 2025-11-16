@@ -217,7 +217,8 @@ BEGIN
     INSERT INTO wallets (organization_id, balance)
     VALUES (admin_org_id, 5000.00)
     ON CONFLICT DO NOTHING;
-END $$;
+END;
+$$;
 
 -- ============================================================
 -- Consolidated Historical Migrations (non-container)
@@ -252,7 +253,8 @@ BEGIN
       ADD CONSTRAINT vps_plans_provider_id_fkey
       FOREIGN KEY (provider_id) REFERENCES service_providers(id) ON DELETE SET NULL;
   END IF;
-END $$;
+END;
+$$;
 
 DO $$
 BEGIN
@@ -271,7 +273,8 @@ BEGIN
     BEFORE UPDATE ON vps_plans
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
   END IF;
-END $$;
+END;
+$$;
 
 DO $$
 BEGIN
@@ -286,7 +289,8 @@ BEGIN
     SET base_price = price_monthly
     WHERE base_price IS NULL AND price_monthly IS NOT NULL;
   END IF;
-END $$;
+END;
+$$;
 
 -- Migration 004: Ensure user_api_keys structure matches expectations
 DO $$
@@ -323,7 +327,8 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_api_keys' AND column_name = 'updated_at') THEN
         ALTER TABLE user_api_keys ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
     END IF;
-END $$;
+END;
+$$;
 
 CREATE INDEX IF NOT EXISTS idx_user_api_keys_active ON user_api_keys(active);
 
@@ -450,7 +455,8 @@ BEGIN
     BEFORE UPDATE ON networking_config
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
   END IF;
-END $$;
+END;
+$$;
 
 -- Migration 008: Notifications enhancement
 ALTER TABLE activity_logs
@@ -1082,7 +1088,8 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'service_providers table does not exist. Please ensure earlier schema is applied.';
   END IF;
-END $$;
+END;
+$$;
 
 ALTER TABLE service_providers DROP CONSTRAINT IF EXISTS service_providers_type_check;
 
@@ -1112,7 +1119,8 @@ BEGIN
     BEFORE UPDATE ON provider_metadata
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
   END IF;
-END $$;
+END;
+$$;
 
 DO $$
 BEGIN
@@ -1125,13 +1133,13 @@ BEGIN
     ALTER TABLE vps_instances ADD COLUMN provider_type VARCHAR(50);
     CREATE INDEX IF NOT EXISTS idx_vps_instances_provider_type ON vps_instances(provider_type);
   END IF;
-END $$;
+END;
+$$;
 
 COMMENT ON TABLE provider_metadata IS 'Stores provider-specific metadata and configuration';
 COMMENT ON COLUMN service_providers.type IS 'Provider type: linode';
 COMMENT ON COLUMN vps_instances.provider_type IS 'Cached provider type for quick filtering';
-
-INSERT INTO service_providers (name, type, api_key_encrypted, configuration, active)
+-- Default service provider records are seeded via application flows, so no static INSERT here.
 
 -- Migration 015: Activity log system events
 ALTER TABLE activity_logs ALTER COLUMN user_id DROP NOT NULL;
@@ -1157,7 +1165,8 @@ BEGIN
     ALTER TABLE vps_instances
       ADD COLUMN provider_id UUID REFERENCES service_providers(id) ON DELETE SET NULL;
   END IF;
-END $$;
+END;
+$$;
 
 CREATE INDEX IF NOT EXISTS idx_vps_instances_provider_id ON vps_instances(provider_id);
 
@@ -1182,7 +1191,8 @@ BEGIN
     WHERE provider_type IS NULL
       AND provider_id IS NULL;
   END IF;
-END $$;
+END;
+$$;
 
 COMMENT ON COLUMN vps_instances.provider_id IS 'Foreign key reference to service_providers table for direct provider lookup';
 
@@ -1316,7 +1326,8 @@ BEGIN
       FOR EACH ROW
       EXECUTE FUNCTION update_updated_at_column();
   END IF;
-END $$;
+END;
+$$;
 
 INSERT INTO provider_region_overrides (provider_id, region)
 SELECT
@@ -1357,7 +1368,8 @@ BEGIN
       FOR EACH ROW
       EXECUTE FUNCTION update_updated_at_column();
   END IF;
-END $$;
+END;
+$$;
 
 COMMENT ON TABLE provider_marketplace_overrides IS 'Stores admin-defined allowlist of provider marketplace applications.';
 COMMENT ON COLUMN provider_marketplace_overrides.app_slug IS 'Marketplace app slug (normalized to lowercase).';
@@ -1386,7 +1398,8 @@ BEGIN
       FOR EACH ROW
       EXECUTE FUNCTION update_updated_at_column();
   END IF;
-END $$;
+END;
+$$;
 
 COMMENT ON TABLE provider_marketplace_labels IS 'Stores local display-name overrides for provider marketplace applications.';
 COMMENT ON COLUMN provider_marketplace_labels.display_name IS 'Admin-defined display label applied within the SkyPanel UI.';

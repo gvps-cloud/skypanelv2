@@ -18,6 +18,13 @@ const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SETUP_SCRIPT_PATH = path.resolve(__dirname, '../../../scripts/setup-worker.sh');
+const ADVERTISE_ADDR_ENV_KEYS = [
+  'PAAS_SWARM_ADVERTISE_ADDR',
+  'SWARM_ADVERTISE_ADDR',
+  'PAAS_MANAGER_IP',
+  'MANAGER_IP',
+  'HOST_IP',
+];
 
 let cachedSetupScript: string | null = null;
 
@@ -40,6 +47,67 @@ async function getSetupScriptContent(): Promise<string> {
   } catch (error: any) {
     throw new Error(`Setup script not found at ${SETUP_SCRIPT_PATH}: ${error?.message || error}`);
   }
+}
+
+function isValidIPv4(addr?: string | null): boolean {
+  if (!addr) {
+    return false;
+  }
+  const trimmed = addr.trim();
+  const parts = trimmed.split('.');
+  if (parts.length !== 4) {
+    return false;
+  }
+  return parts.every(part => {
+    if (!/^\d+$/.test(part)) {
+      return false;
+    }
+    const value = Number(part);
+    return value >= 0 && value <= 255;
+  });
+}
+
+function extractFirstIPv4(value: string): string | null {
+  const tokens = value.split(/\s+/).filter(Boolean);
+  for (const token of tokens) {
+    if (isValidIPv4(token)) {
+      return token;
+    }
+  }
+  return null;
+}
+
+async function resolveManagerAdvertiseAddr(): Promise<string> {
+  for (const key of ADVERTISE_ADDR_ENV_KEYS) {
+    const candidate = process.env[key];
+    if (isValidIPv4(candidate)) {
+      return candidate!.trim();
+    }
+  }
+
+  const commands = [
+    'hostname -I',
+    'ip route get 1.1.1.1',
+    'ip route get 8.8.8.8',
+    'ipconfig getifaddr en0',
+    'ipconfig getifaddr en1',
+  ];
+
+  for (const command of commands) {
+    try {
+      const { stdout } = await execAsync(command);
+      const ip = extractFirstIPv4(stdout);
+      if (ip) {
+        return ip;
+      }
+    } catch {
+      // Command not supported on this host; try the next fallback.
+    }
+  }
+
+  throw new Error(
+    'Unable to determine a valid advertise IP address. Set PAAS_SWARM_ADVERTISE_ADDR (or SWARM_ADVERTISE_ADDR) to your manager IP and retry.'
+  );
 }
 
 export interface NodeProvisionOptions {
@@ -94,9 +162,8 @@ export class NodeManagerService {
         };
       }
 
-      // Get local IP address
-      const { stdout: ipOutput } = await execAsync("hostname -I | awk '{print $1}'");
-      const managerIp = ipOutput.trim();
+      // Get local IP address (or configured override)
+      const managerIp = await resolveManagerAdvertiseAddr();
 
       // Initialize Swarm
       await execAsync(`docker swarm init --advertise-addr ${managerIp}`);
