@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import { pipeline } from 'stream/promises';
 import { pool, PaasBuildCache } from '../../lib/database.js';
 import { PaasSettingsService } from './settingsService.js';
+import { ensureDirectory, removePath } from '../../lib/fsUtils.js';
 
 export interface BuildCacheConfig {
   enabled: boolean;
@@ -101,10 +102,17 @@ export class BuildCacheService {
     } else {
       const basePath = storage.local?.path || '/var/paas/storage';
       const destDir = path.join(basePath, this.CACHE_PREFIX);
-      await fs.mkdir(destDir, { recursive: true });
-      const destPath = path.join(destDir, `${options.applicationId}-${fileName}`);
-      await fs.copyFile(options.archivePath, destPath);
-      cacheUrl = destPath;
+
+      try {
+        await ensureDirectory(destDir);
+        const destPath = path.join(destDir, `${options.applicationId}-${fileName}`);
+        await fs.copyFile(options.archivePath, destPath);
+        cacheUrl = destPath;
+      } catch (error: any) {
+        console.warn(`[BuildCache] Failed to save cache archive locally: ${error.message}`);
+        // If cache persistence fails, continue without cache but don't fail the build
+        cacheUrl = '';
+      }
     }
 
     const upsert = await pool.query<PaasBuildCache>(
@@ -127,14 +135,26 @@ export class BuildCacheService {
    * Download cache archive to local temp path (if needed)
    */
   static async downloadCacheArchive(cache: PaasBuildCache): Promise<CacheDownloadResult> {
-    if (cache.cache_url.startsWith('s3://')) {
-      await fs.mkdir(TEMP_ARCHIVE_DIR, { recursive: true });
-      const tempPath = path.join(TEMP_ARCHIVE_DIR, `${crypto.randomUUID()}.tgz`);
-      await this.downloadS3Object(cache.cache_url, tempPath);
-      return { archivePath: tempPath, cleanup: true };
-    }
+    try {
+      if (cache.cache_url.startsWith('s3://')) {
+        await ensureDirectory(TEMP_ARCHIVE_DIR);
+        const tempPath = path.join(TEMP_ARCHIVE_DIR, `${crypto.randomUUID()}.tgz`);
+        await this.downloadS3Object(cache.cache_url, tempPath);
+        return { archivePath: tempPath, cleanup: true };
+      }
 
-    return { archivePath: cache.cache_url, cleanup: false };
+      // For local cache, verify the file exists before returning
+      try {
+        await fs.access(cache.cache_url);
+        return { archivePath: cache.cache_url, cleanup: false };
+      } catch (accessError: any) {
+        console.warn(`[BuildCache] Cache file not accessible: ${cache.cache_url} (${accessError.message})`);
+        throw accessError;
+      }
+    } catch (error: any) {
+      console.warn(`[BuildCache] Failed to download cache archive: ${error.message}`);
+      throw error;
+    }
   }
 
   /**
@@ -287,7 +307,7 @@ export class BuildCacheService {
       return;
     }
 
-    await fs.rm(cache.cache_url, { force: true }).catch(() => {});
+    await removePath(cache.cache_url).catch(() => {});
   }
 
   private static parseS3Url(url: string): { bucket: string; key: string } | null {

@@ -15,6 +15,7 @@ import * as crypto from 'crypto';
 import { constants as zlibConstants } from 'zlib';
 import { GitService } from './gitService.js';
 import { BuildCacheService, BuildCacheConfig } from './buildCacheService.js';
+import { ensureDirectory, removePath } from '../../lib/fsUtils.js';
 
 const execAsync = promisify(exec);
 
@@ -64,9 +65,7 @@ export class BuilderService {
       };
     }
 
-    await Promise.all(
-      Object.values(this.directories).map((dir) => fs.mkdir(dir, { recursive: true }))
-    );
+    await Promise.all(Object.values(this.directories).map((dir) => ensureDirectory(dir)));
   }
 
   /**
@@ -242,8 +241,8 @@ export class BuilderService {
       }
 
       // Cleanup
-      await fs.rm(workDir, { recursive: true, force: true });
-      await fs.rm(cacheDir, { recursive: true, force: true });
+      await removePath(workDir);
+      await removePath(cacheDir);
 
       await this.logBuild(deploymentId, `-----> Build complete! Slug size: ${(slugSize / 1024 / 1024).toFixed(2)}MB`);
 
@@ -251,8 +250,8 @@ export class BuilderService {
     } catch (error: any) {
       await this.logBuild(deploymentId, `!     Build failed: ${error.message}`, true);
       // Cleanup on error
-      await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
-      await fs.rm(cacheDir, { recursive: true, force: true }).catch(() => {});
+      await removePath(workDir).catch(() => {});
+      await removePath(cacheDir).catch(() => {});
       throw error;
     }
   }
@@ -377,8 +376,8 @@ export class BuilderService {
    */
   private static async prepareCacheDirectory(deploymentId: string): Promise<string> {
     const cacheDir = path.join(this.directories.cache, deploymentId);
-    await fs.rm(cacheDir, { recursive: true, force: true }).catch(() => {});
-    await fs.mkdir(cacheDir, { recursive: true });
+    await removePath(cacheDir).catch(() => {});
+    await ensureDirectory(cacheDir);
     return cacheDir;
   }
 
@@ -425,7 +424,7 @@ export class BuilderService {
         cwd: cacheDir,
       });
       if (archive.cleanup) {
-        await fs.rm(archive.archivePath, { force: true }).catch(() => {});
+        await removePath(archive.archivePath).catch(() => {});
       }
       await BuildCacheService.touchCache(cache.id);
       await this.logBuild(deploymentId, '-----> Build cache restored');
@@ -499,7 +498,7 @@ export class BuilderService {
         `!     Failed to persist build cache (${error?.message || error}).`
       );
     } finally {
-      await fs.rm(archivePath, { force: true }).catch(() => {});
+      await removePath(archivePath).catch(() => {});
     }
   }
 
@@ -545,7 +544,7 @@ export class BuilderService {
           : `https://${storageConfig.s3.bucket}.s3.${storageConfig.s3.region || 'us-east-1'}.amazonaws.com/${s3Key}`;
 
         console.log(`✅ Slug uploaded to S3: ${s3Url}`);
-        await fs.rm(slugPath, { force: true }).catch(() => {});
+        await removePath(slugPath).catch(() => {});
         return s3Url;
       } catch (error) {
         console.error('Failed to upload slug to S3:', error);

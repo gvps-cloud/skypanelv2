@@ -87,6 +87,7 @@ All PaaS settings live in the `paas_settings` table and are editable under **Adm
 | Buildpacks | `buildpack_default_stack`, `buildpack_cache_enabled`, `buildpack_cache_ttl_hours`, `buildpack_cache_max_size_mb` | Drives the BuilderService cache behavior. |
 | Swarm | `swarm_initialized`, `swarm_manager_ip`, `swarm_join_token_*` | Populated automatically by `npm run paas:init`. |
 | Networking | `traefik_acme_email`, `default_domain` | Domain + SSL automation. |
+| Registry | `registry_url`, `registry_username`, `registry_password` | Defaults to the built-in registry at `registry.<default_domain>` after `npm run paas:init`, override to use an external registry. |
 | Limits | `max_apps_per_org`, `max_deployments_per_hour` | Enforced in PaaS API routes. |
 
 ### Worker Nodes
@@ -95,10 +96,15 @@ All PaaS settings live in the `paas_settings` table and are editable under **Adm
 * Remote workers: copy `.env`, run `scripts/setup-worker.sh <SWARM_TOKEN> <MANAGER_IP>`, then approve the node inside `/admin#paas-workers` if required.
 * Worker monitors run every 30s (resource updates) and 60s (health checks). Alerts are posted via the Notification Service.
 
+### Registry Requirements
+
+`npm run paas:init` now deploys a Docker Registry service inside the `paas-infra` stack and auto-populates `registry_url` with `registry.<default_domain>`. Create a DNS record (or hosts entry for local installs) that points `registry.<default_domain>` to the Swarm manager. Traefik terminates TLS for that host, so `docker push registry.<default_domain>/paas/<slug>:<version>` works out of the box without marking it as an insecure registry. If you prefer Docker Hub or another provider, overwrite `registry_url`/`registry_username`/`registry_password` in **Admin → PaaS Settings**; those values will be used instead. In all cases, deployment credentials are forwarded with `--with-registry-auth` so worker nodes can pull the exact digest that the builder pushed.
+
 ## 4. Troubleshooting
 
 | Symptom | Resolution |
 | --- | --- |
+| `docker service create ... image ... could not be accessed on a registry` | Ensure `registry.<default_domain>` resolves to the manager and that the `registry` service is running (`docker service ls | grep registry`). Re-run `npm run paas:init` if the registry configs were not deployed, or set `registry_url` to a reachable external registry. Run `docker login <registry_url>` on the manager to confirm access. |
 | `docker stack deploy ... network ... cannot be used` | Make sure both `paas-infrastructure` and `paas-public` are overlay networks (already fixed in repo). Re-run `docker stack rm paas-infra && npm run paas:init`. |
 | `redis` errors / queues stuck | Confirm `REDIS_URL` is reachable. Worker logs show queue failures by job type. |
 | Apps stuck in `building` | Inspect `BuilderService` logs via `/api/paas/apps/:id/deployments/:deploymentId/logs`. Verify build cache path `/var/paas/cache` exists and Docker can mount it. |

@@ -1,7 +1,7 @@
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import * as fs from 'fs/promises';
 import { pool } from '../../lib/database.js';
 import { PaasSettingsService } from './settingsService.js';
+import { removePath } from '../../lib/fsUtils.js';
 
 export class SlugService {
   /**
@@ -56,7 +56,7 @@ export class SlugService {
     }
 
     // Local storage
-    await fs.rm(slugUrl, { force: true }).catch(() => {});
+    await removePath(slugUrl).catch(() => {});
   }
 
   private static extractS3Key(slugUrl: string, bucket: string): string | null {

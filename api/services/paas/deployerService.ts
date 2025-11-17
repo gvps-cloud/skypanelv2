@@ -5,7 +5,7 @@
 
 import { pool, PaasApplication, PaasDeployment } from '../../lib/database.js';
 import { PaasSettingsService } from './settingsService.js';
-import { exec, ExecOptions } from 'child_process';
+import { exec, ExecOptions, spawn } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -19,6 +19,7 @@ import { HealthCheckService } from './healthCheckService.js';
 import { PaasEnvironmentService } from './environmentService.js';
 import { logActivity } from '../activityLogger.js';
 import { NodeManagerService } from './nodeManagerService.js';
+import { ensureDirectory, removePath } from '../../lib/fsUtils.js';
 
 const execAsync = promisify(exec);
 const SLUG_CACHE_DIR = process.env.PAAS_SLUG_CACHE_DIR || path.join(os.tmpdir(), 'paas-slug-cache');
@@ -185,7 +186,7 @@ export class DeployerService {
       ? { localPath: cachedPath, cleanup: false }
       : await this.ensureLocalSlug(slugUrl);
     const runtimeDir = `/var/paas/runtime/${deploymentId}`;
-    await fs.mkdir(runtimeDir, { recursive: true });
+    await ensureDirectory(runtimeDir);
 
     await tar.x({
       file: localPath,
@@ -194,7 +195,7 @@ export class DeployerService {
     });
 
     if (cleanup) {
-      await fs.rm(localPath, { force: true }).catch(() => {});
+      await removePath(localPath).catch(() => {});
     }
 
     return runtimeDir;
@@ -209,7 +210,7 @@ export class DeployerService {
       return { localPath: slugUrl, cleanup: false };
     }
 
-    await fs.mkdir(SLUG_CACHE_DIR, { recursive: true });
+    await ensureDirectory(SLUG_CACHE_DIR);
     const cacheKey = crypto.createHash('sha1').update(slugUrl).digest('hex');
     const cachePath = path.join(SLUG_CACHE_DIR, `${cacheKey}.tgz`);
 
@@ -288,23 +289,28 @@ CMD ["/start", "web"]
       return null;
     }
 
-    const remoteName = `${registry.url}/paas/${app.slug}:${deployment.version}`;
+    // Allow registry_url to include an optional path/namespace, e.g. "docker.io/username"
+    const [host, ...pathParts] = registry.url.split('/');
+    const loginHost = host;
+    const basePath = pathParts.join('/');
+    const repoPrefix = basePath ? `${basePath}/paas` : 'paas';
+    const remoteName = `${loginHost}/${repoPrefix}/${app.slug}:${deployment.version}`;
+
     try {
       if (registry.username && registry.password) {
-        await this.execDocker(
-          `docker login ${registry.url} -u ${registry.username} -p ${registry.password}`
-        );
+        await this.dockerLogin(loginHost, registry.username, registry.password);
       }
       await this.execDocker(`docker tag ${imageName} ${remoteName}`);
       await this.execDocker(`docker push ${remoteName}`);
-      console.log(`[Deploy] Pushed image ${remoteName} to registry ${registry.url}`);
+      console.log(`[Deploy] Pushed image ${remoteName} to registry ${loginHost}`);
       return remoteName;
     } catch (error: any) {
+      const message = error?.message || error;
       console.warn(
-        `[Deploy] Failed to push image ${imageName} to registry ${registry.url}:`,
-        error?.message || error
+        `[Deploy] Failed to push image ${imageName} to registry ${loginHost}:`,
+        message
       );
-      return null;
+      throw new Error(`Failed to push Docker image to ${loginHost}. ${message}`);
     }
   }
 
@@ -346,6 +352,9 @@ CMD ["/start", "web"]
     const networkName = `paas-net-${app.id}`;
     await this.createOverlayNetwork(networkName);
 
+    // Ensure public network exists for external access
+    await this.ensurePublicNetwork();
+
     // Check if service exists
     const serviceExists = await this.checkServiceExists(serviceName);
 
@@ -357,6 +366,7 @@ CMD ["/start", "web"]
       // Update existing service
       const updateArgs = [
         'docker service update',
+        '--with-registry-auth',
         `--image ${imageName}`,
         `--replicas ${replicas}`,
         `--limit-cpu ${cpuLimit}`,
@@ -368,7 +378,7 @@ CMD ["/start", "web"]
         ...envArgs,
         ...systemEnvArgs,
         `--label "traefik.enable=true"`,
-        `--label "traefik.http.routers.${app.slug}.rule=Host(\`${appUrl}\`)"`,
+        `--label 'traefik.http.routers.${app.slug}.rule=Host(\`${appUrl}\`)'`,
         `--label "traefik.http.services.${app.slug}.loadbalancer.server.port=5000"`,
         `--update-parallelism ${Math.max(1, Math.min(replicas || 1, 2))}`,
         '--update-order start-first',
@@ -381,6 +391,7 @@ CMD ["/start", "web"]
       const createUpdateParallelism = Math.max(1, Math.min(replicas || 1, 2));
       const createArgs = [
         'docker service create',
+        '--with-registry-auth',
         `--name ${serviceName}`,
         `--replicas ${replicas}`,
         `--limit-cpu ${cpuLimit}`,
@@ -393,7 +404,7 @@ CMD ["/start", "web"]
         ...envArgs,
         ...systemEnvArgs,
         `--label "traefik.enable=true"`,
-        `--label "traefik.http.routers.${app.slug}.rule=Host(\`${appUrl}\`)"`,
+        `--label 'traefik.http.routers.${app.slug}.rule=Host(\`${appUrl}\`)'`,
         `--label "traefik.http.services.${app.slug}.loadbalancer.server.port=5000"`,
         `--label "paas.app.id=${app.id}"`,
         `--label "paas.app.name=${app.name}"`,
@@ -430,6 +441,25 @@ CMD ["/start", "web"]
     } catch (error) {
       // Network doesn't exist, create it
       await this.execDocker(`docker network create --driver overlay --attachable ${networkName}`);
+    }
+  }
+
+  /**
+   * Ensure the public network exists for external access
+   */
+  private static async ensurePublicNetwork(): Promise<void> {
+    try {
+      await this.execDocker('docker network inspect paas-public');
+      // Network exists
+    } catch (error) {
+      try {
+        // Network doesn't exist, create it
+        console.log('[Deploy] Creating paas-public network for external access');
+        await this.execDocker('docker network create --driver overlay --attachable paas-public');
+      } catch (createError: any) {
+        console.warn('[Deploy] Failed to create paas-public network:', createError.message);
+        // Continue without public network - service will be created but may not be externally accessible
+      }
     }
   }
 
@@ -656,6 +686,32 @@ CMD ["/start", "web"]
     );
 
     return { replicas: desiredReplicas };
+  }
+
+  private static dockerLogin(registryUrl: string, username: string, password: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const child = spawn('docker', ['login', registryUrl, '-u', username, '--password-stdin']);
+      let stderr = '';
+
+      child.stderr.on('data', (chunk: Buffer) => {
+        stderr += chunk.toString();
+      });
+
+      child.on('error', (error) => {
+        reject(error);
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(stderr.trim() || `docker login exited with code ${code}`));
+        }
+      });
+
+      child.stdin.write(`${password}\n`);
+      child.stdin.end();
+    });
   }
 
   private static execDocker(

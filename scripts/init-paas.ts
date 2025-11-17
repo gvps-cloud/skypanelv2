@@ -40,6 +40,8 @@ interface DeployConfig {
   traefikEmail: string;
   grafanaAdminUser: string;
   grafanaAdminPassword: string;
+  defaultDomain: string;
+  registryHostname: string;
 }
 
 async function main(): Promise<void> {
@@ -77,16 +79,23 @@ async function prepareDeployConfig(): Promise<DeployConfig> {
     rawTraefikEmail,
     rawGrafanaUser,
     rawGrafanaPassword,
+    rawDefaultDomain,
+    rawRegistryUrl,
   ] = await Promise.all([
     PaasSettingsService.get('loki_retention_days'),
     PaasSettingsService.get('traefik_acme_email'),
     PaasSettingsService.get('grafana_admin_user'),
     PaasSettingsService.get('grafana_admin_password'),
+    PaasSettingsService.get('default_domain'),
+    PaasSettingsService.get('registry_url'),
   ]);
 
   const lokiRetentionDays = Number(rawRetention ?? 7) || 7;
   const traefikEmail = (rawTraefikEmail as string) || 'admin@example.com';
   const grafanaAdminUser = (rawGrafanaUser as string) || 'admin';
+  const defaultDomain = (rawDefaultDomain as string)?.trim() || 'apps.example.com';
+  const normalizedDomain = defaultDomain.replace(/^registry\./i, '').replace(/\/$/, '');
+  const registryHostname = `registry.${normalizedDomain}`;
 
   let grafanaAdminPassword = (rawGrafanaPassword as string) || '';
   if (!grafanaAdminPassword) {
@@ -97,6 +106,19 @@ async function prepareDeployConfig(): Promise<DeployConfig> {
       is_sensitive: true,
     });
     console.log(`   • Generated Grafana admin password: ${grafanaAdminPassword}`);
+  }
+
+  if (!rawRegistryUrl) {
+    await PaasSettingsService.set(
+      'registry_url',
+      registryHostname,
+      {
+        description: 'Internal registry hostname (auto-configured)',
+        category: 'registry',
+        skipValidation: true,
+      }
+    );
+    console.log(`   • Registry hostname set to ${registryHostname}`);
   }
 
   // Ensure Loki endpoint setting exists for downstream services
@@ -113,6 +135,8 @@ async function prepareDeployConfig(): Promise<DeployConfig> {
   console.log(`   • Traefik ACME email     : ${traefikEmail}`);
   console.log(`   • Grafana admin username : ${grafanaAdminUser}`);
   console.log(`   • Loki retention (days)  : ${lokiRetentionDays}`);
+  console.log(`   • Default domain         : ${normalizedDomain}`);
+  console.log(`   • Registry hostname      : ${registryHostname}`);
   console.log('');
 
   return {
@@ -120,6 +144,8 @@ async function prepareDeployConfig(): Promise<DeployConfig> {
     traefikEmail,
     grafanaAdminUser,
     grafanaAdminPassword,
+    defaultDomain: normalizedDomain,
+    registryHostname,
   };
 }
 
@@ -297,6 +323,7 @@ async function deployInfrastructure(config: DeployConfig): Promise<void> {
     GRAFANA_ADMIN_USER: config.grafanaAdminUser,
     GRAFANA_ADMIN_PASSWORD: config.grafanaAdminPassword,
     CONFIG_VERSION: process.env.CONFIG_VERSION || 'v1',
+    REGISTRY_HOSTNAME: config.registryHostname,
   };
 
   await execAsync('docker stack deploy --with-registry-auth -c docker-compose.yaml paas-infra', {
@@ -433,7 +460,8 @@ async function saveInitSummary(
     `Swarm Manager IP : ${swarm.managerIp}\n` +
     `Config Version   : ${process.env.CONFIG_VERSION || 'unknown'}\n` +
     `Loki Retention   : ${config.lokiRetentionDays} days\n` +
-    `Traefik ACME     : ${config.traefikEmail}\n\n` +
+    `Traefik ACME     : ${config.traefikEmail}\n` +
+    `Registry Host    : ${config.registryHostname}\n\n` +
     `Access Points:\n` +
     `  • Grafana    : ${accessPoints.grafana}\n` +
     `  • Traefik    : ${accessPoints.traefik}\n` +
@@ -456,10 +484,12 @@ function printSummary(config: DeployConfig, summaryPath?: string): void {
   console.log('   • Grafana : http://localhost:3002 (admin user/password from settings)');
   console.log('   • Traefik : http://localhost:8080 (dashboard)');
   console.log('   • Prometheus : http://localhost:9090');
+  console.log(`   • Registry : https://${config.registryHostname}`);
   console.log('');
   console.log('Stored settings:');
   console.log(`   • traefik_acme_email     : ${config.traefikEmail}`);
   console.log(`   • grafana_admin_user     : ${config.grafanaAdminUser}`);
+  console.log(`   • registry_url           : ${config.registryHostname}`);
   console.log('   • grafana_admin_password : stored securely in paas_settings');
   console.log('');
   if (summaryPath) {

@@ -653,12 +653,24 @@ export class PaasSettingsService {
     username?: string;
     password?: string;
   } | null> {
-    const url = ((await this.get('registry_url')) as string | null)?.trim();
+    let url = ((await this.get('registry_url')) as string | null)?.trim();
+
+    if (!url) {
+      const defaultDomain = ((await this.get('default_domain')) as string | null)?.trim();
+      if (defaultDomain) {
+        const normalizedDomain = defaultDomain.replace(/^registry\./i, '').replace(/\/$/, '');
+        url = `registry.${normalizedDomain}`;
+      }
+    }
+
     if (!url) {
       return null;
     }
 
-    const normalizedUrl = url.replace(/\/$/, '');
+    const normalizedUrl = url
+      .replace(/^https?:\/\//i, '')
+      .replace(/\/$/, '');
+
     const username = (await this.get('registry_username')) as string | undefined;
     const password = (await this.get('registry_password')) as string | undefined;
     return {

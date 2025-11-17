@@ -151,10 +151,22 @@ export class NodeManagerService {
     managerToken: string;
   }> {
     try {
-      // Check if Swarm is already initialized
       const swarmConfig = await PaasSettingsService.getSwarmConfig();
 
-      if (swarmConfig.initialized) {
+      // Inspect local Docker daemon to see if this node is already a Swarm manager
+      let localSwarm: any | null = null;
+      try {
+        localSwarm = await this.getLocalSwarmInfo();
+      } catch {
+        // If docker info fails we still attempt to initialize below
+        localSwarm = null;
+      }
+
+      const localState = (localSwarm?.LocalNodeState || '').toLowerCase();
+      const isLocalManager = Boolean(localSwarm?.ControlAvailable);
+
+      if (swarmConfig.initialized && isLocalManager && localState === 'active') {
+        // Settings say Swarm exists and local daemon agrees – return existing config
         return {
           managerIp: swarmConfig.managerIp!,
           workerToken: swarmConfig.workerToken!,
@@ -162,10 +174,16 @@ export class NodeManagerService {
         };
       }
 
+      if (swarmConfig.initialized && (!isLocalManager || localState !== 'active')) {
+        console.warn(
+          '[NodeManager] Swarm marked initialized in settings but local node is not a manager; re-initializing Swarm on this host.'
+        );
+      }
+
       // Get local IP address (or configured override)
       const managerIp = await resolveManagerAdvertiseAddr();
 
-      // Initialize Swarm
+      // Initialize Swarm on this node
       await execAsync(`docker swarm init --advertise-addr ${managerIp}`);
 
       // Get join tokens
@@ -178,10 +196,8 @@ export class NodeManagerService {
       await PaasSettingsService.set('swarm_join_token_worker', workerToken.trim(), { is_sensitive: true });
       await PaasSettingsService.set('swarm_join_token_manager', managerToken.trim(), { is_sensitive: true });
 
-      // Create public network for Traefik
-      await execAsync('docker network create --driver overlay --attachable paas-public').catch(() => {
-        // Network might already exist
-      });
+      // Create public network for Traefik with enhanced error handling
+      await this.ensurePublicNetwork();
 
       return {
         managerIp,
@@ -920,6 +936,32 @@ export class NodeManagerService {
            WHERE id = $2`,
           [error?.message || 'Unknown error', node.id]
         );
+      }
+    }
+  }
+
+  /**
+   * Ensure the public network exists for external access
+   */
+  static async ensurePublicNetwork(): Promise<void> {
+    try {
+      await execAsync('docker network inspect paas-public');
+      console.log('[NodeManager] paas-public network already exists');
+    } catch (error) {
+      try {
+        console.log('[NodeManager] Creating paas-public network for external access');
+        await execAsync('docker network create --driver overlay --attachable paas-public');
+        console.log('[NodeManager] Successfully created paas-public network');
+      } catch (createError: any) {
+        console.warn('[NodeManager] Failed to create paas-public network:', createError.message);
+        // Try one more time in case there was a race condition
+        try {
+          await execAsync('docker network inspect paas-public');
+          console.log('[NodeManager] paas-public network exists (was created by another process)');
+        } catch (retryError) {
+          console.error('[NodeManager] paas-public network does not exist and could not be created');
+          throw new Error(`Failed to create paas-public network: ${createError.message}`);
+        }
       }
     }
   }

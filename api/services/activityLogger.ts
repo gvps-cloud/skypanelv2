@@ -108,7 +108,21 @@ export async function logActivity(payload: ActivityPayload, req?: Request): Prom
     await query(
       `INSERT INTO activity_logs (user_id, organization_id, event_type, entity_type, entity_id, message, status, ip_address, user_agent, metadata, is_read, read_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-      [userId, organizationId, eventType, entityType, entityId, message, status, ip, ua, metadata, isRead, readAt]
+      [
+        // Fix: Only pass userId if it's a valid UUID string, otherwise null for system events
+        (userId && userId !== 'undefined' && userId !== 'null') ? userId : null,
+        organizationId,
+        eventType,
+        entityType,
+        entityId,
+        message,
+        status,
+        ip,
+        ua,
+        metadata,
+        isRead,
+        readAt
+      ]
     );
   } catch (e) {
     // Non-blocking: do not throw, but log to server console
@@ -164,7 +178,8 @@ export async function logRateLimitEvent(payload: RateLimitEventPayload, req: Req
       `INSERT INTO activity_logs (user_id, organization_id, event_type, entity_type, entity_id, message, status, ip_address, user_agent, metadata)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
-        userId || null,
+        // Fix: Only pass userId if it's a valid UUID string, otherwise null for system events
+        (userId && userId !== 'undefined' && userId !== 'null') ? userId : null,
         organizationId,
         'rate_limit_violation',
         'api_request',

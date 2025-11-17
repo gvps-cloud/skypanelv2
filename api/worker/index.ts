@@ -97,8 +97,27 @@ deployQueue.process(async (job) => {
 /**
  * Billing Queue Processor
  */
+billingQueue.process('hourly', async (job) => {
+  console.log(`[Billing] Processing hourly job ${job.id}`);
+
+  try {
+    const result = await PaasBillingService.recordHourlyUsage();
+    console.log(`[Billing] Completed - ${result.billedInstances} apps billed, $${result.totalAmount.toFixed(2)} charged`);
+
+    if (result.failedInstances.length > 0) {
+      console.warn(`[Billing] ${result.failedInstances.length} apps failed billing:`, result.errors);
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error('[Billing] Critical error:', error);
+    throw error;
+  }
+});
+
+// Default billing processor for any other billing job types
 billingQueue.process(async (job) => {
-  console.log(`[Billing] Processing job ${job.id}`);
+  console.log(`[Billing] Processing generic job ${job.id} (type: ${job.name || 'unknown'})`);
 
   try {
     const result = await PaasBillingService.recordHourlyUsage();

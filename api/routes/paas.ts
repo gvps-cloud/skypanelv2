@@ -22,6 +22,7 @@ import { SSLService } from '../services/paas/sslService.js';
 import { SlugService } from '../services/paas/slugService.js';
 import { PaasPlanService } from '../services/paas/planService.js';
 import { BuildCacheService } from '../services/paas/buildCacheService.js';
+import { paasPollingLimiter, paasStreamingLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
 
@@ -499,7 +500,7 @@ router.post(
  * GET /api/paas/apps/:id/deployments
  * Get deployment history
  */
-router.get('/apps/:id/deployments', param('id').isUUID(), async (req: Request, res: Response) => {
+router.get('/apps/:id/deployments', paasPollingLimiter, param('id').isUUID(), async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -668,6 +669,7 @@ router.get(
  */
 router.get(
   '/apps/:id/logs/stream',
+  paasStreamingLimiter,
   [
     param('id').isUUID(),
     validateQuery('level').optional().isIn(['info', 'warn', 'error', 'debug']),
@@ -1400,7 +1402,7 @@ router.get('/usage', async (req: Request, res: Response) => {
  * GET /api/paas/jobs/:id
  * Retrieve job status for build/deploy queues
  */
-router.get('/jobs/:id', param('id').isLength({ min: 1 }), async (req: Request, res: Response) => {
+router.get('/jobs/:id', paasPollingLimiter, param('id').isLength({ min: 1 }), async (req: Request, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -1475,8 +1477,8 @@ router.get(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const page = (req.query.page as number) || 1;
-      const limit = Math.min((req.query.limit as number) || 12, 100); // Cap at 100 for performance
+      const page = Number(req.query.page) || 1;
+      const limit = Math.min(Number(req.query.limit) || 12, 100); // Cap at 100 for performance
       const category = req.query.category as string;
       const featured = req.query.featured === 'true';
       const search = req.query.search as string;
@@ -1662,35 +1664,53 @@ router.post('/marketplace/deploy/:slug',
         return res.status(400).json({ errors: errors.array() });
       }
 
+      // Extract and validate request data
       const userId = (req as any).userId;
       const orgId = (req as any).organizationId;
       const { slug } = req.params;
       const { name, custom_slug, plan_id, custom_env_vars, selected_addons } = req.body;
-      const sanitizedSelectedAddons = sanitizeAddonIds(selected_addons);
-      let sanitizedCustomEnvVars: Record<string, string | number | boolean> = {};
 
-      if (custom_env_vars && typeof custom_env_vars === 'object' && !Array.isArray(custom_env_vars)) {
-        sanitizedCustomEnvVars = Object.fromEntries(
-          Object.entries(custom_env_vars).filter(([key, value]) => {
-            return (
-              typeof key === 'string' &&
-              key.length > 0 &&
-              key.length <= 255 &&
-              (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') &&
-              !key.includes('\n') &&
-              !key.includes('\r')
-            );
-          })
-        );
-      }
-
-      // Validate required fields
+      // Validate required fields early
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
 
       if (!orgId) {
         return res.status(403).json({ error: 'Organization membership required for deployment' });
+      }
+
+      // Process and sanitize input data with error handling
+      let sanitizedSelectedAddons: string[] = [];
+      let sanitizedCustomEnvVars: Record<string, string | number | boolean> = {};
+
+      try {
+        sanitizedSelectedAddons = sanitizeAddonIds(selected_addons);
+      } catch (error) {
+        console.error('Error sanitizing addons:', error);
+        // Continue with empty addons array
+      }
+
+      try {
+        if (custom_env_vars && typeof custom_env_vars === 'object' && !Array.isArray(custom_env_vars)) {
+          sanitizedCustomEnvVars = Object.fromEntries(
+            Object.entries(custom_env_vars).filter(([key, value]): [string, string | number | boolean] | null => {
+              if (
+                typeof key === 'string' &&
+                key.length > 0 &&
+                key.length <= 255 &&
+                (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') &&
+                !key.includes('\n') &&
+                !key.includes('\r')
+              ) {
+                return [key, value as string | number | boolean];
+              }
+              return null;
+            }).filter((entry): entry is [string, string | number | boolean] => entry !== null)
+          );
+        }
+      } catch (error) {
+        console.error('Error processing environment variables:', error);
+        // Continue with empty env vars object
       }
 
       // Get template

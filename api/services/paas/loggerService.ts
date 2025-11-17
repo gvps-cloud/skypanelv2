@@ -174,11 +174,20 @@ export class LoggerService {
       throw new Error('Application not found');
     }
 
-    const lokiConfig = await PaasSettingsService.getLokiConfig();
     const streamOptions: LogQuery = {
       applicationId,
       ...options,
     };
+
+    // First, check if there's an active deployment with build logs to stream
+    const buildLogStream = this.streamBuildLogs(applicationId, streamOptions, signal);
+    for await (const log of buildLogStream) {
+      if (signal?.aborted) break;
+      yield log;
+    }
+
+    // Then stream runtime logs (Docker/Loki)
+    const lokiConfig = await PaasSettingsService.getLokiConfig();
 
     if (lokiConfig.endpoint) {
       yield* this.streamLokiLogs(app.rows[0].slug, streamOptions, lokiConfig.endpoint, signal);
@@ -305,6 +314,103 @@ export class LoggerService {
   static async getBuildLogs(deploymentId: string): Promise<string> {
     const result = await pool.query('SELECT build_log FROM paas_deployments WHERE id = $1', [deploymentId]);
     return result.rows[0]?.build_log || '';
+  }
+
+  /**
+   * Stream build logs for active deployments (real-time)
+   */
+  private static async *streamBuildLogs(applicationId: string, options: LogQuery, signal?: AbortSignal): AsyncGenerator<LogLine> {
+    // Find the most recent deployment for this application
+    const deploymentResult = await pool.query(
+      `SELECT id, build_log, status, build_started_at
+       FROM paas_deployments
+       WHERE application_id = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [applicationId]
+    );
+
+    if (deploymentResult.rows.length === 0) {
+      return; // No deployments found
+    }
+
+    const deployment = deploymentResult.rows[0];
+
+    // Only stream build logs for active builds or recently completed builds
+    const isActiveBuild = ['building', 'deploying'].includes(deployment.status);
+    const isRecentBuild = deployment.build_started_at &&
+      (Date.now() - new Date(deployment.build_started_at).getTime()) < 5 * 60 * 1000; // Within 5 minutes
+
+    if (!isActiveBuild && !isRecentBuild) {
+      return; // No active or recent build to stream
+    }
+
+    let lastLogLength = 0;
+    let buildCompleted = false;
+
+    // Stream build logs as they're being written
+    while (!signal?.aborted && !buildCompleted) {
+      try {
+        const currentLogResult = await pool.query(
+          'SELECT build_log, status FROM paas_deployments WHERE id = $1',
+          [deployment.id]
+        );
+
+        const currentDeployment = currentLogResult.rows[0];
+        if (!currentDeployment) break;
+
+        const currentLog = currentDeployment.build_log || '';
+
+        // If there's new log content, yield the new lines
+        if (currentLog.length > lastLogLength) {
+          const newContent = currentLog.slice(lastLogLength);
+          const newLines = newContent.split('\n').filter(line => line.trim());
+
+          for (const line of newLines) {
+            if (this.matchesFilters(line, options)) {
+              yield {
+                timestamp: new Date().toISOString(),
+                message: line,
+                level: 'info',
+                source: 'build',
+              };
+            }
+          }
+
+          lastLogLength = currentLog.length;
+        }
+
+        // Check if build is complete
+        if (['deployed', 'build_failed', 'failed', 'rolled_back'].includes(currentDeployment.status)) {
+          buildCompleted = true;
+
+          // Yield any remaining log content one final time
+          if (currentDeployment.build_log && currentDeployment.build_log.length > lastLogLength) {
+            const remainingContent = currentDeployment.build_log.slice(lastLogLength);
+            const remainingLines = remainingContent.split('\n').filter(line => line.trim());
+
+            for (const line of remainingLines) {
+              if (this.matchesFilters(line, options)) {
+                yield {
+                  timestamp: new Date().toISOString(),
+                  message: line,
+                  level: 'info',
+                  source: 'build',
+                };
+              }
+            }
+          }
+        }
+
+        // Wait before checking again (poll every 2 seconds for new logs)
+        if (!buildCompleted) {
+          await sleep(2000, signal);
+        }
+      } catch (error) {
+        console.error('Error streaming build logs:', error);
+        await sleep(5000, signal); // Wait longer on error
+      }
+    }
   }
 
   /**

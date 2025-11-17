@@ -125,12 +125,25 @@ export const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
     } catch (error: any) {
       const message = String(error?.message || '');
       const isNotFound = error?.status === 404 || /job not found/i.test(message);
+      const isRateLimited = error?.status === 429 || /rate limit/i.test(message);
+
       if (isNotFound) {
         setJobStatus(null);
         jobStateRef.current = 'missing';
         return;
       }
+
+      if (isRateLimited) {
+        console.warn('Rate limited while polling job status, will retry with longer interval');
+        // Don't update state on rate limit errors to avoid UI flicker
+        return;
+      }
+
       console.error('Failed to poll job status:', error);
+      // Show user-friendly error for persistent issues
+      if (error?.status >= 500) {
+        toast.error('Server error while checking deployment status');
+      }
     }
   }, [jobInfo, onJobComplete, trackedDeploymentId, onDeploymentUpdated]);
 
@@ -143,21 +156,104 @@ export const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
         setTrackedDeploymentId(latest.id);
       }
     } catch (error: any) {
+      const message = String(error?.message || '');
+      const isRateLimited = error?.status === 429 || /rate limit/i.test(message);
+
+      if (isRateLimited) {
+        console.warn('Rate limited while loading deployments, will retry with longer interval');
+        return;
+      }
+
       console.error('Failed to load deployments:', error);
+      // Show user-friendly error for persistent issues
+      if (error?.status >= 500) {
+        toast.error('Server error while loading deployment data');
+      }
     }
   }, [appId, trackedDeploymentId]);
 
+  // Smart polling with exponential backoff and visibility detection
   useEffect(() => {
-    pollJobStatus();
-    const interval = setInterval(pollJobStatus, 5000);
-    return () => clearInterval(interval);
-  }, [pollJobStatus]);
+    let intervalMs = 10000; // Start with 10 seconds
+    let intervalId: NodeJS.Timeout | null = null;
+    let retryCount = 0;
 
+    const scheduleNextPoll = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+
+      // Exponential backoff: 10s -> 15s -> 20s -> max 30s
+      intervalMs = Math.min(10000 + retryCount * 5000, 30000);
+
+      intervalId = setInterval(() => {
+        // Only poll if page is visible or deployment is active
+        if (!document.hidden || hasActiveDeployment) {
+          pollJobStatus();
+          retryCount = 0; // Reset on successful poll
+          scheduleNextPoll(); // Reschedule with current interval
+        }
+      }, intervalMs);
+    };
+
+    // Initial poll
+    pollJobStatus();
+    scheduleNextPoll();
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [pollJobStatus, hasActiveDeployment]);
+
+  // Similar smart polling for deployment status
   useEffect(() => {
+    let intervalMs = 10000; // Start with 10 seconds
+    let intervalId: NodeJS.Timeout | null = null;
+    let retryCount = 0;
+
+    const scheduleNextPoll = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+
+      // Exponential backoff: 10s -> 15s -> 20s -> max 30s
+      intervalMs = Math.min(10000 + retryCount * 5000, 30000);
+
+      intervalId = setInterval(() => {
+        // Only poll if page is visible or deployment is active
+        if (!document.hidden || hasActiveDeployment) {
+          loadLatestDeployment();
+          retryCount = 0; // Reset on successful poll
+          scheduleNextPoll(); // Reschedule with current interval
+        }
+      }, intervalMs);
+    };
+
+    // Initial load
     loadLatestDeployment();
-    const interval = setInterval(loadLatestDeployment, 5000);
-    return () => clearInterval(interval);
-  }, [loadLatestDeployment]);
+    scheduleNextPoll();
+
+    // Listen for visibility changes to pause/resume polling
+    const handleVisibilityChange = () => {
+      if (document.hidden && intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      } else if (!document.hidden && !intervalId) {
+        scheduleNextPoll();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadLatestDeployment, hasActiveDeployment]);
 
   useEffect(() => {
     if (!logEndRef.current) return;
@@ -286,7 +382,7 @@ export const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
         )}
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3 items-start">
           <div>
             <p className="text-xs text-muted-foreground">Deployment Status</p>
             <p className="font-semibold capitalize">{deploymentStatusLabel}</p>
@@ -307,7 +403,7 @@ export const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
               </p>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end">
             <Button
               variant="outline"
               size="sm"
@@ -316,6 +412,7 @@ export const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
                 loadLatestDeployment();
                 toast.success('Deployment status refreshed');
               }}
+              className="w-full md:w-auto"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
@@ -325,6 +422,7 @@ export const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
               size="sm"
               onClick={() => setLogs([])}
               disabled={logs.length === 0}
+              className="w-full md:w-auto"
             >
               Clear Logs
             </Button>

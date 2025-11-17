@@ -1,0 +1,14 @@
+#!/bin/bash
+# Release script for PaaS deployment
+echo "Running release tasks..."
+
+# Run database migrations
+if [ -f "node_modules/.bin/tsx" ]; then
+    echo "Running database migrations..."
+    node node_modules/.bin/tsx scripts/run-migration.js
+else
+    echo "tsx not found, running with node..."
+    node scripts/run-migration.js
+fi
+
+echo "Release tasks completed!"

@@ -45,6 +45,29 @@ services:
     depends_on:
       - loki
 
+  # Docker Registry - Internal image storage for PaaS deployments
+  registry:
+    image: registry:2
+    environment:
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+    volumes:
+      - registry-data:/var/lib/registry
+    networks:
+      - paas-infrastructure
+      - paas-public
+    ports:
+      - "5000:5000"
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.registry.rule=Host(${REGISTRY_HOSTNAME:-registry.apps.example.com})"
+        - "traefik.http.routers.registry.entrypoints=websecure"
+        - "traefik.http.routers.registry.tls.certresolver=letsencrypt"
+        - "traefik.http.services.registry.loadbalancer.server.port=5000"
+
   # Grafana - Log visualization
   grafana:
     image: grafana/grafana:10.2.3
@@ -139,6 +162,8 @@ volumes:
   traefik-certs:
     driver: local
   prometheus-data:
+    driver: local
+  registry-data:
     driver: local
 
 networks:

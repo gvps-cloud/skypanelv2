@@ -32,6 +32,61 @@ router.get("/", (req: Request, res: Response) => {
 });
 
 /**
+ * PaaS health check endpoint - simple check for container orchestration
+ */
+router.get("/paas", async (req: Request, res: Response) => {
+  try {
+    // Check database connection
+    await query('SELECT 1');
+
+    // Check if critical directories exist
+    const fs = await import('fs/promises');
+    const criticalPaths = [
+      '/var/paas/storage',
+      '/app/logs'
+    ];
+
+    let directoriesAccessible = true;
+    for (const dirPath of criticalPaths) {
+      try {
+        await fs.access(dirPath, fs.constants.W_OK);
+      } catch {
+        directoriesAccessible = false;
+        break;
+      }
+    }
+
+    const health = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: 'ok',
+        directories: directoriesAccessible ? 'ok' : 'error',
+        memory: {
+          used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+          total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        },
+        uptime: Math.round(process.uptime()),
+      }
+    };
+
+    const isHealthy = health.checks.database === 'ok' && health.checks.directories === 'ok';
+
+    res.status(isHealthy ? 200 : 503).json({
+      success: isHealthy,
+      ...health
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Health check failed'
+    });
+  }
+});
+
+/**
  * Public status endpoint for platform statistics
  * No authentication required - provides aggregate counts
  */

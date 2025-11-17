@@ -331,6 +331,45 @@ export const PaaSSettingsAdmin: React.FC = () => {
 
       <Card>
         <CardHeader>
+          <CardTitle>Registry Access</CardTitle>
+          <CardDescription>Credentials used when pushing deployment images</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Registry URL</Label>
+            <Input
+              value={getDisplayValue('registry_url')}
+              onChange={(e) => updateSetting('registry_url', e.target.value)}
+              placeholder="registry.example.com"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Use the hostname (with optional port) that every Swarm node can reach, e.g. registry.internal:5000.
+            </p>
+          </div>
+          <div>
+            <Label>Registry Username (optional)</Label>
+            <Input
+              value={getDisplayValue('registry_username')}
+              onChange={(e) => updateSetting('registry_username', e.target.value)}
+              placeholder="robot$builder"
+            />
+          </div>
+          <div>
+            <Label>Registry Password / Token</Label>
+            <Input
+              type="password"
+              value={getDisplayValue('registry_password')}
+              onChange={(e) => updateSetting('registry_password', e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Leave blank for anonymous pulls. When set, credentials are shared with Swarm using --with-registry-auth.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Git Authentication</CardTitle>
           <CardDescription>Configure credentials used for cloning private repositories</CardDescription>
         </CardHeader>

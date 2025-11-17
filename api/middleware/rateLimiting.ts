@@ -82,13 +82,15 @@ export function generateRateLimitKey(req: Request, userType: UserType): string {
 
   const clientIP = ipResult.ip;
 
+  // For authenticated users, use only user ID to prevent IP-based fragmentation
   if (userType !== 'anonymous') {
     const userId = getAuthenticatedUserId(req);
     if (userId) {
-      return `${userType}:${userId}:${clientIP}`;
+      return `${userType}:${userId}`; // Remove IP component for authenticated users
     }
   }
 
+  // For anonymous users, use IP-based limiting
   return `${userType}:${clientIP}`;
 }
 
@@ -100,20 +102,34 @@ interface LimitConfig {
 function getBaseLimitConfig(userType: UserType): LimitConfig {
   const rateLimitConfig = config.rateLimiting;
 
+  // Check if we're in development mode and apply MUCH higher limits
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  // Admin users in development get completely unlimited access
+  if (userType === 'admin' && isDevelopment) {
+    return {
+      limit: 1000000, // Effectively unlimited - 1M requests per 15 minutes
+      windowMs: 15 * 60 * 1000, // 15 minutes
+    };
+  }
+
+  // Development mode multipliers - much more generous
+  const developmentMultiplier = isDevelopment ? 100 : 1; // 100x higher limits in development
+
   switch (userType) {
     case 'admin':
       return {
-        limit: rateLimitConfig.adminMaxRequests,
+        limit: rateLimitConfig.adminMaxRequests * developmentMultiplier,
         windowMs: rateLimitConfig.adminWindowMs,
       };
     case 'authenticated':
       return {
-        limit: rateLimitConfig.authenticatedMaxRequests,
+        limit: rateLimitConfig.authenticatedMaxRequests * developmentMultiplier,
         windowMs: rateLimitConfig.authenticatedWindowMs,
       };
     default:
       return {
-        limit: rateLimitConfig.anonymousMaxRequests,
+        limit: rateLimitConfig.anonymousMaxRequests * developmentMultiplier,
         windowMs: rateLimitConfig.anonymousWindowMs,
       };
   }
@@ -313,6 +329,36 @@ export async function smartRateLimit(req: Request, res: Response, next: NextFunc
       override = await getRateLimitOverrideForUser(authenticatedUserId);
     }
 
+    // In development mode, bypass rate limiting for critical endpoints
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const exemptEndpoints = [
+      '/api/paas/apps/',
+      '/api/paas/deployments/',
+      '/api/paas/build-logs/',
+      '/api/paas/deploy-logs/',
+      '/api/notifications/',
+      '/api/admin/paas/settings',
+      '/api/admin/users/search',
+      '/api/health',
+      '/api/auth/me'
+    ];
+
+    const isExemptEndpoint = exemptEndpoints.some(endpoint => req.path.startsWith(endpoint));
+
+    if (isDevelopment && isExemptEndpoint) {
+      // Skip rate limiting entirely for critical endpoints in development
+      recordRateLimitEvent(
+        req,
+        userType,
+        999999, // Very high limit for tracking
+        1,
+        15 * 60 * 1000,
+        Date.now() + (15 * 60 * 1000),
+        authenticatedUserId,
+      );
+      return next();
+    }
+
     if (override) {
       effectiveLimit = override.maxRequests;
       effectiveWindowMs = override.windowMs;
@@ -379,6 +425,30 @@ export function createCustomRateLimiter(options: RateLimiterFactoryOptions = {})
     // Rate limit reached logging is handled in the custom handler
   });
 }
+
+/**
+ * PaaS-specific rate limiter for polling endpoints
+ * More lenient limits for deployment monitoring and job status polling
+ */
+export const paasPollingLimiter = createCustomRateLimiter({
+  windowMs: 60 * 1000, // 1 minute window
+  maxRequests: 60, // 60 requests per minute = 1 per second
+  userType: 'authenticated',
+  skipSuccessfulRequests: false,
+  skipFailedRequests: false
+});
+
+/**
+ * PaaS-specific rate limiter for high-frequency operations
+ * Used for log streaming and other real-time features
+ */
+export const paasStreamingLimiter = createCustomRateLimiter({
+  windowMs: 60 * 1000, // 1 minute window
+  maxRequests: 120, // 120 requests per minute = 2 per second
+  userType: 'authenticated',
+  skipSuccessfulRequests: false,
+  skipFailedRequests: false
+});
 
 /**
  * Middleware to add rate limit information to response headers for all requests
