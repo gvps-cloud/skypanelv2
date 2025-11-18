@@ -1,4 +1,4 @@
--- Migration 002: Remove Legacy Container Artifacts
+-- Migration 003: Remove Legacy Container Artifacts
 -- Date: 2025-11-06
 -- This migration removes all legacy Container as a Service (CaaS) references,
 -- Easypanel integration, and Dokploy integration artifacts from the database.
@@ -145,7 +145,7 @@ WHERE permissions ? 'container'
 
 -- Final Comments
 
-COMMENT ON SCHEMA public IS 'SkyPanelV2 database schema - Container artifacts removed in migration 002';
+COMMENT ON SCHEMA public IS 'SkyPanelV2 database schema - Container artifacts removed in migration 003';
 
 -- Migration completed successfully
 -- All legacy container, CaaS, Easypanel, and Dokploy artifacts have been removed
