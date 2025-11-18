@@ -3,7 +3,7 @@
  * Manage support tickets and VPS plans
  */
 import express, { Request, Response } from "express";
-import { body, param, query as queryValidator, validationResult } from "express-validator";
+import { body, param, validationResult } from "express-validator";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
@@ -23,7 +23,7 @@ import {
   requestSizeLimit,
 } from "../middleware/security.js";
 import { encryptSecret } from "../lib/crypto.js";
-import { normalizeProviderToken, getProviderTokenByType } from "../lib/providerTokens.js";
+import { normalizeProviderToken } from "../lib/providerTokens.js";
 import {
   DEFAULT_LINODE_ALLOWED_REGIONS,
   normalizeRegionList,

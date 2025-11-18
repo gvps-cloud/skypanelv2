@@ -7,21 +7,17 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   AlertTriangle,
-  AppWindow,
   ArrowRight,
-  BarChart3,
   Calendar,
   CheckCircle,
   ClipboardList,
   Clock,
-  Cpu,
   DollarSign,
   Edit,
   FileCode,
   Globe,
   GripVertical,
   HelpCircle,
-  Layers,
   LifeBuoy,
   Palette,
   Plus,
@@ -31,14 +27,12 @@ import {
   ServerCog,
   Settings,
   Shield,
-  Store,
   Trash2,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
-import { UserActionMenu } from "@/components/admin/UserActionMenu";
 import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
 import { OrganizationManagement } from "@/components/admin/OrganizationManagement";
@@ -663,16 +657,12 @@ const Admin: React.FC = () => {
   const [serverSearch, setServerSearch] = useState("");
   const [adminUsers, setAdminUsers] = useState<AdminUserRecord[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
-  const [userSearch, setUserSearch] = useState("");
-  const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
   const [selectedUserForProfile, setSelectedUserForProfile] =
     useState<any>(null);
   const [userProfileModalOpen, setUserProfileModalOpen] = useState(false);
   const [selectedUserForEdit, setSelectedUserForEdit] =
     useState<AdminUserRecord | null>(null);
   const [userEditModalOpen, setUserEditModalOpen] = useState(false);
-  const [loadingUserDetails, setLoadingUserDetails] = useState(false);
-  const [savingUserUpdate, setSavingUserUpdate] = useState(false);
 
   const [providers, setProviders] = useState<AdminProvider[]>([]);
   const [validatingProviderId, setValidatingProviderId] =
@@ -727,6 +717,7 @@ const Admin: React.FC = () => {
     setSelectedUserForProfile(null);
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleEditUser = useCallback((user: AdminUserRecord) => {
     setSelectedUserForEdit(user);
     setUserEditModalOpen(true);
@@ -743,6 +734,7 @@ const Admin: React.FC = () => {
     targetUser: AdminUserRecord | null;
   }>({ isOpen: false, targetUser: null });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleImpersonateUser = useCallback(
     async (user: AdminUserRecord) => {
       try {
@@ -1000,45 +992,6 @@ const Admin: React.FC = () => {
       return haystack.includes(term);
     });
   }, [serverSearch, serverStatusFilter, servers]);
-
-  const userRoleOptions = useMemo(() => {
-    const roles = new Set<string>();
-    adminUsers.forEach((user) => {
-      if (user.role) {
-        roles.add(user.role);
-      }
-    });
-    return Array.from(roles).sort();
-  }, [adminUsers]);
-
-  const filteredUsers = useMemo(() => {
-    const term = userSearch.trim().toLowerCase();
-    return adminUsers.filter((user) => {
-      const matchesRole =
-        userRoleFilter === "all" ||
-        user.role.toLowerCase() === userRoleFilter.toLowerCase();
-      if (!matchesRole) {
-        return false;
-      }
-
-      if (!term) {
-        return true;
-      }
-
-      const orgText = Array.isArray(user.organizations)
-        ? user.organizations
-          .map(
-            (org) =>
-              `${org.organizationName} ${org.organizationSlug} ${org.role}`
-          )
-          .join(" ")
-          .toLowerCase()
-        : "";
-
-      const haystack = `${user.name} ${user.email} ${orgText}`.toLowerCase();
-      return haystack.includes(term);
-    });
-  }, [adminUsers, userRoleFilter, userSearch]);
 
   const formattedThemeUpdatedAt = useMemo(() => {
     if (!themeUpdatedAt) {
@@ -1497,68 +1450,10 @@ const Admin: React.FC = () => {
     }
   }, [token, authHeader]);
 
-  const handleSaveUserUpdate = useCallback(
-    async (userId: string, updates: any) => {
-      if (!token) {
-        throw new Error("Authentication required");
-      }
-
-      try {
-        setSavingUserUpdate(true);
-        const response = await fetch(
-          buildApiUrl(`/api/admin/users/${userId}`),
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(updates),
-          }
-        );
-
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "Failed to update user");
-        }
-
-        const data = await response.json();
-
-        // Update the user in the local state with optimistic update
-        setAdminUsers((prev) =>
-          prev.map((user) =>
-            user.id === userId ? { ...user, ...data.user } : user
-          )
-        );
-
-        // If this user is currently selected for profile view, update that too
-        if (selectedUserForProfile && selectedUserForProfile.id === userId) {
-          setSelectedUserForProfile({
-            ...selectedUserForProfile,
-            ...data.user,
-          });
-        }
-
-        toast.success("User updated successfully");
-      } catch (error: any) {
-        console.error("Failed to update user:", error);
-        // Re-fetch users to ensure consistency on error
-        fetchAdminUsers();
-        throw error;
-      } finally {
-        setSavingUserUpdate(false);
-      }
-    },
-    [token, selectedUserForProfile, fetchAdminUsers]
-  );
-
   const savePlan = async () => {
     if (!editPlanId) return;
     
     // Find the plan being edited to get its provider
-    const planBeingEdited = plans.find(p => p.id === editPlanId);
-    const planProvider = planBeingEdited ? providers.find(p => p.id === planBeingEdited.provider_id) : null;
-    
     try {
       const res = await fetch(`${API_BASE_URL}/admin/plans/${editPlanId}`, {
         method: "PUT",
@@ -2098,8 +1993,6 @@ const Admin: React.FC = () => {
 
   const liveProvisioningCount = provisioningServers;
 
-  const criticalAttentionCount = attentionServers + urgentTickets;
-
   const dashboardTicketHighlights = useMemo(() => {
     const sorted = [...tickets]
       .filter(
@@ -2136,57 +2029,6 @@ const Admin: React.FC = () => {
       })
       .slice(0, 4);
   }, [servers]);
-
-  const handleRefresh = () => {
-    if (!token) {
-      toast.error("Authentication required");
-      return;
-    }
-
-    switch (activeTab) {
-      case "support":
-        fetchTickets();
-        break;
-      case "vps-plans":
-        fetchPlans();
-        fetchProviders();
-        fetchLinodeTypes();
-        fetchLinodeRegions();
-        break;
-      case "servers":
-        fetchServers();
-        break;
-      case "providers":
-        fetchProviders();
-        break;
-      case "stackscripts":
-        fetchStackscriptsAndConfigs();
-        break;
-      case "networking":
-        fetchNetworkingRdns();
-        break;
-      case "theme":
-        fetchThemeConfiguration();
-        break;
-      case "user-management":
-        fetchAdminUsers();
-        break;
-      case "rate-limiting":
-        // Rate limiting monitoring handles its own data fetching
-        break;
-      case "faq-management":
-        // FAQ management will handle its own data fetching
-        break;
-      case "platform":
-        // Platform settings page - no specific data fetching needed
-        break;
-      case "contact-management":
-        // Contact management will handle its own data fetching
-        break;
-      default:
-        break;
-    }
-  };
 
   return (
     <div className={isDashboardView ? "space-y-6" : ""}>

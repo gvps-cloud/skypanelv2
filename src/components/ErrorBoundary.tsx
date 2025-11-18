@@ -5,7 +5,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
-import { displayError, ErrorType } from '@/lib/errorHandling';
+import { displayError } from '@/lib/errorHandling';
 
 interface Props {
   children: ReactNode;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -116,11 +116,6 @@ export const MemberAddModal: React.FC<MemberAddModalProps> = ({
   };
 
   // Handle field blur for validation
-  const handleFieldBlur = (fieldName: string) => {
-    setTouched(prev => ({ ...prev, [fieldName]: true }));
-    validateField(fieldName, formData[fieldName]);
-  };
-
   // Handle field change with real-time validation
   const handleFieldChange = (fieldName: string, value: any) => {
     setFormData(prev => ({ ...prev, [fieldName]: value }));
@@ -137,7 +132,7 @@ export const MemberAddModal: React.FC<MemberAddModalProps> = ({
   };
 
   // Search users for member addition
-  const searchUsers = async (query: string) => {
+  const searchUsers = useCallback(async (query: string) => {
     if (!token || !query.trim()) {
       setUsers([]);
       return;
@@ -166,7 +161,7 @@ export const MemberAddModal: React.FC<MemberAddModalProps> = ({
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [token, organizationId]);
 
   // Debounced user search
   useEffect(() => {
@@ -179,7 +174,7 @@ export const MemberAddModal: React.FC<MemberAddModalProps> = ({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [userSearchQuery, token, organizationId]);
+  }, [userSearchQuery, searchUsers]);
 
 
 

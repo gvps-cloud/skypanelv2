@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -92,7 +92,7 @@ export const OrganizationCreateModal: React.FC<OrganizationCreateModalProps> = (
   }, [formData.name, formData.slug]);
 
   // Search users for owner selection
-  const searchUsers = async (query: string) => {
+  const searchUsers = useCallback(async (query: string) => {
     if (!token || !query.trim()) {
       setUsers([]);
       return;
@@ -121,7 +121,7 @@ export const OrganizationCreateModal: React.FC<OrganizationCreateModalProps> = (
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [token]);
 
   // Debounced user search
   useEffect(() => {
@@ -134,7 +134,7 @@ export const OrganizationCreateModal: React.FC<OrganizationCreateModalProps> = (
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [userSearchQuery, token]);
+  }, [userSearchQuery, searchUsers]);
 
   // Real-time field validation
   const validateField = (fieldName: string, value: any) => {

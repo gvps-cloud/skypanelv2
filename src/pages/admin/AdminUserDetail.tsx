@@ -120,7 +120,6 @@ const AdminUserDetail: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   const [showImpersonationDialog, setShowImpersonationDialog] = useState(false);
   const [impersonationTarget, setImpersonationTarget] = useState<{
     id: string;
@@ -210,7 +209,7 @@ const AdminUserDetail: React.FC = () => {
 
       return response.json().catch(() => ({}));
     },
-    onSuccess: (data) => {
+    onSuccess: (_deletedUser) => {
       const userName = user?.name || 'User';
       toast.success(`${userName} has been successfully deleted`);
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
@@ -268,7 +267,7 @@ const AdminUserDetail: React.FC = () => {
       await deleteUserMutation.mutateAsync();
       setShowDeleteDialog(false);
       setDeleteConfirmEmail('');
-    } catch (error) {
+    } catch {
       // Error is handled by the mutation
     } finally {
       setIsDeleting(false);
@@ -282,7 +281,6 @@ const AdminUserDetail: React.FC = () => {
   };
 
   const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
     refetch();
   };
 

@@ -127,6 +127,7 @@ export const PageNotFound: React.FC = () => (
 /**
  * Hook for handling not found scenarios
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useNotFoundHandler() {
   const navigate = useNavigate();
 

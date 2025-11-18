@@ -174,7 +174,6 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       isDashboardActive,
       isSshKeysActive,
       isVpsActive,
-      pathname,
     ]
   );
 

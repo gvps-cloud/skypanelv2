@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import { motion } from 'framer-motion';
 import '../styles/home.css';
 
 // Get the base URL for display
@@ -32,34 +32,24 @@ const getBaseUrl = () => {
   return 'dashboard.skypanel.dev';
 };
 import {
-  Activity,
   ArrowUpRight,
   Check,
-  Cloud,
-  Globe,
-  Layers,
   Server,
   ShieldCheck,
   Sparkles,
   Wallet,
   Zap,
-  Cpu,
-  Database,
   Monitor,
   Terminal,
-  Clock,
   TrendingUp,
   Users,
   Star,
-  ChevronRight,
-  Play,
   BarChart3,
   Settings,
   Lock,
   Rocket,
   Code,
   Package,
-  DollarSign,
   Timer,
   Shield,
   Wifi,
@@ -70,7 +60,6 @@ import {
   MapPin,
   Quote
 } from 'lucide-react';
-import { BRAND_NAME } from '../lib/brand';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -94,18 +83,6 @@ const staggerChildren = {
   animate: {
     transition: {
       staggerChildren: 0.1
-    }
-  }
-};
-
-const floatAnimation = {
-  initial: { y: 0 },
-  animate: {
-    y: [-10, 10, -10],
-    transition: {
-      duration: 4,
-      repeat: Infinity,
-      ease: "easeInOut"
     }
   }
 };
@@ -451,7 +428,7 @@ const FeaturesShowcase = () => {
           variants={staggerChildren}
           className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {features.map((feature, index) => (
+          {features.map((feature) => (
             <motion.div
               key={feature.title}
               variants={fadeInUp}
@@ -552,7 +529,7 @@ const LiveShowcase = () => {
           className="flex justify-center mb-12 px-4"
         >
           <div className="inline-flex bg-card rounded-xl p-1 shadow-sm border border-border flex-wrap justify-center max-w-full backdrop-blur-sm">
-            {showcaseTabs.map((tab, index) => (
+            {showcaseTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}

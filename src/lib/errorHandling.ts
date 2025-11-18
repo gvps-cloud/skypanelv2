@@ -181,7 +181,6 @@ export function displayError(
   const {
     showToast = true,
     toastDuration = 5000,
-    fallbackMessage = 'An error occurred',
   } = options;
 
   const errorType = categorizeError(status, error.code);

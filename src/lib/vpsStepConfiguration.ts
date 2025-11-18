@@ -87,7 +87,7 @@ const ALL_STEPS = [
 export function getActiveSteps(
   options: StepConfigurationOptions
 ): StepConfiguration[] {
-  const { providerType } = options;
+  const { providerType: _providerType } = options;
   const activeSteps = ALL_STEPS.filter((step) => {
     if (step.id === "deployment-config" && !options.hasDeploymentConfig) {
       return false;
@@ -104,8 +104,8 @@ export function getActiveSteps(
     stepNumber: index + 1, // Display number (1, 2, 3)
     isActive: true,
     id: step.id,
-    title: getDynamicStepTitle(step, providerType),
-    description: getDynamicStepDescription(step, providerType),
+    title: getDynamicStepTitle(step, _providerType),
+    description: getDynamicStepDescription(step, _providerType),
     totalSteps,
   }));
 }
@@ -119,7 +119,7 @@ export function getActiveSteps(
  */
 function getDynamicStepTitle(
   step: typeof ALL_STEPS[number],
-  providerType: ProviderType
+  _providerType: ProviderType
 ): string {
   return step.title;
 }
@@ -134,7 +134,7 @@ function getDynamicStepTitle(
  */
 function getDynamicStepDescription(
   step: typeof ALL_STEPS[number],
-  providerType: ProviderType
+  _providerType: ProviderType
 ): string {
   return step.description;
 }

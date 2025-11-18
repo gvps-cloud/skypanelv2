@@ -21,8 +21,7 @@ import {
   Network,
   Shield,
   AlertCircle,
-  ArrowRight,
-  Cloud
+  ArrowRight
 } from 'lucide-react';
 import type { VPSPlan } from '@/types/vps';
 import { BRAND_NAME } from '@/lib/brand';
@@ -96,16 +95,6 @@ const PricingPage: React.FC = () => {
     };
     
     return `${value} ${pluralizeUnit(unit, value)}`;
-  };
-
-  const formatBytes = (bytes: number): string => {
-    // Handle MB to GB conversion for storage values
-    if (bytes >= 1024 * 1024) {
-      return `${(bytes / (1024 * 1024)).toFixed(0)}TB`;
-    } else if (bytes >= 1024) {
-      return `${Math.round(bytes / 1024)}GB`;
-    }
-    return `${bytes}MB`;
   };
 
   if (loading) {

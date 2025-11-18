@@ -294,7 +294,7 @@ export function validateMarketplaceApp(
 /**
  * Real-time validation hook for forms
  */
-export function useFormValidation(schema: ValidationSchema, initialData: Record<string, any> = {}) {
+export function useFormValidation(schema: ValidationSchema, _initialData: Record<string, any> = {}) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
