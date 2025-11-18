@@ -393,7 +393,7 @@ const FeaturesShowcase = () => {
     {
       icon: Monitor,
       title: "Unified Dashboard",
-      description: "Single interface for managing VPS, PaaS, billing, and monitoring across all providers.",
+      description: "Single interface for managing VPS, billing, and monitoring across all providers.",
       color: "from-primary to-primary/80"
     },
     {

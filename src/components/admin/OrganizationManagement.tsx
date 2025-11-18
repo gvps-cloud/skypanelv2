@@ -17,10 +17,6 @@ import {
   UserPlus,
   Calendar,
   AlertTriangle,
-  DollarSign,
-  Cpu,
-  PauseCircle,
-  PlayCircle,
   User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -76,14 +72,6 @@ interface Organization {
   updatedAt: string;
   members: OrganizationMember[];
   memberCount: number;
-  paasAppCount?: number;
-  paasCost30d?: number;
-  paasCpuHours30d?: number;
-  paasRamMbHours30d?: number;
-  paasLastUsageAt?: string | null;
-  paasSuspended?: boolean;
-  paasSuspendReason?: string | null;
-  paasSuspendedAt?: string | null;
 }
 
 interface OrganizationManagementProps {
@@ -115,7 +103,6 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
 
   // Error and loading states
   const [error, setError] = useState<string>('');
-  const [operationLoading, setOperationLoading] = useState(false);
 
   const fetchOrganizations = useCallback(async () => {
     if (!token) return;
@@ -172,16 +159,6 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
     });
   };
 
-  const formatCurrency = (value?: number | null) => {
-    const amount = Number(value ?? 0);
-    return `$${amount.toFixed(2)}`;
-  };
-
-  const formatNumber = (value?: number | null, digits = 2) => {
-    const amount = Number(value ?? 0);
-    return amount.toFixed(digits);
-  };
-
   // Modal handlers
   const handleCreateOrganization = () => {
     setCreateModalOpen(true);
@@ -212,36 +189,6 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
     setSelectedMember(member);
     setSelectedOrgForMember(orgId);
     setMemberRemoveDialogOpen(true);
-  };
-
-  const handleSuspendPaas = async (org: Organization) => {
-    if (!token) return;
-    const reason =
-      window.prompt('Enter a reason for suspending PaaS (optional)', org.paasSuspendReason || '') ?? '';
-    setOperationLoading(true);
-    try {
-      await apiClient.post(`/admin/organizations/${org.id}/paas/suspend`, { reason });
-      toast.success(`Suspended PaaS for ${org.name}`);
-      await fetchOrganizations();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to suspend PaaS');
-    } finally {
-      setOperationLoading(false);
-    }
-  };
-
-  const handleResumePaas = async (org: Organization) => {
-    if (!token) return;
-    setOperationLoading(true);
-    try {
-      await apiClient.post(`/admin/organizations/${org.id}/paas/resume`);
-      toast.success(`Resumed PaaS for ${org.name}`);
-      await fetchOrganizations();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to resume PaaS');
-    } finally {
-      setOperationLoading(false);
-    }
   };
 
   const handleModalSuccess = () => {
@@ -278,16 +225,16 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
             size="sm"
             className="gap-2"
             onClick={handleRefresh}
-            disabled={loading || operationLoading}
+            disabled={loading}
           >
-            <RefreshCw className={cn('h-4 w-4', (loading || operationLoading) && 'animate-spin')} />
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
             {loading ? 'Refreshing…' : 'Refresh'}
           </Button>
-          <Button 
-            size="sm" 
-            className="gap-2" 
+          <Button
+            size="sm"
+            className="gap-2"
             onClick={handleCreateOrganization}
-            disabled={loading || operationLoading}
+            disabled={loading}
           >
             <Plus className="h-4 w-4" />
             New Organization
@@ -378,11 +325,6 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
                             <Badge variant="outline" className="text-xs">
                               {org.memberCount} member{org.memberCount !== 1 ? 's' : ''}
                             </Badge>
-                            {org.paasAppCount !== undefined && org.paasAppCount > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                {org.paasAppCount} PaaS app{org.paasAppCount !== 1 ? 's' : ''}
-                              </Badge>
-                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">
                             Owner: {org.ownerName} ({org.ownerEmail})
@@ -404,7 +346,7 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
                           e.stopPropagation();
                           handleEditOrganization(org);
                         }}
-                        disabled={loading || operationLoading}
+                        disabled={loading}
                         title="Edit organization"
                       >
                         <Edit className="h-4 w-4" />
@@ -416,7 +358,7 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
                           e.stopPropagation();
                           handleDeleteOrganization(org);
                         }}
-                        disabled={loading || operationLoading}
+                        disabled={loading}
                         title="Delete organization"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -426,108 +368,19 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
                   
                   <CollapsibleContent>
                     <div className="border-t p-4 bg-accent/20 space-y-6">
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium flex items-center gap-2">
-                              <DollarSign className="h-4 w-4 text-muted-foreground" />
-                              PaaS Billing (30d)
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-2xl font-bold">
-                              {formatCurrency(org.paasCost30d)}
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Last usage:{' '}
-                              {org.paasLastUsageAt ? formatDate(org.paasLastUsageAt) : 'No data'}
-                            </p>
-                          </CardContent>
-                        </Card>
-
-                        <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium flex items-center gap-2">
-                              <Cpu className="h-4 w-4 text-muted-foreground" />
-                              Resource Usage (30d)
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-1">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">CPU hours</span>
-                              <span className="font-semibold">
-                                {formatNumber(org.paasCpuHours30d, 2)}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">RAM GB hours</span>
-                              <span className="font-semibold">
-                                {formatNumber((org.paasRamMbHours30d ?? 0) / 1024, 2)}
-                              </span>
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        <Card>
-                          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                            <div>
-                              <CardTitle className="text-sm font-medium">PaaS Status</CardTitle>
-                              <p className="text-xs text-muted-foreground">
-                                {org.paasSuspended
-                                  ? org.paasSuspendReason || 'Suspended by administrator'
-                                  : 'PaaS access is active'}
-                              </p>
-                            </div>
-                            <Badge
-                              variant={org.paasSuspended ? 'destructive' : 'secondary'}
-                              className="text-xs"
-                            >
-                              {org.paasSuspended ? 'Suspended' : 'Active'}
-                            </Badge>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="text-xs text-muted-foreground">
-                              {org.paasSuspendedAt
-                                ? `Since ${formatDate(org.paasSuspendedAt)}`
-                                : 'Applications can deploy normally'}
-                            </div>
-                            {org.paasSuspended ? (
-                              <Button
-                                size="sm"
-                                className="gap-2"
-                                onClick={() => handleResumePaas(org)}
-                                disabled={loading || operationLoading}
-                              >
-                                <PlayCircle className="h-4 w-4" />
-                                Resume PaaS
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                className="gap-2"
-                                onClick={() => handleSuspendPaas(org)}
-                                disabled={loading || operationLoading}
-                              >
-                                <PauseCircle className="h-4 w-4" />
-                                Suspend PaaS
-                              </Button>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
+                      {/* Legacy metrics removed */}
 
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="text-sm font-semibold flex items-center gap-2">
                           <Users className="h-4 w-4" />
                           Members ({org.memberCount})
                         </h4>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           className="gap-2"
                           onClick={() => handleAddMember(org.id)}
-                          disabled={loading || operationLoading}
+                          disabled={loading}
                         >
                           <UserPlus className="h-4 w-4" />
                           Add Member
@@ -595,7 +448,7 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
                                       variant="ghost"
                                       onClick={() => onUserAction?.(member.userId, 'view')}
                                       title="Open user details"
-                                      disabled={loading || operationLoading}
+                                      disabled={loading}
                                     >
                                       <User className="h-3 w-3" />
                                     </Button>
@@ -604,7 +457,7 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
                                       variant="ghost"
                                       onClick={() => handleEditMember(member, org.id)}
                                       title="Edit member role"
-                                      disabled={loading || operationLoading}
+                                      disabled={loading}
                                     >
                                       <Edit className="h-3 w-3" />
                                     </Button>
@@ -620,7 +473,7 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
                                         }
                                       }}
                                       title="Impersonate user"
-                                      disabled={loading || operationLoading || isStarting}
+                                      disabled={loading || isStarting}
                                     >
                                       <Users className="h-3 w-3" />
                                     </Button>
@@ -629,7 +482,7 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
                                       variant="ghost"
                                       onClick={() => handleRemoveMember(member, org.id)}
                                       title={member.role === 'owner' ? 'Cannot remove owner' : 'Remove member'}
-                                      disabled={loading || operationLoading || member.role === 'owner'}
+                                      disabled={loading || member.role === 'owner'}
                                       className={cn(
                                         member.role === 'owner' && 'opacity-50 cursor-not-allowed'
                                       )}
@@ -671,7 +524,6 @@ export const OrganizationManagement: React.FC<OrganizationManagementProps> = ({
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onSuccess={handleModalSuccess}
-        availableOrganizations={organizations}
       />
 
       <MemberAddModal

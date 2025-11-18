@@ -1,5 +1,5 @@
 #!/bin/bash
-# Release script for PaaS deployment
+# Release script for SkyPanel deployment
 echo "Running release tasks..."
 
 # Run database migrations

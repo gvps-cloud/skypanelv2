@@ -235,6 +235,13 @@ const VPS: React.FC = () => {
     return map;
   }, [providerOptions]);
 
+  const hasValidProviderSelection = useMemo(() => {
+    if (!createForm.provider_id) return false;
+    return providerOptions.some(
+      (provider) => provider.id === createForm.provider_id
+    );
+  }, [createForm.provider_id, providerOptions]);
+
   // Group provider images into distributions with versions for cleaner selection cards
   const osGroups = useMemo(() => {
     const groups: Record<
@@ -503,6 +510,39 @@ const VPS: React.FC = () => {
       return "all";
     });
   }, [providerOptions]);
+
+  useEffect(() => {
+    if (providerOptions.length === 0) {
+      return;
+    }
+
+    if (hasValidProviderSelection) {
+      return;
+    }
+
+    const normalizedType = normalizeProviderType(createForm.provider_type);
+    const fallback =
+      providerOptions.find((provider) => provider.type === normalizedType) ??
+      providerOptions.find((provider) => provider.type === "linode") ??
+      providerOptions[0];
+
+    if (!fallback) {
+      return;
+    }
+
+    setCreateForm({
+      provider_id: fallback.id,
+      provider_type: fallback.type,
+      type: "",
+      region: "",
+    });
+  }, [
+    providerOptions,
+    hasValidProviderSelection,
+    normalizeProviderType,
+    createForm.provider_type,
+    setCreateForm,
+  ]);
 
   const visibleRegionOptions = useMemo(() => {
     if (providerFilter === "all") {
@@ -814,10 +854,19 @@ const VPS: React.FC = () => {
   );
 
   const handleMarketplaceRefresh = useCallback(() => {
-    if (createForm.provider_type === "linode" && createForm.provider_id) {
+    if (
+      createForm.provider_type === "linode" &&
+      createForm.provider_id &&
+      hasValidProviderSelection
+    ) {
       loadMarketplaceApps(createForm.provider_id);
     }
-  }, [createForm.provider_type, createForm.provider_id, loadMarketplaceApps]);
+  }, [
+    createForm.provider_type,
+    createForm.provider_id,
+    hasValidProviderSelection,
+    loadMarketplaceApps,
+  ]);
 
   const loadInstances = useCallback(async () => {
     setLoading(true);
@@ -1040,13 +1089,22 @@ const VPS: React.FC = () => {
   ]);
 
   useEffect(() => {
-    if (createForm.provider_type === "linode" && createForm.provider_id) {
+    if (
+      createForm.provider_type === "linode" &&
+      createForm.provider_id &&
+      hasValidProviderSelection
+    ) {
       loadMarketplaceApps(createForm.provider_id);
-    } else {
-      setMarketplaceApps([]);
-      setMarketplaceError(null);
+    } else if (!hasValidProviderSelection) {
+      setMarketplaceApps((prev) => (prev.length === 0 ? prev : []));
+      setMarketplaceError((prev) => (prev ? null : prev));
     }
-  }, [createForm.provider_type, createForm.provider_id, loadMarketplaceApps]);
+  }, [
+    createForm.provider_type,
+    createForm.provider_id,
+    hasValidProviderSelection,
+    loadMarketplaceApps,
+  ]);
 
   // Performance measurement cleanup - run once on mount
   useEffect(() => {

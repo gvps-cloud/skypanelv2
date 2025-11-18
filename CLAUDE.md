@@ -15,8 +15,6 @@ npm run dev-up
 # Start development servers (both frontend and backend)
 npm run dev
 
-# Start all three components (Client + API + Worker for PaaS)
-npm run dev:all
 
 # Kill ports before restarting
 npm run kill-ports
@@ -24,8 +22,6 @@ npm run kill-ports
 # Start individual components
 npm run client:dev    # Frontend only (Vite on :5173)
 npm run server:dev    # Backend only (Nodemon on :3001)
-npm run dev:worker    # PaaS Worker only
-npm run worker        # PaaS Worker in production mode
 ```
 
 ### Building and Testing
@@ -70,15 +66,6 @@ npm run db:fresh
 npm run seed:admin
 ```
 
-### PaaS Infrastructure
-```bash
-# Initialize PaaS infrastructure with Docker Swarm
-npm run paas:init
-
-# Get Grafana admin password
-npm run paas:grafana-password
-```
-
 ### Utility Scripts
 ```bash
 # Generate encryption secret for provider API tokens
@@ -107,7 +94,7 @@ node scripts/update-admin-password.js --email admin@example.com --password newpa
 
 ### Tech Stack
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, TanStack Query v5, Zustand, shadcn/ui
-- **Backend**: Node.js 20+, Express.js (ESM), TypeScript, PostgreSQL, Redis, Bull queues
+- **Backend**: Node.js 20+, Express.js (ESM), TypeScript, PostgreSQL
 - **Integrations**: PayPal REST SDK, Linode/Akamai API, SMTP2GO, optional InfluxDB
 
 ### Directory Structure
@@ -119,7 +106,6 @@ api/                    # Express backend application
 ├── routes/            # API route handlers
 ├── services/          # Business logic and external integrations
 ├── lib/               # Utility functions and database helpers
-└── worker/            # Background job processor (PaaS)
 
 src/                   # React frontend application
 ├── main.tsx          # Frontend entry point
@@ -145,7 +131,6 @@ public/               # Static assets
 - **Provider Abstraction**: Multi-cloud VPS through `ProviderFactory` in `api/services/providers/` - implementations extend `BaseProviderService` and implement `IProviderService`
 - **Authentication**: JWT-based with middleware chain: `authenticateToken` → `requireOrganization` → `requireAdmin`
 - **Real-time Features**: PostgreSQL LISTEN/NOTIFY with Server-Sent Events via `notificationService`, WebSocket SSH bridge for terminal access
-- **PaaS Infrastructure**: Docker Swarm-based platform services in `api/services/paas/` for application deployment and scaling
 - **Error Handling**: Global error handler in `api/app.ts` normalizes responses to `{ success: false, error }` format
 
 #### Frontend (React + TypeScript)
@@ -199,7 +184,6 @@ public/               # Static assets
 - `DATABASE_URL` - PostgreSQL connection string
 - `JWT_SECRET` - JWT signing secret (32+ characters)
 - `SSH_CRED_SECRET` - Encryption secret for provider tokens (generate via script)
-- `REDIS_URL` - Redis connection for caching and queues
 - `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` - PayPal REST credentials
 - `LINODE_API_TOKEN` - Linode API token for VPS management
 
@@ -267,7 +251,7 @@ npm run check         # TypeScript type checking
 
 ### PM2 Configuration
 - Uses `ecosystem.config.cjs` for process management
-- Runs three processes: API server, UI preview, and background worker
+- Runs two processes: API server and UI preview
 - Configure environment variables in PM2 ecosystem file
 
 ### Database Migrations
@@ -280,7 +264,6 @@ npm run check         # TypeScript type checking
 - Secure `SSH_CRED_SECRET` (32+ characters) for provider token encryption
 - PayPal live credentials (not sandbox) for production
 - `TRUST_PROXY` configured for reverse proxy setups
-- Redis password and TLS enabled for caching and queues
 - PostgreSQL SSL enabled for managed database connections
 - Helmet CSP properly configured for XSS protection
 - Rate limiting tiers configured for different user types
@@ -302,12 +285,9 @@ npm run check         # TypeScript type checking
 - Validate provider credentials via admin panel
 
 ### Rate Limiting
-- Redis-backed rate limiting state
-- Clear with `redis-cli FLUSHDB` if limits seem stuck
 - Configure tiered limits in environment variables
 
 ### Real-time Features
-- Check Redis connection for notifications
 - Verify SSE endpoints in browser devtools
 - Ensure `activity_logs` triggers are working
 

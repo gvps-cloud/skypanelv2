@@ -27,10 +27,6 @@ RUN npm ci --only=production && npm cache clean --force
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Create required directories for PaaS
-RUN mkdir -p /var/paas/storage/{builds,build-cache,slugs,temp,logs} && \
-    chown -R nodejs:nodejs /var/paas/storage
-
 # Copy source code
 COPY --chown=nodejs:nodejs . .
 
@@ -63,9 +59,7 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 # Create required directories with proper permissions
-RUN mkdir -p /var/paas/storage/{builds,build-cache,slugs,temp,logs} && \
-    chown -R nodejs:nodejs /var/paas/storage && \
-    mkdir -p /app/logs && \
+RUN mkdir -p /app/logs && \
     chown -R nodejs:nodejs /app
 
 # Copy built application from base stage

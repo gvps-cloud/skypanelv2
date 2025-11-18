@@ -5,7 +5,6 @@
 
 import { query, transaction } from '../lib/database.js';
 import { PayPalService } from './paypalService.js';
-import { PaasBillingService } from './paas/billingService.js';
 
 export interface VPSBillingInfo {
   id: string;
@@ -616,68 +615,4 @@ export class BillingService {
     }
   }
 
-  /**
-   * ========================================================================
-   * PaaS BILLING METHODS
-   * ========================================================================
-   */
-
-  /**
-   * Run hourly billing for all active PaaS applications
-   */
-  static async runPaaSHourlyBilling(): Promise<BillingResult> {
-    return PaasBillingService.recordHourlyUsage();
-  }
-  /**
-   * Get billing summary including both VPS and PaaS
-   */
-  static async getCombinedBillingSummary(organizationId: string) {
-    try {
-      // Get VPS summary (existing)
-      const vpsResult = await query(`
-        SELECT COALESCE(SUM(total_amount), 0) as total
-        FROM vps_billing_cycles
-        WHERE organization_id = $1
-          AND status = 'billed'
-          AND billing_period_start >= date_trunc('month', CURRENT_DATE)
-      `, [organizationId]);
-
-      // Get PaaS summary
-      const paasResult = await query(`
-        SELECT COALESCE(SUM(total_cost), 0) as total
-        FROM paas_resource_usage
-        WHERE organization_id = $1
-          AND billed_at IS NOT NULL
-          AND period_start >= date_trunc('month', CURRENT_DATE)
-      `, [organizationId]);
-
-      // Get active PaaS app count
-      const paasCountResult = await query(`
-        SELECT COUNT(*) as count
-        FROM paas_applications
-        WHERE organization_id = $1 AND status IN ('running', 'building')
-      `, [organizationId]);
-
-      // Get existing VPS summary
-      const vpsSummary = await this.getBillingSummary(organizationId);
-
-      return {
-        ...vpsSummary,
-        totalSpentThisMonthPaaS: parseFloat(paasResult.rows[0].total),
-        activePaaSCount: parseInt(paasCountResult.rows[0].count),
-        combinedMonthlySpend: vpsSummary.totalSpentThisMonth + parseFloat(paasResult.rows[0].total)
-      };
-    } catch (error) {
-      console.error('Error getting combined billing summary:', error);
-      return {
-        totalSpentThisMonth: 0,
-        totalSpentAllTime: 0,
-        activeVPSCount: 0,
-        monthlyEstimate: 0,
-        totalSpentThisMonthPaaS: 0,
-        activePaaSCount: 0,
-        combinedMonthlySpend: 0
-      };
-    }
-  }
 }

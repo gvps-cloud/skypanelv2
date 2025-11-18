@@ -47,13 +47,6 @@ DATABASE_URL=postgresql://username:password@ep-example-123456.us-east-1.aws.neon
 DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
 ```
 
-### Redis
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `REDIS_URL` | No | `redis://localhost:6379` | Redis connection URL for caching and queues |
-| `REDIS_PASSWORD` | No | - | Redis password if authentication is enabled |
-
 ## Branding & UI Configuration
 
 | Variable | Required | Default | Description |
@@ -198,7 +191,6 @@ TRUST_PROXY=1  # Adjust based on your proxy setup
 ```bash
 NODE_ENV=test
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/skypanelv2_test
-REDIS_URL=redis://localhost:6379/1
 ```
 
 ## Security Best Practices
@@ -217,7 +209,6 @@ REDIS_URL=redis://localhost:6379/1
 - [ ] Secure `SSH_CRED_SECRET` and `ENCRYPTION_KEY`
 - [ ] PayPal live credentials (not sandbox)
 - [ ] Proper `TRUST_PROXY` configuration for your infrastructure
-- [ ] Redis password protection enabled
 - [ ] PostgreSQL SSL/TLS enabled
 - [ ] Rate limiting configured appropriately
 - [ ] Monitoring and logging enabled

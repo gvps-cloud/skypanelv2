@@ -11,7 +11,6 @@ import {
   Server,
   ServerCog,
   Settings,
-  Store,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -46,7 +45,6 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const currentHash = location.hash?.slice(1) ?? "";
   const isDashboardActive = pathname === "/dashboard";
   const isVpsActive = pathname.startsWith("/vps");
-  const isPaasActive = pathname.startsWith("/paas");
   const isActivityActive = pathname.startsWith("/activity");
   const isBillingActive = pathname.startsWith("/billing");
   const isSshKeysActive = pathname.startsWith("/ssh-keys");
@@ -73,19 +71,6 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             isActive: activeAnchor === "support",
             items: [
               { title: "Tickets", url: `/admin#support`, isActive: activeAnchor === "support" },
-            ],
-          },
-          {
-            title: "PaaS",
-            icon: ServerCog,
-            url: `/admin#paas-overview`,
-            isActive: ["paas-overview", "paas-usage", "paas-apps", "paas-settings", "paas-workers"].includes(activeAnchor),
-            items: [
-              { title: "Overview", url: `/admin#paas-overview`, isActive: activeAnchor === "paas-overview" },
-              { title: "Usage Reports", url: `/admin#paas-usage`, isActive: activeAnchor === "paas-usage" },
-              { title: "Applications", url: `/admin#paas-apps`, isActive: activeAnchor === "paas-apps" },
-              { title: "Settings", url: `/admin#paas-settings`, isActive: activeAnchor === "paas-settings" },
-              { title: "Workers", url: `/admin#paas-workers`, isActive: activeAnchor === "paas-workers" },
             ],
           },
           {
@@ -142,34 +127,6 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           isActive: isDashboardActive,
         },
         {
-          title: "PaaS",
-          url: "/paas",
-          icon: ServerCog,
-          isActive: isPaasActive,
-          items: [
-            {
-              title: "Applications",
-              url: "/paas",
-              isActive: pathname === "/paas",
-            },
-            {
-              title: "Marketplace",
-              url: "/paas/marketplace",
-              isActive: pathname.startsWith("/paas/marketplace"),
-            },
-            {
-              title: "Plans",
-              url: "/paas/plans",
-              isActive: pathname.startsWith("/paas/plans"),
-            },
-            {
-              title: "Create App",
-              url: "/paas/new",
-              isActive: pathname.startsWith("/paas/new"),
-            },
-          ],
-        },
-        {
           title: "Compute",
           url: "/vps",
           icon: Server,
@@ -214,7 +171,6 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       isAdminRoute,
       isBillingActive,
       isApiDocsActive,
-      isPaasActive,
       isDashboardActive,
       isSshKeysActive,
       isVpsActive,

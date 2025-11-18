@@ -332,12 +332,7 @@ export async function smartRateLimit(req: Request, res: Response, next: NextFunc
     // In development mode, bypass rate limiting for critical endpoints
     const isDevelopment = process.env.NODE_ENV === 'development';
     const exemptEndpoints = [
-      '/api/paas/apps/',
-      '/api/paas/deployments/',
-      '/api/paas/build-logs/',
-      '/api/paas/deploy-logs/',
       '/api/notifications/',
-      '/api/admin/paas/settings',
       '/api/admin/users/search',
       '/api/health',
       '/api/auth/me'
@@ -425,30 +420,6 @@ export function createCustomRateLimiter(options: RateLimiterFactoryOptions = {})
     // Rate limit reached logging is handled in the custom handler
   });
 }
-
-/**
- * PaaS-specific rate limiter for polling endpoints
- * More lenient limits for deployment monitoring and job status polling
- */
-export const paasPollingLimiter = createCustomRateLimiter({
-  windowMs: 60 * 1000, // 1 minute window
-  maxRequests: 60, // 60 requests per minute = 1 per second
-  userType: 'authenticated',
-  skipSuccessfulRequests: false,
-  skipFailedRequests: false
-});
-
-/**
- * PaaS-specific rate limiter for high-frequency operations
- * Used for log streaming and other real-time features
- */
-export const paasStreamingLimiter = createCustomRateLimiter({
-  windowMs: 60 * 1000, // 1 minute window
-  maxRequests: 120, // 120 requests per minute = 2 per second
-  userType: 'authenticated',
-  skipSuccessfulRequests: false,
-  skipFailedRequests: false
-});
 
 /**
  * Middleware to add rate limit information to response headers for all requests

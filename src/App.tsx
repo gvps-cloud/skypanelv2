@@ -55,12 +55,6 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Pricing from "./pages/Pricing";
 import SSHKeys from "./pages/SSHKeys";
-import PaaSApps from "./pages/PaaS/PaaSApps";
-import PaaSAppCreate from "./pages/PaaS/PaaSAppCreate";
-import PaaSAppDetail from "./pages/PaaS/PaaSAppDetail";
-import PaaSPlans from "./pages/PaaS/PaaSPlans";
-import PaaSMarketplace from "./pages/PaaS/PaaSMarketplace";
-import PaaSMarketplaceDeploy from "./pages/PaaS/PaaSMarketplaceDeploy";
 
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
 
@@ -344,54 +338,6 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ActivityPage />
-            </ProtectedRoute>
-          }
-        />
-          <Route
-          path="/paas"
-          element={
-            <ProtectedRoute>
-              <PaaSApps />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/paas/plans"
-          element={
-            <ProtectedRoute>
-              <PaaSPlans />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/paas/new"
-          element={
-            <ProtectedRoute>
-              <PaaSAppCreate />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/paas/:id"
-          element={
-            <ProtectedRoute>
-              <PaaSAppDetail />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/paas/marketplace"
-          element={
-            <ProtectedRoute>
-              <PaaSMarketplace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/paas/marketplace/deploy/:slug"
-          element={
-            <ProtectedRoute>
-              <PaaSMarketplaceDeploy />
             </ProtectedRoute>
           }
         />

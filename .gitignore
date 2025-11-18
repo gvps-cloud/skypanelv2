@@ -30,9 +30,6 @@ dist-ssr
 .env.production
 docker/.env
 
-# Generated PaaS config
-docker/paas/generated/
-
 # Upload directories
 uploads/
 temp/

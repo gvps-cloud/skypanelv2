@@ -60,7 +60,7 @@
 - **Missing .js Extensions:** ESM requires explicit `.js` in imports; TypeScript will compile without them but runtime will fail.
 - **Forgot Organization Context:** Many endpoints require `organizationId`; use `requireOrganization` middleware and check `req.user.organizationId`.
 - **Encryption Key Not Set:** `SSH_CRED_SECRET` must be 32+ chars; generate via script or provider token decryption will fail.
-- **Stale Rate Limit State:** Redis-backed; clear with `redis-cli FLUSHDB` or restart Redis if limits seem stuck.
+- **Stale Rate Limit State:** Restart the API server to clear in-memory counters if limits seem stuck.
 - **Notification Not Appearing:** Ensure `activity_logs` insert succeeds and `notificationService.emit()` called; check SSE connection in browser devtools.
 
 ## Testing & Quality

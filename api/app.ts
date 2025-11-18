@@ -33,15 +33,11 @@ import healthRoutes from './routes/health.js';
 import contactRouter from './routes/contact.js';
 import adminContactRoutes from './routes/admin/contact.js';
 import adminPlatformRoutes from './routes/admin/platform.js';
-import adminPaasRoutes from './routes/admin/paas.js';
 import faqRoutes from './routes/faq.js';
 import adminFaqRoutes from './routes/adminFaq.js';
 import sshKeysRoutes from './routes/sshKeys.js';
 import pricingRoutes from './routes/pricing.js';
-import paasRoutes from './routes/paas.js';
 import { notificationService } from './services/notificationService.js';
-import { PaasSettingsService } from './services/paas/settingsService.js';
-import { PaasPlanService } from './services/paas/planService.js';
 import { performStartupValidation, initializeConfigurationMonitoring } from './services/rateLimitConfigValidator.js';
 import { initializeMetricsCollection, startMetricsPersistence } from './services/rateLimitMetrics.js';
 
@@ -63,14 +59,6 @@ startMetricsPersistence();
 // Start notification service for real-time updates
 notificationService.start().catch(err => {
   console.error('Failed to start notification service:', err);
-});
-
-PaasSettingsService.initializeDefaults().catch(err => {
-  console.error('Failed to ensure default PaaS settings:', err);
-});
-
-PaasPlanService.ensureDefaultPlans().catch(err => {
-  console.error('Failed to ensure default PaaS plans:', err);
 });
 
 const app: express.Application = express()
@@ -141,11 +129,9 @@ app.use('/api/pricing', pricingRoutes)
 app.use('/api/contact', contactRouter);
 app.use('/api/admin/contact', adminContactRoutes);
 app.use('/api/admin/platform', adminPlatformRoutes);
-app.use('/api/admin/paas', adminPaasRoutes);
 app.use('/api/faq', faqRoutes)
 app.use('/api/admin/faq', adminFaqRoutes)
 app.use('/api/ssh-keys', sshKeysRoutes)
-app.use('/api/paas', paasRoutes)
 
 // Health check routes are now handled by the dedicated health router
 
