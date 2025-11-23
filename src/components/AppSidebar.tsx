@@ -12,6 +12,7 @@ import {
   ServerCog,
   Settings,
   Users,
+  Cloud,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,11 +46,15 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const currentHash = location.hash?.slice(1) ?? "";
   const isDashboardActive = pathname === "/dashboard";
   const isVpsActive = pathname.startsWith("/vps");
+  const isPaasActive = pathname.startsWith("/paas");
   const isActivityActive = pathname.startsWith("/activity");
   const isBillingActive = pathname.startsWith("/billing");
   const isSshKeysActive = pathname.startsWith("/ssh-keys");
   const isApiDocsActive = pathname.startsWith("/api-docs");
   const isAdminRoute = pathname.startsWith("/admin");
+  const isPaasAppsActive = pathname.startsWith("/paas/apps");
+  const isPaasMarketplaceActive = pathname.startsWith("/paas/marketplace");
+  const isAdminPaasActive = pathname.startsWith("/admin/paas");
 
   const navMainItems = React.useMemo(
     () => {
@@ -97,6 +102,23 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             ],
           },
           {
+            title: "PaaS",
+            icon: Cloud,
+            url: `/admin/paas/workers`,
+            isActive: isAdminPaasActive,
+            items: [
+              { title: "Worker Nodes", url: `/admin/paas/workers`, isActive: pathname === "/admin/paas/workers" },
+              { title: "Services", url: `/admin/paas/services`, isActive: pathname === "/admin/paas/services" },
+              { title: "Volumes", url: `/admin/paas/volumes`, isActive: pathname === "/admin/paas/volumes" },
+              { title: "DNS", url: `/admin/paas/dns`, isActive: pathname === "/admin/paas/dns" },
+              { title: "Networking", url: `/admin/paas/networking`, isActive: pathname === "/admin/paas/networking" },
+              { title: "SSH Keys", url: `/admin/paas/ssh-keys`, isActive: pathname === "/admin/paas/ssh-keys" },
+              { title: "Caddy", url: `/admin/paas/caddy`, isActive: pathname === "/admin/paas/caddy" },
+              { title: "Pricing Plans", url: `/admin/paas/pricing`, isActive: pathname === "/admin/paas/pricing" },
+              { title: "Marketplace", url: `/admin/paas/marketplace`, isActive: pathname === "/admin/paas/marketplace" },
+            ],
+          },
+          {
             title: "Platform Settings",
             icon: Settings,
             url: `/admin#platform`,
@@ -140,6 +162,24 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           ],
         },
         {
+          title: "PaaS",
+          url: "/paas/apps",
+          icon: Cloud,
+          isActive: isPaasActive || isPaasAppsActive || isPaasMarketplaceActive,
+          items: [
+            {
+              title: "Applications",
+              url: "/paas/apps",
+              isActive: isPaasAppsActive,
+            },
+            {
+              title: "Marketplace",
+              url: "/paas/marketplace",
+              isActive: isPaasMarketplaceActive,
+            },
+          ],
+        },
+        {
           title: "SSH Keys",
           url: "/ssh-keys",
           icon: Key,
@@ -174,6 +214,11 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       isDashboardActive,
       isSshKeysActive,
       isVpsActive,
+      isPaasActive,
+      isPaasAppsActive,
+      isPaasMarketplaceActive,
+      isAdminPaasActive,
+      pathname,
     ]
   );
 

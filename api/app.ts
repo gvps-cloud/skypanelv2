@@ -31,14 +31,28 @@ import notificationsRouter from './routes/notifications.js';
 import themeRoutes from './routes/theme.js';
 import healthRoutes from './routes/health.js';
 import contactRouter from './routes/contact.js';
-import adminContactRoutes from './routes/admin/contact.js';
 import adminPlatformRoutes from './routes/admin/platform.js';
 import faqRoutes from './routes/faq.js';
-import adminFaqRoutes from './routes/adminFaq.js';
 import sshKeysRoutes from './routes/sshKeys.js';
 import pricingRoutes from './routes/pricing.js';
-import { notificationService } from './services/notificationService.js';
-import { performStartupValidation, initializeConfigurationMonitoring } from './services/rateLimitConfigValidator.js';
+import adminPaaSWorkersRoutes from './routes/admin/paasWorkers.js';
+import adminPaaSServicesRoutes from './routes/admin/paasServices.js';
+import adminPaaSVolumesRoutes from './routes/admin/paasVolumes.js';
+import adminPaaSDnsRoutes from './routes/admin/paasDns.js';
+import adminPaaSNetworkingRoutes from './routes/admin/paasNetworking.js';
+import adminPaaSSshKeysRoutes from './routes/admin/paasSshKeys.js';
+import adminPaaSCaddyRoutes from './routes/admin/paasCaddy.js';
+import adminPaaSImagesRoutes from './routes/admin/paasImages.js';
+import adminPaaSMarketplaceRoutes from './routes/admin/paasMarketplace.js';
+import adminPaaSPricingRoutes from './routes/admin/paasPricing.js';
+import adminPaaSApplicationsRoutes from './routes/admin/paasApplications.js';
+import adminPaaSDeploymentsRoutes from './routes/admin/paasDeployments.js';
+import adminPaaSContainersRoutes from './routes/admin/paasContainers.js';
+import clientPaaSApplicationsRoutes from './routes/client/paasApplications.js';
+import clientPaaSMarketplaceRoutes from './routes/client/paasMarketplace.js';
+import clientPaaSBillingRoutes from './routes/client/paasBilling.js';
+import adminFaqRoutes from './routes/adminFaq.js';
+import adminContactRoutes from './routes/admin/contact.js';
 import { initializeMetricsCollection, startMetricsPersistence } from './services/rateLimitMetrics.js';
 
 // for esm mode
@@ -46,92 +60,68 @@ import { initializeMetricsCollection, startMetricsPersistence } from './services
 // Validate configuration
 validateConfig()
 
-// Perform comprehensive rate limiting configuration validation
-performStartupValidation().catch(err => {
-  console.error('Rate limiting startup validation failed:', err);
-});
-
-// Initialize rate limiting monitoring and metrics
-initializeConfigurationMonitoring();
-initializeMetricsCollection();
-startMetricsPersistence();
-
-// Start notification service for real-time updates
-notificationService.start().catch(err => {
-  console.error('Failed to start notification service:', err);
-});
-
-const app: express.Application = express()
+const app = express()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const clientBuildPath = path.resolve(__dirname, '../dist')
 const clientIndexFile = path.join(clientBuildPath, 'index.html')
 
-// Trust proxy configuration - must be set before other middleware
-// This enables proper IP detection when behind proxies (Vite dev server, reverse proxies, etc.)
-app.set('trust proxy', config.rateLimiting.trustProxy)
-
 // Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
-}))
-
-// Smart rate limiting with differentiated limits based on user type
-app.use('/api/', addRateLimitHeaders)
-app.use('/api/', smartRateLimit)
-
-// CORS configuration
-// CORS configuration with sensible dev defaults and optional override
-const devOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000']
-const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
-  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
-  : (process.env.NODE_ENV === 'production' ? ['https://your-domain.com'] : devOrigins)
-
+app.use(helmet())
 app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: config.corsOrigins,
+  credentials: true
 }))
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+// Body parsing
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
-// Request logging middleware
-app.use((req: Request, res: Response, next: NextFunction) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-})
+// Rate limiting
+app.use(addRateLimitHeaders)
+app.use(smartRateLimit)
 
-/**
- * API Routes
- */
+// Initialize metrics
+initializeMetricsCollection()
+startMetricsPersistence()
+
+// Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/payments', paymentRoutes)
-app.use('/api/invoices', invoicesRouter);
 app.use('/api/admin', adminRoutes)
+app.use('/api/admin/platform', adminPlatformRoutes)
 app.use('/api/vps', vpsRoutes)
 app.use('/api/support', supportRoutes)
 app.use('/api/activity', activityRoutes)
+app.use('/api/invoices', invoicesRouter)
 app.use('/api/notifications', notificationsRouter)
 app.use('/api/theme', themeRoutes)
 app.use('/api/health', healthRoutes)
-app.use('/api/pricing', pricingRoutes)
-app.use('/api/contact', contactRouter);
-app.use('/api/admin/contact', adminContactRoutes);
-app.use('/api/admin/platform', adminPlatformRoutes);
-app.use('/api/faq', faqRoutes)
-app.use('/api/admin/faq', adminFaqRoutes)
+app.use('/api/contact', contactRouter)
+app.use('/api/admin/contact', adminContactRoutes)
+app.use('/api/faq', faqRoutes);
+app.use('/api/admin/faq', adminFaqRoutes);
 app.use('/api/ssh-keys', sshKeysRoutes)
+app.use('/api/pricing', pricingRoutes)
+
+// PaaS Routes
+app.use('/api/admin/paas/workers', adminPaaSWorkersRoutes);
+app.use('/api/admin/paas/services', adminPaaSServicesRoutes);
+app.use('/api/admin/paas/volumes', adminPaaSVolumesRoutes);
+app.use('/api/admin/paas/dns', adminPaaSDnsRoutes);
+app.use('/api/admin/paas/networking', adminPaaSNetworkingRoutes);
+app.use('/api/admin/paas/ssh-keys', adminPaaSSshKeysRoutes);
+app.use('/api/admin/paas/caddy', adminPaaSCaddyRoutes);
+app.use('/api/admin/paas/images', adminPaaSImagesRoutes);
+app.use('/api/admin/paas/pricing', adminPaaSPricingRoutes);
+app.use('/api/admin/paas/marketplace', adminPaaSMarketplaceRoutes);
+app.use('/api/admin/paas/applications', adminPaaSApplicationsRoutes);
+app.use('/api/admin/paas/deployments', adminPaaSDeploymentsRoutes);
+app.use('/api/admin/paas/containers', adminPaaSContainersRoutes);
+app.use('/api/client/paas/applications', clientPaaSApplicationsRoutes);
+app.use('/api/client/paas/marketplace', clientPaaSMarketplaceRoutes);
+app.use('/api/client/paas/billing', clientPaaSBillingRoutes);
 
 // Health check routes are now handled by the dedicated health router
 

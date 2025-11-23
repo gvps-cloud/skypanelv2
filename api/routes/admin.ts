@@ -1930,6 +1930,128 @@ router.put(
 
 // List all VPS servers for admins
 router.get(
+  "/users",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const result = await query(
+        `SELECT id, email, name, role, created_at, updated_at 
+         FROM users 
+         ORDER BY created_at DESC`
+      );
+      
+      const users = result.rows;
+      
+      // Fetch organizations for each user
+      for (const user of users) {
+        const orgs = await query(
+          `SELECT o.id as "organizationId", o.name as "organizationName", o.slug as "organizationSlug", m.role
+           FROM organization_members m
+           JOIN organizations o ON o.id = m.organization_id
+           WHERE m.user_id = $1`,
+          [user.id]
+        );
+        user.organizations = orgs.rows;
+      }
+      
+      res.json({ users });
+    } catch (err: any) {
+      console.error("Admin users list error:", err);
+      res.status(500).json({ error: err.message || "Failed to fetch users" });
+    }
+  }
+);
+
+// Upstream Plans
+router.get("/upstream/plans", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    // Check if we have an active Linode provider
+    const provider = await query("SELECT id FROM service_providers WHERE type = 'linode' AND active = true LIMIT 1");
+    if (provider.rows.length === 0) {
+      return res.json({ plans: [] });
+    }
+    const plans = await linodeService.getLinodeTypes();
+    res.json({ plans });
+  } catch (err: any) {
+    console.error("Admin upstream plans error:", err);
+    // Return empty list instead of error if upstream fails
+    res.json({ plans: [], error: err.message });
+  }
+});
+
+// Upstream Regions
+router.get("/upstream/regions", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+     const provider = await query("SELECT id FROM service_providers WHERE type = 'linode' AND active = true LIMIT 1");
+    if (provider.rows.length === 0) {
+      return res.json({ regions: [] });
+    }
+    const regions = await linodeService.getLinodeRegions();
+    res.json({ regions });
+  } catch (err: any) {
+    console.error("Admin upstream regions error:", err);
+    res.json({ regions: [], error: err.message });
+  }
+});
+
+// Upstream StackScripts
+router.get("/upstream/stackscripts", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+     const provider = await query("SELECT id FROM service_providers WHERE type = 'linode' AND active = true LIMIT 1");
+    if (provider.rows.length === 0) {
+      return res.json({ stackscripts: [] });
+    }
+    const mine = req.query.mine === 'true';
+    const scripts = await linodeService.getLinodeStackScripts({ mineOnly: mine });
+    res.json({ stackscripts: scripts });
+  } catch (err: any) {
+    console.error("Admin upstream stackscripts error:", err);
+    res.json({ stackscripts: [], error: err.message });
+  }
+});
+
+// StackScript Configs
+router.get("/stackscripts/configs", authenticateToken, requireAdmin, async (req, res) => {
+   try {
+      const result = await query("SELECT * FROM stackscript_configs ORDER BY display_order ASC");
+      res.json({ configs: result.rows });
+   } catch (err: any) {
+     if (isMissingTableError(err)) {
+       return res.json({ configs: [] });
+     }
+     res.status(500).json({ error: err.message });
+   }
+});
+
+router.post("/stackscripts/configs", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { stackscript_id, label, description, is_enabled, display_order, metadata } = req.body;
+    // Upsert
+    const result = await query(
+      `INSERT INTO stackscript_configs (stackscript_id, label, description, is_enabled, display_order, metadata, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       ON CONFLICT (stackscript_id) DO UPDATE SET
+         label = EXCLUDED.label,
+         description = EXCLUDED.description,
+         is_enabled = EXCLUDED.is_enabled,
+         display_order = EXCLUDED.display_order,
+         metadata = EXCLUDED.metadata,
+         updated_at = NOW()
+       RETURNING *`,
+      [stackscript_id, label, description, is_enabled, display_order, metadata]
+    );
+    res.json({ config: result.rows[0] });
+  } catch (err: any) {
+    if (isMissingTableError(err)) {
+       return res.status(400).json({ error: "stackscript_configs table missing" });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List all VPS servers for admins
+router.get(
   "/servers",
   authenticateToken,
   requireAdmin,
