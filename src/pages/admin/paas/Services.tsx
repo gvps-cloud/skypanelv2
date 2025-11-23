@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiClient } from "@/lib/api";
 import { PageHeader } from "@/components/layouts/PageHeader";
 import { ContentCard } from "@/components/layouts/ContentCard";
@@ -12,6 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export default function AdminPaaSServicesPage() {
   const [context, setContext] = useState<string>("");
@@ -58,7 +64,9 @@ export default function AdminPaaSServicesPage() {
   async function remove(name: string) {
     try {
       await apiClient.delete(
-        `/api/admin/paas/services/${encodeURIComponent(name)}`
+        `/api/admin/paas/services/${encodeURIComponent(name)}${
+          context ? `?context=${encodeURIComponent(context)}` : ""
+        }`
       );
       await load();
     } catch (e: any) {
@@ -107,7 +115,7 @@ export default function AdminPaaSServicesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Image</TableHead>
+                <TableHead>Mode</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ports</TableHead>
                 <TableHead className="w-40 text-right">Actions</TableHead>
@@ -117,7 +125,7 @@ export default function AdminPaaSServicesPage() {
               {services.map((s) => (
                 <TableRow key={s.name}>
                   <TableCell className="font-medium">{s.name}</TableCell>
-                  <TableCell className="text-xs sm:text-sm">{s.image}</TableCell>
+                  <TableCell className="text-xs sm:text-sm">{s.mode}</TableCell>
                   <TableCell className="capitalize text-xs sm:text-sm">
                     {s.status}
                   </TableCell>
@@ -125,20 +133,16 @@ export default function AdminPaaSServicesPage() {
                     {(s.ports || []).join(", ")}
                   </TableCell>
                   <TableCell className="space-x-1 text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => scale(s.name, 1)}
-                    >
-                      Scale 1
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => scale(s.name, 2)}
-                    >
-                      Scale 2
-                    </Button>
+                    {s.name === "caddy" || s.mode === "global" ? (
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to="/admin/paas/caddy">Manage</Link>
+                      </Button>
+                    ) : (
+                      <ScalePopover
+                        currentReplicas={s.replicas}
+                        onScale={(r) => scale(s.name, r)}
+                      />
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -155,6 +159,55 @@ export default function AdminPaaSServicesPage() {
         )}
       </ContentCard>
     </div>
+  );
+}
+
+function ScalePopover({
+  currentReplicas,
+  onScale,
+}: {
+  currentReplicas: number;
+  onScale: (r: number) => void;
+}) {
+  const [replicas, setReplicas] = useState(currentReplicas || 1);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="outline">
+          Scale
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-60">
+        <div className="grid gap-4">
+          <div className="space-y-2">
+            <h4 className="font-medium leading-none">Scale Service</h4>
+            <p className="text-sm text-muted-foreground">
+              Set the number of replicas for this service.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              min={0}
+              value={replicas}
+              onChange={(e) => setReplicas(parseInt(e.target.value) || 0)}
+              className="h-8"
+            />
+            <Button
+              size="sm"
+              onClick={() => {
+                onScale(replicas);
+                setOpen(false);
+              }}
+            >
+              Apply
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

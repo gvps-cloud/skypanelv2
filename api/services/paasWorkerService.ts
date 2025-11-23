@@ -534,22 +534,16 @@ export class PaaSWorkerService {
       const contexts = contextsList.map(ctx => ctx.name);
       let discovered = 0;
       let registered = 0;
+      const uniqueMachineIds = new Set<string>();
 
       for (const contextName of contexts) {
         try {
           // Get machines for this context
-          const machinesOutput = await UncloudService.listServices(contextName);
-          // Parse machine output - for now just skip if can't get machines
-          if (!machinesOutput) {
-            console.log(`  No machines found for context ${contextName}`);
-            continue;
-          }
-          
           // Try to get machine details using uc machine ls
           const { stdout: machinesList } = await execAsync(`uc machine ls -c ${contextName}`);
           const machineLines = machinesList.trim().split('\n').slice(1); // Skip header
           
-          const machines: Array<{name: string; state: string; address: string; publicIp?: string}> = [];
+          const machines: Array<{name: string; state: string; address: string; publicIp?: string; id: string}> = [];
           for (const line of machineLines) {
             const parts = line.trim().split(/\s+/);
             if (parts.length >= 4) {
@@ -557,11 +551,19 @@ export class PaaSWorkerService {
                 name: parts[0],
                 state: parts[1],
                 address: parts[2].split('/')[0], // Remove CIDR
-                publicIp: parts[3]
+                publicIp: parts[3],
+                id: parts[parts.length - 1] // Last part is ID
               });
             }
           }
-          discovered += machines.length;
+          
+          // Count unique machines
+          for (const machine of machines) {
+            if (!uniqueMachineIds.has(machine.id)) {
+              uniqueMachineIds.add(machine.id);
+              discovered++;
+            }
+          }
 
           for (const machine of machines) {
             // Check if worker already exists (by name or by context+machine combo)
@@ -571,7 +573,8 @@ export class PaaSWorkerService {
             );
 
             if (existing.rows.length > 0) {
-              console.log(`  Worker already exists: ${contextName}/${machine.name}`);
+              // Silent skip for duplicates in other contexts to avoid log spam
+              // console.log(`  Worker already exists: ${contextName}/${machine.name}`);
               continue;
             }
 
@@ -606,7 +609,7 @@ export class PaaSWorkerService {
         }
       }
 
-      console.log(`✨ Discovery complete: ${discovered} discovered, ${registered} registered`);
+      console.log(`✨ Discovery complete: ${discovered} unique worker(s) found, ${registered} newly registered`);
       return { discovered, registered };
     } catch (error) {
       console.error('Error discovering workers:', error);

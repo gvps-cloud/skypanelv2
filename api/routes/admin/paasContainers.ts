@@ -23,10 +23,10 @@ router.get('/', async (req: Request, res: Response) => {
     
     for (const worker of workers.rows) {
       try {
-        const result = await UncloudService.listServices({ context: worker.uncloud_context });
+        const services = await UncloudService.listServices(worker.uncloud_context);
         
-        if (result.success && result.services) {
-          allContainers.push(...result.services.map((svc: any) => ({
+        if (services) {
+          allContainers.push(...services.map((svc) => ({
             ...svc,
             workerNodeId: worker.id,
             workerName: worker.name,
@@ -55,11 +55,11 @@ router.get('/stats', async (req: Request, res: Response) => {
     
     for (const worker of workers.rows) {
       try {
-        const result = await UncloudService.listServices({ context: worker.uncloud_context });
+        const services = await UncloudService.listServices(worker.uncloud_context);
         
-        if (result.success && result.services) {
-          totalContainers += result.services.length;
-          runningContainers += result.services.filter((s: any) => s.state === 'running').length;
+        if (services) {
+          totalContainers += services.length;
+          runningContainers += services.filter((s) => s.status === 'running').length;
         }
       } catch (err) {
         console.error(`Error getting stats from worker ${worker.name}:`, err);
@@ -89,15 +89,13 @@ router.get('/:serviceName', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'workerContext required' });
     }
     
-    const result = await UncloudService.listServices({ 
-      context: workerContext as string 
-    });
+    const services = await UncloudService.listServices(workerContext as string);
     
-    if (!result.success || !result.services) {
+    if (!services) {
       return res.status(404).json({ success: false, error: 'Container not found' });
     }
     
-    const container = result.services.find((s: any) => s.name === req.params.serviceName);
+    const container = services.find((s) => s.name === req.params.serviceName);
     
     if (!container) {
       return res.status(404).json({ success: false, error: 'Container not found' });

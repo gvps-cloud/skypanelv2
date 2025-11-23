@@ -43,8 +43,8 @@ router.post('/:name/scale', async (req: Request, res: Response) => {
 
 router.delete('/:name', async (req: Request, res: Response) => {
   try {
-    const { context } = req.body
-    const result = await UncloudService.removeService({ serviceName: req.params.name, context })
+    const { context } = req.query.context ? req.query : req.body;
+    const result = await UncloudService.removeService({ serviceName: req.params.name, context: context as string | undefined })
     res.status(result.success ? 200 : 500).json(result)
   } catch (error: any) {
     res.status(500).json({ success: false, output: '', error: error.message })

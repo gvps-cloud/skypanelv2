@@ -32,6 +32,8 @@ export interface UncloudAppInfo {
   ports: string[];
   image?: string;
   createdAt?: string;
+  mode?: string;
+  replicas?: number;
 }
 
 export class UncloudService {
@@ -275,12 +277,20 @@ export class UncloudService {
       for (const line of lines) {
         if (line.startsWith('NAME')) continue;
         const parts = line.trim().split(/\s+/);
-        if (parts.length >= 4) {
+        if (parts.length >= 3) {
           const name = parts[0];
+          const mode = parts[1];
           const replicas = parseInt(parts[2], 10);
-          const image = parts[3];
-          const endpoints = parts.slice(4);
-          apps.push({ name, status: isNaN(replicas) ? 'unknown' : replicas > 0 ? 'running' : 'stopped', ports: endpoints, image });
+          const endpoints = parts.slice(3);
+          
+          apps.push({ 
+            name, 
+            mode,
+            replicas,
+            status: isNaN(replicas) ? 'unknown' : replicas > 0 ? 'running' : 'stopped', 
+            ports: endpoints, 
+            image: '' // Image is not available in uc ls output
+          });
         }
       }
       return apps;
@@ -303,7 +313,7 @@ export class UncloudService {
   static async serviceScale(params: { serviceName: string; replicas: number; context?: string }): Promise<{ success: boolean; output: string; error?: string }>{
     try {
       const contextFlag = params.context ? `-c ${params.context}` : '';
-      const { stdout, stderr } = await execAsync(`uc service scale ${params.serviceName} ${params.replicas} ${contextFlag}`.trim());
+      const { stdout, stderr } = await execAsync(`echo "y" | uc service scale ${params.serviceName} ${params.replicas} ${contextFlag}`.trim());
       return { success: true, output: stdout, error: stderr || undefined };
     } catch (error: any) {
       return { success: false, output: error.stdout || '', error: error.stderr || error.message };
@@ -494,7 +504,7 @@ export class UncloudService {
   }): Promise<{ success: boolean; output: string; error?: string }> {
     try {
       const contextFlag = params.context ? `-c ${params.context}` : '';
-      const command = `uc service rm ${params.serviceName} ${contextFlag}`.trim();
+      const command = `echo "y" | uc service rm ${params.serviceName} ${contextFlag}`.trim();
       
       console.log(`🗑️ Removing service: ${params.serviceName}`);
       const { stdout, stderr } = await execAsync(command);
