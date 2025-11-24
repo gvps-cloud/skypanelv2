@@ -55,12 +55,17 @@ interface LocationStats {
   workersCount: number;
 }
 
+const DATACENTER_PAGE_SIZE = 5;
+
 const AdminPaaSLocationsPage: React.FC = () => {
   const { token } = useAuth();
 
   const [locations, setLocations] = useState<PaaSLocation[]>([]);
   const [stats, setStats] = useState<LocationStats | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [datacenterFilter, setDatacenterFilter] = useState<string>("all");
+  const [datacenterSearch, setDatacenterSearch] = useState("");
+  const [datacenterPage, setDatacenterPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
 
@@ -110,6 +115,14 @@ const AdminPaaSLocationsPage: React.FC = () => {
         createdAt: loc.createdAt || loc.created_at,
         updatedAt: loc.updatedAt || loc.updated_at,
         createdBy: loc.createdBy || loc.created_by,
+        // workerCount comes from backend aggregation in PaaSLocationService.getAllLocations
+        // It may be provided as either camelCase or snake_case depending on the caller
+        workerCount:
+          typeof loc.workerCount === "number"
+            ? loc.workerCount
+            : loc.worker_count !== undefined
+            ? Number(loc.worker_count)
+            : undefined,
       }));
       setLocations(items);
     } catch (error: any) {
@@ -147,6 +160,46 @@ const AdminPaaSLocationsPage: React.FC = () => {
   useEffect(() => {
     void loadStats();
   }, [loadStats]);
+
+  const datacenterOptions = useMemo(
+    () =>
+      Array.from(new Set(locations.map((loc) => loc.datacenterCode))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [locations],
+  );
+
+  const {
+    pagedDatacenterOptions,
+    datacenterTotalPages,
+    datacenterCurrentPage,
+    datacenterTotalCount,
+  } = useMemo(() => {
+    const search = datacenterSearch.trim().toLowerCase();
+    const filtered = search
+      ? datacenterOptions.filter((code) => code.toLowerCase().includes(search))
+      : datacenterOptions;
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / DATACENTER_PAGE_SIZE));
+    const currentPage = Math.min(datacenterPage, totalPages - 1);
+    const start = currentPage * DATACENTER_PAGE_SIZE;
+    const end = start + DATACENTER_PAGE_SIZE;
+
+    return {
+      pagedDatacenterOptions: filtered.slice(start, end),
+      datacenterTotalPages: totalPages,
+      datacenterCurrentPage: currentPage,
+      datacenterTotalCount: filtered.length,
+    };
+  }, [datacenterOptions, datacenterSearch, datacenterPage]);
+
+  const filteredLocations = useMemo(
+    () =>
+      datacenterFilter === "all"
+        ? locations
+        : locations.filter((loc) => loc.datacenterCode === datacenterFilter),
+    [locations, datacenterFilter],
+  );
 
   const resetCreateForm = () => {
     setNewName("");
@@ -400,10 +453,75 @@ const AdminPaaSLocationsPage: React.FC = () => {
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
+            <Select
+              value={datacenterFilter}
+              onValueChange={(value) => setDatacenterFilter(value)}
+            >
+              <SelectTrigger className="h-8 w-48">
+                <SelectValue placeholder="All datacenters" />
+              </SelectTrigger>
+              <SelectContent>
+                <div className="p-2">
+                  <Input
+                    placeholder="Search datacenter code..."
+                    value={datacenterSearch}
+                    onChange={(e) => {
+                      setDatacenterSearch(e.target.value);
+                      setDatacenterPage(0);
+                    }}
+                    // Prevent Radix Select typeahead from hijacking key presses
+                    // so users can type full search strings without auto-selecting items.
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                    }}
+                    className="h-8"
+                  />
+                </div>
+                <div className="max-h-60 overflow-y-auto">
+                  <SelectItem value="all">All datacenters</SelectItem>
+                  {pagedDatacenterOptions.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {code}
+                    </SelectItem>
+                  ))}
+                </div>
+                {datacenterTotalCount > DATACENTER_PAGE_SIZE && (
+                  <div className="flex items-center justify-between border-t px-2 py-1 text-xs text-muted-foreground">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      disabled={datacenterCurrentPage === 0}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDatacenterPage((prev) => Math.max(prev - 1, 0));
+                      }}
+                    >
+                      {"<"}
+                    </Button>
+                    <span>
+                      Page {datacenterCurrentPage + 1} of {datacenterTotalPages}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      disabled={datacenterCurrentPage >= datacenterTotalPages - 1}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDatacenterPage((prev) => prev + 1);
+                      }}
+                    >
+                      {">"}
+                    </Button>
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
           </div>
         }
       >
-        {locations.length === 0 ? (
+        {filteredLocations.length === 0 ? (
           <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
             No locations configured yet. Add at least one location to organize worker nodes.
           </div>
@@ -421,7 +539,7 @@ const AdminPaaSLocationsPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {locations.map((location) => (
+              {filteredLocations.map((location) => (
                 <TableRow key={location.id}>
                   <TableCell className="font-medium">
                     <div>

@@ -61,6 +61,7 @@ import PaaSApplicationsPage from "./pages/PaaSApplications";
 import PaaSMarketplacePage from "./pages/PaaSMarketplace";
 import PaaSApplicationDetailsPage from "./pages/PaaSApplicationDetails";
 import AdminPaaSWorkersPage from "./pages/admin/paas/Workers";
+import AdminPaaSImagesPage from "./pages/admin/paas/Images";
 import AdminPaaSPricingPage from "./pages/admin/paas/Pricing";
 import AdminPaaSMarketplacePage from "./pages/admin/paas/Marketplace";
 import AdminPaaSServicesPage from "./pages/admin/paas/Services";
@@ -399,6 +400,14 @@ function AppRoutes() {
           element={
             <AdminRoute>
               <AdminPaaSWorkersPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/paas/images"
+          element={
+            <AdminRoute>
+              <AdminPaaSImagesPage />
             </AdminRoute>
           }
         />

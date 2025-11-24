@@ -325,13 +325,61 @@ export class PaaSWorkerService {
     updates: UpdateWorkerParams
   ): Promise<PaaSWorkerNode | null> {
     try {
+      // Load current worker so we can detect name changes and know its uncloud machine name/context
+      const currentResult = await query(
+        'SELECT name, uncloud_context, uncloud_machine_name FROM paas_worker_nodes WHERE id = $1',
+        [workerId]
+      );
+
+      if (currentResult.rows.length === 0) {
+        console.warn(`updateWorker: worker ${workerId} not found`);
+        return null;
+      }
+
+      const current = currentResult.rows[0];
+
       const setStatements: string[] = [];
       const params: any[] = [];
       let paramIndex = 1;
       
       if (updates.name !== undefined) {
+        const newDisplayName = updates.name;
+
+        // Only attempt an uncloud machine rename if the display name actually changed
+        if (newDisplayName !== current.name) {
+          const oldMachineName =
+            current.uncloud_machine_name ||
+            current.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          const newMachineName = newDisplayName
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '-');
+
+          if (newMachineName !== oldMachineName) {
+            const renameResult = await UncloudService.renameMachine({
+              oldName: oldMachineName,
+              newName: newMachineName,
+              context: current.uncloud_context,
+            });
+
+            if (!renameResult.success) {
+              throw new Error(
+                renameResult.error ||
+                  'Failed to rename machine in uncloud cluster',
+              );
+            }
+
+            console.log(
+              `✅ Renamed uncloud machine ${oldMachineName} -> ${newMachineName} (context: ${current.uncloud_context})`,
+            );
+
+            // Persist the new uncloud machine name in our database
+            setStatements.push(`uncloud_machine_name = $${paramIndex++}`);
+            params.push(newMachineName);
+          }
+        }
+
         setStatements.push(`name = $${paramIndex++}`);
-        params.push(updates.name);
+        params.push(newDisplayName);
       }
       
       if (updates.status !== undefined) {

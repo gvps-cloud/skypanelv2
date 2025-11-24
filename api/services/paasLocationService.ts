@@ -27,6 +27,7 @@ export interface PaaSLocation {
   createdAt: Date;
   updatedAt: Date;
   createdBy?: number;
+  workerCount?: number; // Number of worker nodes assigned to this location
 }
 
 /**
@@ -153,16 +154,20 @@ export class PaaSLocationService {
    */
   static async getAllLocations(activeOnly: boolean = false): Promise<PaaSLocation[]> {
     try {
-      let sql = 'SELECT * FROM paas_locations';
+      let sql = `
+        SELECT l.*, COUNT(w.id) AS worker_count
+        FROM paas_locations l
+        LEFT JOIN paas_worker_nodes w ON w.location_id = l.id
+      `;
       const params: any[] = [];
-      
+
       if (activeOnly) {
-        sql += ' WHERE is_active = $1';
+        sql += ' WHERE l.is_active = $1';
         params.push(true);
       }
-      
-      sql += ' ORDER BY created_at DESC';
-      
+
+      sql += ' GROUP BY l.id ORDER BY l.created_at DESC';
+
       const result = await query(sql, params);
       return result.rows.map(row => this.mapRowToLocation(row));
     } catch (error) {
@@ -465,6 +470,10 @@ export class PaaSLocationService {
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       createdBy: row.created_by,
+      workerCount:
+        row.worker_count !== undefined && row.worker_count !== null
+          ? parseInt(row.worker_count, 10)
+          : undefined,
     };
   }
 }

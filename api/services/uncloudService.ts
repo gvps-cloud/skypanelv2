@@ -445,6 +445,37 @@ export class UncloudService {
     }
   }
 
+  static async renameMachine(params: {
+    oldName: string;
+    newName: string;
+    context?: string;
+  }): Promise<{ success: boolean; output: string; error?: string }> {
+    try {
+      const contextFlag = params.context ? `-c ${params.context}` : '';
+      const command = `uc machine rename ${params.oldName} ${params.newName} ${contextFlag}`.trim();
+
+      console.log(`✏️ Renaming machine: ${params.oldName} -> ${params.newName}`);
+      const { stdout, stderr } = await execAsync(command);
+      console.log(`✅ Machine rename completed: ${params.oldName} -> ${params.newName}`);
+
+      return {
+        success: true,
+        output: stdout,
+        error: stderr || undefined,
+      };
+    } catch (error: any) {
+      console.error(
+        `Failed to rename machine ${params.oldName} -> ${params.newName}:`,
+        error,
+      );
+      return {
+        success: false,
+        output: error.stdout || '',
+        error: error.stderr || error.message,
+      };
+    }
+  }
+
   static async removeMachine(params: {
     machineName: string;
     context?: string;
