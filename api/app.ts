@@ -36,6 +36,7 @@ import faqRoutes from './routes/faq.js';
 import sshKeysRoutes from './routes/sshKeys.js';
 import pricingRoutes from './routes/pricing.js';
 import adminPaaSWorkersRoutes from './routes/admin/paasWorkers.js';
+import adminPaaSLocationsRoutes from './routes/admin/paasLocations.js';
 import adminPaaSServicesRoutes from './routes/admin/paasServices.js';
 import adminPaaSVolumesRoutes from './routes/admin/paasVolumes.js';
 import adminPaaSDnsRoutes from './routes/admin/paasDns.js';
@@ -107,6 +108,7 @@ app.use('/api/pricing', pricingRoutes)
 
 // PaaS Routes
 app.use('/api/admin/paas/workers', adminPaaSWorkersRoutes);
+app.use('/api/admin/paas/locations', adminPaaSLocationsRoutes);
 app.use('/api/admin/paas/services', adminPaaSServicesRoutes);
 app.use('/api/admin/paas/volumes', adminPaaSVolumesRoutes);
 app.use('/api/admin/paas/dns', adminPaaSDnsRoutes);

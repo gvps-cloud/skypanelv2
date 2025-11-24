@@ -20,6 +20,7 @@ export interface PaaSWorkerNode {
   sshKeyPath?: string;
   uncloudContext: string;
   status: 'active' | 'inactive' | 'maintenance' | 'error';
+  locationId?: string; // Foreign key to paas_locations
   cpuTotal?: number;
   memoryTotalGb?: number;
   diskTotalGb?: number;
@@ -35,12 +36,14 @@ export interface CreateWorkerParams {
   sshPort?: number;
   sshUser: string;
   sshKeyPath?: string;
+  locationId?: string; // Location assignment for this worker
   createdBy?: string; // User ID
 }
 
 export interface UpdateWorkerParams {
   name?: string;
   status?: 'active' | 'inactive' | 'maintenance' | 'error';
+  locationId?: string; // Update location assignment
   healthStatus?: 'healthy' | 'degraded' | 'unhealthy';
   cpuTotal?: number;
   memoryTotalGb?: number;
@@ -202,9 +205,9 @@ export class PaaSWorkerService {
           `INSERT INTO paas_worker_nodes (
             name, ssh_host, ssh_port, ssh_user, ssh_key_path,
             uncloud_context, uncloud_machine_name, status, health_status,
-            cpu_cores, ram_mb, disk_gb,
+            cpu_cores, ram_mb, disk_gb, location_id,
             last_health_check, created_by, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
           RETURNING *`,
           [
             params.name,
@@ -219,6 +222,7 @@ export class PaaSWorkerService {
             serverInfo?.cpuCount,
             serverInfo ? parseFloat(serverInfo.memoryTotal) * 1024 : null,
             serverInfo ? parseFloat(serverInfo.diskSpace) : null,
+            params.locationId || null,
             now,
             null,
             now,
@@ -333,6 +337,11 @@ export class PaaSWorkerService {
       if (updates.status !== undefined) {
         setStatements.push(`status = $${paramIndex++}`);
         params.push(updates.status);
+      }
+      
+      if (updates.locationId !== undefined) {
+        setStatements.push(`location_id = $${paramIndex++}`);
+        params.push(updates.locationId);
       }
       
       if (updates.healthStatus !== undefined) {
@@ -753,6 +762,7 @@ SCRIPT`;
       sshKeyPath: row.ssh_key_path,
       uncloudContext: row.uncloud_context,
       status: row.status,
+      locationId: row.location_id ? row.location_id.toString() : undefined,
       cpuTotal: row.cpu_cores,
       memoryTotalGb: row.ram_mb ? row.ram_mb / 1024 : undefined,
       diskTotalGb: row.disk_gb ? parseFloat(row.disk_gb) : undefined,

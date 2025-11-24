@@ -87,7 +87,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const { name, hostIp, sshPort, sshUser, sshKeyPath } = req.body;
+    const { name, hostIp, sshPort, sshUser, sshKeyPath, locationId } = req.body;
     
     if (!name || !hostIp || !sshUser) {
       return res.status(400).json({ 
@@ -110,6 +110,7 @@ router.post('/', async (req: Request, res: Response) => {
       sshPort: sshPort ? parseInt(sshPort) : 22,
       sshUser,
       sshKeyPath,
+      locationId: locationId || undefined,
       createdBy: authReq.user?.id
     });
     

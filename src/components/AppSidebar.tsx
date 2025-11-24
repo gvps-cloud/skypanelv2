@@ -107,6 +107,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             url: `/admin/paas/workers`,
             isActive: isAdminPaasActive,
             items: [
+              { title: "Locations", url: `/admin/paas/locations`, isActive: pathname === "/admin/paas/locations" },
               { title: "Worker Nodes", url: `/admin/paas/workers`, isActive: pathname === "/admin/paas/workers" },
               { title: "Services", url: `/admin/paas/services`, isActive: pathname === "/admin/paas/services" },
               { title: "Volumes", url: `/admin/paas/volumes`, isActive: pathname === "/admin/paas/volumes" },

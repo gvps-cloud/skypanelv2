@@ -69,6 +69,7 @@ import AdminPaaSDnsPage from "./pages/admin/paas/Dns";
 import AdminPaaSNetworkingPage from "./pages/admin/paas/Networking";
 import AdminPaaSSshKeysPage from "./pages/admin/paas/SshKeys";
 import AdminPaaSCaddyPage from "./pages/admin/paas/Caddy";
+import AdminPaaSLocationsPage from "./pages/admin/paas/Locations";
 
 // Component to handle impersonation banner display
 function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
@@ -398,6 +399,14 @@ function AppRoutes() {
           element={
             <AdminRoute>
               <AdminPaaSWorkersPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/paas/locations"
+          element={
+            <AdminRoute>
+              <AdminPaaSLocationsPage />
             </AdminRoute>
           }
         />

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Activity, Plus, RefreshCw, Server, Trash2, Wifi, AlertTriangle, Edit } from "lucide-react";
+import { Activity, Plus, RefreshCw, Server, Trash2, Wifi, AlertTriangle, Edit, Check, ChevronsUpDown, MapPin } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { buildApiUrl } from "@/lib/api";
@@ -32,6 +32,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 interface WorkerNode {
   id: string;
@@ -41,6 +54,7 @@ interface WorkerNode {
   sshUser: string;
   uncloudContext: string;
   status: "active" | "inactive" | "maintenance" | "error";
+  locationId?: string | null;
   cpuTotal?: number | null;
   memoryTotalGb?: number | null;
   diskTotalGb?: number | null;
@@ -54,6 +68,15 @@ interface SshKey {
   id: string;
   name: string;
   keyPath: string;
+}
+
+interface PaaSLocation {
+  id: string;
+  name: string;
+  datacenterCode: string;
+  region: string;
+  country: string;
+  isActive: boolean;
 }
 
 interface WorkerStats {
@@ -73,6 +96,7 @@ const AdminPaaSWorkersPage: React.FC = () => {
   const [workers, setWorkers] = useState<WorkerNode[]>([]);
   const [stats, setStats] = useState<WorkerStats | null>(null);
   const [sshKeys, setSshKeys] = useState<SshKey[]>([]);
+  const [locations, setLocations] = useState<PaaSLocation[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -86,11 +110,15 @@ const AdminPaaSWorkersPage: React.FC = () => {
   const [newSshUser, setNewSshUser] = useState("root");
   const [selectedKeyId, setSelectedKeyId] = useState<string>("custom");
   const [newSshKeyPath, setNewSshKeyPath] = useState("/root/.ssh/id_rsa");
+  const [selectedLocationId, setSelectedLocationId] = useState<string>("");
+  const [locationSearchOpen, setLocationSearchOpen] = useState(false);
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsWorker, setDetailsWorker] = useState<WorkerNode | null>(null);
   const [editName, setEditName] = useState("");
   const [editStatus, setEditStatus] = useState<WorkerNode["status"]>("active");
+  const [editLocationId, setEditLocationId] = useState<string>("");
+  const [editLocationSearchOpen, setEditLocationSearchOpen] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -111,9 +139,25 @@ const AdminPaaSWorkersPage: React.FC = () => {
     }
   }, [hasToken, token]);
 
+  const loadLocations = useCallback(async () => {
+    if (!hasToken) return;
+    try {
+      const res = await fetch(buildApiUrl("/api/admin/paas/locations?activeOnly=true"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.locations)) {
+        setLocations(data.locations);
+      }
+    } catch (error) {
+      console.error("Failed to load locations", error);
+    }
+  }, [hasToken, token]);
+
   useEffect(() => {
     void loadSshKeys();
-  }, [loadSshKeys]);
+    void loadLocations();
+  }, [loadSshKeys, loadLocations]);
 
   const loadWorkers = useCallback(async () => {
     if (!hasToken) return;
@@ -138,6 +182,7 @@ const AdminPaaSWorkersPage: React.FC = () => {
         sshUser: w.sshUser || w.ssh_user,
         uncloudContext: w.uncloudContext || w.uncloud_context,
         status: w.status,
+        locationId: w.locationId || w.location_id || null,
         cpuTotal: w.cpuTotal ?? w.cpu_total ?? null,
         memoryTotalGb: w.memoryTotalGb ?? w.memory_total_gb ?? null,
         diskTotalGb: w.diskTotalGb ?? w.disk_total_gb ?? null,
@@ -188,8 +233,9 @@ const AdminPaaSWorkersPage: React.FC = () => {
     setNewHostIp("");
     setNewSshPort("22");
     setNewSshUser("root");
-    setSelectedKeyId(sshKeys.length > 0 ? sshKeys[0].id : "custom");
+    setSelectedKeyId("custom");
     setNewSshKeyPath("/root/.ssh/id_rsa");
+    setSelectedLocationId("");
     setCreationLogs("");
   };
 
@@ -244,6 +290,7 @@ const AdminPaaSWorkersPage: React.FC = () => {
         sshPort: port,
         sshUser: newSshUser.trim(),
         sshKeyPath: finalKeyPath.trim(),
+        locationId: selectedLocationId || undefined,
       };
       const res = await fetch(buildApiUrl("/api/admin/paas/workers"), {
         method: "POST",
@@ -340,6 +387,7 @@ const AdminPaaSWorkersPage: React.FC = () => {
     setDetailsWorker(worker);
     setEditName(worker.name);
     setEditStatus(worker.status);
+    setEditLocationId(worker.locationId || "");
     setDetailsOpen(true);
   };
 
@@ -359,7 +407,8 @@ const AdminPaaSWorkersPage: React.FC = () => {
         },
         body: JSON.stringify({ 
           name: editName.trim(),
-          status: editStatus 
+          status: editStatus,
+          locationId: editLocationId || undefined
         }),
       });
       const payload = await res.json().catch(() => ({}));
@@ -582,6 +631,7 @@ const AdminPaaSWorkersPage: React.FC = () => {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Host</TableHead>
+                <TableHead>Location</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Health</TableHead>
                 <TableHead>Resources</TableHead>
@@ -598,6 +648,18 @@ const AdminPaaSWorkersPage: React.FC = () => {
                     <div className="text-[11px] text-muted-foreground">
                       ctx: {w.uncloudContext}
                     </div>
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {w.locationId ? (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                        <span>
+                          {locations.find(loc => loc.id === w.locationId)?.name || w.locationId}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Not assigned</span>
+                    )}
                   </TableCell>
                   <TableCell>{renderStatusBadge(w.status)}</TableCell>
                   <TableCell>{renderHealthBadge(w.healthStatus)}</TableCell>
@@ -699,6 +761,82 @@ const AdminPaaSWorkersPage: React.FC = () => {
                     <SelectItem value="error">Error</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="worker-location-edit">Datacenter Location</Label>
+                <Popover open={editLocationSearchOpen} onOpenChange={setEditLocationSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="worker-location-edit"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={editLocationSearchOpen}
+                      className="w-full justify-between h-9"
+                    >
+                      {editLocationId ? (
+                        <span className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          {locations.find((loc) => loc.id === editLocationId)?.name || "Unknown"}
+                        </span>
+                      ) : (
+                        "Select location..."
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search locations..." />
+                      <CommandEmpty>No location found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value=""
+                          onSelect={() => {
+                            setEditLocationId("");
+                            setEditLocationSearchOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              editLocationId === "" ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          None (No location)
+                        </CommandItem>
+                        {locations.map((location) => (
+                          <CommandItem
+                            key={location.id}
+                            value={`${location.name} ${location.datacenterCode} ${location.region}`}
+                            onSelect={() => {
+                              setEditLocationId(location.id);
+                              setEditLocationSearchOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                editLocationId === location.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-3 w-3 text-muted-foreground" />
+                              <div>
+                                <div className="font-medium">{location.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {location.datacenterCode} • {location.region}, {location.country}
+                                </div>
+                              </div>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  Assign this worker to a geographic datacenter for organization.
+                </p>
               </div>
               <div className="space-y-1 text-xs text-muted-foreground">
                 <div>
@@ -874,6 +1012,83 @@ const AdminPaaSWorkersPage: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="worker-location">Datacenter Location (Optional)</Label>
+              <Popover open={locationSearchOpen} onOpenChange={setLocationSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="worker-location"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={locationSearchOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedLocationId ? (
+                      <span className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        {locations.find((loc) => loc.id === selectedLocationId)?.name || "Unknown"}
+                      </span>
+                    ) : (
+                      "Select location..."
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search locations..." />
+                    <CommandEmpty>No location found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value=""
+                        onSelect={() => {
+                          setSelectedLocationId("");
+                          setLocationSearchOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedLocationId === "" ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        None (No location)
+                      </CommandItem>
+                      {locations.map((location) => (
+                        <CommandItem
+                          key={location.id}
+                          value={`${location.name} ${location.datacenterCode} ${location.region}`}
+                          onSelect={() => {
+                            setSelectedLocationId(location.id);
+                            setLocationSearchOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedLocationId === location.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            <div>
+                              <div className="font-medium">{location.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {location.datacenterCode} • {location.region}, {location.country}
+                              </div>
+                            </div>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                Assign this worker to a geographic datacenter for organization.
+              </p>
             </div>
             
             {(creating || creationLogs) && (
