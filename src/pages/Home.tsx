@@ -358,7 +358,7 @@ const TrustBadges = () => (
   </section>
 );
 
-// Features Showcase
+// Features Showcase ("Platform" section)
 const FeaturesShowcase = () => {
   const features = [
     {
@@ -400,7 +400,7 @@ const FeaturesShowcase = () => {
   ];
 
   return (
-    <section className="py-24 bg-background">
+    <section id="platform" className="py-24 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -470,7 +470,7 @@ const FeaturesShowcase = () => {
   );
 };
 
-// Live Application Showcase Section
+// Live Application Showcase Section ("Capabilities" section)
 const LiveShowcase = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -499,7 +499,7 @@ const LiveShowcase = () => {
   ];
 
   return (
-    <section className="py-24 bg-muted/20">
+    <section id="capabilities" className="py-24 bg-muted/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -722,7 +722,7 @@ const LiveShowcase = () => {
   );
 };
 
-// Use Cases Section
+// Use Cases Section ("Solutions" section)
 const UseCases = () => {
   const useCases = [
     {
@@ -752,7 +752,7 @@ const UseCases = () => {
   ];
 
   return (
-    <section className="py-24 bg-muted/20">
+    <section id="solutions" className="py-24 bg-muted/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}

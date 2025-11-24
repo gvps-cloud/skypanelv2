@@ -30,6 +30,15 @@ export function MarketingNavbar({ sticky = true }: MarketingNavbarProps) {
   const location = useLocation();
   const isHome = location.pathname === "/";
 
+  const scrollToAnchor = (href: string) => {
+    if (!href.startsWith("#")) return;
+    const id = href.slice(1);
+    const el = typeof document !== "undefined" ? document.getElementById(id) : null;
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   const resolveHref = (link: NavLinkConfig) => {
     if (link.isAnchor && !isHome) {
       return `/${link.href}`;
@@ -55,7 +64,11 @@ export function MarketingNavbar({ sticky = true }: MarketingNavbarProps) {
           key={link.label}
           href={resolvedHref}
           className="text-muted-foreground transition hover:text-primary"
-          onClick={closeMobileMenu}
+          onClick={(event) => {
+            event.preventDefault();
+            scrollToAnchor(link.href);
+            closeMobileMenu();
+          }}
         >
           {link.label}
         </a>

@@ -53,7 +53,7 @@ router.get('/plans/:id', async (req: Request, res: Response) => {
 router.post('/plans', async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const { name, slug, plan_type, monthly_price } = req.body;
+    const { name, slug, plan_type } = req.body;
     
     if (!name || !slug || !plan_type) {
       return res.status(400).json({ 

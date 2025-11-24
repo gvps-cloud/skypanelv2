@@ -108,8 +108,10 @@ const AdminPaaSPricingPage: React.FC = () => {
   const [savingAddon, setSavingAddon] = useState(false);
   const [addonName, setAddonName] = useState("");
   const [addonSlug, setAddonSlug] = useState("");
-  const [addonType, setAddonType] = useState("postgres");
+  const [addonType, setAddonType] = useState("postgresql");
   const [addonMonthlyPrice, setAddonMonthlyPrice] = useState("10");
+  const [addonStorageGb, setAddonStorageGb] = useState("");
+  const [addonMaxConnections, setAddonMaxConnections] = useState("");
 
   const [editingPlan, setEditingPlan] = useState<PricingPlan | null>(null);
   const [calcPlanId, setCalcPlanId] = useState<string>("");
@@ -166,8 +168,10 @@ const AdminPaaSPricingPage: React.FC = () => {
   const resetAddonForm = () => {
     setAddonName("");
     setAddonSlug("");
-    setAddonType("postgres");
+    setAddonType("postgresql");
     setAddonMonthlyPrice("10");
+    setAddonStorageGb("");
+    setAddonMaxConnections("");
   };
 
   const handleCreatePlan = async () => {
@@ -270,6 +274,16 @@ const AdminPaaSPricingPage: React.FC = () => {
       toast.error("Monthly price must be a non-negative number");
       return;
     }
+    const storageGb = addonStorageGb.trim() ? Number(addonStorageGb) : undefined;
+    if (storageGb !== undefined && (!Number.isFinite(storageGb) || storageGb < 0)) {
+      toast.error("Storage must be a non-negative number");
+      return;
+    }
+    const maxConnections = addonMaxConnections.trim() ? Number(addonMaxConnections) : undefined;
+    if (maxConnections !== undefined && (!Number.isFinite(maxConnections) || maxConnections < 0)) {
+      toast.error("Max connections must be a non-negative number");
+      return;
+    }
     setSavingAddon(true);
     try {
       const body: any = {
@@ -283,6 +297,12 @@ const AdminPaaSPricingPage: React.FC = () => {
         is_active: true,
         is_visible: true,
       };
+      if (storageGb !== undefined) {
+        body.storage_gb = storageGb;
+      }
+      if (maxConnections !== undefined) {
+        body.max_connections = maxConnections;
+      }
       const res = await fetch(buildApiUrl("/api/admin/paas/pricing/addons"), {
         method: "POST",
         headers: {
@@ -327,9 +347,11 @@ const AdminPaaSPricingPage: React.FC = () => {
     }
   };
 
-  const formatCurrency = (value?: number) => {
-    if (value == null || !Number.isFinite(value)) return "—";
-    return `$${value.toFixed(2)}`;
+  const formatCurrency = (value?: number | string) => {
+    if (value == null) return "—";
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    if (!Number.isFinite(numValue)) return "—";
+    return `$${numValue.toFixed(2)}`;
   };
 
   const selectedCalcPlan = useMemo(
@@ -766,7 +788,7 @@ const AdminPaaSPricingPage: React.FC = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="postgres">PostgreSQL</SelectItem>
+                    <SelectItem value="postgresql">PostgreSQL</SelectItem>
                     <SelectItem value="mysql">MySQL</SelectItem>
                     <SelectItem value="redis">Redis</SelectItem>
                     <SelectItem value="mongodb">MongoDB</SelectItem>
@@ -782,6 +804,26 @@ const AdminPaaSPricingPage: React.FC = () => {
                   step="0.01"
                   value={addonMonthlyPrice}
                   onChange={(e) => setAddonMonthlyPrice(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="addon-storage">Storage (GB)</Label>
+                <Input
+                  id="addon-storage"
+                  type="number"
+                  min={0}
+                  value={addonStorageGb}
+                  onChange={(e) => setAddonStorageGb(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="addon-connections">Max connections</Label>
+                <Input
+                  id="addon-connections"
+                  type="number"
+                  min={0}
+                  value={addonMaxConnections}
+                  onChange={(e) => setAddonMaxConnections(e.target.value)}
                 />
               </div>
             </div>

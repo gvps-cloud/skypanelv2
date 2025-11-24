@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import { query } from "../lib/database.js";
+import { PaaSPricingService } from "../services/paasPricingService.js";
 
 const router = express.Router();
 
@@ -56,6 +57,24 @@ router.get("/vps", async (_req: Request, res: Response) => {
     console.error("Public VPS plans fetch error:", error);
     const message =
       error instanceof Error ? error.message : "Failed to fetch VPS plans";
+    res.status(500).json({ error: message });
+  }
+});
+
+/**
+ * GET /api/pricing/paas
+ * 
+ * Public endpoint to retrieve available PaaS pricing plans for applications.
+ * No authentication required - this is for public pricing pages.
+ */
+router.get("/paas", async (_req: Request, res: Response) => {
+  try {
+    const plans = await PaaSPricingService.getAllPlans(false);
+    res.json({ plans });
+  } catch (error) {
+    console.error("Public PaaS plans fetch error:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch PaaS pricing plans";
     res.status(500).json({ error: message });
   }
 });
