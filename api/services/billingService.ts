@@ -220,11 +220,9 @@ export class BillingService {
           (SELECT 
             -- Base VPS hourly rate
             ((vp.base_price + vp.markup_price) / 730) +
-            -- Backup hourly rate (if backups enabled)
+            -- Backup hourly rate (if backups enabled - flat rate, no daily/weekly distinction)
             CASE 
-              WHEN vi.backup_frequency = 'daily' THEN 
-                ((vp.backup_price_hourly + vp.backup_upcharge_hourly) * 1.5)
-              WHEN vi.backup_frequency = 'weekly' THEN 
+              WHEN vi.backup_frequency IN ('daily', 'weekly') THEN 
                 (vp.backup_price_hourly + vp.backup_upcharge_hourly)
               ELSE 0
             END
@@ -295,15 +293,11 @@ export class BillingService {
   let backupHourlyRate = 0;
   const backupFrequency = plan?.backup_frequency || 'none';
         
+        // Flat backup rate - Linode does daily backups at one price
         if (plan && backupFrequency !== 'none') {
           const baseBackupHourly = parseFloat(plan.backup_price_hourly || 0);
           const backupUpchargeHourly = parseFloat(plan.backup_upcharge_hourly || 0);
-          
-          if (backupFrequency === 'daily') {
-            backupHourlyRate = (baseBackupHourly + backupUpchargeHourly) * 1.5;
-          } else if (backupFrequency === 'weekly') {
-            backupHourlyRate = baseBackupHourly + backupUpchargeHourly;
-          }
+          backupHourlyRate = baseBackupHourly + backupUpchargeHourly;
         }
         
         const totalAmount = Number(((baseHourlyRate + backupHourlyRate) * hoursToCharge).toFixed(4));
@@ -524,10 +518,9 @@ export class BillingService {
           COUNT(*) as count,
           COALESCE(SUM(
             (vp.base_price + vp.markup_price) +
+            -- Flat backup rate - Linode does daily backups at one price
             CASE 
-              WHEN vi.backup_frequency = 'daily' THEN 
-                ((vp.backup_price_monthly + vp.backup_upcharge_monthly) * 1.5)
-              WHEN vi.backup_frequency = 'weekly' THEN 
+              WHEN vi.backup_frequency IN ('daily', 'weekly') THEN 
                 (vp.backup_price_monthly + vp.backup_upcharge_monthly)
               ELSE 0
             END

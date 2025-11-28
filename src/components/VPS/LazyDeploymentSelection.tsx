@@ -341,7 +341,7 @@ export default function LazyDeploymentSelection({
   return (
     <div className="space-y-4">
       {hasMarketplace && (
-        <div className="space-y-3">
+        <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-2 pb-4 space-y-3 bg-[hsl(var(--background))] border-b border-border/30">
           <div className="flex items-center gap-2">
             <button
               type="button"

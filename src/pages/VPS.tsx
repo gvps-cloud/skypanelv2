@@ -1439,7 +1439,7 @@ const VPS: React.FC = () => {
       return;
     }
 
-    // Fetch plan details for backup pricing
+    // Fetch plan details for backup pricing (flat rate - Linode does daily backups at one price)
     let backupCostHourly = 0;
     if (createForm.backups && createForm.backup_frequency && createForm.backup_frequency !== 'none') {
       try {
@@ -1452,8 +1452,7 @@ const VPS: React.FC = () => {
         if (plan) {
           const baseBackupHourly = plan.backup_price_hourly || 0;
           const backupUpchargeHourly = plan.backup_upcharge_hourly || 0;
-          const dailyMultiplier = createForm.backup_frequency === 'daily' ? 1.5 : 1;
-          backupCostHourly = (baseBackupHourly + backupUpchargeHourly) * dailyMultiplier;
+          backupCostHourly = baseBackupHourly + backupUpchargeHourly;
         }
       } catch (err) {
         console.error("Failed to fetch backup pricing:", err);
@@ -1463,10 +1462,10 @@ const VPS: React.FC = () => {
 
     const totalHourlyCost = selectedType.price.hourly + backupCostHourly;
 
-    // Show mobile loading state
+    // Show loading overlay with clear steps
     mobileLoading.showLoading(
-      "Verifying wallet balance...",
-      "Please wait while we check your account balance"
+      "Checking wallet balance",
+      "Step 1 of 3: Verifying your account has sufficient funds"
     );
 
     // Check wallet balance
@@ -1559,7 +1558,7 @@ const VPS: React.FC = () => {
       }
 
       // Update loading state for VPS creation
-      mobileLoading.updateProgress(25, "Creating VPS instance...");
+      mobileLoading.updateProgress(33, "Step 2 of 3: Provisioning your server");
 
       const res = await fetch("/api/vps", {
         method: "POST",
@@ -1570,7 +1569,7 @@ const VPS: React.FC = () => {
         body: JSON.stringify(body),
       });
 
-      mobileLoading.updateProgress(75, "Processing response...");
+      mobileLoading.updateProgress(66, "Step 3 of 3: Configuring instance");
 
       const payload = await res.json();
       if (!res.ok) {
@@ -1601,12 +1600,12 @@ const VPS: React.FC = () => {
         return;
       }
 
-      mobileLoading.updateProgress(100, "VPS created successfully!");
+      mobileLoading.updateProgress(100, "✓ VPS created successfully!");
 
       // Brief delay to show completion before hiding loading
       setTimeout(() => {
         mobileLoading.hideLoading();
-      }, 1000);
+      }, 1500);
 
       // VPS creation successful - show appropriate message based on billing status
       if (payload.billing?.success) {

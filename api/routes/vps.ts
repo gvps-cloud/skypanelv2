@@ -2154,6 +2154,7 @@ router.get("/:id", async (req: Request, res: Response) => {
         providerName: providerName,
         createdAt: instanceRow.created_at ?? null,
         updatedAt: instanceRow.updated_at ?? null,
+        notes: instanceRow.notes ?? null,
         region: typeof regionCode === "string" ? regionCode : null,
         regionLabel,
         configuration,
@@ -2442,16 +2443,10 @@ router.post("/", async (req: Request, res: Response) => {
           const baseMonthlyCost = parseFloat(plan.base_price) + parseFloat(plan.markup_price);
           let baseHourlyRate = baseMonthlyCost / 730;
           
-          // Add backup costs if backups are enabled
+          // Add backup costs if backups are enabled (flat rate - Linode does daily backups at one price)
           if (backups && validatedBackupFrequency !== 'none') {
-            const baseBackupHourly = validatedBackupFrequency === 'daily'
-              ? (parseFloat(plan.backup_price_hourly) || 0) * 1.5
-              : (parseFloat(plan.backup_price_hourly) || 0);
-            
-            const backupUpchargeHourly = validatedBackupFrequency === 'daily'
-              ? (parseFloat(plan.backup_upcharge_hourly) || 0) * 1.5
-              : (parseFloat(plan.backup_upcharge_hourly) || 0);
-            
+            const baseBackupHourly = parseFloat(plan.backup_price_hourly) || 0;
+            const backupUpchargeHourly = parseFloat(plan.backup_upcharge_hourly) || 0;
             baseHourlyRate += baseBackupHourly + backupUpchargeHourly;
           }
           
@@ -3710,6 +3705,98 @@ router.delete("/:id", async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ error: err.message || "Failed to delete VPS instance" });
+  }
+});
+
+// Update VPS notes
+router.put("/:id/notes", async (req: Request, res: Response) => {
+  try {
+    const { notes } = (req.body || {}) as { notes?: string };
+    const { id } = req.params;
+    const user = (req as any).user;
+    const organizationId = user.organizationId;
+
+    // Validate notes (allow empty string to clear notes)
+    if (typeof notes !== "string") {
+      return res.status(400).json({ error: "Notes must be a string" });
+    }
+
+    // Limit notes length
+    if (notes.length > 10000) {
+      return res.status(400).json({ error: "Notes cannot exceed 10,000 characters" });
+    }
+
+    // Check if instance exists and belongs to organization
+    const rowRes = await query(
+      "SELECT id, label FROM vps_instances WHERE id = $1 AND organization_id = $2",
+      [id, organizationId]
+    );
+    if (rowRes.rows.length === 0) {
+      return res.status(404).json({ error: "Instance not found" });
+    }
+
+    const row = rowRes.rows[0];
+
+    // Update notes in database
+    await query(
+      "UPDATE vps_instances SET notes = $1, updated_at = NOW() WHERE id = $2",
+      [notes.trim() || null, id]
+    );
+
+    // Log notes update activity
+    try {
+      await logActivity(
+        {
+          userId: user.id,
+          organizationId: user.organizationId,
+          eventType: "vps.notes.update",
+          entityType: "vps",
+          entityId: String(id),
+          message: notes.trim() 
+            ? `Updated notes for VPS '${row.label}'`
+            : `Cleared notes for VPS '${row.label}'`,
+          status: "success",
+          metadata: {
+            notes_length: notes.trim().length,
+          },
+        },
+        req as any
+      );
+    } catch (logErr) {
+      console.warn("Failed to log vps.notes.update activity:", logErr);
+    }
+
+    res.json({ 
+      success: true, 
+      notes: notes.trim() || null,
+      message: notes.trim() ? "Notes updated successfully" : "Notes cleared"
+    });
+  } catch (err: any) {
+    console.error("VPS notes update error:", err);
+    res.status(500).json({ error: err.message || "Failed to update notes" });
+  }
+});
+
+// Get VPS notes
+router.get("/:id/notes", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const organizationId = user.organizationId;
+
+    // Check if instance exists and belongs to organization
+    const rowRes = await query(
+      "SELECT notes FROM vps_instances WHERE id = $1 AND organization_id = $2",
+      [id, organizationId]
+    );
+    if (rowRes.rows.length === 0) {
+      return res.status(404).json({ error: "Instance not found" });
+    }
+
+    res.json({ notes: rowRes.rows[0].notes || null });
+  } catch (err: any) {
+    console.error("VPS notes fetch error:", err);
+    res.status(500).json({ error: err.message || "Failed to fetch notes" });
   }
 });
 

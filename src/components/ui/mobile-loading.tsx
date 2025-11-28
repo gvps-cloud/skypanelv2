@@ -14,7 +14,7 @@ interface MobileLoadingProps {
 }
 
 /**
- * Mobile-optimized loading overlay with progress feedback
+ * Loading overlay with progress feedback - works on both mobile and desktop
  */
 export function MobileLoading({
   isLoading,
@@ -28,51 +28,62 @@ export function MobileLoading({
 
   if (!isLoading) return null
 
-  if (!isMobile) {
-    // Simple loading for desktop
-    return (
-      <div className="flex items-center gap-2">
-        <LoaderCircle className="h-4 w-4 animate-spin" />
-        <span className="text-sm text-muted-foreground">{title}</span>
-      </div>
-    )
-  }
-
   return (
-    <div className="mobile-loading-overlay">
-      <div className={cn("mobile-loading-content", className)}>
-        <div className="mobile-loading-spinner">
-          <LoaderCircle className="h-10 w-10 animate-spin text-primary mx-auto" />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className={cn(
+        "relative mx-4 w-full max-w-md rounded-xl border bg-card p-8 shadow-2xl",
+        "animate-in fade-in-0 zoom-in-95 duration-200",
+        className
+      )}>
+        {/* Spinner */}
+        <div className="flex justify-center mb-6">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+            <LoaderCircle className={cn(
+              "relative animate-spin text-primary",
+              isMobile ? "h-12 w-12" : "h-10 w-10"
+            )} />
+          </div>
         </div>
         
-        <div className="mobile-loading-text">
+        {/* Title */}
+        <div className={cn(
+          "text-center font-semibold text-foreground",
+          isMobile ? "text-lg" : "text-base"
+        )}>
           {title}
         </div>
         
+        {/* Description */}
         {description && (
-          <div className="mobile-loading-subtext">
+          <div className="mt-2 text-center text-sm text-muted-foreground">
             {description}
           </div>
         )}
 
+        {/* Progress bar */}
         {progress !== undefined && (
-          <div className="mt-4">
-            <div className="w-full bg-muted rounded-full h-2">
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-muted-foreground">Progress</span>
+              <span className="text-xs font-medium text-foreground">
+                {Math.round(progress)}%
+              </span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
               <div 
-                className="bg-primary h-2 rounded-full transition-all duration-300"
+                className="bg-primary h-full rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
               />
-            </div>
-            <div className="text-xs text-muted-foreground mt-2">
-              {Math.round(progress)}% complete
             </div>
           </div>
         )}
 
+        {/* Cancel button */}
         {onCancel && (
           <button
             onClick={onCancel}
-            className="mt-4 px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="mt-6 w-full px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
           >
             Cancel
           </button>

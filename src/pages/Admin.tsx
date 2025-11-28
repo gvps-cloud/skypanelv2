@@ -2538,7 +2538,7 @@ const Admin: React.FC = () => {
                         </TableHead>
                         <TableHead className="min-w-[8rem]">Markup</TableHead>
                         <TableHead className="min-w-[10rem]">Backup Price</TableHead>
-                        <TableHead className="min-w-[10rem]">Backup Frequencies</TableHead>
+                        <TableHead className="min-w-[8rem]">Backups</TableHead>
                         <TableHead className="w-32">Active</TableHead>
                         <TableHead className="w-36 text-right">
                           Actions
@@ -2834,64 +2834,13 @@ const Admin: React.FC = () => {
                                         )}
                                       </TableCell>
                                       <TableCell>
-                                        {isEditing ? (
-                                          <div className="space-y-2">
-                                            <div className="flex items-center space-x-2">
-                                              <Checkbox
-                                                id={`edit-weekly-${plan.id}`}
-                                                checked={
-                                                  (editPlan.weekly_backups_enabled as boolean | undefined) ??
-                                                  plan.weekly_backups_enabled ??
-                                                  true
-                                                }
-                                                onCheckedChange={(checked) =>
-                                                  setEditPlan((prev) => ({
-                                                    ...prev,
-                                                    weekly_backups_enabled: !!checked,
-                                                  }))
-                                                }
-                                              />
-                                              <Label htmlFor={`edit-weekly-${plan.id}`} className="text-xs font-normal cursor-pointer">
-                                                Weekly
-                                              </Label>
-                                            </div>
-                                            <div className="flex items-center space-x-2">
-                                              <Checkbox
-                                                id={`edit-daily-${plan.id}`}
-                                                checked={
-                                                  (editPlan.daily_backups_enabled as boolean | undefined) ??
-                                                  plan.daily_backups_enabled ??
-                                                  false
-                                                }
-                                                onCheckedChange={(checked) =>
-                                                  setEditPlan((prev) => ({
-                                                    ...prev,
-                                                    daily_backups_enabled: !!checked,
-                                                  }))
-                                                }
-                                              />
-                                              <Label htmlFor={`edit-daily-${plan.id}`} className="text-xs font-normal cursor-pointer">
-                                                Daily
-                                              </Label>
-                                            </div>
-                                          </div>
-                                        ) : (
-                                          <div className="text-sm flex flex-col gap-1">
-                                            {plan.weekly_backups_enabled && (
-                                              <Badge variant="outline" className="w-fit text-xs">
-                                                Weekly
-                                              </Badge>
-                                            )}
-                                            {plan.daily_backups_enabled && (
-                                              <Badge variant="outline" className="w-fit text-xs">
-                                                Daily
-                                              </Badge>
-                                            )}
-                                            {!plan.weekly_backups_enabled && !plan.daily_backups_enabled && (
-                                              <span className="text-xs text-muted-foreground">None</span>
-                                            )}
-                                          </div>
-                                        )}
+                                        {/* Backups are always daily via Linode - just show enabled status */}
+                                        <Badge 
+                                          variant="outline" 
+                                          className="w-fit text-xs bg-green-500/10 text-green-500 border-green-500/30"
+                                        >
+                                          Daily
+                                        </Badge>
                                       </TableCell>
                                       <TableCell>
                                         {isEditing ? (

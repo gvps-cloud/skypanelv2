@@ -1,12 +1,14 @@
 /**
  * BackupConfiguration Component
- * Handles backup frequency selection and pricing display
+ * Handles backup enable/disable and pricing display
+ * 
+ * Note: Linode's backup service runs daily automatic backups at a single flat rate.
+ * There is no separate "daily" vs "weekly" pricing tier - backups are simply on or off.
  */
 
 import React, { useState, useEffect } from "react";
-import { Shield, DollarSign, Calendar, Clock } from "lucide-react";
+import { Shield, DollarSign, Calendar, Info } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import type { VPSPlan } from "@/types/vps";
 
 // Normalizes API values that may arrive as strings so currency math stays reliable
@@ -39,7 +41,6 @@ interface BackupConfigurationProps {
 export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
   planId,
   backupsEnabled,
-  backupFrequency = "weekly",
   onBackupsChange,
   onFrequencyChange,
   token,
@@ -82,37 +83,19 @@ export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
     fetchPlan();
   }, [planId, token]);
 
-  // Calculate backup pricing
+  // Calculate backup pricing - single flat rate (Linode backups are daily at one price)
   const baseBackupPrice = toCurrencyNumber(plan?.backup_price_monthly);
   const backupMarkup = toCurrencyNumber(plan?.backup_upcharge_monthly);
-  const baseBackupCostMonthly = baseBackupPrice + backupMarkup;
-  const weeklyBackupPrice = baseBackupCostMonthly;
-  const dailyBackupPrice = baseBackupCostMonthly * 1.5; // Daily is 1.5x weekly
+  const backupCostMonthly = baseBackupPrice + backupMarkup;
 
-  // Determine available backup frequencies
-  const hasWeeklyBackups = plan?.weekly_backups_enabled !== false;
-  const hasDailyBackups = plan?.daily_backups_enabled === true;
-  const hasBothOptions = hasWeeklyBackups && hasDailyBackups;
-
-  // Auto-select frequency when backups are enabled
+  // Sync frequency with enabled state (always use 'weekly' internally for compatibility)
   useEffect(() => {
-    if (backupsEnabled && backupFrequency === "none") {
-      // Default to weekly if available, otherwise daily
-      if (hasWeeklyBackups) {
-        onFrequencyChange("weekly");
-      } else if (hasDailyBackups) {
-        onFrequencyChange("daily");
-      }
-    } else if (!backupsEnabled && backupFrequency !== "none") {
+    if (backupsEnabled) {
+      onFrequencyChange("weekly"); // Use 'weekly' as the standard enabled state
+    } else {
       onFrequencyChange("none");
     }
-  }, [
-    backupsEnabled,
-    backupFrequency,
-    hasWeeklyBackups,
-    hasDailyBackups,
-    onFrequencyChange,
-  ]);
+  }, [backupsEnabled, onFrequencyChange]);
 
   if (loading) {
     return (
@@ -148,160 +131,66 @@ export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
             </p>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Automatic backups of your server (additional cost applies)
+            Automatic daily backups of your server
           </p>
         </div>
       </label>
 
-      {/* Backup Frequency Selection */}
+      {/* Backup Pricing Info */}
       {backupsEnabled && (
         <div className="ml-7 space-y-3 pl-4 border-l-2 border-primary/20">
-          {hasBothOptions ? (
-            <>
-              <Label className="text-sm font-medium text-foreground">
-                Backup Frequency
-              </Label>
-              <div className="space-y-3">
-                {/* Weekly Backups Option */}
-                {hasWeeklyBackups && (
-                  <label
-                    htmlFor="weekly"
-                    className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
-                      backupFrequency === "weekly"
-                        ? "border-primary bg-primary/10 dark:bg-primary/20"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      id="weekly"
-                      name="backup-frequency"
-                      value="weekly"
-                      checked={backupFrequency === "weekly"}
-                      onChange={() => onFrequencyChange("weekly")}
-                      className="mt-1 h-4 w-4 text-primary focus:ring-primary border rounded-full"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium text-foreground">
-                            Weekly Backups
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
-                          <DollarSign className="h-3.5 w-3.5" />
-                          <span>{weeklyBackupPrice.toFixed(2)}/mo</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Automatic weekly backups of your entire server
-                      </p>
-                    </div>
-                  </label>
-                )}
+          {/* Backup Details */}
+          <div className="rounded-lg bg-muted p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">
+                  Daily Automatic Backups
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
+                <DollarSign className="h-3.5 w-3.5" />
+                <span>{backupCostMonthly.toFixed(2)}/mo</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Your server is backed up automatically every day
+            </p>
+          </div>
 
-                {/* Daily Backups Option */}
-                {hasDailyBackups && (
-                  <label
-                    htmlFor="daily"
-                    className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
-                      backupFrequency === "daily"
-                        ? "border-primary bg-primary/10 dark:bg-primary/20"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      id="daily"
-                      name="backup-frequency"
-                      value="daily"
-                      checked={backupFrequency === "daily"}
-                      onChange={() => onFrequencyChange("daily")}
-                      className="mt-1 h-4 w-4 text-primary focus:ring-primary border rounded-full"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium text-foreground">
-                            Daily Backups
-                          </span>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                            +50%
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
-                          <DollarSign className="h-3.5 w-3.5" />
-                          <span>{dailyBackupPrice.toFixed(2)}/mo</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Automatic daily backups for maximum data protection
-                      </p>
-                    </div>
-                  </label>
-                )}
+          {/* Backup Pricing Breakdown */}
+          {(baseBackupPrice > 0 || backupMarkup > 0) && (
+            <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Provider backup cost:</span>
+                <span className="font-medium text-foreground">
+                  ${baseBackupPrice.toFixed(2)}/mo
+                </span>
               </div>
-            </>
-          ) : (
-            // Single option available - just show the pricing
-            <div className="rounded-lg bg-muted p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {hasDailyBackups ? (
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span className="text-sm font-medium text-foreground">
-                    {hasDailyBackups ? "Daily Backups" : "Weekly Backups"}
+              {backupMarkup > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Platform fee:</span>
+                  <span className="font-medium text-foreground">
+                    ${backupMarkup.toFixed(2)}/mo
                   </span>
                 </div>
-                <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
-                  <DollarSign className="h-3.5 w-3.5" />
-                  <span>
-                    {hasDailyBackups
-                      ? dailyBackupPrice.toFixed(2)
-                      : weeklyBackupPrice.toFixed(2)}
-                    /mo
-                  </span>
-                </div>
+              )}
+              <div className="pt-1.5 border-t border-border flex items-center justify-between text-xs font-semibold">
+                <span className="text-foreground">Total backup cost:</span>
+                <span className="text-primary">
+                  ${backupCostMonthly.toFixed(2)}/mo
+                </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {hasDailyBackups
-                  ? "Automatic daily backups of your entire server"
-                  : "Automatic weekly backups of your entire server"}
-              </p>
             </div>
           )}
 
-          {/* Backup Pricing Breakdown */}
-          <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Base backup cost:</span>
-              <span className="font-medium text-foreground">
-                ${baseBackupCostMonthly.toFixed(2)}/mo
-              </span>
-            </div>
-            {backupFrequency === "daily" && hasDailyBackups && (
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Daily multiplier:</span>
-                <span className="font-medium text-foreground">×1.5</span>
-              </div>
-            )}
-            <div className="pt-1.5 border-t border-border flex items-center justify-between text-xs font-semibold">
-              <span className="text-foreground">Total backup cost:</span>
-              <span className="text-primary">
-                $
-                {backupFrequency === "daily"
-                  ? dailyBackupPrice.toFixed(2)
-                  : weeklyBackupPrice.toFixed(2)}
-                /mo
-              </span>
-            </div>
+          {/* Info note */}
+          <div className="flex items-start gap-2 text-xs text-muted-foreground">
+            <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>
+              Backups include 3 automatic daily snapshots and 1 manual snapshot slot.
+              You can restore from any backup at any time.
+            </span>
           </div>
         </div>
       )}
