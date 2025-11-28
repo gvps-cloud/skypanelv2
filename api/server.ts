@@ -5,7 +5,6 @@
 import app from "./app.js";
 import { initSSHBridge } from "./services/sshBridge.js";
 import { BillingService } from "./services/billingService.js";
-import { PaaSWorkerService } from "./services/paasWorkerService.js";
 
 /**
  * start server with port
@@ -17,34 +16,9 @@ const server = app.listen(PORT, () => {
   // Initialize websocket SSH bridge on same HTTP server
   initSSHBridge(server);
 
-  // Auto-discover PaaS workers on startup (async, non-blocking)
-  setTimeout(() => {
-    void discoverPaaSWorkers();
-  }, 2000); // Wait 2 seconds for server to stabilize
-
   // Start hourly billing scheduler
   startBillingScheduler();
 });
-
-/**
- * Auto-discover PaaS workers from uncloud on startup
- */
-async function discoverPaaSWorkers() {
-  try {
-    console.log("🔍 Auto-discovering PaaS workers from uncloud...");
-    const result = await PaaSWorkerService.discoverAndRegisterWorkers();
-    if (result.registered > 0) {
-      console.log(`✅ Discovered and registered ${result.registered} worker(s)`);
-    } else if (result.discovered > 0) {
-      console.log(`ℹ️  Found ${result.discovered} worker(s) (already registered)`);
-    } else {
-      console.log("ℹ️  No uncloud workers found");
-    }
-  } catch (error) {
-    console.error("⚠️  Failed to auto-discover workers:", error);
-    // Don't crash the server if discovery fails
-  }
-}
 
 /**
  * Start the hourly billing scheduler

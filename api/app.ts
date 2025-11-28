@@ -35,23 +35,6 @@ import adminPlatformRoutes from './routes/admin/platform.js';
 import faqRoutes from './routes/faq.js';
 import sshKeysRoutes from './routes/sshKeys.js';
 import pricingRoutes from './routes/pricing.js';
-import adminPaaSWorkersRoutes from './routes/admin/paasWorkers.js';
-import adminPaaSLocationsRoutes from './routes/admin/paasLocations.js';
-import adminPaaSServicesRoutes from './routes/admin/paasServices.js';
-import adminPaaSVolumesRoutes from './routes/admin/paasVolumes.js';
-import adminPaaSDnsRoutes from './routes/admin/paasDns.js';
-import adminPaaSNetworkingRoutes from './routes/admin/paasNetworking.js';
-import adminPaaSSshKeysRoutes from './routes/admin/paasSshKeys.js';
-import adminPaaSCaddyRoutes from './routes/admin/paasCaddy.js';
-import adminPaaSImagesRoutes from './routes/admin/paasImages.js';
-import adminPaaSMarketplaceRoutes from './routes/admin/paasMarketplace.js';
-import adminPaaSPricingRoutes from './routes/admin/paasPricing.js';
-import adminPaaSApplicationsRoutes from './routes/admin/paasApplications.js';
-import adminPaaSDeploymentsRoutes from './routes/admin/paasDeployments.js';
-import adminPaaSContainersRoutes from './routes/admin/paasContainers.js';
-import clientPaaSApplicationsRoutes from './routes/client/paasApplications.js';
-import clientPaaSMarketplaceRoutes from './routes/client/paasMarketplace.js';
-import clientPaaSBillingRoutes from './routes/client/paasBilling.js';
 import adminFaqRoutes from './routes/adminFaq.js';
 import adminContactRoutes from './routes/admin/contact.js';
 import { initializeMetricsCollection, startMetricsPersistence } from './services/rateLimitMetrics.js';
@@ -105,25 +88,6 @@ app.use('/api/faq', faqRoutes);
 app.use('/api/admin/faq', adminFaqRoutes);
 app.use('/api/ssh-keys', sshKeysRoutes)
 app.use('/api/pricing', pricingRoutes)
-
-// PaaS Routes
-app.use('/api/admin/paas/workers', adminPaaSWorkersRoutes);
-app.use('/api/admin/paas/locations', adminPaaSLocationsRoutes);
-app.use('/api/admin/paas/services', adminPaaSServicesRoutes);
-app.use('/api/admin/paas/volumes', adminPaaSVolumesRoutes);
-app.use('/api/admin/paas/dns', adminPaaSDnsRoutes);
-app.use('/api/admin/paas/networking', adminPaaSNetworkingRoutes);
-app.use('/api/admin/paas/ssh-keys', adminPaaSSshKeysRoutes);
-app.use('/api/admin/paas/caddy', adminPaaSCaddyRoutes);
-app.use('/api/admin/paas/images', adminPaaSImagesRoutes);
-app.use('/api/admin/paas/pricing', adminPaaSPricingRoutes);
-app.use('/api/admin/paas/marketplace', adminPaaSMarketplaceRoutes);
-app.use('/api/admin/paas/applications', adminPaaSApplicationsRoutes);
-app.use('/api/admin/paas/deployments', adminPaaSDeploymentsRoutes);
-app.use('/api/admin/paas/containers', adminPaaSContainersRoutes);
-app.use('/api/client/paas/applications', clientPaaSApplicationsRoutes);
-app.use('/api/client/paas/marketplace', clientPaaSMarketplaceRoutes);
-app.use('/api/client/paas/billing', clientPaaSBillingRoutes);
 
 // Health check routes are now handled by the dedicated health router
 

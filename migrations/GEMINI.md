@@ -14,23 +14,16 @@ Files follow the pattern: `XXX_description_of_change.sql`
 
 ## Schema Structure
 
-The database schema is divided into two main logical domains:
+The database schema covers the core system:
 
-### 1. Core / Base System
+### Core / Base System
 Defined primarily in `001_initial_schema.sql` and early migrations.
 *   **`users`**: Authentication and user profiles.
 *   **`organizations`**: Multi-tenant grouping for users.
+*   **`vps_instances`**, **`vps_plans`**: VPS hosting management.
+*   **`payment_transactions`**: PayPal billing integration.
+*   **`support_tickets`**: Customer support system.
 *   **Activity Logs**: Audit trails (modified in `002`).
-
-### 2. PaaS (Platform as a Service)
-Defined in migrations `004` through `018+`.
-*   **`paas_worker_nodes`**: Infrastructure nodes that run workloads.
-*   **`paas_applications`**: User-deployed applications.
-    *   Supports `buildpack` and `dockerfile` deployment methods.
-    *   Tracks status, resources (CPU/RAM), and network config.
-*   **`paas_deployments`**: History of application deployments.
-*   **`paas_pricing_plans`** & **`paas_billing_usage`**: Monetization and usage tracking.
-*   **`paas_addons`**: Marketplace services (databases, caches).
 
 ## Usage
 
@@ -44,8 +37,6 @@ These are raw SQL files. In the SkyPanelV2 development workflow, they are typica
 ## Key Migrations
 
 *   **`001_initial_schema.sql`**: Sets up `uuid-ossp`, `pgcrypto`, and core tables.
-*   **`005_create_paas_applications.sql`**: Main table for PaaS apps, including Git repo info and build configurations.
-*   **`013_create_paas_billing_usage.sql`**: Infrastructure for tracking hourly/monthly resource consumption.
 *   **`019_fix_created_by_column_type.sql`**: Example of a type fix migration.
 
 ## Notes for AI Agents

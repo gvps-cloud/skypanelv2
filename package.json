@@ -23,18 +23,9 @@
     "pm2:stop": "pm2 stop skypanelv2-api skypanelv2-ui && pm2 delete skypanelv2-api skypanelv2-ui",
     "pm2:list": "pm2 ls",
     "seed:admin": "node scripts/seed-admin.js",
-    "seed:marketplace": "node --import tsx scripts/seed-marketplace.js",
     "db:reset": "node scripts/reset-database.js",
     "db:reset:confirm": "node scripts/reset-database.js --confirm",
-    "db:fresh": "node scripts/reset-database.js --confirm && node scripts/run-migration.js",
-    "db:seed": "npm run seed:admin && npm run seed:marketplace && npm run paas:discover",
-    "install:uncloud": "node --import tsx scripts/install-uncloud.js",
-    "install:unregistry": "node --import tsx scripts/install-unregistry.js",
-    "install:pack": "node --import tsx scripts/install-pack.js",
-    "install:docker-compose": "node --import tsx scripts/install-docker-compose.js",
-    "paas:setup": "npm run install:uncloud && npm run install:unregistry && npm run install:pack && npm run install:docker-compose",
-    "paas:check": "node scripts/paas-health-check.js",
-    "paas:discover": "node --import tsx scripts/discover-workers.js"
+    "db:fresh": "node scripts/reset-database.js --confirm && node scripts/run-migration.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.927.0",

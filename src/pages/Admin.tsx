@@ -12,7 +12,6 @@ import {
   CheckCircle,
   ClipboardList,
   Clock,
-  Cloud,
   DollarSign,
   Edit,
   FileCode,
@@ -140,8 +139,7 @@ type AdminSection =
   | "rate-limiting"
   | "faq-management"
   | "platform"
-  | "contact-management"
-  | "paas";
+  | "contact-management";
 
 const ADMIN_SECTIONS: AdminSection[] = [
   "dashboard",
@@ -159,7 +157,6 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "faq-management",
   "platform",
   "contact-management",
-  "paas",
 ];
 
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
@@ -842,12 +839,6 @@ const Admin: React.FC = () => {
     },
     [activeTab, updateAdminHash]
   );
-
-  useEffect(() => {
-    if (activeTab === "paas") {
-      navigate("/admin/paas/workers");
-    }
-  }, [activeTab, navigate]);
 
   useEffect(() => {
     if (!pendingFocusUserId || activeTab !== "user-management") {
@@ -1940,18 +1931,6 @@ const Admin: React.FC = () => {
           { label: "Attention", value: formatCountValue(attentionServers) },
         ],
         actionLabel: "Manage servers",
-      },
-      {
-        id: "paas",
-        title: "PaaS Cluster",
-        description: "Manage worker nodes, services, and container resources.",
-        icon: Cloud,
-        accent: "text-sky-500",
-        summary: [
-          { label: "Status", value: "Active" },
-          { label: "Workers", value: "—" },
-        ],
-        actionLabel: "Manage cluster",
       },
       {
         id: "vps-plans",

@@ -1,7 +1,7 @@
 # SkyPanelV2 Context for Gemini
 
 ## Project Overview
-SkyPanelV2 is an open-source cloud service billing panel and PaaS platform. It acts as a white-label control plane for cloud hosting businesses, enabling them to offer VPS hosting (via Linode/Akamai) and PaaS application deployment (via Uncloud).
+SkyPanelV2 is an open-source cloud service billing panel. It acts as a white-label control plane for cloud hosting businesses, enabling them to offer VPS hosting (via Linode/Akamai).
 
 ### Tech Stack
 
@@ -20,42 +20,23 @@ SkyPanelV2 is an open-source cloud service billing panel and PaaS platform. It a
 *   **Database:** PostgreSQL (via `pg` driver)
 *   **Real-time:** WebSockets (`ws`) + SSE
 
-**PaaS Infrastructure:**
-*   **Core:** `uncloud` (Orchestration), `unregistry` (Docker Registry)
-*   **Builds:** Cloud Native Buildpacks (`pack` CLI)
-*   **Isolation:** Docker networks/volumes per tenant
-
 ## Scripts Directory (`/scripts`)
 
-The `scripts` directory is the operational heart of the project, containing tools for database management, PaaS infrastructure setup, and system health checks.
+The `scripts` directory is the operational heart of the project, containing tools for database management and system health checks.
 
-### 1. PaaS Infrastructure Setup
-These scripts automate the installation of the required CLI tools for the PaaS features.
-*   `install-uncloud.js`: Downloads and installs the `uc` CLI (supports Linux/macOS).
-*   `install-pack.js`: Installs the Cloud Native Buildpacks `pack` CLI.
-*   `install-unregistry.js`: Installs the Docker `pussh` plugin for the internal registry.
-*   `install-docker-compose.js`: Helper to ensure Docker Compose is available.
+### 1. Health & Diagnostics
+*   `test-connection.js`: Verifies PostgreSQL connectivity.
+*   `check-schema.js` & `check-users-schema.js`: Utilities to verify DB structure against expected schemas.
 
-### 2. Health & Diagnostics
-*   `paas-health-check.js`: The master diagnostic tool. Checks:
-    *   Node.js & npm versions.
-    *   Docker & Docker Compose status.
-    *   PaaS dependencies (`uc`, `pack`, `pussh`).
-    *   PostgreSQL connection.
-*   `check-workers.js`: Lists registered PaaS worker nodes from the database.
-*   `verify-paas-api.js`: Tests the connectivity of the PaaS API endpoints.
-
-### 3. Database Management
+### 2. Database Management
 *   **Reset & Seed:**
     *   `reset-database.js`: **Destructive**. Drops all tables/views and re-applies schema.
-    *   `seed-marketplace.js`: Populates the application marketplace.
     *   `create-test-admin.js`: Creates a default admin user for development.
 *   **Migrations:**
     *   `run-migration.js`: Applies all pending SQL migrations.
     *   `apply-single-migration.js`: Applies a specific SQL file.
-    *   `check-schema.js` & `check-users-schema.js`: Utilities to verify DB structure against expected schemas.
 
-### 4. Maintenance Utilities
+### 3. Maintenance Utilities
 *   `update-admin-password.js`: Emergency password reset for admin accounts.
 *   `promote-to-admin.js`: Elevates a standard user to admin status.
 *   `fix-provider-encryption.js`: Re-encrypts provider credentials if keys change.
@@ -72,8 +53,6 @@ These scripts automate the installation of the required CLI tools for the PaaS f
 *   `npm run db:fresh`: **Reset DB**, apply migrations, and seed. (Destructive!)
 *   `npm run db:reset`: Interactive DB reset.
 *   `npm run seed:admin`: Create default admin user.
-*   `npm run paas:setup`: Install/update all PaaS dependencies (`pack`, `uncloud`, `unregistry`).
-*   `npm run paas:check`: Run the full PaaS health check.
 
 ### Testing & QA
 *   `npm run test`: Run Vitest suite.
@@ -86,10 +65,6 @@ These scripts automate the installation of the required CLI tools for the PaaS f
 *   **Database:**
     *   Use the `pg` driver directly or the helper in `api/lib/database.ts`.
     *   Migrations are raw SQL files in `migrations/`.
-*   **PaaS Integration:**
-    *   PaaS features rely on local CLI tools (`pack`, `uc`).
-    *   Always run `npm run paas:check` before debugging PaaS issues.
-    *   Worker nodes are managed via SSH; ensure SSH keys are synced.
 *   **Environment:**
     *   `.env` drives configuration.
     *   `DATABASE_URL` and `SSH_CRED_SECRET` are critical.
@@ -105,4 +80,4 @@ These scripts automate the installation of the required CLI tools for the PaaS f
     *   `components/`: Reusable UI.
     *   `lib/`: Frontend utilities.
 *   **`scripts/`**: Automation & Setup (Current Directory).
-*   **`migrations/`**: SQL migration files (001 to 018+).
+*   **`migrations/`**: SQL migration files.

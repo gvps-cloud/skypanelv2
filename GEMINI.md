@@ -1,7 +1,7 @@
 # SkyPanelV2 Context for Gemini
 
 ## Project Overview
-SkyPanelV2 is an open-source cloud service billing panel and PaaS platform. It acts as a white-label control plane for cloud hosting businesses, enabling them to offer VPS hosting (via Linode/Akamai) and PaaS application deployment (via Uncloud).
+SkyPanelV2 is an open-source cloud service billing panel. It acts as a white-label control plane for cloud hosting businesses, enabling them to offer VPS hosting (via Linode/Akamai).
 
 ### Tech Stack
 
@@ -20,11 +20,6 @@ SkyPanelV2 is an open-source cloud service billing panel and PaaS platform. It a
 *   **Database:** PostgreSQL (via `pg` driver)
 *   **Real-time:** WebSockets (`ws`) + SSE
 
-**PaaS Infrastructure:**
-*   **Core:** `uncloud` (Orchestration), `unregistry` (Docker Registry)
-*   **Builds:** Cloud Native Buildpacks (`pack` CLI)
-*   **Isolation:** Docker networks/volumes per tenant
-
 ## Key Commands
 
 ### Development
@@ -37,8 +32,6 @@ SkyPanelV2 is an open-source cloud service billing panel and PaaS platform. It a
 *   `npm run db:fresh`: **Reset DB**, apply migrations, and seed. (Destructive!)
 *   `npm run db:reset`: Interactive DB reset.
 *   `npm run seed:admin`: Create default admin user.
-*   `npm run paas:setup`: Install/update all PaaS dependencies (`pack`, `uncloud`, `unregistry`).
-*   `npm run paas:discover`: Discover existing PaaS workers.
 
 ### Testing & QA
 *   `npm run test`: Run Vitest suite.
@@ -50,7 +43,7 @@ SkyPanelV2 is an open-source cloud service billing panel and PaaS platform. It a
 *   **`api/`**: Backend Application
     *   `server.ts`: Main entry point.
     *   `routes/`: API Endpoints (`admin`, `client`, `public`).
-    *   `services/`: Business logic (Billing, PaaS, Providers).
+    *   `services/`: Business logic (Billing, VPS, Providers).
     *   `lib/`: Utilities (Crypto, DB, Validation).
 *   **`src/`**: Frontend Application
     *   `pages/`: Route components.
@@ -58,8 +51,8 @@ SkyPanelV2 is an open-source cloud service billing panel and PaaS platform. It a
     *   `lib/`: Frontend utilities & API client.
     *   `hooks/`: Custom React hooks.
 *   **`scripts/`**: Critical maintenance & setup scripts.
-    *   *Note:* Contains logic for DB migrations, seeding, and PaaS installation.
-*   **`migrations/`**: SQL migration files (001 to 018+).
+    *   *Note:* Contains logic for DB migrations, seeding.
+*   **`migrations/`**: SQL migration files.
 *   **`repo-docs/`**: Detailed documentation.
     *   `ENVIRONMENT_VARIABLES.md`: Full env var reference.
     *   `ADMIN_TROUBLESHOOTING.md`: Operational guides.
@@ -77,4 +70,3 @@ SkyPanelV2 is an open-source cloud service billing panel and PaaS platform. It a
 *   **Styling:** Use Tailwind utility classes.
 *   **Types:** Strict TypeScript usage. Shared types often in `src/types` or co-located.
 *   **API:** Frontend uses `src/lib/api.ts` for authenticated requests.
-*   **PaaS:** PaaS features depend on local CLI tools (`pack`, `uc`, `docker`). Ensure `npm run paas:setup` has been run if working on PaaS features.

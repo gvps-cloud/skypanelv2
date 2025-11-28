@@ -21,13 +21,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run db:reset` - Interactive database reset with confirmation
 - `npm run db:reset:confirm` - Reset database without prompt
 - `npm run seed:admin` - Create default admin user (admin@skypanelv2.com / admin123)
-- `npm run seed:marketplace` - Seed PaaS marketplace templates
-- `npm run db:seed` - Complete database seeding (admin + marketplace + worker discovery)
-
-### PaaS Platform Setup
-- `npm run paas:setup` - Install uncloud CLI, unregistry (docker pussh), and pack CLI
-- `npm run paas:check` - Health check for PaaS dependencies and worker connectivity
-- `npm run paas:discover` - Auto-discover and register worker nodes
 
 ### Production Deployment
 - `npm run start` - Launch production Express server + Vite preview
@@ -38,7 +31,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-SkyPanelV2 is a full-stack cloud service reseller billing panel with integrated PaaS capabilities:
+SkyPanelV2 is a full-stack cloud service reseller billing panel:
 
 ### Frontend (`src/`)
 - **React 18** SPA with TypeScript and Vite
@@ -54,13 +47,6 @@ SkyPanelV2 is a full-stack cloud service reseller billing panel with integrated 
 - **JWT authentication** with role-based access (admin/user)
 - **Rate limiting** with tiered configuration (anonymous/authenticated/admin)
 - **Comprehensive middleware** stack (CORS, helmet, validation)
-
-### PaaS Integration
-- **Cloud Native Buildpacks** via `pack` CLI for Heroku-like deployments
-- **uncloud** for container orchestration and cluster management
-- **unregistry** (docker pussh) for SSH-based image distribution
-- **Multi-language support**: Auto-detection for Node.js, Python, Ruby, Go, Java, PHP, Rust
-- **Multi-tenant security** with network and storage isolation
 
 ## Environment Configuration
 
@@ -103,26 +89,6 @@ SMTP2GO_PASSWORD=your-smtp2go-password
 - `payment_transactions` - PayPal billing integration
 - `support_tickets` - Customer support system
 
-### PaaS Tables (migrations 004-018)
-- `paas_worker_nodes` - Worker node provisioning and management with location assignments
-- `paas_locations` - Datacenter locations for geographic organization of workers
-- `paas_applications` - Application lifecycle and configuration
-- `paas_app_ports` - Port mapping for application access
-- `paas_app_env_vars` - Encrypted environment variable storage
-- `paas_deployments` - Deployment history and logs
-- `paas_pricing_plans` - Flexible pricing (monthly or per-resource)
-- `paas_marketplace_templates` - One-click application templates
-- `paas_services` - PaaS service definitions and configurations
-- `paas_volumes` - Persistent storage management
-- `paas_dns` - DNS zone and record management
-- `paas_networking` - Network configuration and firewall rules
-- `paas_ssh_keys` - SSH key management for PaaS services
-- `paas_caddy` - Caddy reverse proxy configuration
-- `paas_images` - Container image management
-- `paas_applications` and `paas_deployments` - Application deployment management
-
-All PaaS tables include tenant isolation with `organization_id` foreign keys.
-
 ## Key Service Patterns
 
 ### Database Operations
@@ -147,82 +113,13 @@ res.status(500).json({ error: error.message });
 res.json({ success: true, data: result });
 ```
 
-### PaaS Service Architecture
-- `uncloudService.ts` - Cluster and machine management
-- `buildpackService.ts` - Buildpack-based application building
-- `paasApplicationService.ts` - Application lifecycle (start/stop/delete)
-- `paasWorkerService.ts` - Worker provisioning and health checks
-- `paasLocationService.ts` - Datacenter location management for worker organization
-- `paasService.ts` - Core PaaS service management
-- `paasVolumeService.ts` - Persistent storage volume management
-- `paasDnsService.ts` - DNS zone and record management
-- `paasNetworkingService.ts` - Network configuration and firewall management
-- `paasSshKeyService.ts` - SSH key management for PaaS services
-- `paasCaddyService.ts` - Caddy reverse proxy configuration
-- `paasImageService.ts` - Container image management
-- `paasMarketplaceService.ts` - Marketplace template management
-- `paasPricingService.ts` - Pricing plan management
-- `paasDeploymentService.ts` - Deployment tracking and management
-
-## PaaS Deployment Workflow
-
-1. **Location Assignment**: Workers are organized by geographic datacenter locations via `paas_locations`
-2. **Application Creation**: User provides Git repository URL and configuration
-3. **Build Process**:
-   - Clone repository to temporary directory
-   - Auto-detect language using buildpacks
-   - Build OCI image with `pack` CLI
-4. **Deployment**:
-   - Push image to workers via `docker pussh`
-   - Deploy using `uc deploy` with docker-compose
-   - Configure automatic HTTPS via uncloud's Caddy
-   - Assign to specific datacenter locations for geographic distribution
-
-### Supported Languages (Auto-detected)
-- **Node.js** - `package.json`
-- **Python** - `requirements.txt`, `Pipfile`, `pyproject.toml`
-- **Ruby** - `Gemfile`
-- **Go** - `go.mod`
-- **Java** - `pom.xml`, `build.gradle`
-- **PHP** - `composer.json`
-- **Rust** - `Cargo.toml`
-
 ## Security Architecture
-
-### Multi-tenant Isolation
-- **Network Isolation**: Per-tenant Docker networks prevent cross-tenant communication
-- **Storage Isolation**: Tenant-specific labeled volumes with access controls
-- **Container Security**: Non-root users, read-only filesystems, capability dropping
-- **Resource Quotas**: CPU, RAM, and storage limits per pricing plan
 
 ### Data Protection
 - SSH credentials and API tokens encrypted at rest
 - Environment variables stored with AES-256 encryption
 - JWT tokens with configurable expiration
 - Rate limiting with tiered access controls
-
-## Known Issues & Critical Notes
-
-### PaaS Implementation Status
-The PaaS system includes comprehensive worker location management and service orchestration:
-
-1. **Location Management**: New `paas_locations` table with `paasLocationService.ts` for geographic organization
-2. **Worker Assignment**: Workers can be assigned to specific datacenter locations for better resource management
-3. **Service Architecture**: Complete CRUD operations for locations, workers, services, volumes, DNS, networking, and more
-4. **Enhanced CLI Integration**: Proper uncloud command patterns and service integration
-
-**Recent Additions**:
-- PaaS datacenter locations with full CRUD API (`/api/admin/paas/locations`)
-- Worker location assignment and management
-- Comprehensive PaaS service management (volumes, DNS, networking, SSH keys, Caddy, images)
-- Enhanced marketplace and pricing management
-
-### Browser Testing Required
-Full end-to-end browser testing is essential for the PaaS functionality:
-1. Admin worker provisioning flow
-2. Complete client application deployment journey
-3. Multi-tenant isolation verification
-4. Application lifecycle management (start/stop/delete)
 
 ## Testing
 
@@ -239,13 +136,8 @@ Full end-to-end browser testing is essential for the PaaS functionality:
 
 ### Manual Testing Checklist
 1. **Database Setup**: `npm run db:fresh && npm run seed:admin`
-2. **PaaS Setup**: `npm run paas:setup`
-3. **Admin Interface**:
-   - Worker provisioning via admin dashboard
-   - PaaS location management (`/api/admin/paas/locations`)
-   - Service configuration (volumes, DNS, networking, etc.)
-4. **Application Deployment**: Complete deployment flow in browser
-5. **Multi-tenant Testing**: Verify organization isolation and permissions
+2. **Admin Interface**: Admin dashboard management
+3. **VPS Management**: VPS provisioning and lifecycle management
 
 ### Default Credentials
 - **Email**: `admin@skypanelv2.com`
@@ -270,7 +162,7 @@ Full end-to-end browser testing is essential for the PaaS functionality:
 │   ├── contexts/        # React contexts (Auth, Theme, Impersonation)
 │   ├── services/        # API client services and data fetching
 │   └── lib/            # Utility libraries and configurations
-├── migrations/           # Sequential SQL migrations (001-018)
+├── migrations/           # Sequential SQL migrations
 ├── scripts/             # Node utilities for database, billing, and diagnostics
 ├── public/             # Static assets served by Vite
 └── tests/              # Test files and utilities
@@ -299,5 +191,3 @@ Full end-to-end browser testing is essential for the PaaS functionality:
 
 ### Development & Diagnostics
 - `node scripts/test-hourly-billing.js` - Dry-run hourly billing workflow
-- `node scripts/discover-workers.js` - Auto-discover and register PaaS workers
-- `node scripts/paas-health-check.js` - Check PaaS dependencies and connectivity

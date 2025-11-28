@@ -57,20 +57,6 @@ import Pricing from "./pages/Pricing";
 import SSHKeys from "./pages/SSHKeys";
 
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
-import PaaSApplicationsPage from "./pages/PaaSApplications";
-import PaaSMarketplacePage from "./pages/PaaSMarketplace";
-import PaaSApplicationDetailsPage from "./pages/PaaSApplicationDetails";
-import AdminPaaSWorkersPage from "./pages/admin/paas/Workers";
-import AdminPaaSImagesPage from "./pages/admin/paas/Images";
-import AdminPaaSPricingPage from "./pages/admin/paas/Pricing";
-import AdminPaaSMarketplacePage from "./pages/admin/paas/Marketplace";
-import AdminPaaSServicesPage from "./pages/admin/paas/Services";
-import AdminPaaSVolumesPage from "./pages/admin/paas/Volumes";
-import AdminPaaSDnsPage from "./pages/admin/paas/Dns";
-import AdminPaaSNetworkingPage from "./pages/admin/paas/Networking";
-import AdminPaaSSshKeysPage from "./pages/admin/paas/SshKeys";
-import AdminPaaSCaddyPage from "./pages/admin/paas/Caddy";
-import AdminPaaSLocationsPage from "./pages/admin/paas/Locations";
 
 // Component to handle impersonation banner display
 function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
@@ -356,30 +342,6 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/paas/apps"
-          element={
-            <ProtectedRoute>
-              <PaaSApplicationsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/paas/apps/:id"
-          element={
-            <ProtectedRoute>
-              <PaaSApplicationDetailsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/paas/marketplace"
-          element={
-            <ProtectedRoute>
-              <PaaSMarketplacePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/admin"
           element={
             <AdminRoute>
@@ -392,94 +354,6 @@ function AppRoutes() {
           element={
             <AdminRoute>
               <AdminUserDetail />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/paas/workers"
-          element={
-            <AdminRoute>
-              <AdminPaaSWorkersPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/paas/images"
-          element={
-            <AdminRoute>
-              <AdminPaaSImagesPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/paas/locations"
-          element={
-            <AdminRoute>
-              <AdminPaaSLocationsPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/paas/services"
-          element={
-            <AdminRoute>
-              <AdminPaaSServicesPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/paas/volumes"
-          element={
-            <AdminRoute>
-              <AdminPaaSVolumesPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/paas/dns"
-          element={
-            <AdminRoute>
-              <AdminPaaSDnsPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/paas/networking"
-          element={
-            <AdminRoute>
-              <AdminPaaSNetworkingPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/paas/ssh-keys"
-          element={
-            <AdminRoute>
-              <AdminPaaSSshKeysPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/paas/caddy"
-          element={
-            <AdminRoute>
-              <AdminPaaSCaddyPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/paas/pricing"
-          element={
-            <AdminRoute>
-              <AdminPaaSPricingPage />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/paas/marketplace"
-          element={
-            <AdminRoute>
-              <AdminPaaSMarketplacePage />
             </AdminRoute>
           }
         />
