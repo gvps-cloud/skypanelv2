@@ -1972,7 +1972,16 @@ router.get("/upstream/plans", authenticateToken, requireAdmin, async (req, res) 
       return res.json({ plans: [] });
     }
     const plans = await linodeService.getLinodeTypes();
-    res.json({ plans });
+    
+    // Linode API includes backup pricing in addons.backups.price
+    // Map it to flat fields for frontend consistency
+    const plansWithBackupPricing = plans.map((plan: any) => ({
+      ...plan,
+      backup_price_monthly: plan.addons?.backups?.price?.monthly || 0,
+      backup_price_hourly: plan.addons?.backups?.price?.hourly || 0,
+    }));
+    
+    res.json({ plans: plansWithBackupPricing });
   } catch (err: any) {
     console.error("Admin upstream plans error:", err);
     // Return empty list instead of error if upstream fails
@@ -2014,7 +2023,7 @@ router.get("/upstream/stackscripts", authenticateToken, requireAdmin, async (req
 // StackScript Configs
 router.get("/stackscripts/configs", authenticateToken, requireAdmin, async (req, res) => {
    try {
-      const result = await query("SELECT * FROM stackscript_configs ORDER BY display_order ASC");
+      const result = await query("SELECT * FROM vps_stackscript_configs ORDER BY display_order ASC");
       res.json({ configs: result.rows });
    } catch (err: any) {
      if (isMissingTableError(err)) {
@@ -2029,7 +2038,7 @@ router.post("/stackscripts/configs", authenticateToken, requireAdmin, async (req
     const { stackscript_id, label, description, is_enabled, display_order, metadata } = req.body;
     // Upsert
     const result = await query(
-      `INSERT INTO stackscript_configs (stackscript_id, label, description, is_enabled, display_order, metadata, updated_at)
+      `INSERT INTO vps_stackscript_configs (stackscript_id, label, description, is_enabled, display_order, metadata, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW())
        ON CONFLICT (stackscript_id) DO UPDATE SET
          label = EXCLUDED.label,
@@ -2044,7 +2053,7 @@ router.post("/stackscripts/configs", authenticateToken, requireAdmin, async (req
     res.json({ config: result.rows[0] });
   } catch (err: any) {
     if (isMissingTableError(err)) {
-       return res.status(400).json({ error: "stackscript_configs table missing" });
+       return res.status(400).json({ error: "vps_stackscript_configs table missing" });
     }
     res.status(500).json({ error: err.message });
   }
@@ -2638,35 +2647,6 @@ router.put(
     } catch (err: any) {
       console.error("Admin user update error:", err);
       res.status(500).json({ error: err.message || "Failed to update user" });
-    }
-  }
-);
-
-// Get upstream provider plans (types)
-router.get(
-  "/upstream/plans",
-  authenticateToken,
-  requireAdmin,
-  async (req: Request, res: Response) => {
-    try {
-      const plans = await linodeService.getLinodeTypes();
-      
-      // Linode API includes backup pricing in the response
-      // Map it to our format for consistency
-      const plansWithBackupPricing = plans.map((plan: any) => ({
-        ...plan,
-        backup_price_monthly: plan.addons?.backups?.price?.monthly || 0,
-        backup_price_hourly: plan.addons?.backups?.price?.hourly || 0,
-      }));
-      
-      res.json({ plans: plansWithBackupPricing });
-    } catch (err: any) {
-      console.error("Error fetching upstream provider plans:", err);
-      res.status(500).json({
-        error: err.message || "Failed to fetch upstream provider plans",
-        details:
-          "Make sure upstream provider API token is configured in environment variables",
-      });
     }
   }
 );

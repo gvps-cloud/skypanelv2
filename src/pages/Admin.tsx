@@ -47,6 +47,7 @@ import PlatformAvailabilityManager from "@/components/admin/PlatformAvailability
 import { RegionAccessManager } from "@/components/admin/RegionAccessManager";
 import { MarketplaceManager } from "@/components/admin/MarketplaceManager";
 import { AdminSupportView } from "@/components/admin/AdminSupportView";
+import { VPSPlanWizard } from "@/components/admin/VPSPlanWizard";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 
 import { useTheme } from "@/contexts/ThemeContext";
@@ -3009,317 +3010,28 @@ const Admin: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Dialog
+            <VPSPlanWizard
               open={showAddVPSPlan}
-              onOpenChange={(open) => {
-                setShowAddVPSPlan(open);
-                if (!open) {
-                  setNewVPSPlan({
-                    name: "",
-                    description: "",
-                    selectedProviderId: "",
-                    selectedType: "",
-                    markupPrice: 0,
-                    backupPriceMonthly: 0,
-                    backupPriceHourly: 0,
-                    backupUpchargeMonthly: 0,
-                    backupUpchargeHourly: 0,
-                    dailyBackupsEnabled: false,
-                    weeklyBackupsEnabled: true,
-                    active: true,
-                  });
+              onOpenChange={setShowAddVPSPlan}
+              providers={providers}
+              linodeTypes={linodeTypes}
+              planTypeFilter={planTypeFilter}
+              setPlanTypeFilter={setPlanTypeFilter}
+              newVPSPlan={newVPSPlan}
+              setNewVPSPlan={setNewVPSPlan}
+              onProviderChange={(value) => {
+                setNewVPSPlan((prev) => ({
+                  ...prev,
+                  selectedProviderId: value,
+                  selectedType: "",
+                }));
+                const provider = providers.find((p) => p.id === value);
+                if (provider) {
+                  fetchLinodeTypes();
                 }
               }}
-            >
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-                <DialogHeader className="flex-shrink-0">
-                  <DialogTitle>Create VPS Plan</DialogTitle>
-                  <DialogDescription>
-                    Configure plan pricing and markup. Customers will select their region during deployment.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4 overflow-y-auto flex-1 pr-2">
-                  <div className="grid gap-2">
-                    <Label htmlFor="plan-name">Display name</Label>
-                    <Input
-                      id="plan-name"
-                      placeholder="e.g. Premium 4GB - Newark"
-                      value={newVPSPlan.name}
-                      onChange={(e) =>
-                        setNewVPSPlan((prev) => ({
-                          ...prev,
-                          name: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Provider</Label>
-                    <Select
-                      value={newVPSPlan.selectedProviderId}
-                      onValueChange={(value) => {
-                        setNewVPSPlan((prev) => ({
-                          ...prev,
-                          selectedProviderId: value,
-                          selectedType: "",
-                        }));
-                        setPlanTypeFilter("all"); // Reset filter when changing provider
-                        // Fetch plans for this provider
-                        const provider = providers.find((p) => p.id === value);
-                        if (provider) {
-                          fetchLinodeTypes();
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a provider" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[200px] overflow-y-auto">
-                        {providers
-                          .filter((p) => p.active)
-                          .map((provider) => (
-                            <SelectItem key={provider.id} value={provider.id}>
-                              {provider.name} ({provider.type})
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Filter by Category</Label>
-                    <Select
-                      value={planTypeFilter}
-                      onValueChange={(value) => setPlanTypeFilter(value)}
-                      disabled={!newVPSPlan.selectedProviderId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="All plan types" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Types</SelectItem>
-                        <>
-                          <SelectItem value="standard">
-                            Shared CPU (Standard/Nanode)
-                          </SelectItem>
-                          <SelectItem value="cpu">Dedicated CPU</SelectItem>
-                          <SelectItem value="memory">High Memory</SelectItem>
-                          <SelectItem value="premium">Premium CPU</SelectItem>
-                          <SelectItem value="gpu">GPU</SelectItem>
-                        </>
-                      </SelectContent>
-                    </Select>
-                    {filteredPlanTypes.length === 0 &&
-                      planTypeFilter !== "all" ? (
-                      <p className="text-xs text-muted-foreground">
-                        No plans in this category. Try "All Types".
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Plan type</Label>
-                    <Select
-                      value={newVPSPlan.selectedType}
-                      onValueChange={(value) => {
-                        // Find the selected type to get backup pricing
-                        const selectedType = linodeTypes.find(t => t.id === value);
-                        setNewVPSPlan((prev) => ({
-                          ...prev,
-                          selectedType: value,
-                          // Auto-populate backup pricing from provider defaults
-                          backupPriceMonthly: selectedType?.backup_price_monthly || 0,
-                          backupPriceHourly: selectedType?.backup_price_hourly || 0,
-                        }));
-                      }}
-                      disabled={!newVPSPlan.selectedProviderId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            newVPSPlan.selectedProviderId
-                              ? "Select a plan type"
-                              : "Select provider first"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent position="popper" sideOffset={5}>
-                        {filteredPlanTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>
-                            {type.label} · {type.vcpus} vCPU · {type.memory}MB
-                            RAM · {Math.round(type.disk / 1024)}GB Disk · $
-                            {type.price.monthly}/mo
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="plan-markup">Markup (USD)</Label>
-                    <Input
-                      id="plan-markup"
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      value={
-                        Number.isFinite(newVPSPlan.markupPrice)
-                          ? newVPSPlan.markupPrice
-                          : 0
-                      }
-                      onChange={(e) =>
-                        setNewVPSPlan((prev) => ({
-                          ...prev,
-                          markupPrice: Number(e.target.value) || 0,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Base Backup Price (from provider)</Label>
-                    <Input
-                      id="backup-price-monthly"
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      placeholder={(() => {
-                        const selectedType = linodeTypes.find(t => t.id === newVPSPlan.selectedType);
-                        return selectedType?.backup_price_monthly
-                          ? `Default: $${(Number(selectedType.backup_price_monthly) || 0).toFixed(2)}`
-                          : "0.00";
-                      })()}
-                      value={newVPSPlan.backupPriceMonthly}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        // Allow empty string, numbers, and partial decimal inputs like "0.", ".5", etc.
-                        if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                          setNewVPSPlan((prev) => ({
-                            ...prev,
-                            backupPriceMonthly: value, // Store the string value to preserve typing
-                          }));
-                        }
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {(() => {
-                        const selectedType = linodeTypes.find(t => t.id === newVPSPlan.selectedType);
-                        if (selectedType?.backup_price_monthly && Number(selectedType.backup_price_monthly) > 0) {
-                          return `Auto-filled from provider: $${(Number(selectedType.backup_price_monthly) || 0).toFixed(2)}/mo`;
-                        }
-                        return "Monthly cost for backup service (auto-filled from provider)";
-                      })()}
-                    </p>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="backup-price-hourly">Backup Price - Hourly (USD)</Label>
-                    <Input
-                      id="backup-price-hourly"
-                      type="number"
-                      step="0.000001"
-                      min={0}
-                      placeholder={(() => {
-                        const selectedType = linodeTypes.find(t => t.id === newVPSPlan.selectedType);
-                        return selectedType?.backup_price_hourly
-                          ? `Default: $${(Number(selectedType.backup_price_hourly) || 0).toFixed(6)}`
-                          : "0.000000";
-                      })()}
-                      value={newVPSPlan.backupPriceHourly}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        // Allow empty string, numbers, and partial decimal inputs like "0.", ".5", etc.
-                        if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                          setNewVPSPlan((prev) => ({
-                            ...prev,
-                            backupPriceHourly: value, // Store the string value to preserve typing
-                          }));
-                        }
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {(() => {
-                        const selectedType = linodeTypes.find(t => t.id === newVPSPlan.selectedType);
-                        if (selectedType?.backup_price_hourly && Number(selectedType.backup_price_hourly) > 0) {
-                          return `Auto-filled from provider: $${(Number(selectedType.backup_price_hourly) || 0).toFixed(6)}/hr`;
-                        }
-                        return "Hourly cost for backup service (auto-filled from provider)";
-                      })()}
-                    </p>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="backup-upcharge-monthly">Backup Upcharge - Monthly (USD)</Label>
-                    <Input
-                      id="backup-upcharge-monthly"
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      placeholder="0.00"
-                      value={newVPSPlan.backupUpchargeMonthly}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        // Allow empty string, numbers, and partial decimal inputs like "0.", ".5", etc.
-                        if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                          const numericValue = value === "" ? 0 : parseFloat(value) || 0;
-                          setNewVPSPlan((prev) => ({
-                            ...prev,
-                            backupUpchargeMonthly: value, // Store the string value to preserve typing
-                            backupUpchargeHourly: numericValue / 730,
-                          }));
-                        }
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Additional markup you charge for backups (hourly: ${((parseFloat(String(newVPSPlan.backupUpchargeMonthly)) || 0) / 730).toFixed(6)}/hr)
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        Enabled for customers
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Toggle off to hide this plan without deleting it.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={newVPSPlan.active}
-                      onCheckedChange={(checked) =>
-                        setNewVPSPlan((prev) => ({ ...prev, active: checked }))
-                      }
-                    />
-                  </div>
-                </div>
-                <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddVPSPlan(false);
-                      setNewVPSPlan({
-                        name: "",
-                        description: "",
-                        selectedProviderId: "",
-                        selectedType: "",
-                        markupPrice: 0,
-                        backupPriceMonthly: 0,
-                        backupPriceHourly: 0,
-                        backupUpchargeMonthly: 0,
-                        backupUpchargeHourly: 0,
-                        dailyBackupsEnabled: false,
-                        weeklyBackupsEnabled: true,
-                        active: true,
-                      });
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={createVPSPlan}
-                    disabled={
-                      !newVPSPlan.selectedType
-                    }
-                  >
-                    Create Plan
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+              onSubmit={createVPSPlan}
+            />
     </SectionPanel>
 
     <SectionPanel section="user-management" activeSection={activeTab}>
