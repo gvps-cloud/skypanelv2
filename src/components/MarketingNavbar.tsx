@@ -96,10 +96,10 @@ export function MarketingNavbar({ sticky = true }: MarketingNavbarProps) {
           </div>
           <span>{BRAND_NAME}</span>
         </Link>
-        <nav className="hidden items-center gap-8 text-sm font-medium md:flex">
+        <nav className="hidden items-center gap-8 text-sm font-medium lg:flex">
           {navLinks.map(renderNavLink)}
         </nav>
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-3 lg:flex">
           <Button variant="ghost" asChild>
             <Link to="/login" onClick={closeMobileMenu}>
               Log in
@@ -115,7 +115,7 @@ export function MarketingNavbar({ sticky = true }: MarketingNavbarProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden"
+          className="lg:hidden"
           onClick={() => setIsMobileMenuOpen((open) => !open)}
           aria-label="Toggle menu"
         >
@@ -123,7 +123,7 @@ export function MarketingNavbar({ sticky = true }: MarketingNavbarProps) {
         </Button>
       </div>
       {isMobileMenuOpen && (
-        <div className="border-t border-border/60 bg-background/95 px-4 pb-6 pt-3 md:hidden">
+        <div className="border-t border-border/60 bg-background/95 px-4 pb-6 pt-3 lg:hidden">
           <div className="flex flex-col gap-4 text-sm font-medium">
             {navLinks.map(renderNavLink)}
           </div>

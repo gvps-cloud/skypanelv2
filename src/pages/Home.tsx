@@ -222,16 +222,16 @@ const HeroSection = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.8 + index * 0.1 }}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
+                  className="flex items-center gap-4 p-6 rounded-xl bg-gradient-to-br from-primary/5 to-primary/2 border border-primary/10 hover:border-primary/20 transition-all duration-300 min-h-[120px] group"
                 >
-                  <div className="w-12 h-12 bg-primary/5 rounded-lg flex items-center justify-center border border-primary/10">
-                    <stat.icon className="w-6 h-6 text-primary" />
+                  <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 group-hover:scale-105 transition-all duration-300">
+                    <stat.icon className="w-7 h-7 text-primary group-hover:text-primary/90" />
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">
+                  <div className="flex-1 text-left">
+                    <div className="text-3xl font-bold text-foreground min-h-[36px] flex items-center">
                       <AnimatedCounter value={stat.value} suffix={stat.suffix} />
                     </div>
-                    <div className="text-xs text-muted-foreground">{stat.label}</div>
+                    <div className="text-sm text-muted-foreground leading-tight mt-1">{stat.label}</div>
                   </div>
                 </motion.div>
               ))}

@@ -579,7 +579,10 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
                     ? app.user_defined_fields.length
                     : 0;
                   return (
-                    <div key={app.slug} className="grid gap-4 p-4 md:grid-cols-[auto,1fr]">
+                    <div
+                      key={app.slug}
+                      className="grid gap-4 p-4 md:grid-cols-[260px,1fr] items-start"
+                    >
                       <div className="flex items-start gap-3">
                         {mode === "custom" && (
                           <Checkbox
@@ -604,7 +607,7 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
                           </p>
                         </div>
                       </div>
-                      <div className="space-y-4">
+                      <div className="space-y-4 flex flex-col justify-between h-full">
                         <p className="text-sm text-muted-foreground">{description}</p>
                         <div className="grid gap-4 md:grid-cols-2">
                           <div className="space-y-2">
