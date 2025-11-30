@@ -385,6 +385,27 @@ export const MarketplaceManager: React.FC<MarketplaceManagerProps> = ({ token })
     }
   };
 
+  // Marketplace (community StackScripts) has been deprecated — only admin-configured StackScripts are supported.
+  // Show a short message and point admins to the StackScripts management UI.
+  const marketplaceDisabled = true;
+
+  if (marketplaceDisabled) {
+    return (
+      <div className="space-y-6">
+        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
+          <div className="relative z-10 space-y-2">
+            <Badge variant="secondary">Infrastructure</Badge>
+            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Marketplace (Disabled)</h2>
+            <p className="max-w-2xl text-muted-foreground">
+              Community Marketplace apps (public StackScripts) are no longer supported.
+              Use the admin <a href="/admin#stackscripts" className="text-primary underline">StackScripts</a> page to configure provider-owned StackScripts.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">

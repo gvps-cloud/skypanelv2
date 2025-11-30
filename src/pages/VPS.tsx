@@ -194,12 +194,7 @@ const VPS: React.FC = () => {
   const [selectedStackScript, setSelectedStackScript] = useState<any | null>(
     null
   );
-  const [stackscriptData, setStackscriptData] = useState<Record<string, any>>(
-    {}
-  );
-  const [marketplaceApps, setMarketplaceApps] = useState<any[]>([]);
-  const [marketplaceLoading, setMarketplaceLoading] = useState(false);
-  const [marketplaceError, setMarketplaceError] = useState<string | null>(null);
+  const [stackscriptData, setStackscriptData] = useState<Record<string, any>>({});
   const [providerOptions, setProviderOptions] = useState<ProviderOption[]>([]);
   const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
   // OS selection redesign: tabs, grouping, and per-OS version selection
@@ -823,50 +818,6 @@ const VPS: React.FC = () => {
     }
   }, [token]);
 
-  const loadMarketplaceApps = useCallback(
-    async (providerId: string) => {
-      if (!providerId || !token) {
-        setMarketplaceApps([]);
-        setMarketplaceError(null);
-        return;
-      }
-      try {
-        setMarketplaceLoading(true);
-        setMarketplaceError(null);
-        const res = await fetch(`/api/vps/providers/${providerId}/marketplace`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const payload = await res.json();
-        if (!res.ok) {
-          throw new Error(payload.error || "Failed to load marketplace apps");
-        }
-        const apps = Array.isArray(payload.apps) ? payload.apps : [];
-        setMarketplaceApps(apps);
-      } catch (error: any) {
-        console.error("Failed to load marketplace apps:", error);
-        setMarketplaceError(error?.message || "Failed to load marketplace apps");
-        setMarketplaceApps([]);
-      } finally {
-        setMarketplaceLoading(false);
-      }
-    },
-    [token]
-  );
-
-  const handleMarketplaceRefresh = useCallback(() => {
-    if (
-      createForm.provider_type === "linode" &&
-      createForm.provider_id &&
-      hasValidProviderSelection
-    ) {
-      loadMarketplaceApps(createForm.provider_id);
-    }
-  }, [
-    createForm.provider_type,
-    createForm.provider_id,
-    hasValidProviderSelection,
-    loadMarketplaceApps,
-  ]);
 
   const loadInstances = useCallback(async () => {
     setLoading(true);
@@ -1088,23 +1039,7 @@ const VPS: React.FC = () => {
     setCreateForm,
   ]);
 
-  useEffect(() => {
-    if (
-      createForm.provider_type === "linode" &&
-      createForm.provider_id &&
-      hasValidProviderSelection
-    ) {
-      loadMarketplaceApps(createForm.provider_id);
-    } else if (!hasValidProviderSelection) {
-      setMarketplaceApps((prev) => (prev.length === 0 ? prev : []));
-      setMarketplaceError((prev) => (prev ? null : prev));
-    }
-  }, [
-    createForm.provider_type,
-    createForm.provider_id,
-    hasValidProviderSelection,
-    loadMarketplaceApps,
-  ]);
+  // Marketplace installs are deprecated/disabled — only configured StackScripts are allowed
 
   // Performance measurement cleanup - run once on mount
   useEffect(() => {
@@ -1898,15 +1833,12 @@ const VPS: React.FC = () => {
           onFormChange={setCreateForm}
           token={token || ""}
           linodeStackScripts={providerStackScripts}
-          marketplaceApps={marketplaceApps}
           selectedStackScript={selectedStackScript}
           onStackScriptSelect={setSelectedStackScript}
           stackscriptData={stackscriptData}
           onStackScriptDataChange={setStackscriptData}
           allowedImagesDisplay={allowedImagesDisplay}
-          marketplaceLoading={marketplaceLoading}
-          marketplaceError={marketplaceError}
-          onMarketplaceRefresh={handleMarketplaceRefresh}
+          
         />
       ),
     },
@@ -1927,15 +1859,12 @@ const VPS: React.FC = () => {
           onFormChange={setCreateForm}
           token={token || ""}
           linodeStackScripts={providerStackScripts}
-          marketplaceApps={marketplaceApps}
           selectedStackScript={selectedStackScript}
           onStackScriptSelect={setSelectedStackScript}
           stackscriptData={stackscriptData}
           onStackScriptDataChange={setStackscriptData}
           allowedImagesDisplay={allowedImagesDisplay}
-          marketplaceLoading={marketplaceLoading}
-          marketplaceError={marketplaceError}
-          onMarketplaceRefresh={handleMarketplaceRefresh}
+          
         />
       ),
     });

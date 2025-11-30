@@ -17,7 +17,7 @@ SkyPanel exposes a handful of internal endpoints that wrap the Linode API. This 
 |--------|------|-------------|
 | `GET`  | `/api/vps/providers` | Lists active Linode providers. |
 | `GET`  | `/api/vps/plans`     | Lists curated Linode plans (`vps_plans`). |
-| `GET`  | `/api/vps/apps`      | Lists StackScripts/marketplace apps configured by admins. |
+| `GET`  | `/api/vps/apps`      | Lists admin-configured StackScripts (community marketplace is disabled). |
 | `POST` | `/api/vps`          | Creates a Linode instance. |
 
 ### `POST /api/vps` Body
@@ -48,7 +48,7 @@ The API response includes the normalized Linode instance plus pricing metadata p
 
 - `ProviderSelector` → `/api/vps/providers`
 - `PlanSelector` → `/api/vps/plans`
-- `CreateVPSSteps` → `/api/vps/apps` (StackScripts/marketplace)
+- `CreateVPSSteps` → `/api/vps/apps` (admin-configured StackScripts only — community marketplace apps are not returned)
 - `RegionSelector` → `/api/vps/providers/:id/regions`
 
 No other provider-specific endpoints remain. If another provider is added in the future, the previous multi-provider patterns (factory, provider service, caching) can be reused without impacting existing Linode behavior.

@@ -942,25 +942,67 @@ const resolvePlanMeta = async (
   return { planRow, specs, pricing, providerPlanId: providerPlanId ?? null };
 };
 
-// Get Linode Marketplace apps (limited to selected slugs)
+// Get available admin-configured apps / StackScripts
+// NOTE: This endpoint previously returned Linode marketplace/community StackScripts.
+// We intentionally restrict this to admin-configured StackScript entries only
+// so creation workflows use curated, provider-account-owned StackScripts.
 router.get("/apps", async (req: Request, res: Response) => {
   try {
-    const slugsParam = String(req.query.slugs || "").trim();
-    const slugs = slugsParam
-      ? slugsParam
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [];
-    const apps = await linodeService.listMarketplaceApps(
-      slugs.length > 0 ? slugs : undefined
+    // Return only enabled StackScript configs created by admins
+    const configsRes = await query(
+      `SELECT stackscript_id, label, description, is_enabled, display_order, metadata
+         FROM vps_stackscript_configs
+        WHERE is_enabled = TRUE
+        ORDER BY display_order ASC, created_at ASC`
     );
+
+    const configs = configsRes.rows || [];
+
+    if (configs.length === 0) {
+      return res.json({ apps: [] });
+    }
+
+    // Try to fetch provider-owned StackScripts (mineOnly true)
+    const ownedScripts = await linodeService.getLinodeStackScripts({ mineOnly: true }).catch(() => []);
+    const scriptMap = new Map<number, any>();
+    ownedScripts.forEach((s: any) => scriptMap.set(Number(s.id), s));
+
+    const apps: any[] = [];
+    for (const row of configs) {
+      const id = Number(row.stackscript_id);
+      let script = scriptMap.get(id);
+      if (!script) {
+        try {
+          script = await linodeService.getStackScript(id);
+        } catch (err) {
+          // If a script cannot be fetched, skip it (admins can fix via admin UI)
+          console.warn(`Configured StackScript ${id} could not be loaded:`, err?.message || err);
+          continue;
+        }
+      }
+
+      const displayLabel = row.label || script.label || `StackScript ${id}`;
+      const displayDescription = row.description || script.description || script.rev_note || "";
+      const user_defined_fields = Array.isArray(script.user_defined_fields) ? script.user_defined_fields : [];
+
+      apps.push({
+        slug: `stackscript-${id}`,
+        id,
+        name: script.label || displayLabel,
+        display_name: displayLabel,
+        description: displayDescription,
+        summary: script.description || script.rev_note || "",
+        images: Array.isArray(script.images) ? script.images : [],
+        user_defined_fields,
+        stackscript_id: id,
+        isMarketplace: false,
+      });
+    }
+
     res.json({ apps });
   } catch (err: any) {
-    console.error("Apps fetch error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to fetch Marketplace apps" });
+    console.error("Configured apps fetch error:", err);
+    res.status(500).json({ error: err.message || "Failed to fetch configured apps" });
   }
 });
 

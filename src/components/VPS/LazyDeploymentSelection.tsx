@@ -109,7 +109,8 @@ export default function LazyDeploymentSelection({
     });
   }, [uniqueMarketplaceApps, marketplaceSearch, categoryFilter]);
 
-  const hasMarketplace = (uniqueMarketplaceApps?.length ?? 0) > 0 || marketplaceLoading || Boolean(marketplaceError);
+  // Marketplace/community apps are removed. Only curated StackScripts (provider account) are used.
+  const hasMarketplace = false;
 
   useEffect(() => {
     if (selectedStackScript?.isMarketplace) {
