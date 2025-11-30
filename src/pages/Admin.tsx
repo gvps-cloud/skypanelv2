@@ -44,7 +44,6 @@ import { ContactCategoryManager } from "@/components/admin/ContactCategoryManage
 import { ContactMethodManager } from "@/components/admin/ContactMethodManager";
 import PlatformAvailabilityManager from "@/components/admin/PlatformAvailabilityManager";
 import { RegionAccessManager } from "@/components/admin/RegionAccessManager";
-import { MarketplaceManager } from "@/components/admin/MarketplaceManager";
 import { AdminSupportView } from "@/components/admin/AdminSupportView";
 import { VPSPlanWizard } from "@/components/admin/VPSPlanWizard";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
@@ -130,7 +129,6 @@ type AdminSection =
   | "vps-plans"
   | "servers"
   | "providers"
-  | "marketplace"
   | "regions"
   | "stackscripts"
   | "networking"
@@ -147,7 +145,6 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "vps-plans",
   "servers",
   "providers",
-  "marketplace",
   "regions",
   "stackscripts",
   "networking",
@@ -1453,7 +1450,7 @@ const Admin: React.FC = () => {
 
   const savePlan = async () => {
     if (!editPlanId) return;
-    
+
     // Find the plan being edited to get its provider
     try {
       const res = await fetch(`${API_BASE_URL}/admin/plans/${editPlanId}`, {
@@ -2050,7 +2047,7 @@ const Admin: React.FC = () => {
                 Manage infrastructure, support tickets, and platform configuration from a unified control panel.
               </p>
             </div>
-            
+
             {/* Background decoration */}
             <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
               <Settings className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -2143,7 +2140,7 @@ const Admin: React.FC = () => {
                     "cursor-pointer transition-colors hover:bg-muted/50",
                     isActive ? "ring-2 ring-primary" : ""
                   )}>
-                    <CardContent 
+                    <CardContent
                       className="p-6"
                       onClick={() => handleTabChange(panel.id)}
                     >
@@ -2229,8 +2226,8 @@ const Admin: React.FC = () => {
                               )}
                               <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
                               <span>
-                                {ticket.updated_at 
-                                  ? new Date(ticket.updated_at).toLocaleString() 
+                                {ticket.updated_at
+                                  ? new Date(ticket.updated_at).toLocaleString()
                                   : new Date(ticket.created_at).toLocaleString()
                                 }
                               </span>
@@ -2335,7 +2332,7 @@ const Admin: React.FC = () => {
             </p>
           )}
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <Palette className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -2460,7 +2457,7 @@ const Admin: React.FC = () => {
             <Plus className="h-4 w-4" /> Add VPS Plan
           </Button>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <DollarSign className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -2814,8 +2811,8 @@ const Admin: React.FC = () => {
                                       </TableCell>
                                       <TableCell>
                                         {/* Backups are always daily via Linode - just show enabled status */}
-                                        <Badge 
-                                          variant="outline" 
+                                        <Badge
+                                          variant="outline"
                                           className="w-fit text-xs bg-green-500/10 text-green-500 border-green-500/30"
                                         >
                                           Daily
@@ -2986,7 +2983,7 @@ const Admin: React.FC = () => {
             Monitor and manage API rate limits across the platform
           </p>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <Shield className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -3010,7 +3007,7 @@ const Admin: React.FC = () => {
             Manage FAQ categories, items, and latest updates for the public FAQ page
           </p>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <HelpCircle className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -3179,7 +3176,7 @@ const Admin: React.FC = () => {
             Manage contact page content, methods, and availability schedules
           </p>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <ClipboardList className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -3238,7 +3235,7 @@ const Admin: React.FC = () => {
             {loadingStackscripts ? "Refreshing…" : "Refresh"}
           </Button>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <FileCode className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -3425,10 +3422,6 @@ const Admin: React.FC = () => {
       </Card>
     </SectionPanel>
 
-    <SectionPanel section="marketplace" activeSection={activeTab}>
-      <MarketplaceManager token={token || ""} />
-    </SectionPanel>
-
     <SectionPanel section="servers" activeSection={activeTab}>
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
@@ -3443,7 +3436,7 @@ const Admin: React.FC = () => {
             Monitor and manage all VPS instances provisioned through the platform
           </p>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <ServerCog className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -3691,7 +3684,7 @@ const Admin: React.FC = () => {
             Configure reverse DNS defaults and IP address management settings
           </p>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <Globe className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -3981,7 +3974,7 @@ const Admin: React.FC = () => {
             <Plus className="h-4 w-4" /> Add Provider
           </Button>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <Settings className="absolute right-10 top-10 h-32 w-32 rotate-12" />

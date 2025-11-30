@@ -1,4 +1,4 @@
-import type { ProviderType } from './provider';
+import type { ProviderType } from "./provider";
 
 export interface VPSListRowSelection {
   [id: string]: boolean;
@@ -7,7 +7,14 @@ export interface VPSListRowSelection {
 export interface VPSInstance {
   id: string;
   label: string;
-  status: "running" | "stopped" | "provisioning" | "rebooting" | "error" | "restoring" | "backing_up";
+  status:
+    | "running"
+    | "stopped"
+    | "provisioning"
+    | "rebooting"
+    | "error"
+    | "restoring"
+    | "backing_up";
   type: string;
   region: string;
   regionLabel?: string;
@@ -18,7 +25,7 @@ export interface VPSInstance {
   provider_id?: string | null;
   provider_type?: ProviderType | null;
   providerName?: string | null;
-  backup_frequency?: 'daily' | 'weekly' | 'none';
+  backup_frequency?: "daily" | "weekly" | "none";
   specs: {
     vcpus: number;
     memory: number;
@@ -58,11 +65,9 @@ export interface CreateVPSForm {
   rootPassword: string;
   sshKeys: string[];
   backups: boolean;
-  backup_frequency?: 'daily' | 'weekly' | 'none';
+  backup_frequency?: "daily" | "weekly" | "none";
   privateIP: boolean;
-  // Marketplace/StackScript
-  appSlug?: string;
-  appData?: Record<string, any>;
+  // StackScript
   stackscriptId?: number;
   stackscriptData?: Record<string, any>;
 }

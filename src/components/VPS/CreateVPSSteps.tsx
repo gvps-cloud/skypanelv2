@@ -21,17 +21,12 @@ interface CreateVPSStepsProps {
   token: string;
 
   // Linode-specific props
-  _linodeImages?: any[];
   linodeStackScripts?: any[];
-  marketplaceApps?: any[];
   selectedStackScript?: any | null;
   onStackScriptSelect?: (script: any | null) => void;
   stackscriptData?: Record<string, any>;
   onStackScriptDataChange?: (data: Record<string, any>) => void;
   allowedImagesDisplay?: string;
-  marketplaceLoading?: boolean;
-  marketplaceError?: string | null;
-  onMarketplaceRefresh?: () => void;
   _osGroups?: Record<
     string,
     {
@@ -61,17 +56,12 @@ export const CreateVPSSteps: React.FC<CreateVPSStepsProps> = ({
   formData,
   onFormChange,
   token,
-  _linodeImages = [],
   linodeStackScripts = [],
-  marketplaceApps = [],
   selectedStackScript = null,
   onStackScriptSelect = () => {},
   stackscriptData = {},
   onStackScriptDataChange = () => {},
   allowedImagesDisplay = "",
-  marketplaceLoading = false,
-  marketplaceError = null,
-  onMarketplaceRefresh = () => {},
   _osGroups = {},
   effectiveOsGroups = {},
   selectedOSGroup = null,
@@ -81,22 +71,18 @@ export const CreateVPSSteps: React.FC<CreateVPSStepsProps> = ({
   osTab = "templates",
   onOsTabChange = () => {},
 }) => {
-  // Step 2: Deployment/Marketplace selection
+  // Step 2: Deployment selection
   if (step === 2) {
     return (
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-2">
-            1-Click Deployments (Optional)
+            StackScript Deployments (Optional)
           </label>
           <LazyDeploymentSelection
             stackScripts={linodeStackScripts}
-            marketplaceApps={marketplaceApps}
             selectedStackScript={selectedStackScript}
             onStackScriptSelect={onStackScriptSelect}
-            marketplaceLoading={marketplaceLoading}
-            marketplaceError={marketplaceError}
-            onMarketplaceRefresh={onMarketplaceRefresh}
           />
         </div>
       </div>

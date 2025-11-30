@@ -30,27 +30,19 @@ import {
   parseStoredAllowedRegions,
 } from "../lib/providerRegions.js";
 import {
-  normalizeMarketplaceSlugs,
-  parseStoredAllowedMarketplaceApps,
-} from "../lib/providerMarketplace.js";
-import {
-  fetchMarketplaceDisplayNames,
-  replaceMarketplaceDisplayNames,
-} from "../lib/providerMarketplaceLabels.js";
-import {
   listActiveRateLimitOverrides,
   upsertRateLimitOverride,
   deleteRateLimitOverride,
 } from "../services/rateLimitOverrideService.js";
-import { 
-  OrganizationValidation, 
-  MemberValidation, 
+import {
+  OrganizationValidation,
+  MemberValidation,
   UserValidation,
   BusinessValidation,
   formatValidationErrors,
   formatBusinessLogicError,
-  formatServerError
-} from '../lib/validation.js';
+  formatServerError,
+} from "../lib/validation.js";
 
 const router = express.Router();
 
@@ -92,14 +84,9 @@ const allowedThemePresetIds = new Set([
   "custom",
 ]);
 
-const normalizeMarketplaceSlugValue = (value: unknown): string =>
-  typeof value === "string" ? value.trim().toLowerCase() : "";
-
-const MAX_MARKETPLACE_DISPLAY_NAME_LENGTH = 120;
-
 const mergeCustomPreset = (
   incoming: unknown,
-  existing: StoredThemePreset | null | undefined
+  existing: StoredThemePreset | null | undefined,
 ): StoredThemePreset | null => {
   if (incoming && typeof incoming === "object") {
     return incoming as StoredThemePreset;
@@ -130,7 +117,9 @@ router.get(
       });
     } catch (error) {
       console.error("Failed to list rate limit overrides:", error);
-      res.status(500).json({ success: false, error: "Failed to load overrides" });
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to load overrides" });
     }
   },
 );
@@ -141,9 +130,16 @@ router.post(
   requireAdmin,
   [
     body("userId").optional().isUUID(),
-    body("email").optional().isEmail().withMessage("A valid email is required when userId is not provided"),
-    body("maxRequests").isInt({ min: 1 }).withMessage("maxRequests must be a positive integer"),
-    body("windowMinutes").isInt({ min: 1 }).withMessage("windowMinutes must be a positive integer"),
+    body("email")
+      .optional()
+      .isEmail()
+      .withMessage("A valid email is required when userId is not provided"),
+    body("maxRequests")
+      .isInt({ min: 1 })
+      .withMessage("maxRequests must be a positive integer"),
+    body("windowMinutes")
+      .isInt({ min: 1 })
+      .withMessage("windowMinutes must be a positive integer"),
     body("reason").optional().isString().isLength({ max: 500 }),
     body("expiresAt").optional().isISO8601(),
   ],
@@ -154,12 +150,20 @@ router.post(
         return res.status(400).json({ success: false, errors: errors.array() });
       }
 
-      const { userId: rawUserId, email, maxRequests, windowMinutes, reason, expiresAt } = req.body;
+      const {
+        userId: rawUserId,
+        email,
+        maxRequests,
+        windowMinutes,
+        reason,
+        expiresAt,
+      } = req.body;
 
       if (!rawUserId && !email) {
         return res.status(400).json({
           success: false,
-          error: "Either userId or email must be provided to create an override.",
+          error:
+            "Either userId or email must be provided to create an override.",
         });
       }
 
@@ -167,15 +171,23 @@ router.post(
 
       if (!userId && email) {
         const normalizedEmail = (email as string).trim().toLowerCase();
-        const { rows } = await query("SELECT id FROM users WHERE LOWER(email) = $1", [normalizedEmail]);
+        const { rows } = await query(
+          "SELECT id FROM users WHERE LOWER(email) = $1",
+          [normalizedEmail],
+        );
         if (!rows[0]) {
-          return res.status(404).json({ success: false, error: "User not found" });
+          return res
+            .status(404)
+            .json({ success: false, error: "User not found" });
         }
         userId = rows[0].id;
       }
 
       if (!userId) {
-        return res.status(400).json({ success: false, error: "Unable to resolve user for override." });
+        return res.status(400).json({
+          success: false,
+          error: "Unable to resolve user for override.",
+        });
       }
 
       const expiresDate = expiresAt ? new Date(expiresAt) : null;
@@ -206,7 +218,7 @@ router.post(
               expiresAt: expiresDate ? expiresDate.toISOString() : null,
             },
           },
-          req
+          req,
         );
       }
 
@@ -219,7 +231,9 @@ router.post(
       });
     } catch (error) {
       console.error("Failed to upsert rate limit override:", error);
-      res.status(500).json({ success: false, error: "Failed to save override" });
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to save override" });
     }
   },
 );
@@ -240,7 +254,9 @@ router.delete(
       const removed = await deleteRateLimitOverride(targetUserId);
 
       if (!removed) {
-        return res.status(404).json({ success: false, error: "Override not found" });
+        return res
+          .status(404)
+          .json({ success: false, error: "Override not found" });
       }
 
       if (req.user?.id) {
@@ -254,14 +270,16 @@ router.delete(
             message: `Deleted rate limit override for user ${targetUserId}`,
             status: "success",
           },
-          req
+          req,
         );
       }
 
       res.json({ success: true });
     } catch (error) {
       console.error("Failed to delete rate limit override:", error);
-      res.status(500).json({ success: false, error: "Failed to delete override" });
+      res
+        .status(500)
+        .json({ success: false, error: "Failed to delete override" });
     }
   },
 );
@@ -296,7 +314,7 @@ router.put(
       const currentConfig = await themeService.getThemeConfig();
       const mergedCustomPreset = mergeCustomPreset(
         customPreset,
-        currentConfig.customPreset
+        currentConfig.customPreset,
       );
 
       const theme = await themeService.updateThemeConfig({
@@ -320,7 +338,7 @@ router.put(
               hasCustomPreset: Boolean(theme.customPreset),
             },
           },
-          req
+          req,
         );
       }
 
@@ -329,7 +347,7 @@ router.put(
       console.error("Admin theme update error:", err);
       res.status(500).json({ error: "Failed to update theme" });
     }
-  }
+  },
 );
 
 // List all support tickets (admin only)
@@ -340,7 +358,7 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const result = await query(
-        "SELECT * FROM support_tickets ORDER BY created_at DESC"
+        "SELECT * FROM support_tickets ORDER BY created_at DESC",
       );
 
       res.json({ tickets: result.rows || [] });
@@ -348,7 +366,7 @@ router.get(
       console.error("Admin tickets list error:", err);
       res.status(500).json({ error: err.message || "Failed to fetch tickets" });
     }
-  }
+  },
 );
 
 // Update ticket status
@@ -375,7 +393,7 @@ router.patch(
 
       const result = await query(
         "UPDATE support_tickets SET status = $1, updated_at = $2 WHERE id = $3 RETURNING *",
-        [status, new Date().toISOString(), id]
+        [status, new Date().toISOString(), id],
       );
 
       if (result.rows.length === 0) {
@@ -389,7 +407,7 @@ router.patch(
         .status(500)
         .json({ error: err.message || "Failed to update ticket status" });
     }
-  }
+  },
 );
 
 // Delete a ticket (admin)
@@ -414,7 +432,7 @@ router.delete(
       console.error("Admin ticket delete error:", err);
       res.status(500).json({ error: err.message || "Failed to delete ticket" });
     }
-  }
+  },
 );
 
 // Reply to a ticket (admin)
@@ -440,7 +458,7 @@ router.post(
       // Get ticket details for activity logging
       const ticketRes = await query(
         "SELECT organization_id, created_by, subject FROM support_tickets WHERE id = $1",
-        [id]
+        [id],
       );
 
       if (ticketRes.rows.length === 0) {
@@ -452,9 +470,9 @@ router.post(
 
       // Create reply
       const replyResult = await query(
-        `INSERT INTO support_ticket_replies (ticket_id, user_id, message, is_staff_reply, created_at) 
+        `INSERT INTO support_ticket_replies (ticket_id, user_id, message, is_staff_reply, created_at)
          VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [id, (req as any).user?.id, message, true, new Date().toISOString()]
+        [id, (req as any).user?.id, message, true, new Date().toISOString()],
       );
 
       if (replyResult.rows.length === 0) {
@@ -483,7 +501,7 @@ router.post(
             is_staff_reply: true,
           },
         },
-        req
+        req,
       );
 
       const replyRow = replyResult.rows[0];
@@ -507,7 +525,7 @@ router.post(
       console.error("Admin ticket reply error:", err);
       res.status(500).json({ error: err.message || "Failed to add reply" });
     }
-  }
+  },
 );
 
 // List replies for a ticket (admin)
@@ -527,7 +545,7 @@ router.get(
       const { id } = req.params;
       const ticketCheck = await query(
         "SELECT id FROM support_tickets WHERE id = $1",
-        [id]
+        [id],
       );
       if (ticketCheck.rows.length === 0) {
         res.status(404).json({ error: "Ticket not found" });
@@ -541,7 +559,7 @@ router.get(
            JOIN users u ON u.id = r.user_id
           WHERE r.ticket_id = $1
           ORDER BY r.created_at ASC`,
-        [id]
+        [id],
       );
       const replies = (repliesRes.rows || []).map((r: any) => ({
         id: r.id,
@@ -564,23 +582,23 @@ router.get(
       console.error("Admin list replies error:", err);
       res.status(500).json({ error: err.message || "Failed to fetch replies" });
     }
-  }
+  },
 );
 
 /**
  * GET /api/admin/vps-plans
- * 
+ *
  * Retrieve all VPS plans with backup pricing information for admin management.
- * 
+ *
  * Authentication: Admin role required
- * 
+ *
  * Response includes:
  * - Plan configuration (name, provider, active status)
  * - Base pricing from provider
  * - Backup pricing (base + upcharge)
  * - Backup frequency configuration (daily/weekly enabled)
  * - Plan specifications and metadata
- * 
+ *
  * See: repo-docs/FLEXIBLE_BACKUP_PRICING_API.md for detailed documentation
  */
 router.get(
@@ -590,16 +608,16 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const result = await query(
-        `SELECT 
-          id, name, provider_id, provider_plan_id, 
+        `SELECT
+          id, name, provider_id, provider_plan_id,
           base_price, markup_price,
           backup_price_monthly, backup_price_hourly,
           backup_upcharge_monthly, backup_upcharge_hourly,
           daily_backups_enabled, weekly_backups_enabled,
           specifications, active, created_at, updated_at
-         FROM vps_plans 
-         WHERE active = true 
-         ORDER BY created_at DESC`
+         FROM vps_plans
+         WHERE active = true
+         ORDER BY created_at DESC`,
       );
 
       res.json({ plans: result.rows || [] });
@@ -607,25 +625,25 @@ router.get(
       console.error("Admin plans list error:", err);
       res.status(500).json({ error: err.message || "Failed to fetch plans" });
     }
-  }
+  },
 );
 
 /**
  * PUT /api/admin/vps-plans/:id
- * 
+ *
  * Update an existing VPS plan's backup configuration and pricing.
- * 
+ *
  * Authentication: Admin role required
- * 
+ *
  * Accepts same fields as POST endpoint for updates:
  * - Pricing updates (base_price, markup_price)
  * - Backup configuration (backup frequencies, upcharges)
  * - Plan metadata (name, active status)
- * 
+ *
  * Validation:
  * - Same validation rules as plan creation
  * - Plan must exist and belong to valid provider
- * 
+ *
  * See: repo-docs/FLEXIBLE_BACKUP_PRICING_API.md for detailed documentation
  */
 router.put(
@@ -657,25 +675,25 @@ router.put(
       const { id } = req.params;
       const updateFields: any = {};
 
-      const { 
-        name, 
-        provider_id, 
-        base_price, 
-        markup_price, 
+      const {
+        name,
+        provider_id,
+        base_price,
+        markup_price,
         active,
         backup_price_monthly,
         backup_price_hourly,
         backup_upcharge_monthly,
         backup_upcharge_hourly,
         daily_backups_enabled,
-        weekly_backups_enabled
+        weekly_backups_enabled,
       } = req.body as any;
 
       // If provider_id is being updated, validate it exists
       if (typeof provider_id !== "undefined") {
         const providerCheck = await query(
           "SELECT id FROM service_providers WHERE id = $1 LIMIT 1",
-          [provider_id]
+          [provider_id],
         );
 
         if (providerCheck.rows.length === 0) {
@@ -687,33 +705,45 @@ router.put(
 
       // Validate backup frequency configuration
       // If both are being updated, check that at least one is enabled
-      if (typeof daily_backups_enabled !== "undefined" && typeof weekly_backups_enabled !== "undefined") {
+      if (
+        typeof daily_backups_enabled !== "undefined" &&
+        typeof weekly_backups_enabled !== "undefined"
+      ) {
         if (!daily_backups_enabled && !weekly_backups_enabled) {
-          res.status(400).json({ error: "At least one backup frequency must be enabled" });
+          res
+            .status(400)
+            .json({ error: "At least one backup frequency must be enabled" });
           return;
         }
-      } else if (typeof daily_backups_enabled !== "undefined" || typeof weekly_backups_enabled !== "undefined") {
+      } else if (
+        typeof daily_backups_enabled !== "undefined" ||
+        typeof weekly_backups_enabled !== "undefined"
+      ) {
         // If only one is being updated, fetch current values to validate
         const currentPlanResult = await query(
           "SELECT daily_backups_enabled, weekly_backups_enabled FROM vps_plans WHERE id = $1",
-          [id]
+          [id],
         );
-        
+
         if (currentPlanResult.rows.length === 0) {
           res.status(404).json({ error: "Plan not found" });
           return;
         }
-        
+
         const currentPlan = currentPlanResult.rows[0];
-        const newDailyEnabled = typeof daily_backups_enabled !== "undefined" 
-          ? daily_backups_enabled 
-          : currentPlan.daily_backups_enabled;
-        const newWeeklyEnabled = typeof weekly_backups_enabled !== "undefined" 
-          ? weekly_backups_enabled 
-          : currentPlan.weekly_backups_enabled;
-        
+        const newDailyEnabled =
+          typeof daily_backups_enabled !== "undefined"
+            ? daily_backups_enabled
+            : currentPlan.daily_backups_enabled;
+        const newWeeklyEnabled =
+          typeof weekly_backups_enabled !== "undefined"
+            ? weekly_backups_enabled
+            : currentPlan.weekly_backups_enabled;
+
         if (!newDailyEnabled && !newWeeklyEnabled) {
-          res.status(400).json({ error: "At least one backup frequency must be enabled" });
+          res
+            .status(400)
+            .json({ error: "At least one backup frequency must be enabled" });
           return;
         }
       }
@@ -750,9 +780,9 @@ router.put(
 
       const result = await query(
         `UPDATE vps_plans SET ${setClauses.join(
-          ", "
+          ", ",
         )} WHERE id = $${idx} RETURNING *`,
-        values
+        values,
       );
 
       if (result.rows.length === 0) {
@@ -764,7 +794,7 @@ router.put(
       console.error("Admin plan update error:", err);
       res.status(500).json({ error: err.message || "Failed to update plan" });
     }
-  }
+  },
 );
 
 // Delete a VPS plan
@@ -789,34 +819,34 @@ router.delete(
         .status(500)
         .json({ error: err.message || "Failed to delete VPS plan" });
     }
-  }
+  },
 );
 
 /**
  * POST /api/admin/vps-plans
- * 
+ *
  * Create a new VPS plan with backup configuration.
- * 
+ *
  * Authentication: Admin role required
- * 
+ *
  * Required fields:
  * - name: Plan display name
  * - provider_id: UUID of the service provider
  * - provider_plan_id: Provider's plan identifier
  * - base_price: Base monthly cost from provider
  * - markup_price: Admin markup on base price
- * 
+ *
  * Optional backup fields:
  * - backup_price_monthly/hourly: Base backup cost from provider
  * - backup_upcharge_monthly/hourly: Admin markup on backup cost
  * - daily_backups_enabled: Allow daily backups
  * - weekly_backups_enabled: Allow weekly backups (default: true)
- * 
+ *
  * Validation:
  * - At least one backup frequency must be enabled if backups offered
  * - Provider must exist and be active
  * - Hourly prices should equal monthly / 730
- * 
+ *
  * See: repo-docs/FLEXIBLE_BACKUP_PRICING_API.md for detailed documentation
  */
 router.post(
@@ -859,7 +889,7 @@ router.post(
       // Ensure provider exists
       const providerCheck = await query(
         "SELECT id FROM service_providers WHERE id = $1 LIMIT 1",
-        [provider_id]
+        [provider_id],
       );
 
       if (providerCheck.rows.length === 0) {
@@ -869,7 +899,9 @@ router.post(
 
       // Validate backup frequency configuration
       if (!daily_backups_enabled && !weekly_backups_enabled) {
-        res.status(400).json({ error: "At least one backup frequency must be enabled" });
+        res
+          .status(400)
+          .json({ error: "At least one backup frequency must be enabled" });
         return;
       }
 
@@ -882,7 +914,7 @@ router.post(
           daily_backups_enabled, weekly_backups_enabled,
           specifications, active, created_at, updated_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          RETURNING *`,
         [
           name,
@@ -900,7 +932,7 @@ router.post(
           active,
           now,
           now,
-        ]
+        ],
       );
 
       res.status(201).json({ plan: insertResult.rows[0] });
@@ -908,7 +940,7 @@ router.post(
       console.error("Admin plan create error:", err);
       res.status(500).json({ error: err.message || "Failed to create plan" });
     }
-  }
+  },
 );
 
 // Providers: list and create
@@ -919,7 +951,7 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const result = await query(
-        "SELECT * FROM service_providers ORDER BY display_order ASC NULLS LAST, created_at DESC"
+        "SELECT * FROM service_providers ORDER BY display_order ASC NULLS LAST, created_at DESC",
       );
 
       // Enhance providers with validation status and last API call from configuration
@@ -938,7 +970,7 @@ router.get(
         .status(500)
         .json({ error: err.message || "Failed to fetch providers" });
     }
-  }
+  },
 );
 
 router.post(
@@ -958,21 +990,21 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-  const { name, type, apiKey, active = true } = req.body;
+      const { name, type, apiKey, active = true } = req.body;
 
-  const encryptedApiKey = encryptSecret(apiKey);
-      
+      const encryptedApiKey = encryptSecret(apiKey);
+
       // Get the next display_order value
       const maxOrderResult = await query(
-        "SELECT COALESCE(MAX(display_order), 0) + 1 as next_order FROM service_providers"
+        "SELECT COALESCE(MAX(display_order), 0) + 1 as next_order FROM service_providers",
       );
       const nextOrder = maxOrderResult.rows[0].next_order;
-      
+
       const result = await query(
         `INSERT INTO service_providers (name, type, api_key_encrypted, active, display_order)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING *`,
-        [name, type, encryptedApiKey, active, nextOrder]
+        [name, type, encryptedApiKey, active, nextOrder],
       );
 
       const newProvider = result.rows[0];
@@ -987,7 +1019,7 @@ router.post(
         .status(500)
         .json({ error: err.message || "Failed to create provider" });
     }
-  }
+  },
 );
 
 // Reorder providers (must be before /providers/:id to avoid route conflict)
@@ -1015,7 +1047,7 @@ router.put(
       for (let i = 0; i < providerIds.length; i++) {
         await query(
           "UPDATE service_providers SET display_order = $1, updated_at = NOW() WHERE id = $2",
-          [i + 1, providerIds[i]]
+          [i + 1, providerIds[i]],
         );
       }
 
@@ -1029,7 +1061,7 @@ router.put(
         .status(500)
         .json({ error: err.message || "Failed to reorder providers" });
     }
-  }
+  },
 );
 
 // Update a provider
@@ -1074,9 +1106,9 @@ router.put(
 
       const result = await query(
         `UPDATE service_providers SET ${updates.join(
-          ", "
+          ", ",
         )} WHERE id = $${paramCount} RETURNING *`,
-        values
+        values,
       );
 
       if (result.rows.length === 0) {
@@ -1095,7 +1127,7 @@ router.put(
         .status(500)
         .json({ error: err.message || "Failed to update provider" });
     }
-  }
+  },
 );
 
 // Fetch provider region configuration and availability
@@ -1117,7 +1149,7 @@ router.get(
            FROM service_providers
           WHERE id = $1
           LIMIT 1`,
-        [id]
+        [id],
       );
 
       if (providerResult.rows.length === 0) {
@@ -1137,41 +1169,48 @@ router.get(
       try {
         const overridesResult = await query(
           "SELECT region FROM provider_region_overrides WHERE provider_id = $1",
-          [id]
+          [id],
         );
 
         if (overridesResult.rows.length > 0) {
           allowedRegions = normalizeRegionList(
             overridesResult.rows
               .map((row) => row.region)
-              .filter((value): value is string => typeof value === "string")
+              .filter((value): value is string => typeof value === "string"),
           );
         }
       } catch (overrideErr: any) {
         const message = String(overrideErr?.message || "").toLowerCase();
-        const missingTable = message.includes("relation") && message.includes("provider_region_overrides");
+        const missingTable =
+          message.includes("relation") &&
+          message.includes("provider_region_overrides");
         if (!missingTable) {
           throw overrideErr;
         }
       }
 
       if (allowedRegions.length === 0) {
-        allowedRegions = parseStoredAllowedRegions(provider.allowed_regions ?? null);
+        allowedRegions = parseStoredAllowedRegions(
+          provider.allowed_regions ?? null,
+        );
       }
 
-      const mode: "default" | "custom" = allowedRegions.length > 0 ? "custom" : "default";
+      const mode: "default" | "custom" =
+        allowedRegions.length > 0 ? "custom" : "default";
 
       const linodeRegions = await linodeService.getLinodeRegions();
       const allRegions = linodeRegions.map((region) => ({
         id: region.id,
         label: region.label,
         country: region.country ?? "",
-        capabilities: Array.isArray(region.capabilities) ? region.capabilities : [],
+        capabilities: Array.isArray(region.capabilities)
+          ? region.capabilities
+          : [],
         status: region.status ?? "unknown",
       }));
 
       const normalizedDefaultSet = new Set(
-        DEFAULT_LINODE_ALLOWED_REGIONS.map((slug) => slug.toLowerCase())
+        DEFAULT_LINODE_ALLOWED_REGIONS.map((slug) => slug.toLowerCase()),
       );
 
       const effectiveAllowedSet =
@@ -1180,13 +1219,14 @@ router.get(
           : new Set(
               allRegions
                 .map((region) =>
-                  typeof region.id === "string" ? region.id.toLowerCase() : ""
+                  typeof region.id === "string" ? region.id.toLowerCase() : "",
                 )
-                .filter(Boolean)
+                .filter(Boolean),
             );
 
       const regions = allRegions.map((region) => {
-        const slug = typeof region.id === "string" ? region.id.toLowerCase() : "";
+        const slug =
+          typeof region.id === "string" ? region.id.toLowerCase() : "";
         return {
           id: region.id,
           label: region.label || region.id,
@@ -1216,7 +1256,7 @@ router.get(
         .status(500)
         .json({ error: err.message || "Failed to fetch provider regions" });
     }
-  }
+  },
 );
 
 // Update provider region allowlist
@@ -1238,15 +1278,18 @@ router.put(
 
       const { id } = req.params;
       const modeRaw =
-        typeof req.body.mode === "string" ? req.body.mode.toLowerCase().trim() : "custom";
-      const mode: "default" | "custom" = modeRaw === "default" ? "default" : "custom";
+        typeof req.body.mode === "string"
+          ? req.body.mode.toLowerCase().trim()
+          : "custom";
+      const mode: "default" | "custom" =
+        modeRaw === "default" ? "default" : "custom";
 
       const providerResult = await query(
         `SELECT id, name, type, api_key_encrypted
            FROM service_providers
           WHERE id = $1
           LIMIT 1`,
-        [id]
+        [id],
       );
 
       if (providerResult.rows.length === 0) {
@@ -1272,21 +1315,28 @@ router.put(
         }
 
         requestedRegions = normalizeRegionList(
-          req.body.regions.filter((value: unknown): value is string => typeof value === "string")
+          req.body.regions.filter(
+            (value: unknown): value is string => typeof value === "string",
+          ),
         );
 
         if (requestedRegions.length === 0) {
-          return res
-            .status(400)
-            .json({ error: "Select at least one region or switch to default mode" });
+          return res.status(400).json({
+            error: "Select at least one region or switch to default mode",
+          });
         }
       }
 
-      const token = await normalizeProviderToken(provider.id, provider.api_key_encrypted);
+      const token = await normalizeProviderToken(
+        provider.id,
+        provider.api_key_encrypted,
+      );
 
       if (mode === "custom") {
         if (!token) {
-          return res.status(503).json({ error: "Provider credentials not available" });
+          return res
+            .status(503)
+            .json({ error: "Provider credentials not available" });
         }
 
         let validRegionSlugs: Set<string> = new Set();
@@ -1295,24 +1345,32 @@ router.put(
         validRegionSlugs = new Set(
           linodeRegions
             .map((region) => region.id?.toLowerCase())
-            .filter((value): value is string => Boolean(value))
+            .filter((value): value is string => Boolean(value)),
         );
 
-        const invalidSelections = requestedRegions.filter((region) => !validRegionSlugs.has(region));
+        const invalidSelections = requestedRegions.filter(
+          (region) => !validRegionSlugs.has(region),
+        );
         if (invalidSelections.length > 0) {
           return res.status(400).json({
-            error: "One or more selected regions are not available from the provider",
+            error:
+              "One or more selected regions are not available from the provider",
             invalidRegions: invalidSelections,
           });
         }
       }
 
       const jsonPayload =
-        mode === "custom" ? JSON.stringify(requestedRegions) : JSON.stringify([]);
+        mode === "custom"
+          ? JSON.stringify(requestedRegions)
+          : JSON.stringify([]);
 
       await query("BEGIN");
       try {
-        await query("DELETE FROM provider_region_overrides WHERE provider_id = $1", [id]);
+        await query(
+          "DELETE FROM provider_region_overrides WHERE provider_id = $1",
+          [id],
+        );
 
         if (mode === "custom") {
           for (const region of requestedRegions) {
@@ -1321,14 +1379,14 @@ router.put(
                VALUES ($1, $2)
                ON CONFLICT (provider_id, region)
                DO UPDATE SET updated_at = NOW()`,
-              [id, region]
+              [id, region],
             );
           }
         }
 
         await query(
           "UPDATE service_providers SET allowed_regions = $2::jsonb, updated_at = NOW() WHERE id = $1",
-          [id, jsonPayload]
+          [id, jsonPayload],
         );
 
         await query("COMMIT");
@@ -1354,320 +1412,7 @@ router.put(
         .status(500)
         .json({ error: err.message || "Failed to update provider regions" });
     }
-  }
-);
-
-// Fetch provider marketplace configuration
-router.get(
-  "/providers/:id/marketplace",
-  authenticateToken,
-  requireAdmin,
-  [param("id").isUUID()],
-  async (req: Request, res: Response) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const { id } = req.params;
-      const providerResult = await query(
-        `SELECT id, name, type, api_key_encrypted, allowed_marketplace_apps
-           FROM service_providers
-          WHERE id = $1
-          LIMIT 1`,
-        [id]
-      );
-
-      if (providerResult.rows.length === 0) {
-        return res.status(404).json({ error: "Provider not found" });
-      }
-
-      const provider = providerResult.rows[0];
-      const providerType = provider.type as string;
-
-      if (providerType !== "linode") {
-        return res
-          .status(400)
-          .json({ error: "Marketplace management is only supported for Linode" });
-      }
-
-      const token = await normalizeProviderToken(provider.id, provider.api_key_encrypted);
-      if (!token) {
-        return res.status(503).json({ error: "Provider credentials not available" });
-      }
-
-      let allowedSlugs: string[] = [];
-      const displayNameOverrides = await fetchMarketplaceDisplayNames(id);
-      try {
-        const overridesResult = await query(
-          "SELECT app_slug FROM provider_marketplace_overrides WHERE provider_id = $1",
-          [id]
-        );
-
-        if (overridesResult.rows.length > 0) {
-          allowedSlugs = normalizeMarketplaceSlugs(
-            overridesResult.rows
-              .map((row) => row.app_slug)
-              .filter((value): value is string => typeof value === "string")
-          );
-        }
-      } catch (overrideErr) {
-        if (!isMissingTableError(overrideErr)) {
-          throw overrideErr;
-        }
-      }
-
-      if (allowedSlugs.length === 0) {
-        allowedSlugs = parseStoredAllowedMarketplaceApps(
-          provider.allowed_marketplace_apps ?? null
-        );
-      }
-
-      const mode: "default" | "custom" = allowedSlugs.length > 0 ? "custom" : "default";
-
-      const apps = await linodeService.listMarketplaceApps();
-
-      const allowedSet = new Set(
-        mode === "custom"
-          ? allowedSlugs
-          : apps
-              .map((app: any) =>
-                typeof app?.slug === "string" ? app.slug.trim().toLowerCase() : ""
-              )
-              .filter(Boolean)
-      );
-
-      const categories: Record<string, number> = {};
-
-      const appsPayload = apps.map((app: any) => {
-        const slug = typeof app?.slug === "string" ? app.slug.trim().toLowerCase() : "";
-        const category = typeof app?.category === "string" && app.category.trim().length > 0
-          ? app.category
-          : "Other";
-
-        categories[category] = (categories[category] || 0) + 1;
-
-        const overrideName = slug ? displayNameOverrides.get(slug) : undefined;
-        const displayName = overrideName && overrideName.length > 0 ? overrideName : app.name;
-
-        return {
-          ...app,
-          category,
-          slug: app.slug,
-          allowed: slug ? allowedSet.has(slug) : false,
-          display_name: displayName,
-          provider_name: app.name,
-        };
-      });
-
-      res.json({
-        provider: {
-          id: provider.id,
-          name: provider.name,
-          type: providerType,
-        },
-        mode,
-        allowedApps: allowedSlugs,
-        displayNameOverrides: Object.fromEntries(displayNameOverrides),
-        apps: appsPayload,
-        categories,
-        fetchedAt: new Date().toISOString(),
-      });
-    } catch (err: any) {
-      console.error("Admin provider marketplace fetch error:", err);
-      res
-        .status(500)
-        .json({ error: err.message || "Failed to fetch provider marketplace apps" });
-    }
-  }
-);
-
-// Update provider marketplace allowlist
-router.put(
-  "/providers/:id/marketplace",
-  authenticateToken,
-  requireAdmin,
-  [
-    param("id").isUUID(),
-    body("mode").optional().isString(),
-    body("apps").optional().isArray(),
-    body("renames").optional().isObject(),
-  ],
-  async (req: Request, res: Response) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const { id } = req.params;
-      const modeRaw =
-        typeof req.body.mode === "string" ? req.body.mode.toLowerCase().trim() : "custom";
-      const mode: "default" | "custom" = modeRaw === "default" ? "default" : "custom";
-
-      const providerResult = await query(
-        `SELECT id, name, type, api_key_encrypted
-           FROM service_providers
-          WHERE id = $1
-          LIMIT 1`,
-        [id]
-      );
-
-      if (providerResult.rows.length === 0) {
-        return res.status(404).json({ error: "Provider not found" });
-      }
-
-      const provider = providerResult.rows[0];
-      const providerType = provider.type as string;
-
-      if (providerType !== "linode") {
-        return res
-          .status(400)
-          .json({ error: "Marketplace management is only supported for Linode" });
-      }
-
-      let requestedApps: string[] = [];
-      const renameMap = new Map<string, string>();
-
-      const renamesPayload = req.body.renames;
-      if (renamesPayload && typeof renamesPayload === "object" && renamesPayload !== null) {
-        for (const [rawSlug, rawName] of Object.entries(renamesPayload)) {
-          const normalizedSlug = normalizeMarketplaceSlugValue(rawSlug);
-          if (!normalizedSlug || renameMap.has(normalizedSlug)) {
-            continue;
-          }
-
-          if (typeof rawName !== "string") {
-            continue;
-          }
-
-          const trimmedName = rawName.trim();
-          if (!trimmedName) {
-            continue;
-          }
-
-          if (trimmedName.length > MAX_MARKETPLACE_DISPLAY_NAME_LENGTH) {
-            return res.status(400).json({
-              error: `Display name for slug "${rawSlug}" exceeds ${MAX_MARKETPLACE_DISPLAY_NAME_LENGTH} characters`,
-            });
-          }
-
-          renameMap.set(normalizedSlug, trimmedName);
-        }
-      }
-
-      if (mode === "custom") {
-        if (!Array.isArray(req.body.apps)) {
-          return res
-            .status(400)
-            .json({ error: "apps must be an array when mode is custom" });
-        }
-
-        requestedApps = normalizeMarketplaceSlugs(
-          req.body.apps.filter((value: unknown): value is string => typeof value === "string")
-        );
-
-        if (requestedApps.length === 0) {
-          return res
-            .status(400)
-            .json({ error: "Select at least one marketplace app or switch to default mode" });
-        }
-      }
-
-      const apps = await linodeService.listMarketplaceApps();
-      const validSlugs = new Set(
-        apps
-          .map((app: any) =>
-            typeof app?.slug === "string" ? app.slug.trim().toLowerCase() : ""
-          )
-          .filter(Boolean)
-      );
-
-      const invalidSelections = requestedApps.filter((slug) => !validSlugs.has(slug));
-      if (invalidSelections.length > 0) {
-        return res.status(400).json({
-          error: "One or more selected marketplace apps are not available",
-          invalidApps: invalidSelections,
-        });
-      }
-
-      const invalidRenameTargets: string[] = [];
-      for (const slug of renameMap.keys()) {
-        if (!validSlugs.has(slug)) {
-          invalidRenameTargets.push(slug);
-        }
-      }
-
-      if (invalidRenameTargets.length > 0) {
-        return res.status(400).json({
-          error: "One or more display name overrides target unavailable marketplace apps",
-          invalidApps: invalidRenameTargets,
-        });
-      }
-
-      if (mode === "custom" && requestedApps.length > 0) {
-        for (const slug of Array.from(renameMap.keys())) {
-          if (!requestedApps.includes(slug)) {
-            renameMap.delete(slug);
-          }
-        }
-      }
-
-      const payloadJson =
-        mode === "custom" ? JSON.stringify(requestedApps) : JSON.stringify([]);
-
-      await query("BEGIN");
-      try {
-        await query(
-          "DELETE FROM provider_marketplace_overrides WHERE provider_id = $1",
-          [id]
-        );
-
-        if (mode === "custom") {
-          for (const slug of requestedApps) {
-            await query(
-              `INSERT INTO provider_marketplace_overrides (provider_id, app_slug)
-               VALUES ($1, $2)
-               ON CONFLICT (provider_id, app_slug)
-               DO UPDATE SET updated_at = NOW()`,
-              [id, slug]
-            );
-          }
-        }
-
-        await query(
-          "UPDATE service_providers SET allowed_marketplace_apps = $2::jsonb, updated_at = NOW() WHERE id = $1",
-          [id, payloadJson]
-        );
-
-        await replaceMarketplaceDisplayNames(id, renameMap);
-
-        await query("COMMIT");
-      } catch (txnErr) {
-        await query("ROLLBACK");
-        throw txnErr;
-      }
-
-      ProviderResourceCache.invalidateResource(id, "marketplace");
-
-      res.json({
-        success: true,
-        mode,
-        allowedApps: requestedApps,
-        message:
-          mode === "custom"
-            ? `Configured ${requestedApps.length} marketplace app${requestedApps.length === 1 ? "" : "s"}`
-            : "Reverted to provider defaults",
-        displayNameOverrides: Object.fromEntries(renameMap),
-      });
-    } catch (err: any) {
-      console.error("Admin provider marketplace update error:", err);
-      res
-        .status(500)
-        .json({ error: err.message || "Failed to update provider marketplace apps" });
-    }
-  }
+  },
 );
 
 // Delete a provider
@@ -1698,7 +1443,7 @@ router.delete(
         .status(500)
         .json({ error: err.message || "Failed to delete provider" });
     }
-  }
+  },
 );
 
 // Validate provider credentials
@@ -1721,7 +1466,7 @@ router.post(
       // Fetch provider details
       const providerResult = await query(
         "SELECT * FROM service_providers WHERE id = $1",
-        [id]
+        [id],
       );
 
       if (providerResult.rows.length === 0) {
@@ -1731,7 +1476,7 @@ router.post(
       const provider = providerResult.rows[0];
       const apiToken = await normalizeProviderToken(
         provider.id,
-        provider.api_key_encrypted
+        provider.api_key_encrypted,
       );
 
       if (!apiToken) {
@@ -1755,7 +1500,7 @@ router.post(
 
         // Update provider with validation status and last API call timestamp
         await query(
-          `UPDATE service_providers 
+          `UPDATE service_providers
            SET configuration = jsonb_set(
              jsonb_set(
                COALESCE(configuration, '{}'::jsonb),
@@ -1771,20 +1516,20 @@ router.post(
             JSON.stringify(validationStatus),
             JSON.stringify(validationMessage),
             id,
-          ]
+          ],
         );
 
         // If validation succeeded, also update last_api_call timestamp
         if (validationStatus === "valid") {
           await query(
-            `UPDATE service_providers 
+            `UPDATE service_providers
              SET configuration = jsonb_set(
                COALESCE(configuration, '{}'::jsonb),
                '{last_api_call}',
                $1::jsonb
              )
              WHERE id = $2`,
-            [JSON.stringify(new Date().toISOString()), id]
+            [JSON.stringify(new Date().toISOString()), id],
           );
         }
 
@@ -1801,7 +1546,7 @@ router.post(
 
         // Update provider with error status
         await query(
-          `UPDATE service_providers 
+          `UPDATE service_providers
            SET configuration = jsonb_set(
              jsonb_set(
                COALESCE(configuration, '{}'::jsonb),
@@ -1817,7 +1562,7 @@ router.post(
             JSON.stringify(validationStatus),
             JSON.stringify(validationMessage),
             id,
-          ]
+          ],
         );
 
         res.json({
@@ -1832,7 +1577,7 @@ router.post(
         .status(500)
         .json({ error: err.message || "Failed to validate provider" });
     }
-  }
+  },
 );
 
 // Networking: rDNS configuration get and upsert
@@ -1843,7 +1588,7 @@ router.get(
   async (_req: Request, res: Response) => {
     try {
       const result = await query(
-        "SELECT * FROM networking_config ORDER BY updated_at DESC LIMIT 1"
+        "SELECT * FROM networking_config ORDER BY updated_at DESC LIMIT 1",
       );
       const config = result.rows?.[0] || null;
       if (config) {
@@ -1863,7 +1608,7 @@ router.get(
         .status(500)
         .json({ error: err.message || "Failed to fetch rDNS configuration" });
     }
-  }
+  },
 );
 
 router.put(
@@ -1887,26 +1632,26 @@ router.put(
       const now = new Date().toISOString();
       // Normalize domain: remove leading/trailing dots and spaces
       const baseDomainRaw: string = String(
-        req.body.rdns_base_domain || ""
+        req.body.rdns_base_domain || "",
       ).trim();
       const baseDomain = baseDomainRaw.replace(/^\.+|\.+$/g, "");
 
       // Upsert: update latest row or insert a new one if none exists
       try {
         const latest = await query(
-          "SELECT id FROM networking_config ORDER BY updated_at DESC LIMIT 1"
+          "SELECT id FROM networking_config ORDER BY updated_at DESC LIMIT 1",
         );
         if (latest.rows?.length) {
           const id = latest.rows[0].id;
           const upd = await query(
             "UPDATE networking_config SET rdns_base_domain = $1, updated_at = $2 WHERE id = $3 RETURNING *",
-            [baseDomain, now, id]
+            [baseDomain, now, id],
           );
           return res.json({ config: upd.rows[0] });
         } else {
           const ins = await query(
             "INSERT INTO networking_config (rdns_base_domain, created_at, updated_at) VALUES ($1, $2, $2) RETURNING *",
-            [baseDomain, now]
+            [baseDomain, now],
           );
           return res.json({ config: ins.rows[0] });
         }
@@ -1925,7 +1670,7 @@ router.put(
         .status(500)
         .json({ error: err.message || "Failed to save rDNS configuration" });
     }
-  }
+  },
 );
 
 // List all VPS servers for admins
@@ -1936,13 +1681,13 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const result = await query(
-        `SELECT id, email, name, role, created_at, updated_at 
-         FROM users 
-         ORDER BY created_at DESC`
+        `SELECT id, email, name, role, created_at, updated_at
+         FROM users
+         ORDER BY created_at DESC`,
       );
-      
+
       const users = result.rows;
-      
+
       // Fetch organizations for each user
       for (const user of users) {
         const orgs = await query(
@@ -1950,95 +1695,136 @@ router.get(
            FROM organization_members m
            JOIN organizations o ON o.id = m.organization_id
            WHERE m.user_id = $1`,
-          [user.id]
+          [user.id],
         );
         user.organizations = orgs.rows;
       }
-      
+
       res.json({ users });
     } catch (err: any) {
       console.error("Admin users list error:", err);
       res.status(500).json({ error: err.message || "Failed to fetch users" });
     }
-  }
+  },
 );
 
 // Upstream Plans
-router.get("/upstream/plans", authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    // Check if we have an active Linode provider
-    const provider = await query("SELECT id FROM service_providers WHERE type = 'linode' AND active = true LIMIT 1");
-    if (provider.rows.length === 0) {
-      return res.json({ plans: [] });
+router.get(
+  "/upstream/plans",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      // Check if we have an active Linode provider
+      const provider = await query(
+        "SELECT id FROM service_providers WHERE type = 'linode' AND active = true LIMIT 1",
+      );
+      if (provider.rows.length === 0) {
+        return res.json({ plans: [] });
+      }
+      const plans = await linodeService.getLinodeTypes();
+
+      // Linode API includes backup pricing in addons.backups.price
+      // Map it to flat fields for frontend consistency
+      const plansWithBackupPricing = plans.map((plan: any) => ({
+        ...plan,
+        backup_price_monthly: plan.addons?.backups?.price?.monthly || 0,
+        backup_price_hourly: plan.addons?.backups?.price?.hourly || 0,
+      }));
+
+      res.json({ plans: plansWithBackupPricing });
+    } catch (err: any) {
+      console.error("Admin upstream plans error:", err);
+      // Return empty list instead of error if upstream fails
+      res.json({ plans: [], error: err.message });
     }
-    const plans = await linodeService.getLinodeTypes();
-    
-    // Linode API includes backup pricing in addons.backups.price
-    // Map it to flat fields for frontend consistency
-    const plansWithBackupPricing = plans.map((plan: any) => ({
-      ...plan,
-      backup_price_monthly: plan.addons?.backups?.price?.monthly || 0,
-      backup_price_hourly: plan.addons?.backups?.price?.hourly || 0,
-    }));
-    
-    res.json({ plans: plansWithBackupPricing });
-  } catch (err: any) {
-    console.error("Admin upstream plans error:", err);
-    // Return empty list instead of error if upstream fails
-    res.json({ plans: [], error: err.message });
-  }
-});
+  },
+);
 
 // Upstream Regions
-router.get("/upstream/regions", authenticateToken, requireAdmin, async (req, res) => {
-  try {
-     const provider = await query("SELECT id FROM service_providers WHERE type = 'linode' AND active = true LIMIT 1");
-    if (provider.rows.length === 0) {
-      return res.json({ regions: [] });
+router.get(
+  "/upstream/regions",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const provider = await query(
+        "SELECT id FROM service_providers WHERE type = 'linode' AND active = true LIMIT 1",
+      );
+      if (provider.rows.length === 0) {
+        return res.json({ regions: [] });
+      }
+      const regions = await linodeService.getLinodeRegions();
+      res.json({ regions });
+    } catch (err: any) {
+      console.error("Admin upstream regions error:", err);
+      res.json({ regions: [], error: err.message });
     }
-    const regions = await linodeService.getLinodeRegions();
-    res.json({ regions });
-  } catch (err: any) {
-    console.error("Admin upstream regions error:", err);
-    res.json({ regions: [], error: err.message });
-  }
-});
+  },
+);
 
 // Upstream StackScripts
-router.get("/upstream/stackscripts", authenticateToken, requireAdmin, async (req, res) => {
-  try {
-     const provider = await query("SELECT id FROM service_providers WHERE type = 'linode' AND active = true LIMIT 1");
-    if (provider.rows.length === 0) {
-      return res.json({ stackscripts: [] });
+router.get(
+  "/upstream/stackscripts",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const provider = await query(
+        "SELECT id FROM service_providers WHERE type = 'linode' AND active = true LIMIT 1",
+      );
+      if (provider.rows.length === 0) {
+        return res.json({ stackscripts: [] });
+      }
+      const mine = req.query.mine === "true";
+      const scripts = await linodeService.getLinodeStackScripts({
+        mineOnly: mine,
+      });
+      res.json({ stackscripts: scripts });
+    } catch (err: any) {
+      console.error("Admin upstream stackscripts error:", err);
+      res.json({ stackscripts: [], error: err.message });
     }
-    const mine = req.query.mine === 'true';
-    const scripts = await linodeService.getLinodeStackScripts({ mineOnly: mine });
-    res.json({ stackscripts: scripts });
-  } catch (err: any) {
-    console.error("Admin upstream stackscripts error:", err);
-    res.json({ stackscripts: [], error: err.message });
-  }
-});
+  },
+);
 
 // StackScript Configs
-router.get("/stackscripts/configs", authenticateToken, requireAdmin, async (req, res) => {
-   try {
-      const result = await query("SELECT * FROM vps_stackscript_configs ORDER BY display_order ASC");
+router.get(
+  "/stackscripts/configs",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const result = await query(
+        "SELECT * FROM vps_stackscript_configs ORDER BY display_order ASC",
+      );
       res.json({ configs: result.rows });
-   } catch (err: any) {
-     if (isMissingTableError(err)) {
-       return res.json({ configs: [] });
-     }
-     res.status(500).json({ error: err.message });
-   }
-});
+    } catch (err: any) {
+      if (isMissingTableError(err)) {
+        return res.json({ configs: [] });
+      }
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
 
-router.post("/stackscripts/configs", authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { stackscript_id, label, description, is_enabled, display_order, metadata } = req.body;
-    // Upsert
-    const result = await query(
-      `INSERT INTO vps_stackscript_configs (stackscript_id, label, description, is_enabled, display_order, metadata, updated_at)
+router.post(
+  "/stackscripts/configs",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const {
+        stackscript_id,
+        label,
+        description,
+        is_enabled,
+        display_order,
+        metadata,
+      } = req.body;
+      // Upsert
+      const result = await query(
+        `INSERT INTO vps_stackscript_configs (stackscript_id, label, description, is_enabled, display_order, metadata, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW())
        ON CONFLICT (stackscript_id) DO UPDATE SET
          label = EXCLUDED.label,
@@ -2048,16 +1834,26 @@ router.post("/stackscripts/configs", authenticateToken, requireAdmin, async (req
          metadata = EXCLUDED.metadata,
          updated_at = NOW()
        RETURNING *`,
-      [stackscript_id, label, description, is_enabled, display_order, metadata]
-    );
-    res.json({ config: result.rows[0] });
-  } catch (err: any) {
-    if (isMissingTableError(err)) {
-       return res.status(400).json({ error: "vps_stackscript_configs table missing" });
+        [
+          stackscript_id,
+          label,
+          description,
+          is_enabled,
+          display_order,
+          metadata,
+        ],
+      );
+      res.json({ config: result.rows[0] });
+    } catch (err: any) {
+      if (isMissingTableError(err)) {
+        return res
+          .status(400)
+          .json({ error: "vps_stackscript_configs table missing" });
+      }
+      res.status(500).json({ error: err.message });
     }
-    res.status(500).json({ error: err.message });
-  }
-});
+  },
+);
 
 // List all VPS servers for admins
 router.get(
@@ -2067,7 +1863,7 @@ router.get(
   async (_req: Request, res: Response) => {
     try {
       const result = await query(
-        `SELECT 
+        `SELECT
         v.id,
         v.organization_id,
         v.plan_id,
@@ -2101,7 +1897,7 @@ router.get(
         LIMIT 1
       ) AS plan_data ON TRUE
       LEFT JOIN service_providers sp ON sp.id = COALESCE(plan_data.provider_id, v.provider_id)
-      ORDER BY v.created_at DESC`
+      ORDER BY v.created_at DESC`,
       );
 
       const rows = result.rows || [];
@@ -2110,17 +1906,23 @@ router.get(
         new Set(
           rows
             .map((row) => row.provider_id)
-            .filter((value): value is string => typeof value === "string" && value.length > 0)
-        )
+            .filter(
+              (value): value is string =>
+                typeof value === "string" && value.length > 0,
+            ),
+        ),
       );
 
-      const providerSecrets = new Map<string, { type: string | null; token: string | null }>();
+      const providerSecrets = new Map<
+        string,
+        { type: string | null; token: string | null }
+      >();
       if (providerIds.length > 0) {
         const providerRows = await query(
           `SELECT id, type, api_key_encrypted
              FROM service_providers
             WHERE id = ANY($1::uuid[])`,
-          [providerIds]
+          [providerIds],
         );
 
         await Promise.all(
@@ -2128,7 +1930,7 @@ router.get(
             try {
               const token = await normalizeProviderToken(
                 provider.id,
-                provider.api_key_encrypted
+                provider.api_key_encrypted,
               );
               providerSecrets.set(provider.id, {
                 type: provider.type ?? null,
@@ -2137,29 +1939,35 @@ router.get(
             } catch (tokenErr) {
               console.warn(
                 `Admin servers: failed to normalize API token for provider ${provider.id}`,
-                tokenErr
+                tokenErr,
               );
               providerSecrets.set(provider.id, {
                 type: provider.type ?? null,
                 token: null,
               });
             }
-          })
+          }),
         );
       }
 
       let regionLabelMap: Record<string, string> = {};
       const requiresLinodeRegions = rows.some((row) => {
-        const providerType = row.provider_type ?? providerSecrets.get(row.provider_id ?? "")?.type;
+        const providerType =
+          row.provider_type ?? providerSecrets.get(row.provider_id ?? "")?.type;
         return providerType === "linode";
       });
 
       if (requiresLinodeRegions) {
         try {
           const regions = await linodeService.getLinodeRegions();
-          regionLabelMap = Object.fromEntries(regions.map((r) => [r.id, r.label]));
+          regionLabelMap = Object.fromEntries(
+            regions.map((r) => [r.id, r.label]),
+          );
         } catch (regionErr) {
-          console.warn("Admin servers: failed to fetch Linode regions", regionErr);
+          console.warn(
+            "Admin servers: failed to fetch Linode regions",
+            regionErr,
+          );
         }
       }
 
@@ -2171,8 +1979,7 @@ router.get(
           const providerMeta = resolvedProviderId
             ? providerSecrets.get(resolvedProviderId)
             : null;
-          const providerType =
-            row.provider_type ?? providerMeta?.type ?? null;
+          const providerType = row.provider_type ?? providerMeta?.type ?? null;
 
           let status = row.status;
           let ipAddress = row.ip_address;
@@ -2208,19 +2015,25 @@ router.get(
                   if (normalizedStatus !== status || currentIp !== ipAddress) {
                     await query(
                       "UPDATE vps_instances SET status = $1, ip_address = $2, updated_at = NOW() WHERE id = $3",
-                      [normalizedStatus, currentIp, row.id]
+                      [normalizedStatus, currentIp, row.id],
                     );
                     status = normalizedStatus;
                     ipAddress = currentIp;
                   }
 
-                  configuration.image = configuration.image || detail.image || null;
-                  configuration.region = configuration.region || detail.region || null;
-                  configuration.type = configuration.type || detail.type || null;
-                  configuration.ipv6 = configuration.ipv6 || detail.ipv6 || null;
+                  configuration.image =
+                    configuration.image || detail.image || null;
+                  configuration.region =
+                    configuration.region || detail.region || null;
+                  configuration.type =
+                    configuration.type || detail.type || null;
+                  configuration.ipv6 =
+                    configuration.ipv6 || detail.ipv6 || null;
 
                   networks.ipv4 = Array.isArray(detail.ipv4)
-                    ? Array.from(new Set(detail.ipv4.filter(Boolean).map(String)))
+                    ? Array.from(
+                        new Set(detail.ipv4.filter(Boolean).map(String)),
+                      )
                     : [];
                   networks.ipv6 = detail.ipv6
                     ? Array.from(new Set([String(detail.ipv6)]))
@@ -2234,7 +2047,7 @@ router.get(
               } catch (detailErr) {
                 console.warn(
                   `Admin servers: unable to refresh Linode instance ${row.provider_instance_id}`,
-                  detailErr
+                  detailErr,
                 );
               }
             }
@@ -2249,7 +2062,7 @@ router.get(
             provider_type: providerType,
             networks,
           };
-        })
+        }),
       );
 
       res.json({ servers: enriched });
@@ -2263,7 +2076,7 @@ router.get(
       console.error("Admin servers list error:", err);
       res.status(500).json({ error: err.message || "Failed to fetch servers" });
     }
-  }
+  },
 );
 
 // List users for admin management view
@@ -2275,7 +2088,7 @@ router.get(
   async (_req: Request, res: Response) => {
     try {
       const result = await query(
-        `SELECT 
+        `SELECT
         u.id,
         u.email,
         u.name,
@@ -2297,14 +2110,14 @@ router.get(
       LEFT JOIN organization_members om ON om.user_id = u.id
       LEFT JOIN organizations org ON org.id = om.organization_id
       GROUP BY u.id
-      ORDER BY u.created_at DESC`
+      ORDER BY u.created_at DESC`,
       );
       res.json({ users: result.rows || [] });
     } catch (err: any) {
       console.error("Admin users list error:", err);
       res.status(500).json({ error: err.message || "Failed to fetch users" });
     }
-  }
+  },
 );
 
 // Get all organizations with their members
@@ -2344,14 +2157,16 @@ router.get(
         LEFT JOIN organization_members om ON om.organization_id = org.id
         LEFT JOIN users mem ON mem.id = om.user_id
         GROUP BY org.id, owner.id
-        ORDER BY org.created_at DESC`
+        ORDER BY org.created_at DESC`,
       );
       res.json({ organizations: result.rows || [] });
     } catch (err: any) {
       console.error("Admin organizations list error:", err);
-      res.status(500).json({ error: err.message || "Failed to fetch organizations" });
+      res
+        .status(500)
+        .json({ error: err.message || "Failed to fetch organizations" });
     }
-  }
+  },
 );
 
 // Get detailed user information by ID
@@ -2373,7 +2188,7 @@ router.get(
 
       // Get detailed user information with organization memberships
       const userResult = await query(
-        `SELECT 
+        `SELECT
           u.id,
           u.email,
           u.name,
@@ -2400,7 +2215,7 @@ router.get(
         LEFT JOIN organizations org ON org.id = om.organization_id
         WHERE u.id = $1
         GROUP BY u.id`,
-        [id]
+        [id],
       );
 
       if (userResult.rows.length === 0) {
@@ -2417,7 +2232,7 @@ router.get(
          JOIN organizations org ON org.id = v.organization_id
          JOIN organization_members om ON om.organization_id = org.id
          WHERE om.user_id = $1`,
-        [id]
+        [id],
       );
 
       // Get last activity from activity logs
@@ -2429,7 +2244,7 @@ router.get(
            WHERE user_id = $1
            ORDER BY created_at DESC
            LIMIT 1`,
-          [id]
+          [id],
         );
         lastActivity = activityResult.rows[0]?.created_at || null;
       } catch (activityErr: any) {
@@ -2455,7 +2270,7 @@ router.get(
         .status(500)
         .json({ error: err.message || "Failed to fetch user details" });
     }
-  }
+  },
 );
 
 // Update user information
@@ -2501,7 +2316,7 @@ router.put(
       // Check if user exists
       const userCheck = await query(
         "SELECT id, email, name, role FROM users WHERE id = $1",
-        [id]
+        [id],
       );
       if (userCheck.rows.length === 0) {
         res.status(404).json({ error: "User not found" });
@@ -2515,7 +2330,7 @@ router.put(
       const securityValidation = validateUserUpdateRequest(
         req.user!,
         existingUser,
-        { name, email, role, phone, timezone }
+        { name, email, role, phone, timezone },
       );
 
       if (!securityValidation.isValid) {
@@ -2527,7 +2342,7 @@ router.put(
       if (email && email !== existingUser.email) {
         const emailCheck = await query(
           "SELECT id FROM users WHERE email = $1 AND id != $2",
-          [email, id]
+          [email, id],
         );
         if (emailCheck.rows.length > 0) {
           res
@@ -2576,9 +2391,9 @@ router.put(
       // Execute update
       const updateResult = await query(
         `UPDATE users SET ${updateFields.join(
-          ", "
+          ", ",
         )} WHERE id = $${paramCount} RETURNING id, email, name, role, phone, timezone, created_at, updated_at`,
-        values
+        values,
       );
 
       const updatedUser = updateResult.rows[0];
@@ -2595,7 +2410,7 @@ router.put(
         if (email !== undefined && email !== existingUser.email) {
           changes.email = { from: existingUser.email, to: email };
           changeDescriptions.push(
-            `email: "${existingUser.email}" → "${email}"`
+            `email: "${existingUser.email}" → "${email}"`,
           );
         }
         if (role !== undefined && role !== existingUser.role) {
@@ -2616,7 +2431,7 @@ router.put(
           req,
           "user_update",
           existingUser,
-          changes
+          changes,
         );
 
         await logActivity(
@@ -2639,7 +2454,7 @@ router.put(
               security_validated: true,
             },
           },
-          req
+          req,
         );
       }
 
@@ -2648,7 +2463,7 @@ router.put(
       console.error("Admin user update error:", err);
       res.status(500).json({ error: err.message || "Failed to update user" });
     }
-  }
+  },
 );
 
 // Get upstream provider regions
@@ -2668,7 +2483,7 @@ router.get(
           "Make sure upstream provider API token is configured in environment variables",
       });
     }
-  }
+  },
 );
 
 // Get upstream provider StackScripts
@@ -2679,7 +2494,9 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const mine = String(req.query.mine || "").toLowerCase() === "true";
-      const stackscripts = await linodeService.getLinodeStackScripts({ mineOnly: mine });
+      const stackscripts = await linodeService.getLinodeStackScripts({
+        mineOnly: mine,
+      });
       res.json({ stackscripts });
     } catch (err: any) {
       console.error("Error fetching upstream provider StackScripts:", err);
@@ -2689,7 +2506,7 @@ router.get(
           "Make sure upstream provider API token is configured in environment variables",
       });
     }
-  }
+  },
 );
 
 // StackScript Configs: List all configs
@@ -2700,7 +2517,7 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const result = await query(
-        "SELECT * FROM vps_stackscript_configs ORDER BY display_order ASC, label ASC"
+        "SELECT * FROM vps_stackscript_configs ORDER BY display_order ASC, label ASC",
       );
       res.json({ configs: result.rows || [] });
     } catch (err: any) {
@@ -2709,7 +2526,7 @@ router.get(
         .status(500)
         .json({ error: err.message || "Failed to fetch StackScript configs" });
     }
-  }
+  },
 );
 
 // StackScript Configs: Update a config
@@ -2740,7 +2557,7 @@ router.put(
         metadata = COALESCE($5, metadata),
         updated_at = $6
       WHERE stackscript_id = $7 RETURNING *`,
-        [label, description, is_enabled, display_order, metadataValue, now, id]
+        [label, description, is_enabled, display_order, metadataValue, now, id],
       );
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "Config not found" });
@@ -2752,7 +2569,7 @@ router.put(
         .status(500)
         .json({ error: err.message || "Failed to update StackScript config" });
     }
-  }
+  },
 );
 
 // StackScript Configs: Create or update a config
@@ -2799,7 +2616,7 @@ router.post(
           display_order,
           metadataValue,
           now,
-        ]
+        ],
       );
       res.status(201).json({ config: result.rows[0] });
     } catch (err: any) {
@@ -2808,7 +2625,7 @@ router.post(
         .status(500)
         .json({ error: err.message || "Failed to upsert StackScript config" });
     }
-  }
+  },
 );
 
 // StackScript Configs: Delete a config
@@ -2821,7 +2638,7 @@ router.delete(
       const { id } = req.params;
       await query(
         "DELETE FROM vps_stackscript_configs WHERE stackscript_id = $1",
-        [id]
+        [id],
       );
       res.status(204).send();
     } catch (err: any) {
@@ -2830,7 +2647,7 @@ router.delete(
         .status(500)
         .json({ error: err.message || "Failed to delete StackScript config" });
     }
-  }
+  },
 );
 
 // User Impersonation: Initiate impersonation
@@ -2861,7 +2678,7 @@ router.post(
       // Check if target user exists
       const targetUserResult = await query(
         "SELECT id, email, name, role FROM users WHERE id = $1",
-        [targetUserId]
+        [targetUserId],
       );
 
       if (targetUserResult.rows.length === 0) {
@@ -2872,13 +2689,12 @@ router.post(
       const targetUser = targetUserResult.rows[0];
 
       // Enhanced security validation
-      const { validateImpersonationRequest } = await import(
-        "../lib/security.js"
-      );
+      const { validateImpersonationRequest } =
+        await import("../lib/security.js");
       const securityValidation = validateImpersonationRequest(
         adminUser,
         targetUser,
-        confirmAdminImpersonation
+        confirmAdminImpersonation,
       );
 
       if (!securityValidation.isValid) {
@@ -2899,7 +2715,7 @@ router.post(
       try {
         const orgResult = await query(
           "SELECT organization_id FROM organization_members WHERE user_id = $1 LIMIT 1",
-          [targetUserId]
+          [targetUserId],
         );
         if (orgResult.rows.length > 0) {
           targetUserOrgId = orgResult.rows[0].organization_id;
@@ -2907,7 +2723,7 @@ router.post(
           // Fallback: check if user owns an organization
           const ownerOrgResult = await query(
             "SELECT id FROM organizations WHERE owner_id = $1 LIMIT 1",
-            [targetUserId]
+            [targetUserId],
           );
           if (ownerOrgResult.rows.length > 0) {
             targetUserOrgId = ownerOrgResult.rows[0].id;
@@ -2927,7 +2743,7 @@ router.post(
 
       const impersonationToken = jwt.sign(
         impersonationPayload,
-        config.JWT_SECRET
+        config.JWT_SECRET,
       );
 
       // Enhanced audit logging for impersonation
@@ -2940,9 +2756,9 @@ router.post(
           admin_confirmation: confirmAdminImpersonation,
           target_user_role: targetUser.role,
           impersonation_token_expires: new Date(
-            impersonationPayload.exp * 1000
+            impersonationPayload.exp * 1000,
           ).toISOString(),
-        }
+        },
       );
 
       await logActivity(
@@ -2962,7 +2778,7 @@ router.post(
           status: "warning", // Changed to warning for security audit
           metadata: auditMetadata,
         },
-        req
+        req,
       );
 
       // Also log activity for the target user
@@ -2981,7 +2797,7 @@ router.post(
             impersonation_started_at: new Date().toISOString(),
           },
         },
-        req
+        req,
       );
 
       res.json({
@@ -3006,7 +2822,7 @@ router.post(
         .status(500)
         .json({ error: err.message || "Failed to initiate impersonation" });
     }
-  }
+  },
 );
 
 // User Impersonation: Exit impersonation
@@ -3044,7 +2860,7 @@ router.post(
       // Get original admin user details
       const adminResult = await query(
         "SELECT id, email, name, role FROM users WHERE id = $1",
-        [decoded.originalAdminId]
+        [decoded.originalAdminId],
       );
 
       if (adminResult.rows.length === 0) {
@@ -3059,7 +2875,7 @@ router.post(
       try {
         const orgResult = await query(
           "SELECT organization_id FROM organization_members WHERE user_id = $1 LIMIT 1",
-          [originalAdmin.id]
+          [originalAdmin.id],
         );
         if (orgResult.rows.length > 0) {
           adminOrgId = orgResult.rows[0].organization_id;
@@ -3067,7 +2883,7 @@ router.post(
           // Fallback: check if admin owns an organization
           const ownerOrgResult = await query(
             "SELECT id FROM organizations WHERE owner_id = $1 LIMIT 1",
-            [originalAdmin.id]
+            [originalAdmin.id],
           );
           if (ownerOrgResult.rows.length > 0) {
             adminOrgId = ownerOrgResult.rows[0].id;
@@ -3096,10 +2912,10 @@ router.post(
         {
           impersonation_duration_seconds: impersonationDuration,
           impersonation_duration_human: `${Math.floor(
-            impersonationDuration / 60
+            impersonationDuration / 60,
           )} minutes`,
           original_admin_restored: true,
-        }
+        },
       );
 
       await logActivity(
@@ -3115,7 +2931,7 @@ router.post(
           status: "info",
           metadata: auditMetadata,
         },
-        req
+        req,
       );
 
       // Also log for the impersonated user
@@ -3134,7 +2950,7 @@ router.post(
             impersonation_ended_at: new Date().toISOString(),
           },
         },
-        req
+        req,
       );
 
       res.json({
@@ -3154,7 +2970,7 @@ router.post(
         .status(500)
         .json({ error: err.message || "Failed to exit impersonation" });
     }
-  }
+  },
 );
 
 // Get comprehensive user details including VPS, billing, and activity
@@ -3175,7 +2991,8 @@ router.get(
       const { id } = req.params;
 
       // Validate UUID format more strictly
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(id)) {
         res.status(400).json({ error: "Invalid user ID format" });
         return;
@@ -3189,7 +3006,7 @@ router.get(
       while (retryCount <= maxRetries) {
         try {
           userResult = await query(
-            `SELECT 
+            `SELECT
               u.id,
               u.email,
               u.name,
@@ -3216,7 +3033,7 @@ router.get(
             LEFT JOIN organizations org ON org.id = om.organization_id
             WHERE u.id = $1
             GROUP BY u.id`,
-            [id]
+            [id],
           );
           break;
         } catch (queryErr: any) {
@@ -3225,7 +3042,7 @@ router.get(
             throw queryErr;
           }
           // Wait briefly before retry
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
       }
 
@@ -3240,7 +3057,7 @@ router.get(
       let vpsInstances: any[] = [];
       try {
         const vpsResult = await query(
-          `SELECT 
+          `SELECT
             v.id,
             v.label,
             v.status,
@@ -3263,7 +3080,7 @@ router.get(
           LEFT JOIN service_providers sp ON sp.id = v.provider_id
           WHERE om.user_id = $1
           ORDER BY v.created_at DESC`,
-          [id]
+          [id],
         );
         vpsInstances = vpsResult.rows || [];
       } catch (vpsErr: any) {
@@ -3279,7 +3096,7 @@ router.get(
         total_payments: 0,
         last_payment_date: null,
         last_payment_amount: null,
-        payment_history: []
+        payment_history: [],
       };
 
       try {
@@ -3290,28 +3107,33 @@ router.get(
           JOIN organizations org ON org.id = w.organization_id
           JOIN organization_members om ON om.organization_id = org.id
           WHERE om.user_id = $1`,
-          [id]
+          [id],
         );
 
         if (walletResult.rows.length > 0) {
-          billing.wallet_balance = parseFloat(walletResult.rows[0].total_balance) || 0;
+          billing.wallet_balance =
+            parseFloat(walletResult.rows[0].total_balance) || 0;
         }
 
         // Get spending data from payment_transactions
         const currentMonth = new Date();
-        const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-        
+        const startOfMonth = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth(),
+          1,
+        );
+
         const spendResult = await query(
-          `SELECT 
+          `SELECT
             COALESCE(SUM(CASE WHEN pt.created_at >= $2 THEN pt.amount ELSE 0 END), 0) as monthly_spend,
             COALESCE(SUM(pt.amount), 0) as total_spend,
             COUNT(*) as total_payments
           FROM payment_transactions pt
           JOIN organizations org ON org.id = pt.organization_id
           JOIN organization_members om ON om.organization_id = org.id
-          WHERE om.user_id = $1 
+          WHERE om.user_id = $1
           AND pt.status = 'completed'`,
-          [id, startOfMonth.toISOString()]
+          [id, startOfMonth.toISOString()],
         );
 
         if (spendResult.rows.length > 0) {
@@ -3323,7 +3145,7 @@ router.get(
 
         // Get recent payment history
         const paymentsResult = await query(
-          `SELECT 
+          `SELECT
             pt.id,
             pt.amount,
             pt.status,
@@ -3333,11 +3155,11 @@ router.get(
           FROM payment_transactions pt
           JOIN organizations org ON org.id = pt.organization_id
           JOIN organization_members om ON om.organization_id = org.id
-          WHERE om.user_id = $1 
+          WHERE om.user_id = $1
           AND pt.status = 'completed'
           ORDER BY pt.created_at DESC
           LIMIT 10`,
-          [id]
+          [id],
         );
 
         billing.payment_history = paymentsResult.rows || [];
@@ -3348,7 +3170,10 @@ router.get(
           billing.last_payment_amount = parseFloat(lastPayment.amount) || 0;
         }
       } catch (billingErr: any) {
-        console.warn("Error fetching billing data for user:", billingErr.message);
+        console.warn(
+          "Error fetching billing data for user:",
+          billingErr.message,
+        );
         // Continue with default billing values
       }
 
@@ -3356,7 +3181,7 @@ router.get(
       let activity: any[] = [];
       try {
         const activityResult = await query(
-          `SELECT 
+          `SELECT
             id,
             event_type,
             entity_type,
@@ -3368,11 +3193,14 @@ router.get(
           WHERE user_id = $1
           ORDER BY created_at DESC
           LIMIT 20`,
-          [id]
+          [id],
         );
         activity = activityResult.rows || [];
       } catch (activityErr: any) {
-        console.warn("Error fetching activity data for user:", activityErr.message);
+        console.warn(
+          "Error fetching activity data for user:",
+          activityErr.message,
+        );
         activity = [];
       }
 
@@ -3380,7 +3208,7 @@ router.get(
       let supportTickets: any[] = [];
       try {
         const ticketsResult = await query(
-          `SELECT 
+          `SELECT
             st.id,
             st.subject,
             st.status,
@@ -3395,23 +3223,29 @@ router.get(
           WHERE om.user_id = $1
           ORDER BY st.created_at DESC
           LIMIT 10`,
-          [id]
+          [id],
         );
         supportTickets = ticketsResult.rows || [];
       } catch (ticketsErr: any) {
-        console.warn("Error fetching support tickets for user:", ticketsErr.message);
+        console.warn(
+          "Error fetching support tickets for user:",
+          ticketsErr.message,
+        );
         supportTickets = [];
       }
 
       // Calculate statistics
       const statistics = {
         totalVPS: vpsInstances.length,
-        activeVPS: vpsInstances.filter(vps => vps.status === 'running').length,
+        activeVPS: vpsInstances.filter((vps) => vps.status === "running")
+          .length,
         totalSpend: billing.total_spend,
         monthlySpend: billing.monthly_spend,
         totalOrganizations: user.organizations.length,
         totalSupportTickets: supportTickets.length,
-        openSupportTickets: supportTickets.filter(ticket => ticket.status === 'open').length
+        openSupportTickets: supportTickets.filter(
+          (ticket) => ticket.status === "open",
+        ).length,
       };
 
       // Build comprehensive response
@@ -3419,19 +3253,19 @@ router.get(
         user: {
           ...user,
           // Ensure preferences is always an object
-          preferences: user.preferences || {}
+          preferences: user.preferences || {},
         },
         vpsInstances,
         billing,
         activity,
         supportTickets,
-        statistics
+        statistics,
       };
 
       res.json(detailedUser);
     } catch (err: any) {
       console.error("Admin user comprehensive detail error:", err);
-      
+
       // Provide more specific error messages
       let errorMessage = "Failed to fetch user details";
       if (err.message?.includes("invalid input syntax for type uuid")) {
@@ -3442,12 +3276,12 @@ router.get(
         errorMessage = err.message;
       }
 
-      res.status(500).json({ 
+      res.status(500).json({
         error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        details: process.env.NODE_ENV === "development" ? err.stack : undefined,
       });
     }
-  }
+  },
 );
 
 // Delete user account and all associated data
@@ -3470,9 +3304,9 @@ router.delete(
       // Check if user exists
       const userCheck = await query(
         "SELECT id, email, name, role FROM users WHERE id = $1",
-        [id]
+        [id],
       );
-      
+
       if (userCheck.rows.length === 0) {
         res.status(404).json({ error: "User not found" });
         return;
@@ -3481,7 +3315,7 @@ router.delete(
       const user = userCheck.rows[0];
 
       // Prevent deletion of admin users by non-super-admin
-      if (user.role === 'admin' && req.user?.role !== 'admin') {
+      if (user.role === "admin" && req.user?.role !== "admin") {
         res.status(403).json({ error: "Cannot delete admin users" });
         return;
       }
@@ -3493,7 +3327,7 @@ router.delete(
       }
 
       // Start transaction for cascading deletes
-      await query('BEGIN');
+      await query("BEGIN");
 
       try {
         // Get user's organizations
@@ -3501,17 +3335,19 @@ router.delete(
           `SELECT DISTINCT om.organization_id
           FROM organization_members om
           WHERE om.user_id = $1`,
-          [id]
+          [id],
         );
 
-        const organizationIds = orgsResult.rows.map(row => row.organization_id);
+        const organizationIds = orgsResult.rows.map(
+          (row) => row.organization_id,
+        );
 
         // Delete VPS instances for user's organizations
         if (organizationIds.length > 0) {
           await query(
-            `DELETE FROM vps_instances 
+            `DELETE FROM vps_instances
             WHERE organization_id = ANY($1)`,
-            [organizationIds]
+            [organizationIds],
           );
         }
 
@@ -3519,15 +3355,15 @@ router.delete(
         try {
           if (organizationIds.length > 0) {
             await query(
-              `DELETE FROM billing_transactions 
+              `DELETE FROM billing_transactions
               WHERE organization_id = ANY($1)`,
-              [organizationIds]
+              [organizationIds],
             );
 
             await query(
-              `DELETE FROM wallet_balances 
+              `DELETE FROM wallet_balances
               WHERE organization_id = ANY($1)`,
-              [organizationIds]
+              [organizationIds],
             );
           }
         } catch (billingErr: any) {
@@ -3537,10 +3373,7 @@ router.delete(
 
         // Delete activity logs
         try {
-          await query(
-            `DELETE FROM activity_logs WHERE user_id = $1`,
-            [id]
-          );
+          await query(`DELETE FROM activity_logs WHERE user_id = $1`, [id]);
         } catch (activityErr: any) {
           // Activity table might not exist, continue
           console.warn("Activity cleanup not available:", activityErr.message);
@@ -3549,49 +3382,44 @@ router.delete(
         // Delete support tickets and replies
         try {
           await query(
-            `DELETE FROM support_ticket_replies 
+            `DELETE FROM support_ticket_replies
             WHERE ticket_id IN (
               SELECT id FROM support_tickets WHERE created_by = $1
             )`,
-            [id]
+            [id],
           );
 
-          await query(
-            `DELETE FROM support_tickets WHERE created_by = $1`,
-            [id]
-          );
+          await query(`DELETE FROM support_tickets WHERE created_by = $1`, [
+            id,
+          ]);
         } catch (supportErr: any) {
           // Support tables might not exist, continue
           console.warn("Support cleanup not available:", supportErr.message);
         }
 
         // Delete organization memberships
-        await query(
-          `DELETE FROM organization_members WHERE user_id = $1`,
-          [id]
-        );
+        await query(`DELETE FROM organization_members WHERE user_id = $1`, [
+          id,
+        ]);
 
         // Delete organizations owned by this user (if they're the only member)
         if (organizationIds.length > 0) {
           await query(
-            `DELETE FROM organizations 
-            WHERE id = ANY($1) 
+            `DELETE FROM organizations
+            WHERE id = ANY($1)
             AND owner_id = $2
             AND NOT EXISTS (
-              SELECT 1 FROM organization_members 
+              SELECT 1 FROM organization_members
               WHERE organization_id = organizations.id
             )`,
-            [organizationIds, id]
+            [organizationIds, id],
           );
         }
 
         // Finally, delete the user
-        await query(
-          `DELETE FROM users WHERE id = $1`,
-          [id]
-        );
+        await query(`DELETE FROM users WHERE id = $1`, [id]);
 
-        await query('COMMIT');
+        await query("COMMIT");
 
         // Log the deletion
         if (req.user?.id) {
@@ -3610,20 +3438,20 @@ router.delete(
                 deleted_user_role: user.role,
               },
             },
-            req
+            req,
           );
         }
 
         res.status(204).send();
       } catch (deleteErr: any) {
-        await query('ROLLBACK');
+        await query("ROLLBACK");
         throw deleteErr;
       }
     } catch (err: any) {
       console.error("Admin user delete error:", err);
       res.status(500).json({ error: err.message || "Failed to delete user" });
     }
-  }
+  },
 );
 
 // Update user account information
@@ -3634,9 +3462,17 @@ router.put(
   auditLogger("update_user"),
   [
     param("id").isUUID().withMessage("Invalid user id"),
-    body("name").optional().isString().trim().isLength({ min: 2 }).withMessage("Name must be at least 2 characters"),
+    body("name")
+      .optional()
+      .isString()
+      .trim()
+      .isLength({ min: 2 })
+      .withMessage("Name must be at least 2 characters"),
     body("email").optional().isEmail().withMessage("Valid email is required"),
-    body("role").optional().isIn(['user', 'admin']).withMessage("Role must be 'user' or 'admin'"),
+    body("role")
+      .optional()
+      .isIn(["user", "admin"])
+      .withMessage("Role must be 'user' or 'admin'"),
     body("phone").optional().isString().trim(),
     body("timezone").optional().isString().trim(),
   ],
@@ -3660,9 +3496,9 @@ router.put(
       // Check if user exists
       const userCheck = await query(
         "SELECT id, email, name, role FROM users WHERE id = $1",
-        [id]
+        [id],
       );
-      
+
       if (userCheck.rows.length === 0) {
         res.status(404).json({ error: "User not found" });
         return;
@@ -3671,7 +3507,11 @@ router.put(
       const currentUser = userCheck.rows[0];
 
       // Prevent self-role modification
-      if (role && role !== currentUser.role && currentUser.id === req.user?.id) {
+      if (
+        role &&
+        role !== currentUser.role &&
+        currentUser.id === req.user?.id
+      ) {
         res.status(403).json({ error: "Cannot modify your own role" });
         return;
       }
@@ -3680,7 +3520,7 @@ router.put(
       if (email && email !== currentUser.email) {
         const emailCheck = await query(
           "SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2",
-          [email, id]
+          [email, id],
         );
 
         if (emailCheck.rows.length > 0) {
@@ -3738,8 +3578,8 @@ router.put(
       values.push(id);
 
       const updateQuery = `
-        UPDATE users 
-        SET ${updateFields.join(', ')} 
+        UPDATE users
+        SET ${updateFields.join(", ")}
         WHERE id = $${paramIndex}
         RETURNING id, email, name, role, phone, timezone, created_at, updated_at
       `;
@@ -3756,9 +3596,12 @@ router.put(
       // Log the update
       if (req.user?.id) {
         const changes = [];
-        if (name !== undefined && name !== currentUser.name) changes.push(`name: "${currentUser.name}" → "${name}"`);
-        if (email !== undefined && email !== currentUser.email) changes.push(`email: "${currentUser.email}" → "${email}"`);
-        if (role !== undefined && role !== currentUser.role) changes.push(`role: "${currentUser.role}" → "${role}"`);
+        if (name !== undefined && name !== currentUser.name)
+          changes.push(`name: "${currentUser.name}" → "${name}"`);
+        if (email !== undefined && email !== currentUser.email)
+          changes.push(`email: "${currentUser.email}" → "${email}"`);
+        if (role !== undefined && role !== currentUser.role)
+          changes.push(`role: "${currentUser.role}" → "${role}"`);
         if (phone !== undefined) changes.push(`phone updated`);
         if (timezone !== undefined) changes.push(`timezone updated`);
 
@@ -3774,10 +3617,10 @@ router.put(
             metadata: {
               updated_user_email: updatedUser.email,
               updated_user_name: updatedUser.name,
-              changes: changes.join(', '),
+              changes: changes.join(", "),
             },
           },
-          req
+          req,
         );
       }
 
@@ -3786,7 +3629,7 @@ router.put(
       console.error("Admin user update error:", err);
       res.status(500).json({ error: err.message || "Failed to update user" });
     }
-  }
+  },
 );
 
 // ============================================================================
@@ -3818,19 +3661,39 @@ router.post(
       // Business logic validation
       const ownerExists = await BusinessValidation.userExists(ownerId);
       if (!ownerExists) {
-        res.status(400).json(formatBusinessLogicError("Owner user not found", "USER_NOT_FOUND"));
+        res
+          .status(400)
+          .json(
+            formatBusinessLogicError("Owner user not found", "USER_NOT_FOUND"),
+          );
         return;
       }
 
-      const nameUnique = await BusinessValidation.isOrganizationNameUnique(name);
+      const nameUnique =
+        await BusinessValidation.isOrganizationNameUnique(name);
       if (!nameUnique) {
-        res.status(400).json(formatBusinessLogicError("Organization name already exists", "NAME_NOT_UNIQUE"));
+        res
+          .status(400)
+          .json(
+            formatBusinessLogicError(
+              "Organization name already exists",
+              "NAME_NOT_UNIQUE",
+            ),
+          );
         return;
       }
 
-      const slugUnique = await BusinessValidation.isOrganizationSlugUnique(slug);
+      const slugUnique =
+        await BusinessValidation.isOrganizationSlugUnique(slug);
       if (!slugUnique) {
-        res.status(400).json(formatBusinessLogicError("Organization slug already exists", "SLUG_NOT_UNIQUE"));
+        res
+          .status(400)
+          .json(
+            formatBusinessLogicError(
+              "Organization slug already exists",
+              "SLUG_NOT_UNIQUE",
+            ),
+          );
         return;
       }
 
@@ -3839,12 +3702,12 @@ router.post(
       // Get owner details for response
       const ownerResult = await query(
         "SELECT id, name, email, role FROM users WHERE id = $1",
-        [ownerId]
+        [ownerId],
       );
       const owner = ownerResult.rows[0];
 
       // Begin transaction for atomic organization creation
-      await query('BEGIN');
+      await query("BEGIN");
 
       try {
         // Create organization
@@ -3852,7 +3715,7 @@ router.post(
           `INSERT INTO organizations (name, slug, owner_id, settings, created_at, updated_at)
            VALUES ($1, $2, $3, $4, $5, $6)
            RETURNING *`,
-          [name, slug, ownerId, description ? { description } : {}, now, now]
+          [name, slug, ownerId, description ? { description } : {}, now, now],
         );
 
         const organization = orgResult.rows[0];
@@ -3861,17 +3724,17 @@ router.post(
         await query(
           `INSERT INTO organization_members (organization_id, user_id, role, created_at)
            VALUES ($1, $2, $3, $4)`,
-          [organization.id, ownerId, 'owner', now]
+          [organization.id, ownerId, "owner", now],
         );
 
         // Create wallet for organization
         await query(
           `INSERT INTO wallets (organization_id, balance, currency, created_at, updated_at)
            VALUES ($1, $2, $3, $4, $5)`,
-          [organization.id, 0.00, 'USD', now, now]
+          [organization.id, 0.0, "USD", now, now],
         );
 
-        await query('COMMIT');
+        await query("COMMIT");
 
         // Log activity
         if (req.user?.id) {
@@ -3890,7 +3753,7 @@ router.post(
                 ownerId: ownerId,
               },
             },
-            req
+            req,
           );
         }
 
@@ -3901,25 +3764,34 @@ router.post(
             owner_name: owner.name,
             owner_email: owner.email,
             member_count: 1,
-            members: [{
-              userId: owner.id,
-              userName: owner.name,
-              userEmail: owner.email,
-              role: 'owner',
-              userRole: owner.role,
-              joinedAt: now
-            }]
-          }
+            members: [
+              {
+                userId: owner.id,
+                userName: owner.name,
+                userEmail: owner.email,
+                role: "owner",
+                userRole: owner.role,
+                joinedAt: now,
+              },
+            ],
+          },
         });
       } catch (transactionError) {
-        await query('ROLLBACK');
+        await query("ROLLBACK");
         throw transactionError;
       }
     } catch (err: any) {
       console.error("Admin organization create error:", err);
-      res.status(500).json(formatServerError(err.message || "Failed to create organization", "ORGANIZATION_CREATE_ERROR"));
+      res
+        .status(500)
+        .json(
+          formatServerError(
+            err.message || "Failed to create organization",
+            "ORGANIZATION_CREATE_ERROR",
+          ),
+        );
     }
-  }
+  },
 );
 
 // Update organization
@@ -3945,29 +3817,60 @@ router.put(
       };
 
       // Check if organization exists
-      const organizationExists = await BusinessValidation.organizationExists(id);
+      const organizationExists =
+        await BusinessValidation.organizationExists(id);
       if (!organizationExists) {
-        res.status(404).json(formatBusinessLogicError("Organization not found", "ORGANIZATION_NOT_FOUND"));
+        res
+          .status(404)
+          .json(
+            formatBusinessLogicError(
+              "Organization not found",
+              "ORGANIZATION_NOT_FOUND",
+            ),
+          );
         return;
       }
 
       // Get existing organization data
-      const orgResult = await query("SELECT * FROM organizations WHERE id = $1", [id]);
+      const orgResult = await query(
+        "SELECT * FROM organizations WHERE id = $1",
+        [id],
+      );
       const existingOrg = orgResult.rows[0];
 
       // Business logic validation for uniqueness
       if (name && name !== existingOrg.name) {
-        const nameUnique = await BusinessValidation.isOrganizationNameUnique(name, id);
+        const nameUnique = await BusinessValidation.isOrganizationNameUnique(
+          name,
+          id,
+        );
         if (!nameUnique) {
-          res.status(400).json(formatBusinessLogicError("Organization name already exists", "NAME_NOT_UNIQUE"));
+          res
+            .status(400)
+            .json(
+              formatBusinessLogicError(
+                "Organization name already exists",
+                "NAME_NOT_UNIQUE",
+              ),
+            );
           return;
         }
       }
 
       if (slug && slug !== existingOrg.slug) {
-        const slugUnique = await BusinessValidation.isOrganizationSlugUnique(slug, id);
+        const slugUnique = await BusinessValidation.isOrganizationSlugUnique(
+          slug,
+          id,
+        );
         if (!slugUnique) {
-          res.status(400).json(formatBusinessLogicError("Organization slug already exists", "SLUG_NOT_UNIQUE"));
+          res
+            .status(400)
+            .json(
+              formatBusinessLogicError(
+                "Organization slug already exists",
+                "SLUG_NOT_UNIQUE",
+              ),
+            );
           return;
         }
       }
@@ -4005,14 +3908,14 @@ router.put(
       // Execute update
       const updateResult = await query(
         `UPDATE organizations SET ${updateFields.join(", ")} WHERE id = $${paramCount} RETURNING *`,
-        values
+        values,
       );
 
       const updatedOrg = updateResult.rows[0];
 
       // Get organization with members for response
       const orgWithMembersResult = await query(
-        `SELECT 
+        `SELECT
           org.id,
           org.name,
           org.slug,
@@ -4042,7 +3945,7 @@ router.put(
         LEFT JOIN users mem ON mem.id = om.user_id
         WHERE org.id = $1
         GROUP BY org.id, owner.id`,
-        [id]
+        [id],
       );
 
       // Log activity
@@ -4062,16 +3965,23 @@ router.put(
               changes: { name, slug, description },
             },
           },
-          req
+          req,
         );
       }
 
       res.json({ organization: orgWithMembersResult.rows[0] });
     } catch (err: any) {
       console.error("Admin organization update error:", err);
-      res.status(500).json(formatServerError(err.message || "Failed to update organization", "ORGANIZATION_UPDATE_ERROR"));
+      res
+        .status(500)
+        .json(
+          formatServerError(
+            err.message || "Failed to update organization",
+            "ORGANIZATION_UPDATE_ERROR",
+          ),
+        );
     }
-  }
+  },
 );
 
 // Delete organization
@@ -4092,83 +4002,85 @@ router.delete(
       const { id } = req.params;
 
       // Check if organization exists
-      const organizationExists = await BusinessValidation.organizationExists(id);
+      const organizationExists =
+        await BusinessValidation.organizationExists(id);
       if (!organizationExists) {
-        res.status(404).json(formatBusinessLogicError("Organization not found", "ORGANIZATION_NOT_FOUND"));
+        res
+          .status(404)
+          .json(
+            formatBusinessLogicError(
+              "Organization not found",
+              "ORGANIZATION_NOT_FOUND",
+            ),
+          );
         return;
       }
 
       // Get organization name for logging
-      const orgNameResult = await query("SELECT name FROM organizations WHERE id = $1", [id]);
+      const orgNameResult = await query(
+        "SELECT name FROM organizations WHERE id = $1",
+        [id],
+      );
       const organizationName = orgNameResult.rows[0].name;
 
       // Get resource counts for confirmation
       const vpsCount = await query(
         "SELECT COUNT(*) as count FROM vps_instances WHERE organization_id = $1",
-        [id]
+        [id],
       );
 
       const memberCount = await query(
         "SELECT COUNT(*) as count FROM organization_members WHERE organization_id = $1",
-        [id]
+        [id],
       );
 
       const ticketCount = await query(
         "SELECT COUNT(*) as count FROM support_tickets WHERE organization_id = $1",
-        [id]
+        [id],
       );
 
       // Begin transaction for cascading deletion
-      await query('BEGIN');
+      await query("BEGIN");
 
       try {
         // Delete VPS instances (this will cascade to billing cycles)
-        await query(
-          "DELETE FROM vps_instances WHERE organization_id = $1",
-          [id]
-        );
+        await query("DELETE FROM vps_instances WHERE organization_id = $1", [
+          id,
+        ]);
 
         // Delete support tickets and replies
         await query(
           "DELETE FROM support_ticket_replies WHERE ticket_id IN (SELECT id FROM support_tickets WHERE organization_id = $1)",
-          [id]
+          [id],
         );
-        await query(
-          "DELETE FROM support_tickets WHERE organization_id = $1",
-          [id]
-        );
+        await query("DELETE FROM support_tickets WHERE organization_id = $1", [
+          id,
+        ]);
 
         // Delete payment transactions
         await query(
           "DELETE FROM payment_transactions WHERE organization_id = $1",
-          [id]
+          [id],
         );
 
         // Delete wallets
-        await query(
-          "DELETE FROM wallets WHERE organization_id = $1",
-          [id]
-        );
+        await query("DELETE FROM wallets WHERE organization_id = $1", [id]);
 
         // Delete organization members
         await query(
           "DELETE FROM organization_members WHERE organization_id = $1",
-          [id]
+          [id],
         );
 
         // Delete activity logs
-        await query(
-          "DELETE FROM activity_logs WHERE organization_id = $1",
-          [id]
-        );
+        await query("DELETE FROM activity_logs WHERE organization_id = $1", [
+          id,
+        ]);
 
         // Finally, delete the organization
-        await query(
-          "DELETE FROM organizations WHERE id = $1",
-          [id]
-        );
+        await query("DELETE FROM organizations WHERE id = $1", [id]);
 
-        await query('COMMIT');
+        await query("COMMIT");
 
         // Log activity
         if (req.user?.id) {
@@ -4190,20 +4102,27 @@ router.delete(
                 },
               },
             },
-            req
+            req,
           );
         }
 
         res.status(204).send();
       } catch (deleteErr: any) {
-        await query('ROLLBACK');
+        await query("ROLLBACK");
         throw deleteErr;
       }
     } catch (err: any) {
       console.error("Admin organization delete error:", err);
-      res.status(500).json(formatServerError(err.message || "Failed to delete organization", "ORGANIZATION_DELETE_ERROR"));
+      res
+        .status(500)
+        .json(
+          formatServerError(
+            err.message || "Failed to delete organization",
+            "ORGANIZATION_DELETE_ERROR",
+          ),
+        );
     }
-  }
+  },
 );
 
 // ============================================================================
@@ -4228,67 +4147,94 @@ router.post(
       const { id: organizationId } = req.params;
       const { userId, role } = req.body as {
         userId: string;
-        role: 'owner' | 'admin' | 'member';
+        role: "owner" | "admin" | "member";
       };
 
       // Business logic validation
-      const organizationExists = await BusinessValidation.organizationExists(organizationId);
+      const organizationExists =
+        await BusinessValidation.organizationExists(organizationId);
       if (!organizationExists) {
-        res.status(404).json(formatBusinessLogicError("Organization not found", "ORGANIZATION_NOT_FOUND"));
+        res
+          .status(404)
+          .json(
+            formatBusinessLogicError(
+              "Organization not found",
+              "ORGANIZATION_NOT_FOUND",
+            ),
+          );
         return;
       }
 
       const userExists = await BusinessValidation.userExists(userId);
       if (!userExists) {
-        res.status(400).json(formatBusinessLogicError("User not found", "USER_NOT_FOUND"));
+        res
+          .status(400)
+          .json(formatBusinessLogicError("User not found", "USER_NOT_FOUND"));
         return;
       }
 
-      const isAlreadyMember = await BusinessValidation.isUserMemberOfOrganization(userId, organizationId);
+      const isAlreadyMember =
+        await BusinessValidation.isUserMemberOfOrganization(
+          userId,
+          organizationId,
+        );
       if (isAlreadyMember) {
-        res.status(400).json(formatBusinessLogicError("User is already a member of this organization", "USER_ALREADY_MEMBER"));
+        res
+          .status(400)
+          .json(
+            formatBusinessLogicError(
+              "User is already a member of this organization",
+              "USER_ALREADY_MEMBER",
+            ),
+          );
         return;
       }
 
       // Get organization and user details for response
-      const orgResult = await query("SELECT name, owner_id FROM organizations WHERE id = $1", [organizationId]);
+      const orgResult = await query(
+        "SELECT name, owner_id FROM organizations WHERE id = $1",
+        [organizationId],
+      );
       const organization = orgResult.rows[0];
 
-      const userResult = await query("SELECT id, name, email, role as user_role FROM users WHERE id = $1", [userId]);
+      const userResult = await query(
+        "SELECT id, name, email, role as user_role FROM users WHERE id = $1",
+        [userId],
+      );
       const user = userResult.rows[0];
 
       // If adding as owner, handle ownership transfer
-      if (role === 'owner') {
-        await query('BEGIN');
+      if (role === "owner") {
+        await query("BEGIN");
         try {
           // Update current owner to admin
           await query(
             "UPDATE organization_members SET role = 'admin' WHERE organization_id = $1 AND role = 'owner'",
-            [organizationId]
+            [organizationId],
           );
 
           // Update organization owner
           await query(
             "UPDATE organizations SET owner_id = $1, updated_at = $2 WHERE id = $3",
-            [userId, new Date().toISOString(), organizationId]
+            [userId, new Date().toISOString(), organizationId],
           );
 
           // Add new member as owner
           await query(
             "INSERT INTO organization_members (organization_id, user_id, role, created_at) VALUES ($1, $2, $3, $4)",
-            [organizationId, userId, role, new Date().toISOString()]
+            [organizationId, userId, role, new Date().toISOString()],
           );
 
-          await query('COMMIT');
+          await query("COMMIT");
         } catch (ownershipErr) {
-          await query('ROLLBACK');
+          await query("ROLLBACK");
           throw ownershipErr;
         }
       } else {
         // Add member with specified role
         await query(
           "INSERT INTO organization_members (organization_id, user_id, role, created_at) VALUES ($1, $2, $3, $4)",
-          [organizationId, userId, role, new Date().toISOString()]
+          [organizationId, userId, role, new Date().toISOString()],
         );
       }
 
@@ -4310,7 +4256,7 @@ router.post(
               memberRole: role,
             },
           },
-          req
+          req,
         );
       }
 
@@ -4322,14 +4268,21 @@ router.post(
           userEmail: user.email,
           role: role,
           userRole: user.user_role,
-          joinedAt: new Date().toISOString()
-        }
+          joinedAt: new Date().toISOString(),
+        },
       });
     } catch (err: any) {
       console.error("Admin add organization member error:", err);
-      res.status(500).json(formatServerError(err.message || "Failed to add organization member", "MEMBER_ADD_ERROR"));
+      res
+        .status(500)
+        .json(
+          formatServerError(
+            err.message || "Failed to add organization member",
+            "MEMBER_ADD_ERROR",
+          ),
+        );
     }
-  }
+  },
 );
 
 // Update member role
@@ -4348,23 +4301,44 @@ router.put(
       }
 
       const { id: organizationId, userId } = req.params;
-      const { role } = req.body as { role: 'owner' | 'admin' | 'member' };
+      const { role } = req.body as { role: "owner" | "admin" | "member" };
 
       // Business logic validation
-      const organizationExists = await BusinessValidation.organizationExists(organizationId);
+      const organizationExists =
+        await BusinessValidation.organizationExists(organizationId);
       if (!organizationExists) {
-        res.status(404).json(formatBusinessLogicError("Organization not found", "ORGANIZATION_NOT_FOUND"));
+        res
+          .status(404)
+          .json(
+            formatBusinessLogicError(
+              "Organization not found",
+              "ORGANIZATION_NOT_FOUND",
+            ),
+          );
         return;
       }
 
-      const isUserMember = await BusinessValidation.isUserMemberOfOrganization(userId, organizationId);
+      const isUserMember = await BusinessValidation.isUserMemberOfOrganization(
+        userId,
+        organizationId,
+      );
       if (!isUserMember) {
-        res.status(404).json(formatBusinessLogicError("Member not found in organization", "MEMBER_NOT_FOUND"));
+        res
+          .status(404)
+          .json(
+            formatBusinessLogicError(
+              "Member not found in organization",
+              "MEMBER_NOT_FOUND",
+            ),
+          );
         return;
       }
 
       // Get organization and member details
-      const orgResult = await query("SELECT name, owner_id FROM organizations WHERE id = $1", [organizationId]);
+      const orgResult = await query(
+        "SELECT name, owner_id FROM organizations WHERE id = $1",
+        [organizationId],
+      );
       const organization = orgResult.rows[0];
 
       const memberResult = await query(
@@ -4372,42 +4346,42 @@ router.put(
          FROM organization_members om
          JOIN users u ON u.id = om.user_id
          WHERE om.organization_id = $1 AND om.user_id = $2`,
-        [organizationId, userId]
+        [organizationId, userId],
       );
       const member = memberResult.rows[0];
 
       // If changing to owner, handle ownership transfer
-      if (role === 'owner') {
-        await query('BEGIN');
+      if (role === "owner") {
+        await query("BEGIN");
         try {
           // Update current owner to admin
           await query(
             "UPDATE organization_members SET role = 'admin' WHERE organization_id = $1 AND role = 'owner'",
-            [organizationId]
+            [organizationId],
           );
 
           // Update organization owner
           await query(
             "UPDATE organizations SET owner_id = $1, updated_at = $2 WHERE id = $3",
-            [userId, new Date().toISOString(), organizationId]
+            [userId, new Date().toISOString(), organizationId],
           );
 
           // Update member role to owner
           await query(
             "UPDATE organization_members SET role = $1 WHERE organization_id = $2 AND user_id = $3",
-            [role, organizationId, userId]
+            [role, organizationId, userId],
           );
 
-          await query('COMMIT');
+          await query("COMMIT");
         } catch (ownershipErr) {
-          await query('ROLLBACK');
+          await query("ROLLBACK");
           throw ownershipErr;
         }
       } else {
         // Regular role update
         await query(
           "UPDATE organization_members SET role = $1 WHERE organization_id = $2 AND user_id = $3",
-          [role, organizationId, userId]
+          [role, organizationId, userId],
         );
       }
 
@@ -4430,7 +4404,7 @@ router.put(
               newRole: role,
             },
           },
-          req
+          req,
         );
       }
 
@@ -4442,14 +4416,21 @@ router.put(
           userEmail: member.email,
           role: role,
           userRole: member.user_role,
-          joinedAt: member.created_at
-        }
+          joinedAt: member.created_at,
+        },
       });
     } catch (err: any) {
       console.error("Admin update organization member error:", err);
-      res.status(500).json(formatServerError(err.message || "Failed to update organization member", "MEMBER_UPDATE_ERROR"));
+      res
+        .status(500)
+        .json(
+          formatServerError(
+            err.message || "Failed to update organization member",
+            "MEMBER_UPDATE_ERROR",
+          ),
+        );
     }
-  }
+  },
 );
 
 // Remove member from organization
@@ -4470,26 +4451,57 @@ router.delete(
       const { id: organizationId, userId } = req.params;
 
       // Business logic validation
-      const organizationExists = await BusinessValidation.organizationExists(organizationId);
+      const organizationExists =
+        await BusinessValidation.organizationExists(organizationId);
       if (!organizationExists) {
-        res.status(404).json(formatBusinessLogicError("Organization not found", "ORGANIZATION_NOT_FOUND"));
+        res
+          .status(404)
+          .json(
+            formatBusinessLogicError(
+              "Organization not found",
+              "ORGANIZATION_NOT_FOUND",
+            ),
+          );
         return;
       }
 
-      const isUserMember = await BusinessValidation.isUserMemberOfOrganization(userId, organizationId);
+      const isUserMember = await BusinessValidation.isUserMemberOfOrganization(
+        userId,
+        organizationId,
+      );
       if (!isUserMember) {
-        res.status(404).json(formatBusinessLogicError("Member not found in organization", "MEMBER_NOT_FOUND"));
+        res
+          .status(404)
+          .json(
+            formatBusinessLogicError(
+              "Member not found in organization",
+              "MEMBER_NOT_FOUND",
+            ),
+          );
         return;
       }
 
-      const isOwner = await BusinessValidation.isUserOrganizationOwner(userId, organizationId);
+      const isOwner = await BusinessValidation.isUserOrganizationOwner(
+        userId,
+        organizationId,
+      );
       if (isOwner) {
-        res.status(400).json(formatBusinessLogicError("Cannot remove organization owner. Transfer ownership first.", "CANNOT_REMOVE_OWNER"));
+        res
+          .status(400)
+          .json(
+            formatBusinessLogicError(
+              "Cannot remove organization owner. Transfer ownership first.",
+              "CANNOT_REMOVE_OWNER",
+            ),
+          );
         return;
       }
 
       // Get organization and member details for logging
-      const orgResult = await query("SELECT name, owner_id FROM organizations WHERE id = $1", [organizationId]);
+      const orgResult = await query(
+        "SELECT name, owner_id FROM organizations WHERE id = $1",
+        [organizationId],
+      );
       const organization = orgResult.rows[0];
 
       const memberResult = await query(
@@ -4497,14 +4509,14 @@ router.delete(
          FROM organization_members om
          JOIN users u ON u.id = om.user_id
          WHERE om.organization_id = $1 AND om.user_id = $2`,
-        [organizationId, userId]
+        [organizationId, userId],
       );
       const member = memberResult.rows[0];
 
       // Remove member
       await query(
         "DELETE FROM organization_members WHERE organization_id = $1 AND user_id = $2",
-        [organizationId, userId]
+        [organizationId, userId],
       );
 
       // Log activity
@@ -4525,16 +4537,23 @@ router.delete(
               memberRole: member.role,
             },
           },
-          req
+          req,
         );
       }
 
       res.status(204).send();
     } catch (err: any) {
       console.error("Admin remove organization member error:", err);
-      res.status(500).json(formatServerError(err.message || "Failed to remove organization member", "MEMBER_REMOVE_ERROR"));
+      res
+        .status(500)
+        .json(
+          formatServerError(
+            err.message || "Failed to remove organization member",
+            "MEMBER_REMOVE_ERROR",
+          ),
+        );
     }
-  }
+  },
 );
 
 // ============================================================================
@@ -4555,22 +4574,22 @@ router.get(
         return;
       }
 
-      const searchQuery = (req.query.q as string) || '';
+      const searchQuery = (req.query.q as string) || "";
       const organizationId = req.query.organizationId as string;
-      const page = parseInt((req.query.page as string) || '1');
-      const limit = parseInt((req.query.limit as string) || '20');
+      const page = parseInt((req.query.page as string) || "1");
+      const limit = parseInt((req.query.limit as string) || "20");
       const offset = (page - 1) * limit;
 
       let baseQuery = `
-        SELECT 
+        SELECT
           u.id,
           u.name,
           u.email,
           u.role,
           u.created_at,
-          CASE 
-            WHEN om.user_id IS NOT NULL THEN true 
-            ELSE false 
+          CASE
+            WHEN om.user_id IS NOT NULL THEN true
+            ELSE false
           END as is_already_member,
           COALESCE(
             jsonb_agg(
@@ -4594,7 +4613,7 @@ router.get(
       // Add search conditions
       if (searchQuery) {
         baseQuery += ` WHERE (
-          LOWER(u.name) LIKE LOWER($${paramCount}) OR 
+          LOWER(u.name) LIKE LOWER($${paramCount}) OR
           LOWER(u.email) LIKE LOWER($${paramCount})
         )`;
         params.push(`%${searchQuery}%`);
@@ -4603,7 +4622,7 @@ router.get(
 
       baseQuery += `
         GROUP BY u.id, u.name, u.email, u.role, u.created_at, om.user_id
-        ORDER BY 
+        ORDER BY
           CASE WHEN om.user_id IS NOT NULL THEN 1 ELSE 0 END,
           u.name ASC
         LIMIT $${paramCount} OFFSET $${paramCount + 1}
@@ -4624,14 +4643,14 @@ router.get(
 
       if (searchQuery) {
         countQuery += ` WHERE (
-          LOWER(u.name) LIKE LOWER($${countParamCount}) OR 
+          LOWER(u.name) LIKE LOWER($${countParamCount}) OR
           LOWER(u.email) LIKE LOWER($${countParamCount})
         )`;
         countParams.push(`%${searchQuery}%`);
       }
 
       const countResult = await query(countQuery, countParams);
-      const total = parseInt(countResult.rows[0]?.total || '0');
+      const total = parseInt(countResult.rows[0]?.total || "0");
 
       // Format results
       const users = result.rows.map((user: any) => ({
@@ -4641,7 +4660,7 @@ router.get(
         role: user.role,
         created_at: user.created_at,
         isAlreadyMember: user.is_already_member,
-        organizations: user.organizations || []
+        organizations: user.organizations || [],
       }));
 
       res.json({
@@ -4652,14 +4671,21 @@ router.get(
           total,
           totalPages: Math.ceil(total / limit),
           hasNext: page * limit < total,
-          hasPrev: page > 1
-        }
+          hasPrev: page > 1,
+        },
       });
     } catch (err: any) {
       console.error("Admin user search error:", err);
-      res.status(500).json(formatServerError(err.message || "Failed to search users", "USER_SEARCH_ERROR"));
+      res
+        .status(500)
+        .json(
+          formatServerError(
+            err.message || "Failed to search users",
+            "USER_SEARCH_ERROR",
+          ),
+        );
     }
-  }
+  },
 );
 
 // ============================================================================
@@ -4693,15 +4719,27 @@ router.put(
       // Business logic validation
       const userExists = await BusinessValidation.userExists(id);
       if (!userExists) {
-        res.status(404).json(formatBusinessLogicError("User not found", "USER_NOT_FOUND"));
+        res
+          .status(404)
+          .json(formatBusinessLogicError("User not found", "USER_NOT_FOUND"));
         return;
       }
 
       // Check email uniqueness if being updated
       if (email) {
-        const emailUnique = await BusinessValidation.isUserEmailUnique(email, id);
+        const emailUnique = await BusinessValidation.isUserEmailUnique(
+          email,
+          id,
+        );
         if (!emailUnique) {
-          res.status(400).json(formatBusinessLogicError("Email address already exists", "EMAIL_NOT_UNIQUE"));
+          res
+            .status(400)
+            .json(
+              formatBusinessLogicError(
+                "Email address already exists",
+                "EMAIL_NOT_UNIQUE",
+              ),
+            );
           return;
         }
       }
@@ -4742,7 +4780,9 @@ router.put(
       }
 
       if (updateFields.length === 0) {
-        res.status(400).json(formatBusinessLogicError("No fields to update", "NO_UPDATES"));
+        res
+          .status(400)
+          .json(formatBusinessLogicError("No fields to update", "NO_UPDATES"));
         return;
       }
 
@@ -4755,7 +4795,7 @@ router.put(
       // Execute update
       const updateResult = await query(
         `UPDATE users SET ${updateFields.join(", ")} WHERE id = $${paramCount} RETURNING *`,
-        values
+        values,
       );
 
       const updatedUser = updateResult.rows[0];
@@ -4777,7 +4817,7 @@ router.put(
               changes: { name, email, role, phone, timezone },
             },
           },
-          req
+          req,
         );
       }
 
@@ -4786,9 +4826,16 @@ router.put(
       res.json({ user: userResponse });
     } catch (err: any) {
       console.error("Admin user update error:", err);
-      res.status(500).json(formatServerError(err.message || "Failed to update user", "USER_UPDATE_ERROR"));
+      res
+        .status(500)
+        .json(
+          formatServerError(
+            err.message || "Failed to update user",
+            "USER_UPDATE_ERROR",
+          ),
+        );
     }
-  }
+  },
 );
 
 export default router;

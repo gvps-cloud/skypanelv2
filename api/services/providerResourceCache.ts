@@ -1,6 +1,6 @@
 /**
  * Provider Resource Cache Service
- * Implements caching for provider resources (plans, images, marketplace apps)
+ * Implements caching for provider resources (plans, images)
  * with configurable TTL per resource type
  */
 
@@ -19,7 +19,6 @@ export class ProviderResourceCache {
   // Cache stores for different resource types
   private static plansCache: Map<string, CachedResource<any[]>> = new Map();
   private static imagesCache: Map<string, CachedResource<any[]>> = new Map();
-  private static marketplaceCache: Map<string, CachedResource<any[]>> = new Map();
   private static regionsCache: Map<string, CachedResource<any[]>> = new Map();
 
   // TTL configurations (in milliseconds)
@@ -30,10 +29,6 @@ export class ProviderResourceCache {
     },
     images: {
       ttlMs: 60 * 60 * 1000, // 1 hour
-      enabled: true,
-    },
-    marketplace: {
-      ttlMs: 6 * 60 * 60 * 1000, // 6 hours
       enabled: true,
     },
     regions: {
@@ -47,7 +42,7 @@ export class ProviderResourceCache {
    */
   private static isCacheValid(
     cache: CachedResource<any> | undefined,
-    resourceType: keyof typeof ProviderResourceCache.CACHE_CONFIGS
+    resourceType: keyof typeof ProviderResourceCache.CACHE_CONFIGS,
   ): boolean {
     if (!cache) return false;
 
@@ -63,7 +58,7 @@ export class ProviderResourceCache {
    */
   static getCachedPlans(providerId: string): any[] | null {
     const cached = this.plansCache.get(providerId);
-    if (this.isCacheValid(cached, 'plans')) {
+    if (this.isCacheValid(cached, "plans")) {
       console.log(`[Cache HIT] Plans for provider ${providerId}`);
       return cached!.data;
     }
@@ -80,7 +75,9 @@ export class ProviderResourceCache {
       timestamp: Date.now(),
       providerId,
     });
-    console.log(`[Cache SET] Plans for provider ${providerId} (${plans.length} items)`);
+    console.log(
+      `[Cache SET] Plans for provider ${providerId} (${plans.length} items)`,
+    );
   }
 
   /**
@@ -88,7 +85,7 @@ export class ProviderResourceCache {
    */
   static getCachedImages(providerId: string): any[] | null {
     const cached = this.imagesCache.get(providerId);
-    if (this.isCacheValid(cached, 'images')) {
+    if (this.isCacheValid(cached, "images")) {
       console.log(`[Cache HIT] Images for provider ${providerId}`);
       return cached!.data;
     }
@@ -105,32 +102,9 @@ export class ProviderResourceCache {
       timestamp: Date.now(),
       providerId,
     });
-    console.log(`[Cache SET] Images for provider ${providerId} (${images.length} items)`);
-  }
-
-  /**
-   * Get cached marketplace apps for a provider
-   */
-  static getCachedMarketplace(providerId: string): any[] | null {
-    const cached = this.marketplaceCache.get(providerId);
-    if (this.isCacheValid(cached, 'marketplace')) {
-      console.log(`[Cache HIT] Marketplace apps for provider ${providerId}`);
-      return cached!.data;
-    }
-    console.log(`[Cache MISS] Marketplace apps for provider ${providerId}`);
-    return null;
-  }
-
-  /**
-   * Set cached marketplace apps for a provider
-   */
-  static setCachedMarketplace(providerId: string, apps: any[]): void {
-    this.marketplaceCache.set(providerId, {
-      data: apps,
-      timestamp: Date.now(),
-      providerId,
-    });
-    console.log(`[Cache SET] Marketplace apps for provider ${providerId} (${apps.length} items)`);
+    console.log(
+      `[Cache SET] Images for provider ${providerId} (${images.length} items)`,
+    );
   }
 
   /**
@@ -138,7 +112,7 @@ export class ProviderResourceCache {
    */
   static getCachedRegions(providerId: string): any[] | null {
     const cached = this.regionsCache.get(providerId);
-    if (this.isCacheValid(cached, 'regions')) {
+    if (this.isCacheValid(cached, "regions")) {
       console.log(`[Cache HIT] Regions for provider ${providerId}`);
       return cached!.data;
     }
@@ -155,7 +129,9 @@ export class ProviderResourceCache {
       timestamp: Date.now(),
       providerId,
     });
-    console.log(`[Cache SET] Regions for provider ${providerId} (${regions.length} items)`);
+    console.log(
+      `[Cache SET] Regions for provider ${providerId} (${regions.length} items)`,
+    );
   }
 
   /**
@@ -166,7 +142,6 @@ export class ProviderResourceCache {
     console.log(`[Cache INVALIDATE] All resources for provider ${providerId}`);
     this.plansCache.delete(providerId);
     this.imagesCache.delete(providerId);
-    this.marketplaceCache.delete(providerId);
     this.regionsCache.delete(providerId);
   }
 
@@ -175,20 +150,19 @@ export class ProviderResourceCache {
    */
   static invalidateResource(
     providerId: string,
-    resourceType: 'plans' | 'images' | 'marketplace' | 'regions'
+    resourceType: "plans" | "images" | "regions",
   ): void {
-    console.log(`[Cache INVALIDATE] ${resourceType} for provider ${providerId}`);
+    console.log(
+      `[Cache INVALIDATE] ${resourceType} for provider ${providerId}`,
+    );
     switch (resourceType) {
-      case 'plans':
+      case "plans":
         this.plansCache.delete(providerId);
         break;
-      case 'images':
+      case "images":
         this.imagesCache.delete(providerId);
         break;
-      case 'marketplace':
-        this.marketplaceCache.delete(providerId);
-        break;
-      case 'regions':
+      case "regions":
         this.regionsCache.delete(providerId);
         break;
     }
@@ -198,10 +172,9 @@ export class ProviderResourceCache {
    * Clear all caches (useful for testing or maintenance)
    */
   static clearAll(): void {
-    console.log('[Cache CLEAR] All provider resource caches');
+    console.log("[Cache CLEAR] All provider resource caches");
     this.plansCache.clear();
     this.imagesCache.clear();
-    this.marketplaceCache.clear();
     this.regionsCache.clear();
   }
 
@@ -211,7 +184,6 @@ export class ProviderResourceCache {
   static getStats(): {
     plans: { size: number; providers: string[] };
     images: { size: number; providers: string[] };
-    marketplace: { size: number; providers: string[] };
     regions: { size: number; providers: string[] };
   } {
     return {
@@ -222,10 +194,6 @@ export class ProviderResourceCache {
       images: {
         size: this.imagesCache.size,
         providers: Array.from(this.imagesCache.keys()),
-      },
-      marketplace: {
-        size: this.marketplaceCache.size,
-        providers: Array.from(this.marketplaceCache.keys()),
       },
       regions: {
         size: this.regionsCache.size,
@@ -240,7 +208,7 @@ export class ProviderResourceCache {
    */
   static configureTTL(
     resourceType: keyof typeof ProviderResourceCache.CACHE_CONFIGS,
-    ttlMs: number
+    ttlMs: number,
   ): void {
     if (this.CACHE_CONFIGS[resourceType]) {
       this.CACHE_CONFIGS[resourceType].ttlMs = ttlMs;
@@ -253,11 +221,13 @@ export class ProviderResourceCache {
    */
   static setCacheEnabled(
     resourceType: keyof typeof ProviderResourceCache.CACHE_CONFIGS,
-    enabled: boolean
+    enabled: boolean,
   ): void {
     if (this.CACHE_CONFIGS[resourceType]) {
       this.CACHE_CONFIGS[resourceType].enabled = enabled;
-      console.log(`[Cache CONFIG] ${resourceType} caching ${enabled ? 'enabled' : 'disabled'}`);
+      console.log(
+        `[Cache CONFIG] ${resourceType} caching ${enabled ? "enabled" : "disabled"}`,
+      );
     }
   }
 }

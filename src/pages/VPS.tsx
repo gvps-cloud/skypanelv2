@@ -152,7 +152,7 @@ const VPS: React.FC = () => {
       debounceMs: 1000,
       autoSave: true,
       clearOnSubmit: true,
-    }
+    },
   );
   const { token, getOrganization } = useAuth();
   const [_organizationName, _setOrganizationName] = useState<string>("vps");
@@ -163,7 +163,7 @@ const VPS: React.FC = () => {
       if (showCreateModal) {
         if (isFormDirty) {
           const shouldSave = window.confirm(
-            "You have unsaved changes. Would you like to save your progress before going back?"
+            "You have unsaved changes. Would you like to save your progress before going back?",
           );
           if (shouldSave) {
             saveForm();
@@ -192,9 +192,11 @@ const VPS: React.FC = () => {
   const [providerImages, setProviderImages] = useState<any[]>([]);
   const [providerStackScripts, setProviderStackScripts] = useState<any[]>([]);
   const [selectedStackScript, setSelectedStackScript] = useState<any | null>(
-    null
+    null,
   );
-  const [stackscriptData, setStackscriptData] = useState<Record<string, any>>({});
+  const [stackscriptData, setStackscriptData] = useState<Record<string, any>>(
+    {},
+  );
   const [providerOptions, setProviderOptions] = useState<ProviderOption[]>([]);
   const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
   // OS selection redesign: tabs, grouping, and per-OS version selection
@@ -233,7 +235,7 @@ const VPS: React.FC = () => {
   const hasValidProviderSelection = useMemo(() => {
     if (!createForm.provider_id) return false;
     return providerOptions.some(
-      (provider) => provider.id === createForm.provider_id
+      (provider) => provider.id === createForm.provider_id,
     );
   }, [createForm.provider_id, providerOptions]);
 
@@ -277,7 +279,7 @@ const VPS: React.FC = () => {
     // Sort versions descending by numeric parts in label to prefer latest first
     Object.values(groups).forEach((g) => {
       g.versions.sort((a, b) =>
-        b.label.localeCompare(a.label, undefined, { numeric: true })
+        b.label.localeCompare(a.label, undefined, { numeric: true }),
       );
     });
     return groups;
@@ -309,7 +311,7 @@ const VPS: React.FC = () => {
       ? (selectedStackScript.images as string[])
       : [];
     const byId = new Map(
-      (providerImages || []).map((img: any) => [img.id, img.label || img.id])
+      (providerImages || []).map((img: any) => [img.id, img.label || img.id]),
     );
     const knownLabels = allowed
       .filter((id) => byId.has(id))
@@ -387,13 +389,17 @@ const VPS: React.FC = () => {
         .filter((provider) => supportedTypes.has(provider.type))
         .map(async (provider) => {
           try {
-            const response = await fetch(`/api/vps/providers/${provider.id}/regions`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+            const response = await fetch(
+              `/api/vps/providers/${provider.id}/regions`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              },
+            );
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
               throw new Error(
-                data.error || "Failed to load regions for the selected provider"
+                data.error ||
+                  "Failed to load regions for the selected provider",
               );
             }
 
@@ -405,11 +411,16 @@ const VPS: React.FC = () => {
               if (!slug) return;
 
               const baseLabel =
-                typeof region.label === "string" && region.label.trim().length > 0
+                typeof region.label === "string" &&
+                region.label.trim().length > 0
                   ? region.label.trim()
                   : slug;
-              const country = typeof region.country === "string" ? region.country : "";
-              const providerName = provider.name.trim().length > 0 ? provider.name : "Configured Provider";
+              const country =
+                typeof region.country === "string" ? region.country : "";
+              const providerName =
+                provider.name.trim().length > 0
+                  ? provider.name
+                  : "Configured Provider";
 
               const existing = aggregate.get(slug);
               if (existing) {
@@ -431,7 +442,10 @@ const VPS: React.FC = () => {
               }
             });
           } catch (error) {
-            console.error(`Failed to load regions for provider ${provider.id}`, error);
+            console.error(
+              `Failed to load regions for provider ${provider.id}`,
+              error,
+            );
           }
         });
 
@@ -442,28 +456,30 @@ const VPS: React.FC = () => {
 
       await Promise.allSettled(tasks);
 
-      const combined: RegionOption[] = Array.from(aggregate.entries()).map(([id, info]) => {
-        const providerNames = Array.from(info.providerNames).sort((a, b) =>
-          a.localeCompare(b)
-        );
-        const displayLabel =
-          providerNames.length > 0
-            ? `${info.label} (${providerNames.join(", ")})`
-            : info.label;
+      const combined: RegionOption[] = Array.from(aggregate.entries()).map(
+        ([id, info]) => {
+          const providerNames = Array.from(info.providerNames).sort((a, b) =>
+            a.localeCompare(b),
+          );
+          const displayLabel =
+            providerNames.length > 0
+              ? `${info.label} (${providerNames.join(", ")})`
+              : info.label;
 
-        return {
-          id,
-          label: displayLabel,
-          country: info.country,
-          providerIds: Array.from(info.providerIds),
-          providerNames,
-        };
-      });
+          return {
+            id,
+            label: displayLabel,
+            country: info.country,
+            providerIds: Array.from(info.providerIds),
+            providerNames,
+          };
+        },
+      );
 
       combined.sort((a, b) => a.label.localeCompare(b.label));
       setRegionOptions(combined);
     },
-    [token]
+    [token],
   );
 
   useEffect(() => {
@@ -494,7 +510,7 @@ const VPS: React.FC = () => {
 
       const normalized = current.toLowerCase();
       const fallback = providerOptions.find(
-        (provider) => provider.type === normalized
+        (provider) => provider.type === normalized,
       );
       if (fallback) {
         sessionStorage.setItem("vps-provider-filter", fallback.id);
@@ -546,7 +562,7 @@ const VPS: React.FC = () => {
 
     if (providerMapById.has(providerFilter)) {
       return regionOptions.filter((region) =>
-        region.providerIds.includes(providerFilter)
+        region.providerIds.includes(providerFilter),
       );
     }
 
@@ -558,7 +574,7 @@ const VPS: React.FC = () => {
 
     const allowedIds = new Set(providerIds);
     return regionOptions.filter((region) =>
-      region.providerIds.some((id) => allowedIds.has(id))
+      region.providerIds.some((id) => allowedIds.has(id)),
     );
   }, [providerFilter, providerIdsByType, providerMapById, regionOptions]);
 
@@ -572,7 +588,7 @@ const VPS: React.FC = () => {
       return;
     }
     const hasRegion = visibleRegionOptions.some(
-      (region) => region.id === regionFilter
+      (region) => region.id === regionFilter,
     );
     if (!hasRegion) {
       setRegionFilter("all");
@@ -587,20 +603,20 @@ const VPS: React.FC = () => {
     const key = src.includes("ubuntu")
       ? "ubuntu"
       : src.includes("centos")
-      ? "centos"
-      : src.includes("alma")
-      ? "almalinux"
-      : src.includes("rocky")
-      ? "rockylinux"
-      : src.includes("debian")
-      ? "debian"
-      : src.includes("fedora")
-      ? "fedora"
-      : src.includes("alpine")
-      ? "alpine"
-      : src.includes("arch")
-      ? "arch"
-      : null;
+        ? "centos"
+        : src.includes("alma")
+          ? "almalinux"
+          : src.includes("rocky")
+            ? "rockylinux"
+            : src.includes("debian")
+              ? "debian"
+              : src.includes("fedora")
+                ? "fedora"
+                : src.includes("alpine")
+                  ? "alpine"
+                  : src.includes("arch")
+                    ? "arch"
+                    : null;
     if (key) {
       setSelectedOSGroup((prev) => prev || key);
       setSelectedOSVersion((prev) => ({ ...prev, [key]: createForm.image }));
@@ -610,7 +626,10 @@ const VPS: React.FC = () => {
   const providerLabelsById = useMemo<Record<string, string>>(() => {
     const entries = providerOptions.map((provider) => {
       const trimmed = provider.name.trim();
-      return [provider.id, trimmed.length > 0 ? trimmed : "Configured Provider"];
+      return [
+        provider.id,
+        trimmed.length > 0 ? trimmed : "Configured Provider",
+      ];
     });
     return Object.fromEntries(entries) as Record<string, string>;
   }, [providerOptions]);
@@ -621,7 +640,7 @@ const VPS: React.FC = () => {
         id: region.id,
         label: region.label,
       })),
-    [regionOptions]
+    [regionOptions],
   );
 
   // Initialize StackScript data defaults when a script is selected
@@ -666,26 +685,26 @@ const VPS: React.FC = () => {
       const key = src.includes("ubuntu")
         ? "ubuntu"
         : src.includes("centos")
-        ? "centos"
-        : src.includes("alma")
-        ? "almalinux"
-        : src.includes("rocky")
-        ? "rockylinux"
-        : src.includes("debian")
-        ? "debian"
-        : src.includes("fedora")
-        ? "fedora"
-        : src.includes("alpine")
-        ? "alpine"
-        : src.includes("arch")
-        ? "arch"
-        : src.includes("opensuse")
-        ? "opensuse"
-        : src.includes("gentoo")
-        ? "gentoo"
-        : src.includes("slackware")
-        ? "slackware"
-        : null;
+          ? "centos"
+          : src.includes("alma")
+            ? "almalinux"
+            : src.includes("rocky")
+              ? "rockylinux"
+              : src.includes("debian")
+                ? "debian"
+                : src.includes("fedora")
+                  ? "fedora"
+                  : src.includes("alpine")
+                    ? "alpine"
+                    : src.includes("arch")
+                      ? "arch"
+                      : src.includes("opensuse")
+                        ? "opensuse"
+                        : src.includes("gentoo")
+                          ? "gentoo"
+                          : src.includes("slackware")
+                            ? "slackware"
+                            : null;
       if (key) {
         setSelectedOSGroup(key);
         setSelectedOSVersion((prev) => ({ ...prev, [key]: pick }));
@@ -757,7 +776,7 @@ const VPS: React.FC = () => {
               monthly: totalPrice,
             },
           };
-        }
+        },
       );
 
       setProviderPlans(mappedPlans);
@@ -796,8 +815,11 @@ const VPS: React.FC = () => {
         : [];
       const uniqueScripts = Array.from(
         new Map(
-          scripts.map((script: any) => [String(script?.id ?? script?.label ?? Math.random()), script])
-        ).values()
+          scripts.map((script: any) => [
+            String(script?.id ?? script?.label ?? Math.random()),
+            script,
+          ]),
+        ).values(),
       );
       setProviderStackScripts(uniqueScripts);
 
@@ -806,7 +828,7 @@ const VPS: React.FC = () => {
         (script) =>
           script.label === "ssh-key" ||
           script.id === "ssh-key" ||
-          (script.label && script.label.toLowerCase().includes("ssh"))
+          (script.label && script.label.toLowerCase().includes("ssh")),
       );
 
       if (sshKeyScript) {
@@ -817,7 +839,6 @@ const VPS: React.FC = () => {
       toast.error(error.message || "Failed to load deployments");
     }
   }, [token]);
-
 
   const loadInstances = useCallback(async () => {
     setLoading(true);
@@ -842,16 +863,20 @@ const VPS: React.FC = () => {
         // Prefer API-provided plan specs/pricing; fallback to loaded plans; else zeros
         const apiSpecs = i.plan_specs || null;
         const apiPricing = i.plan_pricing || null;
-        const providerType = (i.provider_type as ProviderType | undefined) ?? "linode";
+        const providerType =
+          (i.provider_type as ProviderType | undefined) ?? "linode";
         const providerName =
-          typeof i.provider_name === "string" && i.provider_name.trim().length > 0
+          typeof i.provider_name === "string" &&
+          i.provider_name.trim().length > 0
             ? i.provider_name
-            : typeof i.providerName === "string" && i.providerName.trim().length > 0
-            ? i.providerName
-            : null;
-        const providerId = typeof i.provider_id === "string" ? i.provider_id : null;
+            : typeof i.providerName === "string" &&
+                i.providerName.trim().length > 0
+              ? i.providerName
+              : null;
+        const providerId =
+          typeof i.provider_id === "string" ? i.provider_id : null;
         const planForType = providerPlans.find(
-          (t) => t.id === (i.configuration?.type || "")
+          (t) => t.id === (i.configuration?.type || ""),
         );
         const specs = apiSpecs
           ? {
@@ -861,24 +886,24 @@ const VPS: React.FC = () => {
               transfer: Number(apiSpecs.transfer || 0),
             }
           : planForType
-          ? {
-              vcpus: planForType.vcpus,
-              memory: planForType.memory,
-              disk: planForType.disk,
-              transfer: planForType.transfer,
-            }
-          : { vcpus: 0, memory: 0, disk: 0, transfer: 0 };
+            ? {
+                vcpus: planForType.vcpus,
+                memory: planForType.memory,
+                disk: planForType.disk,
+                transfer: planForType.transfer,
+              }
+            : { vcpus: 0, memory: 0, disk: 0, transfer: 0 };
         const pricing = apiPricing
           ? {
               hourly: Number(apiPricing.hourly || 0),
               monthly: Number(apiPricing.monthly || 0),
             }
           : planForType
-          ? {
-              hourly: planForType.price.hourly,
-              monthly: planForType.price.monthly,
-            }
-          : { hourly: 0, monthly: 0 };
+            ? {
+                hourly: planForType.price.hourly,
+                monthly: planForType.price.monthly,
+              }
+            : { hourly: 0, monthly: 0 };
         const rawProgress =
           i &&
           typeof i.provider_progress === "object" &&
@@ -960,7 +985,7 @@ const VPS: React.FC = () => {
   // Simple polling: refresh instances while any are provisioning or rebooting
   useEffect(() => {
     const hasPending = instances.some(
-      (i) => i.status === "provisioning" || i.status === "rebooting"
+      (i) => i.status === "provisioning" || i.status === "rebooting",
     );
     if (!hasPending) return;
     const interval = setInterval(() => {
@@ -983,7 +1008,7 @@ const VPS: React.FC = () => {
   useEffect(() => {
     if (activeSteps.length === 0) return;
     const isActive = activeSteps.some(
-      (step) => step.originalStepNumber === createStep
+      (step) => step.originalStepNumber === createStep,
     );
     if (!isActive) {
       const fallback = activeSteps[0]?.originalStepNumber ?? 1;
@@ -1009,13 +1034,13 @@ const VPS: React.FC = () => {
           const existingLabels = instances.map((i) => i.label);
           const uniqueLabel = generateUniqueVPSLabel(
             companyName,
-            existingLabels
+            existingLabels,
           );
           setCreateForm({ label: uniqueLabel });
         } catch (error) {
           console.error(
             "Failed to fetch organization or generate label:",
-            error
+            error,
           );
           // Fallback: generate label with default name
           const existingLabels = instances.map((i) => i.label);
@@ -1039,7 +1064,7 @@ const VPS: React.FC = () => {
     setCreateForm,
   ]);
 
-  // Marketplace installs are deprecated/disabled — only configured StackScripts are allowed
+  // Marketplace installs are removed — only account-owned StackScripts are supported
 
   // Performance measurement cleanup - run once on mount
   useEffect(() => {
@@ -1052,7 +1077,7 @@ const VPS: React.FC = () => {
 
   const handleInstanceAction = async (
     instanceId: string,
-    action: "boot" | "shutdown" | "reboot" | "delete"
+    action: "boot" | "shutdown" | "reboot" | "delete",
   ) => {
     try {
       if (action === "delete") {
@@ -1093,7 +1118,7 @@ const VPS: React.FC = () => {
   };
 
   const handleBulkAction = async (
-    action: "boot" | "shutdown" | "reboot" | "delete"
+    action: "boot" | "shutdown" | "reboot" | "delete",
   ) => {
     if (selectedInstances.length === 0) return;
 
@@ -1110,7 +1135,7 @@ const VPS: React.FC = () => {
           selectedInstances.length > 1 ? "s" : ""
         }?\n\n` +
           `The following instances will be restarted:\n` +
-          selectedInstances.map((instance) => `• ${instance.label}`).join("\n")
+          selectedInstances.map((instance) => `• ${instance.label}`).join("\n"),
       );
       if (!confirmed) return;
     }
@@ -1148,7 +1173,7 @@ const VPS: React.FC = () => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok)
           throw new Error(
-            data.error || `Failed to ${action} ${instance.label}`
+            data.error || `Failed to ${action} ${instance.label}`,
           );
 
         results.success++;
@@ -1173,11 +1198,11 @@ const VPS: React.FC = () => {
           action === "boot"
             ? "started"
             : action === "shutdown"
-            ? "stopped"
-            : action === "reboot"
-            ? "restarted"
-            : "deleted"
-        } ${results.success} instance${results.success > 1 ? "s" : ""}`
+              ? "stopped"
+              : action === "reboot"
+                ? "restarted"
+                : "deleted"
+        } ${results.success} instance${results.success > 1 ? "s" : ""}`,
       );
     } else if (results.success > 0 && results.failed > 0) {
       toast.warning(
@@ -1185,17 +1210,17 @@ const VPS: React.FC = () => {
           action === "boot"
             ? "started"
             : action === "shutdown"
-            ? "stopped"
-            : action === "reboot"
-            ? "restarted"
-            : "deleted"
-        } successfully, ${results.failed} failed`
+              ? "stopped"
+              : action === "reboot"
+                ? "restarted"
+                : "deleted"
+        } successfully, ${results.failed} failed`,
       );
     } else if (results.failed > 0) {
       toast.error(
         `Failed to ${action} ${results.failed} instance${
           results.failed > 1 ? "s" : ""
-        }${results.errors.length > 0 ? ":\n" + results.errors.join("\n") : ""}`
+        }${results.errors.length > 0 ? ":\n" + results.errors.join("\n") : ""}`,
       );
     }
   };
@@ -1249,13 +1274,13 @@ const VPS: React.FC = () => {
         toast.success(
           `Successfully deleted ${results.success} instance${
             results.success > 1 ? "s" : ""
-          }`
+          }`,
         );
       } else if (results.success > 0 && results.failed > 0) {
         toast.warning(
           `${results.success} instance${
             results.success > 1 ? "s" : ""
-          } deleted successfully, ${results.failed} failed`
+          } deleted successfully, ${results.failed} failed`,
         );
       } else if (results.failed > 0) {
         toast.error(
@@ -1263,7 +1288,7 @@ const VPS: React.FC = () => {
             results.failed > 1 ? "s" : ""
           }${
             results.errors.length > 0 ? ":\n" + results.errors.join("\n") : ""
-          }`
+          }`,
         );
       }
     } catch (error: any) {
@@ -1362,7 +1387,7 @@ const VPS: React.FC = () => {
 
     if (!createForm.region) {
       mobileToast.error(
-        "Region is required. Please select a plan with a configured region."
+        "Region is required. Please select a plan with a configured region.",
       );
       return;
     }
@@ -1376,14 +1401,20 @@ const VPS: React.FC = () => {
 
     // Fetch plan details for backup pricing (flat rate - Linode does daily backups at one price)
     let backupCostHourly = 0;
-    if (createForm.backups && createForm.backup_frequency && createForm.backup_frequency !== 'none') {
+    if (
+      createForm.backups &&
+      createForm.backup_frequency &&
+      createForm.backup_frequency !== "none"
+    ) {
       try {
         const planRes = await fetch("/api/vps/plans", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const planData = await planRes.json();
-        const plan = (planData.plans || []).find((p: any) => p.id === createForm.type);
-        
+        const plan = (planData.plans || []).find(
+          (p: any) => p.id === createForm.type,
+        );
+
         if (plan) {
           const baseBackupHourly = plan.backup_price_hourly || 0;
           const backupUpchargeHourly = plan.backup_upcharge_hourly || 0;
@@ -1400,7 +1431,7 @@ const VPS: React.FC = () => {
     // Show loading overlay with clear steps
     mobileLoading.showLoading(
       "Checking wallet balance",
-      "Step 1 of 3: Verifying your account has sufficient funds"
+      "Step 1 of 3: Verifying your account has sufficient funds",
     );
 
     // Check wallet balance
@@ -1410,11 +1441,11 @@ const VPS: React.FC = () => {
         mobileLoading.hideLoading();
         mobileToast.error(
           `Insufficient wallet balance. Required: $${totalHourlyCost.toFixed(
-            4
+            4,
           )}/hour, Available: $${walletBalance?.balance.toFixed(2) || "0.00"}`,
           {
             duration: 8000, // Longer duration for important financial information
-          }
+          },
         );
         return;
       }
@@ -1426,7 +1457,7 @@ const VPS: React.FC = () => {
     }
 
     try {
-      // Enforce image compatibility and validate fields for Marketplace/StackScript
+      // Enforce image compatibility and validate fields for StackScripts
       if (selectedStackScript && Array.isArray(selectedStackScript.images)) {
         const allowed = selectedStackScript.images as string[];
         const knownIds = new Set((providerImages || []).map((i: any) => i.id));
@@ -1436,7 +1467,7 @@ const VPS: React.FC = () => {
           if (!createForm.image || !allowedKnown.includes(createForm.image)) {
             mobileLoading.hideLoading();
             mobileToast.error(
-              "Selected OS image is not compatible with the selected application. Choose an allowed image."
+              "Selected OS image is not compatible with the selected application. Choose an allowed image.",
             );
             return;
           }
@@ -1452,21 +1483,20 @@ const VPS: React.FC = () => {
             return (
               val === undefined || val === null || String(val).trim() === ""
             );
-          }
+          },
         );
         if (missing.length > 0) {
           const first = missing[0];
           mobileLoading.hideLoading();
           mobileToast.error(
-            `Please fill required field: ${first.label || first.name}`
+            `Please fill required field: ${first.label || first.name}`,
           );
           return;
         }
       }
 
-      const isMarketplace = Boolean((selectedStackScript as any)?.isMarketplace);
       const imageToUse = createForm.image;
-      
+
       const body: any = {
         provider_id: createForm.provider_id,
         provider_type: createForm.provider_type,
@@ -1477,20 +1507,14 @@ const VPS: React.FC = () => {
         rootPassword: createForm.rootPassword,
         sshKeys: createForm.sshKeys,
         backups: createForm.backups,
-        backup_frequency: createForm.backup_frequency || (createForm.backups ? 'weekly' : 'none'),
+        backup_frequency:
+          createForm.backup_frequency ||
+          (createForm.backups ? "weekly" : "none"),
         privateIP: createForm.privateIP,
       };
-      
-      if (isMarketplace && createForm.provider_type === 'linode') {
-        body.appSlug = (selectedStackScript as any)?.appSlug;
-        body.appData = stackscriptData;
-      } else if (!isMarketplace) {
-        // For regular StackScripts (non-marketplace)
-        body.stackscriptId = selectedStackScript?.id || undefined;
-        body.stackscriptData = selectedStackScript
-          ? stackscriptData
-          : undefined;
-      }
+
+      body.stackscriptId = selectedStackScript?.id || undefined;
+      body.stackscriptData = selectedStackScript ? stackscriptData : undefined;
 
       // Update loading state for VPS creation
       mobileLoading.updateProgress(33, "Step 2 of 3: Provisioning your server");
@@ -1519,15 +1543,15 @@ const VPS: React.FC = () => {
             }. Please add funds to your wallet.`,
             {
               duration: 8000,
-            }
+            },
           );
         } else if (payload.code === "WALLET_NOT_FOUND") {
           mobileToast.error(
-            "No wallet found for your organization. Please contact support."
+            "No wallet found for your organization. Please contact support.",
           );
         } else if (payload.code === "WALLET_CHECK_FAILED") {
           mobileToast.error(
-            "Failed to verify wallet balance. Please try again."
+            "Failed to verify wallet balance. Please try again.",
           );
         } else {
           mobileToast.error(payload.error || "Failed to create VPS");
@@ -1545,13 +1569,13 @@ const VPS: React.FC = () => {
       // VPS creation successful - show appropriate message based on billing status
       if (payload.billing?.success) {
         mobileToast.success(
-          `VPS "${createForm.label}" created successfully! ${payload.billing.message}`
+          `VPS "${createForm.label}" created successfully! ${payload.billing.message}`,
         );
       } else {
         mobileToast.warning(
           `VPS "${createForm.label}" created successfully, but ${
             payload.billing?.message || "initial billing failed"
-          }. You will be billed hourly as normal.`
+          }. You will be billed hourly as normal.`,
         );
       }
 
@@ -1591,7 +1615,9 @@ const VPS: React.FC = () => {
 
       const providerById = providerMapById.get(providerFilter);
       if (providerById) {
-        const normalizedInstanceType = (instance.provider_type || "").toLowerCase();
+        const normalizedInstanceType = (
+          instance.provider_type || ""
+        ).toLowerCase();
         return normalizedInstanceType === providerById.type;
       }
 
@@ -1602,7 +1628,9 @@ const VPS: React.FC = () => {
           return providerIds.includes(instance.provider_id);
         }
 
-        const normalizedInstanceType = (instance.provider_type || "").toLowerCase();
+        const normalizedInstanceType = (
+          instance.provider_type || ""
+        ).toLowerCase();
         return providerIds.some((id) => {
           const provider = providerMapById.get(id);
           if (!provider) return false;
@@ -1624,7 +1652,8 @@ const VPS: React.FC = () => {
       return providerPlans;
     }
     return providerPlans.filter(
-      (plan) => !plan.provider_id || plan.provider_id === createForm.provider_id
+      (plan) =>
+        !plan.provider_id || plan.provider_id === createForm.provider_id,
     );
   }, [providerPlans, createForm.provider_id]);
 
@@ -1640,10 +1669,12 @@ const VPS: React.FC = () => {
 
     const fallbackTotal = activeSteps.length > 0 ? activeSteps.length : 4;
     const fallbackIndex = activeSteps.findIndex(
-      (step) => step.originalStepNumber === createStep
+      (step) => step.originalStepNumber === createStep,
     );
     const fallbackStep =
-      fallbackIndex >= 0 ? fallbackIndex + 1 : Math.min(createStep, fallbackTotal);
+      fallbackIndex >= 0
+        ? fallbackIndex + 1
+        : Math.min(createStep, fallbackTotal);
 
     return {
       currentDisplayStep: fallbackStep,
@@ -1654,9 +1685,9 @@ const VPS: React.FC = () => {
     if (createStep === 1)
       return Boolean(
         createForm.provider_id &&
-          createForm.label &&
-          createForm.type &&
-          createForm.region // Region is now required
+        createForm.label &&
+        createForm.type &&
+        createForm.region, // Region is now required
       );
     if (createStep === 3) return Boolean(createForm.image);
     return true;
@@ -1686,7 +1717,7 @@ const VPS: React.FC = () => {
   // Get dynamic step information from active steps configuration
   const getStepInfo = (originalStepNumber: number) => {
     const stepConfig = activeSteps.find(
-      (s) => s.originalStepNumber === originalStepNumber
+      (s) => s.originalStepNumber === originalStepNumber,
     );
     return stepConfig || null;
   };
@@ -1768,7 +1799,7 @@ const VPS: React.FC = () => {
               {createForm.type &&
                 (() => {
                   const selectedType = providerPlans.find(
-                    (t) => t.id === createForm.type
+                    (t) => t.id === createForm.type,
                   );
                   if (!selectedType) return null;
                   return (
@@ -1838,7 +1869,6 @@ const VPS: React.FC = () => {
           stackscriptData={stackscriptData}
           onStackScriptDataChange={setStackscriptData}
           allowedImagesDisplay={allowedImagesDisplay}
-          
         />
       ),
     },
@@ -1850,7 +1880,7 @@ const VPS: React.FC = () => {
       title: getStepInfo(3)?.title || "App Configuration",
       description:
         getStepInfo(3)?.description ||
-        "Provide required credentials for the selected marketplace app.",
+        "Provide required credentials for the selected StackScript.",
       content: (
         <CreateVPSSteps
           step={3}
@@ -1864,7 +1894,6 @@ const VPS: React.FC = () => {
           stackscriptData={stackscriptData}
           onStackScriptDataChange={setStackscriptData}
           allowedImagesDisplay={allowedImagesDisplay}
-          
         />
       ),
     });
@@ -1911,7 +1940,7 @@ const VPS: React.FC = () => {
           token={token || ""}
         />
       ),
-    }
+    },
   );
 
   const stackFooter = (
@@ -1924,7 +1953,7 @@ const VPS: React.FC = () => {
         onClick={() => {
           if (isFormDirty) {
             const shouldSave = window.confirm(
-              "You have unsaved changes. Would you like to save your progress?"
+              "You have unsaved changes. Would you like to save your progress?",
             );
             if (shouldSave) {
               saveForm();
@@ -2006,10 +2035,17 @@ const VPS: React.FC = () => {
             Compute Control Center
           </h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            Deploy, monitor, and scale your cloud infrastructure from a unified control panel built for performance.
+            Deploy, monitor, and scale your cloud infrastructure from a unified
+            control panel built for performance.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button size="lg" onClick={() => { setCreateStep(1); setShowCreateModal(true); }}>
+            <Button
+              size="lg"
+              onClick={() => {
+                setCreateStep(1);
+                setShowCreateModal(true);
+              }}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Create instance
             </Button>
@@ -2019,7 +2055,7 @@ const VPS: React.FC = () => {
             </Button>
           </div>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <Server className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -2033,11 +2069,15 @@ const VPS: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Running</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Running
+                </p>
                 <p className="text-3xl font-bold tracking-tight">
                   {instances.filter((i) => i.status === "running").length}
                 </p>
-                <p className="text-xs text-muted-foreground">Active instances</p>
+                <p className="text-xs text-muted-foreground">
+                  Active instances
+                </p>
               </div>
               <div className="rounded-lg bg-primary/10 p-3">
                 <Power className="h-6 w-6 text-primary" />
@@ -2050,11 +2090,15 @@ const VPS: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Stopped</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Stopped
+                </p>
                 <p className="text-3xl font-bold tracking-tight">
                   {instances.filter((i) => i.status === "stopped").length}
                 </p>
-                <p className="text-xs text-muted-foreground">Inactive instances</p>
+                <p className="text-xs text-muted-foreground">
+                  Inactive instances
+                </p>
               </div>
               <div className="rounded-lg bg-muted/50 p-3">
                 <PowerOff className="h-6 w-6 text-foreground" />
@@ -2067,9 +2111,15 @@ const VPS: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Total Instances</p>
-                <p className="text-3xl font-bold tracking-tight">{instances.length}</p>
-                <p className="text-xs text-muted-foreground">Across all providers</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Instances
+                </p>
+                <p className="text-3xl font-bold tracking-tight">
+                  {instances.length}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Across all providers
+                </p>
               </div>
               <div className="rounded-lg bg-primary/10 p-3">
                 <Server className="h-6 w-6 text-primary" />
@@ -2082,13 +2132,17 @@ const VPS: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Monthly Spend</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Monthly Spend
+                </p>
                 <p className="text-3xl font-bold tracking-tight">
                   {formatCurrency(
-                    instances.reduce((sum, i) => sum + i.pricing.monthly, 0)
+                    instances.reduce((sum, i) => sum + i.pricing.monthly, 0),
                   )}
                 </p>
-                <p className="text-xs text-muted-foreground">Estimated monthly cost</p>
+                <p className="text-xs text-muted-foreground">
+                  Estimated monthly cost
+                </p>
               </div>
               <div className="rounded-lg bg-muted/50 p-3">
                 <DollarSign className="h-6 w-6 text-foreground" />
@@ -2132,10 +2186,7 @@ const VPS: React.FC = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="vps-region-filter">Region</Label>
-              <Select
-                value={regionFilter}
-                onValueChange={setRegionFilter}
-              >
+              <Select value={regionFilter} onValueChange={setRegionFilter}>
                 <SelectTrigger id="vps-region-filter">
                   <SelectValue placeholder="All regions" />
                 </SelectTrigger>
@@ -2194,7 +2245,7 @@ const VPS: React.FC = () => {
                   variant="secondary"
                   size="sm"
                   disabled={selectedInstances.every(
-                    (instance) => instance.status === "running"
+                    (instance) => instance.status === "running",
                   )}
                 >
                   <Power className="h-4 w-4 mr-1" />
@@ -2205,7 +2256,7 @@ const VPS: React.FC = () => {
                   variant="secondary"
                   size="sm"
                   disabled={selectedInstances.every(
-                    (instance) => instance.status === "stopped"
+                    (instance) => instance.status === "stopped",
                   )}
                 >
                   <PowerOff className="h-4 w-4 mr-1" />
@@ -2216,7 +2267,7 @@ const VPS: React.FC = () => {
                   variant="default"
                   size="sm"
                   disabled={selectedInstances.every(
-                    (instance) => instance.status !== "running"
+                    (instance) => instance.status !== "running",
                   )}
                 >
                   <RotateCcw className="h-4 w-4 mr-1" />
@@ -2253,7 +2304,9 @@ const VPS: React.FC = () => {
             <div>
               <CardTitle>VPS Instances</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">
-                {filteredInstances.length} {filteredInstances.length === 1 ? 'instance' : 'instances'} found
+                {filteredInstances.length}{" "}
+                {filteredInstances.length === 1 ? "instance" : "instances"}{" "}
+                found
               </p>
             </div>
           </div>
@@ -2266,208 +2319,208 @@ const VPS: React.FC = () => {
             onAction={handleInstanceAction}
             onCopy={copyToClipboard}
             onSelectionChange={setSelectedInstances}
-              rowSelection={selectedRowSelection}
-              onRowSelectionChange={setSelectedRowSelection}
-              isLoading={loading && instances.length > 0}
-            />
-          </CardContent>
-        </Card>
+            rowSelection={selectedRowSelection}
+            onRowSelectionChange={setSelectedRowSelection}
+            isLoading={loading && instances.length > 0}
+          />
+        </CardContent>
+      </Card>
 
-        <DialogStack
-          open={showCreateModal}
-          onOpenChange={(isOpen) => {
-            if (!isOpen && isFormDirty) {
-              const shouldSave = window.confirm(
-                "You have unsaved changes. Would you like to save your progress?"
-              );
-              if (shouldSave) {
-                saveForm();
-              }
+      <DialogStack
+        open={showCreateModal}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && isFormDirty) {
+            const shouldSave = window.confirm(
+              "You have unsaved changes. Would you like to save your progress?",
+            );
+            if (shouldSave) {
+              saveForm();
             }
-            setShowCreateModal(isOpen);
-            if (!isOpen) setCreateStep(1);
-          }}
-          steps={creationSteps.filter((step) => {
-            // Filter steps based on active steps configuration
-            const stepNumber =
-              step.id === "plan"
-                ? 1
-                : step.id === "deployments"
+          }
+          setShowCreateModal(isOpen);
+          if (!isOpen) setCreateStep(1);
+        }}
+        steps={creationSteps.filter((step) => {
+          // Filter steps based on active steps configuration
+          const stepNumber =
+            step.id === "plan"
+              ? 1
+              : step.id === "deployments"
                 ? 2
                 : step.id === "os"
-                ? 3
-                : 4;
-            return activeSteps.some((s) => s.originalStepNumber === stepNumber);
-          })}
-          activeStep={
-            activeSteps.findIndex((s) => s.originalStepNumber === createStep)
+                  ? 3
+                  : 4;
+          return activeSteps.some((s) => s.originalStepNumber === stepNumber);
+        })}
+        activeStep={activeSteps.findIndex(
+          (s) => s.originalStepNumber === createStep,
+        )}
+        onStepChange={(index) => {
+          const step = activeSteps[index];
+          if (step) {
+            setCreateStep(step.originalStepNumber);
           }
-          onStepChange={(index) => {
-            const step = activeSteps[index];
-            if (step) {
-              setCreateStep(step.originalStepNumber);
-            }
-          }}
-          title="Create New VPS Instance"
-          description={
-            lastSaved
-              ? `Provision a VPS using our guided setup. Auto-saved ${new Date(
-                  lastSaved
-                ).toLocaleTimeString()}`
-              : "Provision a VPS using our guided setup."
-          }
-          footer={stackFooter}
-          mobileLayout={
-            optimizedSettings.enableAnimations ? "adaptive" : "fullscreen"
-          }
-          touchOptimized={true}
-        />
+        }}
+        title="Create New VPS Instance"
+        description={
+          lastSaved
+            ? `Provision a VPS using our guided setup. Auto-saved ${new Date(
+                lastSaved,
+              ).toLocaleTimeString()}`
+            : "Provision a VPS using our guided setup."
+        }
+        footer={stackFooter}
+        mobileLayout={
+          optimizedSettings.enableAnimations ? "adaptive" : "fullscreen"
+        }
+        touchOptimized={true}
+      />
 
-        {deleteModal.open && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 bg-background dark:bg-opacity-75 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border border w-full max-w-lg shadow-lg rounded-md bg-card">
-              <div className="mt-3">
-                <h3 className="text-lg font-medium text-foreground mb-4">
-                  Confirm Delete
-                </h3>
-                <p className="text-sm text-gray-600 text-muted-foreground">
-                  To confirm deletion, type the server name exactly:
+      {deleteModal.open && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 bg-background dark:bg-opacity-75 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border border w-full max-w-lg shadow-lg rounded-md bg-card">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-foreground mb-4">
+                Confirm Delete
+              </h3>
+              <p className="text-sm text-gray-600 text-muted-foreground">
+                To confirm deletion, type the server name exactly:
+              </p>
+              <div className="mt-2 flex items-center space-x-2">
+                <p className="text-sm font-mono px-2 py-1 bg-secondary text-foreground rounded">
+                  {deleteModal.label}
                 </p>
-                <div className="mt-2 flex items-center space-x-2">
-                  <p className="text-sm font-mono px-2 py-1 bg-secondary text-foreground rounded">
-                    {deleteModal.label}
-                  </p>
-                  <button
-                    onClick={() => copyToClipboard(deleteModal.label)}
-                    className="p-3 min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground active:text-foreground focus:outline-none focus:ring-2 focus:ring-primary rounded-md touch-manipulation transition-colors duration-200"
-                    title="Copy server name"
-                    aria-label="Copy server name to clipboard"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </button>
+                <button
+                  onClick={() => copyToClipboard(deleteModal.label)}
+                  className="p-3 min-h-[44px] min-w-[44px] text-muted-foreground hover:text-foreground active:text-foreground focus:outline-none focus:ring-2 focus:ring-primary rounded-md touch-manipulation transition-colors duration-200"
+                  title="Copy server name"
+                  aria-label="Copy server name to clipboard"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+              </div>
+              <form onSubmit={(e) => e.preventDefault()}>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
+                    Server name
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteModal.input}
+                    onChange={(e) =>
+                      setDeleteModal((m) => ({
+                        ...m,
+                        input: e.target.value,
+                        error: "",
+                      }))
+                    }
+                    placeholder="Type the server name to confirm"
+                    className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-red-500 text-base touch-manipulation"
+                    autoComplete="off"
+                    aria-label="Confirm server name for deletion"
+                  />
                 </div>
-                <form onSubmit={(e) => e.preventDefault()}>
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      Server name
-                    </label>
-                    <input
-                      type="text"
-                      value={deleteModal.input}
-                      onChange={(e) =>
-                        setDeleteModal((m) => ({
-                          ...m,
-                          input: e.target.value,
-                          error: "",
-                        }))
-                      }
-                      placeholder="Type the server name to confirm"
-                      className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-red-500 text-base touch-manipulation"
-                      autoComplete="off"
-                      aria-label="Confirm server name for deletion"
-                    />
-                  </div>
-
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">
-                      Account Password
-                    </label>
-                    <input
-                      type="password"
-                      value={deleteModal.password}
-                      onChange={(e) =>
-                        setDeleteModal((m) => ({
-                          ...m,
-                          password: e.target.value,
-                          error: "",
-                        }))
-                      }
-                      placeholder="Enter your account password"
-                      className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-red-500 text-base touch-manipulation"
-                      autoComplete="current-password"
-                      aria-label="Enter account password to confirm deletion"
-                    />
-                  </div>
-                </form>
 
                 <div className="mt-4">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={deleteModal.confirmCheckbox}
-                      onChange={(e) =>
-                        setDeleteModal((m) => ({
-                          ...m,
-                          confirmCheckbox: e.target.checked,
-                          error: "",
-                        }))
-                      }
-                      className="h-4 w-4 text-red-600 focus:ring-red-500 border rounded"
-                    />
-                    <span className="ml-2 text-sm text-muted-foreground">
-                      I understand that this action cannot be undone and will
-                      permanently delete the VPS and all its data.
-                    </span>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
+                    Account Password
                   </label>
-                  {deleteModal.error && (
-                    <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-                      {deleteModal.error}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end space-y-3 sm:space-y-0 sm:space-x-3 mt-6">
-                  <button
-                    onClick={() =>
-                      setDeleteModal({
-                        open: false,
-                        id: "",
-                        label: "",
-                        input: "",
-                        password: "",
-                        confirmCheckbox: false,
-                        loading: false,
+                  <input
+                    type="password"
+                    value={deleteModal.password}
+                    onChange={(e) =>
+                      setDeleteModal((m) => ({
+                        ...m,
+                        password: e.target.value,
                         error: "",
-                      })
+                      }))
                     }
-                    className="px-6 py-3 min-h-[48px] border border-rounded-md text-sm font-medium text-muted-foreground bg-secondary hover:bg-secondary/80 active:bg-secondary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary touch-manipulation transition-colors duration-200"
-                    disabled={deleteModal.loading}
-                    aria-label="Cancel deletion"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmDeleteInstance}
-                    disabled={
-                      deleteModal.loading ||
-                      deleteModal.input.trim() !== deleteModal.label.trim() ||
-                      !deleteModal.password.trim() ||
-                      !deleteModal.confirmCheckbox
-                    }
-                    className={`px-6 py-3 min-h-[48px] border border-transparent rounded-md shadow-sm text-sm font-medium text-white touch-manipulation transition-colors duration-200 ${
-                      deleteModal.input.trim() === deleteModal.label.trim() &&
-                      deleteModal.password.trim() &&
-                      deleteModal.confirmCheckbox
-                        ? "bg-red-600 hover:bg-red-700 active:bg-red-800"
-                        : "bg-red-400 cursor-not-allowed"
-                    }`}
-                    aria-label="Confirm server deletion"
-                  >
-                    {deleteModal.loading ? "Deleting..." : "Delete Server"}
-                  </button>
+                    placeholder="Enter your account password"
+                    className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-red-500 text-base touch-manipulation"
+                    autoComplete="current-password"
+                    aria-label="Enter account password to confirm deletion"
+                  />
                 </div>
+              </form>
+
+              <div className="mt-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={deleteModal.confirmCheckbox}
+                    onChange={(e) =>
+                      setDeleteModal((m) => ({
+                        ...m,
+                        confirmCheckbox: e.target.checked,
+                        error: "",
+                      }))
+                    }
+                    className="h-4 w-4 text-red-600 focus:ring-red-500 border rounded"
+                  />
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    I understand that this action cannot be undone and will
+                    permanently delete the VPS and all its data.
+                  </span>
+                </label>
+                {deleteModal.error && (
+                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                    {deleteModal.error}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end space-y-3 sm:space-y-0 sm:space-x-3 mt-6">
+                <button
+                  onClick={() =>
+                    setDeleteModal({
+                      open: false,
+                      id: "",
+                      label: "",
+                      input: "",
+                      password: "",
+                      confirmCheckbox: false,
+                      loading: false,
+                      error: "",
+                    })
+                  }
+                  className="px-6 py-3 min-h-[48px] border border-rounded-md text-sm font-medium text-muted-foreground bg-secondary hover:bg-secondary/80 active:bg-secondary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary touch-manipulation transition-colors duration-200"
+                  disabled={deleteModal.loading}
+                  aria-label="Cancel deletion"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteInstance}
+                  disabled={
+                    deleteModal.loading ||
+                    deleteModal.input.trim() !== deleteModal.label.trim() ||
+                    !deleteModal.password.trim() ||
+                    !deleteModal.confirmCheckbox
+                  }
+                  className={`px-6 py-3 min-h-[48px] border border-transparent rounded-md shadow-sm text-sm font-medium text-white touch-manipulation transition-colors duration-200 ${
+                    deleteModal.input.trim() === deleteModal.label.trim() &&
+                    deleteModal.password.trim() &&
+                    deleteModal.confirmCheckbox
+                      ? "bg-red-600 hover:bg-red-700 active:bg-red-800"
+                      : "bg-red-400 cursor-not-allowed"
+                  }`}
+                  aria-label="Confirm server deletion"
+                >
+                  {deleteModal.loading ? "Deleting..." : "Delete Server"}
+                </button>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Bulk Delete Modal */}
-        <BulkDeleteModal
-          isOpen={showBulkDeleteModal}
-          onClose={() => setShowBulkDeleteModal(false)}
-          onConfirm={handleBulkDelete}
-          selectedInstances={selectedInstances}
-          isLoading={bulkDeleteLoading}
-        />
+      {/* Bulk Delete Modal */}
+      <BulkDeleteModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onConfirm={handleBulkDelete}
+        selectedInstances={selectedInstances}
+        isLoading={bulkDeleteLoading}
+      />
     </div>
   );
 };

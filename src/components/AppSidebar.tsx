@@ -84,7 +84,6 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               "providers",
               "regions",
               "vps-plans",
-              "marketplace",
             ].includes(activeAnchor),
             items: [
               { title: "Servers", url: `/admin#servers`, isActive: activeAnchor === "servers" },
@@ -93,7 +92,6 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               { title: "Regions", url: `/admin#regions`, isActive: activeAnchor === "regions" },
               { title: "Providers", url: `/admin#providers`, isActive: activeAnchor === "providers" },
               { title: "VPS Plans", url: `/admin#vps-plans`, isActive: activeAnchor === "vps-plans" },
-              { title: "Marketplace", url: `/admin#marketplace`, isActive: activeAnchor === "marketplace" },
             ],
           },
           {

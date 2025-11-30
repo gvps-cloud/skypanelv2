@@ -46,19 +46,22 @@ const ALL_STEPS = [
     originalStepNumber: 1,
     id: "plan",
     title: "Plan & Label",
-    description: "Configure the server label and pricing plan before provisioning.",
+    description:
+      "Configure the server label and pricing plan before provisioning.",
   },
   {
     originalStepNumber: 2,
     id: "deployments",
-    title: "1-Click Deployments",
-    description: "Optionally provision with a StackScript or continue without one.",
+    title: "StackScript Deployment",
+    description:
+      "Optionally provision with an account StackScript or continue without one.",
   },
   {
     originalStepNumber: 3,
     id: "deployment-config",
     title: "App Configuration",
-    description: "Provide credentials and options required by the selected marketplace app.",
+    description:
+      "Provide credentials and options required by the selected StackScript.",
   },
   {
     originalStepNumber: 4,
@@ -76,16 +79,16 @@ const ALL_STEPS = [
 
 /**
  * Determines which steps should be active based on provider type and user selections
- * 
+ *
  * Rules:
  * - Linode: Always show all steps
  * - Steps are renumbered sequentially for display (e.g., 1, 2, 4 becomes 1, 2, 3)
- * 
- * @param options - Configuration options including provider type and marketplace app selection
+ *
+ * @param options - Configuration options including provider type
  * @returns Array of step configurations with active status and renumbered display numbers
  */
 export function getActiveSteps(
-  options: StepConfigurationOptions
+  options: StepConfigurationOptions,
 ): StepConfiguration[] {
   const { providerType: _providerType } = options;
   const activeSteps = ALL_STEPS.filter((step) => {
@@ -112,43 +115,42 @@ export function getActiveSteps(
 
 /**
  * Gets the dynamic title for a step based on provider type
- * 
+ *
  * @param step - The step configuration
  * @param providerType - The selected provider type
  * @returns The appropriate title for the step
  */
 function getDynamicStepTitle(
-  step: typeof ALL_STEPS[number],
-  _providerType: ProviderType
+  step: (typeof ALL_STEPS)[number],
+  _providerType: ProviderType,
 ): string {
   return step.title;
 }
 
 /**
  * Gets the dynamic description for a step based on provider type and selections
- * 
+ *
  * @param step - The step configuration
  * @param providerType - The selected provider type
- * @param hasMarketplaceApp - Whether a marketplace app is selected
  * @returns The appropriate description for the step
  */
 function getDynamicStepDescription(
-  step: typeof ALL_STEPS[number],
-  _providerType: ProviderType
+  step: (typeof ALL_STEPS)[number],
+  _providerType: ProviderType,
 ): string {
   return step.description;
 }
 
 /**
  * Gets the next active step number from the current step
- * 
+ *
  * @param currentStep - The current original step number
  * @param activeSteps - Array of active step configurations
  * @returns The next active step's original number, or null if at the end
  */
 export function getNextStep(
   currentStep: number,
-  activeSteps: StepConfiguration[]
+  activeSteps: StepConfiguration[],
 ): number | null {
   const activeStepNumbers = activeSteps.map((s) => s.originalStepNumber);
   const currentIndex = activeStepNumbers.indexOf(currentStep);
@@ -162,14 +164,14 @@ export function getNextStep(
 
 /**
  * Gets the previous active step number from the current step
- * 
+ *
  * @param currentStep - The current original step number
  * @param activeSteps - Array of active step configurations
  * @returns The previous active step's original number, or null if at the beginning
  */
 export function getPreviousStep(
   currentStep: number,
-  activeSteps: StepConfiguration[]
+  activeSteps: StepConfiguration[],
 ): number | null {
   const activeStepNumbers = activeSteps.map((s) => s.originalStepNumber);
   const currentIndex = activeStepNumbers.indexOf(currentStep);
@@ -183,17 +185,17 @@ export function getPreviousStep(
 
 /**
  * Gets the display information for the current step
- * 
+ *
  * @param currentStep - The current original step number
  * @param activeSteps - Array of active step configurations
  * @returns Object with current display number and total steps, or null if step not found
  */
 export function getCurrentStepDisplay(
   currentStep: number,
-  activeSteps: StepConfiguration[]
+  activeSteps: StepConfiguration[],
 ): { stepNumber: number; totalSteps: number } | null {
   const step = activeSteps.find((s) => s.originalStepNumber === currentStep);
-  
+
   if (!step) {
     return null;
   }
@@ -206,14 +208,14 @@ export function getCurrentStepDisplay(
 
 /**
  * Checks if a step is active in the current workflow
- * 
+ *
  * @param stepNumber - The original step number to check
  * @param activeSteps - Array of active step configurations
  * @returns True if the step is active, false otherwise
  */
 export function isStepActive(
   stepNumber: number,
-  activeSteps: StepConfiguration[]
+  activeSteps: StepConfiguration[],
 ): boolean {
   return activeSteps.some((s) => s.originalStepNumber === stepNumber);
 }

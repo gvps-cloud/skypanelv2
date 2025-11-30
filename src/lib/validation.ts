@@ -2,7 +2,7 @@
  * Comprehensive form validation utilities for admin user management
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback } from "react";
 
 export interface ValidationRule {
   required?: boolean;
@@ -24,8 +24,12 @@ export interface ValidationResult {
 /**
  * Validates a single field against its rules
  */
-export function validateField(value: any, rules: ValidationRule, fieldName: string): string | null {
-  const stringValue = typeof value === 'string' ? value : String(value || '');
+export function validateField(
+  value: any,
+  rules: ValidationRule,
+  fieldName: string,
+): string | null {
+  const stringValue = typeof value === "string" ? value : String(value || "");
   const trimmedValue = stringValue.trim();
 
   // Required validation
@@ -67,7 +71,10 @@ export function validateField(value: any, rules: ValidationRule, fieldName: stri
 /**
  * Validates an entire form against a schema
  */
-export function validateForm(data: Record<string, any>, schema: ValidationSchema): ValidationResult {
+export function validateForm(
+  data: Record<string, any>,
+  schema: ValidationSchema,
+): ValidationResult {
   const errors: Record<string, string> = {};
 
   for (const [fieldName, rules] of Object.entries(schema)) {
@@ -88,27 +95,30 @@ export function validateForm(data: Record<string, any>, schema: ValidationSchema
  */
 function getPatternErrorMessage(fieldName: string, pattern: RegExp): string {
   const patternString = pattern.toString();
-  
+
   // Email pattern
-  if (patternString.includes('@')) {
-    return 'Please enter a valid email address';
+  if (patternString.includes("@")) {
+    return "Please enter a valid email address";
   }
-  
+
   // Slug pattern (lowercase letters, numbers, hyphens)
-  if (patternString.includes('[a-z0-9-]')) {
-    return 'Only lowercase letters, numbers, and hyphens are allowed';
+  if (patternString.includes("[a-z0-9-]")) {
+    return "Only lowercase letters, numbers, and hyphens are allowed";
   }
-  
+
   // Phone pattern
-  if (patternString.includes('\\d') && (patternString.includes('{') || patternString.includes('+'))) {
-    return 'Please enter a valid phone number';
+  if (
+    patternString.includes("\\d") &&
+    (patternString.includes("{") || patternString.includes("+"))
+  ) {
+    return "Please enter a valid phone number";
   }
-  
+
   // Timezone pattern
-  if (patternString.includes('\\/')) {
-    return 'Please enter a valid timezone (e.g., America/New_York)';
+  if (patternString.includes("\\/")) {
+    return "Please enter a valid timezone (e.g., America/New_York)";
   }
-  
+
   return `${fieldName} format is invalid`;
 }
 
@@ -173,8 +183,8 @@ export const ValidationSchemas = {
     role: {
       required: true,
       custom: (value: string) => {
-        const validRoles = ['owner', 'admin', 'member'];
-        return validRoles.includes(value) ? null : 'Please select a valid role';
+        const validRoles = ["owner", "admin", "member"];
+        return validRoles.includes(value) ? null : "Please select a valid role";
       },
     },
   },
@@ -183,8 +193,8 @@ export const ValidationSchemas = {
     role: {
       required: true,
       custom: (value: string) => {
-        const validRoles = ['owner', 'admin', 'member'];
-        return validRoles.includes(value) ? null : 'Please select a valid role';
+        const validRoles = ["owner", "admin", "member"];
+        return validRoles.includes(value) ? null : "Please select a valid role";
       },
     },
   },
@@ -203,21 +213,25 @@ export const ValidationSchemas = {
     role: {
       required: true,
       custom: (value: string) => {
-        const validRoles = ['user', 'admin'];
-        return validRoles.includes(value) ? null : 'Please select a valid role';
+        const validRoles = ["user", "admin"];
+        return validRoles.includes(value) ? null : "Please select a valid role";
       },
     },
     phone: {
       custom: (value: string) => {
         if (!value || !value.trim()) return null;
-        const cleanPhone = value.replace(/[\s-()]/g, '');
-        return ValidationPatterns.phone.test(cleanPhone) ? null : 'Please enter a valid phone number';
+        const cleanPhone = value.replace(/[\s-()]/g, "");
+        return ValidationPatterns.phone.test(cleanPhone)
+          ? null
+          : "Please enter a valid phone number";
       },
     },
     timezone: {
       custom: (value: string) => {
         if (!value || !value.trim()) return null;
-        return ValidationPatterns.timezone.test(value) ? null : 'Please enter a valid timezone (e.g., America/New_York)';
+        return ValidationPatterns.timezone.test(value)
+          ? null
+          : "Please enter a valid timezone (e.g., America/New_York)";
       },
     },
   },
@@ -226,66 +240,38 @@ export const ValidationSchemas = {
 /**
  * Validates SSH public key format
  */
-export function validateSSHPublicKey(key: string): { valid: boolean; error?: string } {
+export function validateSSHPublicKey(key: string): {
+  valid: boolean;
+  error?: string;
+} {
   if (!key || !key.trim()) {
-    return { valid: false, error: 'SSH public key is required' };
+    return { valid: false, error: "SSH public key is required" };
   }
 
   const trimmedKey = key.trim();
-  
+
   // Basic SSH key format validation
-  const sshKeyPattern = /^(ssh-rsa|ssh-dss|ssh-ed25519|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521)\s+[A-Za-z0-9+/]+[=]{0,3}(\s+.*)?$/;
-  
+  const sshKeyPattern =
+    /^(ssh-rsa|ssh-dss|ssh-ed25519|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521)\s+[A-Za-z0-9+/]+[=]{0,3}(\s+.*)?$/;
+
   if (!sshKeyPattern.test(trimmedKey)) {
-    return { valid: false, error: 'Invalid SSH public key format. Key should start with ssh-rsa, ssh-ed25519, etc.' };
+    return {
+      valid: false,
+      error:
+        "Invalid SSH public key format. Key should start with ssh-rsa, ssh-ed25519, etc.",
+    };
   }
 
   // Check key length (reasonable bounds)
   if (trimmedKey.length < 100) {
-    return { valid: false, error: 'SSH public key appears to be too short' };
+    return { valid: false, error: "SSH public key appears to be too short" };
   }
 
   if (trimmedKey.length > 8192) {
-    return { valid: false, error: 'SSH public key is too long (max 8192 characters)' };
-  }
-
-  return { valid: true };
-}
-
-/**
- * Validates marketplace application configuration
- */
-export function validateMarketplaceApp(
-  appSlug: string, 
-  region?: string, 
-  availableApps?: any[]
-): { valid: boolean; error?: string; errorCode?: string } {
-  if (!appSlug || typeof appSlug !== 'string' || appSlug.trim().length === 0) {
-    return { valid: false, error: 'Application slug is required' };
-  }
-
-  if (!/^[a-z0-9-]+$/.test(appSlug)) {
-    return { 
-      valid: false, 
-      error: 'Application slug must contain only lowercase letters, numbers, and hyphens' 
+    return {
+      valid: false,
+      error: "SSH public key is too long (max 8192 characters)",
     };
-  }
-
-  // If region and available apps are provided, check compatibility
-  if (region && availableApps) {
-    const app = availableApps.find(a => a.slug === appSlug);
-    if (!app) {
-      return { valid: false, error: 'Application not found' };
-    }
-
-    // Check if app is compatible with the region
-    if (app.regions && !app.regions.includes(region)) {
-      return { 
-        valid: false, 
-        error: `Application "${app.name}" is not available in region "${region}"`,
-        errorCode: 'REGION_INCOMPATIBLE'
-      };
-    }
   }
 
   return { valid: true };
@@ -294,29 +280,38 @@ export function validateMarketplaceApp(
 /**
  * Real-time validation hook for forms
  */
-export function useFormValidation(schema: ValidationSchema, _initialData: Record<string, any> = {}) {
+export function useFormValidation(
+  schema: ValidationSchema,
+  _initialData: Record<string, any> = {},
+) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  const validateFieldValue = useCallback((fieldName: string, value: any) => {
-    const rules = schema[fieldName];
-    if (!rules) return;
+  const validateFieldValue = useCallback(
+    (fieldName: string, value: any) => {
+      const rules = schema[fieldName];
+      if (!rules) return;
 
-    const error = validateField(value, rules, fieldName);
-    setErrors(prev => ({
-      ...prev,
-      [fieldName]: error || '',
-    }));
-  }, [schema]);
+      const error = validateField(value, rules, fieldName);
+      setErrors((prev) => ({
+        ...prev,
+        [fieldName]: error || "",
+      }));
+    },
+    [schema],
+  );
 
-  const validateAll = useCallback((data: Record<string, any>) => {
-    const result = validateForm(data, schema);
-    setErrors(result.errors);
-    return result;
-  }, [schema]);
+  const validateAll = useCallback(
+    (data: Record<string, any>) => {
+      const result = validateForm(data, schema);
+      setErrors(result.errors);
+      return result;
+    },
+    [schema],
+  );
 
   const markFieldTouched = useCallback((fieldName: string) => {
-    setTouched(prev => ({
+    setTouched((prev) => ({
       ...prev,
       [fieldName]: true,
     }));
@@ -327,9 +322,12 @@ export function useFormValidation(schema: ValidationSchema, _initialData: Record
     setTouched({});
   }, []);
 
-  const getFieldError = useCallback((fieldName: string) => {
-    return touched[fieldName] ? errors[fieldName] : '';
-  }, [errors, touched]);
+  const getFieldError = useCallback(
+    (fieldName: string) => {
+      return touched[fieldName] ? errors[fieldName] : "";
+    },
+    [errors, touched],
+  );
 
   return {
     errors,
@@ -339,6 +337,6 @@ export function useFormValidation(schema: ValidationSchema, _initialData: Record
     markFieldTouched,
     clearErrors,
     getFieldError,
-    hasErrors: Object.values(errors).some(error => error),
+    hasErrors: Object.values(errors).some((error) => error),
   };
 }

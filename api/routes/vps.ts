@@ -15,7 +15,10 @@ import type {
 } from "../services/linodeService.js";
 import { logActivity } from "../services/activityLogger.js";
 import { encryptSecret } from "../lib/crypto.js";
-import { normalizeProviderToken, getProviderTokenByType } from "../lib/providerTokens.js";
+import {
+  normalizeProviderToken,
+  getProviderTokenByType,
+} from "../lib/providerTokens.js";
 import { BillingService } from "../services/billingService.js";
 import { AuthService } from "../services/authService.js";
 import {
@@ -23,39 +26,26 @@ import {
   parseStoredAllowedRegions,
   shouldFilterByAllowedRegions,
 } from "../lib/providerRegions.js";
-import {
-  normalizeMarketplaceSlugs,
-  parseStoredAllowedMarketplaceApps,
-} from "../lib/providerMarketplace.js";
-import { fetchMarketplaceDisplayNames } from "../lib/providerMarketplaceLabels.js";
 const router = express.Router();
 
 router.use(authenticateToken, requireOrganization);
 
 const DEFAULT_RDNS_BASE_DOMAIN = "ip.rev.skyvps360.xyz";
 
-const isMissingMarketplaceOverridesTable = (err: unknown): boolean => {
-  const message = String((err as any)?.message || "").toLowerCase();
-  return (
-    message.includes("provider_marketplace_overrides") &&
-    (message.includes("does not exist") ||
-      message.includes("not exist") ||
-      message.includes("not find"))
-  );
-};
-
-async function loadActiveProviderToken(providerType: "linode"): Promise<string | null> {
+async function loadActiveProviderToken(
+  providerType: "linode",
+): Promise<string | null> {
   const providerInfo = await getProviderTokenByType(providerType);
   return providerInfo?.token ?? null;
 }
 
 async function loadProviderTokenById(
   providerId: string,
-  providerType: "linode"
+  providerType: "linode",
 ): Promise<string | null> {
   const providerResult = await query(
     "SELECT id, api_key_encrypted FROM service_providers WHERE id = $1 AND type = $2 AND active = true LIMIT 1",
-    [providerId, providerType]
+    [providerId, providerType],
   );
 
   if (providerResult.rows.length === 0) {
@@ -63,16 +53,13 @@ async function loadProviderTokenById(
   }
 
   const providerRow = providerResult.rows[0];
-  return normalizeProviderToken(
-    providerRow.id,
-    providerRow.api_key_encrypted
-  );
+  return normalizeProviderToken(providerRow.id, providerRow.api_key_encrypted);
 }
 
 async function resolveProviderTokenOrRespond(
   res: Response,
   providerType: "linode",
-  providerId?: string
+  providerId?: string,
 ): Promise<string | null> {
   try {
     const token = providerId
@@ -83,7 +70,9 @@ async function resolveProviderTokenOrRespond(
       const isSpecificProvider = Boolean(providerId);
       res.status(503).json({
         error: {
-          code: isSpecificProvider ? "PROVIDER_INACTIVE" : "MISSING_CREDENTIALS",
+          code: isSpecificProvider
+            ? "PROVIDER_INACTIVE"
+            : "MISSING_CREDENTIALS",
           message: isSpecificProvider
             ? `Selected Linode provider is not configured or inactive.`
             : `Linode provider is not configured or inactive.`,
@@ -110,7 +99,7 @@ async function resolveProviderTokenOrRespond(
 router.get("/networking/config", async (_req: Request, res: Response) => {
   try {
     const result = await query(
-      "SELECT rdns_base_domain FROM networking_config ORDER BY updated_at DESC LIMIT 1"
+      "SELECT rdns_base_domain FROM networking_config ORDER BY updated_at DESC LIMIT 1",
     );
     const row = result.rows?.[0] ?? null;
     const baseDomain =
@@ -140,7 +129,7 @@ router.get("/networking/config", async (_req: Request, res: Response) => {
 router.get("/providers", async (_req: Request, res: Response) => {
   try {
     const result = await query(
-      "SELECT id, name, type, active, display_order FROM service_providers WHERE active = true ORDER BY display_order ASC NULLS LAST, created_at DESC"
+      "SELECT id, name, type, active, display_order FROM service_providers WHERE active = true ORDER BY display_order ASC NULLS LAST, created_at DESC",
     );
     res.json({ providers: result.rows || [] });
   } catch (err: any) {
@@ -151,17 +140,17 @@ router.get("/providers", async (_req: Request, res: Response) => {
 
 /**
  * GET /api/vps/plans
- * 
+ *
  * Retrieve available VPS plans for users with backup pricing information.
- * 
+ *
  * Authentication: User authentication required
- * 
+ *
  * Response includes:
  * - Plan details (name, provider, pricing)
  * - Backup pricing breakdown (base + upcharge)
  * - Available backup frequencies (daily/weekly)
  * - Total costs for different backup options
- * 
+ *
  * See: repo-docs/FLEXIBLE_BACKUP_PRICING_API.md for detailed documentation
  */
 router.get("/plans", async (_req: Request, res: Response) => {
@@ -185,7 +174,7 @@ router.get("/plans", async (_req: Request, res: Response) => {
          specifications
        FROM vps_plans
        WHERE active = true
-       ORDER BY created_at DESC`
+       ORDER BY created_at DESC`,
     );
 
     const plans = (result.rows || []).map((row: any) => ({
@@ -335,7 +324,7 @@ const normalizeSeries = (series: unknown): MetricPoint[] => {
     .map(([timestamp, value]) => ({ timestamp, value }))
     .filter(
       (point) =>
-        Number.isFinite(point.timestamp) && Number.isFinite(point.value)
+        Number.isFinite(point.timestamp) && Number.isFinite(point.value),
     );
 };
 
@@ -359,7 +348,7 @@ const summarizeSeries = (series: MetricPoint[]): MetricSummary => {
 };
 
 const deriveTimeframe = (
-  collections: MetricPoint[][]
+  collections: MetricPoint[][],
 ): { start: number | null; end: number | null } => {
   const timestamps: number[] = [];
   collections.forEach((series) => {
@@ -429,7 +418,7 @@ const extractTransferUsedBytes = (value: unknown): number => {
 };
 
 const mapBackupSummary = (
-  backup: LinodeBackupSummary | null | undefined
+  backup: LinodeBackupSummary | null | undefined,
 ): BackupSummaryPayload | null => {
   if (!backup || typeof backup !== "object") {
     return null;
@@ -688,7 +677,7 @@ const PROGRESS_ACTION_MAP: Record<string, string[]> = {
 
 const pickProgressEvent = (
   events: Array<Record<string, any>>,
-  instanceStatus: string
+  instanceStatus: string,
 ): Record<string, any> | null => {
   if (!Array.isArray(events) || events.length === 0) {
     return null;
@@ -699,7 +688,7 @@ const pickProgressEvent = (
 
   if (Array.isArray(actionCandidates) && actionCandidates.length > 0) {
     const actionSet = new Set(
-      actionCandidates.map((action) => action.toLowerCase())
+      actionCandidates.map((action) => action.toLowerCase()),
     );
     const byAction = events.find((event) => {
       const action =
@@ -729,14 +718,14 @@ const pickProgressEvent = (
   }
 
   const anyWithPercent = events.find(
-    (event) => clampPercent(event?.percentComplete ?? null) !== null
+    (event) => clampPercent(event?.percentComplete ?? null) !== null,
   );
   return anyWithPercent || null;
 };
 
 const deriveProgressFromEvents = (
   instanceStatus: string,
-  events: Array<Record<string, any>>
+  events: Array<Record<string, any>>,
 ): {
   percent: number | null;
   action: string | null;
@@ -791,7 +780,7 @@ const ensureRegionLabelCache = async (): Promise<Map<string, string>> => {
   try {
     const regions = await linodeService.getLinodeRegions();
     regionLabelCache = new Map(
-      regions.map((region) => [region.id, region.label])
+      regions.map((region) => [region.id, region.label]),
     );
   } catch (err) {
     console.warn("Failed to populate region label cache:", err);
@@ -801,7 +790,7 @@ const ensureRegionLabelCache = async (): Promise<Map<string, string>> => {
 };
 
 const resolveRegionLabel = async (
-  regionId: string | null
+  regionId: string | null,
 ): Promise<string | null> => {
   if (!regionId) {
     return null;
@@ -813,7 +802,7 @@ const resolveRegionLabel = async (
   try {
     const regions = await linodeService.getLinodeRegions();
     regionLabelCache = new Map(
-      regions.map((region) => [region.id, region.label])
+      regions.map((region) => [region.id, region.label]),
     );
     return regionLabelCache.get(regionId) ?? null;
   } catch (err) {
@@ -824,7 +813,7 @@ const resolveRegionLabel = async (
 
 const resolvePlanMeta = async (
   instanceRow: any,
-  providerDetail: LinodeInstance | null
+  providerDetail: LinodeInstance | null,
 ): Promise<PlanMeta> => {
   let planRow: any = null;
   const configuration =
@@ -847,14 +836,14 @@ const resolvePlanMeta = async (
     if (!planRow && configuredType) {
       const res = await query(
         "SELECT * FROM vps_plans WHERE provider_plan_id = $1 LIMIT 1",
-        [configuredType]
+        [configuredType],
       );
       planRow = res.rows[0] ?? null;
     }
     if (!planRow && providerType) {
       const res = await query(
         "SELECT * FROM vps_plans WHERE provider_plan_id = $1 LIMIT 1",
-        [providerType]
+        [providerType],
       );
       planRow = res.rows[0] ?? null;
     }
@@ -865,7 +854,7 @@ const resolvePlanMeta = async (
   const providerPlanId =
     typeof planRow?.provider_plan_id === "string"
       ? String(planRow.provider_plan_id)
-      : configuredType ?? providerType ?? null;
+      : (configuredType ?? providerType ?? null);
 
   const specs: PlanSpecs = { vcpus: 0, memory: 0, disk: 0, transfer: 0 };
   const pricing: PlanPricing = { hourly: 0, monthly: 0 };
@@ -953,7 +942,7 @@ router.get("/apps", async (req: Request, res: Response) => {
       `SELECT stackscript_id, label, description, is_enabled, display_order, metadata
          FROM vps_stackscript_configs
         WHERE is_enabled = TRUE
-        ORDER BY display_order ASC, created_at ASC`
+        ORDER BY display_order ASC, created_at ASC`,
     );
 
     const configs = configsRes.rows || [];
@@ -963,7 +952,9 @@ router.get("/apps", async (req: Request, res: Response) => {
     }
 
     // Try to fetch provider-owned StackScripts (mineOnly true)
-    const ownedScripts = await linodeService.getLinodeStackScripts({ mineOnly: true }).catch(() => []);
+    const ownedScripts = await linodeService
+      .getLinodeStackScripts({ mineOnly: true })
+      .catch(() => []);
     const scriptMap = new Map<number, any>();
     ownedScripts.forEach((s: any) => scriptMap.set(Number(s.id), s));
 
@@ -976,14 +967,20 @@ router.get("/apps", async (req: Request, res: Response) => {
           script = await linodeService.getStackScript(id);
         } catch (err) {
           // If a script cannot be fetched, skip it (admins can fix via admin UI)
-          console.warn(`Configured StackScript ${id} could not be loaded:`, err?.message || err);
+          console.warn(
+            `Configured StackScript ${id} could not be loaded:`,
+            err?.message || err,
+          );
           continue;
         }
       }
 
       const displayLabel = row.label || script.label || `StackScript ${id}`;
-      const displayDescription = row.description || script.description || script.rev_note || "";
-      const user_defined_fields = Array.isArray(script.user_defined_fields) ? script.user_defined_fields : [];
+      const displayDescription =
+        row.description || script.description || script.rev_note || "";
+      const user_defined_fields = Array.isArray(script.user_defined_fields)
+        ? script.user_defined_fields
+        : [];
 
       apps.push({
         slug: `stackscript-${id}`,
@@ -1002,127 +999,11 @@ router.get("/apps", async (req: Request, res: Response) => {
     res.json({ apps });
   } catch (err: any) {
     console.error("Configured apps fetch error:", err);
-    res.status(500).json({ error: err.message || "Failed to fetch configured apps" });
+    res
+      .status(500)
+      .json({ error: err.message || "Failed to fetch configured apps" });
   }
 });
-
-router.get(
-  "/providers/:providerId/marketplace",
-  async (req: Request, res: Response) => {
-    try {
-      const { providerId } = req.params;
-      const providerResult = await query(
-        `SELECT id, name, type, allowed_marketplace_apps, active
-           FROM service_providers
-          WHERE id = $1
-          LIMIT 1`,
-        [providerId]
-      );
-
-      if (providerResult.rows.length === 0) {
-        return res.status(404).json({ error: "Provider not found" });
-      }
-
-      const providerRow = providerResult.rows[0];
-
-      if (!providerRow.active) {
-        return res.status(400).json({ error: "Provider is inactive" });
-      }
-
-      if (providerRow.type !== "linode") {
-        return res
-          .status(400)
-          .json({ error: "Marketplace apps are only available for Linode providers" });
-      }
-
-      let allowedSlugs: string[] = [];
-      try {
-        const overrides = await query(
-          "SELECT app_slug FROM provider_marketplace_overrides WHERE provider_id = $1",
-          [providerId]
-        );
-        if (overrides.rows.length > 0) {
-          allowedSlugs = normalizeMarketplaceSlugs(
-            overrides.rows
-              .map((row: any) => (typeof row.app_slug === "string" ? row.app_slug : ""))
-              .filter(Boolean)
-          );
-        }
-      } catch (overrideErr) {
-        if (!isMissingMarketplaceOverridesTable(overrideErr)) {
-          throw overrideErr;
-        }
-      }
-
-      if (allowedSlugs.length === 0) {
-        allowedSlugs = parseStoredAllowedMarketplaceApps(
-          providerRow.allowed_marketplace_apps ?? null
-        );
-      }
-
-      const displayNameMap = await fetchMarketplaceDisplayNames(providerId);
-
-      let apps = await linodeService.listMarketplaceApps(
-        allowedSlugs.length > 0 ? allowedSlugs : undefined
-      );
-
-      if (allowedSlugs.length > 0) {
-        const allowedSet = new Set(allowedSlugs);
-        apps = apps.filter((app: any) => {
-          const slug = typeof app?.slug === "string" ? app.slug.trim().toLowerCase() : "";
-          return slug && allowedSet.has(slug);
-        });
-      }
-
-      const categories: Record<string, number> = {};
-      const payloadApps = apps.map((app: any) => {
-        const slugRaw = typeof app?.slug === "string" ? app.slug.trim().toLowerCase() : "";
-        const category =
-          typeof app?.category === "string" && app.category.trim().length > 0
-            ? app.category.trim()
-            : "Applications";
-        categories[category] = (categories[category] || 0) + 1;
-        const displayName =
-          (slugRaw && displayNameMap.get(slugRaw)) ||
-          app.display_name ||
-          app.name ||
-          app.slug;
-        return {
-          slug: app.slug,
-          name: app.name,
-          display_name: displayName,
-          description: app.description,
-          summary: app.summary,
-          category,
-          deploy_count: app.deploy_count ?? 0,
-          stackscript_id: app.stackscript_id,
-          user_defined_fields: Array.isArray(app.user_defined_fields)
-            ? app.user_defined_fields
-            : [],
-          secret_fields: Array.isArray(app.secret_fields) ? app.secret_fields : [],
-          images: Array.isArray(app.images) ? app.images : [],
-        };
-      });
-
-      res.json({
-        provider: {
-          id: providerId,
-          name: providerRow.name,
-          type: providerRow.type,
-        },
-        mode: allowedSlugs.length > 0 ? "custom" : "default",
-        allowedApps: allowedSlugs,
-        apps: payloadApps,
-        categories,
-      });
-    } catch (err: any) {
-      console.error("Provider marketplace fetch error:", err);
-      res
-        .status(500)
-        .json({ error: err.message || "Failed to load provider marketplace apps" });
-    }
-  }
-);
 
 // Get available Linode images
 router.get("/images", async (req: Request, res: Response) => {
@@ -1136,78 +1017,89 @@ router.get("/images", async (req: Request, res: Response) => {
 });
 
 // Get available regions for a specific provider
-router.get("/providers/:providerId/regions", async (req: Request, res: Response) => {
-  try {
-    const { providerId } = req.params;
-
-    // Fetch provider details
-    const providerResult = await query(
-      "SELECT id, type, api_key_encrypted, allowed_regions FROM service_providers WHERE id = $1 AND active = true LIMIT 1",
-      [providerId]
-    );
-
-    if (providerResult.rows.length === 0) {
-      return res.status(404).json({ error: "Provider not found or inactive" });
-    }
-
-    const provider = providerResult.rows[0];
-    const providerType = provider.type as "linode";
-
-    let allowedRegions: string[] = [];
-
+router.get(
+  "/providers/:providerId/regions",
+  async (req: Request, res: Response) => {
     try {
-      const overridesResult = await query(
-        "SELECT region FROM provider_region_overrides WHERE provider_id = $1",
-        [providerId]
+      const { providerId } = req.params;
+
+      // Fetch provider details
+      const providerResult = await query(
+        "SELECT id, type, api_key_encrypted, allowed_regions FROM service_providers WHERE id = $1 AND active = true LIMIT 1",
+        [providerId],
       );
 
-      if (overridesResult.rows.length > 0) {
-        allowedRegions = normalizeRegionList(
-          overridesResult.rows
-            .map((row) => row.region)
-            .filter((value): value is string => typeof value === "string")
+      if (providerResult.rows.length === 0) {
+        return res
+          .status(404)
+          .json({ error: "Provider not found or inactive" });
+      }
+
+      const provider = providerResult.rows[0];
+      const providerType = provider.type as "linode";
+
+      let allowedRegions: string[] = [];
+
+      try {
+        const overridesResult = await query(
+          "SELECT region FROM provider_region_overrides WHERE provider_id = $1",
+          [providerId],
+        );
+
+        if (overridesResult.rows.length > 0) {
+          allowedRegions = normalizeRegionList(
+            overridesResult.rows
+              .map((row) => row.region)
+              .filter((value): value is string => typeof value === "string"),
+          );
+        }
+      } catch (overrideErr: any) {
+        const message = String(overrideErr?.message || "").toLowerCase();
+        const relationMissing =
+          message.includes("relation") &&
+          message.includes("provider_region_overrides");
+        if (!relationMissing) {
+          throw overrideErr;
+        }
+      }
+
+      if (allowedRegions.length === 0) {
+        allowedRegions = parseStoredAllowedRegions(
+          provider.allowed_regions ?? null,
         );
       }
-    } catch (overrideErr: any) {
-      const message = String(overrideErr?.message || "").toLowerCase();
-      const relationMissing =
-        message.includes("relation") && message.includes("provider_region_overrides");
-      if (!relationMissing) {
-        throw overrideErr;
-      }
-    }
 
-    if (allowedRegions.length === 0) {
-      allowedRegions = parseStoredAllowedRegions(provider.allowed_regions ?? null);
-    }
-
-    const normalizedAllowedRegions = allowedRegions.length > 0 ? allowedRegions : [];
-    const shouldApplyAllowedRegionFilter = shouldFilterByAllowedRegions(normalizedAllowedRegions);
-
-    if (providerType !== "linode") {
-      return res.status(400).json({ error: "Unsupported provider type" });
-    }
-
-    const allRegions = await linodeService.getLinodeRegions();
-
-    // Filter regions based on allowed_regions configuration
-    let regions = allRegions;
-    if (shouldApplyAllowedRegionFilter) {
-      const allowedSet = new Set(normalizedAllowedRegions);
-      regions = allRegions.filter(
-        (region) =>
-          region &&
-          typeof region.id === "string" &&
-          allowedSet.has(region.id.toLowerCase())
+      const normalizedAllowedRegions =
+        allowedRegions.length > 0 ? allowedRegions : [];
+      const shouldApplyAllowedRegionFilter = shouldFilterByAllowedRegions(
+        normalizedAllowedRegions,
       );
-    }
 
-    res.json({ regions });
-  } catch (err: any) {
-    console.error("Regions fetch error:", err);
-    res.status(500).json({ error: err.message || "Failed to fetch regions" });
-  }
-});
+      if (providerType !== "linode") {
+        return res.status(400).json({ error: "Unsupported provider type" });
+      }
+
+      const allRegions = await linodeService.getLinodeRegions();
+
+      // Filter regions based on allowed_regions configuration
+      let regions = allRegions;
+      if (shouldApplyAllowedRegionFilter) {
+        const allowedSet = new Set(normalizedAllowedRegions);
+        regions = allRegions.filter(
+          (region) =>
+            region &&
+            typeof region.id === "string" &&
+            allowedSet.has(region.id.toLowerCase()),
+        );
+      }
+
+      res.json({ regions });
+    } catch (err: any) {
+      console.error("Regions fetch error:", err);
+      res.status(500).json({ error: err.message || "Failed to fetch regions" });
+    }
+  },
+);
 
 // Get available Linode stack scripts
 router.get("/stackscripts", async (req: Request, res: Response) => {
@@ -1215,7 +1107,7 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
   const configuredOnly = isTruthy(
     (req.query as any).configured ||
       (req.query as any).allowed ||
-      (req.query as any).allowedOnly
+      (req.query as any).allowedOnly,
   );
   const mineOnly = isTruthy(req.query.mine);
 
@@ -1227,7 +1119,7 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
           `SELECT stackscript_id, label, description, is_enabled, display_order, metadata
              FROM vps_stackscript_configs
             WHERE is_enabled = TRUE
-            ORDER BY display_order ASC, created_at ASC`
+            ORDER BY display_order ASC, created_at ASC`,
         );
         configs = configRes.rows || [];
       } catch (configErr: any) {
@@ -1237,7 +1129,7 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
           (msg.includes("relation") && msg.includes("vps_stackscript_configs"))
         ) {
           console.warn(
-            "StackScript config table missing; returning empty configured list"
+            "StackScript config table missing; returning empty configured list",
           );
           return res.json({ stackscripts: [] });
         }
@@ -1251,12 +1143,14 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
       let ownedScripts: any[] = [];
       const scriptMap = new Map<number, any>();
       try {
-        ownedScripts = await linodeService.getLinodeStackScripts({ mineOnly: true });
+        ownedScripts = await linodeService.getLinodeStackScripts({
+          mineOnly: true,
+        });
         ownedScripts.forEach((script) => scriptMap.set(script.id, script));
       } catch (err) {
         console.warn(
           "Failed to fetch owned StackScripts list, will query individually:",
-          err
+          err,
         );
       }
 
@@ -1309,14 +1203,16 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
         return String(a?.label || "").localeCompare(
           String(b?.label || ""),
           undefined,
-          { sensitivity: "base" }
+          { sensitivity: "base" },
         );
       });
 
       return res.json({ stackscripts: enriched });
     }
 
-    const stackscripts = await linodeService.getLinodeStackScripts({ mineOnly });
+    const stackscripts = await linodeService.getLinodeStackScripts({
+      mineOnly,
+    });
     return res.json({ stackscripts });
   } catch (err: any) {
     console.error("StackScripts fetch error:", err);
@@ -1330,9 +1226,9 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
 router.get("/linode/ssh-keys", async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
-    
+
     if (!userId) {
-      res.status(401).json({ error: 'Authentication required' });
+      res.status(401).json({ error: "Authentication required" });
       return;
     }
 
@@ -1346,20 +1242,20 @@ router.get("/linode/ssh-keys", async (req: Request, res: Response) => {
 
     // Get user's SSH keys from database to filter
     const userKeysResult = await query(
-      `SELECT linode_key_id 
-       FROM user_ssh_keys 
+      `SELECT linode_key_id
+       FROM user_ssh_keys
        WHERE user_id = $1 AND linode_key_id IS NOT NULL`,
-      [userId]
+      [userId],
     );
 
     // Create a set of user's Linode key IDs for efficient filtering
     const userLinodeKeyIds = new Set(
-      userKeysResult.rows.map((row: any) => String(row.linode_key_id))
+      userKeysResult.rows.map((row: any) => String(row.linode_key_id)),
     );
 
     // Filter Linode keys to only include user's keys
-    const filteredKeys = allLinodeKeys.filter((key: any) => 
-      userLinodeKeyIds.has(String(key.id))
+    const filteredKeys = allLinodeKeys.filter((key: any) =>
+      userLinodeKeyIds.has(String(key.id)),
     );
 
     res.json({
@@ -1388,7 +1284,7 @@ router.get("/", async (req: Request, res: Response) => {
     const organizationId = (req as any).user.organizationId;
     const result = await query(
       "SELECT * FROM vps_instances WHERE organization_id = $1 ORDER BY created_at DESC",
-      [organizationId]
+      [organizationId],
     );
 
     const rows = result.rows || [];
@@ -1397,22 +1293,29 @@ router.get("/", async (req: Request, res: Response) => {
       new Set(
         rows
           .map((row) => row.provider_id)
-          .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
-      )
+          .filter(
+            (id): id is string =>
+              typeof id === "string" && id.trim().length > 0,
+          ),
+      ),
     );
 
-    const providerMetadata = new Map<string, { id: string; name: string | null; type: ProviderType }>();
+    const providerMetadata = new Map<
+      string,
+      { id: string; name: string | null; type: ProviderType }
+    >();
     if (providerIdList.length > 0) {
       try {
         const providersRes = await query(
           `SELECT id, name, type FROM service_providers WHERE id = ANY($1::uuid[])`,
-          [providerIdList]
+          [providerIdList],
         );
         for (const providerRow of providersRes.rows || []) {
           providerMetadata.set(providerRow.id, {
             id: providerRow.id,
             name:
-              typeof providerRow.name === "string" && providerRow.name.trim().length > 0
+              typeof providerRow.name === "string" &&
+              providerRow.name.trim().length > 0
                 ? providerRow.name
                 : null,
             type: (providerRow.type || "linode") as ProviderType,
@@ -1425,24 +1328,33 @@ router.get("/", async (req: Request, res: Response) => {
 
     let linodeRegionLabelMap: Record<string, string> = {};
     const hasLinodeRows = rows.some((row) => {
-      const providerInfo = row.provider_id ? providerMetadata.get(row.provider_id) : null;
-      const inferredType = (row.provider_type || providerInfo?.type || "linode") as ProviderType;
+      const providerInfo = row.provider_id
+        ? providerMetadata.get(row.provider_id)
+        : null;
+      const inferredType = (row.provider_type ||
+        providerInfo?.type ||
+        "linode") as ProviderType;
       return inferredType === "linode";
     });
     if (hasLinodeRows) {
       try {
         const regions = await linodeService.getLinodeRegions();
-        linodeRegionLabelMap = Object.fromEntries(regions.map((region) => [region.id, region.label]));
+        linodeRegionLabelMap = Object.fromEntries(
+          regions.map((region) => [region.id, region.label]),
+        );
       } catch (regionErr) {
         console.warn("Failed to fetch Linode regions for labeling:", regionErr);
       }
     }
 
-
     const enriched = await Promise.all(
       rows.map(async (row) => {
-        const providerInfo = row.provider_id ? providerMetadata.get(row.provider_id) : null;
-        const providerType = (row.provider_type || providerInfo?.type || "linode") as ProviderType;
+        const providerInfo = row.provider_id
+          ? providerMetadata.get(row.provider_id)
+          : null;
+        const providerType = (row.provider_type ||
+          providerInfo?.type ||
+          "linode") as ProviderType;
         (row as any).provider_type = providerType;
         const providerName = providerInfo?.name ?? null;
         (row as any).provider_name = providerName;
@@ -1456,16 +1368,20 @@ router.get("/", async (req: Request, res: Response) => {
 
         if (providerType === "linode" && Number.isFinite(providerInstanceId)) {
           try {
-            const detail = await linodeService.getLinodeInstance(providerInstanceId);
+            const detail =
+              await linodeService.getLinodeInstance(providerInstanceId);
 
             const currentIp =
-              Array.isArray(detail.ipv4) && detail.ipv4.length > 0 ? detail.ipv4[0] : null;
-            const normalized = detail.status === "offline" ? "stopped" : detail.status;
+              Array.isArray(detail.ipv4) && detail.ipv4.length > 0
+                ? detail.ipv4[0]
+                : null;
+            const normalized =
+              detail.status === "offline" ? "stopped" : detail.status;
 
             if (row.status !== normalized || row.ip_address !== currentIp) {
               await query(
                 "UPDATE vps_instances SET status = $1, ip_address = $2, updated_at = NOW() WHERE id = $3",
-                [normalized, currentIp, row.id]
+                [normalized, currentIp, row.id],
               );
               row.status = normalized;
               row.ip_address = currentIp;
@@ -1484,7 +1400,8 @@ router.get("/", async (req: Request, res: Response) => {
             row.configuration = newConf;
 
             const regionCode = newConf.region || "";
-            (row as any).region_label = linodeRegionLabelMap[regionCode] ?? null;
+            (row as any).region_label =
+              linodeRegionLabelMap[regionCode] ?? null;
 
             let planSpecs = { vcpus: 0, memory: 0, disk: 0, transfer: 0 };
             let planPricing = { hourly: 0, monthly: 0 };
@@ -1493,14 +1410,14 @@ router.get("/", async (req: Request, res: Response) => {
               if (row.plan_id) {
                 const byId = await query(
                   "SELECT * FROM vps_plans WHERE id = $1 LIMIT 1",
-                  [row.plan_id]
+                  [row.plan_id],
                 );
                 planRow = byId.rows[0] || null;
               }
               if (!planRow && newConf.type) {
                 const byProviderId = await query(
                   "SELECT * FROM vps_plans WHERE provider_plan_id = $1 LIMIT 1",
-                  [newConf.type]
+                  [newConf.type],
                 );
                 planRow = byProviderId.rows[0] || null;
               }
@@ -1514,7 +1431,9 @@ router.get("/", async (req: Request, res: Response) => {
                     : undefined) ??
                   0;
                 const memoryMb =
-                  (typeof specs.memory === "number" ? specs.memory : undefined) ??
+                  (typeof specs.memory === "number"
+                    ? specs.memory
+                    : undefined) ??
                   (typeof specs.memory_gb === "number"
                     ? specs.memory_gb * 1024
                     : undefined) ??
@@ -1570,27 +1489,29 @@ router.get("/", async (req: Request, res: Response) => {
               typeof row.status === "string" ? row.status.toLowerCase() : "";
             if (
               ["provisioning", "rebooting", "restoring", "backing_up"].includes(
-                normalizedStatus
+                normalizedStatus,
               )
             ) {
               try {
                 const eventsData = await linodeService.getLinodeInstanceEvents(
                   providerInstanceId,
-                  { pageSize: 50 }
+                  { pageSize: 50 },
                 );
                 const events = Array.isArray((eventsData as any)?.data)
-                  ? (eventsData as any).data.map(mapEventSummary).filter(Boolean)
+                  ? (eventsData as any).data
+                      .map(mapEventSummary)
+                      .filter(Boolean)
                   : [];
                 const progress = deriveProgressFromEvents(
                   normalizedStatus,
-                  events
+                  events,
                 );
                 (row as any).provider_progress = progress;
                 (row as any).progress_percent = progress?.percent ?? null;
               } catch (eventError) {
                 console.warn(
                   "Failed to fetch instance events for progress:",
-                  eventError
+                  eventError,
                 );
               }
             } else {
@@ -1613,7 +1534,7 @@ router.get("/", async (req: Request, res: Response) => {
         }
 
         return row;
-      })
+      }),
     );
 
     res.json({ instances: enriched });
@@ -1632,7 +1553,7 @@ router.get("/uptime-summary", async (req: Request, res: Response) => {
 
     // Fetch all VPS instances for the organization with plan data
     const result = await query(
-      `SELECT 
+      `SELECT
         vi.id,
         vi.label,
         vi.status,
@@ -1646,7 +1567,7 @@ router.get("/uptime-summary", async (req: Request, res: Response) => {
       LEFT JOIN vps_plans vp ON vi.plan_id::uuid = vp.id
       WHERE vi.organization_id = $1
       ORDER BY vi.created_at DESC`,
-      [organizationId]
+      [organizationId],
     );
 
     const instances = result.rows || [];
@@ -1723,7 +1644,7 @@ router.get("/:id", async (req: Request, res: Response) => {
     const organizationId = (req as any).user.organizationId;
     const detailRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2 LIMIT 1",
-      [id, organizationId]
+      [id, organizationId],
     );
 
     if (detailRes.rows.length === 0) {
@@ -1749,11 +1670,12 @@ router.get("/:id", async (req: Request, res: Response) => {
       try {
         const providerResult = await query(
           "SELECT name, api_key_encrypted FROM service_providers WHERE id = $1",
-          [instanceRow.provider_id]
+          [instanceRow.provider_id],
         );
         if (providerResult.rows.length > 0) {
           const providerRow = providerResult.rows[0];
-          providerName = typeof providerRow.name === "string" ? providerRow.name : null;
+          providerName =
+            typeof providerRow.name === "string" ? providerRow.name : null;
         }
       } catch (err) {
         console.warn("Failed to fetch provider metadata:", err);
@@ -1765,13 +1687,12 @@ router.get("/:id", async (req: Request, res: Response) => {
     // Route to appropriate provider based on provider_type
     if (isLinodeProvider && Number.isFinite(providerInstanceId)) {
       try {
-        providerDetail = await linodeService.getLinodeInstance(
-          providerInstanceId
-        );
+        providerDetail =
+          await linodeService.getLinodeInstance(providerInstanceId);
       } catch (err) {
         console.warn(
           `Failed to fetch Linode provider detail for instance ${instanceRow.provider_instance_id}:`,
-          err
+          err,
         );
       }
     }
@@ -1787,12 +1708,12 @@ router.get("/:id", async (req: Request, res: Response) => {
     }
 
     const normalizedStatus = normalizeProviderStatus(
-      providerDetail?.status ?? instanceRow.status
+      providerDetail?.status ?? instanceRow.status,
     );
     const providerIp =
       Array.isArray(providerDetail?.ipv4) && providerDetail.ipv4.length > 0
         ? providerDetail.ipv4[0]
-        : instanceRow.ip_address ?? null;
+        : (instanceRow.ip_address ?? null);
 
     if (
       instanceRow.status !== normalizedStatus ||
@@ -1801,7 +1722,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       try {
         await query(
           "UPDATE vps_instances SET status = $1, ip_address = $2, updated_at = NOW() WHERE id = $3",
-          [normalizedStatus, providerIp, instanceRow.id]
+          [normalizedStatus, providerIp, instanceRow.id],
         );
       } catch (err) {
         console.warn("Failed to synchronize instance cache fields:", err);
@@ -1815,7 +1736,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 
     const regionCode = providerDetail?.region ?? configuration?.region ?? null;
     const regionLabel = await resolveRegionLabel(
-      typeof regionCode === "string" ? regionCode : null
+      typeof regionCode === "string" ? regionCode : null,
     );
 
     const planMeta = await resolvePlanMeta(instanceRow, providerDetail);
@@ -1849,10 +1770,10 @@ router.get("/:id", async (req: Request, res: Response) => {
         const ipv4InSeries = normalizeSeries(metricsSource?.netv4?.in);
         const ipv4OutSeries = normalizeSeries(metricsSource?.netv4?.out);
         const ipv4PrivateInSeries = normalizeSeries(
-          metricsSource?.netv4?.private_in
+          metricsSource?.netv4?.private_in,
         );
         const ipv4PrivateOutSeries = normalizeSeries(
-          metricsSource?.netv4?.private_out
+          metricsSource?.netv4?.private_out,
         );
         const ioSeries = normalizeSeries(metricsSource?.io?.io);
         const swapSeries = normalizeSeries(metricsSource?.io?.swap);
@@ -1923,11 +1844,14 @@ router.get("/:id", async (req: Request, res: Response) => {
     let providerConfigs: any[] = [];
     let instanceEvents: any[] = [];
 
-    if (isLinodeProvider && providerDetail && Number.isFinite(providerInstanceId)) {
+    if (
+      isLinodeProvider &&
+      providerDetail &&
+      Number.isFinite(providerInstanceId)
+    ) {
       try {
-        const transferData = await linodeService.getLinodeInstanceTransfer(
-          providerInstanceId
-        );
+        const transferData =
+          await linodeService.getLinodeInstanceTransfer(providerInstanceId);
 
         const transferSource = (transferData ?? {}) as Record<string, unknown>;
         const usedBytes = extractTransferUsedBytes(transferSource.used);
@@ -1960,13 +1884,16 @@ router.get("/:id", async (req: Request, res: Response) => {
     }
 
     let backups: BackupsPayload | null = null;
-    if (isLinodeProvider && providerDetail && Number.isFinite(providerInstanceId)) {
+    if (
+      isLinodeProvider &&
+      providerDetail &&
+      Number.isFinite(providerInstanceId)
+    ) {
       const providerBackups = providerDetail.backups ?? null;
       let backupCollection: LinodeInstanceBackupsResponse | null = null;
       try {
-        backupCollection = await linodeService.getLinodeInstanceBackups(
-          providerInstanceId
-        );
+        backupCollection =
+          await linodeService.getLinodeInstanceBackups(providerInstanceId);
       } catch (err) {
         console.warn("Failed to fetch instance backups:", err);
       }
@@ -1979,7 +1906,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 
       const snapshot = mapBackupSummary(backupCollection?.snapshot?.current);
       const snapshotInProgress = mapBackupSummary(
-        backupCollection?.snapshot?.in_progress
+        backupCollection?.snapshot?.in_progress,
       );
 
       backups = {
@@ -1998,7 +1925,11 @@ router.get("/:id", async (req: Request, res: Response) => {
       };
     }
 
-    if (isLinodeProvider && providerDetail && Number.isFinite(providerInstanceId)) {
+    if (
+      isLinodeProvider &&
+      providerDetail &&
+      Number.isFinite(providerInstanceId)
+    ) {
       try {
         const catalog = await linodeService.listFirewalls();
         firewallOptions = catalog
@@ -2009,9 +1940,8 @@ router.get("/:id", async (req: Request, res: Response) => {
       }
 
       try {
-        const ipData = await linodeService.getLinodeInstanceIPs(
-          providerInstanceId
-        );
+        const ipData =
+          await linodeService.getLinodeInstanceIPs(providerInstanceId);
         const ipv4Data = (ipData as any)?.ipv4 || {};
         const ipv6Data = (ipData as any)?.ipv6 || null;
         networking = {
@@ -2044,9 +1974,8 @@ router.get("/:id", async (req: Request, res: Response) => {
       }
 
       try {
-        const firewallData = await linodeService.getLinodeInstanceFirewalls(
-          providerInstanceId
-        );
+        const firewallData =
+          await linodeService.getLinodeInstanceFirewalls(providerInstanceId);
         const firewallRows = Array.isArray((firewallData as any)?.data)
           ? (firewallData as any).data
           : [];
@@ -2056,9 +1985,8 @@ router.get("/:id", async (req: Request, res: Response) => {
             let attachment: Record<string, unknown> | null = null;
             if (firewallId !== null) {
               try {
-                const devices = await linodeService.getFirewallDevices(
-                  firewallId
-                );
+                const devices =
+                  await linodeService.getFirewallDevices(firewallId);
                 const matches = devices.find((device) => {
                   const mapped = mapFirewallAttachment(device);
                   if (!mapped) {
@@ -2076,24 +2004,23 @@ router.get("/:id", async (req: Request, res: Response) => {
               } catch (deviceErr) {
                 console.warn(
                   `Failed to fetch firewall devices for ${firewallId}:`,
-                  deviceErr
+                  deviceErr,
                 );
               }
             }
             return mapFirewallSummary(row, attachment);
-          })
+          }),
         );
         firewalls = resolved.filter((item): item is Record<string, unknown> =>
-          Boolean(item)
+          Boolean(item),
         );
       } catch (err) {
         console.warn("Failed to fetch instance firewalls:", err);
       }
 
       try {
-        const configData = await linodeService.getLinodeInstanceConfigs(
-          providerInstanceId
-        );
+        const configData =
+          await linodeService.getLinodeInstanceConfigs(providerInstanceId);
         providerConfigs = Array.isArray((configData as any)?.data)
           ? (configData as any).data.map(mapConfigProfile).filter(Boolean)
           : [];
@@ -2104,7 +2031,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       try {
         const eventsData = await linodeService.getLinodeInstanceEvents(
           providerInstanceId,
-          { pageSize: 50 }
+          { pageSize: 50 },
         );
         instanceEvents = Array.isArray((eventsData as any)?.data)
           ? (eventsData as any).data.map(mapEventSummary).filter(Boolean)
@@ -2125,12 +2052,12 @@ router.get("/:id", async (req: Request, res: Response) => {
     let progressPercent: number | null = null;
     if (
       ["provisioning", "rebooting", "restoring", "backing_up"].includes(
-        normalizedStatus
+        normalizedStatus,
       )
     ) {
       providerProgress = deriveProgressFromEvents(
         normalizedStatus,
-        instanceEvents
+        instanceEvents,
       );
       progressPercent = providerProgress?.percent ?? null;
     }
@@ -2173,7 +2100,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       : [];
     const rdnsEnabledOnIpv4 = allIPv4Collections.some(
       (entry: any) =>
-        entry && typeof entry === "object" && entry.rdnsEditable === true
+        entry && typeof entry === "object" && entry.rdnsEditable === true,
     );
     const slaacAddress =
       networking?.ipv6 && typeof networking.ipv6 === "object"
@@ -2253,17 +2180,17 @@ router.get("/:id", async (req: Request, res: Response) => {
 
 /**
  * POST /api/vps
- * 
+ *
  * Create a new VPS instance with region and backup frequency selection.
- * 
+ *
  * Authentication: User authentication required
- * 
+ *
  * Required fields:
  * - plan_id: UUID of the VPS plan
  * - region: Datacenter region (now required from user, not from plan)
  * - label: Instance name
  * - root_password: Root password for the instance
- * 
+ *
  * Optional fields:
  * - backup_frequency: "daily" or "weekly" (required if backups_enabled is true)
  * - backups_enabled: Enable backup service
@@ -2271,12 +2198,12 @@ router.get("/:id", async (req: Request, res: Response) => {
  * - image: OS image identifier
  * - stackscript_id: Linode StackScript ID
  * - private_ip: Enable private IP
- * 
+ *
  * Validation:
  * - Region must be available for the provider
  * - Backup frequency must be supported by the plan
  * - Sufficient wallet balance required
- * 
+ *
  * See: repo-docs/FLEXIBLE_BACKUP_PRICING_API.md for detailed documentation
  */
 router.post("/", async (req: Request, res: Response) => {
@@ -2292,10 +2219,8 @@ router.post("/", async (req: Request, res: Response) => {
       rootPassword,
       sshKeys = [],
       backups = false,
-      backup_frequency = 'weekly',
+      backup_frequency = "weekly",
       privateIP = false,
-      appSlug,
-      appData,
       stackscriptId,
       stackscriptData,
     } = req.body || {};
@@ -2322,7 +2247,7 @@ router.post("/", async (req: Request, res: Response) => {
     try {
       const providerResult = await query(
         "SELECT id, name, type, api_key_encrypted, active FROM service_providers WHERE id = $1",
-        [provider_id]
+        [provider_id],
       );
 
       if (providerResult.rows.length === 0) {
@@ -2350,7 +2275,7 @@ router.post("/", async (req: Request, res: Response) => {
       try {
         providerApiToken = await normalizeProviderToken(
           providerDetails.id,
-          providerDetails.api_key_encrypted
+          providerDetails.api_key_encrypted,
         );
       } catch (tokenErr) {
         logError("Provider token resolution", tokenErr, {
@@ -2383,13 +2308,13 @@ router.post("/", async (req: Request, res: Response) => {
       // First, try lookup by provider_plan_id (expected frontend value)
       let planRes = await query(
         "SELECT id, provider_id, provider_plan_id, specifications FROM vps_plans WHERE provider_plan_id = $1 AND provider_id = $2 LIMIT 1",
-        [type, provider_id]
+        [type, provider_id],
       );
       // If not found, user may have passed internal plan UUID; try that
       if (planRes.rows.length === 0) {
         planRes = await query(
           "SELECT id, provider_id, provider_plan_id, specifications FROM vps_plans WHERE id = $1 AND provider_id = $2 LIMIT 1",
-          [type, provider_id]
+          [type, provider_id],
         );
       }
 
@@ -2439,26 +2364,26 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     // Validate backup frequency against plan configuration
-    let validatedBackupFrequency = 'none';
+    let validatedBackupFrequency = "none";
     if (backups && planIdForInstance) {
       try {
         const planResult = await query(
           "SELECT daily_backups_enabled, weekly_backups_enabled FROM vps_plans WHERE id = $1",
-          [planIdForInstance]
+          [planIdForInstance],
         );
         if (planResult.rows.length > 0) {
           const plan = planResult.rows[0];
-          if (backup_frequency === 'daily' && !plan.daily_backups_enabled) {
+          if (backup_frequency === "daily" && !plan.daily_backups_enabled) {
             res.status(400).json({
-              error: 'Daily backups not available for this plan',
-              code: 'INVALID_BACKUP_FREQUENCY'
+              error: "Daily backups not available for this plan",
+              code: "INVALID_BACKUP_FREQUENCY",
             });
             return;
           }
-          if (backup_frequency === 'weekly' && !plan.weekly_backups_enabled) {
+          if (backup_frequency === "weekly" && !plan.weekly_backups_enabled) {
             res.status(400).json({
-              error: 'Weekly backups not available for this plan',
-              code: 'INVALID_BACKUP_FREQUENCY'
+              error: "Weekly backups not available for this plan",
+              code: "INVALID_BACKUP_FREQUENCY",
             });
             return;
           }
@@ -2474,24 +2399,26 @@ router.post("/", async (req: Request, res: Response) => {
     try {
       if (planIdForInstance) {
         const planResult = await query(
-          `SELECT 
+          `SELECT
             base_price, markup_price,
             backup_price_hourly, backup_upcharge_hourly
            FROM vps_plans WHERE id = $1`,
-          [planIdForInstance]
+          [planIdForInstance],
         );
         if (planResult.rows.length > 0) {
           const plan = planResult.rows[0];
-          const baseMonthlyCost = parseFloat(plan.base_price) + parseFloat(plan.markup_price);
+          const baseMonthlyCost =
+            parseFloat(plan.base_price) + parseFloat(plan.markup_price);
           let baseHourlyRate = baseMonthlyCost / 730;
-          
+
           // Add backup costs if backups are enabled (flat rate - Linode does daily backups at one price)
-          if (backups && validatedBackupFrequency !== 'none') {
+          if (backups && validatedBackupFrequency !== "none") {
             const baseBackupHourly = parseFloat(plan.backup_price_hourly) || 0;
-            const backupUpchargeHourly = parseFloat(plan.backup_upcharge_hourly) || 0;
+            const backupUpchargeHourly =
+              parseFloat(plan.backup_upcharge_hourly) || 0;
             baseHourlyRate += baseBackupHourly + backupUpchargeHourly;
           }
-          
+
           hourlyRate = baseHourlyRate;
         }
       }
@@ -2503,7 +2430,7 @@ router.post("/", async (req: Request, res: Response) => {
     try {
       const walletResult = await query(
         "SELECT balance FROM wallets WHERE organization_id = $1",
-        [organizationId]
+        [organizationId],
       );
 
       if (walletResult.rows.length === 0) {
@@ -2519,9 +2446,9 @@ router.post("/", async (req: Request, res: Response) => {
       if (currentBalance < hourlyRate) {
         res.status(400).json({
           error: `Insufficient wallet balance. Required: $${hourlyRate.toFixed(
-            4
+            4,
           )}, Available: $${currentBalance.toFixed(
-            2
+            2,
           )}. Please add funds to your wallet.`,
           code: "INSUFFICIENT_BALANCE",
           required: hourlyRate,
@@ -2576,15 +2503,14 @@ router.post("/", async (req: Request, res: Response) => {
           if (requestedKeyIds.length > 0) {
             if (providerApiToken) {
               try {
-                const providerKeys = await linodeService.getSSHKeys(
-                  providerApiToken
-                );
+                const providerKeys =
+                  await linodeService.getSSHKeys(providerApiToken);
 
                 const keyLookup = new Map(
                   providerKeys.map((providerKey: any) => [
                     String(providerKey.id),
                     String(providerKey.ssh_key || ""),
-                  ])
+                  ]),
                 );
 
                 for (const keyId of requestedKeyIds) {
@@ -2597,7 +2523,7 @@ router.post("/", async (req: Request, res: Response) => {
                       {
                         keyId,
                         provider_id,
-                      }
+                      },
                     );
                   }
                 }
@@ -2611,7 +2537,7 @@ router.post("/", async (req: Request, res: Response) => {
                     {
                       requested: requestedKeyIds,
                       resolved: resolvedKeys.length,
-                    }
+                    },
                   );
                 }
               } catch (sshKeyErr) {
@@ -2627,7 +2553,7 @@ router.post("/", async (req: Request, res: Response) => {
                 {
                   provider_id,
                   requestedKeyIds,
-                }
+                },
               );
             }
           }
@@ -2637,56 +2563,41 @@ router.post("/", async (req: Request, res: Response) => {
           }
         }
 
-        // Linode: Marketplace app takes precedence when provided
-        if (appSlug) {
-          created = await linodeService.createInstanceWithMarketplaceApp({
-            label,
-            type: providerPlanId,
-            region: regionToUse,
-            image,
-            rootPassword,
-            sshKeys: resolvedAuthorizedKeys,
-            backups,
-            privateIP,
-            appSlug,
-            appData: appData || {},
-          });
-        } else {
-          const linodeCreatePayload: CreateLinodeRequest = {
-            type: providerPlanId,
-            region: regionToUse,
-            image,
-            label,
-            root_pass: rootPassword,
-            backups_enabled: backups,
-            private_ip: privateIP,
-            tags: ["skypanelv2"],
-            group: "skypanelv2",
-          };
+        const linodeCreatePayload: CreateLinodeRequest = {
+          type: providerPlanId,
+          region: regionToUse,
+          image,
+          label,
+          root_pass: rootPassword,
+          backups_enabled: backups,
+          private_ip: privateIP,
+          tags: ["skypanelv2"],
+          group: "skypanelv2",
+        };
 
-          if (resolvedAuthorizedKeys && resolvedAuthorizedKeys.length > 0) {
-            linodeCreatePayload.authorized_keys = resolvedAuthorizedKeys;
-          }
-
-          if (stackscriptId !== undefined && stackscriptId !== null) {
-            const stackscriptIdNumber = Number(stackscriptId);
-            if (!Number.isNaN(stackscriptIdNumber)) {
-              linodeCreatePayload.stackscript_id = stackscriptIdNumber;
-            }
-          }
-
-          if (
-            stackscriptData &&
-            typeof stackscriptData === "object" &&
-            !Array.isArray(stackscriptData)
-          ) {
-            linodeCreatePayload.stackscript_data = stackscriptData as Record<string, any>;
-          }
-
-          created = await linodeService.createLinodeInstance(
-            linodeCreatePayload
-          );
+        if (resolvedAuthorizedKeys && resolvedAuthorizedKeys.length > 0) {
+          linodeCreatePayload.authorized_keys = resolvedAuthorizedKeys;
         }
+
+        if (stackscriptId !== undefined && stackscriptId !== null) {
+          const stackscriptIdNumber = Number(stackscriptId);
+          if (!Number.isNaN(stackscriptIdNumber)) {
+            linodeCreatePayload.stackscript_id = stackscriptIdNumber;
+          }
+        }
+
+        if (
+          stackscriptData &&
+          typeof stackscriptData === "object" &&
+          !Array.isArray(stackscriptData)
+        ) {
+          linodeCreatePayload.stackscript_data = stackscriptData as Record<
+            string,
+            any
+          >;
+        }
+
+        created = await linodeService.createLinodeInstance(linodeCreatePayload);
         providerInstanceId = String(created.id);
       } else {
         res.status(400).json({
@@ -2695,22 +2606,26 @@ router.post("/", async (req: Request, res: Response) => {
         return;
       }
     } catch (createErr: any) {
-      logError('VPS creation', createErr, {
+      logError("VPS creation", createErr, {
         organizationId,
         provider_type,
         provider_id,
         label,
         region: regionToUse,
-        image
+        image,
       });
-      
+
       // Handle provider-specific errors
-      const structuredError = handleProviderError(createErr, 'linode', 'create VPS instance');
-      
+      const structuredError = handleProviderError(
+        createErr,
+        "linode",
+        "create VPS instance",
+      );
+
       res.status(structuredError.statusCode).json({
         error: structuredError.message,
         code: structuredError.code,
-        details: structuredError.details
+        details: structuredError.details,
       });
       return;
     }
@@ -2724,10 +2639,8 @@ router.post("/", async (req: Request, res: Response) => {
       backup_frequency: validatedBackupFrequency,
       privateIP,
       // Linode-specific fields
-      stackscriptId: provider_type === 'linode' ? stackscriptId : undefined,
-      stackscriptData: provider_type === 'linode' ? stackscriptData : undefined,
-      appSlug: provider_type === 'linode' ? appSlug : undefined,
-      appData: provider_type === 'linode' ? appData : undefined,
+      stackscriptId: provider_type === "linode" ? stackscriptId : undefined,
+      stackscriptData: provider_type === "linode" ? stackscriptData : undefined,
       auth: {
         method: "password",
         user: "root",
@@ -2761,7 +2674,7 @@ router.post("/", async (req: Request, res: Response) => {
         ip,
         configuration,
         validatedBackupFrequency,
-      ]
+      ],
     );
     const instance = insertRes.rows[0];
 
@@ -2773,7 +2686,7 @@ router.post("/", async (req: Request, res: Response) => {
           let baseDomain = "ip.rev.skyvps360.xyz";
           try {
             const cfgRes = await query(
-              "SELECT rdns_base_domain FROM networking_config ORDER BY updated_at DESC LIMIT 1"
+              "SELECT rdns_base_domain FROM networking_config ORDER BY updated_at DESC LIMIT 1",
             );
             const row = cfgRes.rows?.[0];
             if (
@@ -2788,12 +2701,12 @@ router.post("/", async (req: Request, res: Response) => {
             const msg = (cfgErr?.message || "").toLowerCase();
             if (msg.includes("relation") && msg.includes("does not exist")) {
               console.warn(
-                "networking_config table not found; using default rDNS base domain"
+                "networking_config table not found; using default rDNS base domain",
               );
             } else {
               console.warn(
                 "Failed to read networking rDNS config; using default base domain:",
-                cfgErr
+                cfgErr,
               );
             }
           }
@@ -2801,12 +2714,12 @@ router.post("/", async (req: Request, res: Response) => {
           await linodeService.setupCustomRDNSAsync(
             Number(providerInstanceId),
             label,
-            baseDomain
+            baseDomain,
           );
         } catch (rdnsErr) {
           console.warn(
             `Background rDNS setup failed for VPS ${label} (${providerInstanceId}):`,
-            rdnsErr
+            rdnsErr,
           );
         }
       });
@@ -2819,12 +2732,12 @@ router.post("/", async (req: Request, res: Response) => {
         String(instance.id),
         organizationId,
         hourlyRate,
-        label
+        label,
       );
 
       if (!billingSuccess) {
         console.warn(
-          `VPS created but billing failed for ${label} (${instance.id})`
+          `VPS created but billing failed for ${label} (${instance.id})`,
         );
         // Note: We don't fail the VPS creation if billing fails, but we log it
         // The hourly billing service will pick this up later
@@ -2856,7 +2769,7 @@ router.post("/", async (req: Request, res: Response) => {
             provider_name: providerDetails.name,
           },
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.create activity:", logErr);
@@ -2869,7 +2782,7 @@ router.post("/", async (req: Request, res: Response) => {
         hourlyRate: hourlyRate,
         message: billingSuccess
           ? `Initial billing of $${hourlyRate.toFixed(
-              4
+              4,
             )}/hour processed successfully`
           : "Initial billing failed - will be retried by hourly billing service",
       },
@@ -2888,7 +2801,7 @@ router.post("/:id/boot", async (req: Request, res: Response) => {
     const organizationId = (req as any).user.organizationId;
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0)
       return res.status(404).json({ error: "Instance not found" });
@@ -2907,7 +2820,7 @@ router.post("/:id/boot", async (req: Request, res: Response) => {
 
     await query(
       "UPDATE vps_instances SET status = $1, ip_address = $2, updated_at = NOW() WHERE id = $3",
-      [status, ip, id]
+      [status, ip, id],
     );
 
     // Log boot action
@@ -2923,7 +2836,7 @@ router.post("/:id/boot", async (req: Request, res: Response) => {
           message: `Booted VPS '${row.label}' on ${providerType}`,
           status: "success",
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.boot activity:", logErr);
@@ -2944,7 +2857,7 @@ router.post("/:id/shutdown", async (req: Request, res: Response) => {
     const organizationId = (req as any).user.organizationId;
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0)
       return res.status(404).json({ error: "Instance not found" });
@@ -2963,7 +2876,7 @@ router.post("/:id/shutdown", async (req: Request, res: Response) => {
 
     await query(
       "UPDATE vps_instances SET status = $1, ip_address = $2, updated_at = NOW() WHERE id = $3",
-      [status, ip, id]
+      [status, ip, id],
     );
 
     // Log shutdown action
@@ -2979,7 +2892,7 @@ router.post("/:id/shutdown", async (req: Request, res: Response) => {
           message: `Shutdown VPS '${row.label}' on ${providerType}`,
           status: "success",
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.shutdown activity:", logErr);
@@ -3000,7 +2913,7 @@ router.post("/:id/reboot", async (req: Request, res: Response) => {
     const organizationId = (req as any).user.organizationId;
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0)
       return res.status(404).json({ error: "Instance not found" });
@@ -3019,7 +2932,7 @@ router.post("/:id/reboot", async (req: Request, res: Response) => {
 
     await query(
       "UPDATE vps_instances SET status = $1, ip_address = $2, updated_at = NOW() WHERE id = $3",
-      [status, ip, id]
+      [status, ip, id],
     );
 
     // Log reboot action
@@ -3035,7 +2948,7 @@ router.post("/:id/reboot", async (req: Request, res: Response) => {
           message: `Rebooted VPS '${row.label}' on ${providerType}`,
           status: "success",
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.reboot activity:", logErr);
@@ -3056,7 +2969,7 @@ router.post("/:id/backups/enable", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
@@ -3083,7 +2996,7 @@ router.post("/:id/backups/enable", async (req: Request, res: Response) => {
           message: `Enabled backups for VPS '${row.label}'`,
           status: "success",
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.backups.enable activity:", logErr);
@@ -3103,7 +3016,7 @@ router.post("/:id/backups/disable", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
@@ -3130,7 +3043,7 @@ router.post("/:id/backups/disable", async (req: Request, res: Response) => {
           message: `Disabled backups for VPS '${row.label}'`,
           status: "success",
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.backups.disable activity:", logErr);
@@ -3150,7 +3063,7 @@ router.post("/:id/backups/schedule", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
@@ -3218,7 +3131,7 @@ router.post("/:id/backups/schedule", async (req: Request, res: Response) => {
 
     await linodeService.updateLinodeBackupSchedule(
       providerInstanceId,
-      scheduleUpdate
+      scheduleUpdate,
     );
 
     try {
@@ -3236,7 +3149,7 @@ router.post("/:id/backups/schedule", async (req: Request, res: Response) => {
           },
           status: "success",
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.backups.schedule activity:", logErr);
@@ -3263,7 +3176,7 @@ router.post("/:id/backups/snapshot", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
@@ -3292,7 +3205,7 @@ router.post("/:id/backups/snapshot", async (req: Request, res: Response) => {
           }`,
           status: "success",
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.backups.snapshot activity:", logErr);
@@ -3322,7 +3235,7 @@ router.post(
       const { overwrite } = (req.body || {}) as { overwrite?: boolean };
       const rowRes = await query(
         "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-        [id, organizationId]
+        [id, organizationId],
       );
       if (rowRes.rows.length === 0) {
         return res.status(404).json({ error: "Instance not found" });
@@ -3342,7 +3255,7 @@ router.post(
         {
           overwrite: overwrite !== undefined ? Boolean(overwrite) : true,
           targetInstanceId: providerInstanceId,
-        }
+        },
       );
 
       try {
@@ -3360,7 +3273,7 @@ router.post(
               overwrite: overwrite !== undefined ? Boolean(overwrite) : true,
             },
           },
-          req as any
+          req as any,
         );
       } catch (logErr) {
         console.warn("Failed to log vps.backups.restore activity:", logErr);
@@ -3373,7 +3286,7 @@ router.post(
         .status(500)
         .json({ error: err.message || "Failed to restore from backup" });
     }
-  }
+  },
 );
 
 router.post("/:id/firewalls/attach", async (req: Request, res: Response) => {
@@ -3389,7 +3302,7 @@ router.post("/:id/firewalls/attach", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
@@ -3405,7 +3318,7 @@ router.post("/:id/firewalls/attach", async (req: Request, res: Response) => {
 
     await linodeService.attachFirewallToLinode(
       parsedFirewallId,
-      providerInstanceId
+      providerInstanceId,
     );
 
     try {
@@ -3420,7 +3333,7 @@ router.post("/:id/firewalls/attach", async (req: Request, res: Response) => {
           status: "success",
           metadata: { firewallId: parsedFirewallId },
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.firewall.attach activity:", logErr);
@@ -3457,7 +3370,7 @@ router.post("/:id/firewalls/detach", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
@@ -3473,7 +3386,7 @@ router.post("/:id/firewalls/detach", async (req: Request, res: Response) => {
 
     await linodeService.detachFirewallFromLinode(
       parsedFirewallId,
-      parsedDeviceId
+      parsedDeviceId,
     );
 
     try {
@@ -3488,7 +3401,7 @@ router.post("/:id/firewalls/detach", async (req: Request, res: Response) => {
           status: "success",
           metadata: { firewallId: parsedFirewallId, deviceId: parsedDeviceId },
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.firewall.detach activity:", logErr);
@@ -3519,7 +3432,7 @@ router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
@@ -3534,9 +3447,8 @@ router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
     }
 
     try {
-      const ipPayload = await linodeService.getLinodeInstanceIPs(
-        providerInstanceId
-      );
+      const ipPayload =
+        await linodeService.getLinodeInstanceIPs(providerInstanceId);
       const ipv4Sets =
         ipPayload?.ipv4 && typeof ipPayload.ipv4 === "object"
           ? Object.values(ipPayload.ipv4)
@@ -3563,7 +3475,7 @@ router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
     } catch (addressErr) {
       console.warn(
         "Failed to verify IP ownership before rDNS update:",
-        addressErr
+        addressErr,
       );
     }
 
@@ -3581,7 +3493,7 @@ router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
           status: "success",
           metadata: { ip: normalizedAddress, rdns: rdnsValue },
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.network.rdns activity:", logErr);
@@ -3628,7 +3540,7 @@ router.put("/:id/hostname", async (req: Request, res: Response) => {
     // Check if instance exists and belongs to organization
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
@@ -3650,7 +3562,7 @@ router.put("/:id/hostname", async (req: Request, res: Response) => {
     // Update local database
     await query(
       "UPDATE vps_instances SET label = $1, updated_at = NOW() WHERE id = $2",
-      [normalizedHostname, id]
+      [normalizedHostname, id],
     );
 
     // Log hostname update activity
@@ -3666,7 +3578,7 @@ router.put("/:id/hostname", async (req: Request, res: Response) => {
           status: "success",
           metadata: { oldHostname: row.label, newHostname: normalizedHostname },
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.hostname.update activity:", logErr);
@@ -3706,7 +3618,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
 
     const rowRes = await query(
       "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0)
       return res.status(404).json({ error: "Instance not found" });
@@ -3736,7 +3648,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
             provider_instance_id: providerInstanceId,
           },
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.delete activity:", logErr);
@@ -3765,13 +3677,15 @@ router.put("/:id/notes", async (req: Request, res: Response) => {
 
     // Limit notes length
     if (notes.length > 10000) {
-      return res.status(400).json({ error: "Notes cannot exceed 10,000 characters" });
+      return res
+        .status(400)
+        .json({ error: "Notes cannot exceed 10,000 characters" });
     }
 
     // Check if instance exists and belongs to organization
     const rowRes = await query(
       "SELECT id, label FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
@@ -3782,7 +3696,7 @@ router.put("/:id/notes", async (req: Request, res: Response) => {
     // Update notes in database
     await query(
       "UPDATE vps_instances SET notes = $1, updated_at = NOW() WHERE id = $2",
-      [notes.trim() || null, id]
+      [notes.trim() || null, id],
     );
 
     // Log notes update activity
@@ -3794,7 +3708,7 @@ router.put("/:id/notes", async (req: Request, res: Response) => {
           eventType: "vps.notes.update",
           entityType: "vps",
           entityId: String(id),
-          message: notes.trim() 
+          message: notes.trim()
             ? `Updated notes for VPS '${row.label}'`
             : `Cleared notes for VPS '${row.label}'`,
           status: "success",
@@ -3802,16 +3716,16 @@ router.put("/:id/notes", async (req: Request, res: Response) => {
             notes_length: notes.trim().length,
           },
         },
-        req as any
+        req as any,
       );
     } catch (logErr) {
       console.warn("Failed to log vps.notes.update activity:", logErr);
     }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       notes: notes.trim() || null,
-      message: notes.trim() ? "Notes updated successfully" : "Notes cleared"
+      message: notes.trim() ? "Notes updated successfully" : "Notes cleared",
     });
   } catch (err: any) {
     console.error("VPS notes update error:", err);
@@ -3829,7 +3743,7 @@ router.get("/:id/notes", async (req: Request, res: Response) => {
     // Check if instance exists and belongs to organization
     const rowRes = await query(
       "SELECT notes FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId]
+      [id, organizationId],
     );
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
