@@ -1,5 +1,13 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { BookOpen, Copy, Rocket, ShieldCheck, Sparkles } from "lucide-react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
+import {
+  BookOpen,
+  Copy,
+  Search,
+  Server,
+  Lock,
+  Code2,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -19,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { BRAND_NAME } from "@/lib/brand";
 
 type EndpointDefinition = {
@@ -35,16 +44,17 @@ type SectionDefinition = {
   title: string;
   base: string;
   description: string;
+  icon?: React.ReactNode;
   endpoints: EndpointDefinition[];
 };
 
 const methodStyles: Record<string, string> = {
-  GET: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
-  POST: "bg-blue-500/10 text-blue-600 dark:text-blue-300",
-  PUT: "bg-amber-500/10 text-amber-600 dark:text-amber-300",
-  PATCH: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300",
-  DELETE: "bg-red-500/10 text-red-600 dark:text-red-300",
-  DEFAULT: "bg-muted text-foreground",
+  GET: "bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:text-emerald-400 dark:border-emerald-800",
+  POST: "bg-blue-500/10 text-blue-700 border-blue-200 dark:text-blue-400 dark:border-blue-800",
+  PUT: "bg-amber-500/10 text-amber-700 border-amber-200 dark:text-amber-400 dark:border-amber-800",
+  PATCH: "bg-purple-500/10 text-purple-700 border-purple-200 dark:text-purple-400 dark:border-purple-800",
+  DELETE: "bg-red-500/10 text-red-700 border-red-200 dark:text-red-400 dark:border-red-800",
+  DEFAULT: "bg-muted text-foreground border-border",
 };
 
 const formatJson = (value: unknown) => JSON.stringify(value, null, 2);
@@ -85,13 +95,17 @@ export default function ApiDocs() {
     `${window.location.protocol}//${window.location.host}/api`
   ).replace(/\/$/, "");
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeSection, setActiveSection] = useState("");
+
   const sections = useMemo<SectionDefinition[]>(
     () => [
       {
         title: "Authentication & Profile",
         base: `${apiBase}/auth`,
         description:
-          "Endpoints used for account onboarding, JWT management, profile updates, organization metadata, and API key lifecycle.",
+          "User authentication, session management, profile and organization settings.",
+        icon: <Lock className="h-4 w-4" />,
         endpoints: [
           {
             method: "POST",
@@ -143,24 +157,21 @@ export default function ApiDocs() {
             method: "POST",
             path: "/refresh",
             description:
-              "Exchange a valid refresh token for a new JWT and optional updated user payload.",
+              "Refresh the JWT token for authenticated session.",
             auth: true,
             response: {
               token: "new_jwt_token",
               user: {
                 id: "user_123",
                 email: "admin@example.com",
-                firstName: "Sky",
-                lastName: "Panel",
                 role: "owner",
-                organizationId: "org_123",
               },
             },
           },
           {
             method: "GET",
-            path: "/profile",
-            description: "Retrieve the authenticated user's profile record.",
+            path: "/me",
+            description: "Get currently authenticated user information.",
             auth: true,
             response: {
               user: {
@@ -168,10 +179,31 @@ export default function ApiDocs() {
                 email: "admin@example.com",
                 firstName: "Sky",
                 lastName: "Panel",
-                phone: "+1-555-555-0100",
-                timezone: "America/New_York",
                 role: "owner",
               },
+            },
+          },
+          {
+            method: "POST",
+            path: "/verify-password",
+            description:
+              "Verify user password before sensitive operations (SSH access, deletion).",
+            auth: true,
+            body: {
+              password: "Sup3rSecure!",
+            },
+            response: {
+              success: true,
+            },
+          },
+          {
+            method: "POST",
+            path: "/logout",
+            description: "End user session (client-side token removal).",
+            auth: true,
+            response: {
+              success: true,
+              message: "Logged out successfully",
             },
           },
           {
@@ -329,8 +361,9 @@ export default function ApiDocs() {
             description:
               "Complete the reset flow by providing a valid token and new password.",
             body: {
+              email: "admin@example.com",
               token: "reset_token_here",
-              newPassword: "N3wSecurePass!",
+              password: "N3wSecurePass!",
             },
             response: {
               success: true,
@@ -339,15 +372,14 @@ export default function ApiDocs() {
           },
           {
             method: "POST",
-            path: "/verify-password",
-            description:
-              "Server-side password verification used before destructive account actions (SSH console, deletions).",
-            auth: true,
+            path: "/verify-email",
+            description: "Verify user email address using verification token.",
             body: {
-              password: "Sup3rSecure!",
+              token: "verification_token_here",
             },
             response: {
               success: true,
+              message: "Email verified successfully",
             },
           },
         ],
@@ -356,7 +388,8 @@ export default function ApiDocs() {
         title: "Billing & Payments",
         base: `${apiBase}/payments`,
         description:
-          "Wallet funding, PayPal integrations, transaction history, and summary reporting that power the billing area of the dashboard.",
+          "Wallet management, PayPal integration, transaction history.",
+        icon: <Server className="h-4 w-4" />,
         endpoints: [
           {
             method: "POST",
@@ -538,13 +571,14 @@ export default function ApiDocs() {
       },
       {
         title: "Invoices & Financial Records",
-        base: `${apiBase}`,
+        base: `${apiBase}/invoices`,
         description:
-          "Invoice listings, PDF generation, and uptime/billing analytics surfaced in the billing experience.",
+          "Invoice generation, viewing, and download.",
+        icon: <Code2 className="h-4 w-4" />,
         endpoints: [
           {
             method: "GET",
-            path: "/invoices",
+            path: "/",
             description:
               "List invoices for the organization with pagination information.",
             auth: true,
@@ -564,7 +598,7 @@ export default function ApiDocs() {
           },
           {
             method: "GET",
-            path: "/invoices/:id",
+            path: "/:id",
             description:
               "Retrieve a single invoice record for detailed display.",
             auth: true,
@@ -588,7 +622,7 @@ export default function ApiDocs() {
           },
           {
             method: "GET",
-            path: "/invoices/:id/download",
+            path: "/:id/download",
             description:
               "Download the generated PDF for an invoice (requires authenticated fetch).",
             auth: true,
@@ -599,7 +633,7 @@ export default function ApiDocs() {
           },
           {
             method: "POST",
-            path: "/invoices/from-transaction/:transactionId",
+            path: "/from-transaction/:transactionId",
             description:
               "Generate an invoice artifact from a historical payment transaction.",
             auth: true,
@@ -610,28 +644,29 @@ export default function ApiDocs() {
             },
           },
           {
-            method: "GET",
-            path: "/vps/uptime-summary",
+            method: "POST",
+            path: "/from-transactions",
             description:
-              "Summarised uptime calculations displayed on the billing page's VPS cost breakdown.",
+              "Create invoice from multiple payment transactions.",
             auth: true,
+            body: {
+              transactionIds: ["txn_001", "txn_002"],
+            },
             response: {
               success: true,
-              data: {
-                totalActiveHours: 985.4,
-                totalEstimatedCost: 265.42,
-                vpsInstances: [
-                  {
-                    id: "vps_001",
-                    label: "production-web-1",
-                    status: "running",
-                    activeHours: 240.5,
-                    hourlyRate: 0.04,
-                    estimatedCost: 9.62,
-                    lastBilledAt: "2024-10-25T12:00:00Z",
-                  },
-                ],
-              },
+              invoiceId: "inv_002",
+            },
+          },
+          {
+            method: "POST",
+            path: "/from-billing-cycles",
+            description:
+              "Create invoice from VPS billing cycles with itemized backup costs.",
+            auth: true,
+            params: { startDate: "2024-10-01", endDate: "2024-10-31" },
+            response: {
+              success: true,
+              invoiceId: "inv_003",
             },
           },
         ],
@@ -640,7 +675,8 @@ export default function ApiDocs() {
         title: "VPS Provisioning & Lifecycle",
         base: `${apiBase}/vps`,
         description:
-          "Core compute actions for provisioning, managing power state, hostname updates, backups, and firewall attachment.",
+          "VPS instance management, power control, backups, and configuration.",
+        icon: <Server className="h-4 w-4" />,
         endpoints: [
           {
             method: "GET",
@@ -777,11 +813,56 @@ export default function ApiDocs() {
             method: "DELETE",
             path: "/:id",
             description:
-              "Schedule a VPS for deletion (requires confirmation modal client-side).",
+              "Delete a VPS instance (requires password confirmation).",
             auth: true,
+            body: {
+              password: "Sup3rSecure!",
+            },
             response: {
               success: true,
               message: "VPS deletion initiated",
+            },
+          },
+          {
+            method: "GET",
+            path: "/:id/notes",
+            description: "Get notes/description for a VPS instance.",
+            auth: true,
+            response: {
+              notes: "Production web server",
+            },
+          },
+          {
+            method: "PUT",
+            path: "/:id/notes",
+            description: "Update notes/description for a VPS instance.",
+            auth: true,
+            body: {
+              notes: "Updated server description",
+            },
+            response: {
+              success: true,
+            },
+          },
+          {
+            method: "GET",
+            path: "/uptime-summary",
+            description:
+              "Get VPS uptime summary for billing calculations.",
+            auth: true,
+            response: {
+              success: true,
+              data: {
+                totalActiveHours: 985.4,
+                totalEstimatedCost: 265.42,
+                vpsInstances: [
+                  {
+                    id: "vps_001",
+                    label: "production-web-1",
+                    estimatedCost: 9.62,
+                  },
+                ],
+              },
             },
           },
           {
@@ -879,7 +960,8 @@ export default function ApiDocs() {
         title: "VPS Catalog & Integrations",
         base: `${apiBase}/vps`,
         description:
-          "Supporting catalog endpoints that power plan selection and provider integrations.",
+          "Available plans, images, regions, and provider configurations.",
+        icon: <Zap className="h-4 w-4" />,
         endpoints: [
           {
             method: "GET",
@@ -977,7 +1059,8 @@ export default function ApiDocs() {
         title: "VPS Networking",
         base: `${apiBase}/vps`,
         description:
-          "Networking configuration helpers including default rDNS domain lookups and per-instance reverse DNS updates.",
+          "Network configuration and reverse DNS management.",
+        icon: <Server className="h-4 w-4" />,
         endpoints: [
           {
             method: "GET",
@@ -1012,7 +1095,8 @@ export default function ApiDocs() {
         title: "User SSH Keys",
         base: `${apiBase}/ssh-keys`,
         description:
-          "Personal SSH key management used across VPS provisioning and console access.",
+          "SSH key management for VPS access.",
+        icon: <Lock className="h-4 w-4" />,
         endpoints: [
           {
             method: "GET",
@@ -1047,7 +1131,7 @@ export default function ApiDocs() {
           },
           {
             method: "DELETE",
-            path: "/:id",
+            path: "/:keyId",
             description: "Remove an SSH key from the account.",
             auth: true,
             response: {
@@ -1060,7 +1144,8 @@ export default function ApiDocs() {
         title: "Activity & Audit Log",
         base: `${apiBase}/activity`,
         description:
-          "Customer-facing activity feed supporting filters, export, and dashboard recent items.",
+          "Activity logging, filtering, and CSV export.",
+        icon: <Code2 className="h-4 w-4" />,
         endpoints: [
           {
             method: "GET",
@@ -1105,12 +1190,25 @@ export default function ApiDocs() {
             method: "GET",
             path: "/export",
             description:
-              "Export the filtered activity feed as CSV for compliance or offline review.",
+              "Export activity log as CSV.",
             auth: true,
             params: { format: "csv" },
             response: {
               contentType: "text/csv",
-              body: "id,type,message,status,timestamp\nact_001,vps,Provisioned production-web-1,success,2024-10-25T08:00:00Z",
+              body: "CSV data stream",
+            },
+          },
+          {
+            method: "GET",
+            path: "/summary",
+            description: "Get activity summary counts by type and status.",
+            auth: true,
+            response: {
+              summary: {
+                total: 150,
+                byType: { vps: 80, billing: 40, support: 30 },
+                byStatus: { success: 140, error: 10 },
+              },
             },
           },
         ],
@@ -1119,7 +1217,8 @@ export default function ApiDocs() {
         title: "Support Tickets",
         base: `${apiBase}/support`,
         description:
-          "Customer support workflow including ticket creation, threaded replies, and SSE streams.",
+          "Support ticket management and real-time updates.",
+        icon: <Server className="h-4 w-4" />,
         endpoints: [
           {
             method: "GET",
@@ -1217,7 +1316,8 @@ export default function ApiDocs() {
         title: "Notifications",
         base: `${apiBase}/notifications`,
         description:
-          "Real-time notification center supporting unread counts, SSE streaming, and acknowledgement.",
+          "Real-time notifications via SSE with read status management.",
+        icon: <Zap className="h-4 w-4" />,
         endpoints: [
           {
             method: "GET",
@@ -1289,7 +1389,8 @@ export default function ApiDocs() {
         title: "Admin Platform Management",
         base: `${apiBase}/admin`,
         description:
-          "Administrative endpoints for tenant operators managing users, content, provider integrations, and platform guardrails.",
+          "Admin-only endpoints for user management, tickets, FAQs, and platform configuration.",
+        icon: <Lock className="h-4 w-4" />,
         endpoints: [
           {
             method: "GET",
@@ -1785,24 +1886,54 @@ export default function ApiDocs() {
         title: "Platform Health",
         base: `${apiBase}/health`,
         description:
-          "Status endpoints consumed by the public status page and admin rate-limit diagnostics.",
+          "Public and authenticated health check endpoints.",
+        icon: <Server className="h-4 w-4" />,
         endpoints: [
           {
             method: "GET",
+            path: "/",
+            description: "Basic health check.",
+            response: {
+              success: true,
+              message: "API is healthy",
+              timestamp: "2024-10-25T10:00:00Z",
+            },
+          },
+          {
+            method: "GET",
             path: "/status",
-            description:
-              "Overall platform health indicator consumed by the /status marketing page.",
+            description: "Public platform status with VPS counts.",
             response: {
               status: "operational",
-              components: [
-                { id: "api", name: "API", status: "operational" },
-                {
-                  id: "compute",
-                  name: "Compute Provisioning",
-                  status: "degraded",
-                },
-              ],
+              vpsStats: { running: 150, stopped: 20, provisioning: 5 },
               updatedAt: "2024-10-25T10:00:00Z",
+            },
+          },
+          {
+            method: "GET",
+            path: "/detailed",
+            description: "Detailed health check with rate limiting info.",
+            response: {
+              health: "ok",
+              rateLimiting: { status: "healthy" },
+            },
+          },
+          {
+            method: "GET",
+            path: "/stats",
+            description: "VPS infrastructure metrics.",
+            response: {
+              totalInstances: 175,
+              byStatus: { running: 150, stopped: 20 },
+            },
+          },
+          {
+            method: "GET",
+            path: "/platform-stats",
+            description: "All-time platform statistics for about page.",
+            response: {
+              totalVPS: 500,
+              totalOrganizations: 50,
             },
           },
           {
@@ -1837,9 +1968,42 @@ export default function ApiDocs() {
     ],
     [apiBase],
   );
-  const [selectedSection, setSelectedSection] = useState(
-    sections[0]?.title ?? "",
-  );
+  const filteredSections = useMemo(() => {
+    if (!searchQuery) return sections;
+    const query = searchQuery.toLowerCase();
+    return sections
+      .map((section) => ({
+        ...section,
+        endpoints: section.endpoints.filter(
+          (endpoint) =>
+            endpoint.path.toLowerCase().includes(query) ||
+            endpoint.description.toLowerCase().includes(query) ||
+            endpoint.method.toLowerCase().includes(query),
+        ),
+      }))
+      .filter((section) => section.endpoints.length > 0);
+  }, [sections, searchQuery]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const sectionElements = sections.map((section) =>
+        document.getElementById(`section-${section.title}`),
+      );
+      const scrollPosition = window.scrollY + 100;
+
+      for (let i = sectionElements.length - 1; i >= 0; i--) {
+        const element = sectionElements[i];
+        if (element && element.offsetTop <= scrollPosition) {
+          setActiveSection(sections[i].title);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [sections]);
 
   const handleCopy = useCallback(async (value: string, label: string) => {
     try {
@@ -1868,249 +2032,325 @@ export default function ApiDocs() {
   );
 
   const handleScrollToSection = useCallback((title: string) => {
-    setSelectedSection(title);
+    setActiveSection(title);
     const anchor = document.getElementById(`section-${title}`);
     if (anchor) {
-      anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+      const offset = 80;
+      const elementPosition = anchor.offsetTop - offset;
+      window.scrollTo({ top: elementPosition, behavior: "smooth" });
     }
   }, []);
 
   return (
-    <div className="space-y-8">
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-primary/10 p-2 text-primary">
-              <BookOpen className="h-6 w-6" />
-            </div>
-            <div>
-              <CardTitle className="text-2xl font-bold">
-                {BRAND_NAME} API Documentation
-              </CardTitle>
-              <CardDescription>
-                Updated reference of every backend endpoint consumed by the
-                application. Copy ready-to-use examples for manual testing or
-                onboarding partners.
-              </CardDescription>
-            </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="rounded-lg bg-primary/10 p-2">
+            <BookOpen className="h-5 w-5 text-primary" />
           </div>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border bg-muted/30 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Rocket className="h-4 w-4" />
-              Coverage
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {sections.length} sections spanning authentication, billing,
-              compute, support, and administrative surfaces.
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {BRAND_NAME} API Documentation
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Complete reference for all backend endpoints. Copy ready-to-use cURL examples.
             </p>
           </div>
-          <div className="rounded-lg border bg-muted/30 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <ShieldCheck className="h-4 w-4" />
-              Authentication
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Endpoints marked with a shield require a valid bearer token. Use
-              the copy buttons to speed up requests in tools like Postman.
-            </p>
-          </div>
-          <div className="rounded-lg border bg-muted/30 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Sparkles className="h-4 w-4" />
-              Usage tips
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Toggle between request payloads, sample responses, and cURL
-              commands inside each endpoint accordion.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle className="text-base">Sections</CardTitle>
-            <CardDescription>
-              Select a section to jump to its endpoints.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {sections.map((section) => (
-              <Button
-                key={section.title}
-                variant={
-                  selectedSection === section.title ? "secondary" : "ghost"
-                }
-                className="w-full justify-start"
-                onClick={() => handleScrollToSection(section.title)}
-              >
-                {section.title}
-              </Button>
-            ))}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          {sections.map((section) => (
-            <Card key={section.title} id={`section-${section.title}`}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between gap-4">
-                  <span>{section.title}</span>
-                  <Badge variant="outline" className="font-normal">
-                    Base: {section.base}
-                  </Badge>
-                </CardTitle>
-                <CardDescription>{section.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Accordion type="single" collapsible className="w-full">
-                  {section.endpoints.map((endpoint, index) => (
-                    <AccordionItem
-                      value={`${section.title}-${index}`}
-                      key={`${section.title}-${endpoint.path}-${index}`}
-                    >
-                      <AccordionTrigger>
-                        <div className="flex w-full items-center gap-3 text-left">
-                          <Badge
-                            className={
-                              methodStyles[endpoint.method] ??
-                              methodStyles.DEFAULT
-                            }
-                          >
-                            {endpoint.method}
-                          </Badge>
-                          <div className="flex flex-col">
-                            <span className="font-semibold">
-                              {endpoint.path}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {endpoint.description}
-                            </span>
-                          </div>
-                          {endpoint.auth && (
-                            <Badge variant="secondary" className="ml-auto">
-                              Auth Required
-                            </Badge>
-                          )}
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <Tabs
-                          defaultValue={
-                            endpoint.body
-                              ? "request"
-                              : endpoint.response
-                                ? "response"
-                                : "curl"
-                          }
-                          className="mt-4"
-                        >
-                          <TabsList>
-                            {endpoint.body && (
-                              <TabsTrigger value="request">Request</TabsTrigger>
-                            )}
-                            {endpoint.response && (
-                              <TabsTrigger value="response">
-                                Response
-                              </TabsTrigger>
-                            )}
-                            <TabsTrigger value="curl">cURL</TabsTrigger>
-                          </TabsList>
-                          {endpoint.body && (
-                            <TabsContent value="request" className="mt-4">
-                              <div className="flex items-center justify-between">
-                                <h4 className="text-sm font-semibold">
-                                  Sample Request Body
-                                </h4>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() =>
-                                    handleCopyJson(
-                                      endpoint.body,
-                                      "Request body",
-                                    )
-                                  }
-                                >
-                                  <Copy className="mr-2 h-4 w-4" /> Copy
-                                </Button>
-                              </div>
-                              <ScrollArea className="mt-2 max-h-60 rounded-md border bg-muted/40 p-4">
-                                <pre className="text-xs leading-relaxed">
-                                  {formatJson(endpoint.body)}
-                                </pre>
-                              </ScrollArea>
-                            </TabsContent>
-                          )}
-                          {endpoint.response && (
-                            <TabsContent value="response" className="mt-4">
-                              <div className="flex items-center justify-between">
-                                <h4 className="text-sm font-semibold">
-                                  Sample Response
-                                </h4>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() =>
-                                    handleCopyJson(
-                                      endpoint.response,
-                                      "Response body",
-                                    )
-                                  }
-                                >
-                                  <Copy className="mr-2 h-4 w-4" /> Copy
-                                </Button>
-                              </div>
-                              <ScrollArea className="mt-2 max-h-60 rounded-md border bg-muted/40 p-4">
-                                <pre className="text-xs leading-relaxed">
-                                  {formatJson(endpoint.response)}
-                                </pre>
-                              </ScrollArea>
-                            </TabsContent>
-                          )}
-                          <TabsContent value="curl" className="mt-4">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-sm font-semibold">
-                                cURL Example
-                              </h4>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  handleCopy(
-                                    buildCurlCommand(section.base, endpoint),
-                                    "cURL command",
-                                  )
-                                }
-                              >
-                                <Copy className="mr-2 h-4 w-4" /> Copy
-                              </Button>
-                            </div>
-                            <ScrollArea className="mt-2 max-h-60 rounded-md border bg-muted/40 p-4">
-                              <pre className="text-xs leading-relaxed">
-                                {buildCurlCommand(section.base, endpoint)}
-                              </pre>
-                            </ScrollArea>
-                            {endpoint.params && (
-                              <p className="mt-2 text-xs text-muted-foreground">
-                                Query parameters example:{" "}
-                                {formatJson(endpoint.params)}
-                              </p>
-                            )}
-                          </TabsContent>
-                        </Tabs>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Search */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search endpoints..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
       </div>
-    </div>
+
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Server className="h-4 w-4 text-primary" />
+              Endpoints
+            </div>
+            <p className="mt-2 text-2xl font-bold">
+              {sections.reduce((acc, s) => acc + s.endpoints.length, 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Across {sections.length} sections
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Lock className="h-4 w-4 text-amber-600" />
+              Protected
+            </div>
+            <p className="mt-2 text-2xl font-bold">
+              {sections.reduce(
+                (acc, s) =>
+                  acc + s.endpoints.filter((e) => e.auth).length,
+                0,
+              )}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Require authentication
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Code2 className="h-4 w-4 text-emerald-600" />
+              Methods
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              GET, POST, PUT, PATCH, DELETE
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex gap-6">
+          {/* Sticky Sidebar */}
+          <aside className="hidden lg:block w-80 shrink-0">
+            <div className="sticky top-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium">
+                    Navigation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[calc(100vh-12rem)]">
+                    <nav className="space-y-1">
+                      {filteredSections.map((section) => (
+                        <button
+                          key={section.title}
+                          onClick={() => handleScrollToSection(section.title)}
+                          className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                            activeSection === section.title
+                              ? "bg-primary/10 font-medium text-primary"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          }`}
+                        >
+                          {section.icon}
+                          <span className="flex-1 text-left leading-tight">
+                            {section.title}
+                          </span>
+                          <Badge
+                            variant="secondary"
+                            className="h-5 min-w-5 px-1.5 text-xs"
+                          >
+                            {section.endpoints.length}
+                          </Badge>
+                        </button>
+                      ))}
+                    </nav>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
+          </aside>
+
+          {/* Content Area */}
+          <div className="flex-1 space-y-8 min-w-0">
+            {filteredSections.length === 0 && (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Search className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    No endpoints found matching "{searchQuery}"
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            {filteredSections.map((section) => (
+              <Card key={section.title} id={`section-${section.title}`}>
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                        {section.icon}
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl">
+                          {section.title}
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          {section.description}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                    <code className="rounded bg-muted px-2 py-1 font-mono">
+                      {section.base}
+                    </code>
+                    <Badge variant="secondary" className="font-normal">
+                      {section.endpoints.length}{" "}
+                      {section.endpoints.length === 1 ? "endpoint" : "endpoints"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Accordion type="single" collapsible className="w-full">
+                    {section.endpoints.map((endpoint, index) => (
+                      <AccordionItem
+                        value={`${section.title}-${index}`}
+                        key={`${section.title}-${endpoint.path}-${index}`}
+                        className="border-b last:border-0"
+                      >
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex w-full items-center gap-3 text-left pr-4">
+                            <Badge
+                              variant="outline"
+                              className={`min-w-[4.5rem] justify-center font-mono text-xs font-semibold ${
+                                methodStyles[endpoint.method] ??
+                                methodStyles.DEFAULT
+                              }`}
+                            >
+                              {endpoint.method}
+                            </Badge>
+                            <div className="flex flex-1 flex-col gap-1 min-w-0">
+                              <code className="font-semibold text-sm truncate">
+                                {endpoint.path}
+                              </code>
+                              <span className="text-xs text-muted-foreground line-clamp-1">
+                                {endpoint.description}
+                              </span>
+                            </div>
+                            {endpoint.auth && (
+                              <Lock className="h-4 w-4 text-amber-600 shrink-0" />
+                            )}
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-4">
+                          <Tabs
+                            defaultValue={
+                              endpoint.body
+                                ? "request"
+                                : endpoint.response
+                                  ? "response"
+                                  : "curl"
+                            }
+                          >
+                            <TabsList className="grid w-full grid-cols-3 mb-4">
+                              {endpoint.body && (
+                                <TabsTrigger value="request">Request</TabsTrigger>
+                              )}
+                              {endpoint.response && (
+                                <TabsTrigger value="response">
+                                  Response
+                                </TabsTrigger>
+                              )}
+                              <TabsTrigger value="curl">cURL</TabsTrigger>
+                            </TabsList>
+                            {endpoint.body && (
+                              <TabsContent value="request" className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="text-sm font-semibold">
+                                    Request Body
+                                  </h4>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      handleCopyJson(
+                                        endpoint.body,
+                                        "Request body",
+                                      )
+                                    }
+                                  >
+                                    <Copy className="mr-2 h-3 w-3" /> Copy
+                                  </Button>
+                                </div>
+                                <ScrollArea className="max-h-96 rounded-lg border bg-muted/30 p-4">
+                                  <pre className="text-xs font-mono leading-relaxed">
+                                    {formatJson(endpoint.body)}
+                                  </pre>
+                                </ScrollArea>
+                              </TabsContent>
+                            )}
+                            {endpoint.response && (
+                              <TabsContent value="response" className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="text-sm font-semibold">
+                                    Sample Response
+                                  </h4>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      handleCopyJson(
+                                        endpoint.response,
+                                        "Response body",
+                                      )
+                                    }
+                                  >
+                                    <Copy className="mr-2 h-3 w-3" /> Copy
+                                  </Button>
+                                </div>
+                                <ScrollArea className="max-h-96 rounded-lg border bg-muted/30 p-4">
+                                  <pre className="text-xs font-mono leading-relaxed">
+                                    {formatJson(endpoint.response)}
+                                  </pre>
+                                </ScrollArea>
+                              </TabsContent>
+                            )}
+                            <TabsContent value="curl" className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-semibold">
+                                  cURL Command
+                                </h4>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleCopy(
+                                      buildCurlCommand(section.base, endpoint),
+                                      "cURL command",
+                                    )
+                                  }
+                                >
+                                  <Copy className="mr-2 h-3 w-3" /> Copy
+                                </Button>
+                              </div>
+                              <ScrollArea className="max-h-96 rounded-lg border bg-muted/30 p-4">
+                                <pre className="text-xs font-mono leading-relaxed">
+                                  {buildCurlCommand(section.base, endpoint)}
+                                </pre>
+                              </ScrollArea>
+                              {endpoint.params && (
+                                <div className="rounded-lg bg-muted/50 p-3">
+                                  <p className="text-xs font-medium mb-2">
+                                    Query Parameters:
+                                  </p>
+                                  <pre className="text-xs text-muted-foreground font-mono">
+                                    {formatJson(endpoint.params)}
+                                  </pre>
+                                </div>
+                              )}
+                            </TabsContent>
+                          </Tabs>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
   );
 }
