@@ -823,7 +823,7 @@ router.post(
       const insertSQL = `INSERT INTO user_api_keys (${insertCols.join(', ')})
                          VALUES (${placeholders})
                          RETURNING id,
-                                   COALESCE(key_name, name) AS name,
+                                   key_name AS name,
                                    key_prefix AS key_preview,
                                    created_at`;
 
