@@ -139,7 +139,7 @@ export function HeroGeometric({
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
             <Button size="lg" asChild className="min-w-[200px]">
               <Link to="/register">
-                Start Free Trial
+                Get Started Today
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>

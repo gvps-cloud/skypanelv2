@@ -223,7 +223,7 @@ const HeroSection = ({ regionCount, activeServers }: { regionCount: number; acti
               >
                 <Link to="/register">
                   <Rocket className="w-5 h-5 mr-2" />
-                  Start Free Trial
+                  Get Started Today
                   <ArrowUpRight className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
