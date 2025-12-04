@@ -99,7 +99,7 @@ const differentiators = [
   },
   {
     title: "Managed partner ecosystem",
-    description: "Carefully vetted integrations with Linode, PayPal, and monitoring providers so you can extend without re-architecting.",
+    description: "Carefully vetted infrastructure, payment, and monitoring partners so you can extend without re-architecting.",
     icon: Building2,
   },
 ];

@@ -76,6 +76,7 @@ import {
 } from "@/components/ui/accordion";
 import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
+import { BRAND_NAME } from "@/lib/brand";
 
 // Animation variants
 const fadeInUp = {
@@ -381,54 +382,69 @@ const HeroSection = ({ regionCount, activeServers }: { regionCount: number; acti
 };
 
 // Trust Badges Section
-const TrustBadges = () => (
-  <section className="py-16 border-b border-border bg-muted/20">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="flex flex-wrap items-center justify-center gap-8"
-      >
-        {[
-          {
-            icon: ShieldCheck,
-            text: "Enterprise Security",
-            colorClass: "text-primary",
-          },
-          {
-            icon: Award,
-            text: "99.95% Uptime SLA",
-            colorClass: "text-primary",
-          },
-          { icon: Users, text: "1000+ Customers", colorClass: "text-primary" },
-          { icon: Lock, text: "GDPR Compliant", colorClass: "text-primary" },
-          {
-            icon: CreditCard,
-            text: "PayPal Verified",
-            colorClass: "text-primary",
-          },
-        ].map((item, index) => (
-          <motion.div
-            key={item.text}
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: index * 0.1 }}
-            whileHover={{ scale: 1.05, y: -2 }}
-            className="flex items-center gap-3 px-6 py-3 bg-background rounded-lg border border-border/50 shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300"
-          >
-            <item.icon className={`w-5 h-5 ${item.colorClass}`} />
-            <span className="text-sm font-medium text-foreground">
-              {item.text}
-            </span>
-          </motion.div>
-        ))}
-      </motion.div>
-    </div>
-  </section>
-);
+const TrustBadges = ({ customerCount }: { customerCount: number | null }) => {
+  const customerBadgeLabel = (() => {
+    if (typeof customerCount === "number") {
+      const cap = 1_000_000;
+      if (customerCount >= cap) {
+        return `${cap.toLocaleString()}+ Customers`;
+      }
+      return `${customerCount.toLocaleString()} Customers`;
+    }
+    return "1000+ Customers";
+  })();
+
+  const badges = [
+    {
+      icon: ShieldCheck,
+      text: "Enterprise Security",
+      colorClass: "text-primary",
+    },
+    {
+      icon: Award,
+      text: "99.95% Uptime SLA",
+      colorClass: "text-primary",
+    },
+    { icon: Users, text: customerBadgeLabel, colorClass: "text-primary" },
+    { icon: Lock, text: "GDPR Compliant", colorClass: "text-primary" },
+    {
+      icon: CreditCard,
+      text: "PayPal Verified",
+      colorClass: "text-primary",
+    },
+  ];
+
+  return (
+    <section className="py-16 border-b border-border bg-muted/20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="flex flex-wrap items-center justify-center gap-8"
+        >
+          {badges.map((item, index) => (
+            <motion.div
+              key={item.text}
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: index * 0.1 }}
+              whileHover={{ scale: 1.05, y: -2 }}
+              className="flex items-center gap-3 px-6 py-3 bg-background rounded-lg border border-border/50 shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300"
+            >
+              <item.icon className={`w-5 h-5 ${item.colorClass}`} />
+              <span className="text-sm font-medium text-foreground">
+                {item.text}
+              </span>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+};
 
 // Features Showcase ("Platform" section)
 const FeaturesShowcase = ({ regionCount }: { regionCount: number }) => {
@@ -1134,7 +1150,7 @@ const Testimonials = () => {
             </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Join thousands of satisfied customers who trust SkyVPS360 for their
+            Join thousands of satisfied customers who trust {BRAND_NAME} for their
             infrastructure needs.
           </p>
         </motion.div>
@@ -1358,7 +1374,7 @@ const FAQ = () => {
             </span>
           </h2>
           <p className="text-xl text-muted-foreground">
-            Everything you need to know to get started with SkyVPS360.
+            Everything you need to know to get started with {BRAND_NAME}.
           </p>
         </motion.div>
 
@@ -1488,31 +1504,38 @@ const BackToTopButton = () => {
 export default function Home() {
   const [regionCount, setRegionCount] = useState(10);
   const [activeServers, setActiveServers] = useState(0);
+  const [customerCount, setCustomerCount] = useState<number | null>(null);
 
   useEffect(() => {
-    // Fetch region count from public regions API
-    fetch("/api/pricing/public-regions")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.data)) {
-          setRegionCount(data.data.length);
+    const fetchCounts = async () => {
+      try {
+        const regionsResponse = await fetch("/api/pricing/public-regions");
+        const regionsData = await regionsResponse.json();
+        if (regionsData.success && Array.isArray(regionsData.data)) {
+          setRegionCount(regionsData.data.length);
         }
-      })
-      .catch(() => {
-        // Fallback to default
-      });
+      } catch {
+        // Fallback handled by initial state
+      }
 
-    // Fetch active server count from platform stats
-    fetch("/api/health/platform-stats")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.data?.activeServers !== undefined) {
-          setActiveServers(data.data.activeServers);
+      try {
+        const statsResponse = await fetch("/api/health/platform-stats");
+        const stats = await statsResponse.json();
+        if (stats.success) {
+          const active = stats.vps?.active ?? stats.vps?.total;
+          if (typeof active === "number") {
+            setActiveServers(active);
+          }
+          if (typeof stats.users?.total === "number") {
+            setCustomerCount(stats.users.total);
+          }
         }
-      })
-      .catch(() => {
-        // Fallback to default
-      });
+      } catch {
+        // Leave defaults if stats fail
+      }
+    };
+
+    fetchCounts();
   }, []);
 
   return (
@@ -1521,7 +1544,7 @@ export default function Home() {
 
       <main>
         <HeroSection regionCount={regionCount} activeServers={activeServers} />
-        <TrustBadges />
+        <TrustBadges customerCount={customerCount} />
         <FeaturesShowcase regionCount={regionCount} />
         <LiveShowcase />
         <UseCases />
