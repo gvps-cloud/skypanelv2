@@ -4,6 +4,7 @@
  */
 import { Router, type Request, type Response } from 'express';
 import { query } from '../lib/database.js';
+import { fetchGitHubCommits } from '../services/githubService.js';
 
 const router = Router();
 
@@ -65,24 +66,22 @@ router.get('/categories', async (req: Request, res: Response): Promise<void> => 
 });
 
 /**
- * Get all active latest updates
+ * Get all active latest updates (from GitHub commits)
  * GET /api/faq/updates
  */
 router.get('/updates', async (req: Request, res: Response): Promise<void> => {
   try {
-    const updatesResult = await query(
-      `SELECT id, title, description, published_date, display_order
-       FROM faq_updates
-       WHERE is_active = true
-       ORDER BY display_order ASC, published_date DESC`
-    );
+    const commits = await fetchGitHubCommits(5); // Get last 5 commits for public page
 
-    const updates = (updatesResult.rows || []).map(update => ({
-      id: update.id,
-      title: update.title,
-      description: update.description,
-      published_date: update.published_date,
-      display_order: update.display_order
+    // Transform commits to match the expected update format
+    const updates = commits.map(commit => ({
+      id: commit.sha,
+      title: commit.title,
+      description: commit.description || `Committed by ${commit.author.username}`,
+      published_date: commit.date,
+      display_order: 0,
+      url: commit.url,
+      author: commit.author.username
     }));
 
     res.json({ updates });

@@ -37,6 +37,7 @@ import sshKeysRoutes from './routes/sshKeys.js';
 import pricingRoutes from './routes/pricing.js';
 import adminFaqRoutes from './routes/adminFaq.js';
 import adminContactRoutes from './routes/admin/contact.js';
+import githubRoutes from './routes/github.js';
 import { initializeMetricsCollection, startMetricsPersistence } from './services/rateLimitMetrics.js';
 
 // for esm mode
@@ -86,6 +87,7 @@ app.use('/api/contact', contactRouter)
 app.use('/api/admin/contact', adminContactRoutes)
 app.use('/api/faq', faqRoutes);
 app.use('/api/admin/faq', adminFaqRoutes);
+app.use('/api/admin/github', githubRoutes);
 app.use('/api/ssh-keys', sshKeysRoutes)
 app.use('/api/pricing', pricingRoutes)
 

@@ -110,6 +110,14 @@ const Status = React.forwardRef<HTMLDivElement, StatusProps>(
   ({ className, variant, size, label, showPing = false, animated = false, ...props }, ref) => {
     const statusLabel = label || (variant ? variant.charAt(0).toUpperCase() + variant.slice(1) : "Status")
     
+    // Get indicator size class for the container
+    const sizeClasses = {
+      sm: "h-2 w-2",
+      default: "h-3 w-3",
+      lg: "h-4 w-4",
+    }
+    const containerSize = sizeClasses[size || "default"]
+    
     return (
       <div
         ref={ref}
@@ -118,12 +126,12 @@ const Status = React.forwardRef<HTMLDivElement, StatusProps>(
         aria-label={`Status: ${statusLabel}`}
         {...props}
       >
-        <div className="relative flex items-center justify-center">
+        <div className={cn("relative flex-shrink-0", containerSize)}>
           {showPing && (
-            <span className={cn(pingVariants({ variant, size }))} />
+            <span className={cn(pingVariants({ variant, size }), "inset-0")} />
           )}
           <span 
-            className={cn(indicatorVariants({ variant, size, animated }))}
+            className={cn(indicatorVariants({ variant, size, animated }), "absolute inset-0")}
             aria-hidden="true"
           />
         </div>

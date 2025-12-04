@@ -28,9 +28,12 @@ export interface FAQUpdate {
   description: string;
   published_date: string;
   display_order: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  // GitHub commit fields (optional)
+  url?: string;
+  author?: string;
 }
 
 // API response types
@@ -95,4 +98,25 @@ export interface ReorderItemsRequest {
 
 export interface ReorderUpdatesRequest {
   updates: ReorderItem[];
+}
+
+// GitHub commit types
+export interface GitHubCommit {
+  sha: string;
+  shortSha: string;
+  title: string;
+  description: string;
+  date: string;
+  author: {
+    name: string;
+    username: string;
+    avatarUrl: string;
+  };
+  url: string;
+}
+
+export interface GitHubCommitsResponse {
+  success: boolean;
+  commits: GitHubCommit[];
+  count: number;
 }

@@ -304,10 +304,24 @@ export default function FAQ() {
               ) : updates.length > 0 ? (
                 updates.map((update, index) => (
                   <div key={update.id}>
-                    {index > 0 && <Separator />}
-                    <div>
-                      <p className="font-medium text-foreground">{update.title}</p>
-                      <p>{update.description}</p>
+                    {index > 0 && <Separator className="my-3" />}
+                    <div className="group">
+                      {update.url ? (
+                        <a 
+                          href={update.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1"
+                        >
+                          {update.title}
+                          <ArrowUpRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </a>
+                      ) : (
+                        <p className="font-medium text-foreground">{update.title}</p>
+                      )}
+                      <p className="text-muted-foreground">
+                        {update.author ? `Committed by ${update.author}` : update.description}
+                      </p>
                     </div>
                   </div>
                 ))
