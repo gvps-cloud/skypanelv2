@@ -9,6 +9,7 @@ import { AuthService } from '../services/authService.js';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js';
 import { logActivity } from '../services/activityLogger.js';
 import { query } from '../lib/database.js';
+import { generateUniqueOrgName } from '../lib/animalSuffix.js';
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.post('/register', [
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('firstName').trim().isLength({ min: 1 }).withMessage('First name is required'),
   body('lastName').trim().isLength({ min: 1 }).withMessage('Last name is required'),
-  body('organizationName').optional().trim()
+  body('organizationName').trim().notEmpty().withMessage('Organization name is required')
 ], async (req: Request, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
@@ -43,6 +44,7 @@ router.post('/register', [
     res.status(201).json({
       message: 'User registered successfully',
       user: result.user,
+      organizationName: result.organizationName,
       token: result.token
     });
   } catch (error: any) {
@@ -441,15 +443,18 @@ router.get('/organization', authenticateToken, async (req: AuthenticatedRequest,
       // Get user's name for default organization name
       const userResult = await query('SELECT name, email FROM users WHERE id = $1', [req.user.id]);
       const userName = userResult.rows[0]?.name || 'User';
-      const defaultOrgName = `${userName}'s Organization`;
-      const slug = defaultOrgName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + orgId.substring(0, 8);
+      const baseOrgName = `${userName}'s Organization`;
+      
+      // Generate unique organization name with animal suffix if needed
+      const { finalName } = await generateUniqueOrgName(baseOrgName);
+      const slug = finalName.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
       // Create organization
       const orgResult = await query(
         `INSERT INTO organizations (id, name, slug, owner_id, settings, created_at, updated_at) 
          VALUES ($1, $2, $3, $4, $5, $6, $7) 
          RETURNING *`,
-        [orgId, defaultOrgName, slug, req.user.id, '{}', now, now]
+        [orgId, finalName, slug, req.user.id, '{}', now, now]
       );
 
       organizationId = orgResult.rows[0].id;
@@ -540,15 +545,18 @@ router.put(
       if (!organizationId) {
         const now = new Date().toISOString();
         const orgId = uuidv4();
-        const orgName = name || 'My Organization';
-        const slug = orgName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + orgId.substring(0, 8);
+        const baseOrgName = name || 'My Organization';
+        
+        // Generate unique organization name with animal suffix if needed
+        const { finalName } = await generateUniqueOrgName(baseOrgName);
+        const slug = finalName.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
         // Create organization
         const orgResult = await query(
           `INSERT INTO organizations (id, name, slug, owner_id, settings, website, address, tax_id, created_at, updated_at) 
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
            RETURNING *`,
-          [orgId, orgName, slug, req.user.id, '{}', website || null, address || null, taxId || null, now, now]
+          [orgId, finalName, slug, req.user.id, '{}', website || null, address || null, taxId || null, now, now]
         );
 
         organizationId = orgResult.rows[0].id;
@@ -589,10 +597,27 @@ router.put(
       }
 
       // Update existing organization
+      let finalName = name;
+      let nameWasModified = false;
+      
+      // If name is being changed, ensure uniqueness
+      if (typeof name !== 'undefined' && name.trim()) {
+        const { finalName: uniqueName, suffixAdded } = await generateUniqueOrgName(name.trim(), 5, organizationId);
+        finalName = uniqueName;
+        nameWasModified = suffixAdded;
+      }
+      
       const fields: string[] = [];
       const values: (string | null | undefined)[] = [];
       let idx = 1;
-      if (typeof name !== 'undefined') { fields.push(`name = $${idx++}`); values.push(name); }
+      if (typeof name !== 'undefined') { 
+        fields.push(`name = $${idx++}`); 
+        values.push(finalName);
+        // Also update slug to match new name
+        const newSlug = finalName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        fields.push(`slug = $${idx++}`);
+        values.push(newSlug);
+      }
       if (typeof website !== 'undefined') { fields.push(`website = $${idx++}`); values.push(website); }
       if (typeof address !== 'undefined') { fields.push(`address = $${idx++}`); values.push(address); }
       if (typeof taxId !== 'undefined') { fields.push(`tax_id = $${idx++}`); values.push(taxId); }
@@ -615,7 +640,8 @@ router.put(
           website: updated.website,
           address: updated.address,
           taxId: updated.tax_id
-        }
+        },
+        nameWasModified
       });
     } catch (error: unknown) {
       console.error('Organization update error:', error);

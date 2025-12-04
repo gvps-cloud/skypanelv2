@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { query, transaction } from '../lib/database.js';
 import { config } from '../config/index.js';
 import { v4 as uuidv4 } from 'uuid';
+import { generateUniqueOrgName } from '../lib/animalSuffix.js';
 import {
   sendPasswordResetEmail,
   sendWelcomeEmail
@@ -14,7 +15,7 @@ export interface RegisterData {
   password: string;
   firstName: string;
   lastName: string;
-  organizationName?: string;
+  organizationName: string;
 }
 
 export interface LoginData {
@@ -56,17 +57,20 @@ export class AuthService {
 
         const user = userResult.rows[0];
         let organizationId = null;
+        let finalOrgName = data.organizationName;
 
-        // Create organization if provided
-        if (data.organizationName) {
+        // Create organization with unique name (append suffix if name already exists)
+        {
+          const { finalName } = await generateUniqueOrgName(data.organizationName);
+          finalOrgName = finalName;
           const orgId = uuidv4();
-          const slug = data.organizationName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          const slug = finalName.toLowerCase().replace(/[^a-z0-9]/g, '-');
           
           const orgResult = await client.query(
             `INSERT INTO organizations (id, name, slug, owner_id, settings, created_at, updated_at) 
              VALUES ($1, $2, $3, $4, $5, $6, $7) 
              RETURNING *`,
-            [orgId, data.organizationName, slug, userId, '{}', now, now]
+            [orgId, finalName, slug, userId, '{}', now, now]
           );
 
           organizationId = orgResult.rows[0].id;
@@ -96,7 +100,7 @@ export class AuthService {
           }
         }
 
-        return { user, organizationId };
+        return { user, organizationId, organizationName: finalOrgName };
       });
 
       // Generate JWT token (include role for rate limiting user type detection)
@@ -127,6 +131,7 @@ export class AuthService {
           emailVerified: true,
           organizationId: result.organizationId
         },
+        organizationName: result.organizationName,
         token
       };
     } catch (error) {

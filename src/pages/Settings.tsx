@@ -160,13 +160,26 @@ const Settings: React.FC = () => {
   const handleSaveOrganization = async () => {
     setLoading(true);
     try {
-      await updateOrganization(
+      const result = await updateOrganization(
         orgData.name,
         orgData.website,
         orgData.address,
         orgData.taxId
       );
-      toast.success('Organization settings updated successfully');
+      
+      // Update form with the actual saved organization data
+      if (result.organization) {
+        setOrgData(prev => ({
+          ...prev,
+          name: result.organization.name || prev.name
+        }));
+      }
+      
+      if (result.nameWasModified) {
+        toast.success(`Organization name was modified to "${result.organization.name}" to ensure uniqueness`);
+      } else {
+        toast.success('Organization settings updated successfully');
+      }
     } catch (error: any) {
       toast.error(error?.message || 'Failed to update organization settings');
     } finally {

@@ -25,7 +25,7 @@ export interface AuthContextType {
   refreshToken: () => Promise<void>;
   updateProfile: (data: { firstName?: string; lastName?: string; phone?: string; timezone?: string }) => Promise<void>;
   getOrganization: () => Promise<any>;
-  updateOrganization: (name?: string, website?: string, address?: string, taxId?: string) => Promise<void>;
+  updateOrganization: (name?: string, website?: string, address?: string, taxId?: string) => Promise<{ organization: any; nameWasModified?: boolean }>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   updatePreferences: (notifications?: any, security?: any) => Promise<void>;
   getApiKeys: () => Promise<any[]>;
@@ -38,7 +38,7 @@ interface RegisterData {
   password: string;
   firstName: string;
   lastName: string;
-  organizationName?: string;
+  organizationName: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -292,7 +292,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update organization');
       }
-      return result.organization;
+      return { organization: result.organization, nameWasModified: result.nameWasModified };
     } catch (error) {
       console.error('Update organization error:', error);
       throw error;
