@@ -190,7 +190,7 @@ export default function AboutUs() {
             {isLoading ? (
               // Loading skeleton
               <>
-                {[1, 2, 3, 4, 5].map((i) => (
+                {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div key={i} className="rounded-lg border border-border p-4 text-left">
                     <Skeleton className="h-8 w-20 mb-2" />
                     <Skeleton className="h-3 w-32" />
@@ -216,10 +216,6 @@ export default function AboutUs() {
                 <div className="rounded-lg border border-border p-4 text-left">
                   <div className="text-2xl font-semibold text-foreground">{formatStat(platformStats?.vps?.total)}</div>
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Total VPS Deployed</p>
-                </div>
-                <div className="rounded-lg border border-border p-4 text-left">
-                  <div className="text-2xl font-semibold text-foreground">{formatStat(platformStats?.containers?.total)}</div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Total Containers</p>
                 </div>
                 <div className="rounded-lg border border-border p-4 text-left">
                   <div className="text-2xl font-semibold text-foreground">{formatStat(platformStats?.support?.totalTickets)}</div>

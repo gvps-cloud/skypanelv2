@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -7,6 +7,8 @@ import {
   AlertCircle,
   Server,
   MapPin,
+  Wifi,
+  Loader2,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -48,17 +50,69 @@ interface Region {
   site_type: string;
   status: string;
   country: string;
+  speedTestUrl?: string;
 }
+
+// Latency result state per region
+interface LatencyState {
+  [regionId: string]: {
+    loading: boolean;
+    latency?: number;
+    error?: boolean;
+  };
+}
+
+// Get latency badge class - uses high-contrast text for visibility
+const getLatencyBadgeClass = (ms: number): string => {
+  // Background color based on latency, always with high-contrast text
+  if (ms < 100) return "bg-green-500 text-white dark:text-white";
+  if (ms < 200) return "bg-yellow-500 text-black dark:text-black";
+  if (ms < 300) return "bg-orange-500 text-white dark:text-white";
+  return "bg-red-500 text-white dark:text-white";
+};
 
 export default function Status() {
   const [services, setServices] = useState<ServiceComponent[]>([]);
-  const [uptime] = useState({ day: 99.9, week: 99.8, month: 99.7 });
   const [activeIncidents, setActiveIncidents] = useState<Incident[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>(() => new Date().toLocaleTimeString());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [regions, setRegions] = useState<Region[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [latencyState, setLatencyState] = useState<LatencyState>({});
+
+  // Measure latency to a speed test URL
+  const measureLatency = useCallback(async (regionId: string, speedTestUrl: string) => {
+    setLatencyState((prev) => ({
+      ...prev,
+      [regionId]: { loading: true },
+    }));
+
+    try {
+      // Use a small file or favicon to minimize download time
+      // We measure round-trip time using fetch with cache disabled
+      const testUrl = `${speedTestUrl}favicon.ico?t=${Date.now()}`;
+      const startTime = performance.now();
+      
+      await fetch(testUrl, {
+        mode: 'no-cors',
+        cache: 'no-store',
+      });
+      
+      const endTime = performance.now();
+      const latency = Math.round(endTime - startTime);
+
+      setLatencyState((prev) => ({
+        ...prev,
+        [regionId]: { loading: false, latency },
+      }));
+    } catch (err) {
+      setLatencyState((prev) => ({
+        ...prev,
+        [regionId]: { loading: false, error: true },
+      }));
+    }
+  }, []);
 
   const fetchLiveData = async () => {
     try {
@@ -84,10 +138,31 @@ export default function Status() {
         // Continue with zeros if status endpoint fails
       }
 
-      // Fetch regions (public data)
-      const regionsResponse = await fetch('https://api.linode.com/v4/regions');
-      const regionsData = await regionsResponse.json();
-      const regionsData_: Region[] = regionsData.data || [];
+      // Fetch regions from our API (only admin-allowed regions)
+      let regionsData_: Region[] = [];
+      try {
+        const regionsResponse = await fetch('/api/pricing/public-regions');
+        const regionsJson = await regionsResponse.json();
+        if (regionsJson.success && Array.isArray(regionsJson.regions)) {
+          regionsData_ = regionsJson.regions;
+        }
+      } catch (err) {
+        console.warn('Failed to fetch regions from API, falling back to Linode:', err);
+        // Fallback to direct Linode API if our endpoint fails
+        try {
+          const linodeResponse = await fetch('https://api.linode.com/v4/regions');
+          const linodeData = await linodeResponse.json();
+          regionsData_ = (linodeData.data || []).map((r: any) => ({
+            id: r.id,
+            label: r.label,
+            site_type: r.site_type,
+            status: r.status,
+            country: r.country,
+          }));
+        } catch (linodeErr) {
+          console.warn('Failed to fetch regions from Linode:', linodeErr);
+        }
+      }
       setRegions(regionsData_);
 
       // Update services with live data
@@ -336,24 +411,69 @@ export default function Status() {
           <Card className="shadow-sm">
             <CardContent className="p-6">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {regions.map((region) => (
-                  <div key={region.id} className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-1">
-                      <h4 className="font-medium">{region.label}</h4>
-                      <p className="text-sm text-muted-foreground">{region.country}</p>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {region.site_type}
-                        </Badge>
+                {regions.map((region) => {
+                  const regionLatency = latencyState[region.id];
+                  return (
+                    <div key={region.id} className="flex flex-col gap-3 rounded-lg border p-4 transition-all hover:border-primary/30 hover:shadow-sm">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <h4 className="font-medium">{region.label}</h4>
+                          <p className="text-sm text-muted-foreground">{region.country}</p>
+                        </div>
                         <StatusDot 
                           variant={region.status === 'ok' ? 'running' : 'error'} 
                           label={region.status} 
                           showPing={region.status === 'ok'}
                         />
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {region.site_type}
+                        </Badge>
+                        {/* Latency Result Badge */}
+                        {regionLatency?.latency !== undefined && (
+                          <span 
+                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${getLatencyBadgeClass(regionLatency.latency)}`}
+                          >
+                            {regionLatency.latency}ms
+                          </span>
+                        )}
+                        {regionLatency?.error && (
+                          <Badge variant="destructive" className="text-xs">
+                            Failed
+                          </Badge>
+                        )}
+                      </div>
+                      {/* Test Latency Button - only show if speedTestUrl is available */}
+                      {region.speedTestUrl && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full mt-1 h-8 text-xs"
+                          onClick={() => measureLatency(region.id, region.speedTestUrl!)}
+                          disabled={regionLatency?.loading}
+                        >
+                          {regionLatency?.loading ? (
+                            <>
+                              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                              Testing...
+                            </>
+                          ) : regionLatency?.latency !== undefined ? (
+                            <>
+                              <Wifi className="mr-2 h-3 w-3" />
+                              Retest Latency
+                            </>
+                          ) : (
+                            <>
+                              <Wifi className="mr-2 h-3 w-3" />
+                              Test Latency
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -361,33 +481,36 @@ export default function Status() {
       )}
 
       <section className="mt-12 space-y-6">
-        <h2 className="text-2xl font-semibold">Uptime performance</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold">SLA Commitments</h2>
+          <Badge variant="outline">Target uptime guarantees</Badge>
+        </div>
         <div className="grid gap-6 md:grid-cols-3">
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">Last 24 hours</CardTitle>
+              <CardTitle className="text-base">VPS Infrastructure</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="text-3xl font-semibold text-green-600 dark:text-green-400">{uptime.day}%</div>
-              <p className="text-xs text-muted-foreground">All systems passed automated probes</p>
+              <div className="text-3xl font-semibold text-green-600 dark:text-green-400">99.9%</div>
+              <p className="text-xs text-muted-foreground">Target uptime for compute resources</p>
             </CardContent>
           </Card>
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">Last 7 days</CardTitle>
+              <CardTitle className="text-base">Network Availability</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="text-3xl font-semibold text-green-600 dark:text-green-400">{uptime.week}%</div>
-              <p className="text-xs text-muted-foreground">Includes scheduled maintenance windows</p>
+              <div className="text-3xl font-semibold text-green-600 dark:text-green-400">99.95%</div>
+              <p className="text-xs text-muted-foreground">Global network backbone guarantee</p>
             </CardContent>
           </Card>
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">Last 30 days</CardTitle>
+              <CardTitle className="text-base">Support Response</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="text-3xl font-semibold text-green-600 dark:text-green-400">{uptime.month}%</div>
-              <p className="text-xs text-muted-foreground">MTTR &lt; 12 minutes for resolved incidents</p>
+              <div className="text-3xl font-semibold text-primary">&lt; 1hr</div>
+              <p className="text-xs text-muted-foreground">Average initial response time</p>
             </CardContent>
           </Card>
         </div>

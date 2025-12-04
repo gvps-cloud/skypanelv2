@@ -140,7 +140,7 @@ const AnimatedCounter = ({
 };
 
 // Hero Section Component
-const HeroSection = () => {
+const HeroSection = ({ regionCount, activeServers }: { regionCount: number; activeServers: number }) => {
   return (
     <section className="relative min-h-screen flex items-center bg-background overflow-hidden">
       {/* Animated background gradient */}
@@ -250,13 +250,13 @@ const HeroSection = () => {
                   icon: Shield,
                 },
                 {
-                  value: 18,
+                  value: regionCount || 10,
                   suffix: "+",
                   label: "Global Regions",
                   icon: Globe2,
                 },
                 {
-                  value: 1000,
+                  value: activeServers || 0,
                   suffix: "+",
                   label: "Active Servers",
                   icon: Server,
@@ -431,7 +431,7 @@ const TrustBadges = () => (
 );
 
 // Features Showcase ("Platform" section)
-const FeaturesShowcase = () => {
+const FeaturesShowcase = ({ regionCount }: { regionCount: number }) => {
   const features = [
     {
       icon: Rocket,
@@ -472,7 +472,7 @@ const FeaturesShowcase = () => {
       icon: Wifi,
       title: "Multi-Region",
       description:
-        "Deploy across 18+ global regions for optimal performance and latency.",
+        `Deploy across ${regionCount || 10}+ global regions for optimal performance and latency.`,
       color: "from-primary to-primary/80",
     },
   ];
@@ -1134,7 +1134,7 @@ const Testimonials = () => {
             </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Join thousands of satisfied customers who trust SkyPanelV2 for their
+            Join thousands of satisfied customers who trust SkyVPS360 for their
             infrastructure needs.
           </p>
         </motion.div>
@@ -1358,7 +1358,7 @@ const FAQ = () => {
             </span>
           </h2>
           <p className="text-xl text-muted-foreground">
-            Everything you need to know to get started with SkyPanelV2.
+            Everything you need to know to get started with SkyVPS360.
           </p>
         </motion.div>
 
@@ -1486,14 +1486,43 @@ const BackToTopButton = () => {
 };
 
 export default function Home() {
+  const [regionCount, setRegionCount] = useState(10);
+  const [activeServers, setActiveServers] = useState(0);
+
+  useEffect(() => {
+    // Fetch region count from public regions API
+    fetch("/api/pricing/public-regions")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setRegionCount(data.data.length);
+        }
+      })
+      .catch(() => {
+        // Fallback to default
+      });
+
+    // Fetch active server count from platform stats
+    fetch("/api/health/platform-stats")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data?.activeServers !== undefined) {
+          setActiveServers(data.data.activeServers);
+        }
+      })
+      .catch(() => {
+        // Fallback to default
+      });
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <MarketingNavbar />
 
       <main>
-        <HeroSection />
+        <HeroSection regionCount={regionCount} activeServers={activeServers} />
         <TrustBadges />
-        <FeaturesShowcase />
+        <FeaturesShowcase regionCount={regionCount} />
         <LiveShowcase />
         <UseCases />
         <HowItWorks />

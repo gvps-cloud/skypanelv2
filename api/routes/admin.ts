@@ -29,6 +29,8 @@ import {
   normalizeRegionList,
   parseStoredAllowedRegions,
 } from "../lib/providerRegions.js";
+import { invalidateRegionsCache } from "./pricing.js";
+import { PlatformStatsService } from "../services/platformStatsService.js";
 import {
   listActiveRateLimitOverrides,
   upsertRateLimitOverride,
@@ -1396,6 +1398,12 @@ router.put(
       }
 
       ProviderResourceCache.invalidateProvider(id);
+      
+      // Invalidate public regions cache so status page reflects changes immediately
+      invalidateRegionsCache();
+      
+      // Invalidate platform stats cache so About page shows updated region count
+      PlatformStatsService.clearCache();
 
       res.json({
         success: true,

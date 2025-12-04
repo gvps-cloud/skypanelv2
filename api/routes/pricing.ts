@@ -1,7 +1,146 @@
 import express, { Request, Response } from "express";
 import { query } from "../lib/database.js";
+import { linodeService } from "../services/linodeService.js";
+import { getSpeedTestUrl, parseStoredAllowedRegions, normalizeRegionList } from "../lib/providerRegions.js";
 
 const router = express.Router();
+
+// ============================================================================
+// Regions Cache for public endpoints
+// ============================================================================
+interface PublicRegion {
+  id: string;
+  label: string;
+  country: string;
+  status: string;
+  site_type: string;
+  speedTestUrl?: string;
+}
+
+interface CachedRegions {
+  regions: PublicRegion[];
+  count: number;
+  timestamp: number;
+}
+
+let regionsCache: CachedRegions | null = null;
+const REGIONS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function isRegionsCacheValid(): boolean {
+  if (!regionsCache) return false;
+  return Date.now() - regionsCache.timestamp < REGIONS_CACHE_TTL_MS;
+}
+
+export function invalidateRegionsCache(): void {
+  regionsCache = null;
+}
+
+/**
+ * GET /api/pricing/public-regions
+ * 
+ * Public endpoint to retrieve allowed regions from all active providers.
+ * Returns only regions that are enabled by admin in the provider configuration.
+ * Cached for 5 minutes.
+ */
+router.get("/public-regions", async (_req: Request, res: Response) => {
+  try {
+    // Check cache first
+    if (isRegionsCacheValid() && regionsCache) {
+      return res.json({
+        success: true,
+        regions: regionsCache.regions,
+        count: regionsCache.count,
+        cached: true,
+        cacheExpiry: new Date(regionsCache.timestamp + REGIONS_CACHE_TTL_MS).toISOString(),
+      });
+    }
+
+    // Fetch all active providers
+    const providersResult = await query(
+      `SELECT id, type, allowed_regions FROM service_providers WHERE active = true`
+    );
+
+    // Collect all allowed regions across providers
+    const allowedRegionSet = new Set<string>();
+
+    for (const provider of providersResult.rows) {
+      if (provider.type !== "linode") continue;
+
+      // Try to get regions from provider_region_overrides first
+      let providerAllowedRegions: string[] = [];
+      try {
+        const overridesResult = await query(
+          "SELECT region FROM provider_region_overrides WHERE provider_id = $1",
+          [provider.id]
+        );
+
+        if (overridesResult.rows.length > 0) {
+          providerAllowedRegions = normalizeRegionList(
+            overridesResult.rows
+              .map((row) => row.region)
+              .filter((value): value is string => typeof value === "string")
+          );
+        }
+      } catch (err: any) {
+        const message = String(err?.message || "").toLowerCase();
+        const missingTable =
+          message.includes("relation") &&
+          message.includes("provider_region_overrides");
+        if (!missingTable) {
+          console.warn("Error fetching provider_region_overrides:", err);
+        }
+      }
+
+      // Fall back to allowed_regions JSONB column
+      if (providerAllowedRegions.length === 0) {
+        providerAllowedRegions = parseStoredAllowedRegions(provider.allowed_regions);
+      }
+
+      // Add to the set
+      providerAllowedRegions.forEach((region) => allowedRegionSet.add(region));
+    }
+
+    // Fetch all Linode regions for details
+    const linodeRegions = await linodeService.getLinodeRegions();
+
+    // Filter to only allowed regions and map with speed test URLs
+    const allowedRegions: PublicRegion[] = linodeRegions
+      .filter((region) => {
+        const slug = region.id?.toLowerCase() || "";
+        // If no specific regions configured, all are allowed
+        if (allowedRegionSet.size === 0) return true;
+        return allowedRegionSet.has(slug);
+      })
+      .map((region) => ({
+        id: region.id,
+        label: region.label || region.id,
+        country: region.country || "",
+        status: region.status || "unknown",
+        site_type: region.site_type || "core",
+        speedTestUrl: getSpeedTestUrl(region.id),
+      }));
+
+    // Update cache
+    regionsCache = {
+      regions: allowedRegions,
+      count: allowedRegions.length,
+      timestamp: Date.now(),
+    };
+
+    res.json({
+      success: true,
+      regions: allowedRegions,
+      count: allowedRegions.length,
+      cached: false,
+      cacheExpiry: new Date(Date.now() + REGIONS_CACHE_TTL_MS).toISOString(),
+    });
+  } catch (error) {
+    console.error("Public regions fetch error:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch regions";
+    res.status(500).json({ error: message });
+  }
+});
 
 /**
  * GET /api/pricing/vps

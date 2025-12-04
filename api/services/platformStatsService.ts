@@ -221,17 +221,58 @@ export class PlatformStatsService {
 
       const plansRow = plansResult.rows[0] || { vps_plans: 0 };
 
-      // Get regions count from Linode API
+      // Get regions count from admin-allowed regions across all providers
       let regionCount = 0;
       try {
-        const regions = await linodeService.getLinodeRegions();
-        regionCount = regions.length;
+        // First, get all allowed regions from provider_region_overrides
+        const allowedRegionSet = new Set<string>();
+        
+        const providersResult = await query(
+          `SELECT id, allowed_regions FROM service_providers WHERE active = true AND type = 'linode'`
+        );
+        
+        for (const provider of providersResult.rows) {
+          try {
+            const overridesResult = await query(
+              "SELECT region FROM provider_region_overrides WHERE provider_id = $1",
+              [provider.id]
+            );
+            
+            if (overridesResult.rows.length > 0) {
+              overridesResult.rows.forEach((row) => {
+                if (typeof row.region === "string") {
+                  allowedRegionSet.add(row.region.toLowerCase().trim());
+                }
+              });
+            } else if (provider.allowed_regions) {
+              // Fall back to allowed_regions JSONB column
+              const parsed = Array.isArray(provider.allowed_regions) 
+                ? provider.allowed_regions 
+                : [];
+              parsed.forEach((r: string) => {
+                if (typeof r === "string") {
+                  allowedRegionSet.add(r.toLowerCase().trim());
+                }
+              });
+            }
+          } catch (err) {
+            // If table doesn't exist, skip
+          }
+        }
+        
+        if (allowedRegionSet.size > 0) {
+          regionCount = allowedRegionSet.size;
+        } else {
+          // Fallback to all Linode regions if no specific regions configured
+          const regions = await linodeService.getLinodeRegions();
+          regionCount = regions.length;
+        }
       } catch (error) {
         console.warn(
-          "Failed to fetch Linode regions for platform stats:",
+          "Failed to fetch allowed regions for platform stats:",
           error
         );
-        // Fallback to 0 if API call fails
+        // Fallback to 0 if query fails
       }
       const platformStats: PlatformStats = {
         users: {
