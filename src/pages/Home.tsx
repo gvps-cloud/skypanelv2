@@ -36,6 +36,7 @@ const getBaseUrl = () => {
   return "dashboard.skypanel.dev";
 };
 import {
+  ArrowUp,
   ArrowUpRight,
   Check,
   Server,
@@ -1444,6 +1445,46 @@ const FinalCTA = () => (
 // Missing icon import
 const CreditCard = Wallet;
 
+// Back to Top Button Component
+const BackToTopButton = () => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const toggleVisibility = () => {
+      if (window.scrollY > 500) {
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
+      }
+    };
+
+    window.addEventListener("scroll", toggleVisibility);
+    return () => window.removeEventListener("scroll", toggleVisibility);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: isVisible ? 1 : 0, scale: isVisible ? 1 : 0.8 }}
+      transition={{ duration: 0.2 }}
+      onClick={scrollToTop}
+      className={`fixed bottom-8 right-8 z-50 p-3 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 hover:shadow-xl transition-all duration-300 ${
+        isVisible ? "pointer-events-auto" : "pointer-events-none"
+      }`}
+      aria-label="Back to top"
+    >
+      <ArrowUp className="w-5 h-5" />
+    </motion.button>
+  );
+};
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1463,6 +1504,7 @@ export default function Home() {
       </main>
 
       <MarketingFooter />
+      <BackToTopButton />
     </div>
   );
 }
