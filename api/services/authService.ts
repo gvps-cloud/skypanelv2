@@ -99,9 +99,9 @@ export class AuthService {
         return { user, organizationId };
       });
 
-      // Generate JWT token
+      // Generate JWT token (include role for rate limiting user type detection)
       const token = jwt.sign(
-        { userId: result.user.id, email: result.user.email },
+        { userId: result.user.id, email: result.user.email, role: result.user.role },
         config.JWT_SECRET as Secret,
         { expiresIn: config.JWT_EXPIRES_IN } as SignOptions
       );
@@ -168,9 +168,9 @@ export class AuthService {
         console.warn('organization_members table not found, skipping organization lookup', err);
       }
 
-      // Generate JWT token
+      // Generate JWT token (include role for rate limiting user type detection)
       const token = jwt.sign(
-        { userId: user.id, email: user.email },
+        { userId: user.id, email: user.email, role: user.role },
         config.JWT_SECRET as Secret,
         { expiresIn: config.JWT_EXPIRES_IN } as SignOptions
       );
@@ -326,9 +326,9 @@ export class AuthService {
         console.warn('organization_members table not found, skipping organization lookup', err);
       }
 
-      // Generate new JWT token
+      // Generate new JWT token (include role for rate limiting user type detection)
       const token = jwt.sign(
-        { userId: user.id, email: user.email },
+        { userId: user.id, email: user.email, role: user.role },
         config.JWT_SECRET as Secret,
         { expiresIn: config.JWT_EXPIRES_IN } as SignOptions
       );

@@ -20,6 +20,80 @@ import type { AuthenticatedRequest } from './auth.js';
 
 export type UserType = 'anonymous' | 'authenticated' | 'admin';
 
+/**
+ * In-memory request counter for tracking actual request counts per key
+ * This enables accurate utilization metrics in the rate limiting dashboard
+ */
+interface RequestCountEntry {
+  count: number;
+  windowStart: number;
+  windowMs: number;
+}
+
+class RequestCounter {
+  private counts: Map<string, RequestCountEntry> = new Map();
+  private cleanupInterval: NodeJS.Timeout;
+
+  constructor() {
+    // Clean up expired entries every minute
+    this.cleanupInterval = setInterval(() => this.cleanup(), 60 * 1000);
+  }
+
+  /**
+   * Increment and get the current count for a key
+   */
+  increment(key: string, windowMs: number): number {
+    const now = Date.now();
+    const entry = this.counts.get(key);
+
+    if (!entry || now - entry.windowStart >= entry.windowMs) {
+      // Start a new window
+      this.counts.set(key, { count: 1, windowStart: now, windowMs });
+      return 1;
+    }
+
+    // Increment existing window
+    entry.count++;
+    return entry.count;
+  }
+
+  /**
+   * Get the current count for a key without incrementing
+   */
+  getCount(key: string): number {
+    const now = Date.now();
+    const entry = this.counts.get(key);
+
+    if (!entry || now - entry.windowStart >= entry.windowMs) {
+      return 0;
+    }
+
+    return entry.count;
+  }
+
+  /**
+   * Clean up expired entries
+   */
+  private cleanup(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.counts.entries()) {
+      if (now - entry.windowStart >= entry.windowMs) {
+        this.counts.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Stop the cleanup interval (for graceful shutdown)
+   */
+  destroy(): void {
+    clearInterval(this.cleanupInterval);
+  }
+}
+
+// Global request counter instance
+const requestCounter = new RequestCounter();
+
 export interface RateLimitResponse {
   error: string;
   retryAfter: number;        // Seconds until reset
@@ -340,13 +414,18 @@ export async function smartRateLimit(req: Request, res: Response, next: NextFunc
 
     const isExemptEndpoint = exemptEndpoints.some(endpoint => req.path.startsWith(endpoint));
 
+    // Generate rate limit key for tracking
+    const rateLimitKey = generateRateLimitKey(req, userType);
+
     if (isDevelopment && isExemptEndpoint) {
       // Skip rate limiting entirely for critical endpoints in development
+      // Still track the request for metrics visibility
+      const currentCount = requestCounter.increment(rateLimitKey, 15 * 60 * 1000);
       recordRateLimitEvent(
         req,
         userType,
         999999, // Very high limit for tracking
-        1,
+        currentCount,
         15 * 60 * 1000,
         Date.now() + (15 * 60 * 1000),
         authenticatedUserId,
@@ -371,11 +450,14 @@ export async function smartRateLimit(req: Request, res: Response, next: NextFunc
       }
     }
 
+    // Increment and get actual request count for this key
+    const currentCount = requestCounter.increment(rateLimitKey, effectiveWindowMs);
+
     recordRateLimitEvent(
       req,
       userType,
       effectiveLimit,
-      1,
+      currentCount,
       effectiveWindowMs,
       Date.now() + effectiveWindowMs,
       authenticatedUserId,
