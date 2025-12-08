@@ -34,6 +34,7 @@ export interface LinodeRegion {
   country: string;
   capabilities: string[];
   status: string;
+  site_type?: "core" | "distributed";
   resolvers: {
     ipv4: string;
     ipv6: string;
@@ -182,17 +183,17 @@ export interface LinodeInstanceStatsResponse extends LinodeInstanceStatsSeries {
 export type LinodeTransferUsage =
   | number
   | {
-      total?: number;
-      in?: number;
-      out?: number;
-      ingress?: number;
-      egress?: number;
-      inbound?: number;
-      outbound?: number;
-      bytes?: number;
-      amount?: number;
-      used?: number;
-    };
+    total?: number;
+    in?: number;
+    out?: number;
+    ingress?: number;
+    egress?: number;
+    inbound?: number;
+    outbound?: number;
+    bytes?: number;
+    amount?: number;
+    used?: number;
+  };
 
 export interface LinodeInstanceTransferResponse {
   used: LinodeTransferUsage;
@@ -712,7 +713,7 @@ class LinodeService {
       if (isDebug) {
         console.log('Fetched Linode types:', data.data.length)
       }
-      
+
       // Map Linode type_class values to standardized categories
       const TYPE_CLASS_MAP: Record<string, string> = {
         'nanode': 'standard',
@@ -723,16 +724,16 @@ class LinodeService {
         'gpu': 'gpu',
         'accelerated': 'accelerated',
       };
-      
+
       return data.data.map((type: any) => {
         const rawTypeClass = (type.class || type.type_class || '').toLowerCase().trim();
         const mappedTypeClass = TYPE_CLASS_MAP[rawTypeClass] || 'standard';
-        
+
         // Log warning for unmapped type classes
         if (!TYPE_CLASS_MAP[rawTypeClass] && rawTypeClass) {
           console.warn(`Unmapped Linode type class: "${type.class || type.type_class}" for plan "${type.id}"`);
         }
-        
+
         return {
           id: type.id,
           label: type.label,
@@ -1142,7 +1143,7 @@ class LinodeService {
   /**
    * Update a Linode instance (e.g., label/hostname)
    */
-  async updateLinodeInstance(instanceId: number, updateData: { label?: string; [key: string]: any }): Promise<LinodeInstance> {
+  async updateLinodeInstance(instanceId: number, updateData: { label?: string;[key: string]: any }): Promise<LinodeInstance> {
     try {
       if (!this.apiToken) {
         throw new Error('Linode API token not configured');
@@ -1281,34 +1282,34 @@ class LinodeService {
 
       if (!response.ok) {
         const text = await response.text().catch(() => '');
-        
+
         // Parse the response to check for specific error conditions
         let errorMessage = `API error: ${response.status} ${response.statusText}`;
-        
+
         try {
           const errorData = JSON.parse(text);
           if (errorData.errors && Array.isArray(errorData.errors)) {
             const errorReasons = errorData.errors.map((err: any) => err.reason || '').join(' ');
-            
+
             // Check for the 24-hour waiting period error and replace with generic message
             if (errorReasons.includes('Please wait 24 hours before reactivating backups')) {
               throw new Error('Please wait 24 hours before reactivating backups for this VPS instance');
             }
-            
+
             // Remove any Linode branding from other error messages
             const sanitizedReasons = errorReasons.replace(/\bLinode\b/gi, 'VPS instance');
             if (sanitizedReasons.trim()) {
               errorMessage = sanitizedReasons;
             }
           }
-  } catch {
+        } catch {
           // If we can't parse the JSON, fall back to sanitizing the raw text
           const sanitizedText = text.replace(/\bLinode\b/gi, 'VPS instance');
           if (sanitizedText.trim()) {
             errorMessage += ` ${sanitizedText}`;
           }
         }
-        
+
         throw new Error(errorMessage.trim());
       }
     } catch (error) {
@@ -1330,29 +1331,29 @@ class LinodeService {
 
       if (!response.ok) {
         const text = await response.text().catch(() => '');
-        
+
         // Parse the response to check for specific error conditions
         let errorMessage = `API error: ${response.status} ${response.statusText}`;
-        
+
         try {
           const errorData = JSON.parse(text);
           if (errorData.errors && Array.isArray(errorData.errors)) {
             const errorReasons = errorData.errors.map((err: any) => err.reason || '').join(' ');
-            
+
             // Remove any Linode branding from error messages
             const sanitizedReasons = errorReasons.replace(/\bLinode\b/gi, 'VPS instance');
             if (sanitizedReasons.trim()) {
               errorMessage = sanitizedReasons;
             }
           }
-  } catch {
+        } catch {
           // If we can't parse the JSON, fall back to sanitizing the raw text
           const sanitizedText = text.replace(/\bLinode\b/gi, 'VPS instance');
           if (sanitizedText.trim()) {
             errorMessage += ` ${sanitizedText}`;
           }
         }
-        
+
         throw new Error(errorMessage.trim());
       }
     } catch (error) {
@@ -1915,7 +1916,7 @@ class LinodeService {
    */
   async setupCustomRDNSAsync(instanceId: number, label: string = `instance-${instanceId}`, baseDomain: string = 'ip.rev.skyvps360.xyz'): Promise<void> {
     const logPrefix = `[rDNS-${instanceId}]`;
-    
+
     try {
       if (!this.apiToken) {
         throw new Error('Linode API token not configured');
