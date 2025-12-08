@@ -1219,12 +1219,12 @@ router.get(
         mode === "custom"
           ? new Set(allowedRegions)
           : new Set(
-              allRegions
-                .map((region) =>
-                  typeof region.id === "string" ? region.id.toLowerCase() : "",
-                )
-                .filter(Boolean),
-            );
+            allRegions
+              .map((region) =>
+                typeof region.id === "string" ? region.id.toLowerCase() : "",
+              )
+              .filter(Boolean),
+          );
 
       const regions = allRegions.map((region) => {
         const slug =
@@ -1398,10 +1398,10 @@ router.put(
       }
 
       ProviderResourceCache.invalidateProvider(id);
-      
+
       // Invalidate public regions cache so status page reflects changes immediately
       invalidateRegionsCache();
-      
+
       // Invalidate platform stats cache so About page shows updated region count
       PlatformStatsService.clearCache();
 
@@ -2040,8 +2040,8 @@ router.get(
 
                   networks.ipv4 = Array.isArray(detail.ipv4)
                     ? Array.from(
-                        new Set(detail.ipv4.filter(Boolean).map(String)),
-                      )
+                      new Set(detail.ipv4.filter(Boolean).map(String)),
+                    )
                     : [];
                   networks.ipv6 = detail.ipv6
                     ? Array.from(new Set([String(detail.ipv6)]))
@@ -2449,9 +2449,8 @@ router.put(
             eventType: "user_update",
             entityType: "user",
             entityId: id,
-            message: `Admin updated user ${
-              existingUser.name || existingUser.email
-            }: ${changeDescriptions.join(", ")}`,
+            message: `Admin updated user ${existingUser.name || existingUser.email
+              }: ${changeDescriptions.join(", ")}`,
             status: "success",
             metadata: {
               ...auditMetadata,
@@ -2680,6 +2679,13 @@ router.post(
       const { confirmAdminImpersonation = false } = req.body;
       const adminUser = req.user!;
 
+      // Fetch admin name for notifications
+      const adminNameResult = await query(
+        "SELECT name FROM users WHERE id = $1",
+        [adminUser.id]
+      );
+      const adminName = adminNameResult.rows[0]?.name || 'An administrator';
+
       // Note: Rate limiting for impersonation is now handled by the unified smart rate limiting middleware
       // Admin users have higher limits (1000 requests per 15 minutes) which should be sufficient for normal operations
 
@@ -2776,13 +2782,11 @@ router.post(
           eventType: "impersonation_start",
           entityType: "user",
           entityId: targetUserId,
-          message: `Admin ${adminUser.email} started impersonating user ${
-            targetUser.email
-          }${
-            targetUser.role === "admin"
+          message: `Admin ${adminUser.email} started impersonating user ${targetUser.email
+            }${targetUser.role === "admin"
               ? " (admin-to-admin with confirmation)"
               : ""
-          }`,
+            }`,
           status: "warning", // Changed to warning for security audit
           metadata: auditMetadata,
         },
@@ -2797,11 +2801,11 @@ router.post(
           eventType: "impersonation_target",
           entityType: "user",
           entityId: adminUser.id,
-          message: `Your account is being accessed by admin ${adminUser.email}`,
+          message: `Your account is being accessed by admin ${adminName}`,
           status: "warning",
           metadata: {
             admin_user_id: adminUser.id,
-            admin_user_email: adminUser.email,
+            admin_user_name: adminName,
             impersonation_started_at: new Date().toISOString(),
           },
         },
@@ -2933,9 +2937,8 @@ router.post(
           eventType: "impersonation_end",
           entityType: "user",
           entityId: user.id,
-          message: `Admin ${originalAdmin.email} ended impersonation of user ${
-            user.email
-          } (duration: ${Math.floor(impersonationDuration / 60)} minutes)`,
+          message: `Admin ${originalAdmin.email} ended impersonation of user ${user.email
+            } (duration: ${Math.floor(impersonationDuration / 60)} minutes)`,
           status: "info",
           metadata: auditMetadata,
         },
@@ -2950,11 +2953,11 @@ router.post(
           eventType: "impersonation_ended",
           entityType: "user",
           entityId: originalAdmin.id,
-          message: `Admin access to your account by ${originalAdmin.email} has ended`,
+          message: `Admin access to your account by ${originalAdmin.name || 'an administrator'} has ended`,
           status: "info",
           metadata: {
             admin_user_id: originalAdmin.id,
-            admin_user_email: originalAdmin.email,
+            admin_user_name: originalAdmin.name,
             impersonation_ended_at: new Date().toISOString(),
           },
         },
