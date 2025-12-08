@@ -86,15 +86,15 @@ router.post(
         });
       }
 
-    const { amount, currency, description } = req.body;
-    const amountValue = safeParseNumber(amount);
-    if (amountValue === null) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid payment amount',
-      });
-    }
-    const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+      const { amount, currency, description } = req.body;
+      const amountValue = safeParseNumber(amount);
+      if (amountValue === null) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid payment amount',
+        });
+      }
+      const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
 
       const originHeader = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
       const forwardedProto = typeof req.headers['x-forwarded-proto'] === 'string' ? req.headers['x-forwarded-proto'] : undefined;
@@ -247,21 +247,15 @@ router.post(
  */
 router.get('/wallet/balance', requireOrganization, async (req: Request, res: Response) => {
   try {
-  const { organizationId } = (req as AuthenticatedRequest).user;
+    const { organizationId } = (req as AuthenticatedRequest).user;
 
     const balance = await PayPalService.getWalletBalance(organizationId);
 
-    if (balance !== null) {
-      res.json({
-        success: true,
-        balance,
-      });
-    } else {
-      res.status(404).json({
-        success: false,
-        error: 'Wallet not found',
-      });
-    }
+    // Return 0 balance if wallet doesn't exist yet (instead of 404)
+    res.json({
+      success: true,
+      balance: balance ?? 0,
+    });
   } catch (error) {
     console.error('Get wallet balance error:', error);
     res.status(500).json({
@@ -296,8 +290,8 @@ router.post(
         });
       }
 
-  const { amount, description } = req.body;
-  const { organizationId } = (req as AuthenticatedRequest).user;
+      const { amount, description } = req.body;
+      const { organizationId } = (req as AuthenticatedRequest).user;
 
       const success = await PayPalService.deductFundsFromWallet(
         organizationId,
@@ -353,7 +347,7 @@ router.get(
         });
       }
 
-  const { organizationId } = (req as AuthenticatedRequest).user;
+      const { organizationId } = (req as AuthenticatedRequest).user;
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
 
@@ -413,13 +407,13 @@ router.get(
         });
       }
 
-  const { organizationId } = (req as AuthenticatedRequest).user;
+      const { organizationId } = (req as AuthenticatedRequest).user;
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
       const status = req.query.status as string;
 
-  const whereClauses: string[] = ['organization_id = $1'];
-  const params: Array<string | number> = [organizationId];
+      const whereClauses: string[] = ['organization_id = $1'];
+      const params: Array<string | number> = [organizationId];
 
       if (status) {
         params.push(status);
@@ -481,7 +475,7 @@ router.get(
       }
 
       const transactionId = req.params.id;
-  const { organizationId } = (req as AuthenticatedRequest).user;
+      const { organizationId } = (req as AuthenticatedRequest).user;
 
       const result = await dbQuery(
         `SELECT id, organization_id, amount, currency, payment_method, payment_provider, provider_transaction_id, status, description, metadata, created_at, updated_at
@@ -572,7 +566,7 @@ router.post(
       }
 
       const { email, amount, currency, reason } = req.body;
-  const { organizationId } = (req as AuthenticatedRequest).user;
+      const { organizationId } = (req as AuthenticatedRequest).user;
 
       // Check if organization has sufficient funds
       const balance = await PayPalService.getWalletBalance(organizationId);

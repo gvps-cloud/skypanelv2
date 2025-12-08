@@ -35,7 +35,7 @@ import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
-import { OrganizationManagement } from "@/components/admin/OrganizationManagement";
+import { UserManagement } from "@/components/admin/UserManagement";
 import { RateLimitMonitoring } from "@/components/admin/RateLimitMonitoring";
 import { CategoryManager } from "@/components/admin/CategoryManager";
 import { FAQItemManager } from "@/components/admin/FAQItemManager";
@@ -1905,7 +1905,7 @@ const Admin: React.FC = () => {
         title: "Support Operations",
         description: "Orchestrate escalations and keep customer promises on track.",
         icon: LifeBuoy,
-    accent: "text-amber-600",
+        accent: "text-amber-600",
         summary: [
           { label: "Open", value: formatCountValue(openTicketCount) },
           { label: "Urgent", value: formatCountValue(urgentTickets) },
@@ -1918,7 +1918,7 @@ const Admin: React.FC = () => {
         title: "Compute Fleet",
         description: "Track dedicated infrastructure health and lifecycle status.",
         icon: Server,
-    accent: "text-blue-600",
+        accent: "text-blue-600",
         summary: [
           { label: "Active", value: formatCountValue(activeServers) },
           {
@@ -1934,7 +1934,7 @@ const Admin: React.FC = () => {
         title: "Plan Catalog",
         description: "Balance pricing, capacity tiers, and backup coverage.",
         icon: ServerCog,
-    accent: "text-emerald-600",
+        accent: "text-emerald-600",
         summary: [
           {
             label: "Active plans",
@@ -1953,7 +1953,7 @@ const Admin: React.FC = () => {
         title: "Organization Access",
         description: "Grant least-privilege access and monitor impersonations.",
         icon: Users,
-    accent: "text-purple-600",
+        accent: "text-purple-600",
         summary: [
           { label: "Members", value: formatCountValue(totalAdminUsers) },
           { label: "Admins", value: formatCountValue(adminUserCount) },
@@ -1965,7 +1965,7 @@ const Admin: React.FC = () => {
         title: "Cloud Providers",
         description: "Validate credentials and enforce deployment guardrails.",
         icon: Globe,
-    accent: "text-slate-600",
+        accent: "text-slate-600",
         summary: [
           { label: "Active", value: formatCountValue(activeProviders) },
           { label: "Inactive", value: formatCountValue(inactiveProviders) },
@@ -2192,1116 +2192,1196 @@ const Admin: React.FC = () => {
           className="space-y-8"
         >
           <div className="grid gap-6 lg:grid-cols-2">
-              <Card className="h-full">
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-lg font-semibold text-foreground">
-                    Support Triage
-                  </CardTitle>
-                  <CardDescription>
-                    Fast access to the highest-priority customer conversations.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {dashboardTicketHighlights.length > 0 ? (
-                    dashboardTicketHighlights.map((ticket) => (
-                      <button
-                        key={ticket.id}
-                        type="button"
-                        onClick={() => {
-                          setPendingFocusTicketId(ticket.id);
-                          handleTabChange("support");
-                        }}
-                        className="w-full rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-foreground line-clamp-2">
-                              {ticket.subject}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                              {ticket.category ? (
-                                <span className="capitalize">{ticket.category}</span>
-                              ) : (
-                                <span>General</span>
-                              )}
-                              <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-                              <span>
-                                {ticket.updated_at
-                                  ? new Date(ticket.updated_at).toLocaleString()
-                                  : new Date(ticket.created_at).toLocaleString()
-                                }
-                              </span>
-                            </div>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "shrink-0 capitalize",
-                              TICKET_PRIORITY_META[ticket.priority].className
-                            )}
-                          >
-                            {TICKET_PRIORITY_META[ticket.priority].label}
-                          </Badge>
-                        </div>
-                        <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">
-                          {ticket.message}
-                        </p>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
-                      No open tickets need attention right now.
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              <Card className="h-full">
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-lg font-semibold text-foreground">
-                    Infrastructure Signals
-                  </CardTitle>
-                  <CardDescription>
-                    Track servers requiring intervention across providers.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {dashboardServerAlerts.length > 0 ? (
-                    dashboardServerAlerts.map((server) => (
-                      <div
-                        key={server.id}
-                        className="rounded-xl border border-border/60 bg-background/80 px-4 py-3"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-foreground">
-                              {server.label || server.id}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                              {server.provider_name ? (
-                                <>
-                                  <span>{server.provider_name}</span>
-                                  <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-                                </>
-                              ) : null}
-                              {server.region_label ? <span>{server.region_label}</span> : null}
-                            </div>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "capitalize",
-                              statusBadgeClass(server.status)
-                            )}
-                          >
-                            {formatStatusLabel(server.status)}
-                          </Badge>
-                        </div>
-                        {server.organization_name ? (
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            {server.organization_name}
+            <Card className="h-full">
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-lg font-semibold text-foreground">
+                  Support Triage
+                </CardTitle>
+                <CardDescription>
+                  Fast access to the highest-priority customer conversations.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {dashboardTicketHighlights.length > 0 ? (
+                  dashboardTicketHighlights.map((ticket) => (
+                    <button
+                      key={ticket.id}
+                      type="button"
+                      onClick={() => {
+                        setPendingFocusTicketId(ticket.id);
+                        handleTabChange("support");
+                      }}
+                      className="w-full rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground line-clamp-2">
+                            {ticket.subject}
                           </p>
-                        ) : null}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            {ticket.category ? (
+                              <span className="capitalize">{ticket.category}</span>
+                            ) : (
+                              <span>General</span>
+                            )}
+                            <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
+                            <span>
+                              {ticket.updated_at
+                                ? new Date(ticket.updated_at).toLocaleString()
+                                : new Date(ticket.created_at).toLocaleString()
+                              }
+                            </span>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "shrink-0 capitalize",
+                            TICKET_PRIORITY_META[ticket.priority].className
+                          )}
+                        >
+                          {TICKET_PRIORITY_META[ticket.priority].label}
+                        </Badge>
                       </div>
-                    ))
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
-                      All servers are running within expected thresholds.
+                      <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">
+                        {ticket.message}
+                      </p>
+                    </button>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
+                    No open tickets need attention right now.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="h-full">
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-lg font-semibold text-foreground">
+                  Infrastructure Signals
+                </CardTitle>
+                <CardDescription>
+                  Track servers requiring intervention across providers.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {dashboardServerAlerts.length > 0 ? (
+                  dashboardServerAlerts.map((server) => (
+                    <div
+                      key={server.id}
+                      className="rounded-xl border border-border/60 bg-background/80 px-4 py-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">
+                            {server.label || server.id}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            {server.provider_name ? (
+                              <>
+                                <span>{server.provider_name}</span>
+                                <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
+                              </>
+                            ) : null}
+                            {server.region_label ? <span>{server.region_label}</span> : null}
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "capitalize",
+                            statusBadgeClass(server.status)
+                          )}
+                        >
+                          {formatStatusLabel(server.status)}
+                        </Badge>
+                      </div>
+                      {server.organization_name ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {server.organization_name}
+                        </p>
+                      ) : null}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
+                    All servers are running within expected thresholds.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </SectionPanel>
 
-    <SectionPanel section="theme" activeSection={activeTab}>
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-        <div className="relative z-10">
-          <Badge variant="secondary" className="mb-3">
-            Branding
-          </Badge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Theme Manager
-          </h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Choose a theme preset that updates instantly for all users
-          </p>
-          {!themeConfigLoading && (
-            <p className="mt-1 text-sm text-muted-foreground">
-              Last updated: {formattedThemeUpdatedAt}
-            </p>
-          )}
-        </div>
+        <SectionPanel section="theme" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+            <div className="relative z-10">
+              <Badge variant="secondary" className="mb-3">
+                Branding
+              </Badge>
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                Theme Manager
+              </h2>
+              <p className="mt-2 max-w-2xl text-muted-foreground">
+                Choose a theme preset that updates instantly for all users
+              </p>
+              {!themeConfigLoading && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Last updated: {formattedThemeUpdatedAt}
+                </p>
+              )}
+            </div>
 
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <Palette className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <Palette className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+            </div>
+          </div>
 
-      <div className="bg-card shadow sm:rounded-lg">
-        <div className="border-b border px-6 py-4">
-          <h3 className="text-lg font-medium text-foreground">Theme Presets</h3>
-          <p className="text-sm text-muted-foreground">
-            Apply a built-in palette for all users
-          </p>
-        </div>
-              <div className="space-y-10 px-6 py-6">
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Presets
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Choose a built-in palette. Applying a preset changes the
-                    experience for every organization member.
-                  </p>
-                  <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    {themes.map((preset) => {
-                      const isActive = preset.id === themeId;
-                      const isSaving = savingPresetId === preset.id;
-                      const disabled =
-                        (savingPresetId !== null &&
-                          savingPresetId !== preset.id) ||
-                        themeConfigLoading;
+          <div className="bg-card shadow sm:rounded-lg">
+            <div className="border-b border px-6 py-4">
+              <h3 className="text-lg font-medium text-foreground">Theme Presets</h3>
+              <p className="text-sm text-muted-foreground">
+                Apply a built-in palette for all users
+              </p>
+            </div>
+            <div className="space-y-10 px-6 py-6">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Presets
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Choose a built-in palette. Applying a preset changes the
+                  experience for every organization member.
+                </p>
+                <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {themes.map((preset) => {
+                    const isActive = preset.id === themeId;
+                    const isSaving = savingPresetId === preset.id;
+                    const disabled =
+                      (savingPresetId !== null &&
+                        savingPresetId !== preset.id) ||
+                      themeConfigLoading;
 
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => handlePresetSelection(preset)}
-                          disabled={disabled}
-                          className={`relative w-full rounded-lg border p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isActive
-                            ? "border-primary ring-2 ring-primary ring-opacity-20"
-                            : "border-border hover:border-primary"
-                            } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <h3 className="text-base font-semibold text-foreground">
-                                {preset.label}
-                              </h3>
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {preset.description}
-                              </p>
-                            </div>
-                            <Badge variant={isActive ? "default" : "outline"}>
-                              {isSaving
-                                ? "Saving..."
-                                : isActive
-                                  ? "Active"
-                                  : "Preview"}
-                            </Badge>
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => handlePresetSelection(preset)}
+                        disabled={disabled}
+                        className={`relative w-full rounded-lg border p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isActive
+                          ? "border-primary ring-2 ring-primary ring-opacity-20"
+                          : "border-border hover:border-primary"
+                          } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <h3 className="text-base font-semibold text-foreground">
+                              {preset.label}
+                            </h3>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {preset.description}
+                            </p>
                           </div>
-                          <div className="mt-4 flex gap-4">
-                            <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                              <span>Primary</span>
-                              <span
-                                className="h-10 w-10 rounded-md border shadow-sm"
-                                style={{
-                                  backgroundColor: `hsl(${preset.light.primary})`,
-                                }}
-                              />
-                            </div>
-                            <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                              <span>Surface</span>
-                              <span
-                                className="h-10 w-10 rounded-md border shadow-sm"
-                                style={{
-                                  backgroundColor: `hsl(${preset.light.background})`,
-                                }}
-                              />
-                            </div>
-                            <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                              <span>Dark Primary</span>
-                              <span
-                                className="h-10 w-10 rounded-md border shadow-sm"
-                                style={{
-                                  backgroundColor: `hsl(${preset.dark.primary})`,
-                                }}
-                              />
-                            </div>
+                          <Badge variant={isActive ? "default" : "outline"}>
+                            {isSaving
+                              ? "Saving..."
+                              : isActive
+                                ? "Active"
+                                : "Preview"}
+                          </Badge>
+                        </div>
+                        <div className="mt-4 flex gap-4">
+                          <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                            <span>Primary</span>
+                            <span
+                              className="h-10 w-10 rounded-md border shadow-sm"
+                              style={{
+                                backgroundColor: `hsl(${preset.light.primary})`,
+                              }}
+                            />
                           </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                          <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                            <span>Surface</span>
+                            <span
+                              className="h-10 w-10 rounded-md border shadow-sm"
+                              style={{
+                                backgroundColor: `hsl(${preset.light.background})`,
+                              }}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                            <span>Dark Primary</span>
+                            <span
+                              className="h-10 w-10 rounded-md border shadow-sm"
+                              style={{
+                                backgroundColor: `hsl(${preset.dark.primary})`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
-    </SectionPanel>
-
-    <SectionPanel section="support" activeSection={activeTab}>
-      <AdminSupportView
-        token={token!}
-        pendingFocusTicketId={pendingFocusTicketId}
-        onFocusTicketHandled={() => setPendingFocusTicketId(null)}
-      />
-    </SectionPanel>
-
-    <SectionPanel section="vps-plans" activeSection={activeTab}>
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-        <div className="relative z-10 flex items-start justify-between">
-          <div>
-            <Badge variant="secondary" className="mb-3">
-              Infrastructure
-            </Badge>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              VPS Plans
-            </h2>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Curate what customers see when provisioning infrastructure
-            </p>
           </div>
-          <Button onClick={() => setShowAddVPSPlan(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Add VPS Plan
-          </Button>
-        </div>
+        </SectionPanel>
 
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <DollarSign className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
+        <SectionPanel section="support" activeSection={activeTab}>
+          <AdminSupportView
+            token={token!}
+            pendingFocusTicketId={pendingFocusTicketId}
+            onFocusTicketHandled={() => setPendingFocusTicketId(null)}
+          />
+        </SectionPanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Plan Configuration</CardTitle>
-        </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Label
-                    htmlFor="plan-provider-filter"
-                    className="text-sm font-medium whitespace-nowrap"
+        <SectionPanel section="vps-plans" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+            <div className="relative z-10 flex items-start justify-between">
+              <div>
+                <Badge variant="secondary" className="mb-3">
+                  Infrastructure
+                </Badge>
+                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                  VPS Plans
+                </h2>
+                <p className="mt-2 max-w-2xl text-muted-foreground">
+                  Curate what customers see when provisioning infrastructure
+                </p>
+              </div>
+              <Button onClick={() => setShowAddVPSPlan(true)} className="gap-2">
+                <Plus className="h-4 w-4" /> Add VPS Plan
+              </Button>
+            </div>
+
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <DollarSign className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plan Configuration</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Label
+                  htmlFor="plan-provider-filter"
+                  className="text-sm font-medium whitespace-nowrap"
+                >
+                  Filter by Provider:
+                </Label>
+                <Select
+                  value={planProviderFilter}
+                  onValueChange={setPlanProviderFilter}
+                >
+                  <SelectTrigger
+                    id="plan-provider-filter"
+                    className="w-[250px]"
                   >
-                    Filter by Provider:
-                  </Label>
-                  <Select
-                    value={planProviderFilter}
-                    onValueChange={setPlanProviderFilter}
-                  >
-                    <SelectTrigger
-                      id="plan-provider-filter"
-                      className="w-[250px]"
-                    >
-                      <SelectValue placeholder="All providers" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Providers</SelectItem>
-                      {providers.map((provider) => (
-                        <SelectItem key={provider.id} value={provider.id}>
-                          {provider.name} ({provider.type})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-              <CardContent className="px-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
+                    <SelectValue placeholder="All providers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Providers</SelectItem>
+                    {providers.map((provider) => (
+                      <SelectItem key={provider.id} value={provider.id}>
+                        {provider.name} ({provider.type})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+            <CardContent className="px-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[12rem]">Name</TableHead>
+                      <TableHead className="min-w-[10rem]">
+                        Provider
+                      </TableHead>
+                      <TableHead className="min-w-[10rem]">
+                        Provider Plan ID
+                      </TableHead>
+                      <TableHead className="min-w-[8rem]">
+                        Base Price
+                      </TableHead>
+                      <TableHead className="min-w-[8rem]">Markup</TableHead>
+                      <TableHead className="min-w-[10rem]">Backup Price</TableHead>
+                      <TableHead className="min-w-[8rem]">Backups</TableHead>
+                      <TableHead className="w-32">Active</TableHead>
+                      <TableHead className="w-36 text-right">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPlans.length === 0 ? (
                       <TableRow>
-                        <TableHead className="min-w-[12rem]">Name</TableHead>
-                        <TableHead className="min-w-[10rem]">
-                          Provider
-                        </TableHead>
-                        <TableHead className="min-w-[10rem]">
-                          Provider Plan ID
-                        </TableHead>
-                        <TableHead className="min-w-[8rem]">
-                          Base Price
-                        </TableHead>
-                        <TableHead className="min-w-[8rem]">Markup</TableHead>
-                        <TableHead className="min-w-[10rem]">Backup Price</TableHead>
-                        <TableHead className="min-w-[8rem]">Backups</TableHead>
-                        <TableHead className="w-32">Active</TableHead>
-                        <TableHead className="w-36 text-right">
-                          Actions
-                        </TableHead>
+                        <TableCell
+                          colSpan={9}
+                          className="py-10 text-center text-muted-foreground"
+                        >
+                          {planProviderFilter === "all"
+                            ? "No plans available"
+                            : "No plans for selected provider"}
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredPlans.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={9}
-                            className="py-10 text-center text-muted-foreground"
-                          >
-                            {planProviderFilter === "all"
-                              ? "No plans available"
-                              : "No plans for selected provider"}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        // Grouped view with pagination
-                        Object.entries(groupedPlans).map(
-                          ([providerId, providerPlans]) => {
-                            const provider = providers.find(
-                              (p) => p.id === providerId
-                            );
-                            const currentPage =
-                              providerPlanPages[providerId] || 1;
-                            const totalPages = Math.ceil(
-                              providerPlans.length / plansPerPage
-                            );
-                            const startIndex = (currentPage - 1) * plansPerPage;
-                            const endIndex = startIndex + plansPerPage;
-                            const paginatedPlans = providerPlans.slice(
-                              startIndex,
-                              endIndex
-                            );
+                    ) : (
+                      // Grouped view with pagination
+                      Object.entries(groupedPlans).map(
+                        ([providerId, providerPlans]) => {
+                          const provider = providers.find(
+                            (p) => p.id === providerId
+                          );
+                          const currentPage =
+                            providerPlanPages[providerId] || 1;
+                          const totalPages = Math.ceil(
+                            providerPlans.length / plansPerPage
+                          );
+                          const startIndex = (currentPage - 1) * plansPerPage;
+                          const endIndex = startIndex + plansPerPage;
+                          const paginatedPlans = providerPlans.slice(
+                            startIndex,
+                            endIndex
+                          );
 
-                            return (
-                              <React.Fragment key={providerId}>
-                                <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                  <TableCell
-                                    colSpan={9}
-                                    className="py-3 font-semibold"
-                                  >
-                                    <div className="flex items-center justify-between">
+                          return (
+                            <React.Fragment key={providerId}>
+                              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                <TableCell
+                                  colSpan={9}
+                                  className="py-3 font-semibold"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <Server className="h-4 w-4 text-muted-foreground" />
+                                      {provider
+                                        ? `${provider.name} (${provider.type})`
+                                        : "Unknown Provider"}
+                                      <Badge
+                                        variant="outline"
+                                        className="ml-2"
+                                      >
+                                        {providerPlans.length}{" "}
+                                        {providerPlans.length === 1
+                                          ? "plan"
+                                          : "plans"}
+                                      </Badge>
+                                    </div>
+                                    {totalPages > 1 && (
                                       <div className="flex items-center gap-2">
-                                        <Server className="h-4 w-4 text-muted-foreground" />
-                                        {provider
-                                          ? `${provider.name} (${provider.type})`
-                                          : "Unknown Provider"}
-                                        <Badge
+                                        <Button
+                                          size="sm"
                                           variant="outline"
-                                          className="ml-2"
+                                          onClick={() =>
+                                            setProviderPlanPages((prev) => ({
+                                              ...prev,
+                                              [providerId]: Math.max(
+                                                1,
+                                                currentPage - 1
+                                              ),
+                                            }))
+                                          }
+                                          disabled={currentPage === 1}
                                         >
-                                          {providerPlans.length}{" "}
-                                          {providerPlans.length === 1
-                                            ? "plan"
-                                            : "plans"}
-                                        </Badge>
+                                          Previous
+                                        </Button>
+                                        <span className="text-xs text-muted-foreground">
+                                          Page {currentPage} of {totalPages}
+                                        </span>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() =>
+                                            setProviderPlanPages((prev) => ({
+                                              ...prev,
+                                              [providerId]: Math.min(
+                                                totalPages,
+                                                currentPage + 1
+                                              ),
+                                            }))
+                                          }
+                                          disabled={
+                                            currentPage === totalPages
+                                          }
+                                        >
+                                          Next
+                                        </Button>
                                       </div>
-                                      {totalPages > 1 && (
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                              {paginatedPlans.map((plan) => {
+                                const isEditing = editPlanId === plan.id;
+                                const planProvider = providers.find(
+                                  (p) => p.id === plan.provider_id
+                                );
+
+                                return (
+                                  <TableRow
+                                    key={plan.id}
+                                    className="align-top"
+                                  >
+                                    <TableCell>
+                                      {isEditing ? (
+                                        <Input
+                                          value={
+                                            (editPlan.name as
+                                              | string
+                                              | undefined) ?? plan.name
+                                          }
+                                          onChange={(e) =>
+                                            setEditPlan((prev) => ({
+                                              ...prev,
+                                              name: e.target.value,
+                                            }))
+                                          }
+                                          className="w-full"
+                                        />
+                                      ) : (
+                                        <span className="text-sm text-foreground">
+                                          {plan.name}
+                                        </span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex flex-col gap-1">
+                                        <span className="text-sm text-foreground font-medium">
+                                          {planProvider?.name || "Unknown"}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {planProvider?.type || "unknown"}
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <span className="text-sm text-muted-foreground">
+                                        {plan.provider_plan_id}
+                                      </span>
+                                    </TableCell>
+                                    <TableCell>
+                                      {isEditing ? (
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          value={
+                                            (editPlan.base_price as
+                                              | number
+                                              | undefined) ?? plan.base_price
+                                          }
+                                          onChange={(e) =>
+                                            setEditPlan((prev) => ({
+                                              ...prev,
+                                              base_price: parseFloat(
+                                                e.target.value
+                                              ),
+                                            }))
+                                          }
+                                          className="max-w-[8rem]"
+                                        />
+                                      ) : (
+                                        <span className="text-sm text-muted-foreground">
+                                          $
+                                          {Number(plan.base_price).toFixed(2)}
+                                        </span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      {isEditing ? (
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          value={
+                                            (editPlan.markup_price as
+                                              | number
+                                              | undefined) ??
+                                            plan.markup_price
+                                          }
+                                          onChange={(e) =>
+                                            setEditPlan((prev) => ({
+                                              ...prev,
+                                              markup_price: parseFloat(
+                                                e.target.value
+                                              ),
+                                            }))
+                                          }
+                                          className="max-w-[8rem]"
+                                        />
+                                      ) : (
+                                        <span className="text-sm text-muted-foreground">
+                                          $
+                                          {Number(plan.markup_price).toFixed(
+                                            2
+                                          )}
+                                        </span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      {isEditing ? (
+                                        <div className="space-y-2">
+                                          <div className="text-xs text-muted-foreground mb-1">Base Price</div>
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="Monthly"
+                                            value={
+                                              (editPlan.backup_price_monthly as
+                                                | number
+                                                | undefined) ??
+                                              plan.backup_price_monthly ?? 0
+                                            }
+                                            onChange={(e) =>
+                                              setEditPlan((prev) => ({
+                                                ...prev,
+                                                backup_price_monthly: parseFloat(
+                                                  e.target.value
+                                                ) || 0,
+                                              }))
+                                            }
+                                            className="max-w-[8rem]"
+                                          />
+                                          <Input
+                                            type="number"
+                                            step="0.000001"
+                                            placeholder="Hourly"
+                                            value={
+                                              (editPlan.backup_price_hourly as
+                                                | number
+                                                | undefined) ??
+                                              plan.backup_price_hourly ?? 0
+                                            }
+                                            onChange={(e) =>
+                                              setEditPlan((prev) => ({
+                                                ...prev,
+                                                backup_price_hourly: parseFloat(
+                                                  e.target.value
+                                                ) || 0,
+                                              }))
+                                            }
+                                            className="max-w-[8rem]"
+                                          />
+                                          <div className="text-xs text-muted-foreground mt-2 mb-1">Upcharge</div>
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="Monthly upcharge"
+                                            value={
+                                              (editPlan.backup_upcharge_monthly as
+                                                | number
+                                                | undefined) ??
+                                              plan.backup_upcharge_monthly ?? 0
+                                            }
+                                            onChange={(e) => {
+                                              const monthlyUpcharge = parseFloat(e.target.value) || 0;
+                                              setEditPlan((prev) => ({
+                                                ...prev,
+                                                backup_upcharge_monthly: monthlyUpcharge,
+                                                backup_upcharge_hourly: monthlyUpcharge / 730,
+                                              }));
+                                            }}
+                                            className="max-w-[8rem]"
+                                          />
+                                        </div>
+                                      ) : (
+                                        <div className="text-sm">
+                                          {(Number(plan.backup_price_monthly) || 0) > 0 || (Number(plan.backup_upcharge_monthly) || 0) > 0 ? (
+                                            <>
+                                              <div className="text-muted-foreground">
+                                                ${((Number(plan.backup_price_monthly) || 0) + (Number(plan.backup_upcharge_monthly) || 0)).toFixed(2)}/mo
+                                              </div>
+                                              <div className="text-xs text-muted-foreground">
+                                                Base: ${(Number(plan.backup_price_monthly) || 0).toFixed(2)} + Upcharge: ${(Number(plan.backup_upcharge_monthly) || 0).toFixed(2)}
+                                              </div>
+                                            </>
+                                          ) : (
+                                            <span className="text-xs text-muted-foreground">
+                                              Not configured
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      {/* Backups are always daily via Linode - just show enabled status */}
+                                      <Badge
+                                        variant="outline"
+                                        className="w-fit text-xs bg-green-500/10 text-green-500 border-green-500/30"
+                                      >
+                                        Daily
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      {isEditing ? (
                                         <div className="flex items-center gap-2">
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() =>
-                                              setProviderPlanPages((prev) => ({
+                                          <Switch
+                                            checked={
+                                              (editPlan.active as
+                                                | boolean
+                                                | undefined) ?? plan.active
+                                            }
+                                            onCheckedChange={(checked) =>
+                                              setEditPlan((prev) => ({
                                                 ...prev,
-                                                [providerId]: Math.max(
-                                                  1,
-                                                  currentPage - 1
-                                                ),
+                                                active: checked,
                                               }))
                                             }
-                                            disabled={currentPage === 1}
-                                          >
-                                            Previous
-                                          </Button>
+                                          />
                                           <span className="text-xs text-muted-foreground">
-                                            Page {currentPage} of {totalPages}
+                                            {(editPlan.active as
+                                              | boolean
+                                              | undefined) ?? plan.active
+                                              ? "Active"
+                                              : "Inactive"}
                                           </span>
+                                        </div>
+                                      ) : (
+                                        <Badge
+                                          variant={
+                                            plan.active
+                                              ? "default"
+                                              : "secondary"
+                                          }
+                                        >
+                                          {plan.active
+                                            ? "Active"
+                                            : "Inactive"}
+                                        </Badge>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      {isEditing ? (
+                                        <div className="flex justify-end gap-2">
+                                          <Button
+                                            size="sm"
+                                            onClick={savePlan}
+                                          >
+                                            Save
+                                          </Button>
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() =>
-                                              setProviderPlanPages((prev) => ({
-                                                ...prev,
-                                                [providerId]: Math.min(
-                                                  totalPages,
-                                                  currentPage + 1
-                                                ),
-                                              }))
-                                            }
-                                            disabled={
-                                              currentPage === totalPages
-                                            }
+                                            onClick={() => {
+                                              setEditPlanId(null);
+                                              setEditPlan({});
+                                            }}
                                           >
-                                            Next
+                                            Cancel
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex justify-end gap-2">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => {
+                                              setEditPlanId(plan.id);
+                                              setEditPlan({
+                                                name: plan.name,
+                                                base_price: plan.base_price,
+                                                markup_price:
+                                                  plan.markup_price,
+                                                backup_price_monthly:
+                                                  plan.backup_price_monthly || 0,
+                                                backup_price_hourly:
+                                                  plan.backup_price_hourly || 0,
+                                                backup_upcharge_monthly:
+                                                  plan.backup_upcharge_monthly || 0,
+                                                backup_upcharge_hourly:
+                                                  plan.backup_upcharge_hourly || 0,
+                                                daily_backups_enabled:
+                                                  plan.daily_backups_enabled ?? false,
+                                                weekly_backups_enabled:
+                                                  plan.weekly_backups_enabled ?? true,
+                                                active: plan.active,
+                                              });
+                                            }}
+                                            className="gap-1"
+                                          >
+                                            <Edit className="h-4 w-4" /> Edit
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="destructive"
+                                            onClick={() =>
+                                              setDeletePlanId(plan.id)
+                                            }
+                                            className="gap-1"
+                                          >
+                                            <Trash2 className="h-4 w-4" />{" "}
+                                            Delete
                                           </Button>
                                         </div>
                                       )}
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                                {paginatedPlans.map((plan) => {
-                                  const isEditing = editPlanId === plan.id;
-                                  const planProvider = providers.find(
-                                    (p) => p.id === plan.provider_id
-                                  );
-
-                                  return (
-                                    <TableRow
-                                      key={plan.id}
-                                      className="align-top"
-                                    >
-                                      <TableCell>
-                                        {isEditing ? (
-                                          <Input
-                                            value={
-                                              (editPlan.name as
-                                                | string
-                                                | undefined) ?? plan.name
-                                            }
-                                            onChange={(e) =>
-                                              setEditPlan((prev) => ({
-                                                ...prev,
-                                                name: e.target.value,
-                                              }))
-                                            }
-                                            className="w-full"
-                                          />
-                                        ) : (
-                                          <span className="text-sm text-foreground">
-                                            {plan.name}
-                                          </span>
-                                        )}
-                                      </TableCell>
-                                      <TableCell>
-                                        <div className="flex flex-col gap-1">
-                                          <span className="text-sm text-foreground font-medium">
-                                            {planProvider?.name || "Unknown"}
-                                          </span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {planProvider?.type || "unknown"}
-                                          </span>
-                                        </div>
-                                      </TableCell>
-                                      <TableCell>
-                                        <span className="text-sm text-muted-foreground">
-                                          {plan.provider_plan_id}
-                                        </span>
-                                      </TableCell>
-                                      <TableCell>
-                                        {isEditing ? (
-                                          <Input
-                                            type="number"
-                                            step="0.01"
-                                            value={
-                                              (editPlan.base_price as
-                                                | number
-                                                | undefined) ?? plan.base_price
-                                            }
-                                            onChange={(e) =>
-                                              setEditPlan((prev) => ({
-                                                ...prev,
-                                                base_price: parseFloat(
-                                                  e.target.value
-                                                ),
-                                              }))
-                                            }
-                                            className="max-w-[8rem]"
-                                          />
-                                        ) : (
-                                          <span className="text-sm text-muted-foreground">
-                                            $
-                                            {Number(plan.base_price).toFixed(2)}
-                                          </span>
-                                        )}
-                                      </TableCell>
-                                      <TableCell>
-                                        {isEditing ? (
-                                          <Input
-                                            type="number"
-                                            step="0.01"
-                                            value={
-                                              (editPlan.markup_price as
-                                                | number
-                                                | undefined) ??
-                                              plan.markup_price
-                                            }
-                                            onChange={(e) =>
-                                              setEditPlan((prev) => ({
-                                                ...prev,
-                                                markup_price: parseFloat(
-                                                  e.target.value
-                                                ),
-                                              }))
-                                            }
-                                            className="max-w-[8rem]"
-                                          />
-                                        ) : (
-                                          <span className="text-sm text-muted-foreground">
-                                            $
-                                            {Number(plan.markup_price).toFixed(
-                                              2
-                                            )}
-                                          </span>
-                                        )}
-                                      </TableCell>
-                                      <TableCell>
-                                        {isEditing ? (
-                                          <div className="space-y-2">
-                                            <div className="text-xs text-muted-foreground mb-1">Base Price</div>
-                                            <Input
-                                              type="number"
-                                              step="0.01"
-                                              placeholder="Monthly"
-                                              value={
-                                                (editPlan.backup_price_monthly as
-                                                  | number
-                                                  | undefined) ??
-                                                plan.backup_price_monthly ?? 0
-                                              }
-                                              onChange={(e) =>
-                                                setEditPlan((prev) => ({
-                                                  ...prev,
-                                                  backup_price_monthly: parseFloat(
-                                                    e.target.value
-                                                  ) || 0,
-                                                }))
-                                              }
-                                              className="max-w-[8rem]"
-                                            />
-                                            <Input
-                                              type="number"
-                                              step="0.000001"
-                                              placeholder="Hourly"
-                                              value={
-                                                (editPlan.backup_price_hourly as
-                                                  | number
-                                                  | undefined) ??
-                                                plan.backup_price_hourly ?? 0
-                                              }
-                                              onChange={(e) =>
-                                                setEditPlan((prev) => ({
-                                                  ...prev,
-                                                  backup_price_hourly: parseFloat(
-                                                    e.target.value
-                                                  ) || 0,
-                                                }))
-                                              }
-                                              className="max-w-[8rem]"
-                                            />
-                                            <div className="text-xs text-muted-foreground mt-2 mb-1">Upcharge</div>
-                                            <Input
-                                              type="number"
-                                              step="0.01"
-                                              placeholder="Monthly upcharge"
-                                              value={
-                                                (editPlan.backup_upcharge_monthly as
-                                                  | number
-                                                  | undefined) ??
-                                                plan.backup_upcharge_monthly ?? 0
-                                              }
-                                              onChange={(e) => {
-                                                const monthlyUpcharge = parseFloat(e.target.value) || 0;
-                                                setEditPlan((prev) => ({
-                                                  ...prev,
-                                                  backup_upcharge_monthly: monthlyUpcharge,
-                                                  backup_upcharge_hourly: monthlyUpcharge / 730,
-                                                }));
-                                              }}
-                                              className="max-w-[8rem]"
-                                            />
-                                          </div>
-                                        ) : (
-                                          <div className="text-sm">
-                                            {(Number(plan.backup_price_monthly) || 0) > 0 || (Number(plan.backup_upcharge_monthly) || 0) > 0 ? (
-                                              <>
-                                                <div className="text-muted-foreground">
-                                                  ${((Number(plan.backup_price_monthly) || 0) + (Number(plan.backup_upcharge_monthly) || 0)).toFixed(2)}/mo
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                  Base: ${(Number(plan.backup_price_monthly) || 0).toFixed(2)} + Upcharge: ${(Number(plan.backup_upcharge_monthly) || 0).toFixed(2)}
-                                                </div>
-                                              </>
-                                            ) : (
-                                              <span className="text-xs text-muted-foreground">
-                                                Not configured
-                                              </span>
-                                            )}
-                                          </div>
-                                        )}
-                                      </TableCell>
-                                      <TableCell>
-                                        {/* Backups are always daily via Linode - just show enabled status */}
-                                        <Badge
-                                          variant="outline"
-                                          className="w-fit text-xs bg-green-500/10 text-green-500 border-green-500/30"
-                                        >
-                                          Daily
-                                        </Badge>
-                                      </TableCell>
-                                      <TableCell>
-                                        {isEditing ? (
-                                          <div className="flex items-center gap-2">
-                                            <Switch
-                                              checked={
-                                                (editPlan.active as
-                                                  | boolean
-                                                  | undefined) ?? plan.active
-                                              }
-                                              onCheckedChange={(checked) =>
-                                                setEditPlan((prev) => ({
-                                                  ...prev,
-                                                  active: checked,
-                                                }))
-                                              }
-                                            />
-                                            <span className="text-xs text-muted-foreground">
-                                              {(editPlan.active as
-                                                | boolean
-                                                | undefined) ?? plan.active
-                                                ? "Active"
-                                                : "Inactive"}
-                                            </span>
-                                          </div>
-                                        ) : (
-                                          <Badge
-                                            variant={
-                                              plan.active
-                                                ? "default"
-                                                : "secondary"
-                                            }
-                                          >
-                                            {plan.active
-                                              ? "Active"
-                                              : "Inactive"}
-                                          </Badge>
-                                        )}
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        {isEditing ? (
-                                          <div className="flex justify-end gap-2">
-                                            <Button
-                                              size="sm"
-                                              onClick={savePlan}
-                                            >
-                                              Save
-                                            </Button>
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              onClick={() => {
-                                                setEditPlanId(null);
-                                                setEditPlan({});
-                                              }}
-                                            >
-                                              Cancel
-                                            </Button>
-                                          </div>
-                                        ) : (
-                                          <div className="flex justify-end gap-2">
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              onClick={() => {
-                                                setEditPlanId(plan.id);
-                                                setEditPlan({
-                                                  name: plan.name,
-                                                  base_price: plan.base_price,
-                                                  markup_price:
-                                                    plan.markup_price,
-                                                  backup_price_monthly:
-                                                    plan.backup_price_monthly || 0,
-                                                  backup_price_hourly:
-                                                    plan.backup_price_hourly || 0,
-                                                  backup_upcharge_monthly:
-                                                    plan.backup_upcharge_monthly || 0,
-                                                  backup_upcharge_hourly:
-                                                    plan.backup_upcharge_hourly || 0,
-                                                  daily_backups_enabled:
-                                                    plan.daily_backups_enabled ?? false,
-                                                  weekly_backups_enabled:
-                                                    plan.weekly_backups_enabled ?? true,
-                                                  active: plan.active,
-                                                });
-                                              }}
-                                              className="gap-1"
-                                            >
-                                              <Edit className="h-4 w-4" /> Edit
-                                            </Button>
-                                            <Button
-                                              size="sm"
-                                              variant="destructive"
-                                              onClick={() =>
-                                                setDeletePlanId(plan.id)
-                                              }
-                                              className="gap-1"
-                                            >
-                                              <Trash2 className="h-4 w-4" />{" "}
-                                              Delete
-                                            </Button>
-                                          </div>
-                                        )}
-                                      </TableCell>
-                                    </TableRow>
-                                  );
-                                })}
-                              </React.Fragment>
-                            );
-                          }
-                        )
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-
-            <VPSPlanWizard
-              open={showAddVPSPlan}
-              onOpenChange={setShowAddVPSPlan}
-              providers={providers}
-              linodeTypes={linodeTypes}
-              planTypeFilter={planTypeFilter}
-              setPlanTypeFilter={setPlanTypeFilter}
-              newVPSPlan={newVPSPlan}
-              setNewVPSPlan={setNewVPSPlan}
-              onProviderChange={(value) => {
-                setNewVPSPlan((prev) => ({
-                  ...prev,
-                  selectedProviderId: value,
-                  selectedType: "",
-                }));
-                const provider = providers.find((p) => p.id === value);
-                if (provider) {
-                  fetchLinodeTypes();
-                }
-              }}
-              onSubmit={createVPSPlan}
-            />
-    </SectionPanel>
-
-    <SectionPanel section="user-management" activeSection={activeTab}>
-      <OrganizationManagement
-        onUserAction={(userId: string, action: string) => {
-          if (action === 'view') {
-            navigate(`/admin/user/${userId}`);
-          }
-        }}
-      />
-    </SectionPanel>
-
-    <SectionPanel section="rate-limiting" activeSection={activeTab}>
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-        <div className="relative z-10">
-          <Badge variant="secondary" className="mb-3">
-            Security
-          </Badge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Rate Limiting
-          </h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Monitor and manage API rate limits across the platform
-          </p>
-        </div>
-
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <Shield className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
-
-      <RateLimitMonitoring token={token || ""} />
-    </SectionPanel>
-
-    <SectionPanel section="faq-management" activeSection={activeTab}>
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-        <div className="relative z-10">
-          <Badge variant="secondary" className="mb-3">
-            Support
-          </Badge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            FAQ Management
-          </h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Manage FAQ categories, items, and latest updates for the public FAQ page
-          </p>
-        </div>
-
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <HelpCircle className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <CategoryManager token={token || ""} />
-        <FAQItemManager token={token || ""} />
-        <UpdatesManager token={token || ""} />
-      </div>
-    </SectionPanel>
-
-    <SectionPanel section="platform" activeSection={activeTab}>
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <Settings className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Platform Settings
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Configure platform-wide settings including availability
-                    schedules and general configuration.
-                  </p>
-                </div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </React.Fragment>
+                          );
+                        }
+                      )
+                    )}
+                  </TableBody>
+                </Table>
               </div>
+            </CardContent>
+          </Card>
 
-              <Tabs defaultValue="availability" className="space-y-6">
-                <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
-                  <TabsTrigger value="availability">Availability</TabsTrigger>
-                  <TabsTrigger value="theme">Theme</TabsTrigger>
-                </TabsList>
+          <VPSPlanWizard
+            open={showAddVPSPlan}
+            onOpenChange={setShowAddVPSPlan}
+            providers={providers}
+            linodeTypes={linodeTypes}
+            planTypeFilter={planTypeFilter}
+            setPlanTypeFilter={setPlanTypeFilter}
+            newVPSPlan={newVPSPlan}
+            setNewVPSPlan={setNewVPSPlan}
+            onProviderChange={(value) => {
+              setNewVPSPlan((prev) => ({
+                ...prev,
+                selectedProviderId: value,
+                selectedType: "",
+              }));
+              const provider = providers.find((p) => p.id === value);
+              if (provider) {
+                fetchLinodeTypes();
+              }
+            }}
+            onSubmit={createVPSPlan}
+          />
+        </SectionPanel>
 
-                <TabsContent value="availability">
-                  <PlatformAvailabilityManager />
-                </TabsContent>
+        <SectionPanel section="user-management" activeSection={activeTab}>
+          <UserManagement />
+        </SectionPanel>
 
-                <TabsContent value="theme">
-                  <div className="bg-card shadow sm:rounded-lg">
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <Palette className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <h2 className="text-lg font-medium text-foreground">
-                            Theme Manager
-                          </h2>
-                          <p className="text-sm text-muted-foreground">
-                            Choose a theme preset. Updates roll out to every
-                            user instantly.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {themeConfigLoading
-                          ? "Syncing..."
-                          : `Last updated: ${formattedThemeUpdatedAt}`}
+        <SectionPanel section="rate-limiting" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+            <div className="relative z-10">
+              <Badge variant="secondary" className="mb-3">
+                Security
+              </Badge>
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                Rate Limiting
+              </h2>
+              <p className="mt-2 max-w-2xl text-muted-foreground">
+                Monitor and manage API rate limits across the platform
+              </p>
+            </div>
+
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <Shield className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+            </div>
+          </div>
+
+          <RateLimitMonitoring token={token || ""} />
+        </SectionPanel>
+
+        <SectionPanel section="faq-management" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+            <div className="relative z-10">
+              <Badge variant="secondary" className="mb-3">
+                Support
+              </Badge>
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                FAQ Management
+              </h2>
+              <p className="mt-2 max-w-2xl text-muted-foreground">
+                Manage FAQ categories, items, and latest updates for the public FAQ page
+              </p>
+            </div>
+
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <HelpCircle className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <CategoryManager token={token || ""} />
+            <FAQItemManager token={token || ""} />
+            <UpdatesManager token={token || ""} />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="platform" activeSection={activeTab}>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <Settings className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Platform Settings
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Configure platform-wide settings including availability
+                  schedules and general configuration.
+                </p>
+              </div>
+            </div>
+
+            <Tabs defaultValue="availability" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
+                <TabsTrigger value="availability">Availability</TabsTrigger>
+                <TabsTrigger value="theme">Theme</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="availability">
+                <PlatformAvailabilityManager />
+              </TabsContent>
+
+              <TabsContent value="theme">
+                <div className="bg-card shadow sm:rounded-lg">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <Palette className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <h2 className="text-lg font-medium text-foreground">
+                          Theme Manager
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                          Choose a theme preset. Updates roll out to every
+                          user instantly.
+                        </p>
                       </div>
                     </div>
-                    <div className="space-y-10 px-6 py-6">
-                      <div>
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Presets
-                        </h3>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Choose a built-in palette. Applying a preset changes
-                          the experience for every organization member.
-                        </p>
-                        <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                          {themes.map((preset) => {
-                            const isActive = preset.id === themeId;
-                            const isSaving = savingPresetId === preset.id;
-                            const disabled =
-                              (savingPresetId !== null &&
-                                savingPresetId !== preset.id) ||
-                              themeConfigLoading;
+                    <div className="text-xs text-muted-foreground">
+                      {themeConfigLoading
+                        ? "Syncing..."
+                        : `Last updated: ${formattedThemeUpdatedAt}`}
+                    </div>
+                  </div>
+                  <div className="space-y-10 px-6 py-6">
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Presets
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Choose a built-in palette. Applying a preset changes
+                        the experience for every organization member.
+                      </p>
+                      <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                        {themes.map((preset) => {
+                          const isActive = preset.id === themeId;
+                          const isSaving = savingPresetId === preset.id;
+                          const disabled =
+                            (savingPresetId !== null &&
+                              savingPresetId !== preset.id) ||
+                            themeConfigLoading;
 
-                            return (
-                              <button
-                                key={preset.id}
-                                type="button"
-                                onClick={() => handlePresetSelection(preset)}
-                                disabled={disabled}
-                                className={`relative w-full rounded-lg border p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isActive
-                                  ? "border-primary ring-2 ring-primary ring-opacity-20"
-                                  : "border-border hover:border-primary"
-                                  } ${disabled
-                                    ? "cursor-not-allowed opacity-60"
-                                    : ""
-                                  }`}
-                              >
-                                <div className="flex items-start justify-between gap-4">
-                                  <div>
-                                    <h3 className="text-base font-semibold text-foreground">
-                                      {preset.label}
-                                    </h3>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                      {preset.description}
-                                    </p>
-                                  </div>
-                                  <Badge
-                                    variant={isActive ? "default" : "outline"}
-                                  >
-                                    {isSaving
-                                      ? "Saving..."
-                                      : isActive
-                                        ? "Active"
-                                        : "Preview"}
-                                  </Badge>
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => handlePresetSelection(preset)}
+                              disabled={disabled}
+                              className={`relative w-full rounded-lg border p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isActive
+                                ? "border-primary ring-2 ring-primary ring-opacity-20"
+                                : "border-border hover:border-primary"
+                                } ${disabled
+                                  ? "cursor-not-allowed opacity-60"
+                                  : ""
+                                }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div>
+                                  <h3 className="text-base font-semibold text-foreground">
+                                    {preset.label}
+                                  </h3>
+                                  <p className="mt-1 text-sm text-muted-foreground">
+                                    {preset.description}
+                                  </p>
                                 </div>
-                                <div className="mt-4 flex gap-4">
-                                  <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                                    <span>Primary</span>
-                                    <span
-                                      className="h-10 w-10 rounded-md border shadow-sm"
-                                      style={{
-                                        backgroundColor: `hsl(${preset.light.primary})`,
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                                    <span>Surface</span>
-                                    <span
-                                      className="h-10 w-10 rounded-md border shadow-sm"
-                                      style={{
-                                        backgroundColor: `hsl(${preset.light.background})`,
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                                    <span>Dark Primary</span>
-                                    <span
-                                      className="h-10 w-10 rounded-md border shadow-sm"
-                                      style={{
-                                        backgroundColor: `hsl(${preset.dark.primary})`,
-                                      }}
-                                    />
-                                  </div>
+                                <Badge
+                                  variant={isActive ? "default" : "outline"}
+                                >
+                                  {isSaving
+                                    ? "Saving..."
+                                    : isActive
+                                      ? "Active"
+                                      : "Preview"}
+                                </Badge>
+                              </div>
+                              <div className="mt-4 flex gap-4">
+                                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                                  <span>Primary</span>
+                                  <span
+                                    className="h-10 w-10 rounded-md border shadow-sm"
+                                    style={{
+                                      backgroundColor: `hsl(${preset.light.primary})`,
+                                    }}
+                                  />
                                 </div>
-                              </button>
-                            );
-                          })}
-                        </div>
+                                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                                  <span>Surface</span>
+                                  <span
+                                    className="h-10 w-10 rounded-md border shadow-sm"
+                                    style={{
+                                      backgroundColor: `hsl(${preset.light.background})`,
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                                  <span>Dark Primary</span>
+                                  <span
+                                    className="h-10 w-10 rounded-md border shadow-sm"
+                                    style={{
+                                      backgroundColor: `hsl(${preset.dark.primary})`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
-                </TabsContent>
-              </Tabs>
-            </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
         </SectionPanel>
 
         <SectionPanel
           section="contact-management"
           activeSection={activeTab}
         >
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-        <div className="relative z-10">
-          <Badge variant="secondary" className="mb-3">
-            Support
-          </Badge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Contact Management
-          </h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Manage contact page content, methods, and availability schedules
-          </p>
-        </div>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+            <div className="relative z-10">
+              <Badge variant="secondary" className="mb-3">
+                Support
+              </Badge>
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                Contact Management
+              </h2>
+              <p className="mt-2 max-w-2xl text-muted-foreground">
+                Manage contact page content, methods, and availability schedules
+              </p>
+            </div>
 
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <ClipboardList className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <Tabs defaultValue="categories" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
-            <TabsTrigger value="categories">Categories</TabsTrigger>
-            <TabsTrigger value="methods">Contact Methods</TabsTrigger>
-            <TabsTrigger value="availability">Availability</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="categories">
-            <ContactCategoryManager token={token || ""} />
-          </TabsContent>
-
-          <TabsContent value="methods">
-            <ContactMethodManager token={token || ""} />
-          </TabsContent>
-
-          <TabsContent value="availability">
-            <PlatformAvailabilityManager />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </SectionPanel>
-
-    {/* Legacy application sections removed */}
-
-
-    <SectionPanel section="stackscripts" activeSection={activeTab}>
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-        <div className="relative z-10 flex items-start justify-between">
-          <div>
-            <Badge variant="secondary" className="mb-3">
-              Automation
-            </Badge>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              StackScripts
-            </h2>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Configure which scripts show up when provisioning new VPS instances
-            </p>
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <ClipboardList className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+            </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchStackscriptsAndConfigs}
-            disabled={loadingStackscripts}
-            className="gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            {loadingStackscripts ? "Refreshing…" : "Refresh"}
-          </Button>
-        </div>
 
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <FileCode className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
+          <div className="space-y-6">
+            <Tabs defaultValue="categories" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+                <TabsTrigger value="categories">Categories</TabsTrigger>
+                <TabsTrigger value="methods">Contact Methods</TabsTrigger>
+                <TabsTrigger value="availability">Availability</TabsTrigger>
+              </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Available StackScripts</CardTitle>
-        </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="stackscript-search">
-                    Search StackScripts
-                  </Label>
-                  <Input
-                    id="stackscript-search"
-                    placeholder="Search StackScripts by name or description"
-                    value={stackscriptSearch}
-                    onChange={(e) => setStackscriptSearch(e.target.value)}
-                  />
-                </div>
+              <TabsContent value="categories">
+                <ContactCategoryManager token={token || ""} />
+              </TabsContent>
 
-                <div className="space-y-4">
-                  {loadingStackscripts ? (
-                    <div className="flex items-center gap-3 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
-                      Loading StackScripts…
-                    </div>
-                  ) : filteredAvailableStackscripts.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
-                      No StackScripts match your search.
-                    </div>
-                  ) : (
-                    filteredAvailableStackscripts.map((script) => {
-                      const config = stackscriptConfigs.find(
-                        (c) => c.stackscript_id === script.id
-                      );
-                      const draft = stackscriptDrafts[script.id] || {
-                        label: config?.label || script.label,
-                        description:
-                          config?.description || script.description || "",
-                        display_order: config?.display_order ?? 0,
-                        is_enabled: config?.is_enabled ?? false,
-                      };
-                      const hasChanges =
-                        config &&
-                        (draft.label !== (config.label || script.label) ||
-                          draft.description !== (config.description || "") ||
-                          draft.display_order !== config.display_order ||
-                          draft.is_enabled !== config.is_enabled);
-                      const isNew = !config;
+              <TabsContent value="methods">
+                <ContactMethodManager token={token || ""} />
+              </TabsContent>
 
-                      return (
-                        <div
-                          key={script.id}
-                          className="rounded-lg border border-border bg-muted/40 p-4"
-                        >
-                          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-                            <div className="flex items-start gap-3 lg:col-span-2">
-                              <Checkbox
-                                id={`stackscript-${script.id}`}
-                                checked={draft.is_enabled}
-                                onCheckedChange={(checked) => {
+              <TabsContent value="availability">
+                <PlatformAvailabilityManager />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </SectionPanel>
+
+        {/* Legacy application sections removed */}
+
+
+        <SectionPanel section="stackscripts" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+            <div className="relative z-10 flex items-start justify-between">
+              <div>
+                <Badge variant="secondary" className="mb-3">
+                  Automation
+                </Badge>
+                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                  StackScripts
+                </h2>
+                <p className="mt-2 max-w-2xl text-muted-foreground">
+                  Configure which scripts show up when provisioning new VPS instances
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchStackscriptsAndConfigs}
+                disabled={loadingStackscripts}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                {loadingStackscripts ? "Refreshing…" : "Refresh"}
+              </Button>
+            </div>
+
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <FileCode className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Available StackScripts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="stackscript-search">
+                  Search StackScripts
+                </Label>
+                <Input
+                  id="stackscript-search"
+                  placeholder="Search StackScripts by name or description"
+                  value={stackscriptSearch}
+                  onChange={(e) => setStackscriptSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-4">
+                {loadingStackscripts ? (
+                  <div className="flex items-center gap-3 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                    Loading StackScripts…
+                  </div>
+                ) : filteredAvailableStackscripts.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                    No StackScripts match your search.
+                  </div>
+                ) : (
+                  filteredAvailableStackscripts.map((script) => {
+                    const config = stackscriptConfigs.find(
+                      (c) => c.stackscript_id === script.id
+                    );
+                    const draft = stackscriptDrafts[script.id] || {
+                      label: config?.label || script.label,
+                      description:
+                        config?.description || script.description || "",
+                      display_order: config?.display_order ?? 0,
+                      is_enabled: config?.is_enabled ?? false,
+                    };
+                    const hasChanges =
+                      config &&
+                      (draft.label !== (config.label || script.label) ||
+                        draft.description !== (config.description || "") ||
+                        draft.display_order !== config.display_order ||
+                        draft.is_enabled !== config.is_enabled);
+                    const isNew = !config;
+
+                    return (
+                      <div
+                        key={script.id}
+                        className="rounded-lg border border-border bg-muted/40 p-4"
+                      >
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+                          <div className="flex items-start gap-3 lg:col-span-2">
+                            <Checkbox
+                              id={`stackscript-${script.id}`}
+                              checked={draft.is_enabled}
+                              onCheckedChange={(checked) => {
+                                const updated = {
+                                  ...draft,
+                                  is_enabled: Boolean(checked),
+                                };
+                                setStackscriptDrafts((prev) => ({
+                                  ...prev,
+                                  [script.id]: updated,
+                                }));
+                              }}
+                            />
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor={`stackscript-${script.id}`}
+                                className="text-sm font-medium text-foreground"
+                              >
+                                {script.label}
+                              </Label>
+                              <Badge
+                                variant={
+                                  draft.is_enabled ? "default" : "secondary"
+                                }
+                              >
+                                {draft.is_enabled ? "Enabled" : "Hidden"}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="space-y-3 lg:col-span-7">
+                            <div className="grid gap-2">
+                              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Display Label
+                              </Label>
+                              <Input
+                                value={draft.label}
+                                onChange={(e) => {
                                   const updated = {
                                     ...draft,
-                                    is_enabled: Boolean(checked),
+                                    label: e.target.value,
+                                  };
+                                  setStackscriptDrafts((prev) => ({
+                                    ...prev,
+                                    [script.id]: updated,
+                                  }));
+                                }}
+                                placeholder={script.label}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Description
+                              </Label>
+                              <Textarea
+                                value={draft.description}
+                                onChange={(e) => {
+                                  const updated = {
+                                    ...draft,
+                                    description: e.target.value,
+                                  };
+                                  setStackscriptDrafts((prev) => ({
+                                    ...prev,
+                                    [script.id]: updated,
+                                  }));
+                                }}
+                                placeholder={
+                                  script.description || "No description"
+                                }
+                                rows={2}
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              ID {script.id} • Images{" "}
+                              {script.images
+                                ?.map((img: string) =>
+                                  img.replace(/^linode\//i, "")
+                                )
+                                .join(", ") || "Any"}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-3 lg:col-span-3">
+                            <div className="grid gap-2">
+                              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Display order
+                              </Label>
+                              <Input
+                                type="number"
+                                value={draft.display_order}
+                                onChange={(e) => {
+                                  const updated = {
+                                    ...draft,
+                                    display_order: Number(e.target.value),
                                   };
                                   setStackscriptDrafts((prev) => ({
                                     ...prev,
@@ -3309,860 +3389,774 @@ const Admin: React.FC = () => {
                                   }));
                                 }}
                               />
-                              <div className="space-y-2">
-                                <Label
-                                  htmlFor={`stackscript-${script.id}`}
-                                  className="text-sm font-medium text-foreground"
-                                >
-                                  {script.label}
-                                </Label>
-                                <Badge
-                                  variant={
-                                    draft.is_enabled ? "default" : "secondary"
-                                  }
-                                >
-                                  {draft.is_enabled ? "Enabled" : "Hidden"}
-                                </Badge>
-                              </div>
                             </div>
-                            <div className="space-y-3 lg:col-span-7">
-                              <div className="grid gap-2">
-                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  Display Label
-                                </Label>
-                                <Input
-                                  value={draft.label}
-                                  onChange={(e) => {
-                                    const updated = {
-                                      ...draft,
-                                      label: e.target.value,
-                                    };
-                                    setStackscriptDrafts((prev) => ({
-                                      ...prev,
-                                      [script.id]: updated,
-                                    }));
-                                  }}
-                                  placeholder={script.label}
-                                />
-                              </div>
-                              <div className="grid gap-2">
-                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  Description
-                                </Label>
-                                <Textarea
-                                  value={draft.description}
-                                  onChange={(e) => {
-                                    const updated = {
-                                      ...draft,
-                                      description: e.target.value,
-                                    };
-                                    setStackscriptDrafts((prev) => ({
-                                      ...prev,
-                                      [script.id]: updated,
-                                    }));
-                                  }}
-                                  placeholder={
-                                    script.description || "No description"
-                                  }
-                                  rows={2}
-                                />
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                ID {script.id} • Images{" "}
-                                {script.images
-                                  ?.map((img: string) =>
-                                    img.replace(/^linode\//i, "")
-                                  )
-                                  .join(", ") || "Any"}
-                              </p>
-                            </div>
-                            <div className="flex flex-col gap-3 lg:col-span-3">
-                              <div className="grid gap-2">
-                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  Display order
-                                </Label>
-                                <Input
-                                  type="number"
-                                  value={draft.display_order}
-                                  onChange={(e) => {
-                                    const updated = {
-                                      ...draft,
-                                      display_order: Number(e.target.value),
-                                    };
-                                    setStackscriptDrafts((prev) => ({
-                                      ...prev,
-                                      [script.id]: updated,
-                                    }));
-                                  }}
-                                />
-                              </div>
-                              <Button
-                                onClick={() =>
-                                  saveStackscriptConfig(script.id, draft)
-                                }
-                                disabled={
-                                  savingStackscriptId === script.id ||
-                                  (!hasChanges && !isNew)
-                                }
-                              >
-                                {savingStackscriptId === script.id
-                                  ? "Saving…"
-                                  : isNew
-                                    ? "Save & Enable"
-                                    : "Save changes"}
-                              </Button>
-                            </div>
+                            <Button
+                              onClick={() =>
+                                saveStackscriptConfig(script.id, draft)
+                              }
+                              disabled={
+                                savingStackscriptId === script.id ||
+                                (!hasChanges && !isNew)
+                              }
+                            >
+                              {savingStackscriptId === script.id
+                                ? "Saving…"
+                                : isNew
+                                  ? "Save & Enable"
+                                  : "Save changes"}
+                            </Button>
                           </div>
                         </div>
-                      );
-                    })
-                  )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </SectionPanel>
+
+        <SectionPanel section="servers" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+            <div className="relative z-10">
+              <Badge variant="secondary" className="mb-3">
+                Infrastructure
+              </Badge>
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                VPS Servers
+              </h2>
+              <p className="mt-2 max-w-2xl text-muted-foreground">
+                Monitor and manage all VPS instances provisioned through the platform
+              </p>
+            </div>
+
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <ServerCog className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Server List</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={fetchServers}
+                disabled={serversLoading}
+              >
+                <RefreshCw className="h-4 w-4" />
+                {serversLoading ? "Refreshing…" : "Refresh"}
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                <div className="w-full xl:w-96">
+                  <Label htmlFor="server-search">Search</Label>
+                  <div className="relative mt-1">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="server-search"
+                      placeholder="Search by label, IP, organization, or plan"
+                      value={serverSearch}
+                      onChange={(e) => setServerSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
                 </div>
-              </CardContent>
-      </Card>
-    </SectionPanel>
+                <div className="w-full xl:w-56">
+                  <Label htmlFor="server-status">Status</Label>
+                  <Select
+                    value={serverStatusFilter}
+                    onValueChange={(value) => setServerStatusFilter(value)}
+                  >
+                    <SelectTrigger id="server-status" className="mt-1">
+                      <SelectValue placeholder="All status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      {serverStatusOptions.map((status) => (
+                        <SelectItem key={status} value={status.toLowerCase()}>
+                          {formatStatusLabel(status)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[14rem]">Label</TableHead>
+                      <TableHead className="min-w-[12rem]">
+                        Organization
+                      </TableHead>
+                      <TableHead className="w-32">Status</TableHead>
+                      <TableHead className="min-w-[10rem]">
+                        IP Address
+                      </TableHead>
+                      <TableHead className="min-w-[12rem]">Plan</TableHead>
+                      <TableHead className="min-w-[10rem]">Region</TableHead>
+                      <TableHead className="min-w-[10rem]">
+                        Provider
+                      </TableHead>
+                      <TableHead className="min-w-[12rem]">Updated</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {serversLoading ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="py-10 text-center text-muted-foreground"
+                        >
+                          Loading servers…
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredServers.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={8}
+                          className="py-10 text-center text-muted-foreground"
+                        >
+                          No servers match the current filters.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredServers.map((server) => {
+                        const specRecord =
+                          server.plan_specifications &&
+                            typeof server.plan_specifications === "object"
+                            ? (server.plan_specifications as Record<
+                              string,
+                              unknown
+                            >)
+                            : null;
+                        const readNumber = (key: string) => {
+                          if (!specRecord) return undefined;
+                          const raw = specRecord[key];
+                          if (typeof raw === "number") return raw;
+                          if (typeof raw === "string") {
+                            const parsed = Number(raw);
+                            return Number.isFinite(parsed)
+                              ? parsed
+                              : undefined;
+                          }
+                          return undefined;
+                        };
+                        const specParts: string[] = [];
+                        const vcpus =
+                          readNumber("vcpus") ??
+                          readNumber("cpu") ??
+                          readNumber("cores");
+                        const memory =
+                          readNumber("memory") ??
+                          readNumber("memory_mb") ??
+                          readNumber("ram");
+                        const disk =
+                          readNumber("disk") ?? readNumber("storage");
+                        const transfer =
+                          readNumber("transfer") ?? readNumber("bandwidth");
+                        if (typeof vcpus !== "undefined") {
+                          specParts.push(`${vcpus} vCPU`);
+                        }
+                        if (typeof memory !== "undefined") {
+                          specParts.push(`${memory} MB RAM`);
+                        }
+                        if (typeof disk !== "undefined") {
+                          specParts.push(`${disk} GB Disk`);
+                        }
+                        if (typeof transfer !== "undefined") {
+                          specParts.push(`${transfer} TB Transfer`);
+                        }
+                        const specSummary =
+                          specParts.length > 0 ? specParts.join(" • ") : "—";
+                        const configurationRecord =
+                          server.configuration &&
+                            typeof server.configuration === "object"
+                            ? (server.configuration as Record<
+                              string,
+                              unknown
+                            >)
+                            : null;
+                        const regionValue = configurationRecord
+                          ? configurationRecord["region"]
+                          : undefined;
+                        const region =
+                          typeof regionValue === "string"
+                            ? regionValue
+                            : null;
 
-    <SectionPanel section="servers" activeSection={activeTab}>
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-        <div className="relative z-10">
-          <Badge variant="secondary" className="mb-3">
-            Infrastructure
-          </Badge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            VPS Servers
-          </h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Monitor and manage all VPS instances provisioned through the platform
-          </p>
-        </div>
+                        return (
+                          <TableRow key={server.id} className="align-top">
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="font-medium text-foreground">
+                                  {server.label}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Provider ID #{server.provider_instance_id}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="text-sm text-foreground">
+                                  {server.organization_name || "—"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {server.organization_slug ||
+                                    server.organization_id}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={statusBadgeClass(server.status)}
+                              >
+                                {formatStatusLabel(server.status)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm text-muted-foreground">
+                                {server.ip_address || "—"}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="text-sm text-foreground">
+                                  {server.plan_name ||
+                                    server.plan_provider_plan_id ||
+                                    server.plan_id}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {specSummary}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm text-muted-foreground">
+                                {server.region_label || region || "—"}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm text-muted-foreground">
+                                {server.provider_name || "—"}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm text-muted-foreground">
+                                {formatDateTime(server.updated_at)}
+                              </p>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </SectionPanel>
 
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <ServerCog className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
+        <SectionPanel section="networking" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+            <div className="relative z-10">
+              <Badge variant="secondary" className="mb-3">
+                Network Configuration
+              </Badge>
+              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                Networking Controls
+              </h2>
+              <p className="mt-2 max-w-2xl text-muted-foreground">
+                Configure reverse DNS defaults and IP address management settings
+              </p>
+            </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Server List</CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={fetchServers}
-            disabled={serversLoading}
-          >
-            <RefreshCw className="h-4 w-4" />
-            {serversLoading ? "Refreshing…" : "Refresh"}
-          </Button>
-        </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                  <div className="w-full xl:w-96">
-                    <Label htmlFor="server-search">Search</Label>
-                    <div className="relative mt-1">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="server-search"
-                        placeholder="Search by label, IP, organization, or plan"
-                        value={serverSearch}
-                        onChange={(e) => setServerSearch(e.target.value)}
-                        className="pl-9"
-                      />
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <Globe className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Network Settings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs
+                value={networkingTab}
+                onValueChange={(value) =>
+                  setNetworkingTab(value as typeof networkingTab)
+                }
+              >
+                <TabsList>
+                  <TabsTrigger value="rdns">Reverse DNS</TabsTrigger>
+                  <TabsTrigger value="ipam">IP Management</TabsTrigger>
+                </TabsList>
+                <TabsContent value="rdns" className="space-y-6 pt-6">
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-base font-semibold text-foreground">
+                        Reverse DNS Template
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Define the base domain used when setting custom rDNS
+                        for VPS instances. If unset, the system falls back to{" "}
+                        <span className="font-mono">
+                          ip.rev.skyvps360.xyz
+                        </span>
+                        .
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="rdns-domain">rDNS base domain</Label>
+                        <Input
+                          id="rdns-domain"
+                          value={rdnsBaseDomain}
+                          onChange={(e) => setRdnsBaseDomain(e.target.value)}
+                          placeholder="ip.rev.skyvps360.xyz"
+                          disabled={rdnsLoading}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Example final rDNS:{" "}
+                          <span className="font-mono">
+                            123-45-67-89.
+                            {rdnsBaseDomain || "ip.rev.skyvps360.xyz"}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={saveNetworkingRdns}
+                        disabled={rdnsSaving || rdnsLoading}
+                        className="gap-2"
+                      >
+                        {rdnsSaving ? "Saving…" : "Save rDNS Template"}
+                      </Button>
                     </div>
                   </div>
-                  <div className="w-full xl:w-56">
-                    <Label htmlFor="server-status">Status</Label>
-                    <Select
-                      value={serverStatusFilter}
-                      onValueChange={(value) => setServerStatusFilter(value)}
-                    >
-                      <SelectTrigger id="server-status" className="mt-1">
-                        <SelectValue placeholder="All status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        {serverStatusOptions.map((status) => (
-                          <SelectItem key={status} value={status.toLowerCase()}>
-                            {formatStatusLabel(status)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                </TabsContent>
+
+                <TabsContent value="ipam" className="space-y-6 pt-6">
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-base font-semibold text-foreground mb-2">
+                        IP Address Management (IPAM)
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Manage IPv4 and IPv6 addresses allocated across your
+                        Linode infrastructure.
+                      </p>
+                    </div>
+
+                    {/* IP Allocation Overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-medium">
+                            Total IPs
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold text-foreground">
+                            {servers.length > 0 ? servers.length : "0"}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Allocated addresses
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-medium">
+                            IPv4
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold text-foreground">
+                            {servers.filter((s) => s.ip_address).length}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Active IPv4 addresses
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-medium">
+                            IPv6
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold text-foreground">
+                            {
+                              servers.filter((s) => s.configuration?.ipv6)
+                                .length
+                            }
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Active IPv6 ranges
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* IP Address Table */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">
+                          IP Addresses
+                        </CardTitle>
+                        <CardDescription>
+                          View and manage IP addresses across all VPS
+                          instances
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="rounded-md border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Instance ID</TableHead>
+                                <TableHead>Label</TableHead>
+                                <TableHead>IPv4 Address</TableHead>
+                                <TableHead>IPv6 Range</TableHead>
+                                <TableHead>Region</TableHead>
+                                <TableHead>Status</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {servers.length === 0 ? (
+                                <TableRow>
+                                  <TableCell
+                                    colSpan={6}
+                                    className="text-center py-8 text-muted-foreground"
+                                  >
+                                    No servers found. Deploy a VPS to see IP
+                                    allocations.
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                servers.map((server) => (
+                                  <TableRow key={server.id}>
+                                    <TableCell className="font-mono text-xs">
+                                      {server.provider_instance_id ||
+                                        server.id}
+                                    </TableCell>
+                                    <TableCell className="font-medium">
+                                      {server.label || "Unnamed Instance"}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-sm">
+                                      {server.ip_address || (
+                                        <span className="text-muted-foreground">
+                                          N/A
+                                        </span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-xs">
+                                      {server.configuration?.ipv6 ? (
+                                        <span
+                                          className="block max-w-[200px] truncate"
+                                          title={String(
+                                            server.configuration.ipv6
+                                          )}
+                                        >
+                                          {String(server.configuration.ipv6)}
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground">
+                                          N/A
+                                        </span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-sm">
+                                      {String(
+                                        server.configuration?.region ||
+                                        "Unknown"
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge
+                                        variant={
+                                          server.status === "running"
+                                            ? "default"
+                                            : "secondary"
+                                        }
+                                      >
+                                        {server.status || "Unknown"}
+                                      </Badge>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+                          <div>
+                            Showing {servers.length} instance
+                            {servers.length !== 1 ? "s" : ""}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span>IP data synced from Linode API</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Additional IPAM Information */}
+                    <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800">
+                      <CardContent className="pt-6">
+                        <div className="flex gap-3">
+                          <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                          <div className="space-y-2">
+                            <h4 className="font-medium text-foreground">
+                              About IP Management
+                            </h4>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              IP addresses are automatically allocated when
+                              you create VPS instances. Each instance receives
+                              a public IPv4 address and an IPv6 range. You can
+                              configure reverse DNS (rDNS) for these IPs in
+                              the rDNS tab. All IP information is synced in
+                              real-time from the Linode API.
+                            </p>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              Note: Instance IDs shown here do not expose
+                              sensitive internal identifiers and are safe for
+                              status monitoring purposes.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
-                </div>
-                <div className="overflow-x-auto">
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </SectionPanel>
+
+        <SectionPanel section="providers" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+            <div className="relative z-10 flex items-start justify-between">
+              <div>
+                <Badge variant="secondary" className="mb-3">
+                  Infrastructure
+                </Badge>
+                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                  Service Providers
+                </h2>
+                <p className="mt-2 max-w-2xl text-muted-foreground">
+                  Manage infrastructure provider credentials and access control
+                </p>
+              </div>
+              <Button onClick={() => setShowAddProvider(true)} className="gap-2">
+                <Plus className="h-4 w-4" /> Add Provider
+              </Button>
+            </div>
+
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <Settings className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Provider List</CardTitle>
+            </CardHeader>
+            <CardContent className="px-0">
+              <div className="overflow-x-auto">
+                <DndContext
+                  sensors={providerSensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleProviderDragEnd}
+                >
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="min-w-[14rem]">Label</TableHead>
-                        <TableHead className="min-w-[12rem]">
-                          Organization
-                        </TableHead>
-                        <TableHead className="w-32">Status</TableHead>
-                        <TableHead className="min-w-[10rem]">
-                          IP Address
-                        </TableHead>
-                        <TableHead className="min-w-[12rem]">Plan</TableHead>
-                        <TableHead className="min-w-[10rem]">Region</TableHead>
-                        <TableHead className="min-w-[10rem]">
-                          Provider
-                        </TableHead>
-                        <TableHead className="min-w-[12rem]">Updated</TableHead>
+                        <TableHead className="w-8"></TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Validation</TableHead>
+                        <TableHead>Last API Call</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {serversLoading ? (
+                      {providers.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={8}
+                            colSpan={7}
                             className="py-10 text-center text-muted-foreground"
                           >
-                            Loading servers…
-                          </TableCell>
-                        </TableRow>
-                      ) : filteredServers.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={8}
-                            className="py-10 text-center text-muted-foreground"
-                          >
-                            No servers match the current filters.
+                            No providers configured yet.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredServers.map((server) => {
-                          const specRecord =
-                            server.plan_specifications &&
-                              typeof server.plan_specifications === "object"
-                              ? (server.plan_specifications as Record<
-                                string,
-                                unknown
-                              >)
-                              : null;
-                          const readNumber = (key: string) => {
-                            if (!specRecord) return undefined;
-                            const raw = specRecord[key];
-                            if (typeof raw === "number") return raw;
-                            if (typeof raw === "string") {
-                              const parsed = Number(raw);
-                              return Number.isFinite(parsed)
-                                ? parsed
-                                : undefined;
-                            }
-                            return undefined;
-                          };
-                          const specParts: string[] = [];
-                          const vcpus =
-                            readNumber("vcpus") ??
-                            readNumber("cpu") ??
-                            readNumber("cores");
-                          const memory =
-                            readNumber("memory") ??
-                            readNumber("memory_mb") ??
-                            readNumber("ram");
-                          const disk =
-                            readNumber("disk") ?? readNumber("storage");
-                          const transfer =
-                            readNumber("transfer") ?? readNumber("bandwidth");
-                          if (typeof vcpus !== "undefined") {
-                            specParts.push(`${vcpus} vCPU`);
-                          }
-                          if (typeof memory !== "undefined") {
-                            specParts.push(`${memory} MB RAM`);
-                          }
-                          if (typeof disk !== "undefined") {
-                            specParts.push(`${disk} GB Disk`);
-                          }
-                          if (typeof transfer !== "undefined") {
-                            specParts.push(`${transfer} TB Transfer`);
-                          }
-                          const specSummary =
-                            specParts.length > 0 ? specParts.join(" • ") : "—";
-                          const configurationRecord =
-                            server.configuration &&
-                              typeof server.configuration === "object"
-                              ? (server.configuration as Record<
-                                string,
-                                unknown
-                              >)
-                              : null;
-                          const regionValue = configurationRecord
-                            ? configurationRecord["region"]
-                            : undefined;
-                          const region =
-                            typeof regionValue === "string"
-                              ? regionValue
-                              : null;
-
-                          return (
-                            <TableRow key={server.id} className="align-top">
-                              <TableCell>
-                                <div className="space-y-1">
-                                  <p className="font-medium text-foreground">
-                                    {server.label}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Provider ID #{server.provider_instance_id}
-                                  </p>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-foreground">
-                                    {server.organization_name || "—"}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {server.organization_slug ||
-                                      server.organization_id}
-                                  </p>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={statusBadgeClass(server.status)}
-                                >
-                                  {formatStatusLabel(server.status)}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <p className="text-sm text-muted-foreground">
-                                  {server.ip_address || "—"}
-                                </p>
-                              </TableCell>
-                              <TableCell>
-                                <div className="space-y-1">
-                                  <p className="text-sm text-foreground">
-                                    {server.plan_name ||
-                                      server.plan_provider_plan_id ||
-                                      server.plan_id}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {specSummary}
-                                  </p>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <p className="text-sm text-muted-foreground">
-                                  {server.region_label || region || "—"}
-                                </p>
-                              </TableCell>
-                              <TableCell>
-                                <p className="text-sm text-muted-foreground">
-                                  {server.provider_name || "—"}
-                                </p>
-                              </TableCell>
-                              <TableCell>
-                                <p className="text-sm text-muted-foreground">
-                                  {formatDateTime(server.updated_at)}
-                                </p>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
+                        <SortableContext
+                          items={providers.map((p) => p.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {providers.map((provider) => (
+                            <SortableProviderRow
+                              key={provider.id}
+                              provider={provider}
+                              validatingProviderId={validatingProviderId}
+                              onValidate={validateProvider}
+                              onEdit={(provider) => {
+                                setEditProviderId(provider.id);
+                                setEditProvider(provider);
+                              }}
+                              onDelete={(id) => setDeleteProviderId(id)}
+                            />
+                          ))}
+                        </SortableContext>
                       )}
                     </TableBody>
                   </Table>
+                </DndContext>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Dialog
+            open={showAddProvider}
+            onOpenChange={(open) => {
+              setShowAddProvider(open);
+              if (!open) {
+                setNewProvider({
+                  name: "",
+                  type: "",
+                  apiKey: "",
+                  active: true,
+                });
+              }
+            }}
+          >
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add Service Provider</DialogTitle>
+                <DialogDescription>
+                  Save provider credentials securely. Only active providers
+                  can be used for new workloads.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="provider-name">Name</Label>
+                  <Input
+                    id="provider-name"
+                    placeholder="e.g. Linode Production"
+                    value={newProvider.name}
+                    onChange={(e) =>
+                      setNewProvider((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    A friendly name to identify this provider configuration
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-    </SectionPanel>
-
-    <SectionPanel section="networking" activeSection={activeTab}>
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-        <div className="relative z-10">
-          <Badge variant="secondary" className="mb-3">
-            Network Configuration
-          </Badge>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Networking Controls
-          </h2>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Configure reverse DNS defaults and IP address management settings
-          </p>
-        </div>
-
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <Globe className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Network Settings</CardTitle>
-        </CardHeader>
-              <CardContent>
-                <Tabs
-                  value={networkingTab}
-                  onValueChange={(value) =>
-                    setNetworkingTab(value as typeof networkingTab)
-                  }
-                >
-                  <TabsList>
-                    <TabsTrigger value="rdns">Reverse DNS</TabsTrigger>
-                    <TabsTrigger value="ipam">IP Management</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="rdns" className="space-y-6 pt-6">
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="text-base font-semibold text-foreground">
-                          Reverse DNS Template
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Define the base domain used when setting custom rDNS
-                          for VPS instances. If unset, the system falls back to{" "}
-                          <span className="font-mono">
-                            ip.rev.skyvps360.xyz
-                          </span>
-                          .
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="rdns-domain">rDNS base domain</Label>
-                          <Input
-                            id="rdns-domain"
-                            value={rdnsBaseDomain}
-                            onChange={(e) => setRdnsBaseDomain(e.target.value)}
-                            placeholder="ip.rev.skyvps360.xyz"
-                            disabled={rdnsLoading}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Example final rDNS:{" "}
-                            <span className="font-mono">
-                              123-45-67-89.
-                              {rdnsBaseDomain || "ip.rev.skyvps360.xyz"}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex justify-end">
-                        <Button
-                          onClick={saveNetworkingRdns}
-                          disabled={rdnsSaving || rdnsLoading}
-                          className="gap-2"
-                        >
-                          {rdnsSaving ? "Saving…" : "Save rDNS Template"}
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="ipam" className="space-y-6 pt-6">
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="text-base font-semibold text-foreground mb-2">
-                          IP Address Management (IPAM)
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Manage IPv4 and IPv6 addresses allocated across your
-                          Linode infrastructure.
-                        </p>
-                      </div>
-
-                      {/* IP Allocation Overview */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium">
-                              Total IPs
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-2xl font-bold text-foreground">
-                              {servers.length > 0 ? servers.length : "0"}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Allocated addresses
-                            </p>
-                          </CardContent>
-                        </Card>
-
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium">
-                              IPv4
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-2xl font-bold text-foreground">
-                              {servers.filter((s) => s.ip_address).length}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Active IPv4 addresses
-                            </p>
-                          </CardContent>
-                        </Card>
-
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium">
-                              IPv6
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-2xl font-bold text-foreground">
-                              {
-                                servers.filter((s) => s.configuration?.ipv6)
-                                  .length
-                              }
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Active IPv6 ranges
-                            </p>
-                          </CardContent>
-                        </Card>
-                      </div>
-
-                      {/* IP Address Table */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">
-                            IP Addresses
-                          </CardTitle>
-                          <CardDescription>
-                            View and manage IP addresses across all VPS
-                            instances
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="rounded-md border">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Instance ID</TableHead>
-                                  <TableHead>Label</TableHead>
-                                  <TableHead>IPv4 Address</TableHead>
-                                  <TableHead>IPv6 Range</TableHead>
-                                  <TableHead>Region</TableHead>
-                                  <TableHead>Status</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {servers.length === 0 ? (
-                                  <TableRow>
-                                    <TableCell
-                                      colSpan={6}
-                                      className="text-center py-8 text-muted-foreground"
-                                    >
-                                      No servers found. Deploy a VPS to see IP
-                                      allocations.
-                                    </TableCell>
-                                  </TableRow>
-                                ) : (
-                                  servers.map((server) => (
-                                    <TableRow key={server.id}>
-                                      <TableCell className="font-mono text-xs">
-                                        {server.provider_instance_id ||
-                                          server.id}
-                                      </TableCell>
-                                      <TableCell className="font-medium">
-                                        {server.label || "Unnamed Instance"}
-                                      </TableCell>
-                                      <TableCell className="font-mono text-sm">
-                                        {server.ip_address || (
-                                          <span className="text-muted-foreground">
-                                            N/A
-                                          </span>
-                                        )}
-                                      </TableCell>
-                                      <TableCell className="font-mono text-xs">
-                                        {server.configuration?.ipv6 ? (
-                                          <span
-                                            className="block max-w-[200px] truncate"
-                                            title={String(
-                                              server.configuration.ipv6
-                                            )}
-                                          >
-                                            {String(server.configuration.ipv6)}
-                                          </span>
-                                        ) : (
-                                          <span className="text-muted-foreground">
-                                            N/A
-                                          </span>
-                                        )}
-                                      </TableCell>
-                                      <TableCell className="text-sm">
-                                        {String(
-                                          server.configuration?.region ||
-                                          "Unknown"
-                                        )}
-                                      </TableCell>
-                                      <TableCell>
-                                        <Badge
-                                          variant={
-                                            server.status === "running"
-                                              ? "default"
-                                              : "secondary"
-                                          }
-                                        >
-                                          {server.status || "Unknown"}
-                                        </Badge>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))
-                                )}
-                              </TableBody>
-                            </Table>
-                          </div>
-
-                          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-                            <div>
-                              Showing {servers.length} instance
-                              {servers.length !== 1 ? "s" : ""}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span>IP data synced from Linode API</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Additional IPAM Information */}
-                      <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800">
-                        <CardContent className="pt-6">
-                          <div className="flex gap-3">
-                            <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                            <div className="space-y-2">
-                              <h4 className="font-medium text-foreground">
-                                About IP Management
-                              </h4>
-                              <p className="text-sm text-muted-foreground leading-relaxed">
-                                IP addresses are automatically allocated when
-                                you create VPS instances. Each instance receives
-                                a public IPv4 address and an IPv6 range. You can
-                                configure reverse DNS (rDNS) for these IPs in
-                                the rDNS tab. All IP information is synced in
-                                real-time from the Linode API.
-                              </p>
-                              <p className="text-sm text-muted-foreground leading-relaxed">
-                                Note: Instance IDs shown here do not expose
-                                sensitive internal identifiers and are safe for
-                                status monitoring purposes.
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-    </SectionPanel>
-
-    <SectionPanel section="providers" activeSection={activeTab}>
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-        <div className="relative z-10 flex items-start justify-between">
-          <div>
-            <Badge variant="secondary" className="mb-3">
-              Infrastructure
-            </Badge>
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Service Providers
-            </h2>
-            <p className="mt-2 max-w-2xl text-muted-foreground">
-              Manage infrastructure provider credentials and access control
-            </p>
-          </div>
-          <Button onClick={() => setShowAddProvider(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Add Provider
-          </Button>
-        </div>
-
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <Settings className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Provider List</CardTitle>
-        </CardHeader>
-              <CardContent className="px-0">
-                <div className="overflow-x-auto">
-                  <DndContext
-                    sensors={providerSensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleProviderDragEnd}
-                  >
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-8"></TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Validation</TableHead>
-                          <TableHead>Last API Call</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {providers.length === 0 ? (
-                          <TableRow>
-                            <TableCell
-                              colSpan={7}
-                              className="py-10 text-center text-muted-foreground"
-                            >
-                              No providers configured yet.
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          <SortableContext
-                            items={providers.map((p) => p.id)}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            {providers.map((provider) => (
-                              <SortableProviderRow
-                                key={provider.id}
-                                provider={provider}
-                                validatingProviderId={validatingProviderId}
-                                onValidate={validateProvider}
-                                onEdit={(provider) => {
-                                  setEditProviderId(provider.id);
-                                  setEditProvider(provider);
-                                }}
-                                onDelete={(id) => setDeleteProviderId(id)}
-                              />
-                            ))}
-                          </SortableContext>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </DndContext>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Dialog
-              open={showAddProvider}
-              onOpenChange={(open) => {
-                setShowAddProvider(open);
-                if (!open) {
-                  setNewProvider({
-                    name: "",
-                    type: "",
-                    apiKey: "",
-                    active: true,
-                  });
-                }
-              }}
-            >
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Add Service Provider</DialogTitle>
-                  <DialogDescription>
-                    Save provider credentials securely. Only active providers
-                    can be used for new workloads.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="provider-name">Name</Label>
-                    <Input
-                      id="provider-name"
-                      placeholder="e.g. Linode Production"
-                      value={newProvider.name}
-                      onChange={(e) =>
-                        setNewProvider((prev) => ({
-                          ...prev,
-                          name: e.target.value,
-                        }))
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      A friendly name to identify this provider configuration
-                    </p>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="provider-type">Provider Type</Label>
-                    <Select
-                      value={newProvider.type}
-                      onValueChange={(value) =>
-                        setNewProvider((prev) => ({ ...prev, type: value }))
-                      }
-                    >
-                      <SelectTrigger id="provider-type">
-                        <SelectValue placeholder="Select provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="linode">Linode / Akamai</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="provider-key">API Token</Label>
-                    <Input
-                      id="provider-key"
-                      type="password"
-                      placeholder="Enter Linode API token"
-                      value={newProvider.apiKey}
-                      onChange={(e) =>
-                        setNewProvider((prev) => ({
-                          ...prev,
-                          apiKey: e.target.value,
-                        }))
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Create an API token from your Linode Cloud Manager with
-                      full access permissions
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        Enable Provider
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Inactive providers stay stored but hidden from
-                        provisioning.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={newProvider.active}
-                      onCheckedChange={(checked) =>
-                        setNewProvider((prev) => ({ ...prev, active: checked }))
-                      }
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddProvider(false);
-                      setNewProvider({
-                        name: "",
-                        type: "linode",
-                        apiKey: "",
-                        active: true,
-                      });
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={createProvider}
-                    disabled={
-                      !newProvider.name ||
-                      !newProvider.type ||
-                      !newProvider.apiKey
+                <div className="grid gap-2">
+                  <Label htmlFor="provider-type">Provider Type</Label>
+                  <Select
+                    value={newProvider.type}
+                    onValueChange={(value) =>
+                      setNewProvider((prev) => ({ ...prev, type: value }))
                     }
                   >
-                    Add Provider
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                    <SelectTrigger id="provider-type">
+                      <SelectValue placeholder="Select provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="linode">Linode / Akamai</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="provider-key">API Token</Label>
+                  <Input
+                    id="provider-key"
+                    type="password"
+                    placeholder="Enter Linode API token"
+                    value={newProvider.apiKey}
+                    onChange={(e) =>
+                      setNewProvider((prev) => ({
+                        ...prev,
+                        apiKey: e.target.value,
+                      }))
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Create an API token from your Linode Cloud Manager with
+                    full access permissions
+                  </p>
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      Enable Provider
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Inactive providers stay stored but hidden from
+                      provisioning.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={newProvider.active}
+                    onCheckedChange={(checked) =>
+                      setNewProvider((prev) => ({ ...prev, active: checked }))
+                    }
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddProvider(false);
+                    setNewProvider({
+                      name: "",
+                      type: "linode",
+                      apiKey: "",
+                      active: true,
+                    });
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={createProvider}
+                  disabled={
+                    !newProvider.name ||
+                    !newProvider.type ||
+                    !newProvider.apiKey
+                  }
+                >
+                  Add Provider
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </SectionPanel>
         <SectionPanel section="regions" activeSection={activeTab}>
           <RegionAccessManager token={token || ""} />
