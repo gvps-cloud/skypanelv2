@@ -313,20 +313,6 @@ const Dashboard: React.FC = () => {
           <p className="mt-2 max-w-2xl text-muted-foreground">
             Deploy and manage infrastructure across your providers with live telemetry, unified billing, and proactive insights.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button asChild size="lg">
-              <Link to="/vps">
-                <Plus className="mr-2 h-4 w-4" />
-                Launch VPS
-              </Link>
-            </Button>
-            <Button variant="outline" size="lg" asChild>
-              <Link to="/billing">
-                View billing
-                <ArrowUpRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
         </div>
 
         {/* Background decoration */}
@@ -506,7 +492,7 @@ const Dashboard: React.FC = () => {
                     <p className="mt-1 text-sm text-muted-foreground">
                       Deploy your first website
                     </p>
-                    <Button asChild size="sm" className="mt-4 !rounded-[2px]">
+                    <Button asChild size="sm" className="mt-4">
                       <Link to="/hosting/new">
                         <Plus className="mr-2 h-4 w-4" />
                         Get Hosting
@@ -566,7 +552,7 @@ const Dashboard: React.FC = () => {
                     <p className="mt-1 text-sm text-muted-foreground">
                       Deploy your first VPS to see live metrics
                     </p>
-                    <Button asChild size="sm" className="mt-4 !rounded-[2px]">
+                    <Button asChild size="sm" className="mt-4">
                       <Link to="/vps">
                         <Plus className="mr-2 h-4 w-4" />
                         Deploy VPS

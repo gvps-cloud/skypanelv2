@@ -99,10 +99,10 @@ router.get('/plans', async (req, res) => {
     }
 });
 
-// Update Plan (Pricing/Type)
+// Update Plan (Pricing/Type/Features/Description)
 router.put('/plans/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, price_monthly, service_type, is_active } = req.body;
+    const { name, price_monthly, service_type, is_active, features, description } = req.body;
 
     try {
         await pool.query(`
@@ -110,9 +110,11 @@ router.put('/plans/:id', async (req, res) => {
       SET name = COALESCE($1, name),
           price_monthly = COALESCE($2, price_monthly),
           service_type = COALESCE($3, service_type),
-          is_active = COALESCE($4, is_active)
-      WHERE id = $5
-    `, [name, price_monthly, service_type, is_active, id]);
+          is_active = COALESCE($4, is_active),
+          features = COALESCE($5, features),
+          description = COALESCE($6, description)
+      WHERE id = $7
+    `, [name, price_monthly, service_type, is_active, features ? JSON.stringify(features) : null, description, id]);
 
         res.json({ success: true });
     } catch (error) {

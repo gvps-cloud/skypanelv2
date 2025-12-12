@@ -89,16 +89,17 @@ export default function HostingStore() {
         <Card className="flex flex-col">
             <CardHeader>
                 <CardTitle>{plan.name}</CardTitle>
-                <CardDescription>{plan.description || 'Premium Hosting'}</CardDescription>
+                {plan.description && <CardDescription>{plan.description}</CardDescription>}
                 <div className="mt-4 text-3xl font-bold">${plan.price_monthly}<span className="text-lg text-muted-foreground font-normal">/mo</span></div>
             </CardHeader>
             <CardContent className="flex-1">
-                <ul className="space-y-2 text-sm">
-                    {/* Placeholder features strictly for demo as we don't have detailed feature list synced yet */}
-                    <li className="flex items-center"><Check className="mr-2 h-4 w-4 text-primary" /> NVMe Storage</li>
-                    <li className="flex items-center"><Check className="mr-2 h-4 w-4 text-primary" /> Unmetered Bandwidth</li>
-                    <li className="flex items-center"><Check className="mr-2 h-4 w-4 text-primary" /> 24/7 Support</li>
-                </ul>
+                {Array.isArray(plan.features) && plan.features.length > 0 && (
+                    <ul className="space-y-2 text-sm">
+                        {plan.features.map((feature: string, idx: number) => (
+                            <li key={idx} className="flex items-center"><Check className="mr-2 h-4 w-4 text-primary" /> {feature}</li>
+                        ))}
+                    </ul>
+                )}
             </CardContent>
             <CardFooter>
                 <Button className="w-full" onClick={() => setSelectedPlan(plan)}>Choose Plan</Button>
