@@ -506,7 +506,7 @@ const Dashboard: React.FC = () => {
                     <p className="mt-1 text-sm text-muted-foreground">
                       Deploy your first website
                     </p>
-                    <Button asChild size="sm" className="mt-4 !rounded-sm">
+                    <Button asChild size="sm" className="mt-4 !rounded-[2px]">
                       <Link to="/hosting/new">
                         <Plus className="mr-2 h-4 w-4" />
                         Get Hosting
@@ -566,7 +566,7 @@ const Dashboard: React.FC = () => {
                     <p className="mt-1 text-sm text-muted-foreground">
                       Deploy your first VPS to see live metrics
                     </p>
-                    <Button asChild size="sm" className="mt-4 !rounded-sm">
+                    <Button asChild size="sm" className="mt-4 !rounded-[2px]">
                       <Link to="/vps">
                         <Plus className="mr-2 h-4 w-4" />
                         Deploy VPS

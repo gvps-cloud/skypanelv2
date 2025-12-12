@@ -774,6 +774,7 @@ const Admin: React.FC = () => {
   const [rdnsBaseDomain, setRdnsBaseDomain] = useState<string>("");
   const [rdnsLoading, setRdnsLoading] = useState<boolean>(false);
   const [rdnsSaving, setRdnsSaving] = useState<boolean>(false);
+  const [hostingServices, setHostingServices] = useState<any[]>([]);
 
   const authHeader = useMemo(
     () => ({ Authorization: `Bearer ${token}` }),
@@ -1101,6 +1102,7 @@ const Admin: React.FC = () => {
         fetchServers();
         fetchAdminUsers();
         fetchProviders();
+        fetchHostingServices();
         break;
       case "support":
         fetchTickets();
@@ -1394,6 +1396,21 @@ const Admin: React.FC = () => {
       setLinodeRegions(data.regions);
     } catch (e: any) {
       toast.error(e.message);
+    }
+  };
+
+  const fetchHostingServices = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/hosting/store/services`, {
+        headers: authHeader,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setHostingServices(data || []);
+      }
+    } catch (e: any) {
+      console.warn('Failed to load hosting services', e);
     }
   };
 
@@ -1930,6 +1947,18 @@ const Admin: React.FC = () => {
         actionLabel: "Manage servers",
       },
       {
+        id: "hosting",
+        title: "Web Hosting",
+        description: "Manage web hosting services and active websites.",
+        icon: Server,
+        accent: "text-blue-500",
+        summary: [
+          { label: "Active", value: formatCountValue(hostingServices.length) },
+          { label: "Total sites", value: formatCountValue(hostingServices.length) },
+        ],
+        actionLabel: "Manage hosting",
+      },
+      {
         id: "vps-plans",
         title: "Plan Catalog",
         description: "Balance pricing, capacity tiers, and backup coverage.",
@@ -2056,7 +2085,7 @@ const Admin: React.FC = () => {
           </div>
 
           {/* Key Metrics Grid - matching dashboard style */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <Card className="overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -2082,6 +2111,21 @@ const Admin: React.FC = () => {
                   </div>
                   <div className="rounded-lg bg-muted/50 p-3">
                     <LifeBuoy className="h-6 w-6 text-foreground" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Web Hosting</p>
+                    <p className="text-3xl font-bold tracking-tight">{formatCountValue(hostingServices.length)}</p>
+                    <p className="text-xs text-muted-foreground">Active websites</p>
+                  </div>
+                  <div className="rounded-lg bg-blue-500/10 p-3">
+                    <Server className="h-6 w-6 text-blue-500" />
                   </div>
                 </div>
               </CardContent>
