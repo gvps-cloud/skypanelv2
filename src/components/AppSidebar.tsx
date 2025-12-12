@@ -12,6 +12,7 @@ import {
   ServerCog,
   Settings,
   Users,
+  Cloud,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,6 +46,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const currentHash = location.hash?.slice(1) ?? "";
   const isDashboardActive = pathname === "/dashboard";
   const isVpsActive = pathname.startsWith("/vps");
+  const isHostingActive = pathname.startsWith("/hosting");
   const isActivityActive = pathname.startsWith("/activity");
   const isBillingActive = pathname.startsWith("/billing");
   const isSshKeysActive = pathname.startsWith("/ssh-keys");
@@ -55,7 +57,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
     () => {
       if (isAdminRoute) {
         const activeAnchor = currentHash || "dashboard";
-        
+
         // Organized admin navigation with groups
         const adminGroups = [
           {
@@ -107,6 +109,16 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             ],
           },
           {
+            title: "Hosting Integration",
+            icon: Cloud,
+            url: `/admin/hosting/plans`,
+            isActive: pathname.startsWith("/admin/hosting"),
+            items: [
+              { title: "Plans Manager", url: `/admin/hosting/plans`, isActive: pathname === "/admin/hosting/plans" },
+              { title: "API Settings", url: `/admin/hosting/settings`, isActive: pathname === "/admin/hosting/settings" },
+            ]
+          },
+          {
             title: "User Management",
             icon: Users,
             url: `/admin#user-management`,
@@ -136,6 +148,12 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               isActive: isVpsActive,
             },
           ],
+        },
+        {
+          title: "Hosting",
+          url: "/hosting",
+          icon: Cloud,
+          isActive: isHostingActive,
         },
         {
           title: "SSH Keys",
@@ -172,6 +190,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       isDashboardActive,
       isSshKeysActive,
       isVpsActive,
+      isHostingActive,
       pathname,
     ]
   );

@@ -76,8 +76,16 @@ interface ActivityItem {
   status: 'success' | 'warning' | 'error' | 'info';
 }
 
+interface HostingService {
+  id: string;
+  domain: string;
+  status: string;
+  plan_name: string;
+}
+
 const Dashboard: React.FC = () => {
   const [vpsInstances, setVpsInstances] = useState<VPSStats[]>([]);
+  const [hostingServices, setHostingServices] = useState<HostingService[]>([]);
   const [billing, setBilling] = useState<BillingStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,6 +155,13 @@ const Dashboard: React.FC = () => {
       });
 
       try {
+        const hostingData = await apiClient.get('/hosting/store/services');
+        setHostingServices(hostingData || []);
+      } catch (err) {
+        console.warn('Failed to load hosting services', err);
+      }
+
+      try {
         const actData = await apiClient.get('/activity/recent?limit=10');
         const mapped: ActivityItem[] = (actData.activities || []).map((activity: any) => ({
           id: activity.id,
@@ -178,6 +193,12 @@ const Dashboard: React.FC = () => {
         description: 'Deploy a fresh instance in under a minute.',
         to: '/vps',
         icon: <Plus className="h-4 w-4" />
+      },
+      {
+        title: 'Deploy Website',
+        description: 'Host a new site with ease.',
+        to: '/hosting/new',
+        icon: <Server className="h-4 w-4" />
       },
       {
         title: 'Top up wallet',
@@ -307,7 +328,7 @@ const Dashboard: React.FC = () => {
             </Button>
           </div>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <Server className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -316,253 +337,294 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Key Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">VPS Instances</p>
-                <p className="text-3xl font-bold tracking-tight">{vpsInstances.length}</p>
-                <p className="text-xs text-muted-foreground">Across all providers</p>
-              </div>
-              <div className="rounded-lg bg-primary/10 p-3">
-                <Server className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Wallet Balance</p>
-                <p className="text-3xl font-bold tracking-tight">{formatCurrency(walletBalance)}</p>
-                <p className="text-xs text-muted-foreground">Ready to deploy infrastructure</p>
-              </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <Wallet className="h-6 w-6 text-foreground" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Monthly Spend</p>
-                <p className="text-3xl font-bold tracking-tight">{formatCurrency(monthlySpend)}</p>
-                <MonthlyResetIndicator monthlySpend={monthlySpend} />
-              </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <TrendingUp className="h-6 w-6 text-foreground" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Last Payment</p>
-                <p className="text-3xl font-bold tracking-tight">
-                  {lastPayment?.amount ? formatCurrency(lastPayment.amount) : '—'}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {lastPayment?.date ? formatTimestamp(lastPayment.date) : 'No payments yet'}
-                </p>
-              </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <ActivityIcon className="h-6 w-6 text-foreground" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Status Overview */}
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="outline" className="gap-2 px-3 py-1.5">
-          <div className="h-2 w-2 rounded-full bg-primary" />
-          {heroStats.running} active
-        </Badge>
-        {heroStats.flagged > 0 && (
-          <Badge variant="secondary" className="gap-2 px-3 py-1.5">
-            <AlertTriangle className="h-3 w-3" />
-            {heroStats.flagged} attention
-          </Badge>
-        )}
-        {heroStats.averageCpu !== null && (
-          <Badge variant="outline" className="gap-2 px-3 py-1.5">
-            <TrendingUp className="h-3 w-3" />
-            Avg CPU {heroStats.averageCpu.toFixed(1)}%
-          </Badge>
-        )}
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* VPS Fleet - Takes 2 columns */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div>
-              <CardTitle>VPS Fleet</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">Live signal across your deployments</p>
-            </div>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/vps">
-                Manage all
-                <ArrowUpRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {vpsInstances.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
-                  <div className="rounded-full bg-muted p-4">
-                    <Server className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <h3 className="mt-4 text-sm font-semibold">No instances yet</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Deploy your first VPS to see live metrics
-                  </p>
-                  <Button asChild size="sm" className="mt-4">
-                    <Link to="/vps">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Deploy VPS
-                    </Link>
-                  </Button>
+      <div className="space-y-4">
+        {/* Top Row: VPS & Web Hosting */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">VPS Instances</p>
+                  <p className="text-3xl font-bold tracking-tight">{vpsInstances.length}</p>
+                  <p className="text-xs text-muted-foreground">Across all providers</p>
                 </div>
-              ) : (
-                vpsInstances.slice(0, 5).map((vps) => {
-                  const cpuLoad = Math.min(100, Math.max(0, vps.metrics?.cpu?.last ?? vps.cpu ?? 0));
-                  const inbound = vps.metrics?.network?.inbound?.last ?? null;
-                  const outbound = vps.metrics?.network?.outbound?.last ?? null;
-
-                  return (
-                    <button
-                      key={vps.id}
-                      type="button"
-                      onClick={() => handleVpsClick(vps.id)}
-                      className="group w-full rounded-lg border bg-card p-4 text-left transition-all hover:border-primary/50 hover:shadow-md"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold group-hover:text-primary">{vps.name}</h4>
-                            <Badge
-                              variant={
-                                vps.status === 'running'
-                                  ? 'default'
-                                  : vps.status === 'stopped'
-                                  ? 'secondary'
-                                  : 'outline'
-                              }
-                            >
-                              {vps.status}
-                            </Badge>
-                          </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                            <span>{vps.plan || 'Unassigned'}</span>
-                            <span>•</span>
-                            <span>{vps.location || 'Unknown region'}</span>
-                            <span>•</span>
-                            <span>{vps.ip || 'IP pending'}</span>
-                          </div>
-                        </div>
-                        <div className="w-32 space-y-2 text-right">
-                          <div>
-                            <div className="mb-1 flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">CPU</span>
-                              <span className="font-semibold">{cpuLoad.toFixed(1)}%</span>
-                            </div>
-                            <Progress value={cpuLoad} className="h-1.5" />
-                          </div>
-                          <div className="flex justify-end gap-3 text-[10px] text-muted-foreground">
-                            {inbound !== null && (
-                              <div className="flex items-center gap-1">
-                                <ArrowUpRight className="h-3 w-3" />
-                                {inbound.toFixed(1)}
-                              </div>
-                            )}
-                            {outbound !== null && (
-                              <div className="flex items-center gap-1">
-                                <Compass className="h-3 w-3" />
-                                {outbound.toFixed(1)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-
-              {vpsInstances.length > 5 && (
-                <Button variant="ghost" size="sm" className="w-full" asChild>
-                  <Link to="/vps">
-                    View all {vpsInstances.length} instances
-                    <ArrowUpRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sidebar - Quick Actions & Activity */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {quickActions.map((action) => (
-                <Link
-                  key={action.title}
-                  to={action.to}
-                  className="group flex items-center gap-3 rounded-lg border bg-card p-3 transition-all hover:border-primary/50 hover:bg-accent"
-                >
-                  <div className="rounded-md bg-primary/10 p-2 text-primary group-hover:bg-primary group-hover:text-primary-foreground">
-                    {action.icon}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium group-hover:text-primary">{action.title}</p>
-                    <p className="text-xs text-muted-foreground">{action.description}</p>
-                  </div>
-                  <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                </Link>
-              ))}
+                <div className="rounded-lg bg-primary/10 p-3">
+                  <Server className="h-6 w-6 text-primary" />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Top Instance Card */}
-          {heroStats.topInstance && (
-            <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Highest Load
-                  </CardTitle>
-                  <Badge variant="outline" className="gap-1">
-                    <TrendingUp className="h-3 w-3" />
-                    {((heroStats.topInstance.metrics?.cpu?.last ?? heroStats.topInstance.cpu) ?? 0).toFixed(1)}%
-                  </Badge>
+          <Card className="overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Web Hosting</p>
+                  <p className="text-3xl font-bold tracking-tight">{hostingServices.length}</p>
+                  <p className="text-xs text-muted-foreground">Active websites</p>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <h3 className="font-semibold">{heroStats.topInstance.name}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {heroStats.topInstance.plan} • {heroStats.topInstance.location || 'Unknown'}
-                </p>
-              </CardContent>
-            </Card>
+                <div className="rounded-lg bg-blue-500/10 p-3">
+                  <Server className="h-6 w-6 text-blue-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bottom Row: Billing Stats */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Wallet Balance</p>
+                  <p className="text-3xl font-bold tracking-tight">{formatCurrency(walletBalance)}</p>
+                  <p className="text-xs text-muted-foreground">Ready to deploy infrastructure</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <Wallet className="h-6 w-6 text-foreground" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Monthly Spend</p>
+                  <p className="text-3xl font-bold tracking-tight">{formatCurrency(monthlySpend)}</p>
+                  <MonthlyResetIndicator monthlySpend={monthlySpend} />
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <TrendingUp className="h-6 w-6 text-foreground" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Last Payment</p>
+                  <p className="text-3xl font-bold tracking-tight">
+                    {lastPayment?.amount ? formatCurrency(lastPayment.amount) : '—'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {lastPayment?.date ? formatTimestamp(lastPayment.date) : 'No payments yet'}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <ActivityIcon className="h-6 w-6 text-foreground" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="space-y-6">
+
+        {/* Status Overview */}
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="gap-2 px-3 py-1.5">
+            <div className="h-2 w-2 rounded-full bg-primary" />
+            {heroStats.running} vps active
+          </Badge>
+          {hostingServices.length > 0 && (
+            <Badge variant="outline" className="gap-2 px-3 py-1.5">
+              <div className="h-2 w-2 rounded-full bg-primary" />
+              {hostingServices.length} sites active
+            </Badge>
           )}
+          {heroStats.flagged > 0 && (
+            <Badge variant="secondary" className="gap-2 px-3 py-1.5">
+              <AlertTriangle className="h-3 w-3" />
+              {heroStats.flagged} attention
+            </Badge>
+          )}
+          {heroStats.averageCpu !== null && (
+            <Badge variant="outline" className="gap-2 px-3 py-1.5">
+              <TrendingUp className="h-3 w-3" />
+              Avg CPU {heroStats.averageCpu.toFixed(1)}%
+            </Badge>
+          )}
+        </div>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {quickActions.map((action) => (
+              <Link
+                key={action.title}
+                to={action.to}
+                className="group flex items-center gap-3 rounded-lg border bg-card p-3 transition-all hover:border-primary/50 hover:bg-accent"
+              >
+                <div className="rounded-md bg-primary/10 p-2 text-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                  {action.icon}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium group-hover:text-primary">{action.title}</p>
+                  <p className="text-xs text-muted-foreground">{action.description}</p>
+                </div>
+                <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Services & VPS Fleet - Side by Side */}
+        <div className="grid gap-6 lg:grid-cols-2">
+
+          {/* Hosting Services Card */}
+          <Card className="h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <div>
+                <CardTitle>Web Hosting</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">Your active web hosting plans</p>
+              </div>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/hosting">
+                  Manage all
+                  <ArrowUpRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {hostingServices.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center h-[200px]">
+                    <div className="rounded-full bg-blue-50 dark:bg-blue-900/10 p-4">
+                      <Server className="h-8 w-8 text-blue-500 dark:text-blue-400" />
+                    </div>
+                    <h3 className="mt-4 text-sm font-semibold">No hosting plans yet</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Deploy your first website
+                    </p>
+                    <Button asChild size="sm" className="mt-4 !rounded-sm">
+                      <Link to="/hosting/new">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Get Hosting
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
+                  hostingServices.slice(0, 5).map(service => (
+                    <Link
+                      key={service.id}
+                      to={`/hosting/${service.id}`}
+                      className="group block w-full rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="rounded-md bg-blue-100 dark:bg-blue-900/30 p-2 text-blue-600 dark:text-blue-400">
+                            <Server className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold group-hover:text-primary">{service.domain}</h4>
+                            <p className="text-xs text-muted-foreground capitalize">{service.plan_name}</p>
+                          </div>
+                        </div>
+                        <Badge variant={service.status === 'active' ? 'default' : 'secondary'}>
+                          {service.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* VPS Fleet */}
+          <Card className="h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <div>
+                <CardTitle>VPS Fleet</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">Live signal across your deployments</p>
+              </div>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/vps">
+                  Manage all
+                  <ArrowUpRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {vpsInstances.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center h-[200px]">
+                    <div className="rounded-full bg-muted p-4">
+                      <Server className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="mt-4 text-sm font-semibold">No instances yet</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Deploy your first VPS to see live metrics
+                    </p>
+                    <Button asChild size="sm" className="mt-4 !rounded-sm">
+                      <Link to="/vps">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Deploy VPS
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
+                  vpsInstances.slice(0, 5).map((vps) => {
+                    const cpuLoad = Math.min(100, Math.max(0, vps.metrics?.cpu?.last ?? vps.cpu ?? 0));
+                    const inbound = vps.metrics?.network?.inbound?.last ?? null;
+                    const outbound = vps.metrics?.network?.outbound?.last ?? null;
+
+                    return (
+                      <button
+                        key={vps.id}
+                        type="button"
+                        onClick={() => handleVpsClick(vps.id)}
+                        className="group w-full rounded-lg border bg-card p-4 text-left transition-all hover:border-primary/50 hover:shadow-md"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold group-hover:text-primary">{vps.name}</h4>
+                              <Badge
+                                variant={
+                                  vps.status === 'running'
+                                    ? 'default'
+                                    : vps.status === 'stopped'
+                                      ? 'secondary'
+                                      : 'outline'
+                                }
+                              >
+                                {vps.status}
+                              </Badge>
+                            </div>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                              <span>{vps.plan || 'Unassigned'}</span>
+                              <span>•</span>
+                              <span>{vps.location || 'Unknown region'}</span>
+                            </div>
+                          </div>
+                          <div className="w-32 space-y-2 text-right">
+                            <div>
+                              <div className="mb-1 flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">CPU</span>
+                                <span className="font-semibold">{cpuLoad.toFixed(1)}%</span>
+                              </div>
+                              <Progress value={cpuLoad} className="h-1.5" />
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -598,15 +660,14 @@ const Dashboard: React.FC = () => {
                     <span className="absolute left-2 top-6 h-full w-px bg-border" />
                   )}
                   <div
-                    className={`absolute left-0 top-2 flex h-4 w-4 items-center justify-center rounded-full border-2 ${
-                      activity.status === 'success'
-                        ? 'border-primary bg-primary/10'
-                        : activity.status === 'warning'
+                    className={`absolute left-0 top-2 flex h-4 w-4 items-center justify-center rounded-full border-2 ${activity.status === 'success'
+                      ? 'border-primary bg-primary/10'
+                      : activity.status === 'warning'
                         ? 'border-muted-foreground bg-muted'
                         : activity.status === 'error'
-                        ? 'border-destructive bg-destructive/10'
-                        : 'border-primary bg-primary/10'
-                    }`}
+                          ? 'border-destructive bg-destructive/10'
+                          : 'border-primary bg-primary/10'
+                      }`}
                   />
                   <div className="flex flex-1 flex-col gap-1 pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>

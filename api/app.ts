@@ -38,6 +38,13 @@ import pricingRoutes from './routes/pricing.js';
 import adminFaqRoutes from './routes/adminFaq.js';
 import adminContactRoutes from './routes/admin/contact.js';
 import githubRoutes from './routes/github.js';
+import adminEnhanceRoutes from './routes/admin/enhance.js';
+import hostingStoreRoutes from './routes/hosting/store.js';
+import hostingNodeRoutes from './routes/hosting/node.js';
+import hostingWebRoutes from './routes/hosting/web.js';
+import hostingEmailRoutes from './routes/hosting/email.js';
+import hostingDnsRoutes from './routes/hosting/dns.js';
+import hostingWpRoutes from './routes/hosting/wordpress.js';
 import { initializeMetricsCollection, startMetricsPersistence } from './services/rateLimitMetrics.js';
 
 // for esm mode
@@ -90,6 +97,13 @@ app.use('/api/admin/faq', adminFaqRoutes);
 app.use('/api/admin/github', githubRoutes);
 app.use('/api/ssh-keys', sshKeysRoutes)
 app.use('/api/pricing', pricingRoutes)
+app.use('/api/admin/enhance', adminEnhanceRoutes);
+app.use('/api/hosting/store', hostingStoreRoutes);
+app.use('/api/hosting/node', hostingNodeRoutes);
+app.use('/api/hosting/web', hostingWebRoutes);
+app.use('/api/hosting/email', hostingEmailRoutes);
+app.use('/api/hosting/dns', hostingDnsRoutes);
+app.use('/api/hosting/wordpress', hostingWpRoutes);
 
 // Health check routes are now handled by the dedicated health router
 

@@ -57,6 +57,11 @@ import Pricing from "./pages/Pricing";
 import SSHKeys from "./pages/SSHKeys";
 
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
+import EnhanceSettings from "./pages/admin/hosting/EnhanceSettings";
+import EnhancePlans from "./pages/admin/hosting/EnhancePlans";
+import HostingStore from "./pages/user/Hosting/HostingStore";
+import HostingList from "./pages/user/Hosting/HostingList";
+import HostingDashboard from "./pages/user/Hosting/HostingDashboard";
 
 // Component to handle impersonation banner display
 function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
@@ -355,6 +360,46 @@ function AppRoutes() {
             <AdminRoute>
               <AdminUserDetail />
             </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/hosting/settings"
+          element={
+            <AdminRoute>
+              <EnhanceSettings />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/hosting/plans"
+          element={
+            <AdminRoute>
+              <EnhancePlans />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/hosting"
+          element={
+            <ProtectedRoute>
+              <HostingList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hosting/new"
+          element={
+            <ProtectedRoute>
+              <HostingStore />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hosting/:id"
+          element={
+            <ProtectedRoute>
+              <HostingDashboard />
+            </ProtectedRoute>
           }
         />
         <Route
