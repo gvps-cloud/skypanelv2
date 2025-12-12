@@ -31,7 +31,7 @@ const sections = [
     title: "2. Information We Collect",
     content: (
       <>
-        <p><strong>2.1 Personal information:</strong> When you create an account we collect details such as your name, email address, billing information (processed through PayPal), and optional organization data.</p>
+        <p><strong>2.1 Personal information:</strong> When you create an account we collect details such as your name, email address, and billing information (processed through PayPal).</p>
         <p><strong>2.2 Technical information:</strong> We gather IP address, device details, operating system, browser type, and logs such as access times and pages viewed. Cookies and similar technologies help us personalize sessions.</p>
         <p><strong>2.3 Usage information:</strong> Resource metrics (CPU, memory, bandwidth), API requests, feature usage patterns, and support interactions help us improve the platform.</p>
         <p><strong>2.4 Customer data:</strong> Content you store or process using the Service remains yours. We access it only to provide the Service or comply with legal obligations.</p>

@@ -9,18 +9,20 @@ import {
   sendPasswordResetEmail,
   sendWelcomeEmail
 } from './emailService.js';
+import { authenticator } from 'otplib';
+import QRCode from 'qrcode';
 
 export interface RegisterData {
   email: string;
   password: string;
   firstName: string;
   lastName: string;
-  organizationName: string;
 }
 
 export interface LoginData {
   email: string;
   password: string;
+  code?: string; // 2FA code
 }
 
 const RESET_TOKEN_LENGTH = 8;
@@ -57,15 +59,16 @@ export class AuthService {
 
         const user = userResult.rows[0];
         let organizationId = null;
-        let finalOrgName = data.organizationName;
+        let finalOrgName = '';
 
         // Create organization with unique name (append suffix if name already exists)
         {
-          const { finalName } = await generateUniqueOrgName(data.organizationName);
+          const baseName = `${data.firstName}'s Workspace`;
+          const { finalName } = await generateUniqueOrgName(baseName);
           finalOrgName = finalName;
           const orgId = uuidv4();
           const slug = finalName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-          
+
           const orgResult = await client.query(
             `INSERT INTO organizations (id, name, slug, owner_id, settings, created_at, updated_at) 
              VALUES ($1, $2, $3, $4, $5, $6, $7) 
@@ -129,9 +132,9 @@ export class AuthService {
           lastName: result.user.name.split(' ').slice(1).join(' ') || '',
           role: result.user.role,
           emailVerified: true,
-          organizationId: result.organizationId
+          preferences: {},
+          twoFactorEnabled: false
         },
-        organizationName: result.organizationName,
         token
       };
     } catch (error) {
@@ -158,6 +161,29 @@ export class AuthService {
       const isValidPassword = await bcrypt.compare(data.password, user.password_hash);
       if (!isValidPassword) {
         throw new Error('Invalid email or password');
+      }
+
+      // Check if 2FA is enabled
+      if (user.two_factor_enabled) {
+        // If 2FA is enabled but no code provided, tell client to ask for it
+        if (!data.code) {
+          return { require2fa: true };
+        }
+
+        // Verify the provided code
+        if (!user.two_factor_secret) {
+          // Should not happen if enabled is true, but safety check
+          throw new Error('2FA configuration error');
+        }
+
+        const isValidToken = authenticator.verify({
+          token: data.code,
+          secret: user.two_factor_secret
+        });
+
+        if (!isValidToken) {
+          throw new Error('Invalid authentication code');
+        }
       }
 
       // Get user's organization (if organization_members table exists)
@@ -190,8 +216,8 @@ export class AuthService {
           timezone: user.timezone,
           role: user.role,
           emailVerified: true,
-          organizationId: orgMember?.organization_id,
-          organizationRole: orgMember?.role
+          preferences: user.preferences,
+          twoFactorEnabled: user.two_factor_enabled || false
         },
         token
       };
@@ -276,7 +302,7 @@ export class AuthService {
     try {
       const normalizedToken = token.toUpperCase();
       const normalizedEmail = email.toLowerCase().trim();
-      
+
       // Find user with valid reset token AND matching email
       const userResult = await query(
         'SELECT id, email FROM users WHERE reset_token = $1 AND reset_expires > NOW() AND LOWER(email) = $2',
@@ -309,7 +335,7 @@ export class AuthService {
   static async refreshToken(userId: string) {
     try {
       const userResult = await query(
-        'SELECT id, email, role, name, phone, timezone FROM users WHERE id = $1',
+        'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled FROM users WHERE id = $1',
         [userId]
       );
 
@@ -338,7 +364,7 @@ export class AuthService {
         { expiresIn: config.JWT_EXPIRES_IN } as SignOptions
       );
 
-      return { 
+      return {
         token,
         user: {
           id: user.id,
@@ -350,7 +376,9 @@ export class AuthService {
           role: user.role,
           emailVerified: true,
           organizationId: orgMember?.organization_id,
-          organizationRole: orgMember?.role
+          organizationRole: orgMember?.role,
+          preferences: user.preferences,
+          twoFactorEnabled: user.two_factor_enabled || false
         }
       };
     } catch (error) {
@@ -378,6 +406,58 @@ export class AuthService {
       return { success: true };
     } catch (error) {
       console.error('Change password error:', error);
+      throw error;
+    }
+  }
+
+  static async setup2FA(userId: string) {
+    try {
+      const userResult = await query('SELECT email FROM users WHERE id = $1', [userId]);
+      if (userResult.rows.length === 0) throw new Error('User not found');
+
+      const user = userResult.rows[0];
+      const secret = authenticator.generateSecret();
+      const otpauth = authenticator.keyuri(user.email, 'SkyPanelV2', secret);
+      const qrCode = await QRCode.toDataURL(otpauth);
+
+      await query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [secret, userId]);
+
+      return { secret, qrCode };
+    } catch (error) {
+      console.error('Setup 2FA error:', error);
+      throw error;
+    }
+  }
+
+  static async verify2FASetup(userId: string, token: string) {
+    try {
+      const result = await query('SELECT two_factor_secret FROM users WHERE id = $1', [userId]);
+      if (result.rows.length === 0) throw new Error('User not found');
+
+      const secret = result.rows[0].two_factor_secret;
+      if (!secret) throw new Error('2FA not initialized');
+
+      const isValid = authenticator.verify({ token, secret });
+      if (!isValid) throw new Error('Invalid OTP code');
+
+      await query('UPDATE users SET two_factor_enabled = TRUE WHERE id = $1', [userId]);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Verify 2FA setup error:', error);
+      throw error;
+    }
+  }
+
+  static async disable2FA(userId: string) {
+    try {
+      await query(
+        'UPDATE users SET two_factor_enabled = FALSE, two_factor_secret = NULL WHERE id = $1',
+        [userId]
+      );
+      return { success: true };
+    } catch (error) {
+      console.error('Disable 2FA error:', error);
       throw error;
     }
   }

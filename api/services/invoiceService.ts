@@ -341,14 +341,14 @@ export class InvoiceService {
           <div class="invoice-meta-item">
             <span class="invoice-meta-label">Due Date</span>
             <span class="invoice-meta-value">${invoiceData.dueDate.toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}</span>
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })}</span>
           </div>
           ` : ''}
           <div class="invoice-meta-item">
-            <span class="invoice-meta-label">Organization ID</span>
+            <span class="invoice-meta-label">Account ID</span>
             <span class="invoice-meta-value" style="font-family: monospace; font-size: 14px;">${invoiceData.organizationId}</span>
           </div>
         </div>
@@ -545,7 +545,7 @@ export class InvoiceService {
     // Group billing cycles by VPS and create separate line items for base and backup costs
     billingCycles.forEach(cycle => {
       const baseAmount = cycle.baseHourlyRate * cycle.hoursCharged;
-      
+
       // Add base VPS cost line item
       items.push({
         description: `${cycle.vpsLabel} - VPS Service (${cycle.hoursCharged}h)`,
@@ -558,7 +558,7 @@ export class InvoiceService {
       if (cycle.backupHourlyRate > 0 && cycle.backupFrequency !== 'none') {
         const backupAmount = cycle.backupHourlyRate * cycle.hoursCharged;
         const frequencyLabel = cycle.backupFrequency === 'daily' ? 'Daily' : 'Weekly';
-        
+
         items.push({
           description: `${cycle.vpsLabel} - ${frequencyLabel} Backups (${cycle.hoursCharged}h)`,
           quantity: cycle.hoursCharged,
@@ -572,11 +572,11 @@ export class InvoiceService {
     const tax = 0;
     const total = subtotal + tax;
 
-    const periodStart = billingCycles.length > 0 
-      ? billingCycles[billingCycles.length - 1].billingPeriodStart 
+    const periodStart = billingCycles.length > 0
+      ? billingCycles[billingCycles.length - 1].billingPeriodStart
       : new Date();
-    const periodEnd = billingCycles.length > 0 
-      ? billingCycles[0].billingPeriodEnd 
+    const periodEnd = billingCycles.length > 0
+      ? billingCycles[0].billingPeriodEnd
       : new Date();
 
     return {
@@ -600,7 +600,7 @@ export class InvoiceService {
    */
   static generateInvoiceFromTransactions(
     organizationId: string,
-    transactions: Array<{description?: string; amount: string | number; currency?: string; createdAt?: string}>,
+    transactions: Array<{ description?: string; amount: string | number; currency?: string; createdAt?: string }>,
     invoiceNumber: string
   ): InvoiceData {
     const detectedCurrency = transactions.find(

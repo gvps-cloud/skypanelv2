@@ -14,6 +14,8 @@ import { BRAND_NAME } from "@/lib/brand";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [show2FA, setShow2FA] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,7 +27,15 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      const result = await login(email, password, show2FA ? twoFactorCode : undefined);
+
+      if (result && result.require2fa) {
+        setShow2FA(true);
+        setLoading(false);
+        toast.info("Please enter your 2FA code");
+        return;
+      }
+
       toast.success("Login successful!");
       navigate("/dashboard");
     } catch (error: unknown) {
@@ -57,43 +67,65 @@ export default function Login() {
           <CardContent>
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="space-y-4">
-                <div className="space-y-1">
-                  <Label htmlFor="email">Email address</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    placeholder="Enter your email"
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
+                {show2FA ? (
+                  <div className="space-y-1">
+                    <Label htmlFor="2fa-code">Two-Factor Authentication Code</Label>
                     <Input
-                      id="password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      required
-                      value={password}
-                      placeholder="Enter your password"
-                      onChange={(e) => setPassword(e.target.value)}
+                      id="2fa-code"
+                      name="code"
+                      type="text"
+                      autoComplete="one-time-code"
+                      required={show2FA}
+                      value={twoFactorCode}
+                      placeholder="Enter 6-digit code"
+                      onChange={(e) => setTwoFactorCode(e.target.value)}
+                      autoFocus
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Enter the code from your authenticator app.
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="space-y-1">
+                      <Label htmlFor="email">Email address</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        placeholder="Enter your email"
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="password">Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          autoComplete="current-password"
+                          required
+                          value={password}
+                          placeholder="Enter your password"
+                          onChange={(e) => setPassword(e.target.value)}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center justify-between">

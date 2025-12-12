@@ -10,8 +10,8 @@ export interface User {
   timezone?: string;
   role: string;
   emailVerified: boolean;
-  organizationId?: string;
-  organizationRole?: string;
+  preferences?: any;
+  twoFactorEnabled?: boolean;
 }
 
 export interface AuthContextType {
@@ -19,26 +19,26 @@ export interface AuthContextType {
   token: string | null;
   loading: boolean;
   isImpersonating: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, code?: string) => Promise<any>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   refreshToken: () => Promise<void>;
   updateProfile: (data: { firstName?: string; lastName?: string; phone?: string; timezone?: string }) => Promise<void>;
-  getOrganization: () => Promise<any>;
-  updateOrganization: (name?: string, website?: string, address?: string, taxId?: string) => Promise<{ organization: any; nameWasModified?: boolean }>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   updatePreferences: (notifications?: any, security?: any) => Promise<void>;
   getApiKeys: () => Promise<any[]>;
   createApiKey: (name: string) => Promise<any>;
   revokeApiKey: (id: string) => Promise<void>;
+  setup2FA: () => Promise<{ secret: string; qrCode: string }>;
+  verify2FA: (token: string) => Promise<void>;
+  disable2FA: () => Promise<void>;
 }
 
-interface RegisterData {
+export interface RegisterData {
   email: string;
   password: string;
   firstName: string;
   lastName: string;
-  organizationName: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -63,13 +63,13 @@ const isTokenExpired = (token: string): boolean => {
         .join('')
     );
     const decoded = JSON.parse(jsonPayload);
-    
+
     if (decoded.exp) {
       // JWT exp is in seconds, Date.now() is in milliseconds
       const expirationTime = decoded.exp * 1000;
       return Date.now() >= expirationTime;
     }
-    
+
     return false;
   } catch {
     return true; // If we can't decode, assume expired
@@ -106,7 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
-      
+
       // Check if this is an impersonation token
       try {
         const base64Url = storedToken.split('.')[1];
@@ -140,14 +140,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, code?: string) => {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, code }),
       });
 
       if (!response.ok) {
@@ -156,13 +156,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const data = await response.json();
-      
+
+      if (data.require2fa) {
+        return { require2fa: true };
+      }
+
       setUser(data.user);
       setToken(data.token);
-      
+
       // Store in localStorage
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('auth_user', JSON.stringify(data.user));
+
+      return { success: true };
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -185,10 +191,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const result = await response.json();
-      
+
       setUser(result.user);
       setToken(result.token);
-      
+
       // Store in localStorage
       localStorage.setItem('auth_token', result.token);
       localStorage.setItem('auth_user', JSON.stringify(result.user));
@@ -217,10 +223,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const data = await response.json();
-      
+
       setToken(data.token);
       localStorage.setItem('auth_token', data.token);
-      
+
       // Update user data if returned from refresh
       if (data.user) {
         setUser(data.user);
@@ -256,48 +262,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const getOrganization = async () => {
-    try {
-      if (!token) throw new Error('Not authenticated');
-      const response = await fetch('/api/auth/organization', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch organization');
-      }
-      return result.organization;
-    } catch (error) {
-      console.error('Get organization error:', error);
-      throw error;
-    }
-  };
-
-  const updateOrganization = async (name?: string, website?: string, address?: string, taxId?: string) => {
-    try {
-      if (!token) throw new Error('Not authenticated');
-      const response = await fetch('/api/auth/organization', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, website, address, taxId }),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to update organization');
-      }
-      return { organization: result.organization, nameWasModified: result.nameWasModified };
-    } catch (error) {
-      console.error('Update organization error:', error);
-      throw error;
-    }
-  };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
     try {
@@ -336,6 +300,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update preferences');
       }
+
+      // Update local user state
+      if (user) {
+        const updatedUser = { ...user, preferences: result.preferences };
+        setUser(updatedUser);
+        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+      }
+
       return result.preferences;
     } catch (error) {
       console.error('Update preferences error:', error);
@@ -404,6 +376,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const setup2FA = async () => {
+    try {
+      if (!token) throw new Error('Not authenticated');
+      const response = await fetch('/api/auth/2fa/setup', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to setup 2FA');
+      return result;
+    } catch (error) {
+      console.error('Setup 2FA error:', error);
+      throw error;
+    }
+  };
+
+  const verify2FA = async (otpToken: string) => {
+    try {
+      if (!token) throw new Error('Not authenticated');
+      const response = await fetch('/api/auth/2fa/verify', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: otpToken }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to verify 2FA');
+
+      // Update local user state
+      if (user) {
+        const updatedUser = { ...user, twoFactorEnabled: true };
+        setUser(updatedUser);
+        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error('Verify 2FA error:', error);
+      throw error;
+    }
+  };
+
+  const disable2FA = async () => {
+    try {
+      if (!token) throw new Error('Not authenticated');
+      const response = await fetch('/api/auth/2fa/disable', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to disable 2FA');
+
+      // Update local user state
+      if (user) {
+        const updatedUser = { ...user, twoFactorEnabled: false };
+        setUser(updatedUser);
+        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error('Disable 2FA error:', error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     token,
@@ -414,13 +454,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     refreshToken,
     updateProfile,
-    getOrganization,
-    updateOrganization,
     changePassword,
     updatePreferences,
     getApiKeys,
     createApiKey,
     revokeApiKey,
+    setup2FA,
+    verify2FA,
+    disable2FA,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

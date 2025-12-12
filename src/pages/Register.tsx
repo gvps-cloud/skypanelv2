@@ -16,8 +16,7 @@ export default function Register() {
     lastName: '',
     email: '',
     password: '',
-    confirmPassword: '',
-    organizationName: ''
+    confirmPassword: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -50,19 +49,14 @@ export default function Register() {
       return;
     }
 
-    if (!formData.organizationName.trim()) {
-      toast.error('Organization name is required');
-      setLoading(false);
-      return;
-    }
+
 
     try {
       await register({
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
-        lastName: formData.lastName,
-        organizationName: formData.organizationName.trim()
+        lastName: formData.lastName
       });
       toast.success(`Registration successful! Welcome to ${BRAND_NAME}!`);
       navigate('/dashboard');
@@ -137,20 +131,7 @@ export default function Register() {
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="organizationName">
-                    Organization name <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="organizationName"
-                    name="organizationName"
-                    type="text"
-                    required
-                    value={formData.organizationName}
-                    onChange={handleChange}
-                    placeholder="Your Company"
-                  />
-                </div>
+
 
                 <div className="space-y-1">
                   <Label htmlFor="password">Password</Label>

@@ -4,61 +4,94 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { 
-  User, 
-  Building, 
-  Key, 
-  Bell, 
-  Shield, 
+import {
+  User,
+  Key,
+  Bell,
+  Shield,
   Save,
   Eye,
   EyeOff,
   Copy,
   Trash2,
-  AlertTriangle
-} from 'lucide-react';
+  AlertTriangle,
+  CheckCircle2,
+  Mail,
+  CreditCard, // For billing icon
+  Wrench // For maintenance icon
+} from 'lucide-react'; // Check if these icons exist in lucide-react (CreditCard, Wrench usually do)
 import { toast } from 'sonner';
-// Navigation provided by AppLayout
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Using Tabs for switching if preferred, or sidebar.
+// I'll stick to sidebar layout but use Card for content.
 
 const Settings: React.FC = () => {
-  const { 
-    user, 
-    updateProfile, 
-    getOrganization,
-    updateOrganization, 
-    changePassword, 
-    updatePreferences, 
-    getApiKeys, 
-    createApiKey, 
-    revokeApiKey 
+  const {
+    user,
+    updateProfile,
+    changePassword,
+    updatePreferences,
+    getApiKeys,
+    createApiKey,
+    revokeApiKey,
+    setup2FA,
+    verify2FA,
+    disable2FA
   } = useAuth();
+
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
-  const [showApiKey, setShowApiKey] = useState<{[key: string]: boolean}>({});
-  const [newlyCreatedKeys, setNewlyCreatedKeys] = useState<{[key: string]: string}>({});
-  const [revokeModal, setRevokeModal] = useState<{isOpen: boolean, keyId: string, keyName: string}>({
+
+  // API Keys State
+  const [apiKeys, setApiKeys] = useState<any[]>([]);
+  const [newApiKeyName, setNewApiKeyName] = useState('');
+  const [showApiKey, setShowApiKey] = useState<{ [key: string]: boolean }>({});
+  const [newlyCreatedKeys, setNewlyCreatedKeys] = useState<{ [key: string]: string }>({});
+  const [revokeModal, setRevokeModal] = useState<{ isOpen: boolean, keyId: string, keyName: string }>({
     isOpen: false,
     keyId: '',
     keyName: ''
   });
 
-  // Profile settings
+  // Profile State
   const [profileData, setProfileData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    timezone: user?.timezone || 'UTC'
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    timezone: 'UTC'
   });
 
-  // Update profile data when user changes
+  // Security State
+  const [securityData, setSecurityData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  // 2FA State
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [twoFactorStep, setTwoFactorStep] = useState<'intro' | 'setup' | 'verify'>('intro'); // intro is just Confirm to enable? Or directly setup.
+  const [twoFactorSecret, setTwoFactorSecret] = useState('');
+  const [twoFactorQr, setTwoFactorQr] = useState('');
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+
+  // Notifications State
+  const [notificationData, setNotificationData] = useState({
+    emailNotifications: true,
+    billingAlerts: true,
+    securityAlerts: true,
+    maintenanceAlerts: true
+  });
+
+  // Load Data
   useEffect(() => {
     if (user) {
       setProfileData({
@@ -68,83 +101,38 @@ const Settings: React.FC = () => {
         phone: user.phone || '',
         timezone: user.timezone || 'UTC'
       });
+
+      // Load preferences
+      if (user.preferences?.notifications) {
+        setNotificationData(prev => ({
+          ...prev,
+          ...user.preferences.notifications
+        }));
+      }
     }
   }, [user]);
 
-  // Organization settings
-  const [orgData, setOrgData] = useState({
-    name: '',
-    website: '',
-    address: '',
-    taxId: ''
-  });
-
-  // Security settings
-  const [securityData, setSecurityData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-    twoFactorEnabled: false
-  });
-
-  // Notification settings
-  const [notificationData, setNotificationData] = useState({
-    emailNotifications: true,
-    smsNotifications: false,
-    billingAlerts: true,
-    securityAlerts: true,
-    maintenanceAlerts: true
-  });
-
-  // API settings
-  const [apiKeys, setApiKeys] = useState<any[]>([]);
-  const [newApiKeyName, setNewApiKeyName] = useState('');
-
-  // Load API keys on mount
+  // Load API Keys
   useEffect(() => {
-    const loadApiKeys = async () => {
-      try {
-        const keys = await getApiKeys();
-        setApiKeys(keys);
-      } catch (error) {
-        console.error('Failed to load API keys:', error);
-      }
-    };
-    loadApiKeys();
-  }, [getApiKeys]);
+    if (activeTab === 'api') {
+      const loadApiKeys = async () => {
+        try {
+          const keys = await getApiKeys();
+          setApiKeys(keys);
+        } catch (error) {
+          console.error('Failed to load API keys:', error);
+        }
+      };
+      loadApiKeys();
+    }
+  }, [activeTab, getApiKeys]);
 
-  // Load organization data on mount
-  useEffect(() => {
-    const loadOrganizationData = async () => {
-      try {
-        const organization = await getOrganization();
-        setOrgData({
-          name: organization.name || '',
-          website: organization.website || '',
-          address: organization.address || '',
-          taxId: organization.taxId || ''
-        });
-      } catch (error) {
-        console.error('Failed to load organization data:', error);
-        // Keep empty values if loading fails
-      }
-    };
-    loadOrganizationData();
-  }, [getOrganization]);
-
-  const tabs = [
-    { id: 'profile', name: 'Profile', icon: User },
-    { id: 'organization', name: 'Organization', icon: Building },
-    { id: 'security', name: 'Security', icon: Shield },
-    { id: 'notifications', name: 'Notifications', icon: Bell },
-    { id: 'api', name: 'API Keys', icon: Key }
-  ];
-
+  // Handlers
   const handleSaveProfile = async () => {
     setLoading(true);
     try {
-      await updateProfile({ 
-        firstName: profileData.firstName, 
+      await updateProfile({
+        firstName: profileData.firstName,
         lastName: profileData.lastName,
         phone: profileData.phone,
         timezone: profileData.timezone
@@ -157,51 +145,19 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleSaveOrganization = async () => {
-    setLoading(true);
-    try {
-      const result = await updateOrganization(
-        orgData.name,
-        orgData.website,
-        orgData.address,
-        orgData.taxId
-      );
-      
-      // Update form with the actual saved organization data
-      if (result.organization) {
-        setOrgData(prev => ({
-          ...prev,
-          name: result.organization.name || prev.name
-        }));
-      }
-      
-      if (result.nameWasModified) {
-        toast.success(`Organization name was modified to "${result.organization.name}" to ensure uniqueness`);
-      } else {
-        toast.success('Organization settings updated successfully');
-      }
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to update organization settings');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleChangePassword = async () => {
     if (securityData.newPassword !== securityData.confirmPassword) {
       toast.error('New passwords do not match');
       return;
     }
-
     if (!securityData.currentPassword || !securityData.newPassword) {
       toast.error('Please fill in all password fields');
       return;
     }
-
     setLoading(true);
     try {
       await changePassword(securityData.currentPassword, securityData.newPassword);
-      setSecurityData(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
+      setSecurityData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       toast.success('Password changed successfully');
     } catch (error: any) {
       toast.error(error?.message || 'Failed to change password');
@@ -210,44 +166,81 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleSaveNotifications = async () => {
+  const handleToggle2FA = async (checked: boolean) => {
+    if (checked) {
+      // Start Setup Flow
+      setTwoFactorStep('setup');
+      setTwoFactorModalOpen(true);
+      try {
+        const { secret, qrCode } = await setup2FA();
+        setTwoFactorSecret(secret);
+        setTwoFactorQr(qrCode);
+      } catch (error: any) {
+        toast.error('Failed to initialize 2FA setup');
+        setTwoFactorModalOpen(false);
+      }
+    } else {
+      // Disable 2FA
+      try {
+        await disable2FA(); // Backend checks permission
+        toast.success('Two-factor authentication disabled');
+      } catch (error: any) {
+        toast.error('Failed to disable 2FA');
+      }
+    }
+  };
+
+  const handleVerify2FA = async () => {
     setLoading(true);
     try {
-      await updatePreferences({
-        notifications: {
-          email: notificationData.emailNotifications,
-          sms: notificationData.smsNotifications,
-          billingAlerts: notificationData.billingAlerts,
-          securityAlerts: notificationData.securityAlerts,
-          maintenanceAlerts: notificationData.maintenanceAlerts
-        }
-      });
-      toast.success('Notification preferences updated successfully');
+      await verify2FA(twoFactorCode);
+      toast.success('Two-factor authentication enabled successfully!');
+      setTwoFactorModalOpen(false);
+      setTwoFactorCode('');
     } catch (error: any) {
-      toast.error(error?.message || 'Failed to update notification preferences');
+      toast.error(error?.message || 'Invalid verification code');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCopyApiKey = (keyId: string, key: string) => {
-    // For newly created keys, copy the full key. For existing keys, copy the preview
-    const fullKey = newlyCreatedKeys[keyId] || key;
-    navigator.clipboard.writeText(fullKey);
-    toast.success('API key copied to clipboard');
+  const handleSaveNotifications = async (newData?: any) => {
+    const dataToSave = newData || notificationData;
+    setLoading(true); // Maybe instant optimism?
+    // Update local state if provided
+    if (newData) setNotificationData(newData);
+
+    try {
+      // Send to backend
+      await updatePreferences({
+        notifications: dataToSave
+      });
+      if (!newData) toast.success('Notification preferences updated');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update notification preferences');
+      // Revert state if needed? For now simple error toast.
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Real-time update wrapper
+  const updateNotificationSetting = (key: string, value: boolean) => {
+    const updated = { ...notificationData, [key]: value };
+    setNotificationData(updated);
+    handleSaveNotifications(updated);
+  };
+
+  // API Key Handlers
   const handleCreateApiKey = async () => {
     if (!newApiKeyName.trim()) {
       toast.error('Please enter a name for the API key');
       return;
     }
-
     setLoading(true);
     try {
       const newKey = await createApiKey(newApiKeyName);
-      setApiKeys(prev => [...prev, newKey]);
-      // Store the full key for this session only
+      setApiKeys(prev => [newKey, ...prev]);
       if (newKey.key) {
         setNewlyCreatedKeys(prev => ({ ...prev, [newKey.id]: newKey.key }));
       }
@@ -265,7 +258,6 @@ const Settings: React.FC = () => {
     try {
       await revokeApiKey(keyId);
       setApiKeys(prev => prev.filter(key => key.id !== keyId));
-      // Remove from newly created keys if it exists
       setNewlyCreatedKeys(prev => {
         const updated = { ...prev };
         delete updated[keyId];
@@ -280,530 +272,370 @@ const Settings: React.FC = () => {
     }
   };
 
-  const openRevokeModal = (keyId: string, keyName: string) => {
-    setRevokeModal({ isOpen: true, keyId, keyName });
-  };
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
+        <p className="mt-2 text-muted-foreground">Manage your account settings and preferences.</p>
+      </div>
 
-  const closeRevokeModal = () => {
-    setRevokeModal({ isOpen: false, keyId: '', keyName: '' });
-  };
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Navigation Sidebar */}
+        <nav className="lg:w-64 flex-shrink-0 space-y-1">
+          {[
+            { id: 'profile', name: 'Profile', icon: User },
+            { id: 'security', name: 'Security', icon: Shield },
+            { id: 'notifications', name: 'Notifications', icon: Bell },
+            { id: 'api', name: 'API Keys', icon: Key },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${isActive
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                  }`}
+              >
+                <Icon className={`mr-3 h-5 w-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                {item.name}
+              </button>
+            );
+          })}
+        </nav>
 
-  const toggleApiKeyVisibility = (keyId: string) => {
-    setShowApiKey(prev => ({ ...prev, [keyId]: !prev[keyId] }));
-  };
+        {/* Content Area */}
+        <div className="flex-1 space-y-6">
 
-  const getDisplayKey = (key: any) => {
-    const isVisible = showApiKey[key.id];
-    const hasFullKey = newlyCreatedKeys[key.id];
-    
-    if (!isVisible) {
-      return '••••••••••••••••••••••••••••••••';
-    }
-    
-    if (hasFullKey) {
-      return newlyCreatedKeys[key.id];
-    }
-    
-    return key.key_preview || key.key;
-  };
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'profile':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-foreground mb-4">Personal Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    First Name
-                  </label>
-                  <Input
-                    type="text"
-                    value={profileData.firstName}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
-                    className="w-full rounded-md border bg-secondary text-foreground shadow-sm focus:border-primary focus:ring-primary"
-                  />
+          {/* PROFILE TAB */}
+          {activeTab === 'profile' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Personal Information</CardTitle>
+                <CardDescription>Update your personal details and contact information.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={profileData.firstName}
+                      onChange={e => setProfileData({ ...profileData, firstName: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={profileData.lastName}
+                      onChange={e => setProfileData({ ...profileData, lastName: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      value={profileData.email}
+                      disabled
+                      className="bg-muted text-muted-foreground cursor-not-allowed"
+                    />
+                    <p className="text-xs text-muted-foreground">Contact support to change email.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      value={profileData.phone}
+                      onChange={e => setProfileData({ ...profileData, phone: e.target.value })}
+                      placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="timezone">Timezone</Label>
+                    <Select value={profileData.timezone} onValueChange={val => setProfileData({ ...profileData, timezone: val })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select timezone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
+                        <SelectItem value="America/New_York">Eastern Time (US & Canada)</SelectItem>
+                        <SelectItem value="America/Chicago">Central Time (US & Canada)</SelectItem>
+                        <SelectItem value="America/Denver">Mountain Time (US & Canada)</SelectItem>
+                        <SelectItem value="America/Los_Angeles">Pacific Time (US & Canada)</SelectItem>
+                        <SelectItem value="Europe/London">London</SelectItem>
+                        <SelectItem value="Europe/Paris">Paris</SelectItem>
+                        <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Last Name
-                  </label>
-                  <Input
-                    type="text"
-                    value={profileData.lastName}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
-                    className="w-full rounded-md border bg-secondary text-foreground shadow-sm focus:border-primary focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Email
-                  </label>
-                  <Input
-                    type="email"
-                    value={profileData.email}
-                    disabled
-                    title="Email changes are not supported in the current schema"
-                    className="w-full rounded-md border shadow-sm bg-muted text-muted-foreground cursor-not-allowed"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Phone
-                  </label>
-                  <Input
-                    type="tel"
-                    value={profileData.phone}
-                    onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full rounded-md border bg-secondary text-foreground shadow-sm focus:border-primary focus:ring-primary"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Timezone
-                  </label>
-                  <Select
-                    value={profileData.timezone}
-                    onValueChange={(value) => setProfileData(prev => ({ ...prev, timezone: value }))}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select timezone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
-                      <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
-                      <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
-                      <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
-                      <SelectItem value="UTC">UTC</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="mt-6">
-                <Button
-                  onClick={handleSaveProfile}
-                  disabled={loading}
-                  className="inline-flex items-center"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {loading ? 'Saving...' : 'Save Changes'}
+              </CardContent>
+              <CardFooter className="flex justify-end border-t pt-6">
+                <Button onClick={handleSaveProfile} disabled={loading} className="min-w-[120px]">
+                  {loading ? <span className="animate-spin mr-2">⏳</span> : <Save className="w-4 h-4 mr-2" />}
+                  Save Changes
                 </Button>
-              </div>
-            </div>
-          </div>
-        );
+              </CardFooter>
+            </Card>
+          )}
 
-      case 'organization':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-foreground mb-4">Organization Details</h3>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Organization Name
-                  </label>
-                  <Input
-                    type="text"
-                    value={orgData.name}
-                    onChange={(e) => setOrgData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full rounded-md border bg-muted shadow-sm focus:border-primary focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Website
-                  </label>
-                  <Input
-                    type="url"
-                    value={orgData.website}
-                    onChange={(e) => setOrgData(prev => ({ ...prev, website: e.target.value }))}
-                    className="w-full rounded-md border bg-muted shadow-sm focus:border-primary focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Address
-                  </label>
-                  <Textarea
-                    value={orgData.address}
-                    onChange={(e) => setOrgData(prev => ({ ...prev, address: e.target.value }))}
-                    rows={3}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Tax ID
-                  </label>
-                  <Input
-                    type="text"
-                    value={orgData.taxId}
-                    onChange={(e) => setOrgData(prev => ({ ...prev, taxId: e.target.value }))}
-                    className="w-full rounded-md border bg-muted shadow-sm focus:border-primary focus:ring-primary"
-                  />
-                </div>
-              </div>
-              <div className="mt-6">
-                <Button
-                  onClick={handleSaveOrganization}
-                  disabled={loading}
-                  className="inline-flex items-center"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {loading ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        );
+          {/* SECURITY TAB */}
+          {activeTab === 'security' && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Password</CardTitle>
+                  <CardDescription>Ensure your account is using a long, random password to stay secure.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Current Password</Label>
+                    <Input
+                      type="password"
+                      value={securityData.currentPassword}
+                      onChange={e => setSecurityData({ ...securityData, currentPassword: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>New Password</Label>
+                      <Input
+                        type="password"
+                        value={securityData.newPassword}
+                        onChange={e => setSecurityData({ ...securityData, newPassword: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Confirm New Password</Label>
+                      <Input
+                        type="password"
+                        value={securityData.confirmPassword}
+                        onChange={e => setSecurityData({ ...securityData, confirmPassword: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="border-t pt-6 flex justify-end">
+                  <Button onClick={handleChangePassword} disabled={loading}>Change Password</Button>
+                </CardFooter>
+              </Card>
 
-      case 'security':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-foreground mb-4">Change Password</h3>
-              <div className="space-y-4 max-w-md">
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Current Password
-                  </label>
-                  <Input
-                    type="password"
-                    value={securityData.currentPassword}
-                    onChange={(e) => setSecurityData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                    className="w-full rounded-md border bg-muted shadow-sm focus:border-primary focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    New Password
-                  </label>
-                  <Input
-                    type="password"
-                    value={securityData.newPassword}
-                    onChange={(e) => setSecurityData(prev => ({ ...prev, newPassword: e.target.value }))}
-                    className="w-full rounded-md border bg-muted shadow-sm focus:border-primary focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">
-                    Confirm New Password
-                  </label>
-                  <Input
-                    type="password"
-                    value={securityData.confirmPassword}
-                    onChange={(e) => setSecurityData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                    className="w-full rounded-md border bg-muted shadow-sm focus:border-primary focus:ring-primary"
-                  />
-                </div>
-                <Button
-                  onClick={handleChangePassword}
-                  disabled={loading || !securityData.currentPassword || !securityData.newPassword || !securityData.confirmPassword}
-                  className="inline-flex items-center"
-                >
-                  {loading ? 'Changing...' : 'Change Password'}
-                </Button>
-              </div>
-            </div>
-
-            <div className="border-t border pt-6">
-              <h3 className="text-lg font-medium text-foreground mb-4">Two-Factor Authentication</h3>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Add an extra layer of security to your account
-                  </p>
-                </div>
-                <Switch
-                  checked={securityData.twoFactorEnabled}
-                  onCheckedChange={(checked) => setSecurityData(prev => ({ ...prev, twoFactorEnabled: checked }))}
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'notifications':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-foreground mb-4">Notification Preferences</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-foreground">Email Notifications</h4>
-                    <p className="text-sm text-muted-foreground">Receive notifications via email</p>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Two-Factor Authentication</CardTitle>
+                  <CardDescription>Add an extra layer of security to your account by requiring a code from your authenticator app.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium">Authenticator App</div>
+                    <div className="text-sm text-muted-foreground">Use an app like Google Authenticator or Authy</div>
                   </div>
                   <Switch
-                    checked={notificationData.emailNotifications}
-                    onCheckedChange={(checked) => setNotificationData(prev => ({ ...prev, emailNotifications: checked }))}
+                    checked={user?.twoFactorEnabled}
+                    onCheckedChange={handleToggle2FA}
                   />
-                </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-foreground">SMS Notifications</h4>
-                    <p className="text-sm text-muted-foreground">Receive notifications via SMS</p>
+          {/* NOTIFICATIONS TAB */}
+          {activeTab === 'notifications' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Notifications</CardTitle>
+                <CardDescription>Choose how you receive updates and alerts.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <Mail className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-base">Email Notifications</Label>
+                      <Switch
+                        checked={notificationData.emailNotifications}
+                        onCheckedChange={(checked) => updateNotificationSetting('emailNotifications', checked)}
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground">Receive important updates and alerts via email.</p>
                   </div>
-                  <Switch
-                    checked={notificationData.smsNotifications}
-                    onCheckedChange={(checked) => setNotificationData(prev => ({ ...prev, smsNotifications: checked }))}
-                  />
                 </div>
 
-                <div className="border-t border pt-4">
-                  <h4 className="text-sm font-medium text-foreground mb-3">Alert Types</h4>
-                  <div className="space-y-3">
-                    {[
-                      { key: 'billingAlerts', label: 'Billing Alerts', description: 'Payment and billing notifications' },
-                      { key: 'securityAlerts', label: 'Security Alerts', description: 'Security-related notifications' },
-                      { key: 'maintenanceAlerts', label: 'Maintenance Alerts', description: 'Scheduled maintenance notifications' }
-                    ].map((alert) => (
-                      <div key={alert.key} className="flex items-center justify-between">
-                        <div>
-                          <h5 className="text-sm font-medium text-foreground">{alert.label}</h5>
-                          <p className="text-sm text-muted-foreground">{alert.description}</p>
-                        </div>
-                        <Switch
-                          checked={notificationData[alert.key as keyof typeof notificationData] as boolean}
-                          onCheckedChange={(checked) => setNotificationData(prev => ({ ...prev, [alert.key]: checked }))}
-                        />
+                <div className="border-t pt-6">
+                  <h3 className="font-medium mb-4">Alert Preferences</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Billing Alerts</Label>
+                        <p className="text-sm text-muted-foreground">Invoices, payment failures, and usage limits.</p>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-6">
-                <Button
-                  onClick={handleSaveNotifications}
-                  disabled={loading}
-                  className="inline-flex items-center"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {loading ? 'Saving...' : 'Save Preferences'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'api':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-foreground mb-4">API Keys</h3>
-              <div className="bg-warning/10 border border-warning/20 rounded-md p-4 mb-6">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <Shield className="h-5 w-5 text-warning" />
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-warning">
-                      Keep your API keys secure
-                    </h3>
-                    <div className="mt-2 text-sm text-warning">
-                      <p>
-                        API keys provide access to your account. Keep them secure and never share them publicly.
-                      </p>
+                      <Switch
+                        checked={notificationData.billingAlerts}
+                        onCheckedChange={(checked) => updateNotificationSetting('billingAlerts', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Security Alerts</Label>
+                        <p className="text-sm text-muted-foreground">New logins, password changes, and API key activity.</p>
+                      </div>
+                      <Switch
+                        checked={notificationData.securityAlerts}
+                        onCheckedChange={(checked) => updateNotificationSetting('securityAlerts', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label>Maintenance Updates</Label>
+                        <p className="text-sm text-muted-foreground">Scheduled maintenance and system outages.</p>
+                      </div>
+                      <Switch
+                        checked={notificationData.maintenanceAlerts}
+                        onCheckedChange={(checked) => updateNotificationSetting('maintenanceAlerts', checked)}
+                      />
                     </div>
                   </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Create new API key */}
-              <div className="border border rounded-lg p-4 mb-6">
-                <h4 className="text-sm font-medium text-foreground mb-4">Create New API Key</h4>
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    placeholder="Enter API key name"
-                    value={newApiKeyName}
-                    onChange={(e) => setNewApiKeyName(e.target.value)}
-                    className="flex-1 rounded-md border bg-muted shadow-sm focus:border-primary focus:ring-primary"
-                  />
-                  <Button
-                    onClick={handleCreateApiKey}
-                    disabled={loading || !newApiKeyName.trim()}
-                    className="inline-flex items-center"
-                  >
-                    <Key className="h-4 w-4 mr-2" />
-                    {loading ? 'Creating...' : 'Create'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Existing API keys */}
-              <div className="space-y-4">
-                {apiKeys.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Key className="h-12 w-12 mx-auto mb-4 text-muted-foreground " />
-                    <p>No API keys found. Create your first API key above.</p>
+          {/* API KEYS TAB */}
+          {activeTab === 'api' && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Create API Key</CardTitle>
+                  <CardDescription>Generate a new API key for accessing the SkyPanel API programmatically.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-4">
+                    <Input
+                      placeholder="Key Name (e.g. My App)"
+                      value={newApiKeyName}
+                      onChange={e => setNewApiKeyName(e.target.value)}
+                      className="max-w-md"
+                    />
+                    <Button onClick={handleCreateApiKey} disabled={loading || !newApiKeyName.trim()}>
+                      Create Key
+                    </Button>
                   </div>
-                ) : (
-                  apiKeys.map((key) => (
-                    <div key={key.id} className="border border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h4 className="text-sm font-medium text-foreground">{key.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Created {new Date(key.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success">
-                          Active
-                        </span>
-                      </div>
+                </CardContent>
+              </Card>
 
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="flex-1 relative">
-                          <Input
-                            type="text"
-                            value={getDisplayKey(key)}
-                            readOnly
-                            className="w-full rounded-md border bg-muted shadow-sm focus:border-primary focus:ring-primary font-mono text-sm"
-                          />
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleApiKeyVisibility(key.id)}
-                          title={showApiKey[key.id] ? 'Hide API key' : 'Show API key'}
-                        >
-                          {showApiKey[key.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyApiKey(key.id, key.key_preview || key.key)}
-                          title="Copy API key"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* Security notice for existing keys */}
-                      {!newlyCreatedKeys[key.id] && showApiKey[key.id] && (
-                        <div className="mb-4 p-3 bg-info/10 border border-info/20 rounded-md">
-                          <div className="flex">
-                            <Shield className="h-4 w-4 text-info mt-0.5 mr-2 flex-shrink-0" />
-                            <div className="text-sm text-info">
-                              <p className="font-medium">Security Notice</p>
-                              <p>For security reasons, only the prefix of existing API keys can be displayed. The full key was only shown when it was first created.</p>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Active API Keys</CardTitle>
+                  <CardDescription>Manage your existing API keys.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {apiKeys.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Key className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                      <p>No API keys found.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {apiKeys.map((key) => (
+                        <div key={key.id} className="flex items-center justify-between p-4 border rounded-lg bg-card/50">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{key.name}</span>
+                              <span className="text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full">Active</span>
+                            </div>
+                            <div className="flex items-center text-sm text-muted-foreground font-mono">
+                              {newlyCreatedKeys[key.id] || (showApiKey[key.id] ? key.key_preview : '••••••••••••••••••••' + key.key_preview?.slice(-4))}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Created {new Date(key.created_at).toLocaleDateString()}
                             </div>
                           </div>
+                          <div className="flex items-center gap-2">
+                            {newlyCreatedKeys[key.id] && (
+                              <Button size="icon" variant="ghost" onClick={() => {
+                                navigator.clipboard.writeText(newlyCreatedKeys[key.id]);
+                                toast.success('Copied to clipboard');
+                              }}>
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button size="icon" variant="ghost" onClick={() => setRevokeModal({ isOpen: true, keyId: key.id, keyName: key.name })} className="text-destructive hover:text-destructive/90 hover:bg-destructive/10">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                      )}
-
-                      <div className="flex gap-2">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => openRevokeModal(key.id, key.name)}
-                          disabled={loading}
-                          className="inline-flex items-center"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          {loading ? 'Revoking...' : 'Revoke'}
-                        </Button>
-                      </div>
+                      ))}
                     </div>
-                  ))
-                )}
-              </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
+          )}
 
-            {/* Revocation Confirmation Modal */}
-            <Dialog open={revokeModal.isOpen} onOpenChange={closeRevokeModal}>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <div className="flex items-center">
-                    <AlertTriangle className="h-6 w-6 text-destructive mr-3" />
-                    <DialogTitle>Revoke API Key</DialogTitle>
-                  </div>
-                  <DialogDescription className="mt-4">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Are you sure you want to revoke the API key:
-                    </p>
-                    <p className="text-sm font-medium text-foreground bg-muted px-3 py-2 rounded border">
-                      {revokeModal.keyName}
-                    </p>
-                    <p className="text-sm text-destructive mt-2">
-                      This action cannot be undone. Any applications using this key will lose access immediately.
-                    </p>
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={closeRevokeModal}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleRevokeApiKey(revokeModal.keyId)}
-                    disabled={loading}
-                  >
-                    {loading ? 'Revoking...' : 'Revoke API Key'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        );
-
-
-
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-          <p className="mt-2 text-muted-foreground">
-            Manage your account settings and preferences
-          </p>
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar */}
-          <div className="lg:w-64">
-            <nav className="space-y-1">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <Button
-                    key={tab.id}
-                    variant={activeTab === tab.id ? "secondary" : "ghost"}
-                    onClick={() => setActiveTab(tab.id)}
-                    className="w-full justify-start"
-                  >
-                    <Icon className="h-5 w-5 mr-3" />
-                    {tab.name}
-                  </Button>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1">
-            <div className="bg-card shadow sm:rounded-lg border border">
-              <div className="px-6 py-6">
-                {renderTabContent()}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
+
+      {/* 2FA SETUP MODAL */}
+      <Dialog open={twoFactorModalOpen} onOpenChange={setTwoFactorModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Setup Two-Factor Authentication</DialogTitle>
+            <DialogDescription>Use your authenticator app to scan the QR code below.</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center justify-center p-4 space-y-4">
+            {twoFactorQr && (
+              <div className="p-4 bg-white rounded-lg">
+                <img src={twoFactorQr} alt="2FA QR Code" className="w-48 h-48" />
+              </div>
+            )}
+
+            <div className="text-center space-y-2">
+              <Label>Or enter code manually:</Label>
+              <code className="block p-2 bg-muted rounded text-sm font-mono break-all">{twoFactorSecret}</code>
+            </div>
+
+            <div className="w-full space-y-2 pt-4">
+              <Label>Verify Code</Label>
+              <Input
+                placeholder="Enter 6-digit code"
+                value={twoFactorCode}
+                onChange={e => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="text-center tracking-widest text-lg"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTwoFactorModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleVerify2FA} disabled={loading || twoFactorCode.length !== 6}>
+              {loading ? 'Verifying...' : 'Verify & Enable'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* REVOKE KEY MODAL */}
+      <Dialog open={revokeModal.isOpen} onOpenChange={(open) => !open && setRevokeModal({ ...revokeModal, isOpen: false })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Revoke API Key
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to revoke <strong>{revokeModal.keyName}</strong>? This action cannot be undone and any applications using this key will immediately stop working.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRevokeModal({ ...revokeModal, isOpen: false })}>Cancel</Button>
+            <Button variant="destructive" onClick={() => handleRevokeApiKey(revokeModal.keyId)}>Revoke Key</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

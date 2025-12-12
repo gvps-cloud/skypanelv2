@@ -22,13 +22,15 @@ export const createMockAuthContext = (overrides: Partial<AuthContextType> = {}):
   logout: vi.fn(),
   refreshToken: vi.fn(),
   updateProfile: vi.fn(),
-  getOrganization: vi.fn(),
-  updateOrganization: vi.fn(),
+
   changePassword: vi.fn(),
   updatePreferences: vi.fn(),
   getApiKeys: vi.fn(),
   createApiKey: vi.fn(),
   revokeApiKey: vi.fn(),
+  setup2FA: vi.fn(),
+  verify2FA: vi.fn(),
+  disable2FA: vi.fn(),
   ...overrides,
 });
 

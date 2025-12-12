@@ -62,11 +62,11 @@ const formatJson = (value: unknown) => JSON.stringify(value, null, 2);
 const buildCurlCommand = (base: string, endpoint: EndpointDefinition) => {
   const query = endpoint.params
     ? new URLSearchParams(
-        Object.entries(endpoint.params).map(([key, value]) => [
-          key,
-          value === undefined || value === null ? "" : String(value),
-        ]),
-      ).toString()
+      Object.entries(endpoint.params).map(([key, value]) => [
+        key,
+        value === undefined || value === null ? "" : String(value),
+      ]),
+    ).toString()
     : "";
 
   const url = query
@@ -103,8 +103,7 @@ export default function ApiDocs() {
       {
         title: "Authentication & Profile",
         base: `${apiBase}/auth`,
-        description:
-          "User authentication, session management, profile and organization settings.",
+        description: "User authentication, session management, and profile settings.",
         icon: <Lock className="h-4 w-4" />,
         endpoints: [
           {
@@ -128,7 +127,6 @@ export default function ApiDocs() {
                 firstName: "Sky",
                 lastName: "Panel",
                 role: "owner",
-                organizationId: "org_123",
               },
             },
           },
@@ -149,7 +147,6 @@ export default function ApiDocs() {
                 firstName: "Sky",
                 lastName: "Panel",
                 role: "owner",
-                organizationId: "org_123",
               },
             },
           },
@@ -229,43 +226,7 @@ export default function ApiDocs() {
               },
             },
           },
-          {
-            method: "GET",
-            path: "/organization",
-            description:
-              "Fetch the organization metadata associated with the current user.",
-            auth: true,
-            response: {
-              organization: {
-                id: "org_123",
-                name: "Example Corp",
-                website: "https://example.com",
-                address: "123 Innovation Way, Example City",
-                taxId: "US-12-3456789",
-              },
-            },
-          },
-          {
-            method: "PUT",
-            path: "/organization",
-            description: "Update the organization's legal or billing profile.",
-            auth: true,
-            body: {
-              name: "Example Corp",
-              website: "https://example.com",
-              address: "123 Innovation Way, Example City",
-              taxId: "US-12-3456789",
-            },
-            response: {
-              organization: {
-                id: "org_123",
-                name: "Example Corp",
-                website: "https://example.com",
-                address: "123 Innovation Way, Example City",
-                taxId: "US-12-3456789",
-              },
-            },
-          },
+
           {
             method: "PUT",
             path: "/password",
@@ -454,7 +415,7 @@ export default function ApiDocs() {
             method: "GET",
             path: "/wallet/balance",
             description:
-              "Return the organization's wallet balance used to provision VPS resources.",
+              "Return the user's wallet balance used to provision VPS resources.",
             auth: true,
             response: {
               balance: 245.67,
@@ -518,7 +479,6 @@ export default function ApiDocs() {
             response: {
               transaction: {
                 id: "txn_001",
-                organizationId: "org_123",
                 amount: 100,
                 currency: "USD",
                 description: "Wallet top-up",
@@ -580,7 +540,7 @@ export default function ApiDocs() {
             method: "GET",
             path: "/",
             description:
-              "List invoices for the organization with pagination information.",
+              "List invoices for the user with pagination information.",
             auth: true,
             params: { limit: 50, offset: 0 },
             response: {
@@ -682,7 +642,7 @@ export default function ApiDocs() {
             method: "GET",
             path: "/",
             description:
-              "List VPS instances for the authenticated organization with live metrics where available.",
+              "List VPS instances for the authenticated user with live metrics where available.",
             auth: true,
             response: {
               instances: [
@@ -1933,7 +1893,7 @@ export default function ApiDocs() {
             description: "All-time platform statistics for about page.",
             response: {
               totalVPS: 500,
-              totalOrganizations: 50,
+
             },
           },
           {
@@ -2121,204 +2081,151 @@ export default function ApiDocs() {
 
       {/* Main Content */}
       <div className="flex gap-6">
-          {/* Sticky Sidebar */}
-          <aside className="hidden lg:block w-80 shrink-0">
-            <div className="sticky top-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">
-                    Navigation
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[calc(100vh-12rem)]">
-                    <nav className="space-y-1">
-                      {filteredSections.map((section) => (
-                        <button
-                          key={section.title}
-                          onClick={() => handleScrollToSection(section.title)}
-                          className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                            activeSection === section.title
-                              ? "bg-primary/10 font-medium text-primary"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        {/* Sticky Sidebar */}
+        <aside className="hidden lg:block w-80 shrink-0">
+          <div className="sticky top-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">
+                  Navigation
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[calc(100vh-12rem)]">
+                  <nav className="space-y-1">
+                    {filteredSections.map((section) => (
+                      <button
+                        key={section.title}
+                        onClick={() => handleScrollToSection(section.title)}
+                        className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${activeSection === section.title
+                          ? "bg-primary/10 font-medium text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
                           }`}
-                        >
-                          {section.icon}
-                          <span className="flex-1 text-left leading-tight">
-                            {section.title}
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className="h-5 min-w-5 px-1.5 text-xs"
-                          >
-                            {section.endpoints.length}
-                          </Badge>
-                        </button>
-                      ))}
-                    </nav>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </div>
-          </aside>
-
-          {/* Content Area */}
-          <div className="flex-1 space-y-8 min-w-0">
-            {filteredSections.length === 0 && (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Search className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                  <p className="mt-4 text-sm text-muted-foreground">
-                    No endpoints found matching "{searchQuery}"
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            {filteredSections.map((section) => (
-              <Card key={section.title} id={`section-${section.title}`}>
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                      >
                         {section.icon}
-                      </div>
-                      <div>
-                        <CardTitle className="text-xl">
+                        <span className="flex-1 text-left leading-tight">
                           {section.title}
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                          {section.description}
-                        </CardDescription>
-                      </div>
+                        </span>
+                        <Badge
+                          variant="secondary"
+                          className="h-5 min-w-5 px-1.5 text-xs"
+                        >
+                          {section.endpoints.length}
+                        </Badge>
+                      </button>
+                    ))}
+                  </nav>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        </aside>
+
+        {/* Content Area */}
+        <div className="flex-1 space-y-8 min-w-0">
+          {filteredSections.length === 0 && (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Search className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                <p className="mt-4 text-sm text-muted-foreground">
+                  No endpoints found matching "{searchQuery}"
+                </p>
+              </CardContent>
+            </Card>
+          )}
+          {filteredSections.map((section) => (
+            <Card key={section.title} id={`section-${section.title}`}>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                      {section.icon}
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">
+                        {section.title}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        {section.description}
+                      </CardDescription>
                     </div>
                   </div>
-                  <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                    <code className="rounded bg-muted px-2 py-1 font-mono">
-                      {section.base}
-                    </code>
-                    <Badge variant="secondary" className="font-normal">
-                      {section.endpoints.length}{" "}
-                      {section.endpoints.length === 1 ? "endpoint" : "endpoints"}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <Accordion type="single" collapsible className="w-full">
-                    {section.endpoints.map((endpoint, index) => (
-                      <AccordionItem
-                        value={`${section.title}-${index}`}
-                        key={`${section.title}-${endpoint.path}-${index}`}
-                        className="border-b last:border-0"
-                      >
-                        <AccordionTrigger className="hover:no-underline">
-                          <div className="flex w-full items-center gap-3 text-left pr-4">
-                            <Badge
-                              variant="outline"
-                              className={`min-w-[4.5rem] justify-center font-mono text-xs font-semibold ${
-                                methodStyles[endpoint.method] ??
-                                methodStyles.DEFAULT
+                </div>
+                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <code className="rounded bg-muted px-2 py-1 font-mono">
+                    {section.base}
+                  </code>
+                  <Badge variant="secondary" className="font-normal">
+                    {section.endpoints.length}{" "}
+                    {section.endpoints.length === 1 ? "endpoint" : "endpoints"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Accordion type="single" collapsible className="w-full">
+                  {section.endpoints.map((endpoint, index) => (
+                    <AccordionItem
+                      value={`${section.title}-${index}`}
+                      key={`${section.title}-${endpoint.path}-${index}`}
+                      className="border-b last:border-0"
+                    >
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex w-full items-center gap-3 text-left pr-4">
+                          <Badge
+                            variant="outline"
+                            className={`min-w-[4.5rem] justify-center font-mono text-xs font-semibold ${methodStyles[endpoint.method] ??
+                              methodStyles.DEFAULT
                               }`}
-                            >
-                              {endpoint.method}
-                            </Badge>
-                            <div className="flex flex-1 flex-col gap-1 min-w-0">
-                              <code className="font-semibold text-sm truncate">
-                                {endpoint.path}
-                              </code>
-                              <span className="text-xs text-muted-foreground line-clamp-1">
-                                {endpoint.description}
-                              </span>
-                            </div>
-                            {endpoint.auth && (
-                              <Lock className="h-4 w-4 text-amber-600 shrink-0" />
-                            )}
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pt-4">
-                          <Tabs
-                            defaultValue={
-                              endpoint.body
-                                ? "request"
-                                : endpoint.response
-                                  ? "response"
-                                  : "curl"
-                            }
                           >
-                            <TabsList className="grid w-full grid-cols-3 mb-4">
-                              {endpoint.body && (
-                                <TabsTrigger value="request">Request</TabsTrigger>
-                              )}
-                              {endpoint.response && (
-                                <TabsTrigger value="response">
-                                  Response
-                                </TabsTrigger>
-                              )}
-                              <TabsTrigger value="curl">cURL</TabsTrigger>
-                            </TabsList>
+                            {endpoint.method}
+                          </Badge>
+                          <div className="flex flex-1 flex-col gap-1 min-w-0">
+                            <code className="font-semibold text-sm truncate">
+                              {endpoint.path}
+                            </code>
+                            <span className="text-xs text-muted-foreground line-clamp-1">
+                              {endpoint.description}
+                            </span>
+                          </div>
+                          {endpoint.auth && (
+                            <Lock className="h-4 w-4 text-amber-600 shrink-0" />
+                          )}
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-4">
+                        <Tabs
+                          defaultValue={
+                            endpoint.body
+                              ? "request"
+                              : endpoint.response
+                                ? "response"
+                                : "curl"
+                          }
+                        >
+                          <TabsList className="grid w-full grid-cols-3 mb-4">
                             {endpoint.body && (
-                              <TabsContent value="request" className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <h4 className="text-sm font-semibold">
-                                    Request Body
-                                  </h4>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      handleCopyJson(
-                                        endpoint.body,
-                                        "Request body",
-                                      )
-                                    }
-                                  >
-                                    <Copy className="mr-2 h-3 w-3" /> Copy
-                                  </Button>
-                                </div>
-                                <ScrollArea className="max-h-96 rounded-lg border bg-muted/30 p-4">
-                                  <pre className="text-xs font-mono leading-relaxed">
-                                    {formatJson(endpoint.body)}
-                                  </pre>
-                                </ScrollArea>
-                              </TabsContent>
+                              <TabsTrigger value="request">Request</TabsTrigger>
                             )}
                             {endpoint.response && (
-                              <TabsContent value="response" className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <h4 className="text-sm font-semibold">
-                                    Sample Response
-                                  </h4>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      handleCopyJson(
-                                        endpoint.response,
-                                        "Response body",
-                                      )
-                                    }
-                                  >
-                                    <Copy className="mr-2 h-3 w-3" /> Copy
-                                  </Button>
-                                </div>
-                                <ScrollArea className="max-h-96 rounded-lg border bg-muted/30 p-4">
-                                  <pre className="text-xs font-mono leading-relaxed">
-                                    {formatJson(endpoint.response)}
-                                  </pre>
-                                </ScrollArea>
-                              </TabsContent>
+                              <TabsTrigger value="response">
+                                Response
+                              </TabsTrigger>
                             )}
-                            <TabsContent value="curl" className="space-y-3">
+                            <TabsTrigger value="curl">cURL</TabsTrigger>
+                          </TabsList>
+                          {endpoint.body && (
+                            <TabsContent value="request" className="space-y-3">
                               <div className="flex items-center justify-between">
                                 <h4 className="text-sm font-semibold">
-                                  cURL Command
+                                  Request Body
                                 </h4>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() =>
-                                    handleCopy(
-                                      buildCurlCommand(section.base, endpoint),
-                                      "cURL command",
+                                    handleCopyJson(
+                                      endpoint.body,
+                                      "Request body",
                                     )
                                   }
                                 >
@@ -2327,30 +2234,81 @@ export default function ApiDocs() {
                               </div>
                               <ScrollArea className="max-h-96 rounded-lg border bg-muted/30 p-4">
                                 <pre className="text-xs font-mono leading-relaxed">
-                                  {buildCurlCommand(section.base, endpoint)}
+                                  {formatJson(endpoint.body)}
                                 </pre>
                               </ScrollArea>
-                              {endpoint.params && (
-                                <div className="rounded-lg bg-muted/50 p-3">
-                                  <p className="text-xs font-medium mb-2">
-                                    Query Parameters:
-                                  </p>
-                                  <pre className="text-xs text-muted-foreground font-mono">
-                                    {formatJson(endpoint.params)}
-                                  </pre>
-                                </div>
-                              )}
                             </TabsContent>
-                          </Tabs>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                          )}
+                          {endpoint.response && (
+                            <TabsContent value="response" className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-semibold">
+                                  Sample Response
+                                </h4>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleCopyJson(
+                                      endpoint.response,
+                                      "Response body",
+                                    )
+                                  }
+                                >
+                                  <Copy className="mr-2 h-3 w-3" /> Copy
+                                </Button>
+                              </div>
+                              <ScrollArea className="max-h-96 rounded-lg border bg-muted/30 p-4">
+                                <pre className="text-xs font-mono leading-relaxed">
+                                  {formatJson(endpoint.response)}
+                                </pre>
+                              </ScrollArea>
+                            </TabsContent>
+                          )}
+                          <TabsContent value="curl" className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-semibold">
+                                cURL Command
+                              </h4>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  handleCopy(
+                                    buildCurlCommand(section.base, endpoint),
+                                    "cURL command",
+                                  )
+                                }
+                              >
+                                <Copy className="mr-2 h-3 w-3" /> Copy
+                              </Button>
+                            </div>
+                            <ScrollArea className="max-h-96 rounded-lg border bg-muted/30 p-4">
+                              <pre className="text-xs font-mono leading-relaxed">
+                                {buildCurlCommand(section.base, endpoint)}
+                              </pre>
+                            </ScrollArea>
+                            {endpoint.params && (
+                              <div className="rounded-lg bg-muted/50 p-3">
+                                <p className="text-xs font-medium mb-2">
+                                  Query Parameters:
+                                </p>
+                                <pre className="text-xs text-muted-foreground font-mono">
+                                  {formatJson(endpoint.params)}
+                                </pre>
+                              </div>
+                            )}
+                          </TabsContent>
+                        </Tabs>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
+    </div>
   );
 }

@@ -9,6 +9,8 @@ export interface AuthenticatedRequest extends Request {
     email: string;
     role: string;
     organizationId?: string;
+    preferences?: any;
+    twoFactorEnabled?: boolean;
   };
   userId?: string;
   organizationId?: string;
@@ -29,10 +31,10 @@ export const authenticateToken = async (
 
     // Verify JWT token
     const decoded = jwt.verify(token, config.JWT_SECRET) as any;
-    
+
     // Get user from database
     const userResult = await query(
-      'SELECT id, email, role FROM users WHERE id = $1',
+      'SELECT id, email, role, preferences, two_factor_enabled AS "twoFactorEnabled" FROM users WHERE id = $1',
       [decoded.userId]
     );
 
@@ -54,12 +56,12 @@ export const authenticateToken = async (
         [user.id]
       );
       orgMember = orgResult.rows[0] || null;
-  } catch {
+    } catch {
       // Table might not exist yet, continue without error
       console.warn('organization_members table not found, skipping organization lookup');
     }
 
-      // Fallback: use organization owned by the user if no membership
+    // Fallback: use organization owned by the user if no membership
     let organizationId = orgMember?.organization_id;
     if (!organizationId) {
       try {
@@ -100,7 +102,9 @@ export const authenticateToken = async (
       id: user.id,
       email: user.email,
       role: user.role,
-      organizationId
+      organizationId,
+      preferences: user.preferences,
+      twoFactorEnabled: user.twoFactorEnabled
     };
     (req as any).userId = user.id;
     (req as any).organizationId = organizationId;
@@ -160,7 +164,7 @@ export const optionalAuth = async (
 
     // Verify JWT token
     const decoded = jwt.verify(token, config.JWT_SECRET) as any;
-    
+
     // Get user from database
     const userResult = await query(
       'SELECT id, email, role FROM users WHERE id = $1',

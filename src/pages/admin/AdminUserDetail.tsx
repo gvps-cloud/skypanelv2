@@ -34,6 +34,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   UserProfileCard,
   UserVPSList,
+  UserHostingList,
   UserBillingInfo,
   UserEditModal
 } from '@/components/admin';
@@ -49,13 +50,6 @@ interface AdminUserDetailResponse {
     preferences?: Record<string, any>;
     created_at: string;
     updated_at: string;
-    organizations: Array<{
-      organizationId: string;
-      organizationName: string;
-      organizationSlug: string;
-      role: string;
-      joinedAt: string;
-    }>;
   };
   vpsInstances: Array<{
     id: string;
@@ -65,6 +59,17 @@ interface AdminUserDetailResponse {
     plan_name: string | null;
     provider_name: string | null;
     region_label: string | null;
+    created_at: string;
+  }>;
+  hostingServices: Array<{
+    id: string;
+    domain: string;
+    status: string;
+    enhance_website_id: string | null;
+    primary_ip: string | null;
+    plan_name: string | null;
+    service_type: string | null;
+    price_monthly: number | null;
     created_at: string;
   }>;
   billing: {
@@ -95,14 +100,14 @@ interface AdminUserDetailResponse {
     category: string;
     created_at: string;
     updated_at: string;
-    organization_name: string;
   }>;
   statistics: {
     totalVPS: number;
     activeVPS: number;
+    totalHosting: number;
+    activeHosting: number;
     totalSpend: number;
     monthlySpend: number;
-    totalOrganizations: number;
     totalSupportTickets: number;
     openSupportTickets: number;
   };
@@ -163,7 +168,7 @@ const AdminUserDetail: React.FC = () => {
       }
 
       const result = await response.json();
-      
+
       // Validate response structure
       if (!result.user || !result.user.id) {
         throw new Error('Invalid response format');
@@ -202,7 +207,7 @@ const AdminUserDetail: React.FC = () => {
         } else if (response.status === 404) {
           throw new Error('User not found');
         }
-        
+
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `HTTP ${response.status}: Failed to delete user`);
       }
@@ -213,8 +218,8 @@ const AdminUserDetail: React.FC = () => {
       const userName = user?.name || 'User';
       toast.success(`${userName} has been successfully deleted`);
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'organizations'] });
-      
+
+
       // Navigate back to user management with a slight delay to show the success message
       setTimeout(() => {
         navigate('/admin#user-management');
@@ -286,9 +291,9 @@ const AdminUserDetail: React.FC = () => {
 
   const getErrorMessage = (error: any): string => {
     if (!error) return 'An unknown error occurred';
-    
+
     const message = error.message || error.toString();
-    
+
     if (message.includes('not found')) {
       return 'User not found';
     } else if (message.includes('Access denied')) {
@@ -300,7 +305,7 @@ const AdminUserDetail: React.FC = () => {
     } else if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
       return 'Network error - please check your connection';
     }
-    
+
     return message;
   };
 
@@ -362,12 +367,12 @@ const AdminUserDetail: React.FC = () => {
           ) : (
             <AlertTriangle className="h-12 w-12 text-muted-foreground" />
           )}
-          
+
           <div className="text-center space-y-2">
             <h3 className="text-lg font-semibold">
-              {isNotFound ? 'User Not Found' : 
-               isAccessDenied ? 'Access Denied' : 
-               isNetworkError ? 'Connection Error' : 'Error Loading User'}
+              {isNotFound ? 'User Not Found' :
+                isAccessDenied ? 'Access Denied' :
+                  isNetworkError ? 'Connection Error' : 'Error Loading User'}
             </h3>
             <p className="text-muted-foreground max-w-md">
               {errorMessage}
@@ -391,7 +396,7 @@ const AdminUserDetail: React.FC = () => {
                 Back to Users
               </Link>
             </Button>
-            
+
             {isNetworkError && (
               <Button onClick={handleRetry} variant="default">
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -404,7 +409,7 @@ const AdminUserDetail: React.FC = () => {
     );
   }
 
-  const { user, vpsInstances, billing, activity, supportTickets, statistics } = data;
+  const { user, vpsInstances, hostingServices, billing, activity, supportTickets, statistics } = data;
 
   return (
     <div className="space-y-6">
@@ -462,15 +467,15 @@ const AdminUserDetail: React.FC = () => {
         name: 'Unknown User',
         role: 'user',
         created_at: '',
-        updated_at: '',
-        organizations: []
+        updated_at: ''
       }} />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="vps">VPS ({vpsInstances?.length || 0})</TabsTrigger>
+          <TabsTrigger value="hosting">Web Hosting ({hostingServices?.length || 0})</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
 
@@ -484,7 +489,16 @@ const AdminUserDetail: React.FC = () => {
                 {statistics?.activeVPS || vpsInstances?.filter(v => v.status === 'running').length || 0} running
               </p>
             </div>
-            
+
+            {/* Web Hosting Stats */}
+            <div className="rounded-lg border bg-card p-6">
+              <h3 className="font-semibold mb-2">Web Hosting</h3>
+              <p className="text-3xl font-bold">{statistics?.totalHosting || hostingServices?.length || 0}</p>
+              <p className="text-sm text-muted-foreground">
+                {statistics?.activeHosting || hostingServices?.filter(h => h.status === 'active').length || 0} active
+              </p>
+            </div>
+
             {/* Wallet Balance */}
             <div className="rounded-lg border bg-card p-6">
               <h3 className="font-semibold mb-2">Wallet Balance</h3>
@@ -493,17 +507,6 @@ const AdminUserDetail: React.FC = () => {
               </p>
               <p className="text-sm text-muted-foreground">
                 ${(billing?.monthly_spend || 0).toFixed(2)} this month
-              </p>
-            </div>
-
-            {/* Organizations */}
-            <div className="rounded-lg border bg-card p-6">
-              <h3 className="font-semibold mb-2">Organizations</h3>
-              <p className="text-3xl font-bold">
-                {statistics?.totalOrganizations || user?.organizations?.length || 0}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {user?.organizations?.filter(org => org.role === 'owner').length || 0} owned
               </p>
             </div>
 
@@ -556,28 +559,6 @@ const AdminUserDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* Organizations */}
-          {user?.organizations && user.organizations.length > 0 && (
-            <div className="rounded-lg border bg-card p-6">
-              <h3 className="font-semibold mb-4">Organizations</h3>
-              <div className="space-y-3">
-                {user.organizations.map((org, index) => (
-                  <div key={org.organizationId || index} className="flex justify-between items-center">
-                    <div>
-                      <p className="text-sm font-medium">{org.organizationName || 'Unnamed Organization'}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Joined {org.joinedAt ? new Date(org.joinedAt).toLocaleDateString() : 'Unknown date'}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {org.role || 'member'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Recent Activity */}
           {activity && activity.length > 0 ? (
             <div className="rounded-lg border bg-card p-6">
@@ -615,14 +596,13 @@ const AdminUserDetail: React.FC = () => {
                     <div className="flex-1">
                       <p className="text-sm font-medium">{ticket.subject || 'No subject'}</p>
                       <p className="text-xs text-muted-foreground">
-                        {ticket.organization_name || 'Unknown organization'} • {' '}
                         {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : 'Unknown date'}
                       </p>
                     </div>
                     <div className="flex gap-2 ml-2">
-                      <Badge 
-                        variant={ticket.status === 'open' ? 'destructive' : 
-                                ticket.status === 'resolved' ? 'default' : 'secondary'}
+                      <Badge
+                        variant={ticket.status === 'open' ? 'destructive' :
+                          ticket.status === 'resolved' ? 'default' : 'secondary'}
                         className="text-xs"
                       >
                         {ticket.status || 'unknown'}
@@ -642,6 +622,10 @@ const AdminUserDetail: React.FC = () => {
 
         <TabsContent value="vps">
           <UserVPSList vpsInstances={vpsInstances || []} />
+        </TabsContent>
+
+        <TabsContent value="hosting">
+          <UserHostingList hostingServices={hostingServices || []} />
         </TabsContent>
 
         <TabsContent value="billing">
@@ -715,7 +699,7 @@ const AdminUserDetail: React.FC = () => {
               <p>
                 This will permanently delete <strong>{user?.name || 'this user'}</strong> and all associated data.
               </p>
-              
+
               {/* Resource Impact Summary */}
               <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 space-y-3">
                 <h4 className="font-semibold text-destructive">Resources to be deleted:</h4>
@@ -726,15 +710,6 @@ const AdminUserDetail: React.FC = () => {
                     {vpsInstances && vpsInstances.length > 0 && (
                       <p className="text-xs text-destructive">
                         {vpsInstances.filter(v => v.status === 'running').length} currently running
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium">Organizations</p>
-                    <p className="text-muted-foreground">{user?.organizations?.length || 0} memberships</p>
-                    {user?.organizations && user.organizations.length > 0 && (
-                      <p className="text-xs text-destructive">
-                        {user.organizations.filter(org => org.role === 'owner').length} owned
                       </p>
                     )}
                   </div>
@@ -767,15 +742,6 @@ const AdminUserDetail: React.FC = () => {
                 </Alert>
               )}
 
-              {user?.organizations && user.organizations.some(org => org.role === 'owner') && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Warning:</strong> This user owns {user.organizations.filter(org => org.role === 'owner').length} organization(s). Deleting this account may affect other users in those organizations.
-                  </AlertDescription>
-                </Alert>
-              )}
-
               {vpsInstances && vpsInstances.filter(v => v.status === 'running').length > 0 && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
@@ -790,7 +756,7 @@ const AdminUserDetail: React.FC = () => {
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
+
           <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="confirm-email" className="text-sm font-medium">
@@ -807,7 +773,7 @@ const AdminUserDetail: React.FC = () => {
                 className="font-mono"
               />
             </div>
-            
+
             {deleteConfirmEmail && deleteConfirmEmail !== (user?.email || '') && (
               <p className="text-sm text-destructive">
                 Email address does not match. Please type the exact email address.

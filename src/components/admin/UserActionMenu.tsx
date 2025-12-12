@@ -17,12 +17,7 @@ interface AdminUserRecord {
   role: string;
   created_at: string;
   updated_at: string;
-  organizations: Array<{
-    organizationId: string;
-    organizationName: string;
-    organizationSlug: string;
-    role: string;
-  }>;
+
 }
 
 interface UserActionMenuProps {
@@ -81,8 +76,8 @@ export const UserActionMenu: React.FC<UserActionMenuProps> = ({
           )} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        align="end" 
+      <DropdownMenuContent
+        align="end"
         className={cn(
           "w-48 animate-in slide-in-from-top-2 duration-200",
           "border border-border/50 shadow-lg"
@@ -113,7 +108,7 @@ export const UserActionMenu: React.FC<UserActionMenuProps> = ({
             </span>
           )}
         </DropdownMenuItem>
-        
+
         <DropdownMenuItem
           onClick={() => handleAction(() => onEdit(user))}
           onKeyDown={(e) => handleKeyDown(e, () => onEdit(user))}
@@ -127,9 +122,9 @@ export const UserActionMenu: React.FC<UserActionMenuProps> = ({
           <Edit className="mr-2 h-4 w-4 transition-transform duration-150 group-hover:scale-110" />
           <span>Edit User</span>
         </DropdownMenuItem>
-        
+
         <DropdownMenuSeparator className="my-1" />
-        
+
         <DropdownMenuItem
           onClick={() => handleAction(() => onImpersonate(user))}
           onKeyDown={(e) => handleKeyDown(e, () => onImpersonate(user))}

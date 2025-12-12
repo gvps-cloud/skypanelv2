@@ -154,8 +154,7 @@ const VPS: React.FC = () => {
       clearOnSubmit: true,
     },
   );
-  const { token, getOrganization } = useAuth();
-  const [_organizationName, _setOrganizationName] = useState<string>("vps");
+  const { token } = useAuth();
 
   // Mobile navigation handling
   const { setModalOpen, goBack: _goBack } = useMobileNavigation({
@@ -399,7 +398,7 @@ const VPS: React.FC = () => {
             if (!response.ok) {
               throw new Error(
                 data.error ||
-                  "Failed to load regions for the selected provider",
+                "Failed to load regions for the selected provider",
               );
             }
 
@@ -412,7 +411,7 @@ const VPS: React.FC = () => {
 
               const baseLabel =
                 typeof region.label === "string" &&
-                region.label.trim().length > 0
+                  region.label.trim().length > 0
                   ? region.label.trim()
                   : slug;
               const country =
@@ -867,10 +866,10 @@ const VPS: React.FC = () => {
           (i.provider_type as ProviderType | undefined) ?? "linode";
         const providerName =
           typeof i.provider_name === "string" &&
-          i.provider_name.trim().length > 0
+            i.provider_name.trim().length > 0
             ? i.provider_name
             : typeof i.providerName === "string" &&
-                i.providerName.trim().length > 0
+              i.providerName.trim().length > 0
               ? i.providerName
               : null;
         const providerId =
@@ -880,34 +879,34 @@ const VPS: React.FC = () => {
         );
         const specs = apiSpecs
           ? {
-              vcpus: Number(apiSpecs.vcpus || 0),
-              memory: Number(apiSpecs.memory || 0),
-              disk: Number(apiSpecs.disk || 0),
-              transfer: Number(apiSpecs.transfer || 0),
-            }
+            vcpus: Number(apiSpecs.vcpus || 0),
+            memory: Number(apiSpecs.memory || 0),
+            disk: Number(apiSpecs.disk || 0),
+            transfer: Number(apiSpecs.transfer || 0),
+          }
           : planForType
             ? {
-                vcpus: planForType.vcpus,
-                memory: planForType.memory,
-                disk: planForType.disk,
-                transfer: planForType.transfer,
-              }
+              vcpus: planForType.vcpus,
+              memory: planForType.memory,
+              disk: planForType.disk,
+              transfer: planForType.transfer,
+            }
             : { vcpus: 0, memory: 0, disk: 0, transfer: 0 };
         const pricing = apiPricing
           ? {
-              hourly: Number(apiPricing.hourly || 0),
-              monthly: Number(apiPricing.monthly || 0),
-            }
+            hourly: Number(apiPricing.hourly || 0),
+            monthly: Number(apiPricing.monthly || 0),
+          }
           : planForType
             ? {
-                hourly: planForType.price.hourly,
-                monthly: planForType.price.monthly,
-              }
+              hourly: planForType.price.hourly,
+              monthly: planForType.price.monthly,
+            }
             : { hourly: 0, monthly: 0 };
         const rawProgress =
           i &&
-          typeof i.provider_progress === "object" &&
-          i.provider_progress !== null
+            typeof i.provider_progress === "object" &&
+            i.provider_progress !== null
             ? i.provider_progress
             : null;
         const percentFromEvent = rawProgress
@@ -917,12 +916,12 @@ const VPS: React.FC = () => {
         const progress =
           rawProgress || percentFromRow !== null
             ? {
-                percent: percentFromEvent ?? percentFromRow,
-                action: rawProgress?.action ?? null,
-                status: rawProgress?.status ?? null,
-                message: rawProgress?.message ?? null,
-                created: rawProgress?.created ?? null,
-              }
+              percent: percentFromEvent ?? percentFromRow,
+              action: rawProgress?.action ?? null,
+              status: rawProgress?.status ?? null,
+              message: rawProgress?.message ?? null,
+              created: rawProgress?.created ?? null,
+            }
             : undefined;
         // Normalize status: treat provider 'offline' as 'stopped' for UI/actions
         const normalizedStatus =
@@ -1023,31 +1022,10 @@ const VPS: React.FC = () => {
       loadProviderStackScripts();
       setModalOpen(true);
 
-      // Fetch organization name and generate unique label
-      (async () => {
-        try {
-          const org = await getOrganization();
-          const companyName = org?.name || "vps";
-          _setOrganizationName(companyName);
-
-          // Generate unique label
-          const existingLabels = instances.map((i) => i.label);
-          const uniqueLabel = generateUniqueVPSLabel(
-            companyName,
-            existingLabels,
-          );
-          setCreateForm({ label: uniqueLabel });
-        } catch (error) {
-          console.error(
-            "Failed to fetch organization or generate label:",
-            error,
-          );
-          // Fallback: generate label with default name
-          const existingLabels = instances.map((i) => i.label);
-          const uniqueLabel = generateUniqueVPSLabel("vps", existingLabels);
-          setCreateForm({ label: uniqueLabel });
-        }
-      })();
+      // Generate unique label
+      const existingLabels = instances.map((i) => i.label);
+      const uniqueLabel = generateUniqueVPSLabel("vps", existingLabels);
+      setCreateForm({ label: uniqueLabel });
 
       // Preload critical assets for better UX
       // Protected API endpoints require auth headers, so skip preload hints here to avoid 401s.
@@ -1059,7 +1037,6 @@ const VPS: React.FC = () => {
     loadProviderImages,
     loadProviderStackScripts,
     setModalOpen,
-    getOrganization,
     instances,
     setCreateForm,
   ]);
@@ -1131,11 +1108,10 @@ const VPS: React.FC = () => {
     // For restart action, show confirmation dialog
     if (action === "reboot") {
       const confirmed = window.confirm(
-        `Are you sure you want to restart ${selectedInstances.length} instance${
-          selectedInstances.length > 1 ? "s" : ""
+        `Are you sure you want to restart ${selectedInstances.length} instance${selectedInstances.length > 1 ? "s" : ""
         }?\n\n` +
-          `The following instances will be restarted:\n` +
-          selectedInstances.map((instance) => `• ${instance.label}`).join("\n"),
+        `The following instances will be restarted:\n` +
+        selectedInstances.map((instance) => `• ${instance.label}`).join("\n"),
       );
       if (!confirmed) return;
     }
@@ -1194,32 +1170,29 @@ const VPS: React.FC = () => {
     // Show results
     if (results.success > 0 && results.failed === 0) {
       toast.success(
-        `Successfully ${
-          action === "boot"
-            ? "started"
-            : action === "shutdown"
-              ? "stopped"
-              : action === "reboot"
-                ? "restarted"
-                : "deleted"
+        `Successfully ${action === "boot"
+          ? "started"
+          : action === "shutdown"
+            ? "stopped"
+            : action === "reboot"
+              ? "restarted"
+              : "deleted"
         } ${results.success} instance${results.success > 1 ? "s" : ""}`,
       );
     } else if (results.success > 0 && results.failed > 0) {
       toast.warning(
-        `${results.success} instance${results.success > 1 ? "s" : ""} ${
-          action === "boot"
-            ? "started"
-            : action === "shutdown"
-              ? "stopped"
-              : action === "reboot"
-                ? "restarted"
-                : "deleted"
+        `${results.success} instance${results.success > 1 ? "s" : ""} ${action === "boot"
+          ? "started"
+          : action === "shutdown"
+            ? "stopped"
+            : action === "reboot"
+              ? "restarted"
+              : "deleted"
         } successfully, ${results.failed} failed`,
       );
     } else if (results.failed > 0) {
       toast.error(
-        `Failed to ${action} ${results.failed} instance${
-          results.failed > 1 ? "s" : ""
+        `Failed to ${action} ${results.failed} instance${results.failed > 1 ? "s" : ""
         }${results.errors.length > 0 ? ":\n" + results.errors.join("\n") : ""}`,
       );
     }
@@ -1272,22 +1245,18 @@ const VPS: React.FC = () => {
       // Show results
       if (results.success > 0 && results.failed === 0) {
         toast.success(
-          `Successfully deleted ${results.success} instance${
-            results.success > 1 ? "s" : ""
+          `Successfully deleted ${results.success} instance${results.success > 1 ? "s" : ""
           }`,
         );
       } else if (results.success > 0 && results.failed > 0) {
         toast.warning(
-          `${results.success} instance${
-            results.success > 1 ? "s" : ""
+          `${results.success} instance${results.success > 1 ? "s" : ""
           } deleted successfully, ${results.failed} failed`,
         );
       } else if (results.failed > 0) {
         toast.error(
-          `Failed to delete ${results.failed} instance${
-            results.failed > 1 ? "s" : ""
-          }${
-            results.errors.length > 0 ? ":\n" + results.errors.join("\n") : ""
+          `Failed to delete ${results.failed} instance${results.failed > 1 ? "s" : ""
+          }${results.errors.length > 0 ? ":\n" + results.errors.join("\n") : ""
           }`,
         );
       }
@@ -1536,10 +1505,8 @@ const VPS: React.FC = () => {
         // Handle specific error codes with better user feedback
         if (payload.code === "INSUFFICIENT_BALANCE") {
           mobileToast.error(
-            `Insufficient wallet balance. You need $${
-              payload.required?.toFixed(4) || "unknown"
-            } but only have $${
-              payload.available?.toFixed(2) || "unknown"
+            `Insufficient wallet balance. You need $${payload.required?.toFixed(4) || "unknown"
+            } but only have $${payload.available?.toFixed(2) || "unknown"
             }. Please add funds to your wallet.`,
             {
               duration: 8000,
@@ -1573,8 +1540,7 @@ const VPS: React.FC = () => {
         );
       } else {
         mobileToast.warning(
-          `VPS "${createForm.label}" created successfully, but ${
-            payload.billing?.message || "initial billing failed"
+          `VPS "${createForm.label}" created successfully, but ${payload.billing?.message || "initial billing failed"
           }. You will be billed hourly as normal.`,
         );
       }
@@ -2365,8 +2331,8 @@ const VPS: React.FC = () => {
         description={
           lastSaved
             ? `Provision a VPS using our guided setup. Auto-saved ${new Date(
-                lastSaved,
-              ).toLocaleTimeString()}`
+              lastSaved,
+            ).toLocaleTimeString()}`
             : "Provision a VPS using our guided setup."
         }
         footer={stackFooter}
@@ -2496,13 +2462,12 @@ const VPS: React.FC = () => {
                     !deleteModal.password.trim() ||
                     !deleteModal.confirmCheckbox
                   }
-                  className={`px-6 py-3 min-h-[48px] border border-transparent rounded-md shadow-sm text-sm font-medium text-white touch-manipulation transition-colors duration-200 ${
-                    deleteModal.input.trim() === deleteModal.label.trim() &&
+                  className={`px-6 py-3 min-h-[48px] border border-transparent rounded-md shadow-sm text-sm font-medium text-white touch-manipulation transition-colors duration-200 ${deleteModal.input.trim() === deleteModal.label.trim() &&
                     deleteModal.password.trim() &&
                     deleteModal.confirmCheckbox
-                      ? "bg-red-600 hover:bg-red-700 active:bg-red-800"
-                      : "bg-red-400 cursor-not-allowed"
-                  }`}
+                    ? "bg-red-600 hover:bg-red-700 active:bg-red-800"
+                    : "bg-red-400 cursor-not-allowed"
+                    }`}
                   aria-label="Confirm server deletion"
                 >
                   {deleteModal.loading ? "Deleting..." : "Delete Server"}

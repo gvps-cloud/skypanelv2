@@ -20,13 +20,7 @@ interface DetailedUserRecord {
   created_at: string;
   updated_at: string;
   status?: 'active' | 'inactive' | 'suspended';
-  organizations: Array<{
-    organizationId: string;
-    organizationName: string;
-    organizationSlug: string;
-    role: string;
-    joinedAt?: string;
-  }>;
+
   activity_summary?: {
     vps_count: number;
     container_count: number;
@@ -60,11 +54,11 @@ const formatRelativeTime = (value: string | null | undefined) => {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  
+
   const now = new Date();
   const diffMs = now.getTime() - parsed.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays === 0) {
     return 'Today';
   } else if (diffDays === 1) {
@@ -145,190 +139,150 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </DialogTitle>
           </DialogHeader>
 
-        <ScrollArea className="max-h-[70vh] pr-4">
-          {isLoading || !user ? (
-            <div className="animate-in fade-in-0 duration-500">
-              <UserProfileSkeleton />
-            </div>
-          ) : (
-            <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-400">
-            {/* Basic Information */}
-            <div className="space-y-4 animate-in slide-in-from-left-2 duration-300 delay-100">
-              <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
-                Basic Information
-                <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
-              </h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <User className="h-4 w-4" />
-                    <span>Name</span>
-                  </div>
-                  <p className="font-medium text-foreground">{user.name}</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    <span>Email</span>
-                  </div>
-                  <p className="font-medium text-foreground">{user.email}</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Shield className="h-4 w-4" />
-                    <span>Role</span>
-                  </div>
-                  <Badge variant="outline" className={roleBadgeClass(user.role)}>
-                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Activity className="h-4 w-4" />
-                    <span>Status</span>
-                  </div>
-                  <Badge variant={statusBadgeVariant(user.status)}>
-                    {user.status ? user.status.charAt(0).toUpperCase() + user.status.slice(1) : 'Active'}
-                  </Badge>
-                </div>
+          <ScrollArea className="max-h-[70vh] pr-4">
+            {isLoading || !user ? (
+              <div className="animate-in fade-in-0 duration-500">
+                <UserProfileSkeleton />
               </div>
-            </div>
-
-            {/* Account Details */}
-            <div className="space-y-4 animate-in slide-in-from-left-2 duration-300 delay-200">
-              <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
-                Account Details
-                <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
-              </h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Created</span>
-                  </div>
-                  <p className="text-sm text-foreground">{formatDateTime(user.created_at)}</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>Last Updated</span>
-                  </div>
-                  <p className="text-sm text-foreground">{formatDateTime(user.updated_at)}</p>
-                </div>
-                {user.phone && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>Phone</span>
-                    </div>
-                    <p className="text-sm text-foreground">{user.phone}</p>
-                  </div>
-                )}
-                {user.timezone && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>Timezone</span>
-                    </div>
-                    <p className="text-sm text-foreground">{user.timezone}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Organization Memberships */}
-            <div className="space-y-4 animate-in slide-in-from-left-2 duration-300 delay-300">
-              <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
-                Organization Memberships
-                <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
-              </h3>
-              {user.organizations && user.organizations.length > 0 ? (
-                <div className="space-y-3">
-                  {user.organizations.map((org) => (
-                    <div
-                      key={`${user.id}-${org.organizationId}`}
-                      className={cn(
-                        "flex items-center justify-between rounded-lg border border-border p-3",
-                        "transition-all duration-200 hover:border-primary/50 hover:bg-accent/30",
-                        "animate-in slide-in-from-left-2 duration-300"
-                      )}
-                      style={{ animationDelay: `${300 + (user.organizations.indexOf(org) * 100)}ms` }}
-                    >
-                      <div className="space-y-1">
-                        <p className="font-medium text-foreground">
-                          {org.organizationName || org.organizationSlug || org.organizationId}
-                        </p>
-                        {org.organizationSlug && org.organizationName !== org.organizationSlug && (
-                          <p className="text-sm text-muted-foreground">@{org.organizationSlug}</p>
-                        )}
-                        {org.joinedAt && (
-                          <p className="text-xs text-muted-foreground">
-                            Joined {formatRelativeTime(org.joinedAt)}
-                          </p>
-                        )}
+            ) : (
+              <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-400">
+                {/* Basic Information */}
+                <div className="space-y-4 animate-in slide-in-from-left-2 duration-300 delay-100">
+                  <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
+                    Basic Information
+                    <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+                  </h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <User className="h-4 w-4" />
+                        <span>Name</span>
                       </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {org.role.charAt(0).toUpperCase() + org.role.slice(1)}
+                      <p className="font-medium text-foreground">{user.name}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Mail className="h-4 w-4" />
+                        <span>Email</span>
+                      </div>
+                      <p className="font-medium text-foreground">{user.email}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Shield className="h-4 w-4" />
+                        <span>Role</span>
+                      </div>
+                      <Badge variant="outline" className={roleBadgeClass(user.role)}>
+                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                       </Badge>
                     </div>
-                  ))}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Activity className="h-4 w-4" />
+                        <span>Status</span>
+                      </div>
+                      <Badge variant={statusBadgeVariant(user.status)}>
+                        {user.status ? user.status.charAt(0).toUpperCase() + user.status.slice(1) : 'Active'}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No organization memberships</p>
-              )}
-            </div>
 
-            {/* Activity Summary */}
-            {user.activity_summary && (
-              <div className="space-y-4 animate-in slide-in-from-left-2 duration-300 delay-500">
-                <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
-                  Activity Summary
-                  <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
-                </h3>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className={cn(
-                    "rounded-lg border border-border p-4 text-center",
-                    "transition-all duration-200 hover:border-primary/50 hover:bg-accent/30 hover:scale-105",
-                    "animate-in slide-in-from-bottom-2 duration-300 delay-600"
-                  )}>
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
-                      <Server className="h-4 w-4" />
-                      <span className="text-sm">VPS Instances</span>
+                {/* Account Details */}
+                <div className="space-y-4 animate-in slide-in-from-left-2 duration-300 delay-200">
+                  <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
+                    Account Details
+                    <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+                  </h3>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>Created</span>
+                      </div>
+                      <p className="text-sm text-foreground">{formatDateTime(user.created_at)}</p>
                     </div>
-                    <p className="text-2xl font-semibold text-foreground transition-colors duration-200">
-                      {user.activity_summary.vps_count}
-                    </p>
-                  </div>
-                  <div className={cn(
-                    "rounded-lg border border-border p-4 text-center",
-                    "transition-all duration-200 hover:border-primary/50 hover:bg-accent/30 hover:scale-105",
-                    "animate-in slide-in-from-bottom-2 duration-300 delay-700"
-                  )}>
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
-                      <Box className="h-4 w-4" />
-                      <span className="text-sm">Containers</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>Last Updated</span>
+                      </div>
+                      <p className="text-sm text-foreground">{formatDateTime(user.updated_at)}</p>
                     </div>
-                    <p className="text-2xl font-semibold text-foreground transition-colors duration-200">
-                      {user.activity_summary.container_count}
-                    </p>
-                  </div>
-                  <div className={cn(
-                    "rounded-lg border border-border p-4 text-center",
-                    "transition-all duration-200 hover:border-primary/50 hover:bg-accent/30 hover:scale-105",
-                    "animate-in slide-in-from-bottom-2 duration-300 delay-800"
-                  )}>
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
-                      <Activity className="h-4 w-4" />
-                      <span className="text-sm">Last Activity</span>
-                    </div>
-                    <p className="text-sm font-medium text-foreground transition-colors duration-200">
-                      {formatRelativeTime(user.activity_summary.last_activity)}
-                    </p>
+                    {user.phone && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>Phone</span>
+                        </div>
+                        <p className="text-sm text-foreground">{user.phone}</p>
+                      </div>
+                    )}
+                    {user.timezone && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>Timezone</span>
+                        </div>
+                        <p className="text-sm text-foreground">{user.timezone}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
+
+
+
+                {/* Activity Summary */}
+                {user.activity_summary && (
+                  <div className="space-y-4 animate-in slide-in-from-left-2 duration-300 delay-500">
+                    <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
+                      Activity Summary
+                      <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+                    </h3>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div className={cn(
+                        "rounded-lg border border-border p-4 text-center",
+                        "transition-all duration-200 hover:border-primary/50 hover:bg-accent/30 hover:scale-105",
+                        "animate-in slide-in-from-bottom-2 duration-300 delay-600"
+                      )}>
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
+                          <Server className="h-4 w-4" />
+                          <span className="text-sm">VPS Instances</span>
+                        </div>
+                        <p className="text-2xl font-semibold text-foreground transition-colors duration-200">
+                          {user.activity_summary.vps_count}
+                        </p>
+                      </div>
+                      <div className={cn(
+                        "rounded-lg border border-border p-4 text-center",
+                        "transition-all duration-200 hover:border-primary/50 hover:bg-accent/30 hover:scale-105",
+                        "animate-in slide-in-from-bottom-2 duration-300 delay-700"
+                      )}>
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
+                          <Box className="h-4 w-4" />
+                          <span className="text-sm">Containers</span>
+                        </div>
+                        <p className="text-2xl font-semibold text-foreground transition-colors duration-200">
+                          {user.activity_summary.container_count}
+                        </p>
+                      </div>
+                      <div className={cn(
+                        "rounded-lg border border-border p-4 text-center",
+                        "transition-all duration-200 hover:border-primary/50 hover:bg-accent/30 hover:scale-105",
+                        "animate-in slide-in-from-bottom-2 duration-300 delay-800"
+                      )}>
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground mb-2">
+                          <Activity className="h-4 w-4" />
+                          <span className="text-sm">Last Activity</span>
+                        </div>
+                        <p className="text-sm font-medium text-foreground transition-colors duration-200">
+                          {formatRelativeTime(user.activity_summary.last_activity)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-            </div>
-          )}
-        </ScrollArea>
+          </ScrollArea>
         </ErrorBoundary>
       </DialogContent>
     </Dialog>

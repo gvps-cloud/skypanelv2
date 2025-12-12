@@ -137,7 +137,8 @@ type AdminSection =
   | "rate-limiting"
   | "faq-management"
   | "platform"
-  | "contact-management";
+  | "contact-management"
+  | "hosting";
 
 const ADMIN_SECTIONS: AdminSection[] = [
   "dashboard",
@@ -257,7 +258,6 @@ interface TicketMessage {
 
 interface SupportTicket {
   id: string;
-  organization_id: string;
   created_by: string;
   subject: string;
   message: string;
@@ -306,7 +306,6 @@ interface VPSPlan {
 
 interface AdminServerInstance {
   id: string;
-  organization_id: string;
   plan_id: string;
   provider_instance_id: string;
   label: string;
@@ -315,8 +314,7 @@ interface AdminServerInstance {
   configuration: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
-  organization_name?: string | null;
-  organization_slug?: string | null;
+
   owner_id?: string | null;
   owner_name?: string | null;
   owner_email?: string | null;
@@ -335,12 +333,7 @@ interface AdminUserRecord {
   role: string;
   created_at: string;
   updated_at: string;
-  organizations: Array<{
-    organizationId: string;
-    organizationName: string;
-    organizationSlug: string;
-    role: string;
-  }>;
+
 }
 
 interface LinodeStackScriptSummary {
@@ -976,8 +969,7 @@ const Admin: React.FC = () => {
       const haystack = [
         server.label,
         server.ip_address,
-        server.organization_name,
-        server.organization_slug,
+
         server.owner_email,
         server.owner_name,
         server.plan_name,
@@ -1160,7 +1152,6 @@ const Admin: React.FC = () => {
       if (!res.ok) throw new Error(data.error || "Failed to load tickets");
       const mapped: SupportTicket[] = (data.tickets || []).map((t: any) => ({
         id: t.id,
-        organization_id: t.organization_id,
         created_by: t.created_by,
         subject: t.subject,
         message: t.message,
@@ -1882,33 +1873,7 @@ const Admin: React.FC = () => {
   } = providerStats;
   const { total: totalAdminUsers, admins: adminUserCount } = adminStats;
 
-  const organizationStats = useMemo(() => {
-    const ticketOrgs = new Set<string>();
-    const serverOrgs = new Set<string>();
 
-    tickets.forEach((ticket) => {
-      if (ticket.organization_id) {
-        ticketOrgs.add(ticket.organization_id);
-      }
-    });
-
-    servers.forEach((server) => {
-      if (server.organization_id) {
-        serverOrgs.add(server.organization_id);
-      }
-    });
-
-    const all = new Set<string>([
-      ...ticketOrgs,
-      ...serverOrgs,
-    ]);
-
-    return {
-      total: all.size,
-      withTickets: ticketOrgs.size,
-      withServers: serverOrgs.size,
-    };
-  }, [tickets, servers]);
 
   const strategicPanels = useMemo<StrategicPanel[]>(() => {
     const markupText =
@@ -1979,7 +1944,7 @@ const Admin: React.FC = () => {
       },
       {
         id: "user-management",
-        title: "Organization Access",
+        title: "User Management",
         description: "Grant least-privilege access and monitor impersonations.",
         icon: Users,
         accent: "text-purple-600",
@@ -2086,20 +2051,7 @@ const Admin: React.FC = () => {
 
           {/* Key Metrics Grid - matching dashboard style */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            <Card className="overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Organizations</p>
-                    <p className="text-3xl font-bold tracking-tight">{formatCountValue(organizationStats.total)}</p>
-                    <p className="text-xs text-muted-foreground">{formatCountValue(organizationStats.withServers)} with servers</p>
-                  </div>
-                  <div className="rounded-lg bg-primary/10 p-3">
-                    <Users className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+
 
             <Card className="overflow-hidden">
               <CardContent className="p-6">
@@ -2340,11 +2292,7 @@ const Admin: React.FC = () => {
                           {formatStatusLabel(server.status)}
                         </Badge>
                       </div>
-                      {server.organization_name ? (
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          {server.organization_name}
-                        </p>
-                      ) : null}
+
                     </div>
                   ))
                 ) : (
@@ -3535,9 +3483,7 @@ const Admin: React.FC = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[14rem]">Label</TableHead>
-                      <TableHead className="min-w-[12rem]">
-                        Organization
-                      </TableHead>
+
                       <TableHead className="w-32">Status</TableHead>
                       <TableHead className="min-w-[10rem]">
                         IP Address
@@ -3646,17 +3592,7 @@ const Admin: React.FC = () => {
                                 </p>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <div className="space-y-1">
-                                <p className="text-sm text-foreground">
-                                  {server.organization_name || "—"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {server.organization_slug ||
-                                    server.organization_id}
-                                </p>
-                              </div>
-                            </TableCell>
+
                             <TableCell>
                               <Badge
                                 variant="outline"

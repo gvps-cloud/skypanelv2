@@ -1696,18 +1696,6 @@ router.get(
 
       const users = result.rows;
 
-      // Fetch organizations for each user
-      for (const user of users) {
-        const orgs = await query(
-          `SELECT o.id as "organizationId", o.name as "organizationName", o.slug as "organizationSlug", m.role
-           FROM organization_members m
-           JOIN organizations o ON o.id = m.organization_id
-           WHERE m.user_id = $1`,
-          [user.id],
-        );
-        user.organizations = orgs.rows;
-      }
-
       res.json({ users });
     } catch (err: any) {
       console.error("Admin users list error:", err);
@@ -3026,22 +3014,8 @@ router.get(
               u.timezone,
               u.preferences,
               u.created_at,
-              u.updated_at,
-              COALESCE(
-                jsonb_agg(
-                  DISTINCT jsonb_build_object(
-                    'organizationId', om.organization_id,
-                    'organizationName', org.name,
-                    'organizationSlug', org.slug,
-                    'role', om.role,
-                    'joinedAt', om.created_at
-                  )
-                ) FILTER (WHERE om.organization_id IS NOT NULL),
-                '[]'::jsonb
-              ) AS organizations
+              u.updated_at
             FROM users u
-            LEFT JOIN organization_members om ON om.user_id = u.id
-            LEFT JOIN organizations org ON org.id = om.organization_id
             WHERE u.id = $1
             GROUP BY u.id`,
             [id],
@@ -3082,7 +3056,6 @@ router.get(
             p.markup_price,
             sp.name as provider_name,
             sp.type as provider_type_name,
-            org.name as organization_name,
             COALESCE(v.configuration->>'region', 'unknown') as region_label
           FROM vps_instances v
           JOIN organizations org ON org.id = v.organization_id
@@ -3245,10 +3218,43 @@ router.get(
         supportTickets = [];
       }
 
+      // Get hosting subscriptions
+      let hostingServices: any[] = [];
+      try {
+        const hostingResult = await query(
+          `SELECT
+            hs.id,
+            hs.domain,
+            hs.status,
+            hs.enhance_website_id,
+            hs.primary_ip,
+            hs.created_at,
+            hs.updated_at,
+            hp.name as plan_name,
+            hp.service_type,
+            hp.price_monthly
+          FROM hosting_subscriptions hs
+          JOIN hosting_plans hp ON hp.id = hs.plan_id
+          WHERE hs.user_id = $1
+          ORDER BY hs.created_at DESC`,
+          [id],
+        );
+        hostingServices = hostingResult.rows || [];
+      } catch (hostingErr: any) {
+        console.warn(
+          "Error fetching hosting services for user:",
+          hostingErr.message,
+        );
+        hostingServices = [];
+      }
+
       // Calculate statistics
       const statistics = {
         totalVPS: vpsInstances.length,
         activeVPS: vpsInstances.filter((vps) => vps.status === "running")
+          .length,
+        totalHosting: hostingServices.length,
+        activeHosting: hostingServices.filter((hs) => hs.status === "active")
           .length,
         totalSpend: billing.total_spend,
         monthlySpend: billing.monthly_spend,
@@ -3267,6 +3273,7 @@ router.get(
           preferences: user.preferences || {},
         },
         vpsInstances,
+        hostingServices,
         billing,
         activity,
         supportTickets,

@@ -199,7 +199,7 @@ router.get(
       }
 
       const { id } = req.params;
-      
+
       // For SSE, we need to get token from query param since EventSource doesn't support headers
       const token = req.query.token as string;
       if (!token) {
@@ -210,21 +210,48 @@ router.get(
       // Validate token manually (similar to notification stream)
       const jwt = await import('jsonwebtoken');
       const { config } = await import('../config/index.js');
-      
-      let decoded: { userId: string; organizationId: string };
+
+      let decoded: { userId: string; organizationId?: string };
       try {
-        decoded = jwt.default.verify(token, config.JWT_SECRET) as { userId: string; organizationId: string };
+        decoded = jwt.default.verify(token, config.JWT_SECRET) as { userId: string; organizationId?: string };
       } catch {
         res.status(401).json({ error: 'Invalid or expired token' });
+        return;
+      }
+
+      let organizationId = decoded.organizationId;
+      if (!organizationId) {
+        // Fallback lookup if not in token
+        try {
+          const orgResult = await query(
+            'SELECT organization_id FROM organization_members WHERE user_id = $1',
+            [decoded.userId]
+          );
+          organizationId = orgResult.rows[0]?.organization_id;
+
+          if (!organizationId) {
+            const ownerOrg = await query(
+              'SELECT id FROM organizations WHERE owner_id = $1 ORDER BY created_at DESC LIMIT 1',
+              [decoded.userId]
+            );
+            organizationId = ownerOrg.rows[0]?.id;
+          }
+        } catch (err) {
+          console.warn('Organization lookup failed for stream:', err);
+        }
+      }
+
+      if (!organizationId) {
+        res.status(403).json({ error: 'Organization data not found' });
         return;
       }
 
       // Verify ticket belongs to user's organization
       const ticketCheck = await query(
         'SELECT id FROM support_tickets WHERE id = $1 AND organization_id = $2',
-        [id, decoded.organizationId]
+        [id, organizationId]
       );
-      
+
       if (ticketCheck.rows.length === 0) {
         res.status(404).json({ error: 'Ticket not found' });
         return;

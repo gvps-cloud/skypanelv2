@@ -113,7 +113,7 @@ const sanitizeThemePreset = (preset: ThemePresetLike | null | undefined): ThemeP
 
   const description = typeof preset.description === "string"
     ? preset.description
-    : "Organization-defined theme preset.";
+    : "User-defined theme preset.";
 
   const sanitizeVariables = (vars: Record<string, unknown> | undefined): ThemeVariables => {
     if (!vars) {

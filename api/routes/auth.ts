@@ -21,8 +21,7 @@ router.post('/register', [
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('firstName').trim().isLength({ min: 1 }).withMessage('First name is required'),
-  body('lastName').trim().isLength({ min: 1 }).withMessage('Last name is required'),
-  body('organizationName').trim().notEmpty().withMessage('Organization name is required')
+  body('lastName').trim().isLength({ min: 1 }).withMessage('Last name is required')
 ], async (req: Request, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
@@ -31,20 +30,18 @@ router.post('/register', [
       return;
     }
 
-    const { email, password, firstName, lastName, organizationName } = req.body;
-    
+    const { email, password, firstName, lastName } = req.body;
+
     const result = await AuthService.register({
       email,
       password,
       firstName,
-      lastName,
-      organizationName
+      lastName
     });
 
     res.status(201).json({
       message: 'User registered successfully',
       user: result.user,
-      organizationName: result.organizationName,
       token: result.token
     });
   } catch (error: any) {
@@ -59,7 +56,8 @@ router.post('/register', [
  */
 router.post('/login', [
   body('email').isEmail().normalizeEmail(),
-  body('password').notEmpty().withMessage('Password is required')
+  body('password').notEmpty().withMessage('Password is required'),
+  body('code').optional().isString().trim()
 ], async (req: Request, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
@@ -68,33 +66,45 @@ router.post('/login', [
       return;
     }
 
-    const { email, password } = req.body;
-    
-    const result = await AuthService.login({ email, password });
+    const { email, password, code } = req.body;
+
+    const result = await AuthService.login({ email, password, code });
+
+    if ('require2fa' in result && result.require2fa) {
+      res.json({ require2fa: true });
+      return;
+    }
+
+    // unexpected case or type narrowing
+    if (!('user' in result) || !('token' in result)) {
+      throw new Error('Unexpected login response');
+    }
+
+    const loginResult = result as { user: any; token: string };
 
     // Log successful login
     try {
       await logActivity({
-        userId: result.user.id,
-        organizationId: result.user.organizationId,
+        userId: loginResult.user.id,
         eventType: 'auth.login',
         entityType: 'user',
-        entityId: result.user.id,
-        message: `User ${result.user.email} logged in`,
+        entityId: loginResult.user.id,
+        message: `User ${loginResult.user.email} logged in`,
         status: 'success',
         metadata: { email }
       }, req);
-    } catch {}
+    } catch { }
 
     res.json({
       message: 'Login successful',
-      user: result.user,
-      token: result.token
+      user: loginResult.user,
+      token: loginResult.token
     });
   } catch (error: any) {
     console.error('Login error:', error);
     res.status(401).json({ error: error.message });
   }
+
 });
 
 router.post('/verify-password', authenticateToken, [
@@ -139,14 +149,13 @@ router.post('/logout', authenticateToken, async (req: AuthenticatedRequest, res:
       try {
         await logActivity({
           userId: req.user.id,
-          organizationId: req.user.organizationId,
           eventType: 'auth.logout',
           entityType: 'user',
           entityId: req.user.id,
           message: `User ${req.user.email} logged out`,
           status: 'success'
         }, req as any);
-      } catch {}
+      } catch { }
     }
     res.json({ message: 'Logout successful' });
   } catch (error: any) {
@@ -324,11 +333,11 @@ router.put(
         return;
       }
 
-      const { firstName, lastName, phone, timezone } = req.body as { 
-        firstName?: string; 
-        lastName?: string; 
-        phone?: string; 
-        timezone?: string; 
+      const { firstName, lastName, phone, timezone } = req.body as {
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        timezone?: string;
       };
 
       // Fetch current user to derive existing name parts
@@ -336,13 +345,13 @@ router.put(
         'SELECT id, email, role, name, phone, timezone FROM users WHERE id = $1',
         [req.user.id]
       );
-      
+
       if (currentResult.rows.length === 0) {
         console.error('Profile update - User lookup failed:', {
           userId: req.user.id,
           userExists: false
         });
-        res.status(404).json({ 
+        res.status(404).json({
           error: 'User not found',
           details: 'User does not exist in database'
         });
@@ -376,7 +385,7 @@ router.put(
         UPDATE users 
         SET ${updateFields.join(', ')} 
         WHERE id = $1 
-        RETURNING id, email, role, name, phone, timezone
+        RETURNING id, email, role, name, phone, timezone, preferences, two_factor_enabled
       `;
 
       const updateResult = await query(updateQuery, updateValues);
@@ -388,18 +397,6 @@ router.put(
 
       const updated = updateResult.rows[0];
 
-      // Get user's organization membership to include in response for consistency
-      let orgMember = null;
-      try {
-        const orgResult = await query(
-          'SELECT organization_id, role FROM organization_members WHERE user_id = $1',
-          [req.user.id]
-        );
-        orgMember = orgResult.rows[0] || null;
-  } catch {
-        console.warn('organization_members table not found, skipping organization lookup');
-      }
-
       res.json({
         user: {
           id: updated.id,
@@ -410,8 +407,8 @@ router.put(
           timezone: updated.timezone,
           role: updated.role,
           emailVerified: true,
-          organizationId: orgMember?.organization_id,
-          organizationRole: orgMember?.role
+          preferences: updated.preferences,
+          twoFactorEnabled: updated.two_factor_enabled
         }
       });
     } catch (error: any) {
@@ -421,235 +418,7 @@ router.put(
   }
 );
 
-/**
- * Get Organization
- * GET /api/auth/organization
- * Auto-creates organization if user doesn't have one
- */
-router.get('/organization', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    if (!req.user) {
-      res.status(401).json({ error: 'Authentication required' });
-      return;
-    }
 
-    let organizationId = req.user.organizationId;
-
-    // If user doesn't have an organization, create one automatically
-    if (!organizationId) {
-      const now = new Date().toISOString();
-      const orgId = uuidv4();
-      
-      // Get user's name for default organization name
-      const userResult = await query('SELECT name, email FROM users WHERE id = $1', [req.user.id]);
-      const userName = userResult.rows[0]?.name || 'User';
-      const baseOrgName = `${userName}'s Organization`;
-      
-      // Generate unique organization name with animal suffix if needed
-      const { finalName } = await generateUniqueOrgName(baseOrgName);
-      const slug = finalName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-
-      // Create organization
-      const orgResult = await query(
-        `INSERT INTO organizations (id, name, slug, owner_id, settings, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7) 
-         RETURNING *`,
-        [orgId, finalName, slug, req.user.id, '{}', now, now]
-      );
-
-      organizationId = orgResult.rows[0].id;
-
-      // Add user to organization as owner
-      try {
-        await query(
-          `INSERT INTO organization_members (organization_id, user_id, role, created_at) 
-           VALUES ($1, $2, $3, $4)`,
-          [organizationId, req.user.id, 'owner', now]
-        );
-      } catch (creationError) {
-        console.warn('Failed to create organization_members entry:', creationError);
-      }
-
-      // Create wallet for organization
-      try {
-        await query(
-          `INSERT INTO wallets (id, organization_id, balance, currency, created_at, updated_at) 
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [uuidv4(), organizationId, 0, 'USD', now, now]
-        );
-      } catch (walletError) {
-        console.warn('Failed to create wallet:', walletError);
-      }
-
-      console.log(`Auto-created organization ${organizationId} for user ${req.user.id}`);
-    }
-
-    // Fetch organization details
-    const result = await query(
-      'SELECT id, name, website, address, tax_id FROM organizations WHERE id = $1',
-      [organizationId]
-    );
-
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Organization not found' });
-      return;
-    }
-
-    const org = result.rows[0];
-    res.json({
-      organization: {
-        id: org.id,
-        name: org.name,
-        website: org.website,
-        address: org.address,
-        taxId: org.tax_id
-      }
-    });
-  } catch (error: any) {
-    console.error('Get organization error:', error);
-    res.status(500).json({ error: error.message || 'Failed to fetch organization' });
-  }
-});
-
-/**
- * Update Organization
- * PUT /api/auth/organization
- * Auto-creates organization if user doesn't have one
- */
-router.put(
-  '/organization',
-  authenticateToken,
-  [
-    body('name').optional().isString().trim().isLength({ min: 1 }),
-    body('website').optional().isURL().withMessage('Invalid website URL'),
-    body('address').optional().isString().trim(),
-    body('taxId').optional().isString().trim()
-  ],
-  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({ errors: errors.array() });
-        return;
-      }
-
-      if (!req.user) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
-
-      const { name, website, address, taxId } = req.body;
-      let organizationId = req.user.organizationId;
-
-      // If user doesn't have an organization, create one
-      if (!organizationId) {
-        const now = new Date().toISOString();
-        const orgId = uuidv4();
-        const baseOrgName = name || 'My Organization';
-        
-        // Generate unique organization name with animal suffix if needed
-        const { finalName } = await generateUniqueOrgName(baseOrgName);
-        const slug = finalName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-
-        // Create organization
-        const orgResult = await query(
-          `INSERT INTO organizations (id, name, slug, owner_id, settings, website, address, tax_id, created_at, updated_at) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-           RETURNING *`,
-          [orgId, finalName, slug, req.user.id, '{}', website || null, address || null, taxId || null, now, now]
-        );
-
-        organizationId = orgResult.rows[0].id;
-
-        // Add user to organization as owner
-        try {
-          await query(
-            `INSERT INTO organization_members (organization_id, user_id, role, created_at) 
-             VALUES ($1, $2, $3, $4)`,
-            [organizationId, req.user.id, 'owner', now]
-          );
-        } catch (error) {
-          console.warn('Failed to create organization_members entry:', error);
-        }
-
-        // Create wallet for organization
-        try {
-          await query(
-            `INSERT INTO wallets (id, organization_id, balance, currency, created_at, updated_at) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [uuidv4(), organizationId, 0, 'USD', now, now]
-          );
-        } catch (error) {
-          console.warn('Failed to create wallet:', error);
-        }
-
-        const org = orgResult.rows[0];
-        res.json({
-          organization: {
-            id: org.id,
-            name: org.name,
-            website: org.website,
-            address: org.address,
-            taxId: org.tax_id
-          }
-        });
-        return;
-      }
-
-      // Update existing organization
-      let finalName = name;
-      let nameWasModified = false;
-      
-      // If name is being changed, ensure uniqueness
-      if (typeof name !== 'undefined' && name.trim()) {
-        const { finalName: uniqueName, suffixAdded } = await generateUniqueOrgName(name.trim(), 5, organizationId);
-        finalName = uniqueName;
-        nameWasModified = suffixAdded;
-      }
-      
-      const fields: string[] = [];
-      const values: (string | null | undefined)[] = [];
-      let idx = 1;
-      if (typeof name !== 'undefined') { 
-        fields.push(`name = $${idx++}`); 
-        values.push(finalName);
-        // Also update slug to match new name
-        const newSlug = finalName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-        fields.push(`slug = $${idx++}`);
-        values.push(newSlug);
-      }
-      if (typeof website !== 'undefined') { fields.push(`website = $${idx++}`); values.push(website); }
-      if (typeof address !== 'undefined') { fields.push(`address = $${idx++}`); values.push(address); }
-      if (typeof taxId !== 'undefined') { fields.push(`tax_id = $${idx++}`); values.push(taxId); }
-      fields.push(`updated_at = $${idx++}`); values.push(new Date().toISOString());
-
-      const updateSql = `UPDATE organizations SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, name, website, address, tax_id`;
-      values.push(organizationId);
-
-      const updatedResult = await query(updateSql, values);
-      if (updatedResult.rows.length === 0) {
-        res.status(500).json({ error: 'Failed to update organization' });
-        return;
-      }
-
-      const updated = updatedResult.rows[0];
-      res.json({
-        organization: {
-          id: updated.id,
-          name: updated.name,
-          website: updated.website,
-          address: updated.address,
-          taxId: updated.tax_id
-        },
-        nameWasModified
-      });
-    } catch (error: unknown) {
-      console.error('Organization update error:', error);
-      const err = error as Error;
-      res.status(500).json({ error: err.message || 'Failed to update organization' });
-    }
-  }
-);
 
 /**
  * Change Password
@@ -680,14 +449,14 @@ router.put(
       // Verify current password using AuthService
       try {
         await AuthService.login({ email: req.user.email, password: currentPassword });
-  } catch {
+      } catch {
         res.status(400).json({ error: 'Current password is incorrect' });
         return;
       }
 
       // Update password
-  await AuthService.changePassword(req.user.id, newPassword);
-      
+      await AuthService.changePassword(req.user.id, newPassword);
+
       res.json({ message: 'Password changed successfully' });
     } catch (error: any) {
       console.error('Password change error:', error);
@@ -743,7 +512,7 @@ router.put(
         return;
       }
 
-      res.json({ 
+      res.json({
         message: 'Preferences updated successfully',
         preferences: updatedPrefs
       });
@@ -813,7 +582,7 @@ router.post(
       // Generate API key
       const apiKey = `sk_live_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
       const keyPrefix = apiKey.substring(0, 12) + '...';
-      
+
       // Hash the key for storage (in production, use proper hashing)
       const keyHash = Buffer.from(apiKey).toString('base64');
 
@@ -872,7 +641,7 @@ router.post(
           status: 'success',
           metadata: { key_preview: newKey.key_preview }
         }, req as any);
-      } catch {}
+      } catch { }
       res.status(201).json({
         message: 'API key created successfully',
         apiKey: {
@@ -935,11 +704,83 @@ router.delete('/api-keys/:id', authenticateToken, async (req: AuthenticatedReque
         message: `Revoked API key '${id}'`,
         status: 'success'
       }, req as any);
-    } catch {}
+    } catch { }
     res.json({ message: 'API key revoked successfully' });
   } catch (error: any) {
     console.error('API key revocation error:', error);
     res.status(500).json({ error: error.message || 'Failed to revoke API key' });
+  }
+});
+
+/**
+ * Setup 2FA
+ * POST /api/auth/2fa/setup
+ */
+router.post('/2fa/setup', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const { secret, qrCode } = await AuthService.setup2FA(req.user.id);
+
+    res.json({
+      secret, // In a real app, maybe don't send secret if not needed, but needed for manual entry
+      qrCode
+    });
+  } catch (error: any) {
+    console.error('2FA setup error:', error);
+    res.status(500).json({ error: error.message || 'Failed to setup 2FA' });
+  }
+});
+
+/**
+ * Verify 2FA Setup
+ * POST /api/auth/2fa/verify
+ */
+router.post('/2fa/verify', authenticateToken, [
+  body('token').isString().isLength({ min: 6 })
+], async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ errors: errors.array() });
+      return;
+    }
+
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    const { token } = req.body;
+    await AuthService.verify2FASetup(req.user.id, token);
+
+    res.json({ message: '2FA enabled successfully' });
+  } catch (error: any) {
+    console.error('2FA verification error:', error);
+    res.status(400).json({ error: error.message || 'Failed to verify 2FA' });
+  }
+});
+
+/**
+ * Disable 2FA
+ * POST /api/auth/2fa/disable
+ */
+router.post('/2fa/disable', authenticateToken, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
+
+    await AuthService.disable2FA(req.user.id);
+
+    res.json({ message: '2FA disabled successfully' });
+  } catch (error: any) {
+    console.error('2FA disable error:', error);
+    res.status(500).json({ error: error.message || 'Failed to disable 2FA' });
   }
 });
 

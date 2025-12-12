@@ -485,8 +485,8 @@ const Dashboard: React.FC = () => {
               <div className="space-y-3">
                 {hostingServices.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center h-[200px]">
-                    <div className="rounded-full bg-blue-50 dark:bg-blue-900/10 p-4">
-                      <Server className="h-8 w-8 text-blue-500 dark:text-blue-400" />
+                    <div className="rounded-full bg-muted p-4">
+                      <Server className="h-8 w-8 text-muted-foreground" />
                     </div>
                     <h3 className="mt-4 text-sm font-semibold">No hosting plans yet</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
