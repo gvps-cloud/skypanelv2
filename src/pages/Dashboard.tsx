@@ -461,7 +461,7 @@ const Dashboard: React.FC = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <CardContent className={`grid gap-4 md:grid-cols-2 ${quickActions.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
             {quickActions.map((action) => (
               <Link
                 key={action.title}

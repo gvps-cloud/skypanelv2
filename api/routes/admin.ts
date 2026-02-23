@@ -3248,6 +3248,20 @@ router.get(
         hostingServices = [];
       }
 
+      // Get organizations count
+      let totalOrganizations = 0;
+      try {
+        const orgsResult = await query(
+          "SELECT COUNT(DISTINCT organization_id) as count FROM organization_members WHERE user_id = $1",
+          [id]
+        );
+        if (orgsResult.rows.length > 0) {
+          totalOrganizations = parseInt(orgsResult.rows[0].count) || 0;
+        }
+      } catch (orgsErr: any) {
+        console.warn("Error fetching organizations count for user:", orgsErr.message);
+      }
+
       // Calculate statistics
       const statistics = {
         totalVPS: vpsInstances.length,
@@ -3258,7 +3272,7 @@ router.get(
           .length,
         totalSpend: billing.total_spend,
         monthlySpend: billing.monthly_spend,
-        totalOrganizations: user.organizations.length,
+        totalOrganizations,
         totalSupportTickets: supportTickets.length,
         openSupportTickets: supportTickets.filter(
           (ticket) => ticket.status === "open",
