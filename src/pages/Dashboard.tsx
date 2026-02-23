@@ -340,7 +340,7 @@ const Dashboard: React.FC = () => {
       {/* Key Metrics Grid */}
       <div className="space-y-4">
         {/* Top Row: VPS & Web Hosting */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className={`grid gap-4 ${isHostingEnabled ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
           <Card className="overflow-hidden">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
