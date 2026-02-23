@@ -8,6 +8,19 @@ const router = express.Router();
 router.use(authenticateToken);
 router.use(requireAdmin);
 
+// Get web hosting enabled status (public endpoint for checking if hosting is available)
+router.get('/status', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT enabled FROM enhance_config WHERE is_active = true LIMIT 1');
+        if (result.rows.length === 0) {
+            return res.json({ enabled: false });
+        }
+        res.json({ enabled: result.rows[0].enabled ?? true });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 // Get current configuration
 router.get('/config', async (req, res) => {
     try {
@@ -25,24 +38,74 @@ router.get('/config', async (req, res) => {
 
 // Update configuration
 router.post('/config', async (req, res) => {
-    const { api_url, org_id, api_key, name } = req.body;
-
-    // Validate first
-    const isValid = await enhanceService.validateCredentials(api_url, org_id, api_key);
-    if (!isValid) {
-        return res.status(400).json({ error: 'Invalid API Credentials. Could not connect to Enhance.' });
-    }
+    const { api_url, org_id, api_key, name, enabled } = req.body;
 
     try {
-        // Upsert singleton config
-        await pool.query('DELETE FROM enhance_config'); // Reset old config
-        await pool.query(`
-      INSERT INTO enhance_config (name, api_url, org_id, api_key)
-      VALUES ($1, $2, $3, $4)
-    `, [name || 'Default Cluster', api_url, org_id, api_key]);
+        // If API credentials are provided, validate them
+        if (api_url && org_id && api_key) {
+            const isValid = await enhanceService.validateCredentials(api_url, org_id, api_key);
+            if (!isValid) {
+                return res.status(400).json({ error: 'Invalid API Credentials. Could not connect to Enhance.' });
+            }
+        }
+
+        // Check if config exists
+        const existing = await pool.query('SELECT * FROM enhance_config WHERE is_active = true LIMIT 1');
+
+        if (existing.rows.length > 0) {
+            // Update existing config
+            const currentConfig = existing.rows[0];
+            const updates: string[] = [];
+            const values: any[] = [];
+            let paramIndex = 1;
+
+            if (name !== undefined) {
+                updates.push(`name = $${paramIndex++}`);
+                values.push(name);
+            }
+            if (api_url !== undefined) {
+                updates.push(`api_url = $${paramIndex++}`);
+                values.push(api_url);
+            }
+            if (org_id !== undefined) {
+                updates.push(`org_id = $${paramIndex++}`);
+                values.push(org_id);
+            }
+            if (api_key !== undefined && api_key !== '') {
+                updates.push(`api_key = $${paramIndex++}`);
+                values.push(api_key);
+            }
+            if (enabled !== undefined) {
+                updates.push(`enabled = $${paramIndex++}`);
+                values.push(enabled);
+            }
+
+            if (updates.length > 0) {
+                values.push(currentConfig.id);
+                await pool.query(`
+                    UPDATE enhance_config
+                    SET ${updates.join(', ')}
+                    WHERE id = $${paramIndex}
+                `, values);
+            }
+        } else {
+            // Create new config
+            await pool.query('DELETE FROM enhance_config'); // Reset old config
+            await pool.query(`
+                INSERT INTO enhance_config (name, api_url, org_id, api_key, enabled)
+                VALUES ($1, $2, $3, $4, $5)
+            `, [
+                name || 'Default Cluster',
+                api_url || '',
+                org_id || '',
+                api_key || '',
+                enabled !== undefined ? enabled : true
+            ]);
+        }
 
         res.json({ success: true });
     } catch (error) {
+        console.error('Error saving enhance config:', error);
         res.status(500).json({ error: 'Failed to save configuration' });
     }
 });

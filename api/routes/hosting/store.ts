@@ -5,12 +5,32 @@ import { authenticateToken } from '../../middleware/auth.js';
 
 const router = express.Router();
 
+// Public endpoint to check if web hosting is enabled
+router.get('/status', async (req, res) => {
+    try {
+        const enhanceConfig = await pool.query('SELECT enabled FROM enhance_config WHERE is_active = true LIMIT 1');
+        const isEnabled = enhanceConfig.rows.length > 0 ? enhanceConfig.rows[0].enabled : true;
+        res.json({ enabled: isEnabled });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 router.use(authenticateToken);
 
 // List Available Plans
 router.get('/plans', async (req, res) => {
     try {
+        // Check if web hosting is enabled
+        const enhanceConfig = await pool.query('SELECT enabled FROM enhance_config WHERE is_active = true LIMIT 1');
+        const isWebHostingEnabled = enhanceConfig.rows.length > 0 ? enhanceConfig.rows[0].enabled : true;
+
+        // If web hosting is disabled and no specific type is requested, return empty array
         const { type } = req.query;
+        if (!type && !isWebHostingEnabled) {
+            return res.json([]);
+        }
+
         let query = 'SELECT * FROM hosting_plans WHERE is_active = true';
         const params: any[] = [];
 

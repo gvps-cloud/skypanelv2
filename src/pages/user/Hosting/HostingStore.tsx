@@ -29,6 +29,7 @@ export default function HostingStore() {
     const [plans, setPlans] = useState<Plan[]>([]);
     const [regions, setRegions] = useState<Region[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isHostingEnabled, setIsHostingEnabled] = useState(true);
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
     const [domain, setDomain] = useState('');
     const [selectedRegion, setSelectedRegion] = useState('');
@@ -36,9 +37,20 @@ export default function HostingStore() {
     const navigate = useNavigate();
 
     useEffect(() => {
+        fetchHostingStatus();
         fetchPlans();
         fetchRegions();
     }, []);
+
+    const fetchHostingStatus = async () => {
+        try {
+            const data = await api.get('/hosting/store/status');
+            setIsHostingEnabled(data.enabled);
+        } catch {
+            // Default to true if status check fails
+            setIsHostingEnabled(true);
+        }
+    };
 
     const fetchPlans = async () => {
         try {
@@ -108,6 +120,31 @@ export default function HostingStore() {
     );
 
     if (isLoading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>;
+
+    if (!isHostingEnabled) {
+        return (
+            <div className="space-y-8 p-6">
+                <div className="text-center space-y-2">
+                    <h1 className="text-3xl font-bold">Cloud Hosting</h1>
+                    <p className="text-muted-foreground">Choose the perfect plan for your project</p>
+                </div>
+
+                <Card className="max-w-md mx-auto">
+                    <CardHeader>
+                        <CardTitle>Web Hosting Unavailable</CardTitle>
+                        <CardDescription>
+                            Web hosting services are currently unavailable. Please check back later or contact support for more information.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button variant="outline" onClick={() => window.location.href = '/support'}>
+                            Contact Support
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 p-6">

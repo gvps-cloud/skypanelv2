@@ -23,6 +23,7 @@ import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
+import api from "@/lib/api";
 import {
   Sidebar,
   SidebarContent,
@@ -40,6 +41,20 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const location = useLocation();
   const { user } = useAuth();
+  const [isHostingEnabled, setIsHostingEnabled] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchHostingStatus = async () => {
+      try {
+        const data = await api.get('/hosting/store/status');
+        setIsHostingEnabled(data.enabled);
+      } catch {
+        // Default to true if status check fails
+        setIsHostingEnabled(true);
+      }
+    };
+    fetchHostingStatus();
+  }, []);
 
   // Main navigation items
   const pathname = location.pathname;
@@ -129,7 +144,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
         return adminGroups;
       }
 
-      return [
+      const userNavItems = [
         {
           title: "Dashboard",
           url: "/dashboard",
@@ -180,6 +195,9 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           isActive: isApiDocsActive,
         },
       ];
+
+      // Filter out Hosting if disabled
+      return isHostingEnabled ? userNavItems : userNavItems.filter(item => item.title !== "Hosting");
     },
     [
       currentHash,
@@ -192,6 +210,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       isVpsActive,
       isHostingActive,
       pathname,
+      isHostingEnabled,
     ]
   );
 
