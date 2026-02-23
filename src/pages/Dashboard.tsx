@@ -89,6 +89,7 @@ const Dashboard: React.FC = () => {
   const [billing, setBilling] = useState<BillingStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isHostingEnabled, setIsHostingEnabled] = useState(true);
   const { token, user } = useAuth();
   const navigate = useNavigate();
 
@@ -154,11 +155,17 @@ const Dashboard: React.FC = () => {
         }
       });
 
+      // Check if web hosting is enabled before fetching services
       try {
-        const hostingData = await apiClient.get('/hosting/store/services');
-        setHostingServices(hostingData || []);
+        const statusData = await apiClient.get('/hosting/store/status');
+        setIsHostingEnabled(statusData.enabled);
+
+        if (statusData.enabled) {
+          const hostingData = await apiClient.get('/hosting/store/services');
+          setHostingServices(hostingData || []);
+        }
       } catch (err) {
-        console.warn('Failed to load hosting services', err);
+        console.warn('Failed to load hosting status/services', err);
       }
 
       try {
@@ -187,33 +194,41 @@ const Dashboard: React.FC = () => {
   }, [loadDashboardData]);
 
   const quickActions = useMemo(
-    () => ([
-      {
-        title: 'Launch a VPS',
-        description: 'Deploy a fresh instance in under a minute.',
-        to: '/vps',
-        icon: <Plus className="h-4 w-4" />
-      },
-      {
-        title: 'Deploy Website',
-        description: 'Host a new site with ease.',
-        to: '/hosting/new',
-        icon: <Server className="h-4 w-4" />
-      },
-      {
-        title: 'Top up wallet',
-        description: 'Add credits with secure PayPal checkout.',
-        to: '/billing',
-        icon: <Wallet className="h-4 w-4" />
-      },
-      {
-        title: 'Create support ticket',
-        description: 'Reach the platform team 24/7.',
-        to: '/support',
-        icon: <ShieldCheck className="h-4 w-4" />
+    () => {
+      const actions = [
+        {
+          title: 'Launch a VPS',
+          description: 'Deploy a fresh instance in under a minute.',
+          to: '/vps',
+          icon: <Plus className="h-4 w-4" />
+        },
+        {
+          title: 'Top up wallet',
+          description: 'Add credits with secure PayPal checkout.',
+          to: '/billing',
+          icon: <Wallet className="h-4 w-4" />
+        },
+        {
+          title: 'Create support ticket',
+          description: 'Reach the platform team 24/7.',
+          to: '/support',
+          icon: <ShieldCheck className="h-4 w-4" />
+        }
+      ];
+
+      // Only show Deploy Website action if hosting is enabled
+      if (isHostingEnabled) {
+        actions.splice(1, 0, {
+          title: 'Deploy Website',
+          description: 'Host a new site with ease.',
+          to: '/hosting/new',
+          icon: <Server className="h-4 w-4" />
+        });
       }
-    ]),
-    []
+
+      return actions;
+    },
+    [isHostingEnabled]
   );
 
   const heroStats = useMemo(() => {
@@ -341,20 +356,22 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Web Hosting</p>
-                  <p className="text-3xl font-bold tracking-tight">{hostingServices.length}</p>
-                  <p className="text-xs text-muted-foreground">Active websites</p>
+          {isHostingEnabled && (
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Web Hosting</p>
+                    <p className="text-3xl font-bold tracking-tight">{hostingServices.length}</p>
+                    <p className="text-xs text-muted-foreground">Active websites</p>
+                  </div>
+                  <div className="rounded-lg bg-blue-500/10 p-3">
+                    <Server className="h-6 w-6 text-blue-500" />
+                  </div>
                 </div>
-                <div className="rounded-lg bg-blue-500/10 p-3">
-                  <Server className="h-6 w-6 text-blue-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Bottom Row: Billing Stats */}
@@ -419,7 +436,7 @@ const Dashboard: React.FC = () => {
             <div className="h-2 w-2 rounded-full bg-primary" />
             {heroStats.running} vps active
           </Badge>
-          {hostingServices.length > 0 && (
+          {isHostingEnabled && hostingServices.length > 0 && (
             <Badge variant="outline" className="gap-2 px-3 py-1.5">
               <div className="h-2 w-2 rounded-full bg-primary" />
               {hostingServices.length} sites active
@@ -465,67 +482,69 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Services & VPS Fleet - Side by Side */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className={`grid gap-6 ${isHostingEnabled ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}`}>
 
           {/* Hosting Services Card */}
-          <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <div>
-                <CardTitle>Web Hosting</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">Your active web hosting plans</p>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/hosting">
-                  Manage all
-                  <ArrowUpRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {hostingServices.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center h-[200px]">
-                    <div className="rounded-full bg-muted p-4">
-                      <Server className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="mt-4 text-sm font-semibold">No hosting plans yet</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Deploy your first website
-                    </p>
-                    <Button asChild size="sm" className="mt-4">
-                      <Link to="/hosting/new">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Get Hosting
-                      </Link>
-                    </Button>
-                  </div>
-                ) : (
-                  hostingServices.slice(0, 5).map(service => (
-                    <Link
-                      key={service.id}
-                      to={`/hosting/${service.id}`}
-                      className="group block w-full rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-md bg-blue-100 dark:bg-blue-900/30 p-2 text-blue-600 dark:text-blue-400">
-                            <Server className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold group-hover:text-primary">{service.domain}</h4>
-                            <p className="text-xs text-muted-foreground capitalize">{service.plan_name}</p>
-                          </div>
-                        </div>
-                        <Badge variant={service.status === 'active' ? 'default' : 'secondary'}>
-                          {service.status}
-                        </Badge>
+          {isHostingEnabled && (
+            <Card className="h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <div>
+                  <CardTitle>Web Hosting</CardTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">Your active web hosting plans</p>
+                </div>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/hosting">
+                    Manage all
+                    <ArrowUpRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {hostingServices.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center h-[200px]">
+                      <div className="rounded-full bg-muted p-4">
+                        <Server className="h-8 w-8 text-muted-foreground" />
                       </div>
-                    </Link>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                      <h3 className="mt-4 text-sm font-semibold">No hosting plans yet</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Deploy your first website
+                      </p>
+                      <Button asChild size="sm" className="mt-4">
+                        <Link to="/hosting/new">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Get Hosting
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    hostingServices.slice(0, 5).map(service => (
+                      <Link
+                        key={service.id}
+                        to={`/hosting/${service.id}`}
+                        className="group block w-full rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="rounded-md bg-blue-100 dark:bg-blue-900/30 p-2 text-blue-600 dark:text-blue-400">
+                              <Server className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold group-hover:text-primary">{service.domain}</h4>
+                              <p className="text-xs text-muted-foreground capitalize">{service.plan_name}</p>
+                            </div>
+                          </div>
+                          <Badge variant={service.status === 'active' ? 'default' : 'secondary'}>
+                            {service.status}
+                          </Badge>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* VPS Fleet */}
           <Card className="h-full">
