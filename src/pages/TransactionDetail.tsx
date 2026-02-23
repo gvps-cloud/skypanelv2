@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Download, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,10 @@ import { formatCurrency as formatCurrencyDisplay } from '@/lib/formatters';
 const TransactionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const fromPath = location.state?.from || '/billing';
+  const fromLabel = location.state?.fromLabel || 'Back to Billing';
   const { token } = useAuth();
   const [transaction, setTransaction] = useState<PaymentTransactionDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -165,11 +169,11 @@ const TransactionDetail: React.FC = () => {
           <h2 className="text-xl font-semibold text-foreground mb-2">Transaction Not Available</h2>
           <p className="text-muted-foreground mb-6">{error || 'We could not find the requested transaction.'}</p>
           <button
-            onClick={() => navigate('/billing')}
+            onClick={() => navigate(fromPath)}
             className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Billing
+            {fromLabel}
           </button>
         </div>
       </div>
@@ -203,11 +207,11 @@ const TransactionDetail: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <button
-            onClick={() => navigate('/billing')}
+            onClick={() => navigate(fromPath)}
             className="inline-flex items-center px-3 py-2 rounded-md border border bg-card text-sm font-medium text-muted-foreground hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Billing
+            {fromLabel}
           </button>
           <button
             onClick={handleDownloadInvoice}
@@ -230,13 +234,12 @@ const TransactionDetail: React.FC = () => {
               <p className="text-muted-foreground mt-1">Review the transaction information and generate an invoice for your records.</p>
             </div>
             <span
-              className={`mt-4 md:mt-0 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                transaction.status === 'completed'
+              className={`mt-4 md:mt-0 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${transaction.status === 'completed'
                   ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
                   : transaction.status === 'pending'
-                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-              }`}
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                }`}
             >
               {transaction.status.toUpperCase()}
             </span>

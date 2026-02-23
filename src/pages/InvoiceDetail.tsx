@@ -7,7 +7,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Download, ChevronLeft, Loader } from 'lucide-react';
 import { toast } from 'sonner';
-import AppLayout from '../components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 
@@ -110,20 +109,20 @@ const InvoiceDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <AppLayout>
+      <>
         <div className="flex min-h-screen items-center justify-center">
           <div className="text-center">
             <Loader className="h-12 w-12 animate-spin text-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">Loading invoice...</p>
           </div>
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   if (!invoice) {
     return (
-      <AppLayout>
+      <>
         <div className="p-8">
           <div className="max-w-4xl mx-auto space-y-4">
             <Button variant="ghost" onClick={() => navigate('/billing')}>
@@ -137,12 +136,12 @@ const InvoiceDetail: React.FC = () => {
             </Card>
           </div>
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="p-4 sm:p-8">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
@@ -212,7 +211,7 @@ const InvoiceDetail: React.FC = () => {
           </div>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 };
 

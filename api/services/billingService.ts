@@ -127,7 +127,7 @@ export class BillingService {
    */
   static async runHourlyBilling(): Promise<BillingResult> {
     console.log('🔄 Starting hourly VPS billing process...');
-    
+
     const result: BillingResult = {
       success: true,
       billedInstances: 0,
@@ -270,7 +270,7 @@ export class BillingService {
         }
 
         const billingPeriodEnd = new Date(billingPeriodStart.getTime() + hoursToCharge * MS_PER_HOUR);
-        
+
         // Fetch detailed pricing breakdown from plan
         const planResult = await client.query(`
           SELECT 
@@ -289,17 +289,17 @@ export class BillingService {
 
         const plan = planResult.rows[0];
         const baseHourlyRate = plan ? ((parseFloat(plan.base_price) + parseFloat(plan.markup_price)) / 730) : instance.hourlyRate;
-        
-  let backupHourlyRate = 0;
-  const backupFrequency = plan?.backup_frequency || 'none';
-        
+
+        let backupHourlyRate = 0;
+        const backupFrequency = plan?.backup_frequency || 'none';
+
         // Flat backup rate - Linode does daily backups at one price
         if (plan && backupFrequency !== 'none') {
           const baseBackupHourly = parseFloat(plan.backup_price_hourly || 0);
           const backupUpchargeHourly = parseFloat(plan.backup_upcharge_hourly || 0);
           backupHourlyRate = baseBackupHourly + backupUpchargeHourly;
         }
-        
+
         const totalAmount = Number(((baseHourlyRate + backupHourlyRate) * hoursToCharge).toFixed(4));
 
         const walletResult = await client.query(
@@ -331,9 +331,9 @@ export class BillingService {
             instance.hourlyRate,
             totalAmount,
             'failed',
-            JSON.stringify({ 
-              reason: 'insufficient_balance', 
-              hours_charged: hoursToCharge, 
+            JSON.stringify({
+              reason: 'insufficient_balance',
+              hours_charged: hoursToCharge,
               elapsed_hours: rawHoursElapsed,
               base_hourly_rate: baseHourlyRate,
               backup_hourly_rate: backupHourlyRate,
@@ -366,9 +366,9 @@ export class BillingService {
             instance.hourlyRate,
             totalAmount,
             'failed',
-            JSON.stringify({ 
-              reason: 'wallet_deduction_failed', 
-              hours_charged: hoursToCharge, 
+            JSON.stringify({
+              reason: 'wallet_deduction_failed',
+              hours_charged: hoursToCharge,
               elapsed_hours: rawHoursElapsed,
               base_hourly_rate: baseHourlyRate,
               backup_hourly_rate: backupHourlyRate,
@@ -404,8 +404,8 @@ export class BillingService {
           totalAmount,
           'billed',
           paymentTransactionId,
-          JSON.stringify({ 
-            hours_charged: hoursToCharge, 
+          JSON.stringify({
+            hours_charged: hoursToCharge,
             elapsed_hours: rawHoursElapsed,
             base_hourly_rate: baseHourlyRate,
             backup_hourly_rate: backupHourlyRate,
@@ -494,20 +494,24 @@ export class BillingService {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      // Get total spent this month
+      // Get total spent this month from wallet transactions (debits)
+      // This ensures all charges (like initial VPS creation and hourly billing) are included
       const monthlyResult = await query(`
-        SELECT COALESCE(SUM(total_amount), 0) as total
-        FROM vps_billing_cycles
+        SELECT COALESCE(SUM(ABS(amount)), 0) as total
+        FROM payment_transactions
         WHERE organization_id = $1 
-          AND status = 'billed'
+          AND amount < 0
+          AND status = 'completed'
           AND created_at >= $2
       `, [organizationId, startOfMonth]);
 
-      // Get total spent all time
+      // Get total spent all time from wallet transactions (debits)
       const allTimeResult = await query(`
-        SELECT COALESCE(SUM(total_amount), 0) as total
-        FROM vps_billing_cycles
-        WHERE organization_id = $1 AND status = 'billed'
+        SELECT COALESCE(SUM(ABS(amount)), 0) as total
+        FROM payment_transactions
+        WHERE organization_id = $1 
+          AND amount < 0
+          AND status = 'completed'
       `, [organizationId]);
 
       // Get active VPS count and monthly estimate
@@ -601,7 +605,7 @@ export class BillingService {
       } catch (err) {
         console.warn('Failed to update last_billed_at when stopping billing:', err);
       }
-      
+
       console.log(`🛑 Stopped billing for VPS instance ${vpsInstanceId}`);
     } catch (error) {
       console.error(`Error stopping billing for VPS ${vpsInstanceId}:`, error);

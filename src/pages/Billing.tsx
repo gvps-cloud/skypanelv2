@@ -5,9 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Wallet, 
-  Plus, 
+import {
+  Wallet,
+  Plus,
   Download,
   ArrowUpRight,
   ArrowDownLeft,
@@ -16,7 +16,9 @@ import {
   X,
   Clock,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { paymentService, type WalletTransaction, type PaymentHistory, type VPSUptimeSummary, type BillingSummary } from '../services/paymentService';
@@ -56,6 +58,7 @@ const Billing: React.FC = () => {
     dateFrom: '',
     dateTo: ''
   });
+  const [invoiceLoadingId, setInvoiceLoadingId] = useState<string | null>(null);
 
   // VPS Uptime state
   const [vpsUptimeData, setVpsUptimeData] = useState<VPSUptimeSummary | null>(null);
@@ -100,7 +103,7 @@ const Billing: React.FC = () => {
         offset
       );
       setTransactions(result.transactions);
-      
+
       // Fetch total count - we'll approximate based on hasMore
       if (result.hasMore) {
         setOverviewPagination(prev => ({
@@ -127,7 +130,7 @@ const Billing: React.FC = () => {
         offset
       );
       setTransactions(result.transactions);
-      
+
       if (result.hasMore) {
         setTransactionsPagination(prev => ({
           ...prev,
@@ -154,7 +157,7 @@ const Billing: React.FC = () => {
         filters.status
       );
       setPaymentHistory(result.payments);
-      
+
       if (result.hasMore) {
         setHistoryPagination(prev => ({
           ...prev,
@@ -392,7 +395,7 @@ const Billing: React.FC = () => {
 
     try {
       let date: Date;
-      
+
       // Check if it's a Unix timestamp (number as string)
       if (/^\d+$/.test(dateString)) {
         const timestamp = parseInt(dateString);
@@ -446,7 +449,7 @@ const Billing: React.FC = () => {
       // Create CSV content
       const csvContent = [
         headers.join(','),
-        ...data.map(row => 
+        ...data.map(row =>
           headers.map(header => {
             const value = row[header.toLowerCase().replace(/\s+/g, '')];
             // Escape commas and quotes in values
@@ -468,7 +471,7 @@ const Billing: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast.success(`${filename} downloaded successfully`);
     } catch (error) {
       console.error('Export error:', error);
@@ -485,7 +488,7 @@ const Billing: React.FC = () => {
       date: formatDate(transaction.createdAt),
       balanceafter: formatCurrencyValue(transaction.balanceAfter)
     }));
-    
+
     exportToCSV(exportData, 'wallet-transactions.csv', headers);
   };
 
@@ -498,7 +501,7 @@ const Billing: React.FC = () => {
       provider: payment.provider.charAt(0).toUpperCase() + payment.provider.slice(1),
       date: formatDate(payment.createdAt)
     }));
-    
+
     exportToCSV(exportData, 'payment-history.csv', headers);
   };
 
@@ -549,6 +552,23 @@ const Billing: React.FC = () => {
       dateTo: ''
     });
     setShowFilter(false);
+  };
+
+  const handleViewInvoice = async (transactionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setInvoiceLoadingId(transactionId);
+    try {
+      const result = await paymentService.createInvoiceFromTransaction(transactionId);
+      if (result.success && result.invoiceId) {
+        navigate(`/billing/invoice/${result.invoiceId}`);
+      } else {
+        toast.error(result.error || 'Failed to generate invoice.');
+      }
+    } catch {
+      toast.error('Failed to generate invoice.');
+    } finally {
+      setInvoiceLoadingId(null);
+    }
   };
 
   const hasActiveFilters = filters.status || filters.dateFrom || filters.dateTo;
@@ -604,7 +624,7 @@ const Billing: React.FC = () => {
             Manage your wallet, add funds via PayPal, and track your spending across all services.
           </p>
         </div>
-        
+
         {/* Background decoration */}
         <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
           <Wallet className="absolute right-10 top-10 h-32 w-32 rotate-12" />
@@ -751,271 +771,267 @@ const Billing: React.FC = () => {
               <Plus className="h-4 w-4 mr-2" />
               Add Funds via PayPal
             </button>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Funds will be added to your wallet after successful PayPal payment
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Funds will be added to your wallet after successful PayPal payment
+          </p>
+        </CardContent>
+      </Card>
 
-        <PayPalCheckoutDialog
-          open={isPayPalDialogOpen}
-          amount={pendingPaymentAmount}
-          description={pendingPaymentDescription}
-          onOpenChange={handlePayPalDialogOpenChange}
-          onPaymentSuccess={handlePayPalSuccess}
-          onPaymentCancel={handlePayPalCancel}
-          onError={handlePayPalError}
-        />
+      <PayPalCheckoutDialog
+        open={isPayPalDialogOpen}
+        amount={pendingPaymentAmount}
+        description={pendingPaymentDescription}
+        onOpenChange={handlePayPalDialogOpenChange}
+        onPaymentSuccess={handlePayPalSuccess}
+        onPaymentCancel={handlePayPalCancel}
+        onError={handlePayPalError}
+      />
 
-        {/* VPS Uptime Summary Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center">
-                <Clock className="h-5 w-5 mr-2 text-primary" />
-                VPS Uptime Summary
-              </CardTitle>
-              {!uptimeLoading && (
-                <button
-                  onClick={loadVPSUptimeData}
-                  className="inline-flex items-center px-3 py-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  title="Refresh uptime data"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </button>
-              )}
+      {/* VPS Uptime Summary Section */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center">
+              <Clock className="h-5 w-5 mr-2 text-primary" />
+              VPS Uptime Summary
+            </CardTitle>
+            {!uptimeLoading && (
+              <button
+                onClick={loadVPSUptimeData}
+                className="inline-flex items-center px-3 py-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                title="Refresh uptime data"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {uptimeLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="ml-3 text-muted-foreground">Loading VPS uptime data...</p>
             </div>
-          </CardHeader>
-          <CardContent>
-            {uptimeLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="ml-3 text-muted-foreground">Loading VPS uptime data...</p>
-              </div>
-            ) : uptimeError ? (
-              <div className="text-center py-8">
-                <p className="text-destructive mb-4">{uptimeError}</p>
-                <button
-                  onClick={loadVPSUptimeData}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Retry
-                </button>
-              </div>
-            ) : vpsUptimeData && vpsUptimeData.vpsInstances.length > 0 ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Total Active Hours</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {vpsUptimeData.totalActiveHours.toLocaleString('en-US', {
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 1
-                      })} hours
-                    </p>
-                  </div>
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Total Estimated Cost</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {formatCurrencyValue(vpsUptimeData.totalEstimatedCost)}
-                    </p>
-                  </div>
+          ) : uptimeError ? (
+            <div className="text-center py-8">
+              <p className="text-destructive mb-4">{uptimeError}</p>
+              <button
+                onClick={loadVPSUptimeData}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </button>
+            </div>
+          ) : vpsUptimeData && vpsUptimeData.vpsInstances.length > 0 ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Total Active Hours</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {vpsUptimeData.totalActiveHours.toLocaleString('en-US', {
+                      minimumFractionDigits: 1,
+                      maximumFractionDigits: 1
+                    })} hours
+                  </p>
                 </div>
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Total Estimated Cost</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {formatCurrencyValue(vpsUptimeData.totalEstimatedCost)}
+                  </p>
+                </div>
+              </div>
 
-                {/* VPS Uptime Details Table */}
-                <div className="mt-6">
-                  <h4 className="text-sm font-medium text-foreground mb-3">VPS Instance Details</h4>
-                  
-                  {/* Desktop Table View */}
-                  <div className="hidden md:block overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            VPS Label
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            Active Hours
-                          </th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            Hourly Rate
-                          </th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            Estimated Cost
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-card divide-y divide-border">
-                        {vpsUptimeData.vpsInstances.map((vps) => (
-                          <tr key={vps.id} className="hover:bg-secondary/50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
-                              {vps.label}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                vps.status === 'running' 
-                                  ? 'bg-primary/10 text-primary border border-primary/20' 
-                                  : vps.status === 'stopped'
+              {/* VPS Uptime Details Table */}
+              <div className="mt-6">
+                <h4 className="text-sm font-medium text-foreground mb-3">VPS Instance Details</h4>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          VPS Label
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Active Hours
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Hourly Rate
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Estimated Cost
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-card divide-y divide-border">
+                      {vpsUptimeData.vpsInstances.map((vps) => (
+                        <tr key={vps.id} className="hover:bg-secondary/50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
+                            {vps.label}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${vps.status === 'running'
+                                ? 'bg-primary/10 text-primary border border-primary/20'
+                                : vps.status === 'stopped'
                                   ? 'bg-muted text-muted-foreground'
                                   : 'bg-muted text-muted-foreground'
                               }`}>
-                                {vps.status.charAt(0).toUpperCase() + vps.status.slice(1)}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground text-right">
-                              {vps.activeHours.toLocaleString('en-US', {
-                                minimumFractionDigits: 1,
-                                maximumFractionDigits: 1
-                              })}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground text-right">
-                              {formatCurrencyValue(vps.hourlyRate)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground text-right">
-                              {formatCurrencyValue(vps.estimatedCost)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                              {vps.status.charAt(0).toUpperCase() + vps.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground text-right">
+                            {vps.activeHours.toLocaleString('en-US', {
+                              minimumFractionDigits: 1,
+                              maximumFractionDigits: 1
+                            })}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground text-right">
+                            {formatCurrencyValue(vps.hourlyRate)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground text-right">
+                            {formatCurrencyValue(vps.estimatedCost)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                  {/* Mobile Card View */}
-                  <div className="md:hidden space-y-3">
-                    {vpsUptimeData.vpsInstances.map((vps) => (
-                      <div key={vps.id} className="bg-card border border rounded-lg p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h5 className="text-sm font-medium text-foreground">{vps.label}</h5>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            vps.status === 'running' 
-                              ? 'bg-primary/10 text-primary border border-primary/20' 
-                              : vps.status === 'stopped'
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {vpsUptimeData.vpsInstances.map((vps) => (
+                    <div key={vps.id} className="bg-card border border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-sm font-medium text-foreground">{vps.label}</h5>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${vps.status === 'running'
+                            ? 'bg-primary/10 text-primary border border-primary/20'
+                            : vps.status === 'stopped'
                               ? 'bg-muted text-muted-foreground'
                               : 'bg-muted text-muted-foreground'
                           }`}>
-                            {vps.status.charAt(0).toUpperCase() + vps.status.slice(1)}
-                          </span>
+                          {vps.status.charAt(0).toUpperCase() + vps.status.slice(1)}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Active Hours</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {vps.activeHours.toLocaleString('en-US', {
+                              minimumFractionDigits: 1,
+                              maximumFractionDigits: 1
+                            })}
+                          </p>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Active Hours</p>
-                            <p className="text-sm font-medium text-foreground">
-                              {vps.activeHours.toLocaleString('en-US', {
-                                minimumFractionDigits: 1,
-                                maximumFractionDigits: 1
-                              })}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Hourly Rate</p>
-                            <p className="text-sm font-medium text-foreground">
-                              {formatCurrencyValue(vps.hourlyRate)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="pt-2 border-t border-border">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs text-muted-foreground">Estimated Cost</p>
-                            <p className="text-sm font-bold text-foreground">
-                              {formatCurrencyValue(vps.estimatedCost)}
-                            </p>
-                          </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Hourly Rate</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {formatCurrencyValue(vps.hourlyRate)}
+                          </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Export Button */}
-                <div className="mt-6 flex justify-end">
-                  <button 
-                    onClick={handleExportVPSUptime}
-                    className="inline-flex items-center px-4 py-2 border border shadow-sm text-sm leading-4 font-medium rounded-md text-muted-foreground bg-secondary hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export VPS Uptime Report
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-                <p className="text-muted-foreground">No VPS instances found</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Create a VPS instance to see uptime tracking
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Tabs */}
-        <Card>
-          <CardHeader className="border-b border">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'overview'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:border-input dark:hover:border-gray-600'
-                }`}
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => setActiveTab('transactions')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'transactions'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:border-input dark:hover:border-gray-600'
-                }`}
-              >
-                Wallet Transactions
-              </button>
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'history'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:border-input dark:hover:border-gray-600'
-                }`}
-              >
-                Payment History
-              </button>
-            </nav>
-          </CardHeader>
-
-          <CardContent>
-            {activeTab === 'overview' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium text-foreground mb-4">Recent Activity</h3>
-                  <div className="space-y-3">
-                    {transactions.map((transaction) => (
-                      <div 
-                        key={transaction.id} 
-                        onClick={() => navigate(`/billing/transaction/${transaction.id}`)}
-                        className="flex items-center justify-between py-3 px-3 -mx-3 border-b border-border border last:border-b-0 rounded-md cursor-pointer hover:bg-secondary/80/50 transition-colors"
-                      >
-                        <div className="flex items-center">
-                          <div className={`p-2 rounded-lg ${transaction.type === 'credit' ? 'bg-primary/10' : 'bg-muted/50'}`}>
-                            {transaction.type === 'credit' ? (
-                              <ArrowUpRight className="h-4 w-4 text-primary" />
-                            ) : (
-                              <ArrowDownLeft className="h-4 w-4 text-foreground" />
-                            )}
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium text-foreground">{transaction.description}</p>
-                            <p className="text-xs text-muted-foreground">{formatDate(transaction.createdAt)}</p>
-                          </div>
+                      <div className="pt-2 border-t border-border">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">Estimated Cost</p>
+                          <p className="text-sm font-bold text-foreground">
+                            {formatCurrencyValue(vps.estimatedCost)}
+                          </p>
                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Export Button */}
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={handleExportVPSUptime}
+                  className="inline-flex items-center px-4 py-2 border border shadow-sm text-sm leading-4 font-medium rounded-md text-muted-foreground bg-secondary hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export VPS Uptime Report
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground">No VPS instances found</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Create a VPS instance to see uptime tracking
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tabs */}
+      <Card>
+        <CardHeader className="border-b border">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'overview'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:border-input dark:hover:border-gray-600'
+                }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('transactions')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'transactions'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:border-input dark:hover:border-gray-600'
+                }`}
+            >
+              Wallet Transactions
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'history'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-300 hover:border-input dark:hover:border-gray-600'
+                }`}
+            >
+              Payment History
+            </button>
+          </nav>
+        </CardHeader>
+
+        <CardContent>
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium text-foreground mb-4">Recent Activity</h3>
+                <div className="space-y-3">
+                  {transactions.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      onClick={() => navigate(`/billing/transaction/${transaction.id}`)}
+                      className="flex items-center justify-between py-3 px-3 -mx-3 border-b border-border border last:border-b-0 rounded-md cursor-pointer hover:bg-secondary/80/50 transition-colors"
+                    >
+                      <div className="flex items-center">
+                        <div className={`p-2 rounded-lg ${transaction.type === 'credit' ? 'bg-primary/10' : 'bg-muted/50'}`}>
+                          {transaction.type === 'credit' ? (
+                            <ArrowUpRight className="h-4 w-4 text-primary" />
+                          ) : (
+                            <ArrowDownLeft className="h-4 w-4 text-foreground" />
+                          )}
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-foreground">{transaction.description}</p>
+                          <p className="text-xs text-muted-foreground">{formatDate(transaction.createdAt)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
                         <div className="text-right">
                           <p className={`text-sm font-medium ${transaction.type === 'credit' ? 'text-primary' : 'text-foreground'}`}>
                             {transaction.type === 'credit' ? '+' : '-'}{formatCurrencyValue(transaction.amount)}
@@ -1026,260 +1042,289 @@ const Billing: React.FC = () => {
                               : 'N/A'}
                           </p>
                         </div>
+                        <button
+                          onClick={(e) => handleViewInvoice(transaction.id, e)}
+                          disabled={invoiceLoadingId === transaction.id}
+                          title="View Invoice"
+                          className="inline-flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                        >
+                          {invoiceLoadingId === transaction.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <FileText className="h-4 w-4" />
+                          )}
+                        </button>
                       </div>
-                    ))}
-                  </div>
-                  {overviewPagination.totalItems > 0 && (
-                    <Pagination
-                      currentPage={overviewPagination.currentPage}
-                      totalItems={overviewPagination.totalItems}
-                      itemsPerPage={overviewPagination.itemsPerPage}
-                      onPageChange={(page) => setOverviewPagination(prev => ({ ...prev, currentPage: page }))}
-                      onItemsPerPageChange={(itemsPerPage) => setOverviewPagination(prev => ({ ...prev, itemsPerPage, currentPage: 1 }))}
-                      className="mt-4"
-                    />
-                  )}
+                    </div>
+                  ))}
                 </div>
+                {overviewPagination.totalItems > 0 && (
+                  <Pagination
+                    currentPage={overviewPagination.currentPage}
+                    totalItems={overviewPagination.totalItems}
+                    itemsPerPage={overviewPagination.itemsPerPage}
+                    onPageChange={(page) => setOverviewPagination(prev => ({ ...prev, currentPage: page }))}
+                    onItemsPerPageChange={(itemsPerPage) => setOverviewPagination(prev => ({ ...prev, itemsPerPage, currentPage: 1 }))}
+                    className="mt-4"
+                  />
+                )}
               </div>
-            )}
+            </div>
+          )}
 
-            {activeTab === 'transactions' && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-foreground">Wallet Transactions</h3>
-                  <button 
-                    onClick={handleExportTransactions}
+          {activeTab === 'transactions' && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-foreground">Wallet Transactions</h3>
+                <button
+                  onClick={handleExportTransactions}
+                  className="inline-flex items-center px-3 py-2 border border shadow-sm text-sm leading-4 font-medium rounded-md text-muted-foreground bg-secondary hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </button>
+              </div>
+              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Amount
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Balance After
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Invoice
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-card divide-y divide-border">
+                    {transactions.map((transaction) => (
+                      <tr
+                        key={transaction.id}
+                        onClick={() => navigate(`/billing/transaction/${transaction.id}`)}
+                        className="cursor-pointer hover:bg-secondary/80 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                          {transaction.description}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${transaction.type === 'credit' ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-muted/50 text-foreground'
+                            }`}>
+                            {transaction.type === 'credit' ? 'Credit' : 'Debit'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                          {transaction.type === 'credit' ? '+' : '-'}{formatCurrencyValue(transaction.amount)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                          {formatDate(transaction.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                          {formatCurrencyValue(transaction.balanceAfter)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={(e) => handleViewInvoice(transaction.id, e)}
+                            disabled={invoiceLoadingId === transaction.id}
+                            title="View Invoice"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground border border hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {invoiceLoadingId === transaction.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <FileText className="h-3.5 w-3.5" />
+                            )}
+                            Invoice
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {transactionsPagination.totalItems > 0 && (
+                <Pagination
+                  currentPage={transactionsPagination.currentPage}
+                  totalItems={transactionsPagination.totalItems}
+                  itemsPerPage={transactionsPagination.itemsPerPage}
+                  onPageChange={(page) => setTransactionsPagination(prev => ({ ...prev, currentPage: page }))}
+                  onItemsPerPageChange={(itemsPerPage) => setTransactionsPagination(prev => ({ ...prev, itemsPerPage, currentPage: 1 }))}
+                  className="mt-4"
+                />
+              )}
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-foreground">Payment History</h3>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowFilter(!showFilter)}
+                    className={`inline-flex items-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${hasActiveFilters
+                        ? 'border-primary text-primary bg-primary/10 dark:border-primary dark:text-primary dark:bg-primary/20'
+                        : 'border text-muted-foreground bg-secondary hover:bg-secondary/80'
+                      }`}
+                  >
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filter
+                    {hasActiveFilters && (
+                      <span className="ml-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-primary-foreground bg-primary rounded-full">
+                        {[filters.status, filters.dateFrom, filters.dateTo].filter(Boolean).length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleExportPaymentHistory}
                     className="inline-flex items-center px-3 py-2 border border shadow-sm text-sm leading-4 font-medium rounded-md text-muted-foreground bg-secondary hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    Export
+                    Export as CSV
                   </button>
                 </div>
-                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Description
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Type
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Amount
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Date
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Balance After
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-card divide-y divide-border">
-                      {transactions.map((transaction) => (
-                        <tr 
-                          key={transaction.id}
-                          onClick={() => navigate(`/billing/transaction/${transaction.id}`)}
-                          className="cursor-pointer hover:bg-secondary/80 transition-colors"
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                            {transaction.description}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              transaction.type === 'credit' ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-muted/50 text-foreground'
-                            }`}>
-                              {transaction.type === 'credit' ? 'Credit' : 'Debit'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                            {transaction.type === 'credit' ? '+' : '-'}{formatCurrencyValue(transaction.amount)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                            {formatDate(transaction.createdAt)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                            {formatCurrencyValue(transaction.balanceAfter)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {transactionsPagination.totalItems > 0 && (
-                  <Pagination
-                    currentPage={transactionsPagination.currentPage}
-                    totalItems={transactionsPagination.totalItems}
-                    itemsPerPage={transactionsPagination.itemsPerPage}
-                    onPageChange={(page) => setTransactionsPagination(prev => ({ ...prev, currentPage: page }))}
-                    onItemsPerPageChange={(itemsPerPage) => setTransactionsPagination(prev => ({ ...prev, itemsPerPage, currentPage: 1 }))}
-                    className="mt-4"
-                  />
-                )}
               </div>
-            )}
 
-            {activeTab === 'history' && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-foreground">Payment History</h3>
-                  <div className="flex items-center space-x-2">
-                    <button 
-                      onClick={() => setShowFilter(!showFilter)}
-                      className={`inline-flex items-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
-                        hasActiveFilters 
-                          ? 'border-primary text-primary bg-primary/10 dark:border-primary dark:text-primary dark:bg-primary/20' 
-                          : 'border text-muted-foreground bg-secondary hover:bg-secondary/80'
-                      }`}
+              {/* Filter Panel */}
+              {showFilter && (
+                <div className="bg-muted rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium text-foreground">Filter Options</h4>
+                    <button
+                      onClick={() => setShowFilter(false)}
+                      className="text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300"
                     >
-                      <Filter className="h-4 w-4 mr-2" />
-                      Filter
-                      {hasActiveFilters && (
-                        <span className="ml-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-primary-foreground bg-primary rounded-full">
-                          {[filters.status, filters.dateFrom, filters.dateTo].filter(Boolean).length}
-                        </span>
-                      )}
-                    </button>
-                    <button 
-                      onClick={handleExportPaymentHistory}
-                      className="inline-flex items-center px-3 py-2 border border shadow-sm text-sm leading-4 font-medium rounded-md text-muted-foreground bg-secondary hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Export as CSV
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
-                </div>
-
-                {/* Filter Panel */}
-                {showFilter && (
-                  <div className="bg-muted rounded-lg p-4 mb-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-foreground">Filter Options</h4>
-                      <button
-                        onClick={() => setShowFilter(false)}
-                        className="text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-300"
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label htmlFor="status-filter" className="block text-sm font-medium text-muted-foreground mb-1">
+                        Status
+                      </label>
+                      <select
+                        id="status-filter"
+                        value={filters.status}
+                        onChange={(e) => handleFilterChange('status', e.target.value)}
+                        className="block w-full px-3 py-2 border border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                       >
-                        <X className="h-4 w-4" />
+                        <option value="">All Statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                        <option value="failed">Failed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="refunded">Refunded</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="date-from" className="block text-sm font-medium text-muted-foreground mb-1">
+                        From Date
+                      </label>
+                      <input
+                        type="date"
+                        id="date-from"
+                        value={filters.dateFrom}
+                        onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                        className="block w-full px-3 py-2 border border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="date-to" className="block text-sm font-medium text-muted-foreground mb-1">
+                        To Date
+                      </label>
+                      <input
+                        type="date"
+                        id="date-to"
+                        value={filters.dateTo}
+                        onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                        className="block w-full px-3 py-2 border border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                  {hasActiveFilters && (
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        onClick={clearFilters}
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded text-primary hover:text-primary/80"
+                      >
+                        Clear Filters
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label htmlFor="status-filter" className="block text-sm font-medium text-muted-foreground mb-1">
-                          Status
-                        </label>
-                        <select
-                          id="status-filter"
-                          value={filters.status}
-                          onChange={(e) => handleFilterChange('status', e.target.value)}
-                          className="block w-full px-3 py-2 border border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                        >
-                          <option value="">All Statuses</option>
-                          <option value="completed">Completed</option>
-                          <option value="pending">Pending</option>
-                          <option value="failed">Failed</option>
-                          <option value="cancelled">Cancelled</option>
-                          <option value="refunded">Refunded</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="date-from" className="block text-sm font-medium text-muted-foreground mb-1">
-                          From Date
-                        </label>
-                        <input
-                          type="date"
-                          id="date-from"
-                          value={filters.dateFrom}
-                          onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                          className="block w-full px-3 py-2 border border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="date-to" className="block text-sm font-medium text-muted-foreground mb-1">
-                          To Date
-                        </label>
-                        <input
-                          type="date"
-                          id="date-to"
-                          value={filters.dateTo}
-                          onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                          className="block w-full px-3 py-2 border border rounded-md bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                        />
-                      </div>
-                    </div>
-                    {hasActiveFilters && (
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          onClick={clearFilters}
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded text-primary hover:text-primary/80"
-                        >
-                          Clear Filters
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Description
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Amount
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Provider
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Date
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-card divide-y divide-border">
-                      {paymentHistory.map((payment) => (
-                        <tr key={payment.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                            {payment.description}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                            {formatCurrencyValue(payment.amount)} {payment.currency}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge variant="outline" className={getStatusBadgeClasses(payment.status)}>
-                              {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                            {payment.provider.charAt(0).toUpperCase() + payment.provider.slice(1)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                            {formatDate(payment.createdAt)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  )}
                 </div>
-                {historyPagination.totalItems > 0 && (
-                  <Pagination
-                    currentPage={historyPagination.currentPage}
-                    totalItems={historyPagination.totalItems}
-                    itemsPerPage={historyPagination.itemsPerPage}
-                    onPageChange={(page) => setHistoryPagination(prev => ({ ...prev, currentPage: page }))}
-                    onItemsPerPageChange={(itemsPerPage) => setHistoryPagination(prev => ({ ...prev, itemsPerPage, currentPage: 1 }))}
-                    className="mt-4"
-                  />
-                )}
+              )}
+
+              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-gray-700 md:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Description
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Amount
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Provider
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Date
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-card divide-y divide-border">
+                    {paymentHistory.map((payment) => (
+                      <tr key={payment.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                          {payment.description}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                          {formatCurrencyValue(payment.amount)} {payment.currency}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge variant="outline" className={getStatusBadgeClasses(payment.status)}>
+                            {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                          {payment.provider.charAt(0).toUpperCase() + payment.provider.slice(1)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                          {formatDate(payment.createdAt)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </CardContent>
-        </Card>
+              {historyPagination.totalItems > 0 && (
+                <Pagination
+                  currentPage={historyPagination.currentPage}
+                  totalItems={historyPagination.totalItems}
+                  itemsPerPage={historyPagination.itemsPerPage}
+                  onPageChange={(page) => setHistoryPagination(prev => ({ ...prev, currentPage: page }))}
+                  onItemsPerPageChange={(itemsPerPage) => setHistoryPagination(prev => ({ ...prev, itemsPerPage, currentPage: 1 }))}
+                  className="mt-4"
+                />
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
