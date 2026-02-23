@@ -94,8 +94,7 @@ export const matchesDefaultAllowedRegions = (
 
 export const shouldFilterByAllowedRegions = (
   normalizedRegions: string[]
-): boolean =>
-  normalizedRegions.length > 0 && !matchesDefaultAllowedRegions(normalizedRegions);
+): boolean => normalizedRegions.length > 0;
 
 export const parseStoredAllowedRegions = (rawValue: unknown): string[] => {
   if (!rawValue) {
