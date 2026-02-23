@@ -71,16 +71,18 @@ router.get('/', requireOrganization, async (req: Request, res: Response) => {
     const total = parseInt(countResult.rows[0]?.total || '0', 10);
 
     // Get paginated results
-    const sql = `SELECT id, user_id, organization_id, event_type, entity_type, entity_id, message, status, metadata, created_at
-                 FROM activity_logs
-                 WHERE ${clauses.join(' AND ')}
-                 ORDER BY created_at DESC
+    const sql = `SELECT a.id, a.user_id, a.organization_id, a.event_type, a.entity_type, a.entity_id, a.message, a.status, a.metadata, a.created_at,
+                        u.role as user_role
+                 FROM activity_logs a
+                 LEFT JOIN users u ON a.user_id = u.id
+                 WHERE ${clauses.map(c => c.replace(/(\w+_id|\w+_type|status|created_at)/g, 'a.$1')).join(' AND ')}
+                 ORDER BY a.created_at DESC
                  LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
     params.push(lim, off);
 
     const result = await query(sql, params);
-    
-    res.json({ 
+
+    res.json({
       activities: result.rows || [],
       pagination: {
         total,
@@ -138,7 +140,7 @@ router.get('/export', requireOrganization, async (req: Request, res: Response) =
                  FROM activity_logs
                  WHERE ${clauses.join(' AND ')}
                  ORDER BY created_at DESC`;
-  await ensureActivityLogsTable();
+    await ensureActivityLogsTable();
     const result = await query(sql, params);
 
     const header = 'created_at,user_id,event_type,entity_type,entity_id,status,message\n';
