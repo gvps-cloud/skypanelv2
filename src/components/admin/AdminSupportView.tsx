@@ -222,6 +222,8 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
       if (ticket) {
         openTicket(ticket);
         onFocusTicketHandled?.();
+      } else {
+        onFocusTicketHandled?.();
       }
     }
   }, [pendingFocusTicketId, tickets, openTicket, onFocusTicketHandled]);
@@ -262,11 +264,18 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         );
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to update status");
+        const updatedStatus = (data?.ticket?.status as TicketStatus) || status;
 
-        toast.success(`Ticket marked as ${status.replace("_", " ")}`);
+        const toastMessage =
+          status === "resolved" && updatedStatus === "closed"
+            ? "Ticket resolved and closed"
+            : `Ticket marked as ${updatedStatus.replace("_", " ")}`;
+        toast.success(toastMessage);
         await fetchTickets();
         if (selectedTicket?.id === ticketId) {
-          setSelectedTicket((prev) => (prev ? { ...prev, status } : prev));
+          setSelectedTicket((prev) =>
+            prev ? { ...prev, status: updatedStatus } : prev,
+          );
         }
       } catch (error: any) {
         toast.error(error.message || "Failed to update ticket status");
@@ -556,7 +565,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                         In Progress
                       </Button>
                     )}
-                    {selectedTicket.status !== "resolved" && (
+                    {selectedTicket.status !== "closed" && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -565,7 +574,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                         }
                       >
                         <CheckCircle className="mr-1 h-4 w-4" />
-                        Resolve
+                        Resolve & Close
                       </Button>
                     )}
                     {selectedTicket.status !== "closed" && (

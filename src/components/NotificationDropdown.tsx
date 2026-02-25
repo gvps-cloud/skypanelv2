@@ -6,10 +6,15 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, Check, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildApiUrl, apiClient } from "@/lib/api";
@@ -22,7 +27,7 @@ interface Notification {
   entity_type: string;
   entity_id?: string | null;
   message?: string | null;
-  status: 'success' | 'warning' | 'error' | 'info';
+  status: "success" | "warning" | "error" | "info";
   metadata?: Record<string, unknown>;
   created_at: string;
   is_read: boolean;
@@ -51,32 +56,88 @@ const NotificationDropdown: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const navigate = useNavigate();
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const syncUnreadCount = (items: Notification[]) => {
     setUnreadCount(items.filter((n) => !n.is_read).length);
   };
 
-  const markAsRead = async (notificationId: string) => {
-    if (!token) return;
-    try {
-      await apiClient.patch(`/notifications/${notificationId}/read`);
+  const markAsRead = useCallback(
+    async (notificationId: string) => {
+      if (!token) return;
+      try {
+        await apiClient.patch(`/notifications/${notificationId}/read`);
 
-      setNotifications((prev) => {
-        const next = prev.map((notification) =>
-          notification.id === notificationId
-            ? { ...notification, is_read: true, read_at: new Date().toISOString() }
-            : notification
-        );
-        syncUnreadCount(next);
-        return next;
-      });
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-      toast.error("Failed to mark notification as read");
+        setNotifications((prev) => {
+          const next = prev.map((notification) =>
+            notification.id === notificationId
+              ? {
+                  ...notification,
+                  is_read: true,
+                  read_at: new Date().toISOString(),
+                }
+              : notification,
+          );
+          syncUnreadCount(next);
+          return next;
+        });
+      } catch (error) {
+        console.error("Error marking notification as read:", error);
+        toast.error("Failed to mark notification as read");
+      }
+    },
+    [token],
+  );
+
+  const getNotificationTicketId = (
+    notification: Notification,
+  ): string | null => {
+    if (notification.entity_type !== "support_ticket") {
+      return null;
     }
+
+    const metadataTicketId = notification.metadata?.ticket_id;
+    if (
+      typeof metadataTicketId === "string" &&
+      metadataTicketId.trim().length > 0
+    ) {
+      return metadataTicketId;
+    }
+
+    if (
+      typeof notification.entity_id === "string" &&
+      notification.entity_id.trim().length > 0
+    ) {
+      return notification.entity_id;
+    }
+
+    return null;
   };
+
+  const handleNotificationSelect = useCallback(
+    async (notification: Notification) => {
+      const ticketId = getNotificationTicketId(notification);
+      if (!ticketId) {
+        return;
+      }
+
+      if (!notification.is_read) {
+        await markAsRead(notification.id);
+      }
+
+      setOpen(false);
+
+      if (user?.role === "admin") {
+        navigate(`/admin?ticketId=${encodeURIComponent(ticketId)}#support`);
+        return;
+      }
+
+      navigate(`/support?ticketId=${encodeURIComponent(ticketId)}`);
+    },
+    [navigate, user?.role, markAsRead],
+  );
 
   const markAllAsRead = async () => {
     if (!token || unreadCount === 0) return;
@@ -148,8 +209,10 @@ const NotificationDropdown: React.FC = () => {
       }
 
       // EventSource doesn't support custom headers, so we pass the token as a query parameter
-      const url = token 
-        ? buildApiUrl(`/notifications/stream?token=${encodeURIComponent(token)}`)
+      const url = token
+        ? buildApiUrl(
+            `/notifications/stream?token=${encodeURIComponent(token)}`,
+          )
         : buildApiUrl("/notifications/stream");
 
       eventSource = new EventSource(url);
@@ -158,7 +221,7 @@ const NotificationDropdown: React.FC = () => {
       eventSource.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data);
-          if (payload?.type === 'notification' && payload?.data) {
+          if (payload?.type === "notification" && payload?.data) {
             const notification: Notification = payload.data;
             if (notification.is_read) {
               return; // Skip already-read activity such as suppressed audit logs
@@ -166,7 +229,10 @@ const NotificationDropdown: React.FC = () => {
             setNotifications((prev) => [notification, ...prev]);
             setUnreadCount((prev) => prev + 1);
             // Brief toast for new notifications
-            toast.success(notification.message || `${notification.event_type} ${notification.entity_type}`);
+            toast.success(
+              notification.message ||
+                `${notification.event_type} ${notification.entity_type}`,
+            );
           }
           // Ignore other event types like 'connected' or heartbeats
         } catch (error) {
@@ -180,17 +246,21 @@ const NotificationDropdown: React.FC = () => {
 
       eventSource.onerror = () => {
         eventSource?.close();
-        
+
         // Only show console warnings after the first retry attempt fails
         if (retryCount > 0) {
-          console.warn(`Notification stream connection failed. Retry ${retryCount}/${maxRetries}`);
+          console.warn(
+            `Notification stream connection failed. Retry ${retryCount}/${maxRetries}`,
+          );
         }
-        
+
         if (retryCount < maxRetries) {
           retryCount++;
           setTimeout(connectEventSource, retryDelay);
         } else {
-          console.warn("Notification stream: Max retries reached. Notifications will not be real-time.");
+          console.warn(
+            "Notification stream: Max retries reached. Notifications will not be real-time.",
+          );
         }
       };
     };
@@ -226,11 +296,13 @@ const NotificationDropdown: React.FC = () => {
         >
           <Bell className="h-5 w-5" />
           {/* Always show badge, with different styling for zero count */}
-          <span className={`absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
-            unreadCount > 0 
-              ? "bg-destructive text-destructive-foreground" 
-              : "bg-muted text-muted-foreground border border-border"
-          }`}>
+          <span
+            className={`absolute -right-1 -top-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
+              unreadCount > 0
+                ? "bg-destructive text-destructive-foreground"
+                : "bg-muted text-muted-foreground border border-border"
+            }`}
+          >
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         </Button>
@@ -274,35 +346,64 @@ const NotificationDropdown: React.FC = () => {
                     notification.is_read ? "bg-background" : "bg-muted/40"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Badge className={statusVariant[notification.status] || statusVariant.info}>
-                          {notification.status}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {formatTimeAgo(notification.created_at)}
-                        </span>
+                  {(() => {
+                    const ticketId = getNotificationTicketId(notification);
+                    const isTicketNotification = Boolean(ticketId);
+
+                    return (
+                      <div className="flex items-start justify-between gap-3">
+                        <button
+                          type="button"
+                          disabled={!isTicketNotification}
+                          onClick={() => {
+                            if (isTicketNotification) {
+                              void handleNotificationSelect(notification);
+                            }
+                          }}
+                          className={`flex-1 space-y-1 text-left ${
+                            isTicketNotification
+                              ? "cursor-pointer hover:opacity-90"
+                              : "cursor-default"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              className={
+                                statusVariant[notification.status] ||
+                                statusVariant.info
+                              }
+                            >
+                              {notification.status}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {formatTimeAgo(notification.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium text-foreground">
+                            {notification.message ||
+                              `${notification.event_type} ${notification.entity_type}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {notification.entity_type}
+                          </p>
+                        </button>
+                        {!notification.is_read && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="mt-1"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void markAsRead(notification.id);
+                            }}
+                            aria-label="Mark notification as read"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
-                      <p className="text-sm font-medium text-foreground">
-                        {notification.message || `${notification.event_type} ${notification.entity_type}`}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {notification.entity_type}
-                      </p>
-                    </div>
-                    {!notification.is_read && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="mt-1"
-                        onClick={() => markAsRead(notification.id)}
-                        aria-label="Mark notification as read"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>

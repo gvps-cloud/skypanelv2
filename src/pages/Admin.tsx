@@ -239,7 +239,7 @@ const SectionPanel: React.FC<SectionPanelProps> = ({
       className={cn(
         "space-y-6",
         activeSection === section ? "block" : "hidden",
-        className
+        className,
       )}
     >
       {children}
@@ -333,7 +333,6 @@ interface AdminUserRecord {
   role: string;
   created_at: string;
   updated_at: string;
-
 }
 
 interface LinodeStackScriptSummary {
@@ -500,7 +499,11 @@ const SortableProviderRow: React.FC<SortableProviderRowProps> = ({
   };
 
   return (
-    <TableRow ref={setNodeRef} style={style} className={isDragging ? "relative z-50" : ""}>
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className={isDragging ? "relative z-50" : ""}
+    >
       <TableCell className="w-8">
         <div
           {...attributes}
@@ -542,16 +545,14 @@ const SortableProviderRow: React.FC<SortableProviderRowProps> = ({
         )}
         {(!provider.validation_status ||
           provider.validation_status === "unknown") && (
-            <Badge variant="secondary" className="gap-1">
-              <HelpCircle className="h-3 w-3" /> Unknown
-            </Badge>
-          )}
+          <Badge variant="secondary" className="gap-1">
+            <HelpCircle className="h-3 w-3" /> Unknown
+          </Badge>
+        )}
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">
         {provider.last_api_call ? (
-          <span
-            title={new Date(provider.last_api_call).toLocaleString()}
-          >
+          <span title={new Date(provider.last_api_call).toLocaleString()}>
             {new Date(provider.last_api_call).toLocaleDateString()}
           </span>
         ) : (
@@ -610,10 +611,11 @@ const Admin: React.FC = () => {
 
   // Tickets state
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [pendingFocusTicketId, setPendingFocusTicketId] =
-    useState<string | null>(null);
+  const [pendingFocusTicketId, setPendingFocusTicketId] = useState<
+    string | null
+  >(null);
   const [pendingFocusUserId, setPendingFocusUserId] = useState<string | null>(
-    null
+    null,
   );
 
   const [stackscriptConfigs, setStackscriptConfigs] = useState<
@@ -635,7 +637,7 @@ const Admin: React.FC = () => {
   >({});
   const [stackscriptSearch, setStackscriptSearch] = useState("");
   const [savingStackscriptId, setSavingStackscriptId] = useState<number | null>(
-    null
+    null,
   );
   const [loadingStackscripts, setLoadingStackscripts] = useState(false);
   const [themeConfigLoading, setThemeConfigLoading] = useState(false);
@@ -656,8 +658,9 @@ const Admin: React.FC = () => {
   const [userEditModalOpen, setUserEditModalOpen] = useState(false);
 
   const [providers, setProviders] = useState<AdminProvider[]>([]);
-  const [validatingProviderId, setValidatingProviderId] =
-    useState<string | null>(null);
+  const [validatingProviderId, setValidatingProviderId] = useState<
+    string | null
+  >(null);
   const [showAddProvider, setShowAddProvider] = useState(false);
   const [newProvider, setNewProvider] = useState<ProviderFormState>({
     name: "",
@@ -667,9 +670,10 @@ const Admin: React.FC = () => {
   });
   const [editProviderId, setEditProviderId] = useState<string | null>(null);
   const [editProvider, setEditProvider] = useState<Partial<AdminProvider>>({});
-  const [deleteProviderId, setDeleteProviderId] =
-    useState<string | null>(null);
-  const [providerPlanPages, setProviderPlanPages] = useState<Record<string, number>>({});
+  const [deleteProviderId, setDeleteProviderId] = useState<string | null>(null);
+  const [providerPlanPages, setProviderPlanPages] = useState<
+    Record<string, number>
+  >({});
   const [plans, setPlans] = useState<VPSPlan[]>([]);
   const [planProviderFilter, setPlanProviderFilter] = useState<string>("all");
   const [planTypeFilter, setPlanTypeFilter] = useState<string>("all");
@@ -700,7 +704,7 @@ const Admin: React.FC = () => {
     (user: AdminUserRecord) => {
       navigate(`/admin/user/${user.id}`);
     },
-    [navigate]
+    [navigate],
   );
 
   const handleCloseUserProfileModal = useCallback(() => {
@@ -743,7 +747,7 @@ const Admin: React.FC = () => {
         }
       }
     },
-    [startImpersonation]
+    [startImpersonation],
   );
 
   const handleConfirmAdminImpersonation = useCallback(async () => {
@@ -771,7 +775,7 @@ const Admin: React.FC = () => {
 
   const authHeader = useMemo(
     () => ({ Authorization: `Bearer ${token}` }),
-    [token]
+    [token],
   );
 
   const updateAdminHash = useCallback(
@@ -786,13 +790,26 @@ const Admin: React.FC = () => {
         if (location.hash !== expectedHash) {
           navigate(
             { pathname: "/admin", hash: expectedHash },
-            { replace: true }
+            { replace: true },
           );
         }
       }
     },
-    [location.hash, navigate]
+    [location.hash, navigate],
   );
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const focusTicketId = searchParams.get("ticketId");
+    if (!focusTicketId) {
+      return;
+    }
+
+    setPendingFocusTicketId(focusTicketId);
+    setActiveTab((prev) => (prev === "support" ? prev : "support"));
+
+    navigate({ pathname: "/admin", hash: "#support" }, { replace: true });
+  }, [location.search, navigate]);
 
   useEffect(() => {
     const hashValueRaw = location.hash ? location.hash.slice(1) : "";
@@ -828,7 +845,7 @@ const Admin: React.FC = () => {
 
       updateAdminHash(normalized);
     },
-    [activeTab, updateAdminHash]
+    [activeTab, updateAdminHash],
   );
 
   useEffect(() => {
@@ -851,12 +868,12 @@ const Admin: React.FC = () => {
   // Allowed regions strictly from admin provider configuration
   const allowedRegionIds = useMemo(() => {
     const linodeProvider = providers.find(
-      (p) => p.type === "linode" && p.active
+      (p) => p.type === "linode" && p.active,
     );
     const list =
       linodeProvider &&
-        linodeProvider.configuration &&
-        Array.isArray(linodeProvider.configuration.allowed_regions)
+      linodeProvider.configuration &&
+      Array.isArray(linodeProvider.configuration.allowed_regions)
         ? (linodeProvider.configuration.allowed_regions as string[])
         : [];
     return list;
@@ -917,8 +934,9 @@ const Admin: React.FC = () => {
     return availableStackscripts
       .filter((script) => {
         if (!searchTerm) return true;
-        const haystack = `${script.label} ${script.description ?? ""
-          }`.toLowerCase();
+        const haystack = `${script.label} ${
+          script.description ?? ""
+        }`.toLowerCase();
         return haystack.includes(searchTerm);
       })
       .sort((a, b) => a.label.localeCompare(b.label));
@@ -957,7 +975,7 @@ const Admin: React.FC = () => {
       const matchesStatus =
         serverStatusFilter === "all" ||
         (server.status ?? "").toLowerCase() ===
-        serverStatusFilter.toLowerCase();
+          serverStatusFilter.toLowerCase();
       if (!matchesStatus) {
         return false;
       }
@@ -1010,7 +1028,7 @@ const Admin: React.FC = () => {
 
       if (!response.ok) {
         throw new Error(
-          `Failed to load theme configuration: ${response.status}`
+          `Failed to load theme configuration: ${response.status}`,
         );
       }
 
@@ -1018,7 +1036,7 @@ const Admin: React.FC = () => {
       const theme = payload?.theme as { updatedAt?: string } | undefined;
 
       setThemeUpdatedAt(
-        typeof theme?.updatedAt === "string" ? theme.updatedAt : null
+        typeof theme?.updatedAt === "string" ? theme.updatedAt : null,
       );
       setThemeConfigLoaded(true);
     } catch (error) {
@@ -1062,7 +1080,7 @@ const Admin: React.FC = () => {
         const payload = await response.json();
         const theme = payload?.theme as { updatedAt?: string } | undefined;
         setThemeUpdatedAt(
-          typeof theme?.updatedAt === "string" ? theme.updatedAt : null
+          typeof theme?.updatedAt === "string" ? theme.updatedAt : null,
         );
 
         await reloadTheme();
@@ -1078,7 +1096,7 @@ const Admin: React.FC = () => {
         setSavingPresetId(null);
       }
     },
-    [token, setTheme, reloadTheme, fetchThemeConfiguration]
+    [token, setTheme, reloadTheme, fetchThemeConfiguration],
   );
 
   useEffect(() => {
@@ -1239,30 +1257,30 @@ const Admin: React.FC = () => {
       // Fetch configs
       const configRes = await fetch(
         `${API_BASE_URL}/admin/stackscripts/configs`,
-        { headers: authHeader }
+        { headers: authHeader },
       );
       const configData = await configRes.json();
       if (!configRes.ok)
         throw new Error(
-          configData.error || "Failed to load StackScript configs"
+          configData.error || "Failed to load StackScript configs",
         );
 
       // Fetch available stackscripts
       const scriptRes = await fetch(
         `${API_BASE_URL}/admin/upstream/stackscripts?mine=true`,
-        { headers: authHeader }
+        { headers: authHeader },
       );
       const scriptData = await scriptRes.json();
       if (!scriptRes.ok)
         throw new Error(scriptData.error || "Failed to load StackScripts");
 
       const configured: StackscriptConfigRecord[] = Array.isArray(
-        configData.configs
+        configData.configs,
       )
         ? configData.configs
         : [];
       const available: LinodeStackScriptSummary[] = Array.isArray(
-        scriptData.stackscripts
+        scriptData.stackscripts,
       )
         ? scriptData.stackscripts
         : [];
@@ -1312,7 +1330,7 @@ const Admin: React.FC = () => {
       description: string;
       display_order: number;
       is_enabled: boolean;
-    }
+    },
   ) => {
     try {
       setSavingStackscriptId(stackscriptId);
@@ -1382,7 +1400,7 @@ const Admin: React.FC = () => {
       const data = await res.json();
       if (!res.ok)
         throw new Error(
-          data.error || "Failed to load upstream provider regions"
+          data.error || "Failed to load upstream provider regions",
         );
       setLinodeRegions(data.regions);
     } catch (e: any) {
@@ -1401,7 +1419,7 @@ const Admin: React.FC = () => {
         setHostingServices(data || []);
       }
     } catch (e: any) {
-      console.warn('Failed to load hosting services', e);
+      console.warn("Failed to load hosting services", e);
     }
   };
 
@@ -1416,17 +1434,17 @@ const Admin: React.FC = () => {
       if (!res.ok) throw new Error(data.error || "Failed to load servers");
       const rows: AdminServerInstance[] = Array.isArray(data.servers)
         ? data.servers.map((server: any) => ({
-          ...server,
-          configuration:
-            server.configuration && typeof server.configuration === "object"
-              ? server.configuration
-              : null,
-          plan_specifications:
-            server.plan_specifications &&
+            ...server,
+            configuration:
+              server.configuration && typeof server.configuration === "object"
+                ? server.configuration
+                : null,
+            plan_specifications:
+              server.plan_specifications &&
               typeof server.plan_specifications === "object"
-              ? server.plan_specifications
-              : null,
-        }))
+                ? server.plan_specifications
+                : null,
+          }))
         : [];
       setServers(rows);
     } catch (e: any) {
@@ -1480,7 +1498,7 @@ const Admin: React.FC = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update plan");
       setPlans((prev) =>
-        prev.map((p) => (p.id === editPlanId ? data.plan : p))
+        prev.map((p) => (p.id === editPlanId ? data.plan : p)),
       );
       setEditPlanId(null);
       setEditPlan({});
@@ -1502,7 +1520,7 @@ const Admin: React.FC = () => {
     }
 
     const selectedType = linodeTypes.find(
-      (t) => t.id === newVPSPlan.selectedType
+      (t) => t.id === newVPSPlan.selectedType,
     );
     if (!selectedType) {
       toast.error("Selected plan type not found");
@@ -1510,7 +1528,7 @@ const Admin: React.FC = () => {
     }
 
     const selectedProvider = providers.find(
-      (p) => p.id === newVPSPlan.selectedProviderId
+      (p) => p.id === newVPSPlan.selectedProviderId,
     );
     if (!selectedProvider) {
       toast.error("Selected provider not found. Please refresh and try again.");
@@ -1530,10 +1548,18 @@ const Admin: React.FC = () => {
           provider_plan_id: selectedType.id,
           base_price: selectedType.price.monthly,
           markup_price: newVPSPlan.markupPrice,
-          backup_price_monthly: parseFloat(String(newVPSPlan.backupPriceMonthly)) || selectedType.backup_price_monthly || 0,
-          backup_price_hourly: parseFloat(String(newVPSPlan.backupPriceHourly)) || selectedType.backup_price_hourly || 0,
-          backup_upcharge_monthly: parseFloat(String(newVPSPlan.backupUpchargeMonthly)) || 0,
-          backup_upcharge_hourly: parseFloat(String(newVPSPlan.backupUpchargeHourly)) || 0,
+          backup_price_monthly:
+            parseFloat(String(newVPSPlan.backupPriceMonthly)) ||
+            selectedType.backup_price_monthly ||
+            0,
+          backup_price_hourly:
+            parseFloat(String(newVPSPlan.backupPriceHourly)) ||
+            selectedType.backup_price_hourly ||
+            0,
+          backup_upcharge_monthly:
+            parseFloat(String(newVPSPlan.backupUpchargeMonthly)) || 0,
+          backup_upcharge_hourly:
+            parseFloat(String(newVPSPlan.backupUpchargeHourly)) || 0,
           daily_backups_enabled: newVPSPlan.dailyBackupsEnabled,
           weekly_backups_enabled: newVPSPlan.weeklyBackupsEnabled,
           specifications: {
@@ -1632,12 +1658,12 @@ const Admin: React.FC = () => {
           method: "PUT",
           headers: { "Content-Type": "application/json", ...authHeader },
           body: JSON.stringify(editProvider),
-        }
+        },
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update provider");
       setProviders(
-        providers.map((p) => (p.id === editProviderId ? data.provider : p))
+        providers.map((p) => (p.id === editProviderId ? data.provider : p)),
       );
       setEditProviderId(null);
       setEditProvider({});
@@ -1675,7 +1701,7 @@ const Admin: React.FC = () => {
         {
           method: "POST",
           headers: authHeader,
-        }
+        },
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to validate provider");
@@ -1685,13 +1711,13 @@ const Admin: React.FC = () => {
         providers.map((p) =>
           p.id === providerId
             ? {
-              ...p,
-              validation_status: data.validation_status,
-              validation_message: data.validation_message,
-              last_api_call: data.last_api_call,
-            }
-            : p
-        )
+                ...p,
+                validation_status: data.validation_status,
+                validation_message: data.validation_message,
+                last_api_call: data.last_api_call,
+              }
+            : p,
+        ),
       );
 
       if (data.validation_status === "valid") {
@@ -1750,12 +1776,12 @@ const Admin: React.FC = () => {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const openTicketCount = useMemo(
     () => tickets.filter((ticket) => ticket.status === "open").length,
-    [tickets]
+    [tickets],
   );
   const ticketStats = useMemo(
     () =>
@@ -1779,9 +1805,9 @@ const Admin: React.FC = () => {
           }
           return acc;
         },
-        { open: 0, inProgress: 0, resolved: 0, urgent: 0 }
+        { open: 0, inProgress: 0, resolved: 0, urgent: 0 },
       ),
-    [tickets]
+    [tickets],
   );
 
   const planStats = useMemo(() => {
@@ -1853,10 +1879,7 @@ const Admin: React.FC = () => {
     return { total: adminUsers.length, admins };
   }, [adminUsers]);
 
-  const {
-    inProgress: inProgressTickets,
-    urgent: urgentTickets,
-  } = ticketStats;
+  const { inProgress: inProgressTickets, urgent: urgentTickets } = ticketStats;
   const {
     active: activePlanCount,
     inactive: inactivePlanCount,
@@ -1867,25 +1890,22 @@ const Admin: React.FC = () => {
     provisioning: provisioningServers,
     attention: attentionServers,
   } = serverStats;
-  const {
-    active: activeProviders,
-    inactive: inactiveProviders,
-  } = providerStats;
+  const { active: activeProviders, inactive: inactiveProviders } =
+    providerStats;
   const { total: totalAdminUsers, admins: adminUserCount } = adminStats;
-
-
 
   const strategicPanels = useMemo<StrategicPanel[]>(() => {
     const markupText =
       averagePlanMarkup !== null
-        ? formatCurrency(averagePlanMarkup) ?? "—"
+        ? (formatCurrency(averagePlanMarkup) ?? "—")
         : "—";
 
     return [
       {
         id: "support",
         title: "Support Operations",
-        description: "Orchestrate escalations and keep customer promises on track.",
+        description:
+          "Orchestrate escalations and keep customer promises on track.",
         icon: LifeBuoy,
         accent: "text-amber-600",
         summary: [
@@ -1898,7 +1918,8 @@ const Admin: React.FC = () => {
       {
         id: "servers",
         title: "Compute Fleet",
-        description: "Track dedicated infrastructure health and lifecycle status.",
+        description:
+          "Track dedicated infrastructure health and lifecycle status.",
         icon: Server,
         accent: "text-blue-600",
         summary: [
@@ -1919,7 +1940,10 @@ const Admin: React.FC = () => {
         accent: "text-blue-500",
         summary: [
           { label: "Active", value: formatCountValue(hostingServices.length) },
-          { label: "Total sites", value: formatCountValue(hostingServices.length) },
+          {
+            label: "Total sites",
+            value: formatCountValue(hostingServices.length),
+          },
         ],
         actionLabel: "Manage hosting",
       },
@@ -1988,7 +2012,7 @@ const Admin: React.FC = () => {
   const dashboardTicketHighlights = useMemo(() => {
     const sorted = [...tickets]
       .filter(
-        (ticket) => ticket.status !== "resolved" && ticket.status !== "closed"
+        (ticket) => ticket.status !== "resolved" && ticket.status !== "closed",
       )
       .sort((a, b) => {
         const priorityA =
@@ -2038,7 +2062,8 @@ const Admin: React.FC = () => {
                 {BRAND_NAME} Administration
               </h1>
               <p className="mt-2 max-w-2xl text-muted-foreground">
-                Manage infrastructure, support tickets, and platform configuration from a unified control panel.
+                Manage infrastructure, support tickets, and platform
+                configuration from a unified control panel.
               </p>
             </div>
 
@@ -2051,15 +2076,20 @@ const Admin: React.FC = () => {
 
           {/* Key Metrics Grid - matching dashboard style */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-
-
             <Card className="overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Support Tickets</p>
-                    <p className="text-3xl font-bold tracking-tight">{formatCountValue(openTicketCount)}</p>
-                    <p className="text-xs text-muted-foreground">{formatCountValue(urgentTickets)} urgent • {formatCountValue(inProgressTickets)} in progress</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Support Tickets
+                    </p>
+                    <p className="text-3xl font-bold tracking-tight">
+                      {formatCountValue(openTicketCount)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCountValue(urgentTickets)} urgent •{" "}
+                      {formatCountValue(inProgressTickets)} in progress
+                    </p>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-3">
                     <LifeBuoy className="h-6 w-6 text-foreground" />
@@ -2072,9 +2102,15 @@ const Admin: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Web Hosting</p>
-                    <p className="text-3xl font-bold tracking-tight">{formatCountValue(hostingServices.length)}</p>
-                    <p className="text-xs text-muted-foreground">Active websites</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Web Hosting
+                    </p>
+                    <p className="text-3xl font-bold tracking-tight">
+                      {formatCountValue(hostingServices.length)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Active websites
+                    </p>
                   </div>
                   <div className="rounded-lg bg-blue-500/10 p-3">
                     <Server className="h-6 w-6 text-blue-500" />
@@ -2087,9 +2123,15 @@ const Admin: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Active Servers</p>
-                    <p className="text-3xl font-bold tracking-tight">{formatCountValue(activeServers)}</p>
-                    <p className="text-xs text-muted-foreground">Across all providers</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Active Servers
+                    </p>
+                    <p className="text-3xl font-bold tracking-tight">
+                      {formatCountValue(activeServers)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Across all providers
+                    </p>
                   </div>
                   <div className="rounded-lg bg-primary/10 p-3">
                     <Server className="h-6 w-6 text-primary" />
@@ -2102,9 +2144,15 @@ const Admin: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Provisioning</p>
-                    <p className="text-3xl font-bold tracking-tight">{formatCountValue(liveProvisioningCount)}</p>
-                    <p className="text-xs text-muted-foreground">Builds in progress</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Provisioning
+                    </p>
+                    <p className="text-3xl font-bold tracking-tight">
+                      {formatCountValue(liveProvisioningCount)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Builds in progress
+                    </p>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-3">
                     <Clock className="h-6 w-6 text-foreground" />
@@ -2132,10 +2180,13 @@ const Admin: React.FC = () => {
                 const isActive = panel.id === activeTab;
 
                 return (
-                  <Card key={panel.id} className={cn(
-                    "cursor-pointer transition-colors hover:bg-muted/50",
-                    isActive ? "ring-2 ring-primary" : ""
-                  )}>
+                  <Card
+                    key={panel.id}
+                    className={cn(
+                      "cursor-pointer transition-colors hover:bg-muted/50",
+                      isActive ? "ring-2 ring-primary" : "",
+                    )}
+                  >
                     <CardContent
                       className="p-6"
                       onClick={() => handleTabChange(panel.id)}
@@ -2143,23 +2194,36 @@ const Admin: React.FC = () => {
                       <div className="flex items-start justify-between">
                         <div className="space-y-2 flex-1">
                           <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "rounded-lg p-2",
-                              isActive ? "bg-primary/10" : "bg-muted/50"
-                            )}>
-                              <Icon className={cn(
-                                "h-5 w-5",
-                                isActive ? "text-primary" : "text-muted-foreground"
-                              )} />
+                            <div
+                              className={cn(
+                                "rounded-lg p-2",
+                                isActive ? "bg-primary/10" : "bg-muted/50",
+                              )}
+                            >
+                              <Icon
+                                className={cn(
+                                  "h-5 w-5",
+                                  isActive
+                                    ? "text-primary"
+                                    : "text-muted-foreground",
+                                )}
+                              />
                             </div>
                             <div>
-                              <p className="font-medium text-foreground">{panel.title}</p>
-                              <p className="text-sm text-muted-foreground">{panel.description}</p>
+                              <p className="font-medium text-foreground">
+                                {panel.title}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {panel.description}
+                              </p>
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-4 mt-4">
                             {panel.summary.map((item) => (
-                              <div key={`${panel.id}-${item.label}`} className="space-y-1">
+                              <div
+                                key={`${panel.id}-${item.label}`}
+                                className="space-y-1"
+                              >
                                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                                   {item.label}
                                 </p>
@@ -2216,7 +2280,9 @@ const Admin: React.FC = () => {
                           </p>
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             {ticket.category ? (
-                              <span className="capitalize">{ticket.category}</span>
+                              <span className="capitalize">
+                                {ticket.category}
+                              </span>
                             ) : (
                               <span>General</span>
                             )}
@@ -2224,8 +2290,7 @@ const Admin: React.FC = () => {
                             <span>
                               {ticket.updated_at
                                 ? new Date(ticket.updated_at).toLocaleString()
-                                : new Date(ticket.created_at).toLocaleString()
-                              }
+                                : new Date(ticket.created_at).toLocaleString()}
                             </span>
                           </div>
                         </div>
@@ -2233,7 +2298,7 @@ const Admin: React.FC = () => {
                           variant="outline"
                           className={cn(
                             "shrink-0 capitalize",
-                            TICKET_PRIORITY_META[ticket.priority].className
+                            TICKET_PRIORITY_META[ticket.priority].className,
                           )}
                         >
                           {TICKET_PRIORITY_META[ticket.priority].label}
@@ -2279,20 +2344,21 @@ const Admin: React.FC = () => {
                                 <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
                               </>
                             ) : null}
-                            {server.region_label ? <span>{server.region_label}</span> : null}
+                            {server.region_label ? (
+                              <span>{server.region_label}</span>
+                            ) : null}
                           </div>
                         </div>
                         <Badge
                           variant="outline"
                           className={cn(
                             "capitalize",
-                            statusBadgeClass(server.status)
+                            statusBadgeClass(server.status),
                           )}
                         >
                           {formatStatusLabel(server.status)}
                         </Badge>
                       </div>
-
                     </div>
                   ))
                 ) : (
@@ -2333,7 +2399,9 @@ const Admin: React.FC = () => {
 
           <div className="bg-card shadow sm:rounded-lg">
             <div className="border-b border px-6 py-4">
-              <h3 className="text-lg font-medium text-foreground">Theme Presets</h3>
+              <h3 className="text-lg font-medium text-foreground">
+                Theme Presets
+              </h3>
               <p className="text-sm text-muted-foreground">
                 Apply a built-in palette for all users
               </p>
@@ -2362,10 +2430,11 @@ const Admin: React.FC = () => {
                         type="button"
                         onClick={() => handlePresetSelection(preset)}
                         disabled={disabled}
-                        className={`relative w-full rounded-lg border p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isActive
-                          ? "border-primary ring-2 ring-primary ring-opacity-20"
-                          : "border-border hover:border-primary"
-                          } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+                        className={`relative w-full rounded-lg border p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                          isActive
+                            ? "border-primary ring-2 ring-primary ring-opacity-20"
+                            : "border-border hover:border-primary"
+                        } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div>
@@ -2495,22 +2564,18 @@ const Admin: React.FC = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[12rem]">Name</TableHead>
-                      <TableHead className="min-w-[10rem]">
-                        Provider
-                      </TableHead>
+                      <TableHead className="min-w-[10rem]">Provider</TableHead>
                       <TableHead className="min-w-[10rem]">
                         Provider Plan ID
                       </TableHead>
-                      <TableHead className="min-w-[8rem]">
-                        Base Price
-                      </TableHead>
+                      <TableHead className="min-w-[8rem]">Base Price</TableHead>
                       <TableHead className="min-w-[8rem]">Markup</TableHead>
-                      <TableHead className="min-w-[10rem]">Backup Price</TableHead>
+                      <TableHead className="min-w-[10rem]">
+                        Backup Price
+                      </TableHead>
                       <TableHead className="min-w-[8rem]">Backups</TableHead>
                       <TableHead className="w-32">Active</TableHead>
-                      <TableHead className="w-36 text-right">
-                        Actions
-                      </TableHead>
+                      <TableHead className="w-36 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2530,18 +2595,18 @@ const Admin: React.FC = () => {
                       Object.entries(groupedPlans).map(
                         ([providerId, providerPlans]) => {
                           const provider = providers.find(
-                            (p) => p.id === providerId
+                            (p) => p.id === providerId,
                           );
                           const currentPage =
                             providerPlanPages[providerId] || 1;
                           const totalPages = Math.ceil(
-                            providerPlans.length / plansPerPage
+                            providerPlans.length / plansPerPage,
                           );
                           const startIndex = (currentPage - 1) * plansPerPage;
                           const endIndex = startIndex + plansPerPage;
                           const paginatedPlans = providerPlans.slice(
                             startIndex,
-                            endIndex
+                            endIndex,
                           );
 
                           return (
@@ -2557,10 +2622,7 @@ const Admin: React.FC = () => {
                                       {provider
                                         ? `${provider.name} (${provider.type})`
                                         : "Unknown Provider"}
-                                      <Badge
-                                        variant="outline"
-                                        className="ml-2"
-                                      >
+                                      <Badge variant="outline" className="ml-2">
                                         {providerPlans.length}{" "}
                                         {providerPlans.length === 1
                                           ? "plan"
@@ -2577,7 +2639,7 @@ const Admin: React.FC = () => {
                                               ...prev,
                                               [providerId]: Math.max(
                                                 1,
-                                                currentPage - 1
+                                                currentPage - 1,
                                               ),
                                             }))
                                           }
@@ -2596,13 +2658,11 @@ const Admin: React.FC = () => {
                                               ...prev,
                                               [providerId]: Math.min(
                                                 totalPages,
-                                                currentPage + 1
+                                                currentPage + 1,
                                               ),
                                             }))
                                           }
-                                          disabled={
-                                            currentPage === totalPages
-                                          }
+                                          disabled={currentPage === totalPages}
                                         >
                                           Next
                                         </Button>
@@ -2614,14 +2674,11 @@ const Admin: React.FC = () => {
                               {paginatedPlans.map((plan) => {
                                 const isEditing = editPlanId === plan.id;
                                 const planProvider = providers.find(
-                                  (p) => p.id === plan.provider_id
+                                  (p) => p.id === plan.provider_id,
                                 );
 
                                 return (
-                                  <TableRow
-                                    key={plan.id}
-                                    className="align-top"
-                                  >
+                                  <TableRow key={plan.id} className="align-top">
                                     <TableCell>
                                       {isEditing ? (
                                         <Input
@@ -2673,7 +2730,7 @@ const Admin: React.FC = () => {
                                             setEditPlan((prev) => ({
                                               ...prev,
                                               base_price: parseFloat(
-                                                e.target.value
+                                                e.target.value,
                                               ),
                                             }))
                                           }
@@ -2681,8 +2738,7 @@ const Admin: React.FC = () => {
                                         />
                                       ) : (
                                         <span className="text-sm text-muted-foreground">
-                                          $
-                                          {Number(plan.base_price).toFixed(2)}
+                                          ${Number(plan.base_price).toFixed(2)}
                                         </span>
                                       )}
                                     </TableCell>
@@ -2694,14 +2750,13 @@ const Admin: React.FC = () => {
                                           value={
                                             (editPlan.markup_price as
                                               | number
-                                              | undefined) ??
-                                            plan.markup_price
+                                              | undefined) ?? plan.markup_price
                                           }
                                           onChange={(e) =>
                                             setEditPlan((prev) => ({
                                               ...prev,
                                               markup_price: parseFloat(
-                                                e.target.value
+                                                e.target.value,
                                               ),
                                             }))
                                           }
@@ -2710,16 +2765,16 @@ const Admin: React.FC = () => {
                                       ) : (
                                         <span className="text-sm text-muted-foreground">
                                           $
-                                          {Number(plan.markup_price).toFixed(
-                                            2
-                                          )}
+                                          {Number(plan.markup_price).toFixed(2)}
                                         </span>
                                       )}
                                     </TableCell>
                                     <TableCell>
                                       {isEditing ? (
                                         <div className="space-y-2">
-                                          <div className="text-xs text-muted-foreground mb-1">Base Price</div>
+                                          <div className="text-xs text-muted-foreground mb-1">
+                                            Base Price
+                                          </div>
                                           <Input
                                             type="number"
                                             step="0.01"
@@ -2728,14 +2783,15 @@ const Admin: React.FC = () => {
                                               (editPlan.backup_price_monthly as
                                                 | number
                                                 | undefined) ??
-                                              plan.backup_price_monthly ?? 0
+                                              plan.backup_price_monthly ??
+                                              0
                                             }
                                             onChange={(e) =>
                                               setEditPlan((prev) => ({
                                                 ...prev,
-                                                backup_price_monthly: parseFloat(
-                                                  e.target.value
-                                                ) || 0,
+                                                backup_price_monthly:
+                                                  parseFloat(e.target.value) ||
+                                                  0,
                                               }))
                                             }
                                             className="max-w-[8rem]"
@@ -2748,19 +2804,22 @@ const Admin: React.FC = () => {
                                               (editPlan.backup_price_hourly as
                                                 | number
                                                 | undefined) ??
-                                              plan.backup_price_hourly ?? 0
+                                              plan.backup_price_hourly ??
+                                              0
                                             }
                                             onChange={(e) =>
                                               setEditPlan((prev) => ({
                                                 ...prev,
-                                                backup_price_hourly: parseFloat(
-                                                  e.target.value
-                                                ) || 0,
+                                                backup_price_hourly:
+                                                  parseFloat(e.target.value) ||
+                                                  0,
                                               }))
                                             }
                                             className="max-w-[8rem]"
                                           />
-                                          <div className="text-xs text-muted-foreground mt-2 mb-1">Upcharge</div>
+                                          <div className="text-xs text-muted-foreground mt-2 mb-1">
+                                            Upcharge
+                                          </div>
                                           <Input
                                             type="number"
                                             step="0.01"
@@ -2769,14 +2828,18 @@ const Admin: React.FC = () => {
                                               (editPlan.backup_upcharge_monthly as
                                                 | number
                                                 | undefined) ??
-                                              plan.backup_upcharge_monthly ?? 0
+                                              plan.backup_upcharge_monthly ??
+                                              0
                                             }
                                             onChange={(e) => {
-                                              const monthlyUpcharge = parseFloat(e.target.value) || 0;
+                                              const monthlyUpcharge =
+                                                parseFloat(e.target.value) || 0;
                                               setEditPlan((prev) => ({
                                                 ...prev,
-                                                backup_upcharge_monthly: monthlyUpcharge,
-                                                backup_upcharge_hourly: monthlyUpcharge / 730,
+                                                backup_upcharge_monthly:
+                                                  monthlyUpcharge,
+                                                backup_upcharge_hourly:
+                                                  monthlyUpcharge / 730,
                                               }));
                                             }}
                                             className="max-w-[8rem]"
@@ -2784,13 +2847,37 @@ const Admin: React.FC = () => {
                                         </div>
                                       ) : (
                                         <div className="text-sm">
-                                          {(Number(plan.backup_price_monthly) || 0) > 0 || (Number(plan.backup_upcharge_monthly) || 0) > 0 ? (
+                                          {(Number(plan.backup_price_monthly) ||
+                                            0) > 0 ||
+                                          (Number(
+                                            plan.backup_upcharge_monthly,
+                                          ) || 0) > 0 ? (
                                             <>
                                               <div className="text-muted-foreground">
-                                                ${((Number(plan.backup_price_monthly) || 0) + (Number(plan.backup_upcharge_monthly) || 0)).toFixed(2)}/mo
+                                                $
+                                                {(
+                                                  (Number(
+                                                    plan.backup_price_monthly,
+                                                  ) || 0) +
+                                                  (Number(
+                                                    plan.backup_upcharge_monthly,
+                                                  ) || 0)
+                                                ).toFixed(2)}
+                                                /mo
                                               </div>
                                               <div className="text-xs text-muted-foreground">
-                                                Base: ${(Number(plan.backup_price_monthly) || 0).toFixed(2)} + Upcharge: ${(Number(plan.backup_upcharge_monthly) || 0).toFixed(2)}
+                                                Base: $
+                                                {(
+                                                  Number(
+                                                    plan.backup_price_monthly,
+                                                  ) || 0
+                                                ).toFixed(2)}{" "}
+                                                + Upcharge: $
+                                                {(
+                                                  Number(
+                                                    plan.backup_upcharge_monthly,
+                                                  ) || 0
+                                                ).toFixed(2)}
                                               </div>
                                             </>
                                           ) : (
@@ -2827,9 +2914,9 @@ const Admin: React.FC = () => {
                                             }
                                           />
                                           <span className="text-xs text-muted-foreground">
-                                            {(editPlan.active as
+                                            {((editPlan.active as
                                               | boolean
-                                              | undefined) ?? plan.active
+                                              | undefined) ?? plan.active)
                                               ? "Active"
                                               : "Inactive"}
                                           </span>
@@ -2842,19 +2929,14 @@ const Admin: React.FC = () => {
                                               : "secondary"
                                           }
                                         >
-                                          {plan.active
-                                            ? "Active"
-                                            : "Inactive"}
+                                          {plan.active ? "Active" : "Inactive"}
                                         </Badge>
                                       )}
                                     </TableCell>
                                     <TableCell className="text-right">
                                       {isEditing ? (
                                         <div className="flex justify-end gap-2">
-                                          <Button
-                                            size="sm"
-                                            onClick={savePlan}
-                                          >
+                                          <Button size="sm" onClick={savePlan}>
                                             Save
                                           </Button>
                                           <Button
@@ -2878,20 +2960,24 @@ const Admin: React.FC = () => {
                                               setEditPlan({
                                                 name: plan.name,
                                                 base_price: plan.base_price,
-                                                markup_price:
-                                                  plan.markup_price,
+                                                markup_price: plan.markup_price,
                                                 backup_price_monthly:
-                                                  plan.backup_price_monthly || 0,
+                                                  plan.backup_price_monthly ||
+                                                  0,
                                                 backup_price_hourly:
                                                   plan.backup_price_hourly || 0,
                                                 backup_upcharge_monthly:
-                                                  plan.backup_upcharge_monthly || 0,
+                                                  plan.backup_upcharge_monthly ||
+                                                  0,
                                                 backup_upcharge_hourly:
-                                                  plan.backup_upcharge_hourly || 0,
+                                                  plan.backup_upcharge_hourly ||
+                                                  0,
                                                 daily_backups_enabled:
-                                                  plan.daily_backups_enabled ?? false,
+                                                  plan.daily_backups_enabled ??
+                                                  false,
                                                 weekly_backups_enabled:
-                                                  plan.weekly_backups_enabled ?? true,
+                                                  plan.weekly_backups_enabled ??
+                                                  true,
                                                 active: plan.active,
                                               });
                                             }}
@@ -2918,7 +3004,7 @@ const Admin: React.FC = () => {
                               })}
                             </React.Fragment>
                           );
-                        }
+                        },
                       )
                     )}
                   </TableBody>
@@ -2990,7 +3076,8 @@ const Admin: React.FC = () => {
                 FAQ Management
               </h2>
               <p className="mt-2 max-w-2xl text-muted-foreground">
-                Manage FAQ categories, items, and latest updates for the public FAQ page
+                Manage FAQ categories, items, and latest updates for the public
+                FAQ page
               </p>
             </div>
 
@@ -3042,8 +3129,8 @@ const Admin: React.FC = () => {
                           Theme Manager
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                          Choose a theme preset. Updates roll out to every
-                          user instantly.
+                          Choose a theme preset. Updates roll out to every user
+                          instantly.
                         </p>
                       </div>
                     </div>
@@ -3059,8 +3146,8 @@ const Admin: React.FC = () => {
                         Presets
                       </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Choose a built-in palette. Applying a preset changes
-                        the experience for every organization member.
+                        Choose a built-in palette. Applying a preset changes the
+                        experience for every organization member.
                       </p>
                       <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                         {themes.map((preset) => {
@@ -3077,13 +3164,13 @@ const Admin: React.FC = () => {
                               type="button"
                               onClick={() => handlePresetSelection(preset)}
                               disabled={disabled}
-                              className={`relative w-full rounded-lg border p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isActive
-                                ? "border-primary ring-2 ring-primary ring-opacity-20"
-                                : "border-border hover:border-primary"
-                                } ${disabled
-                                  ? "cursor-not-allowed opacity-60"
-                                  : ""
-                                }`}
+                              className={`relative w-full rounded-lg border p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                                isActive
+                                  ? "border-primary ring-2 ring-primary ring-opacity-20"
+                                  : "border-border hover:border-primary"
+                              } ${
+                                disabled ? "cursor-not-allowed opacity-60" : ""
+                              }`}
                             >
                               <div className="flex items-start justify-between gap-4">
                                 <div>
@@ -3145,10 +3232,7 @@ const Admin: React.FC = () => {
           </div>
         </SectionPanel>
 
-        <SectionPanel
-          section="contact-management"
-          activeSection={activeTab}
-        >
+        <SectionPanel section="contact-management" activeSection={activeTab}>
           {/* Hero Section */}
           <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
             <div className="relative z-10">
@@ -3194,7 +3278,6 @@ const Admin: React.FC = () => {
 
         {/* Legacy application sections removed */}
 
-
         <SectionPanel section="stackscripts" activeSection={activeTab}>
           {/* Hero Section */}
           <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
@@ -3207,7 +3290,8 @@ const Admin: React.FC = () => {
                   StackScripts
                 </h2>
                 <p className="mt-2 max-w-2xl text-muted-foreground">
-                  Configure which scripts show up when provisioning new VPS instances
+                  Configure which scripts show up when provisioning new VPS
+                  instances
                 </p>
               </div>
               <Button
@@ -3234,9 +3318,7 @@ const Admin: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="stackscript-search">
-                  Search StackScripts
-                </Label>
+                <Label htmlFor="stackscript-search">Search StackScripts</Label>
                 <Input
                   id="stackscript-search"
                   placeholder="Search StackScripts by name or description"
@@ -3257,7 +3339,7 @@ const Admin: React.FC = () => {
                 ) : (
                   filteredAvailableStackscripts.map((script) => {
                     const config = stackscriptConfigs.find(
-                      (c) => c.stackscript_id === script.id
+                      (c) => c.stackscript_id === script.id,
                     );
                     const draft = stackscriptDrafts[script.id] || {
                       label: config?.label || script.label,
@@ -3357,7 +3439,7 @@ const Admin: React.FC = () => {
                               ID {script.id} • Images{" "}
                               {script.images
                                 ?.map((img: string) =>
-                                  img.replace(/^linode\//i, "")
+                                  img.replace(/^linode\//i, ""),
                                 )
                                 .join(", ") || "Any"}
                             </p>
@@ -3419,7 +3501,8 @@ const Admin: React.FC = () => {
                 VPS Servers
               </h2>
               <p className="mt-2 max-w-2xl text-muted-foreground">
-                Monitor and manage all VPS instances provisioned through the platform
+                Monitor and manage all VPS instances provisioned through the
+                platform
               </p>
             </div>
 
@@ -3490,9 +3573,7 @@ const Admin: React.FC = () => {
                       </TableHead>
                       <TableHead className="min-w-[12rem]">Plan</TableHead>
                       <TableHead className="min-w-[10rem]">Region</TableHead>
-                      <TableHead className="min-w-[10rem]">
-                        Provider
-                      </TableHead>
+                      <TableHead className="min-w-[10rem]">Provider</TableHead>
                       <TableHead className="min-w-[12rem]">Updated</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -3519,11 +3600,11 @@ const Admin: React.FC = () => {
                       filteredServers.map((server) => {
                         const specRecord =
                           server.plan_specifications &&
-                            typeof server.plan_specifications === "object"
+                          typeof server.plan_specifications === "object"
                             ? (server.plan_specifications as Record<
-                              string,
-                              unknown
-                            >)
+                                string,
+                                unknown
+                              >)
                             : null;
                         const readNumber = (key: string) => {
                           if (!specRecord) return undefined;
@@ -3531,9 +3612,7 @@ const Admin: React.FC = () => {
                           if (typeof raw === "number") return raw;
                           if (typeof raw === "string") {
                             const parsed = Number(raw);
-                            return Number.isFinite(parsed)
-                              ? parsed
-                              : undefined;
+                            return Number.isFinite(parsed) ? parsed : undefined;
                           }
                           return undefined;
                         };
@@ -3566,19 +3645,14 @@ const Admin: React.FC = () => {
                           specParts.length > 0 ? specParts.join(" • ") : "—";
                         const configurationRecord =
                           server.configuration &&
-                            typeof server.configuration === "object"
-                            ? (server.configuration as Record<
-                              string,
-                              unknown
-                            >)
+                          typeof server.configuration === "object"
+                            ? (server.configuration as Record<string, unknown>)
                             : null;
                         const regionValue = configurationRecord
                           ? configurationRecord["region"]
                           : undefined;
                         const region =
-                          typeof regionValue === "string"
-                            ? regionValue
-                            : null;
+                          typeof regionValue === "string" ? regionValue : null;
 
                         return (
                           <TableRow key={server.id} className="align-top">
@@ -3655,7 +3729,8 @@ const Admin: React.FC = () => {
                 Networking Controls
               </h2>
               <p className="mt-2 max-w-2xl text-muted-foreground">
-                Configure reverse DNS defaults and IP address management settings
+                Configure reverse DNS defaults and IP address management
+                settings
               </p>
             </div>
 
@@ -3687,12 +3762,9 @@ const Admin: React.FC = () => {
                         Reverse DNS Template
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        Define the base domain used when setting custom rDNS
-                        for VPS instances. If unset, the system falls back to{" "}
-                        <span className="font-mono">
-                          ip.rev.skyvps360.xyz
-                        </span>
-                        .
+                        Define the base domain used when setting custom rDNS for
+                        VPS instances. If unset, the system falls back to{" "}
+                        <span className="font-mono">ip.rev.skyvps360.xyz</span>.
                       </p>
                     </div>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -3799,8 +3871,7 @@ const Admin: React.FC = () => {
                           IP Addresses
                         </CardTitle>
                         <CardDescription>
-                          View and manage IP addresses across all VPS
-                          instances
+                          View and manage IP addresses across all VPS instances
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -3831,8 +3902,7 @@ const Admin: React.FC = () => {
                                 servers.map((server) => (
                                   <TableRow key={server.id}>
                                     <TableCell className="font-mono text-xs">
-                                      {server.provider_instance_id ||
-                                        server.id}
+                                      {server.provider_instance_id || server.id}
                                     </TableCell>
                                     <TableCell className="font-medium">
                                       {server.label || "Unnamed Instance"}
@@ -3849,7 +3919,7 @@ const Admin: React.FC = () => {
                                         <span
                                           className="block max-w-[200px] truncate"
                                           title={String(
-                                            server.configuration.ipv6
+                                            server.configuration.ipv6,
                                           )}
                                         >
                                           {String(server.configuration.ipv6)}
@@ -3863,7 +3933,7 @@ const Admin: React.FC = () => {
                                     <TableCell className="text-sm">
                                       {String(
                                         server.configuration?.region ||
-                                        "Unknown"
+                                          "Unknown",
                                       )}
                                     </TableCell>
                                     <TableCell>
@@ -3906,11 +3976,11 @@ const Admin: React.FC = () => {
                               About IP Management
                             </h4>
                             <p className="text-sm text-muted-foreground leading-relaxed">
-                              IP addresses are automatically allocated when
-                              you create VPS instances. Each instance receives
-                              a public IPv4 address and an IPv6 range. You can
-                              configure reverse DNS (rDNS) for these IPs in
-                              the rDNS tab. All IP information is synced in
+                              IP addresses are automatically allocated when you
+                              create VPS instances. Each instance receives a
+                              public IPv4 address and an IPv6 range. You can
+                              configure reverse DNS (rDNS) for these IPs in the
+                              rDNS tab. All IP information is synced in
                               real-time from the Linode API.
                             </p>
                             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -3944,7 +4014,10 @@ const Admin: React.FC = () => {
                   Manage infrastructure provider credentials and access control
                 </p>
               </div>
-              <Button onClick={() => setShowAddProvider(true)} className="gap-2">
+              <Button
+                onClick={() => setShowAddProvider(true)}
+                className="gap-2"
+              >
                 <Plus className="h-4 w-4" /> Add Provider
               </Button>
             </div>
@@ -4033,8 +4106,8 @@ const Admin: React.FC = () => {
               <DialogHeader>
                 <DialogTitle>Add Service Provider</DialogTitle>
                 <DialogDescription>
-                  Save provider credentials securely. Only active providers
-                  can be used for new workloads.
+                  Save provider credentials securely. Only active providers can
+                  be used for new workloads.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -4086,8 +4159,8 @@ const Admin: React.FC = () => {
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Create an API token from your Linode Cloud Manager with
-                    full access permissions
+                    Create an API token from your Linode Cloud Manager with full
+                    access permissions
                   </p>
                 </div>
                 <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">

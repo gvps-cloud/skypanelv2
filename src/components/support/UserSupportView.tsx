@@ -135,9 +135,15 @@ const TICKET_PRIORITY_META: Record<
 
 interface UserSupportViewProps {
   token: string;
+  pendingFocusTicketId?: string | null;
+  onFocusTicketHandled?: () => void;
 }
 
-export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
+export const UserSupportView: React.FC<UserSupportViewProps> = ({
+  token,
+  pendingFocusTicketId,
+  onFocusTicketHandled,
+}) => {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
     null,
@@ -147,6 +153,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
   const [statusFilter, setStatusFilter] = useState<"all" | TicketStatus>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [ticketsInitialized, setTicketsInitialized] = useState(false);
   const [requestingReopen, setRequestingReopen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -195,6 +202,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
       toast.error(error.message || "Failed to load tickets");
     } finally {
       setLoading(false);
+      setTicketsInitialized(true);
     }
   }, [authHeader]);
 
@@ -325,6 +333,36 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
     },
     [authHeader, scrollToBottom],
   );
+
+  useEffect(() => {
+    if (!pendingFocusTicketId) {
+      return;
+    }
+
+    if (tickets.length === 0) {
+      if (ticketsInitialized) {
+        onFocusTicketHandled?.();
+      }
+      return;
+    }
+
+    const matchingTicket = tickets.find(
+      (ticket) => ticket.id === pendingFocusTicketId,
+    );
+    if (!matchingTicket) {
+      onFocusTicketHandled?.();
+      return;
+    }
+
+    void openTicket(matchingTicket);
+    onFocusTicketHandled?.();
+  }, [
+    pendingFocusTicketId,
+    tickets,
+    openTicket,
+    onFocusTicketHandled,
+    ticketsInitialized,
+  ]);
 
   const sendReply = useCallback(async () => {
     if (!selectedTicket || !replyMessage.trim()) return;

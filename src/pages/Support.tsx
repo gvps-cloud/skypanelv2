@@ -3,13 +3,31 @@
  * Real-time messaging with support team
  */
 
-import React from 'react';
-import { Ticket } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { UserSupportView } from '@/components/support/UserSupportView';
+import React, { useCallback, useMemo } from "react";
+import { Ticket } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { UserSupportView } from "@/components/support/UserSupportView";
 
 const Support: React.FC = () => {
   const { token } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const pendingFocusTicketId = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const ticketId = searchParams.get("ticketId");
+    return ticketId && ticketId.trim().length > 0 ? ticketId : null;
+  }, [location.search]);
+
+  const handleFocusTicketHandled = useCallback(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (!searchParams.has("ticketId")) {
+      return;
+    }
+
+    navigate({ pathname: "/support" }, { replace: true });
+  }, [location.search, navigate]);
 
   if (!token) {
     return null;
@@ -24,7 +42,11 @@ const Support: React.FC = () => {
         </h1>
       </div>
       <div className="flex-1 p-6">
-        <UserSupportView token={token} />
+        <UserSupportView
+          token={token}
+          pendingFocusTicketId={pendingFocusTicketId}
+          onFocusTicketHandled={handleFocusTicketHandled}
+        />
       </div>
     </div>
   );

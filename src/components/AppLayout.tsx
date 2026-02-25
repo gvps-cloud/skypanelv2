@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,
@@ -24,7 +28,11 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { Kbd } from "@/components/ui/kbd";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Activity,
   CreditCard,
@@ -48,7 +56,10 @@ import { formatCurrency as formatCurrencyDisplay } from "@/lib/formatters";
 import NotificationDropdown from "@/components/NotificationDropdown";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
-import { BreadcrumbProvider, useBreadcrumb } from "@/contexts/BreadcrumbContext";
+import {
+  BreadcrumbProvider,
+  useBreadcrumb,
+} from "@/contexts/BreadcrumbContext";
 import type { VPSInstance } from "@/types/vps";
 import { Badge } from "@/components/ui/badge";
 
@@ -119,25 +130,32 @@ const toTitleCase = (value: string): string =>
 
 const TICKET_STATUS_CLASSES: Record<string, string> = {
   open: "border border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  in_progress: "border border-sky-500/25 bg-sky-500/10 text-sky-600 dark:text-sky-400",
-  resolved: "border border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  in_progress:
+    "border border-sky-500/25 bg-sky-500/10 text-sky-600 dark:text-sky-400",
+  resolved:
+    "border border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   closed: "border border-muted-foreground/20 bg-muted text-muted-foreground",
 };
 
 const TICKET_PRIORITY_CLASSES: Record<string, string> = {
   low: "border border-muted-foreground/20 bg-muted text-muted-foreground",
-  medium: "border border-blue-500/25 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  medium:
+    "border border-blue-500/25 bg-blue-500/10 text-blue-600 dark:text-blue-400",
   high: "border border-orange-500/25 bg-orange-500/10 text-orange-600 dark:text-orange-400",
-  urgent: "border border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400",
+  urgent:
+    "border border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400",
 };
 
 const getTicketStatusClass = (status: string): string =>
-  TICKET_STATUS_CLASSES[status] || "border border-muted-foreground/20 bg-muted text-muted-foreground";
+  TICKET_STATUS_CLASSES[status] ||
+  "border border-muted-foreground/20 bg-muted text-muted-foreground";
 
 const getTicketPriorityClass = (priority: string): string =>
-  TICKET_PRIORITY_CLASSES[priority] || "border border-muted-foreground/20 bg-muted text-muted-foreground";
+  TICKET_PRIORITY_CLASSES[priority] ||
+  "border border-muted-foreground/20 bg-muted text-muted-foreground";
 
-const formatTicketStatusLabel = (status: string): string => toTitleCase(status || "Pending");
+const formatTicketStatusLabel = (status: string): string =>
+  toTitleCase(status || "Pending");
 
 const formatTicketPriorityLabel = (priority: string): string =>
   toTitleCase(priority || "Normal");
@@ -156,7 +174,7 @@ const BreadcrumbNavigation: React.FC = () => {
   // Generate breadcrumbs from current route with dynamic overrides
   const breadcrumbs = useMemo(
     () => generateBreadcrumbs(location.pathname, dynamicOverrides),
-    [location.pathname, dynamicOverrides]
+    [location.pathname, dynamicOverrides],
   );
 
   return (
@@ -191,9 +209,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const isAdmin = useMemo(
     () => (user?.role || "").toLowerCase() === "admin",
-    [user?.role]
+    [user?.role],
   );
-  
+
   // State for VPS and related search data
   const [vpsInstances, setVpsInstances] = useState<VPSInstance[]>([]);
   const [vpsLoading, setVpsLoading] = useState(false);
@@ -226,7 +244,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     return cookie ? cookie.split("=")[1] !== "false" : true;
   }, []);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => getSidebarPreference());
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
+    getSidebarPreference(),
+  );
 
   useEffect(() => {
     setIsSidebarOpen(getSidebarPreference());
@@ -240,25 +260,29 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   // Fetch VPS instances
   const fetchVPSInstances = useCallback(async () => {
     if (!token) return;
-    
+
     setVpsLoading(true);
     try {
-      const res = await fetch('/api/vps', {
+      const res = await fetch("/api/vps", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const payload = await res.json();
-      if (!res.ok) throw new Error(payload.error || 'Failed to load VPS instances');
+      if (!res.ok)
+        throw new Error(payload.error || "Failed to load VPS instances");
 
       const mapped: VPSInstance[] = (payload.instances || []).map((i: any) => ({
         id: i.id,
         label: i.label,
-        status: ((i.status as any) || 'provisioning') === 'offline' ? 'stopped' : ((i.status as any) || 'provisioning'),
-        type: i.configuration?.type || '',
-        region: i.configuration?.region || '',
+        status:
+          ((i.status as any) || "provisioning") === "offline"
+            ? "stopped"
+            : (i.status as any) || "provisioning",
+        type: i.configuration?.type || "",
+        region: i.configuration?.region || "",
         regionLabel: i.region_label || undefined,
-        image: i.configuration?.image || '',
+        image: i.configuration?.image || "",
         ipv4: i.ip_address ? [i.ip_address] : [],
-        ipv6: '',
+        ipv6: "",
         created: i.created_at,
         specs: {
           vcpus: Number(i.plan_specs?.vcpus || 0),
@@ -266,16 +290,22 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           disk: Number(i.plan_specs?.disk || 0),
           transfer: Number(i.plan_specs?.transfer || 0),
         },
-        stats: { cpu: 0, memory: 0, disk: 0, network: { in: 0, out: 0 }, uptime: '' },
+        stats: {
+          cpu: 0,
+          memory: 0,
+          disk: 0,
+          network: { in: 0, out: 0 },
+          uptime: "",
+        },
         pricing: {
           hourly: Number(i.plan_pricing?.hourly || 0),
           monthly: Number(i.plan_pricing?.monthly || 0),
-        }
+        },
       }));
 
       setVpsInstances(mapped);
     } catch (error: any) {
-      console.error('Failed to load VPS instances:', error);
+      console.error("Failed to load VPS instances:", error);
     } finally {
       setVpsLoading(false);
     }
@@ -289,12 +319,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
     setSupportTicketsLoading(true);
     try {
-      const res = await fetch('/api/admin/tickets', {
+      const res = await fetch("/api/admin/tickets", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const payload = await res.json();
       if (!res.ok) {
-        throw new Error(payload.error || 'Failed to load support tickets');
+        throw new Error(payload.error || "Failed to load support tickets");
       }
 
       const rows: TicketCommandItem[] = Array.isArray(payload.tickets)
@@ -303,13 +333,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             subject: ticket.subject,
             status: ticket.status,
             priority: ticket.priority,
-            createdAt: ticket.updated_at ?? ticket.created_at ?? '',
+            createdAt: ticket.updated_at ?? ticket.created_at ?? "",
           }))
         : [];
 
       setSupportTickets(rows);
     } catch (error) {
-      console.error('Failed to load admin tickets:', error);
+      console.error("Failed to load admin tickets:", error);
     } finally {
       setSupportTicketsLoading(false);
     }
@@ -323,12 +353,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
     setAdminUsersLoading(true);
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch("/api/admin/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const payload = await res.json();
       if (!res.ok) {
-        throw new Error(payload.error || 'Failed to load admin users');
+        throw new Error(payload.error || "Failed to load admin users");
       }
 
       const rows: AdminUserCommandItem[] = Array.isArray(payload.users)
@@ -342,7 +372,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       setAdminCommandUsers(rows);
     } catch (error) {
-      console.error('Failed to load admin users:', error);
+      console.error("Failed to load admin users:", error);
     } finally {
       setAdminUsersLoading(false);
     }
@@ -356,12 +386,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
     setInvoicesLoading(true);
     try {
-      const res = await fetch('/api/invoices?limit=12', {
+      const res = await fetch("/api/invoices?limit=12", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const payload = await res.json();
       if (!res.ok || payload.success === false) {
-        throw new Error(payload.error || 'Failed to load invoices');
+        throw new Error(payload.error || "Failed to load invoices");
       }
 
       const rows: InvoiceCommandItem[] = Array.isArray(payload.invoices)
@@ -370,16 +400,16 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             invoiceNumber:
               invoice.invoiceNumber ?? invoice.invoice_number ?? null,
             totalAmount: Number(
-              invoice.totalAmount ?? invoice.total_amount ?? 0
+              invoice.totalAmount ?? invoice.total_amount ?? 0,
             ),
-            currency: invoice.currency || 'USD',
-            createdAt: invoice.createdAt ?? invoice.created_at ?? '',
+            currency: invoice.currency || "USD",
+            createdAt: invoice.createdAt ?? invoice.created_at ?? "",
           }))
         : [];
 
       setInvoiceItems(rows);
     } catch (error) {
-      console.error('Failed to load invoices:', error);
+      console.error("Failed to load invoices:", error);
     } finally {
       setInvoicesLoading(false);
     }
@@ -401,7 +431,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     dataLoaded,
     token,
     isAdmin,
-  fetchVPSInstances,
+    fetchVPSInstances,
     fetchRecentInvoices,
     fetchSupportTickets,
     fetchAdminCommandUsers,
@@ -487,7 +517,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         requiresAlt: false,
       },
     ],
-    [isMac]
+    [isMac],
   );
 
   const actionItems = useMemo(
@@ -502,7 +532,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         requiresAlt: false,
       },
     ],
-    [isMac, toggleTheme, isDark]
+    [isMac, toggleTheme, isDark],
   );
 
   const handleNavigate = useCallback(
@@ -510,25 +540,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       navigate(href);
       setCommandOpen(false);
     },
-    [navigate, setCommandOpen]
+    [navigate, setCommandOpen],
   );
 
   const handleSupportTicketSelect = useCallback(
     (ticketId: string) => {
-      navigate("/admin#support");
+      navigate(`/admin?ticketId=${encodeURIComponent(ticketId)}#support`);
       setCommandOpen(false);
-
-      if (typeof window !== "undefined") {
-        window.setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent("admin:focus-ticket", {
-              detail: { ticketId },
-            })
-          );
-        }, 120);
-      }
     },
-    [navigate]
+    [navigate],
   );
 
   const handleAdminUserSelect = useCallback(
@@ -541,12 +561,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           window.dispatchEvent(
             new CustomEvent("admin:focus-user", {
               detail: { userId },
-            })
+            }),
           );
         }, 120);
       }
     },
-    [navigate]
+    [navigate],
   );
 
   const handleInvoiceSelect = useCallback(
@@ -554,7 +574,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       navigate(`/billing/invoice/${invoiceId}`);
       setCommandOpen(false);
     },
-    [navigate]
+    [navigate],
   );
 
   useEffect(() => {
@@ -569,7 +589,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       }
 
       const pressedKey = event.key.toLowerCase();
-      const matchesModifiers = (item: { requiresShift?: boolean; requiresAlt?: boolean }) => {
+      const matchesModifiers = (item: {
+        requiresShift?: boolean;
+        requiresAlt?: boolean;
+      }) => {
         const needsShift = item.requiresShift === true;
         const needsAlt = item.requiresAlt === true;
 
@@ -585,7 +608,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       };
 
       const match = navigationItems.find(
-        (item) => item.shortcutKey === pressedKey && matchesModifiers(item)
+        (item) => item.shortcutKey === pressedKey && matchesModifiers(item),
       );
       if (match) {
         event.preventDefault();
@@ -598,7 +621,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       }
 
       const actionMatch = actionItems.find(
-        (item) => item.shortcutKey === pressedKey && matchesModifiers(item)
+        (item) => item.shortcutKey === pressedKey && matchesModifiers(item),
       );
       if (actionMatch) {
         event.preventDefault();
@@ -620,18 +643,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   // Helper function to get status color for VPS
   const getVPSStatusColor = (status: string): string => {
     switch (status) {
-      case 'running':
-        return 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/20';
-      case 'stopped':
-        return 'text-muted-foreground bg-gray-100 dark:bg-gray-800';
-      case 'provisioning':
-        return 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20';
-      case 'rebooting':
-        return 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/20';
-      case 'error':
-        return 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/20';
+      case "running":
+        return "text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/20";
+      case "stopped":
+        return "text-muted-foreground bg-gray-100 dark:bg-gray-800";
+      case "provisioning":
+        return "text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20";
+      case "rebooting":
+        return "text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/20";
+      case "error":
+        return "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/20";
       default:
-        return 'text-muted-foreground bg-gray-100 dark:bg-gray-800';
+        return "text-muted-foreground bg-gray-100 dark:bg-gray-800";
     }
   };
 
@@ -647,11 +670,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <Card className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear">
           <CardContent className="flex h-16 shrink-0 items-center justify-between gap-2 px-4 py-0">
             <div className="flex items-center gap-2">
-              <SidebarTrigger className={cn(isSidebarOpen ? "-ml-1" : "ml-2")} />
-              
-              <Separator orientation="vertical" className="mr-2 h-4 hidden md:block" />
-              <BreadcrumbNavigation />
+              <SidebarTrigger
+                className={cn(isSidebarOpen ? "-ml-1" : "ml-2")}
+              />
 
+              <Separator
+                orientation="vertical"
+                className="mr-2 h-4 hidden md:block"
+              />
+              <BreadcrumbNavigation />
             </div>
 
             <div className="flex items-center gap-2 ml-auto">
@@ -669,17 +696,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   </kbd>
                 </Button>
               </div>
-              
+
               <NotificationDropdown />
-              
+
               {/* Keyboard Help Menu */}
               <Popover open={helpOpen} onOpenChange={setHelpOpen}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9"
-                  >
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
                     <HelpCircle className="h-4 w-4" />
                     <span className="sr-only">Keyboard shortcuts</span>
                   </Button>
@@ -687,7 +710,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <PopoverContent className="w-80" align="end">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <h4 className="font-medium leading-none">Keyboard Shortcuts</h4>
+                      <h4 className="font-medium leading-none">
+                        Keyboard Shortcuts
+                      </h4>
                       <p className="text-sm text-muted-foreground">
                         Quick access to common actions
                       </p>
@@ -705,7 +730,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   </div>
                 </PopoverContent>
               </Popover>
-              
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -726,210 +751,220 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         {/* Main Content Area */}
         <Card className="flex-1">
           <CardContent className="flex flex-1 flex-col gap-4 p-4 pt-6">
-            <main className="flex-1">
-              {children}
-            </main>
+            <main className="flex-1">{children}</main>
           </CardContent>
         </Card>
 
         {/* Command Dialog */}
-         <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
-           <CommandInput placeholder="Type a command or search for a server..." />
-           <CommandList>
-             <CommandEmpty>No results found.</CommandEmpty>
-             <CommandGroup heading="Navigation">
-               {navigationItems.map((item) => {
-                 const Icon = item.icon;
-                 return (
-                   <CommandItem
-                     key={item.href}
-                     onSelect={() => handleNavigate(item.href)}
-                   >
-                     <Icon className="mr-2 h-4 w-4" />
-                     <span>{item.label}</span>
-                     <CommandShortcut>{item.shortcut}</CommandShortcut>
-                   </CommandItem>
-                 );
-               })}
-             </CommandGroup>
-             
-             {/* VPS Instances Group */}
-             {(vpsInstances.length > 0 || vpsLoading) && (
-               <>
-                 <CommandSeparator />
-                 <CommandGroup heading="VPS Instances">
-                   {vpsLoading ? (
-                     <CommandItem disabled>
-                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                       <span>Loading VPS instances...</span>
-                     </CommandItem>
-                   ) : (
-                     vpsInstances.map((vps) => (
-                       <CommandItem
-                         key={vps.id}
-                         onSelect={() => handleNavigate(`/vps/${vps.id}`)}
-                         className="flex items-center justify-between"
-                       >
-                         <div className="flex items-center">
-                           <Server className="mr-2 h-4 w-4" />
-                           <div className="flex flex-col">
-                             <span className="font-medium">{vps.label}</span>
-                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                               <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${getVPSStatusColor(vps.status)}`}>
-                                 {vps.status}
-                               </span>
-                               {vps.ipv4.length > 0 && (
-                                 <span>{vps.ipv4[0]}</span>
-                               )}
-                               {vps.regionLabel && (
-                                 <span>{vps.regionLabel}</span>
-                               )}
-                             </div>
-                           </div>
-                         </div>
-                       </CommandItem>
-                     ))
-                   )}
-                 </CommandGroup>
-               </>
-             )}
+        <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
+          <CommandInput placeholder="Type a command or search for a server..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup heading="Navigation">
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <CommandItem
+                    key={item.href}
+                    onSelect={() => handleNavigate(item.href)}
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    <span>{item.label}</span>
+                    <CommandShortcut>{item.shortcut}</CommandShortcut>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
 
-             {/* Invoice Group */}
-             {(invoiceItems.length > 0 || invoicesLoading) && (
-               <>
-                 <CommandSeparator />
-                 <CommandGroup heading="Recent Invoices">
-                   {invoicesLoading ? (
-                     <CommandItem disabled>
-                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                       <span>Loading invoices...</span>
-                     </CommandItem>
-                   ) : (
-                     invoiceItems.map((invoice) => (
-                       <CommandItem
-                         key={invoice.id}
-                         onSelect={() => handleInvoiceSelect(invoice.id)}
-                         className="flex items-center justify-between"
-                       >
-                         <div className="flex items-center">
-                           <FileText className="mr-2 h-4 w-4" />
-                           <div className="flex flex-col">
-                             <span className="font-medium">
-                               {invoice.invoiceNumber
-                                 ? `Invoice ${invoice.invoiceNumber}`
-                                 : `Invoice ${invoice.id}`}
-                             </span>
-                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                               <span>{formatCurrencyValue(invoice.totalAmount, invoice.currency)}</span>
-                               <span>{formatRelativeTime(invoice.createdAt)}</span>
-                             </div>
-                           </div>
-                         </div>
-                       </CommandItem>
-                     ))
-                   )}
-                 </CommandGroup>
-               </>
-             )}
+            {/* VPS Instances Group */}
+            {(vpsInstances.length > 0 || vpsLoading) && (
+              <>
+                <CommandSeparator />
+                <CommandGroup heading="VPS Instances">
+                  {vpsLoading ? (
+                    <CommandItem disabled>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <span>Loading VPS instances...</span>
+                    </CommandItem>
+                  ) : (
+                    vpsInstances.map((vps) => (
+                      <CommandItem
+                        key={vps.id}
+                        onSelect={() => handleNavigate(`/vps/${vps.id}`)}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center">
+                          <Server className="mr-2 h-4 w-4" />
+                          <div className="flex flex-col">
+                            <span className="font-medium">{vps.label}</span>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span
+                                className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${getVPSStatusColor(vps.status)}`}
+                              >
+                                {vps.status}
+                              </span>
+                              {vps.ipv4.length > 0 && (
+                                <span>{vps.ipv4[0]}</span>
+                              )}
+                              {vps.regionLabel && (
+                                <span>{vps.regionLabel}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CommandItem>
+                    ))
+                  )}
+                </CommandGroup>
+              </>
+            )}
 
-             {/* Support Tickets Group (Admin) */}
-             {isAdmin && (supportTickets.length > 0 || supportTicketsLoading) && (
-               <>
-                 <CommandSeparator />
-                 <CommandGroup heading="Support Tickets">
-                   {supportTicketsLoading ? (
-                     <CommandItem disabled>
-                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                       <span>Loading support tickets...</span>
-                     </CommandItem>
-                   ) : (
-                     supportTickets.map((ticket) => (
-                       <CommandItem
-                         key={ticket.id}
-                         onSelect={() => handleSupportTicketSelect(ticket.id)}
-                         className="flex items-center justify-between"
-                       >
-                         <div className="flex items-center">
-                           <LifeBuoy className="mr-2 h-4 w-4" />
-                           <div className="flex flex-col">
-                             <span className="font-medium">
-                               {ticket.subject || `Ticket ${ticket.id}`}
-                             </span>
-                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                               <Badge
-                                 variant="outline"
-                                 className={cn(
-                                   "border px-1.5 py-0.5 font-medium",
-                                   getTicketStatusClass(ticket.status)
-                                 )}
-                               >
-                                 {formatTicketStatusLabel(ticket.status)}
-                               </Badge>
-                               <Badge
-                                 variant="outline"
-                                 className={cn(
-                                   "border px-1.5 py-0.5 font-medium",
-                                   getTicketPriorityClass(ticket.priority)
-                                 )}
-                               >
-                                 {formatTicketPriorityLabel(ticket.priority)}
-                               </Badge>
-                               <span>{formatRelativeTime(ticket.createdAt)}</span>
-                             </div>
-                           </div>
-                         </div>
-                       </CommandItem>
-                     ))
-                   )}
-                 </CommandGroup>
-               </>
-             )}
+            {/* Invoice Group */}
+            {(invoiceItems.length > 0 || invoicesLoading) && (
+              <>
+                <CommandSeparator />
+                <CommandGroup heading="Recent Invoices">
+                  {invoicesLoading ? (
+                    <CommandItem disabled>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <span>Loading invoices...</span>
+                    </CommandItem>
+                  ) : (
+                    invoiceItems.map((invoice) => (
+                      <CommandItem
+                        key={invoice.id}
+                        onSelect={() => handleInvoiceSelect(invoice.id)}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center">
+                          <FileText className="mr-2 h-4 w-4" />
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {invoice.invoiceNumber
+                                ? `Invoice ${invoice.invoiceNumber}`
+                                : `Invoice ${invoice.id}`}
+                            </span>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              <span>
+                                {formatCurrencyValue(
+                                  invoice.totalAmount,
+                                  invoice.currency,
+                                )}
+                              </span>
+                              <span>
+                                {formatRelativeTime(invoice.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </CommandItem>
+                    ))
+                  )}
+                </CommandGroup>
+              </>
+            )}
 
-             {/* Admin Users Group (Admin) */}
-             {isAdmin && (adminCommandUsers.length > 0 || adminUsersLoading) && (
-               <>
-                 <CommandSeparator />
-                 <CommandGroup heading="Admin Users">
-                   {adminUsersLoading ? (
-                     <CommandItem disabled>
-                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                       <span>Loading team members...</span>
-                     </CommandItem>
-                   ) : (
-                     adminCommandUsers.map((adminUser) => (
-                       <CommandItem
-                         key={adminUser.id}
-                         onSelect={() => handleAdminUserSelect(adminUser.id)}
-                         className="flex items-center justify-between"
-                       >
-                         <div className="flex items-center">
-                           <Users className="mr-2 h-4 w-4" />
-                           <div className="flex flex-col">
-                             <span className="font-medium">
-                               {adminUser.name || adminUser.email}
-                             </span>
-                             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                               <span className="truncate max-w-[220px]">
-                                 {adminUser.email}
-                               </span>
-                               <Badge
-                                 variant="outline"
-                                 className="border px-1.5 py-0.5 font-medium border-muted-foreground/25 text-muted-foreground"
-                               >
-                                 {formatRoleLabel(adminUser.role)}
-                               </Badge>
-                             </div>
-                           </div>
-                         </div>
-                       </CommandItem>
-                     ))
-                   )}
-                 </CommandGroup>
-               </>
-             )}
+            {/* Support Tickets Group (Admin) */}
+            {isAdmin &&
+              (supportTickets.length > 0 || supportTicketsLoading) && (
+                <>
+                  <CommandSeparator />
+                  <CommandGroup heading="Support Tickets">
+                    {supportTicketsLoading ? (
+                      <CommandItem disabled>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <span>Loading support tickets...</span>
+                      </CommandItem>
+                    ) : (
+                      supportTickets.map((ticket) => (
+                        <CommandItem
+                          key={ticket.id}
+                          onSelect={() => handleSupportTicketSelect(ticket.id)}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center">
+                            <LifeBuoy className="mr-2 h-4 w-4" />
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {ticket.subject || `Ticket ${ticket.id}`}
+                              </span>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "border px-1.5 py-0.5 font-medium",
+                                    getTicketStatusClass(ticket.status),
+                                  )}
+                                >
+                                  {formatTicketStatusLabel(ticket.status)}
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "border px-1.5 py-0.5 font-medium",
+                                    getTicketPriorityClass(ticket.priority),
+                                  )}
+                                >
+                                  {formatTicketPriorityLabel(ticket.priority)}
+                                </Badge>
+                                <span>
+                                  {formatRelativeTime(ticket.createdAt)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </CommandItem>
+                      ))
+                    )}
+                  </CommandGroup>
+                </>
+              )}
 
-             <CommandSeparator />
-             <CommandGroup heading="Actions">
+            {/* Admin Users Group (Admin) */}
+            {isAdmin && (adminCommandUsers.length > 0 || adminUsersLoading) && (
+              <>
+                <CommandSeparator />
+                <CommandGroup heading="Admin Users">
+                  {adminUsersLoading ? (
+                    <CommandItem disabled>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <span>Loading team members...</span>
+                    </CommandItem>
+                  ) : (
+                    adminCommandUsers.map((adminUser) => (
+                      <CommandItem
+                        key={adminUser.id}
+                        onSelect={() => handleAdminUserSelect(adminUser.id)}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center">
+                          <Users className="mr-2 h-4 w-4" />
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {adminUser.name || adminUser.email}
+                            </span>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              <span className="truncate max-w-[220px]">
+                                {adminUser.email}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className="border px-1.5 py-0.5 font-medium border-muted-foreground/25 text-muted-foreground"
+                              >
+                                {formatRoleLabel(adminUser.role)}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </CommandItem>
+                    ))
+                  )}
+                </CommandGroup>
+              </>
+            )}
+
+            <CommandSeparator />
+            <CommandGroup heading="Actions">
               {actionItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -946,9 +981,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   </CommandItem>
                 );
               })}
-             </CommandGroup>
-           </CommandList>
-         </CommandDialog>
+            </CommandGroup>
+          </CommandList>
+        </CommandDialog>
       </SidebarInset>
     </SidebarProvider>
   );

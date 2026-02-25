@@ -392,14 +392,77 @@ router.patch(
 
       const { id } = req.params;
       const { status } = req.body as { status: string };
+      const adminUserId = (req as any).user?.id as string | undefined;
+
+      const ticketRes = await query(
+        "SELECT id, status, created_by, organization_id, subject FROM support_tickets WHERE id = $1",
+        [id],
+      );
+      if (ticketRes.rows.length === 0) {
+        res.status(404).json({ error: "Ticket not found" });
+        return;
+      }
+
+      const existingTicket = ticketRes.rows[0];
+      const requestedStatus = status;
+      const nextStatus =
+        requestedStatus === "resolved" ? "closed" : requestedStatus;
 
       const result = await query(
         "UPDATE support_tickets SET status = $1, updated_at = $2 WHERE id = $3 RETURNING *",
-        [status, new Date().toISOString(), id],
+        [nextStatus, new Date().toISOString(), id],
       );
 
       if (result.rows.length === 0) {
-        throw new Error("Ticket not found");
+        throw new Error("Failed to update ticket status");
+      }
+
+      const userMessageByStatus: Record<
+        string,
+        { message: string; status: "success" | "warning" | "error" | "info" }
+      > = {
+        in_progress: {
+          message: `Support is now working on your ticket: "${existingTicket.subject}"`,
+          status: "info",
+        },
+        open: {
+          message: `Your ticket was re-opened by support: "${existingTicket.subject}"`,
+          status: "info",
+        },
+        resolved: {
+          message: `Your ticket was resolved and closed: "${existingTicket.subject}"`,
+          status: "success",
+        },
+        closed: {
+          message: `Your ticket was closed by support: "${existingTicket.subject}"`,
+          status: "warning",
+        },
+      };
+
+      const userStatusUpdate = userMessageByStatus[requestedStatus];
+      if (userStatusUpdate) {
+        await logActivity(
+          {
+            userId: existingTicket.created_by,
+            organizationId: existingTicket.organization_id,
+            eventType: "ticket_reply",
+            entityType: "support_ticket",
+            entityId: id,
+            message: userStatusUpdate.message,
+            status: userStatusUpdate.status,
+            metadata: {
+              ticket_id: id,
+              ticket_subject: existingTicket.subject,
+              is_status_update: true,
+              old_status: existingTicket.status,
+              requested_status: requestedStatus,
+              new_status: nextStatus,
+              resolved_and_closed: requestedStatus === "resolved",
+              updated_by: adminUserId || null,
+            },
+          },
+          req,
+        );
       }
 
       res.json({ ticket: result.rows[0] });
@@ -1219,12 +1282,12 @@ router.get(
         mode === "custom"
           ? new Set(allowedRegions)
           : new Set(
-            allRegions
-              .map((region) =>
-                typeof region.id === "string" ? region.id.toLowerCase() : "",
-              )
-              .filter(Boolean),
-          );
+              allRegions
+                .map((region) =>
+                  typeof region.id === "string" ? region.id.toLowerCase() : "",
+                )
+                .filter(Boolean),
+            );
 
       const regions = allRegions.map((region) => {
         const slug =
@@ -2028,8 +2091,8 @@ router.get(
 
                   networks.ipv4 = Array.isArray(detail.ipv4)
                     ? Array.from(
-                      new Set(detail.ipv4.filter(Boolean).map(String)),
-                    )
+                        new Set(detail.ipv4.filter(Boolean).map(String)),
+                      )
                     : [];
                   networks.ipv6 = detail.ipv6
                     ? Array.from(new Set([String(detail.ipv6)]))
@@ -2437,8 +2500,9 @@ router.put(
             eventType: "user_update",
             entityType: "user",
             entityId: id,
-            message: `Admin updated user ${existingUser.name || existingUser.email
-              }: ${changeDescriptions.join(", ")}`,
+            message: `Admin updated user ${
+              existingUser.name || existingUser.email
+            }: ${changeDescriptions.join(", ")}`,
             status: "success",
             metadata: {
               ...auditMetadata,
@@ -2670,9 +2734,9 @@ router.post(
       // Fetch admin name for notifications
       const adminNameResult = await query(
         "SELECT name FROM users WHERE id = $1",
-        [adminUser.id]
+        [adminUser.id],
       );
-      const adminName = adminNameResult.rows[0]?.name || 'An administrator';
+      const adminName = adminNameResult.rows[0]?.name || "An administrator";
 
       // Note: Rate limiting for impersonation is now handled by the unified smart rate limiting middleware
       // Admin users have higher limits (1000 requests per 15 minutes) which should be sufficient for normal operations
@@ -2770,11 +2834,13 @@ router.post(
           eventType: "impersonation_start",
           entityType: "user",
           entityId: targetUserId,
-          message: `Admin ${adminUser.email} started impersonating user ${targetUser.email
-            }${targetUser.role === "admin"
+          message: `Admin ${adminUser.email} started impersonating user ${
+            targetUser.email
+          }${
+            targetUser.role === "admin"
               ? " (admin-to-admin with confirmation)"
               : ""
-            }`,
+          }`,
           status: "warning", // Changed to warning for security audit
           metadata: auditMetadata,
         },
@@ -2925,8 +2991,9 @@ router.post(
           eventType: "impersonation_end",
           entityType: "user",
           entityId: user.id,
-          message: `Admin ${originalAdmin.email} ended impersonation of user ${user.email
-            } (duration: ${Math.floor(impersonationDuration / 60)} minutes)`,
+          message: `Admin ${originalAdmin.email} ended impersonation of user ${
+            user.email
+          } (duration: ${Math.floor(impersonationDuration / 60)} minutes)`,
           status: "info",
           metadata: auditMetadata,
         },
@@ -2941,7 +3008,7 @@ router.post(
           eventType: "impersonation_ended",
           entityType: "user",
           entityId: originalAdmin.id,
-          message: `Admin access to your account by ${originalAdmin.name || 'an administrator'} has ended`,
+          message: `Admin access to your account by ${originalAdmin.name || "an administrator"} has ended`,
           status: "info",
           metadata: {
             admin_user_id: originalAdmin.id,
@@ -3253,13 +3320,16 @@ router.get(
       try {
         const orgsResult = await query(
           "SELECT COUNT(DISTINCT organization_id) as count FROM organization_members WHERE user_id = $1",
-          [id]
+          [id],
         );
         if (orgsResult.rows.length > 0) {
           totalOrganizations = parseInt(orgsResult.rows[0].count) || 0;
         }
       } catch (orgsErr: any) {
-        console.warn("Error fetching organizations count for user:", orgsErr.message);
+        console.warn(
+          "Error fetching organizations count for user:",
+          orgsErr.message,
+        );
       }
 
       // Calculate statistics
