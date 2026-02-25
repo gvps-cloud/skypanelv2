@@ -651,11 +651,10 @@ const LiveShowcase = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-3 rounded-lg transition-all duration-300 touch-manipulation ${
-                  activeTab === tab.id
+                className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-6 py-3 rounded-lg transition-all duration-300 touch-manipulation ${activeTab === tab.id
                     ? "bg-primary text-primary-foreground shadow-md ring-2 ring-primary/20"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                }`}
+                  }`}
               >
                 <tab.icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                 <span className="font-medium text-sm sm:text-base">
@@ -1246,79 +1245,117 @@ const Testimonials = () => {
 };
 
 // Pricing Preview Section
-const PricingPreview = () => (
-  <section className="py-24 bg-background">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="text-center mb-16"
-      >
-        <Badge
-          variant="outline"
-          className="mb-4 border-primary/40 bg-primary/10 text-primary"
-        >
-          Transparent Pricing
-        </Badge>
-        <h2 className="text-4xl font-bold mb-4">
-          Start Small,
-          <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            {" "}
-            Scale Big
-          </span>
-        </h2>
-        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          No setup fees, no hidden costs. Pay only for what you use with our
-          transparent hourly billing.
-        </p>
-      </motion.div>
+const PricingPreview = () => {
+  const [lowestPrice, setLowestPrice] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="bg-gradient-to-br from-primary to-primary/80 rounded-3xl p-8 md:p-12 text-center"
-      >
-        <div className="max-w-3xl mx-auto">
-          <div className="text-6xl font-bold text-primary-foreground mb-4">
-            $5
-            <span className="text-2xl text-primary-foreground/80">/month</span>
-          </div>
-          <p className="text-xl text-primary-foreground/90 mb-8">
-            Starting from our smallest VPS instances
-          </p>
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-background/20 backdrop-blur-sm rounded-xl p-6">
-              <Check className="w-6 h-6 text-primary mx-auto mb-3" />
-              <p className="text-primary-foreground">No Setup Fees</p>
-            </div>
-            <div className="bg-background/20 backdrop-blur-sm rounded-xl p-6">
-              <Check className="w-6 h-6 text-primary mx-auto mb-3" />
-              <p className="text-primary-foreground">Pay As You Go</p>
-            </div>
-            <div className="bg-background/20 backdrop-blur-sm rounded-xl p-6">
-              <Check className="w-6 h-6 text-primary mx-auto mb-3" />
-              <p className="text-primary-foreground">Cancel Anytime</p>
-            </div>
-          </div>
-          <Button
-            size="lg"
-            className="bg-background text-primary hover:bg-background/90 px-8 py-4 text-lg"
-            asChild
+  useEffect(() => {
+    const fetchLowestPrice = async () => {
+      try {
+        const response = await fetch('/api/pricing/vps');
+        const data = await response.json();
+
+        if (response.ok && data.plans && data.plans.length > 0) {
+          const prices = data.plans.map((plan: any) => {
+            const basePrice = Number(plan.base_price) || 0;
+            const markupPrice = Number(plan.markup_price) || 0;
+            return basePrice + markupPrice;
+          });
+          const minPrice = Math.min(...prices);
+          setLowestPrice(minPrice);
+        }
+      } catch (error) {
+        console.error('Failed to fetch pricing for homepage:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLowestPrice();
+  }, []);
+
+  const displayPrice = lowestPrice !== null ? lowestPrice : 5;
+
+  return (
+    <section className="py-24 bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <Badge
+            variant="outline"
+            className="mb-4 border-primary/40 bg-primary/10 text-primary"
           >
-            <Link to="/pricing">
-              View Full Pricing
-              <ArrowUpRight className="w-5 h-5 ml-2" />
-            </Link>
-          </Button>
-        </div>
-      </motion.div>
-    </div>
-  </section>
-);
+            Transparent Pricing
+          </Badge>
+          <h2 className="text-4xl font-bold mb-4">
+            Start Small,
+            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              {" "}
+              Scale Big
+            </span>
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            No setup fees, no hidden costs. Pay only for what you use with our
+            transparent hourly billing.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="bg-gradient-to-br from-primary to-primary/80 rounded-3xl p-8 md:p-12 text-center"
+        >
+          <div className="max-w-3xl mx-auto">
+            <div className="text-6xl font-bold text-primary-foreground mb-4 min-h-[72px]">
+              {isLoading ? (
+                <div className="w-8 h-8 md:w-12 md:h-12 border-4 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mx-auto mt-2"></div>
+              ) : (
+                <>
+                  ${displayPrice}
+                  <span className="text-2xl text-primary-foreground/80">/month</span>
+                </>
+              )}
+            </div>
+            <p className="text-xl text-primary-foreground/90 mb-8">
+              Starting from our smallest VPS instances
+            </p>
+            <div className="grid md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-background/20 backdrop-blur-sm rounded-xl p-6">
+                <Check className="w-6 h-6 text-primary-foreground mx-auto mb-3" />
+                <p className="text-primary-foreground">No Setup Fees</p>
+              </div>
+              <div className="bg-background/20 backdrop-blur-sm rounded-xl p-6">
+                <Check className="w-6 h-6 text-primary-foreground mx-auto mb-3" />
+                <p className="text-primary-foreground">Pay As You Go</p>
+              </div>
+              <div className="bg-background/20 backdrop-blur-sm rounded-xl p-6">
+                <Check className="w-6 h-6 text-primary-foreground mx-auto mb-3" />
+                <p className="text-primary-foreground">Cancel Anytime</p>
+              </div>
+            </div>
+            <Button
+              size="lg"
+              className="bg-background text-primary hover:bg-background/90 px-8 py-4 text-lg"
+              asChild
+            >
+              <Link to="/pricing">
+                View Full Pricing
+                <ArrowUpRight className="w-5 h-5 ml-2" />
+              </Link>
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
 
 // FAQ Section
 const FAQ = () => {
@@ -1491,9 +1528,8 @@ const BackToTopButton = () => {
       animate={{ opacity: isVisible ? 1 : 0, scale: isVisible ? 1 : 0.8 }}
       transition={{ duration: 0.2 }}
       onClick={scrollToTop}
-      className={`fixed bottom-8 right-8 z-50 p-3 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 hover:shadow-xl transition-all duration-300 ${
-        isVisible ? "pointer-events-auto" : "pointer-events-none"
-      }`}
+      className={`fixed bottom-8 right-8 z-50 p-3 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 hover:shadow-xl transition-all duration-300 ${isVisible ? "pointer-events-auto" : "pointer-events-none"
+        }`}
       aria-label="Back to top"
     >
       <ArrowUp className="w-5 h-5" />
