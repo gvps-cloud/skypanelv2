@@ -772,6 +772,7 @@ const Admin: React.FC = () => {
   const [rdnsLoading, setRdnsLoading] = useState<boolean>(false);
   const [rdnsSaving, setRdnsSaving] = useState<boolean>(false);
   const [hostingServices, setHostingServices] = useState<any[]>([]);
+  const [isWebHostingEnabled, setIsWebHostingEnabled] = useState<boolean>(true);
 
   const authHeader = useMemo(
     () => ({ Authorization: `Bearer ${token}` }),
@@ -1112,6 +1113,7 @@ const Admin: React.FC = () => {
         fetchServers();
         fetchAdminUsers();
         fetchProviders();
+        fetchWebHostingStatus();
         fetchHostingServices();
         break;
       case "support":
@@ -1420,6 +1422,22 @@ const Admin: React.FC = () => {
       }
     } catch (e: any) {
       console.warn("Failed to load hosting services", e);
+    }
+  };
+
+  const fetchWebHostingStatus = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/enhance/status`, {
+        headers: authHeader,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load web hosting status");
+      }
+      setIsWebHostingEnabled(Boolean(data?.enabled));
+    } catch (e: any) {
+      console.warn("Failed to load web hosting status", e);
     }
   };
 
@@ -1932,21 +1950,28 @@ const Admin: React.FC = () => {
         ],
         actionLabel: "Manage servers",
       },
-      {
-        id: "hosting",
-        title: "Web Hosting",
-        description: "Manage web hosting services and active websites.",
-        icon: Server,
-        accent: "text-blue-500",
-        summary: [
-          { label: "Active", value: formatCountValue(hostingServices.length) },
-          {
-            label: "Total sites",
-            value: formatCountValue(hostingServices.length),
-          },
-        ],
-        actionLabel: "Manage hosting",
-      },
+      ...(isWebHostingEnabled
+        ? [
+            {
+              id: "hosting",
+              title: "Web Hosting",
+              description: "Manage web hosting services and active websites.",
+              icon: Server,
+              accent: "text-blue-500",
+              summary: [
+                {
+                  label: "Active",
+                  value: formatCountValue(hostingServices.length),
+                },
+                {
+                  label: "Total sites",
+                  value: formatCountValue(hostingServices.length),
+                },
+              ],
+              actionLabel: "Manage hosting",
+            } satisfies StrategicPanel,
+          ]
+        : []),
       {
         id: "vps-plans",
         title: "Plan Catalog",
@@ -2001,8 +2026,10 @@ const Admin: React.FC = () => {
     inactivePlanCount,
     inactiveProviders,
     inProgressTickets,
+    isWebHostingEnabled,
     openTicketCount,
     provisioningServers,
+    hostingServices.length,
     totalAdminUsers,
     urgentTickets,
   ]);
@@ -2098,26 +2125,28 @@ const Admin: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Web Hosting
-                    </p>
-                    <p className="text-3xl font-bold tracking-tight">
-                      {formatCountValue(hostingServices.length)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Active websites
-                    </p>
+            {isWebHostingEnabled ? (
+              <Card className="overflow-hidden">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Web Hosting
+                      </p>
+                      <p className="text-3xl font-bold tracking-tight">
+                        {formatCountValue(hostingServices.length)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Active websites
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-blue-500/10 p-3">
+                      <Server className="h-6 w-6 text-blue-500" />
+                    </div>
                   </div>
-                  <div className="rounded-lg bg-blue-500/10 p-3">
-                    <Server className="h-6 w-6 text-blue-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ) : null}
 
             <Card className="overflow-hidden">
               <CardContent className="p-6">
