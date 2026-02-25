@@ -2,7 +2,13 @@
  * Admin Support View - Inbox-style support ticket management
  * Uses shadcn sidebar pattern for a modern support interface
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   CheckCircle,
   Clock,
@@ -68,23 +74,34 @@ interface TicketMessage {
   created_at: string;
 }
 
+const REOPEN_REQUEST_PREFIX = "[REOPEN_REQUEST]";
+const isReopenRequestMessage = (message: string): boolean =>
+  typeof message === "string" && message.startsWith(REOPEN_REQUEST_PREFIX);
+const formatTicketMessage = (message: string): string =>
+  isReopenRequestMessage(message)
+    ? message.replace(REOPEN_REQUEST_PREFIX, "").trim()
+    : message;
+
 const TICKET_STATUS_META: Record<
   TicketStatus,
   { label: string; className: string; icon: React.ElementType }
 > = {
   open: {
     label: "Open",
-    className: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    className:
+      "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
     icon: Mail,
   },
   in_progress: {
     label: "In Progress",
-    className: "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    className:
+      "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
     icon: Clock,
   },
   resolved: {
     label: "Resolved",
-    className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    className:
+      "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     icon: CheckCircle,
   },
   closed: {
@@ -104,11 +121,13 @@ const TICKET_PRIORITY_META: Record<
   },
   medium: {
     label: "Medium",
-    className: "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    className:
+      "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
   },
   high: {
     label: "High",
-    className: "border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    className:
+      "border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400",
   },
   urgent: {
     label: "Urgent",
@@ -128,7 +147,9 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
   onFocusTicketHandled,
 }) => {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
+    null,
+  );
   const [replyMessage, setReplyMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | TicketStatus>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -138,7 +159,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
 
   const authHeader = useMemo(
     () => ({ Authorization: `Bearer ${token}` }),
-    [token]
+    [token],
   );
 
   const scrollToBottom = useCallback(() => {
@@ -171,7 +192,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
       try {
         const res = await fetch(
           buildApiUrl(`/api/admin/tickets/${ticket.id}/replies`),
-          { headers: authHeader }
+          { headers: authHeader },
         );
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to load replies");
@@ -183,13 +204,15 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
           message: m.message,
           created_at: m.created_at,
         }));
-        setSelectedTicket((prev) => (prev ? { ...prev, messages: msgs } : prev));
+        setSelectedTicket((prev) =>
+          prev ? { ...prev, messages: msgs } : prev,
+        );
         setTimeout(scrollToBottom, 100);
       } catch (e: any) {
         toast.error(e.message || "Failed to load replies");
       }
     },
-    [authHeader, scrollToBottom]
+    [authHeader, scrollToBottom],
   );
 
   // Handle pending focus ticket once the opener is ready
@@ -213,7 +236,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
           method: "POST",
           headers: { ...authHeader, "Content-Type": "application/json" },
           body: JSON.stringify({ message: replyMessage }),
-        }
+        },
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send reply");
@@ -235,7 +258,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
             method: "PATCH",
             headers: { ...authHeader, "Content-Type": "application/json" },
             body: JSON.stringify({ status }),
-          }
+          },
         );
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to update status");
@@ -249,7 +272,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         toast.error(error.message || "Failed to update ticket status");
       }
     },
-    [authHeader, fetchTickets, selectedTicket]
+    [authHeader, fetchTickets, selectedTicket],
   );
 
   const deleteTicket = useCallback(async () => {
@@ -261,7 +284,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         {
           method: "DELETE",
           headers: authHeader,
-        }
+        },
       );
       const raw = await res.text();
       let data: any;
@@ -288,7 +311,8 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
   }, [deleteTicketId, authHeader, selectedTicket, fetchTickets]);
 
   const filteredTickets = tickets.filter((ticket) => {
-    const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all" || ticket.status === statusFilter;
     const matchesSearch =
       !searchQuery ||
       ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -309,10 +333,12 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
     <>
       <div className="flex h-[calc(100vh-12rem)] overflow-hidden rounded-lg border border-border bg-background relative">
         {/* Sidebar - Ticket List */}
-        <div className={cn(
-          "flex flex-col border-r border-border bg-muted/30 w-full md:w-80 shrink-0",
-          selectedTicket ? "hidden md:flex" : "flex"
-        )}>
+        <div
+          className={cn(
+            "flex flex-col border-r border-border bg-muted/30 w-full md:w-80 shrink-0",
+            selectedTicket ? "hidden md:flex" : "flex",
+          )}
+        >
           {/* Sidebar Header */}
           <div className="flex items-center justify-between border-b border-border bg-background px-4 py-3">
             <div className="flex items-center gap-2">
@@ -347,7 +373,9 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
           <div className="border-b border-border p-3">
             <Select
               value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}
+              onValueChange={(value) =>
+                setStatusFilter(value as typeof statusFilter)
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -356,9 +384,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                 <SelectItem value="all">
                   All Tickets ({ticketCounts.all})
                 </SelectItem>
-                <SelectItem value="open">
-                  Open ({ticketCounts.open})
-                </SelectItem>
+                <SelectItem value="open">Open ({ticketCounts.open})</SelectItem>
                 <SelectItem value="in_progress">
                   In Progress ({ticketCounts.in_progress})
                 </SelectItem>
@@ -393,7 +419,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                         "flex w-full flex-col gap-2 p-4 text-left transition-colors",
                         isSelected
                           ? "bg-primary/10 border-l-2 border-l-primary"
-                          : "hover:bg-muted/50"
+                          : "hover:bg-muted/50",
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -405,7 +431,10 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                         </div>
                         <Badge
                           variant="outline"
-                          className={cn("text-xs", TICKET_PRIORITY_META[ticket.priority].className)}
+                          className={cn(
+                            "text-xs",
+                            TICKET_PRIORITY_META[ticket.priority].className,
+                          )}
                         >
                           {TICKET_PRIORITY_META[ticket.priority].label}
                         </Badge>
@@ -416,14 +445,19 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Badge
                           variant="outline"
-                          className={cn("text-xs", TICKET_STATUS_META[ticket.status].className)}
+                          className={cn(
+                            "text-xs",
+                            TICKET_STATUS_META[ticket.status].className,
+                          )}
                         >
                           {TICKET_STATUS_META[ticket.status].label}
                         </Badge>
                         <span>•</span>
                         <span className="capitalize">{ticket.category}</span>
                         <span>•</span>
-                        <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
+                        <span>
+                          {new Date(ticket.created_at).toLocaleDateString()}
+                        </span>
                       </div>
                     </button>
                   );
@@ -434,10 +468,12 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         </div>
 
         {/* Main Content - Ticket Detail */}
-        <div className={cn(
-          "flex flex-1 flex-col",
-          !selectedTicket ? "hidden md:flex" : "flex"
-        )}>
+        <div
+          className={cn(
+            "flex flex-1 flex-col",
+            !selectedTicket ? "hidden md:flex" : "flex",
+          )}
+        >
           {!selectedTicket ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
               <Mail className="h-16 w-16 text-muted-foreground/40" />
@@ -464,17 +500,24 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                         ← Back to Tickets
                       </Button>
                     </div>
-                    <h2 className="text-xl font-semibold">{selectedTicket.subject}</h2>
+                    <h2 className="text-xl font-semibold">
+                      {selectedTicket.subject}
+                    </h2>
                     <div className="flex flex-wrap items-center gap-2 text-sm">
                       <Badge
                         variant="outline"
-                        className={cn(TICKET_STATUS_META[selectedTicket.status].className)}
+                        className={cn(
+                          TICKET_STATUS_META[selectedTicket.status].className,
+                        )}
                       >
                         {TICKET_STATUS_META[selectedTicket.status].label}
                       </Badge>
                       <Badge
                         variant="outline"
-                        className={cn(TICKET_PRIORITY_META[selectedTicket.priority].className)}
+                        className={cn(
+                          TICKET_PRIORITY_META[selectedTicket.priority]
+                            .className,
+                        )}
                       >
                         {TICKET_PRIORITY_META[selectedTicket.priority].label}
                       </Badge>
@@ -493,7 +536,9 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => updateTicketStatus(selectedTicket.id, "open")}
+                        onClick={() =>
+                          updateTicketStatus(selectedTicket.id, "open")
+                        }
                       >
                         <RefreshCw className="mr-1 h-4 w-4" />
                         Re-open
@@ -503,7 +548,9 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => updateTicketStatus(selectedTicket.id, "in_progress")}
+                        onClick={() =>
+                          updateTicketStatus(selectedTicket.id, "in_progress")
+                        }
                       >
                         <Clock className="mr-1 h-4 w-4" />
                         In Progress
@@ -513,10 +560,24 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => updateTicketStatus(selectedTicket.id, "resolved")}
+                        onClick={() =>
+                          updateTicketStatus(selectedTicket.id, "resolved")
+                        }
                       >
                         <CheckCircle className="mr-1 h-4 w-4" />
                         Resolve
+                      </Button>
+                    )}
+                    {selectedTicket.status !== "closed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          updateTicketStatus(selectedTicket.id, "closed")
+                        }
+                      >
+                        <MailOpen className="mr-1 h-4 w-4" />
+                        Close
                       </Button>
                     )}
                     <Button
@@ -539,40 +600,62 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                     <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Original Message
                     </div>
-                    <p className="whitespace-pre-wrap text-sm">{selectedTicket.message}</p>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {selectedTicket.message}
+                    </p>
                   </div>
 
                   <Separator />
 
                   {/* Replies */}
-                  {selectedTicket.messages && selectedTicket.messages.length > 0 ? (
+                  {selectedTicket.messages &&
+                  selectedTicket.messages.length > 0 ? (
                     <div className="space-y-4">
-                      {selectedTicket.messages.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className={cn(
-                            "flex",
-                            msg.sender_type === "admin" ? "justify-end" : "justify-start"
-                          )}
-                        >
+                      {selectedTicket.messages.map((msg) => {
+                        const isReopenRequest =
+                          msg.sender_type === "user" &&
+                          isReopenRequestMessage(msg.message);
+
+                        return (
                           <div
+                            key={msg.id}
                             className={cn(
-                              "max-w-2xl rounded-lg border p-4",
+                              "flex",
                               msg.sender_type === "admin"
-                                ? "border-primary/30 bg-primary text-primary-foreground"
-                                : "border-border bg-background"
+                                ? "justify-end"
+                                : "justify-start",
                             )}
                           >
-                            <div className="mb-2 flex items-center justify-between gap-4 text-xs">
-                              <span className="font-medium">{msg.sender_name}</span>
-                              <span className="text-muted-foreground">
-                                {new Date(msg.created_at).toLocaleString()}
-                              </span>
+                            <div
+                              className={cn(
+                                "max-w-2xl rounded-lg border p-4",
+                                msg.sender_type === "admin"
+                                  ? "border-primary/30 bg-primary text-primary-foreground"
+                                  : "border-border bg-background",
+                                isReopenRequest &&
+                                  "border-amber-500/30 bg-amber-500/10",
+                              )}
+                            >
+                              <div className="mb-2 flex items-center justify-between gap-4 text-xs">
+                                <span className="font-medium">
+                                  {msg.sender_name}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {new Date(msg.created_at).toLocaleString()}
+                                </span>
+                              </div>
+                              {isReopenRequest && (
+                                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                  Re-open Request
+                                </div>
+                              )}
+                              <p className="whitespace-pre-wrap text-sm">
+                                {formatTicketMessage(msg.message)}
+                              </p>
                             </div>
-                            <p className="whitespace-pre-wrap text-sm">{msg.message}</p>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
@@ -586,7 +669,10 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
               {/* Reply Box */}
               <div className="border-t border-border bg-muted/30 p-4">
                 <div className="space-y-3">
-                  <Label htmlFor="reply-message" className="text-sm font-medium">
+                  <Label
+                    htmlFor="reply-message"
+                    className="text-sm font-medium"
+                  >
                     Reply to ticket
                   </Label>
                   <Textarea
@@ -618,17 +704,24 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteTicketId} onOpenChange={() => setDeleteTicketId(null)}>
+      <AlertDialog
+        open={!!deleteTicketId}
+        onOpenChange={() => setDeleteTicketId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Ticket</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this ticket? This action cannot be undone.
+              Are you sure you want to delete this ticket? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={deleteTicket} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={deleteTicket}
+              className="bg-destructive text-destructive-foreground"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

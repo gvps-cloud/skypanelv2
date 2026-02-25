@@ -1,7 +1,13 @@
 /**
  * User Support View - Inbox-style support ticket interface for users
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Clock,
   Inbox,
@@ -9,6 +15,7 @@ import {
   MailOpen,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   Send,
   User,
@@ -65,23 +72,34 @@ interface TicketMessage {
   created_at: string;
 }
 
+const REOPEN_REQUEST_PREFIX = "[REOPEN_REQUEST]";
+const isReopenRequestMessage = (message: string): boolean =>
+  typeof message === "string" && message.startsWith(REOPEN_REQUEST_PREFIX);
+const formatTicketMessage = (message: string): string =>
+  isReopenRequestMessage(message)
+    ? message.replace(REOPEN_REQUEST_PREFIX, "").trim()
+    : message;
+
 const TICKET_STATUS_META: Record<
   TicketStatus,
   { label: string; className: string; icon: React.ElementType }
 > = {
   open: {
     label: "Open",
-    className: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    className:
+      "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
     icon: Mail,
   },
   in_progress: {
     label: "In Progress",
-    className: "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    className:
+      "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
     icon: Clock,
   },
   resolved: {
     label: "Resolved",
-    className: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    className:
+      "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     icon: MailOpen,
   },
   closed: {
@@ -101,11 +119,13 @@ const TICKET_PRIORITY_META: Record<
   },
   medium: {
     label: "Medium",
-    className: "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    className:
+      "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
   },
   high: {
     label: "High",
-    className: "border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    className:
+      "border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400",
   },
   urgent: {
     label: "Urgent",
@@ -119,11 +139,15 @@ interface UserSupportViewProps {
 
 export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
+    null,
+  );
   const [replyMessage, setReplyMessage] = useState("");
+  const [reopenRequestMessage, setReopenRequestMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | TicketStatus>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [requestingReopen, setRequestingReopen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -137,7 +161,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
 
   const authHeader = useMemo(
     () => ({ Authorization: `Bearer ${token}` }),
-    [token]
+    [token],
   );
 
   const scrollToBottom = useCallback(() => {
@@ -178,12 +202,19 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
     fetchTickets();
   }, [fetchTickets]);
 
+  useEffect(() => {
+    setReplyMessage("");
+    setReopenRequestMessage("");
+  }, [selectedTicket?.id]);
+
   // Set up real-time updates for selected ticket
   useEffect(() => {
     if (!selectedTicket || !token) return;
 
     const es = new EventSource(
-      buildApiUrl(`/api/support/tickets/${selectedTicket.id}/stream?token=${token}`)
+      buildApiUrl(
+        `/api/support/tickets/${selectedTicket.id}/stream?token=${token}`,
+      ),
     );
     eventSourceRef.current = es;
 
@@ -191,7 +222,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
       try {
         const data = JSON.parse(event.data);
 
-        if (data.type === "ticket_message" && data.ticket_id === selectedTicket.id) {
+        if (
+          data.type === "ticket_message" &&
+          data.ticket_id === selectedTicket.id
+        ) {
           const newMsg: TicketMessage = {
             id: data.message_id,
             ticket_id: data.ticket_id,
@@ -221,20 +255,32 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
           setTickets((prev) =>
             prev.map((t) =>
               t.id === data.ticket_id
-                ? { ...t, has_staff_reply: t.has_staff_reply || data.is_staff_reply }
-                : t
-            )
+                ? {
+                    ...t,
+                    has_staff_reply: t.has_staff_reply || data.is_staff_reply,
+                  }
+                : t,
+            ),
           );
 
           setTimeout(scrollToBottom, 100);
         }
 
-        if (data.type === "ticket_status_change" && data.ticket_id === selectedTicket.id) {
-          setSelectedTicket((prev) => (prev ? { ...prev, status: data.new_status } : prev));
-          setTickets((prev) =>
-            prev.map((t) => (t.id === data.ticket_id ? { ...t, status: data.new_status } : t))
+        if (
+          data.type === "ticket_status_change" &&
+          data.ticket_id === selectedTicket.id
+        ) {
+          setSelectedTicket((prev) =>
+            prev ? { ...prev, status: data.new_status } : prev,
           );
-          toast.info(`Ticket status updated to: ${data.new_status.replace("_", " ")}`);
+          setTickets((prev) =>
+            prev.map((t) =>
+              t.id === data.ticket_id ? { ...t, status: data.new_status } : t,
+            ),
+          );
+          toast.info(
+            `Ticket status updated to: ${data.new_status.replace("_", " ")}`,
+          );
         }
       } catch (err) {
         console.error("Error parsing SSE message:", err);
@@ -257,7 +303,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
       try {
         const res = await fetch(
           buildApiUrl(`/api/support/tickets/${ticket.id}/replies`),
-          { headers: authHeader }
+          { headers: authHeader },
         );
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to load replies");
@@ -269,17 +315,23 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
           message: m.message,
           created_at: m.created_at,
         }));
-        setSelectedTicket((prev) => (prev ? { ...prev, messages: msgs } : prev));
+        setSelectedTicket((prev) =>
+          prev ? { ...prev, messages: msgs } : prev,
+        );
         setTimeout(scrollToBottom, 100);
       } catch (e: any) {
         toast.error(e.message || "Failed to load messages");
       }
     },
-    [authHeader, scrollToBottom]
+    [authHeader, scrollToBottom],
   );
 
   const sendReply = useCallback(async () => {
     if (!selectedTicket || !replyMessage.trim()) return;
+    if (selectedTicket.status === "closed") {
+      toast.error("This ticket is closed. Request a reopen to continue.");
+      return;
+    }
 
     try {
       const res = await fetch(
@@ -288,7 +340,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
           method: "POST",
           headers: { ...authHeader, "Content-Type": "application/json" },
           body: JSON.stringify({ message: replyMessage }),
-        }
+        },
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send reply");
@@ -300,6 +352,45 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
       toast.error(error.message || "Failed to send reply");
     }
   }, [selectedTicket, replyMessage, authHeader, openTicket]);
+
+  const requestReopen = useCallback(async () => {
+    if (!selectedTicket) return;
+    if (selectedTicket.status !== "closed") {
+      toast.error("Only closed tickets can be reopened.");
+      return;
+    }
+
+    setRequestingReopen(true);
+    try {
+      const note = reopenRequestMessage.trim();
+      const payload = note ? { message: note } : {};
+      const res = await fetch(
+        buildApiUrl(`/api/support/tickets/${selectedTicket.id}/reopen-request`),
+        {
+          method: "POST",
+          headers: { ...authHeader, "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to request reopen");
+
+      toast.success("Re-open request sent to support staff");
+      setReopenRequestMessage("");
+      await openTicket(selectedTicket);
+      await fetchTickets();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to request reopen");
+    } finally {
+      setRequestingReopen(false);
+    }
+  }, [
+    selectedTicket,
+    reopenRequestMessage,
+    authHeader,
+    openTicket,
+    fetchTickets,
+  ]);
 
   const handleCreateTicket = async () => {
     if (!newTicket.subject.trim() || !newTicket.description.trim()) {
@@ -339,7 +430,8 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
   };
 
   const filteredTickets = tickets.filter((ticket) => {
-    const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all" || ticket.status === statusFilter;
     const matchesSearch =
       !searchQuery ||
       ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -360,10 +452,12 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
     <>
       <div className="flex h-[calc(100vh-12rem)] overflow-hidden rounded-lg border border-border bg-background relative">
         {/* Sidebar - Ticket List */}
-        <div className={cn(
-          "flex flex-col border-r border-border bg-muted/30 w-full md:w-80 shrink-0",
-          selectedTicket ? "hidden md:flex" : "flex"
-        )}>
+        <div
+          className={cn(
+            "flex flex-col border-r border-border bg-muted/30 w-full md:w-80 shrink-0",
+            selectedTicket ? "hidden md:flex" : "flex",
+          )}
+        >
           {/* Sidebar Header */}
           <div className="flex items-center justify-between border-b border-border bg-background px-4 py-3">
             <div className="flex items-center gap-2">
@@ -378,7 +472,9 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                 disabled={loading}
                 className="h-8 w-8"
               >
-                <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+                <RefreshCw
+                  className={cn("h-4 w-4", loading && "animate-spin")}
+                />
               </Button>
               <Button
                 variant="ghost"
@@ -408,19 +504,27 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
           <div className="border-b border-border p-3">
             <Select
               value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}
+              onValueChange={(value) =>
+                setStatusFilter(value as typeof statusFilter)
+              }
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Tickets ({ticketCounts.all})</SelectItem>
+                <SelectItem value="all">
+                  All Tickets ({ticketCounts.all})
+                </SelectItem>
                 <SelectItem value="open">Open ({ticketCounts.open})</SelectItem>
                 <SelectItem value="in_progress">
                   In Progress ({ticketCounts.in_progress})
                 </SelectItem>
-                <SelectItem value="resolved">Resolved ({ticketCounts.resolved})</SelectItem>
-                <SelectItem value="closed">Closed ({ticketCounts.closed})</SelectItem>
+                <SelectItem value="resolved">
+                  Resolved ({ticketCounts.resolved})
+                </SelectItem>
+                <SelectItem value="closed">
+                  Closed ({ticketCounts.closed})
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -454,7 +558,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                         "flex w-full flex-col gap-2 p-4 text-left transition-colors",
                         isSelected
                           ? "bg-primary/10 border-l-2 border-l-primary"
-                          : "hover:bg-muted/50"
+                          : "hover:bg-muted/50",
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -465,7 +569,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                           </span>
                         </div>
                         {ticket.has_staff_reply && (
-                          <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20 flex-shrink-0">
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-primary/10 text-primary border-primary/20 flex-shrink-0"
+                          >
                             New
                           </Badge>
                         )}
@@ -476,18 +583,26 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Badge
                           variant="outline"
-                          className={cn("text-xs", TICKET_STATUS_META[ticket.status].className)}
+                          className={cn(
+                            "text-xs",
+                            TICKET_STATUS_META[ticket.status].className,
+                          )}
                         >
                           {TICKET_STATUS_META[ticket.status].label}
                         </Badge>
                         <Badge
                           variant="outline"
-                          className={cn("text-xs", TICKET_PRIORITY_META[ticket.priority].className)}
+                          className={cn(
+                            "text-xs",
+                            TICKET_PRIORITY_META[ticket.priority].className,
+                          )}
                         >
                           {TICKET_PRIORITY_META[ticket.priority].label}
                         </Badge>
                         <span>•</span>
-                        <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
+                        <span>
+                          {new Date(ticket.created_at).toLocaleDateString()}
+                        </span>
                       </div>
                     </button>
                   );
@@ -498,10 +613,12 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
         </div>
 
         {/* Main Content - Ticket Detail */}
-        <div className={cn(
-          "flex flex-1 flex-col",
-          !selectedTicket ? "hidden md:flex" : "flex"
-        )}>
+        <div
+          className={cn(
+            "flex flex-1 flex-col",
+            !selectedTicket ? "hidden md:flex" : "flex",
+          )}
+        >
           {!selectedTicket ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
               <Mail className="h-16 w-16 text-muted-foreground/40" />
@@ -532,17 +649,24 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                         ← Back to Tickets
                       </Button>
                     </div>
-                    <h2 className="text-xl font-semibold">{selectedTicket.subject}</h2>
+                    <h2 className="text-xl font-semibold">
+                      {selectedTicket.subject}
+                    </h2>
                     <div className="flex flex-wrap items-center gap-2 text-sm">
                       <Badge
                         variant="outline"
-                        className={cn(TICKET_STATUS_META[selectedTicket.status].className)}
+                        className={cn(
+                          TICKET_STATUS_META[selectedTicket.status].className,
+                        )}
                       >
                         {TICKET_STATUS_META[selectedTicket.status].label}
                       </Badge>
                       <Badge
                         variant="outline"
-                        className={cn(TICKET_PRIORITY_META[selectedTicket.priority].className)}
+                        className={cn(
+                          TICKET_PRIORITY_META[selectedTicket.priority]
+                            .className,
+                        )}
                       >
                         {TICKET_PRIORITY_META[selectedTicket.priority].label}
                       </Badge>
@@ -568,9 +692,13 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                       <User className="h-3 w-3" />
                       <span className="font-medium">You</span>
                       <span>•</span>
-                      <span>{new Date(selectedTicket.created_at).toLocaleString()}</span>
+                      <span>
+                        {new Date(selectedTicket.created_at).toLocaleString()}
+                      </span>
                     </div>
-                    <p className="whitespace-pre-wrap text-sm">{selectedTicket.description}</p>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {selectedTicket.description}
+                    </p>
                   </div>
 
                   {selectedTicket.messages.length > 0 && <Separator />}
@@ -583,7 +711,9 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                           key={msg.id}
                           className={cn(
                             "flex",
-                            msg.sender_type === "admin" ? "justify-start" : "justify-end"
+                            msg.sender_type === "admin"
+                              ? "justify-start"
+                              : "justify-end",
                           )}
                         >
                           <div
@@ -591,18 +721,28 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                               "max-w-2xl rounded-lg border p-4",
                               msg.sender_type === "admin"
                                 ? "border-primary/30 bg-primary/5"
-                                : "border-border bg-background"
+                                : "border-border bg-background",
                             )}
                           >
                             <div className="mb-2 flex items-center gap-2 text-xs">
                               <User className="h-3 w-3 text-muted-foreground" />
-                              <span className="font-medium">{msg.sender_name}</span>
+                              <span className="font-medium">
+                                {msg.sender_name}
+                              </span>
                               <span className="text-muted-foreground">•</span>
                               <span className="text-muted-foreground">
                                 {new Date(msg.created_at).toLocaleString()}
                               </span>
                             </div>
-                            <p className="whitespace-pre-wrap text-sm">{msg.message}</p>
+                            {msg.sender_type === "user" &&
+                              isReopenRequestMessage(msg.message) && (
+                                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                  Re-open Request
+                                </div>
+                              )}
+                            <p className="whitespace-pre-wrap text-sm">
+                              {formatTicketMessage(msg.message)}
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -615,12 +755,40 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
               {/* Reply Box */}
               <div className="border-t border-border bg-muted/30 p-4">
                 {selectedTicket.status === "closed" ? (
-                  <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                    This ticket has been closed. Create a new ticket if you need further assistance.
+                  <div className="space-y-3 rounded-lg border border-dashed border-border p-4">
+                    <p className="text-sm text-muted-foreground">
+                      This ticket has been closed. You can request a re-open for
+                      this same thread or create a new ticket.
+                    </p>
+                    <Textarea
+                      rows={3}
+                      value={reopenRequestMessage}
+                      onChange={(e) => setReopenRequestMessage(e.target.value)}
+                      placeholder="Optional note for support staff"
+                      className="resize-none bg-background"
+                    />
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsCreateModalOpen(true)}
+                      >
+                        Create New Ticket
+                      </Button>
+                      <Button
+                        onClick={requestReopen}
+                        disabled={requestingReopen}
+                      >
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                        {requestingReopen ? "Requesting..." : "Request Re-open"}
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <Label htmlFor="reply-message" className="text-sm font-medium">
+                    <Label
+                      htmlFor="reply-message"
+                      className="text-sm font-medium"
+                    >
                       Reply to ticket
                     </Label>
                     <Textarea
@@ -649,7 +817,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                         >
                           Clear
                         </Button>
-                        <Button onClick={sendReply} disabled={!replyMessage.trim()}>
+                        <Button
+                          onClick={sendReply}
+                          disabled={!replyMessage.trim()}
+                        >
                           <Send className="mr-2 h-4 w-4" />
                           Send Reply
                         </Button>
@@ -669,7 +840,8 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
           <DialogHeader>
             <DialogTitle>Create Support Ticket</DialogTitle>
             <DialogDescription>
-              Describe your issue and our support team will get back to you as soon as possible.
+              Describe your issue and our support team will get back to you as
+              soon as possible.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -678,7 +850,9 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
               <Input
                 id="subject"
                 value={newTicket.subject}
-                onChange={(e) => setNewTicket((prev) => ({ ...prev, subject: e.target.value }))}
+                onChange={(e) =>
+                  setNewTicket((prev) => ({ ...prev, subject: e.target.value }))
+                }
                 placeholder="Brief description of your issue"
               />
             </div>
@@ -688,7 +862,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                 <Select
                   value={newTicket.category}
                   onValueChange={(value) =>
-                    setNewTicket((prev) => ({ ...prev, category: value as TicketCategory }))
+                    setNewTicket((prev) => ({
+                      ...prev,
+                      category: value as TicketCategory,
+                    }))
                   }
                 >
                   <SelectTrigger id="category">
@@ -698,7 +875,9 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                     <SelectItem value="general">General</SelectItem>
                     <SelectItem value="technical">Technical</SelectItem>
                     <SelectItem value="billing">Billing</SelectItem>
-                    <SelectItem value="feature_request">Feature Request</SelectItem>
+                    <SelectItem value="feature_request">
+                      Feature Request
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -707,7 +886,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                 <Select
                   value={newTicket.priority}
                   onValueChange={(value) =>
-                    setNewTicket((prev) => ({ ...prev, priority: value as TicketPriority }))
+                    setNewTicket((prev) => ({
+                      ...prev,
+                      priority: value as TicketPriority,
+                    }))
                   }
                 >
                   <SelectTrigger id="priority">
@@ -729,7 +911,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
                 rows={6}
                 value={newTicket.description}
                 onChange={(e) =>
-                  setNewTicket((prev) => ({ ...prev, description: e.target.value }))
+                  setNewTicket((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
                 }
                 placeholder="Detailed description of your issue or question"
                 className="resize-none"
@@ -737,12 +922,19 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button
               onClick={handleCreateTicket}
-              disabled={loading || !newTicket.subject.trim() || !newTicket.description.trim()}
+              disabled={
+                loading ||
+                !newTicket.subject.trim() ||
+                !newTicket.description.trim()
+              }
             >
               {loading ? "Creating..." : "Create Ticket"}
             </Button>
