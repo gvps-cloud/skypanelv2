@@ -536,11 +536,11 @@ const AdminUserDetail: React.FC = () => {
               </div>
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Role</Label>
-                <p className="text-sm">
+                <div className="mt-1">
                   <Badge variant={user?.role === 'admin' ? 'default' : 'secondary'}>
                     {user?.role === 'admin' ? 'Administrator' : 'User'}
                   </Badge>
-                </p>
+                </div>
               </div>
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Phone</Label>

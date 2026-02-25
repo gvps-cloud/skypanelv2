@@ -152,7 +152,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to fetch tickets");
-      
+
       const mapped: SupportTicket[] = (data.tickets || []).map((t: any) => ({
         id: t.id,
         subject: t.subject,
@@ -165,7 +165,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
         has_staff_reply: t.has_staff_reply || false,
         messages: [],
       }));
-      
+
       setTickets(mapped);
     } catch (error: any) {
       toast.error(error.message || "Failed to load tickets");
@@ -330,7 +330,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
         category: "general",
       });
       setIsCreateModalOpen(false);
-  await fetchTickets();
+      await fetchTickets();
     } catch (error: any) {
       toast.error(error.message || "Failed to create support ticket");
     } finally {
@@ -358,9 +358,12 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
 
   return (
     <>
-      <div className="flex h-[calc(100vh-12rem)] overflow-hidden rounded-lg border border-border bg-background">
+      <div className="flex h-[calc(100vh-12rem)] overflow-hidden rounded-lg border border-border bg-background relative">
         {/* Sidebar - Ticket List */}
-        <div className="flex w-80 flex-col border-r border-border bg-muted/30">
+        <div className={cn(
+          "flex flex-col border-r border-border bg-muted/30 w-full md:w-80 shrink-0",
+          selectedTicket ? "hidden md:flex" : "flex"
+        )}>
           {/* Sidebar Header */}
           <div className="flex items-center justify-between border-b border-border bg-background px-4 py-3">
             <div className="flex items-center gap-2">
@@ -495,7 +498,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
         </div>
 
         {/* Main Content - Ticket Detail */}
-        <div className="flex flex-1 flex-col">
+        <div className={cn(
+          "flex flex-1 flex-col",
+          !selectedTicket ? "hidden md:flex" : "flex"
+        )}>
           {!selectedTicket ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
               <Mail className="h-16 w-16 text-muted-foreground/40" />
@@ -516,14 +522,14 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({ token }) => {
               <div className="border-b border-border bg-background px-6 py-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 md:hidden">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setSelectedTicket(null)}
                         className="h-auto p-0 text-sm text-primary hover:text-primary/80"
                       >
-                        ← Back
+                        ← Back to Tickets
                       </Button>
                     </div>
                     <h2 className="text-xl font-semibold">{selectedTicket.subject}</h2>

@@ -49,11 +49,11 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
 }) => {
   const { token } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    role: '',
-    phone: '',
-    timezone: '',
+    name: user?.name || '',
+    email: user?.email || '',
+    role: user?.role || 'user',
+    phone: user?.phone || '',
+    timezone: user?.timezone || '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string>('');
@@ -86,12 +86,12 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
   // Handle field change with real-time validation
   const handleFieldChange = (fieldName: string, value: any) => {
     setFormData(prev => ({ ...prev, [fieldName]: value }));
-    
+
     // Clear server error when user starts typing
     if (serverError) {
       setServerError('');
     }
-    
+
     // Validate if field has been touched
     if (touched[fieldName]) {
       validateField(fieldName, value);
@@ -173,15 +173,15 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
 
     // Only send changed fields
     const updateData: { name?: string; email?: string; role?: string; phone?: string; timezone?: string } = {};
-    
+
     if (formData.name.trim() !== (user.name || '')) {
       updateData.name = formData.name.trim();
     }
-    
+
     if (formData.email.trim().toLowerCase() !== (user.email || '').toLowerCase()) {
       updateData.email = formData.email.trim().toLowerCase();
     }
-    
+
     if (formData.role !== (user.role || '')) {
       updateData.role = formData.role;
     }
@@ -209,7 +209,7 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
       setFormData({
         name: user.name || '',
         email: user.email || '',
-        role: user.role || '',
+        role: user.role || 'user',
         phone: user.phone || '',
         timezone: user.timezone || '',
       });
