@@ -9,7 +9,7 @@ export default defineConfig({
   envPrefix: ["VITE_", "COMPANY-"],
   server: {
     host: "0.0.0.0", // Allow connections from any IP address
-    port: 5173, // Default Vite port
+    port: 8000, // Default Vite port
     strictPort: false, // Allow fallback to other ports if 5173 is busy
     allowedHosts: true, // Accept requests for any hostname (useful for custom domains)
     proxy: {
