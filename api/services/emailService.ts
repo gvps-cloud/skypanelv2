@@ -1,5 +1,6 @@
 import nodemailer, { type SendMailOptions, type Transporter } from 'nodemailer';
 import { config } from '../config/index.js';
+import { Resend } from 'resend';
 
 let transporter: Transporter | null = null;
 
@@ -10,7 +11,7 @@ function ensureTransporter(): Transporter {
 
   const user = config.SMTP2GO_USERNAME;
   const pass = config.SMTP2GO_PASSWORD || config.SMTP2GO_API_KEY;
-  
+
   console.log('Initializing SMTP2GO transporter with config:', {
     host: process.env.SMTP2GO_HOST || 'mail.smtp2go.com',
     port: Number(process.env.SMTP2GO_PORT || 2525),
@@ -54,9 +55,36 @@ async function sendEmail(options: SendMailOptions): Promise<void> {
 
   const senderName = config.FROM_NAME || 'SkyVPS360';
   const mailOptions: SendMailOptions = {
-  from: options.from || `${senderName} <${senderEmail}>`,
+    from: options.from || `${senderName} <${senderEmail}>`,
     ...options
   };
+
+  // If Resend is configured, try to send with Resend first
+  if (config.RESEND_API_KEY) {
+    const resend = new Resend(config.RESEND_API_KEY);
+
+    try {
+      console.log('Attempting to send email via Resend to:', mailOptions.to);
+      const { data, error } = await resend.emails.send({
+        from: mailOptions.from as string,
+        to: Array.isArray(mailOptions.to) ? mailOptions.to as string[] : [mailOptions.to as string],
+        subject: mailOptions.subject as string || '',
+        html: mailOptions.html as string || '',
+        text: mailOptions.text as string || ''
+      });
+
+      if (error) {
+        console.error('Failed to send email via Resend (falling back to SMTP):', error);
+      } else {
+        console.log('Email sent via Resend successfully:', data);
+        return;
+      }
+    } catch (error) {
+      console.error('Exception sending via Resend (falling back to SMTP):', error);
+    }
+  }
+
+  // Fallback to standard SMTP2GO sender
 
   console.log('Attempting to send email:', {
     to: mailOptions.to,
