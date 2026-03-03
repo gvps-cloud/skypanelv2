@@ -27,6 +27,14 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
 import {
   Popover,
@@ -35,6 +43,7 @@ import {
 } from "@/components/ui/popover";
 import {
   Activity,
+  Cloud,
   CreditCard,
   FileText,
   HelpCircle,
@@ -44,11 +53,13 @@ import {
   Loader2,
   MessageCircle,
   Moon,
+  Plus,
   Search,
   Server,
   Settings,
   Sun,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 import { generateBreadcrumbs } from "@/lib/breadcrumbs";
 import { cn } from "@/lib/utils";
@@ -84,6 +95,13 @@ interface InvoiceCommandItem {
   totalAmount: number;
   currency: string;
   createdAt: string;
+}
+
+interface QuickCreateItem {
+  label: string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
 }
 
 const formatRelativeTime = (input: string | null | undefined): string => {
@@ -224,6 +242,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [adminUsersLoading, setAdminUsersLoading] = useState(false);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceCommandItem[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [isHostingEnabled, setIsHostingEnabled] = useState(true);
   const isMac = useMemo(() => {
     if (typeof navigator === "undefined") {
       return false;
@@ -256,6 +275,33 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   // Use the proper theme hook for persistence
   const { isDark, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchHostingStatus = async () => {
+      try {
+        const res = await fetch("/api/hosting/store/status");
+        const payload = await res.json();
+
+        if (!active) {
+          return;
+        }
+
+        if (res.ok && typeof payload?.enabled === "boolean") {
+          setIsHostingEnabled(payload.enabled);
+        }
+      } catch {
+        // Keep default enabled behavior if status endpoint is unavailable.
+      }
+    };
+
+    fetchHostingStatus();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Fetch VPS instances
   const fetchVPSInstances = useCallback(async () => {
@@ -535,6 +581,40 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     [isMac, toggleTheme, isDark],
   );
 
+  const quickCreateItems = useMemo<QuickCreateItem[]>(() => {
+    const items: QuickCreateItem[] = [
+      {
+        label: "Launch VPS",
+        description: "Deploy a new virtual server",
+        href: "/vps?create=1",
+        icon: Server,
+      },
+      {
+        label: "Create support ticket",
+        description: "Open a new support conversation",
+        href: "/support",
+        icon: LifeBuoy,
+      },
+      {
+        label: "Top up wallet",
+        description: "Add funds with secure checkout",
+        href: "/billing",
+        icon: CreditCard,
+      },
+    ];
+
+    if (isHostingEnabled) {
+      items.splice(1, 0, {
+        label: "Deploy website",
+        description: "Provision a new hosting service",
+        href: "/hosting/new",
+        icon: Cloud,
+      });
+    }
+
+    return items;
+  }, [isHostingEnabled]);
+
   const handleNavigate = useCallback(
     (href: string) => {
       navigate(href);
@@ -696,6 +776,39 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   </kbd>
                 </Button>
               </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <Plus className="h-4 w-4" />
+                    <span className="sr-only">Create new service</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel>Quick create</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {quickCreateItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <DropdownMenuItem
+                        key={item.label}
+                        className="flex cursor-pointer items-start gap-3 py-2"
+                        onSelect={() => navigate(item.href)}
+                      >
+                        <Icon className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium leading-tight">
+                            {item.label}
+                          </span>
+                          <span className="text-xs text-muted-foreground leading-tight">
+                            {item.description}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <NotificationDropdown />
 

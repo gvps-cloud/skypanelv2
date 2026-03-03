@@ -2101,6 +2101,125 @@ const Admin: React.FC = () => {
             </div>
           </div>
 
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="h-full">
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-lg font-semibold text-foreground">
+                  Support Triage
+                </CardTitle>
+                <CardDescription>
+                  Fast access to the highest-priority customer conversations.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {dashboardTicketHighlights.length > 0 ? (
+                  dashboardTicketHighlights.map((ticket) => (
+                    <button
+                      key={ticket.id}
+                      type="button"
+                      onClick={() => {
+                        setPendingFocusTicketId(ticket.id);
+                        handleTabChange("support");
+                      }}
+                      className="w-full rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground line-clamp-2">
+                            {ticket.subject}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            {ticket.category ? (
+                              <span className="capitalize">
+                                {ticket.category}
+                              </span>
+                            ) : (
+                              <span>General</span>
+                            )}
+                            <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
+                            <span>
+                              {ticket.updated_at
+                                ? new Date(ticket.updated_at).toLocaleString()
+                                : new Date(ticket.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "shrink-0 capitalize",
+                            TICKET_PRIORITY_META[ticket.priority].className,
+                          )}
+                        >
+                          {TICKET_PRIORITY_META[ticket.priority].label}
+                        </Badge>
+                      </div>
+                      <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">
+                        {ticket.message}
+                      </p>
+                    </button>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
+                    No open tickets need attention right now.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="h-full">
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-lg font-semibold text-foreground">
+                  Infrastructure Signals
+                </CardTitle>
+                <CardDescription>
+                  Track servers requiring intervention across providers.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {dashboardServerAlerts.length > 0 ? (
+                  dashboardServerAlerts.map((server) => (
+                    <div
+                      key={server.id}
+                      className="rounded-xl border border-border/60 bg-background/80 px-4 py-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-foreground">
+                            {server.label || server.id}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            {server.provider_name ? (
+                              <>
+                                <span>{server.provider_name}</span>
+                                <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
+                              </>
+                            ) : null}
+                            {server.region_label ? (
+                              <span>{server.region_label}</span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "capitalize",
+                            statusBadgeClass(server.status),
+                          )}
+                        >
+                          {formatStatusLabel(server.status)}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
+                    All servers are running within expected thresholds.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Key Metrics Grid - matching dashboard style */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <Card className="overflow-hidden">
@@ -2275,131 +2394,6 @@ const Admin: React.FC = () => {
       ) : null}
 
       <div className={isDashboardView ? "space-y-12" : "space-y-6"}>
-        <SectionPanel
-          section="dashboard"
-          activeSection={activeTab}
-          className="space-y-8"
-        >
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="h-full">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-lg font-semibold text-foreground">
-                  Support Triage
-                </CardTitle>
-                <CardDescription>
-                  Fast access to the highest-priority customer conversations.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {dashboardTicketHighlights.length > 0 ? (
-                  dashboardTicketHighlights.map((ticket) => (
-                    <button
-                      key={ticket.id}
-                      type="button"
-                      onClick={() => {
-                        setPendingFocusTicketId(ticket.id);
-                        handleTabChange("support");
-                      }}
-                      className="w-full rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground line-clamp-2">
-                            {ticket.subject}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            {ticket.category ? (
-                              <span className="capitalize">
-                                {ticket.category}
-                              </span>
-                            ) : (
-                              <span>General</span>
-                            )}
-                            <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-                            <span>
-                              {ticket.updated_at
-                                ? new Date(ticket.updated_at).toLocaleString()
-                                : new Date(ticket.created_at).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "shrink-0 capitalize",
-                            TICKET_PRIORITY_META[ticket.priority].className,
-                          )}
-                        >
-                          {TICKET_PRIORITY_META[ticket.priority].label}
-                        </Badge>
-                      </div>
-                      <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">
-                        {ticket.message}
-                      </p>
-                    </button>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
-                    No open tickets need attention right now.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            <Card className="h-full">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-lg font-semibold text-foreground">
-                  Infrastructure Signals
-                </CardTitle>
-                <CardDescription>
-                  Track servers requiring intervention across providers.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {dashboardServerAlerts.length > 0 ? (
-                  dashboardServerAlerts.map((server) => (
-                    <div
-                      key={server.id}
-                      className="rounded-xl border border-border/60 bg-background/80 px-4 py-3"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">
-                            {server.label || server.id}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            {server.provider_name ? (
-                              <>
-                                <span>{server.provider_name}</span>
-                                <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-                              </>
-                            ) : null}
-                            {server.region_label ? (
-                              <span>{server.region_label}</span>
-                            ) : null}
-                          </div>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "capitalize",
-                            statusBadgeClass(server.status),
-                          )}
-                        >
-                          {formatStatusLabel(server.status)}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
-                    All servers are running within expected thresholds.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </SectionPanel>
-
         <SectionPanel section="theme" activeSection={activeTab}>
           {/* Hero Section */}
           <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">

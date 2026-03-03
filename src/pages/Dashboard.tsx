@@ -3,7 +3,7 @@
  * Presents a refreshed command center view for VPS, billing, and activity.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Server,
   Wallet,
@@ -13,20 +13,20 @@ import {
   Plus,
   ArrowUpRight,
   ShieldCheck,
-  Compass
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
-import { getMonthlySpendWithFallback } from '../lib/billingUtils';
-import { MonthlyResetIndicator } from '@/components/Dashboard/MonthlyResetIndicator';
-import { formatCurrency } from '@/lib/formatters';
-import { apiClient } from '@/lib/api';
+  Compass,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { getMonthlySpendWithFallback } from "../lib/billingUtils";
+import { MonthlyResetIndicator } from "@/components/Dashboard/MonthlyResetIndicator";
+import { formatCurrency } from "@/lib/formatters";
+import { apiClient } from "@/lib/api";
 
 interface MetricSummary {
   average: number;
@@ -49,7 +49,7 @@ interface VpsMetrics {
 interface VPSStats {
   id: string;
   name: string;
-  status: 'running' | 'stopped' | 'provisioning';
+  status: "running" | "stopped" | "provisioning";
   plan: string;
   location: string;
   cpu: number;
@@ -70,10 +70,10 @@ interface BillingStats {
 
 interface ActivityItem {
   id: string;
-  type: 'vps' | 'billing' | 'support' | 'activity';
+  type: "vps" | "billing" | "support" | "activity";
   message: string;
   timestamp: string;
-  status: 'success' | 'warning' | 'error' | 'info';
+  status: "success" | "warning" | "error" | "info";
 }
 
 interface HostingService {
@@ -98,9 +98,9 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     try {
       const [vpsData, walletData, paymentsData] = await Promise.all([
-        apiClient.get('/vps'),
-        apiClient.get('/payments/wallet/balance'),
-        apiClient.get('/payments/history?limit=1&status=completed'),
+        apiClient.get("/vps"),
+        apiClient.get("/payments/wallet/balance"),
+        apiClient.get("/payments/history?limit=1&status=completed"),
       ]);
 
       const instances: VPSStats[] = await Promise.all(
@@ -114,31 +114,35 @@ const Dashboard: React.FC = () => {
               cpu: detailData.metrics?.cpu?.summary ?? null,
               network: {
                 inbound: detailData.metrics?.network?.inbound?.summary ?? null,
-                outbound: detailData.metrics?.network?.outbound?.summary ?? null
+                outbound:
+                  detailData.metrics?.network?.outbound?.summary ?? null,
               },
               io: {
                 read: detailData.metrics?.io?.read?.summary ?? null,
-                swap: detailData.metrics?.io?.swap?.summary ?? null
-              }
+                swap: detailData.metrics?.io?.swap?.summary ?? null,
+              },
             };
             cpu = detailData.metrics?.cpu?.summary?.last || 0;
           } catch (error) {
-            console.warn(`Failed to fetch metrics for VPS ${instance.id}:`, error);
+            console.warn(
+              `Failed to fetch metrics for VPS ${instance.id}:`,
+              error,
+            );
           }
 
           return {
             id: instance.id,
-            name: instance.label || 'instance',
-            status: instance.status || 'provisioning',
-            plan: instance.configuration?.type || '',
-            location: instance.configuration?.region || '',
+            name: instance.label || "instance",
+            status: instance.status || "provisioning",
+            plan: instance.configuration?.type || "",
+            location: instance.configuration?.region || "",
             cpu: Math.round(cpu * 100) / 100,
             memory: null,
             storage: 0,
-            ip: instance.ip_address || '',
-            metrics
+            ip: instance.ip_address || "",
+            metrics,
           } satisfies VPSStats;
-        })
+        }),
       );
 
       setVpsInstances(instances);
@@ -151,39 +155,41 @@ const Dashboard: React.FC = () => {
         monthlySpend,
         lastPayment: {
           amount: lastPaymentItem?.amount ?? 0,
-          date: lastPaymentItem?.created_at ?? ''
-        }
+          date: lastPaymentItem?.created_at ?? "",
+        },
       });
 
       // Check if web hosting is enabled before fetching services
       try {
-        const statusData = await apiClient.get('/hosting/store/status');
+        const statusData = await apiClient.get("/hosting/store/status");
         setIsHostingEnabled(statusData.enabled);
 
         if (statusData.enabled) {
-          const hostingData = await apiClient.get('/hosting/store/services');
+          const hostingData = await apiClient.get("/hosting/store/services");
           setHostingServices(hostingData || []);
         }
       } catch (err) {
-        console.warn('Failed to load hosting status/services', err);
+        console.warn("Failed to load hosting status/services", err);
       }
 
       try {
-        const actData = await apiClient.get('/activity/recent?limit=10');
-        const mapped: ActivityItem[] = (actData.activities || []).map((activity: any) => ({
-          id: activity.id,
-          type: activity.type || activity.entity_type || 'activity',
-          message: activity.message || `${activity.event_type}`,
-          timestamp: activity.timestamp || activity.created_at,
-          status: activity.status || 'info'
-        }));
+        const actData = await apiClient.get("/activity/recent?limit=10");
+        const mapped: ActivityItem[] = (actData.activities || []).map(
+          (activity: any) => ({
+            id: activity.id,
+            type: activity.type || activity.entity_type || "activity",
+            message: activity.message || `${activity.event_type}`,
+            timestamp: activity.timestamp || activity.created_at,
+            status: activity.status || "info",
+          }),
+        );
         setRecentActivity(mapped);
       } catch (error) {
-        console.warn('Failed to load recent activity', error);
+        console.warn("Failed to load recent activity", error);
       }
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-      toast.error('Failed to load dashboard data');
+      console.error("Failed to load dashboard data:", error);
+      toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -193,43 +199,40 @@ const Dashboard: React.FC = () => {
     loadDashboardData();
   }, [loadDashboardData]);
 
-  const quickActions = useMemo(
-    () => {
-      const actions = [
-        {
-          title: 'Launch a VPS',
-          description: 'Deploy a fresh instance in under a minute.',
-          to: '/vps',
-          icon: <Plus className="h-4 w-4" />
-        },
-        {
-          title: 'Top up wallet',
-          description: 'Add credits with secure PayPal checkout.',
-          to: '/billing',
-          icon: <Wallet className="h-4 w-4" />
-        },
-        {
-          title: 'Create support ticket',
-          description: 'Reach the platform team 24/7.',
-          to: '/support',
-          icon: <ShieldCheck className="h-4 w-4" />
-        }
-      ];
+  const quickActions = useMemo(() => {
+    const actions = [
+      {
+        title: "Launch a VPS",
+        description: "Deploy a fresh instance in under a minute.",
+        to: "/vps",
+        icon: <Plus className="h-4 w-4" />,
+      },
+      {
+        title: "Top up wallet",
+        description: "Add credits with secure PayPal checkout.",
+        to: "/billing",
+        icon: <Wallet className="h-4 w-4" />,
+      },
+      {
+        title: "Create support ticket",
+        description: "Reach the platform team 24/7.",
+        to: "/support",
+        icon: <ShieldCheck className="h-4 w-4" />,
+      },
+    ];
 
-      // Only show Deploy Website action if hosting is enabled
-      if (isHostingEnabled) {
-        actions.splice(1, 0, {
-          title: 'Deploy Website',
-          description: 'Host a new site with ease.',
-          to: '/hosting/new',
-          icon: <Server className="h-4 w-4" />
-        });
-      }
+    // Only show Deploy Website action if hosting is enabled
+    if (isHostingEnabled) {
+      actions.splice(1, 0, {
+        title: "Deploy Website",
+        description: "Host a new site with ease.",
+        to: "/hosting/new",
+        icon: <Server className="h-4 w-4" />,
+      });
+    }
 
-      return actions;
-    },
-    [isHostingEnabled]
-  );
+    return actions;
+  }, [isHostingEnabled]);
 
   const heroStats = useMemo(() => {
     if (!vpsInstances.length) {
@@ -237,44 +240,54 @@ const Dashboard: React.FC = () => {
         running: 0,
         flagged: 0,
         averageCpu: null as number | null,
-        topInstance: null as VPSStats | null
+        topInstance: null as VPSStats | null,
       };
     }
 
-    const running = vpsInstances.filter((v) => v.status === 'running').length;
+    const running = vpsInstances.filter((v) => v.status === "running").length;
     const flagged = vpsInstances.length - running;
     const cpuSamples = vpsInstances
       .map((v) => v.metrics?.cpu?.last ?? v.metrics?.cpu?.average ?? null)
-      .filter((value): value is number => typeof value === 'number');
+      .filter((value): value is number => typeof value === "number");
 
     const averageCpu = cpuSamples.length
-      ? Math.round((cpuSamples.reduce((sum, value) => sum + value, 0) / cpuSamples.length) * 10) / 10
+      ? Math.round(
+          (cpuSamples.reduce((sum, value) => sum + value, 0) /
+            cpuSamples.length) *
+            10,
+        ) / 10
       : null;
 
-    const topInstance = vpsInstances.reduce<VPSStats | null>((top, instance) => {
-      const topCpu = top?.metrics?.cpu?.last ?? top?.cpu ?? -1;
-      const currentCpu = instance.metrics?.cpu?.last ?? instance.cpu ?? -1;
-      return currentCpu > topCpu ? instance : top;
-    }, null);
+    const topInstance = vpsInstances.reduce<VPSStats | null>(
+      (top, instance) => {
+        const topCpu = top?.metrics?.cpu?.last ?? top?.cpu ?? -1;
+        const currentCpu = instance.metrics?.cpu?.last ?? instance.cpu ?? -1;
+        return currentCpu > topCpu ? instance : top;
+      },
+      null,
+    );
 
     return { running, flagged, averageCpu, topInstance };
   }, [vpsInstances]);
 
   const formatTimestamp = useCallback((timestamp: string | undefined) => {
-    if (!timestamp) return '—';
+    if (!timestamp) return "—";
     const date = new Date(timestamp);
     if (Number.isNaN(date.getTime())) {
       return timestamp;
     }
     return new Intl.DateTimeFormat(undefined, {
-      dateStyle: 'medium',
-      timeStyle: 'short'
+      dateStyle: "medium",
+      timeStyle: "short",
     }).format(date);
   }, []);
 
-  const handleVpsClick = useCallback((vpsId: string) => {
-    navigate(`/vps/${vpsId}`);
-  }, [navigate]);
+  const handleVpsClick = useCallback(
+    (vpsId: string) => {
+      navigate(`/vps/${vpsId}`);
+    },
+    [navigate],
+  );
 
   const walletBalance = billing?.walletBalance ?? 0;
   const monthlySpend = billing?.monthlySpend ?? 0;
@@ -323,10 +336,13 @@ const Dashboard: React.FC = () => {
             </Badge>
           </div>
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-            {user?.firstName ? `Good to see you, ${user.firstName}.` : 'Welcome to SkyPanel'}
+            {user?.firstName
+              ? `Good to see you, ${user.firstName}.`
+              : "Welcome to SkyPanel"}
           </h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            Deploy and manage infrastructure across your providers with live telemetry, unified billing, and proactive insights.
+            Deploy and manage infrastructure across your providers with live
+            telemetry, unified billing, and proactive insights.
           </p>
         </div>
 
@@ -340,14 +356,22 @@ const Dashboard: React.FC = () => {
       {/* Key Metrics Grid */}
       <div className="space-y-4">
         {/* Top Row: VPS & Web Hosting */}
-        <div className={`grid gap-4 ${isHostingEnabled ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
+        <div
+          className={`grid gap-4 ${isHostingEnabled ? "md:grid-cols-2" : "md:grid-cols-1"}`}
+        >
           <Card className="overflow-hidden">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">VPS Instances</p>
-                  <p className="text-3xl font-bold tracking-tight">{vpsInstances.length}</p>
-                  <p className="text-xs text-muted-foreground">Across all providers</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    VPS Instances
+                  </p>
+                  <p className="text-3xl font-bold tracking-tight">
+                    {vpsInstances.length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Across all providers
+                  </p>
                 </div>
                 <div className="rounded-lg bg-primary/10 p-3">
                   <Server className="h-6 w-6 text-primary" />
@@ -361,9 +385,15 @@ const Dashboard: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Web Hosting</p>
-                    <p className="text-3xl font-bold tracking-tight">{hostingServices.length}</p>
-                    <p className="text-xs text-muted-foreground">Active websites</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Web Hosting
+                    </p>
+                    <p className="text-3xl font-bold tracking-tight">
+                      {hostingServices.length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Active websites
+                    </p>
                   </div>
                   <div className="rounded-lg bg-blue-500/10 p-3">
                     <Server className="h-6 w-6 text-blue-500" />
@@ -380,9 +410,15 @@ const Dashboard: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Wallet Balance</p>
-                  <p className="text-3xl font-bold tracking-tight">{formatCurrency(walletBalance)}</p>
-                  <p className="text-xs text-muted-foreground">Ready to deploy infrastructure</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Wallet Balance
+                  </p>
+                  <p className="text-3xl font-bold tracking-tight">
+                    {formatCurrency(walletBalance)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Ready to deploy infrastructure
+                  </p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-3">
                   <Wallet className="h-6 w-6 text-foreground" />
@@ -395,9 +431,16 @@ const Dashboard: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Monthly Spend</p>
-                  <p className="text-3xl font-bold tracking-tight">{formatCurrency(monthlySpend)}</p>
-                  <MonthlyResetIndicator monthlySpend={monthlySpend} />
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Monthly Spend
+                  </p>
+                  <p className="text-3xl font-bold tracking-tight">
+                    {formatCurrency(monthlySpend)}
+                  </p>
+                  <MonthlyResetIndicator
+                    monthlySpend={monthlySpend}
+                    showAnimation={false}
+                  />
                 </div>
                 <div className="rounded-lg bg-muted/50 p-3">
                   <TrendingUp className="h-6 w-6 text-foreground" />
@@ -410,12 +453,18 @@ const Dashboard: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Last Payment</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Last Payment
+                  </p>
                   <p className="text-3xl font-bold tracking-tight">
-                    {lastPayment?.amount ? formatCurrency(lastPayment.amount) : '—'}
+                    {lastPayment?.amount
+                      ? formatCurrency(lastPayment.amount)
+                      : "—"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {lastPayment?.date ? formatTimestamp(lastPayment.date) : 'No payments yet'}
+                    {lastPayment?.date
+                      ? formatTimestamp(lastPayment.date)
+                      : "No payments yet"}
                   </p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-3">
@@ -429,7 +478,6 @@ const Dashboard: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="space-y-6">
-
         {/* Status Overview */}
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline" className="gap-2 px-3 py-1.5">
@@ -461,7 +509,9 @@ const Dashboard: React.FC = () => {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className={`grid gap-4 md:grid-cols-2 ${quickActions.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+          <CardContent
+            className={`grid gap-4 md:grid-cols-2 ${quickActions.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}
+          >
             {quickActions.map((action) => (
               <Link
                 key={action.title}
@@ -472,8 +522,12 @@ const Dashboard: React.FC = () => {
                   {action.icon}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium group-hover:text-primary">{action.title}</p>
-                  <p className="text-xs text-muted-foreground">{action.description}</p>
+                  <p className="text-sm font-medium group-hover:text-primary">
+                    {action.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {action.description}
+                  </p>
                 </div>
                 <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
               </Link>
@@ -482,15 +536,18 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Services & VPS Fleet - Side by Side */}
-        <div className={`grid gap-6 ${isHostingEnabled ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}`}>
-
+        <div
+          className={`grid gap-6 ${isHostingEnabled ? "lg:grid-cols-2" : "lg:grid-cols-1"}`}
+        >
           {/* Hosting Services Card */}
           {isHostingEnabled && (
             <Card className="h-full">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>
                   <CardTitle>Web Hosting</CardTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">Your active web hosting plans</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Your active web hosting plans
+                  </p>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/hosting">
@@ -506,7 +563,9 @@ const Dashboard: React.FC = () => {
                       <div className="rounded-full bg-muted p-4">
                         <Server className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="mt-4 text-sm font-semibold">No hosting plans yet</h3>
+                      <h3 className="mt-4 text-sm font-semibold">
+                        No hosting plans yet
+                      </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
                         Deploy your first website
                       </p>
@@ -518,7 +577,7 @@ const Dashboard: React.FC = () => {
                       </Button>
                     </div>
                   ) : (
-                    hostingServices.slice(0, 5).map(service => (
+                    hostingServices.slice(0, 5).map((service) => (
                       <Link
                         key={service.id}
                         to={`/hosting/${service.id}`}
@@ -530,11 +589,21 @@ const Dashboard: React.FC = () => {
                               <Server className="h-4 w-4" />
                             </div>
                             <div>
-                              <h4 className="font-semibold group-hover:text-primary">{service.domain}</h4>
-                              <p className="text-xs text-muted-foreground capitalize">{service.plan_name}</p>
+                              <h4 className="font-semibold group-hover:text-primary">
+                                {service.domain}
+                              </h4>
+                              <p className="text-xs text-muted-foreground capitalize">
+                                {service.plan_name}
+                              </p>
                             </div>
                           </div>
-                          <Badge variant={service.status === 'active' ? 'default' : 'secondary'}>
+                          <Badge
+                            variant={
+                              service.status === "active"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
                             {service.status}
                           </Badge>
                         </div>
@@ -551,7 +620,9 @@ const Dashboard: React.FC = () => {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <div>
                 <CardTitle>VPS Fleet</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">Live signal across your deployments</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Live signal across your deployments
+                </p>
               </div>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/vps">
@@ -567,7 +638,9 @@ const Dashboard: React.FC = () => {
                     <div className="rounded-full bg-muted p-4">
                       <Server className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <h3 className="mt-4 text-sm font-semibold">No instances yet</h3>
+                    <h3 className="mt-4 text-sm font-semibold">
+                      No instances yet
+                    </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Deploy your first VPS to see live metrics
                     </p>
@@ -580,9 +653,13 @@ const Dashboard: React.FC = () => {
                   </div>
                 ) : (
                   vpsInstances.slice(0, 5).map((vps) => {
-                    const cpuLoad = Math.min(100, Math.max(0, vps.metrics?.cpu?.last ?? vps.cpu ?? 0));
+                    const cpuLoad = Math.min(
+                      100,
+                      Math.max(0, vps.metrics?.cpu?.last ?? vps.cpu ?? 0),
+                    );
                     const inbound = vps.metrics?.network?.inbound?.last ?? null;
-                    const outbound = vps.metrics?.network?.outbound?.last ?? null;
+                    const outbound =
+                      vps.metrics?.network?.outbound?.last ?? null;
 
                     return (
                       <button
@@ -594,30 +671,36 @@ const Dashboard: React.FC = () => {
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
-                              <h4 className="font-semibold group-hover:text-primary">{vps.name}</h4>
+                              <h4 className="font-semibold group-hover:text-primary">
+                                {vps.name}
+                              </h4>
                               <Badge
                                 variant={
-                                  vps.status === 'running'
-                                    ? 'default'
-                                    : vps.status === 'stopped'
-                                      ? 'secondary'
-                                      : 'outline'
+                                  vps.status === "running"
+                                    ? "default"
+                                    : vps.status === "stopped"
+                                      ? "secondary"
+                                      : "outline"
                                 }
                               >
                                 {vps.status}
                               </Badge>
                             </div>
                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                              <span>{vps.plan || 'Unassigned'}</span>
+                              <span>{vps.plan || "Unassigned"}</span>
                               <span>•</span>
-                              <span>{vps.location || 'Unknown region'}</span>
+                              <span>{vps.location || "Unknown region"}</span>
                             </div>
                           </div>
                           <div className="w-32 space-y-2 text-right">
                             <div>
                               <div className="mb-1 flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground">CPU</span>
-                                <span className="font-semibold">{cpuLoad.toFixed(1)}%</span>
+                                <span className="text-muted-foreground">
+                                  CPU
+                                </span>
+                                <span className="font-semibold">
+                                  {cpuLoad.toFixed(1)}%
+                                </span>
                               </div>
                               <Progress value={cpuLoad} className="h-1.5" />
                             </div>
@@ -638,7 +721,9 @@ const Dashboard: React.FC = () => {
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle>Recent Activity</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Track your platform events</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Track your platform events
+            </p>
           </div>
           <Button variant="ghost" size="sm" asChild>
             <Link to="/activity">
@@ -654,7 +739,8 @@ const Dashboard: React.FC = () => {
                 <ActivityIcon className="h-8 w-8 text-muted-foreground" />
               </div>
               <p className="mt-4 text-sm text-muted-foreground">
-                Activity will appear here after your next deployment or billing event
+                Activity will appear here after your next deployment or billing
+                event
               </p>
             </div>
           ) : (
@@ -665,23 +751,26 @@ const Dashboard: React.FC = () => {
                     <span className="absolute left-2 top-6 h-full w-px bg-border" />
                   )}
                   <div
-                    className={`absolute left-0 top-2 flex h-4 w-4 items-center justify-center rounded-full border-2 ${activity.status === 'success'
-                      ? 'border-primary bg-primary/10'
-                      : activity.status === 'warning'
-                        ? 'border-muted-foreground bg-muted'
-                        : activity.status === 'error'
-                          ? 'border-destructive bg-destructive/10'
-                          : 'border-primary bg-primary/10'
-                      }`}
+                    className={`absolute left-0 top-2 flex h-4 w-4 items-center justify-center rounded-full border-2 ${
+                      activity.status === "success"
+                        ? "border-primary bg-primary/10"
+                        : activity.status === "warning"
+                          ? "border-muted-foreground bg-muted"
+                          : activity.status === "error"
+                            ? "border-destructive bg-destructive/10"
+                            : "border-primary bg-primary/10"
+                    }`}
                   />
                   <div className="flex flex-1 flex-col gap-1 pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-medium">{activity.message}</p>
                       <p className="text-xs text-muted-foreground">
-                        {activity.type === 'billing' && 'Billing event'}
-                        {activity.type === 'vps' && 'VPS event'}
-                        {activity.type === 'support' && 'Support update'}
-                        {!['billing', 'vps', 'support'].includes(activity.type) && 'System event'}
+                        {activity.type === "billing" && "Billing event"}
+                        {activity.type === "vps" && "VPS event"}
+                        {activity.type === "support" && "Support update"}
+                        {!["billing", "vps", "support"].includes(
+                          activity.type,
+                        ) && "System event"}
                       </p>
                     </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">

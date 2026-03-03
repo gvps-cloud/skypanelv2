@@ -7,6 +7,11 @@ import {
   Lock,
   Code2,
   Zap,
+  DollarSign,
+  Globe,
+  HelpCircle,
+  Mail,
+  Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,6 +34,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { BRAND_NAME } from "@/lib/brand";
+import { ACTIVE_API_ROUTE_MANIFEST } from "@/lib/apiRouteManifest";
 
 type EndpointDefinition = {
   method: string;
@@ -58,6 +64,293 @@ const methodStyles: Record<string, string> = {
 };
 
 const formatJson = (value: unknown) => JSON.stringify(value, null, 2);
+
+
+type EndpointKey = `${string} ${string}`;
+type ActiveRoute = (typeof ACTIVE_API_ROUTE_MANIFEST)[number];
+
+const normalizePath = (value: string): string => {
+  if (!value) {
+    return "/";
+  }
+  const collapsed = value.replace(/\/{2,}/g, "/");
+  if (collapsed.length > 1 && collapsed.endsWith("/")) {
+    return collapsed.slice(0, -1);
+  }
+  return collapsed;
+};
+
+const extractApiPathFromBase = (base: string): string => {
+  try {
+    const parsed = new URL(base);
+    return normalizePath(parsed.pathname);
+  } catch {
+    return normalizePath(base.replace(/^https?:\/\/[^/]+/i, ""));
+  }
+};
+
+const endpointKey = (method: string, path: string): EndpointKey =>
+  `${method.toUpperCase()} ${normalizePath(path)}` as EndpointKey;
+
+const sectionEndpointKey = (
+  sectionApiBase: string,
+  endpoint: EndpointDefinition,
+): EndpointKey => endpointKey(endpoint.method, `${sectionApiBase}${endpoint.path}`);
+
+const routeRelativePath = (routePath: string, sectionApiBase: string): string => {
+  if (routePath === sectionApiBase) {
+    return "/";
+  }
+  const suffix = routePath.slice(sectionApiBase.length);
+  if (!suffix) {
+    return "/";
+  }
+  return suffix.startsWith("/") ? suffix : `/${suffix}`;
+};
+
+const assignSectionForRoute = (
+  route: ActiveRoute,
+  sectionApiBases: string[],
+  sectionTitles: string[],
+): number | null => {
+  const candidates: number[] = [];
+  for (let i = 0; i < sectionApiBases.length; i++) {
+    const base = sectionApiBases[i];
+    if (route.path === base || route.path.startsWith(`${base}/`)) {
+      candidates.push(i);
+    }
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+  if (candidates.length === 1) {
+    return candidates[0];
+  }
+
+  const vpsCandidates = candidates.filter((idx) =>
+    sectionTitles[idx].startsWith("VPS "),
+  );
+  if (vpsCandidates.length > 0) {
+    if (
+      /^\/api\/vps\/(plans|providers|regions|stackscripts)(\/|$)/.test(route.path)
+    ) {
+      const match = vpsCandidates.find((idx) =>
+        sectionTitles[idx].includes("Catalog"),
+      );
+      if (match !== undefined) {
+        return match;
+      }
+    }
+
+    if (
+      route.path.includes("/networking") ||
+      route.path.includes("/rdns") ||
+      route.path.includes("/ipam")
+    ) {
+      const match = vpsCandidates.find((idx) =>
+        sectionTitles[idx].includes("Networking"),
+      );
+      if (match !== undefined) {
+        return match;
+      }
+    }
+
+    const lifecycleMatch = vpsCandidates.find((idx) =>
+      sectionTitles[idx].includes("Lifecycle"),
+    );
+    if (lifecycleMatch !== undefined) {
+      return lifecycleMatch;
+    }
+  }
+
+  return candidates.sort(
+    (a, b) => sectionApiBases[b].length - sectionApiBases[a].length,
+  )[0];
+};
+
+const getAutoSectionBase = (routePath: string): string => {
+  if (routePath.startsWith("/api/hosting/")) {
+    return "/api/hosting";
+  }
+  const parts = routePath.split("/").filter(Boolean);
+  if (parts.length >= 2) {
+    return `/${parts[0]}/${parts[1]}`;
+  }
+  return "/api/misc";
+};
+
+const getAutoSectionTitle = (basePath: string): string => {
+  if (basePath === "/api/hosting") {
+    return "Hosting Services";
+  }
+  if (basePath === "/api/contact") {
+    return "Contact";
+  }
+  if (basePath === "/api/faq") {
+    return "FAQ & Updates";
+  }
+  if (basePath === "/api/pricing") {
+    return "Pricing";
+  }
+  const suffix = basePath.replace(/^\/api\//, "");
+  if (!suffix) {
+    return "Additional APIs";
+  }
+  const words = suffix
+    .split("/")
+    .flatMap((part) => part.split("-"))
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1));
+  return words.join(" ");
+};
+
+
+const getAutoSectionIcon = (basePath: string): React.ReactNode => {
+  switch (basePath) {
+    case "/api/contact":
+      return <Mail className="h-4 w-4" />;
+    case "/api/faq":
+      return <HelpCircle className="h-4 w-4" />;
+    case "/api/hosting":
+      return <Globe className="h-4 w-4" />;
+    case "/api/pricing":
+      return <DollarSign className="h-4 w-4" />;
+    case "/api/theme":
+      return <Palette className="h-4 w-4" />;
+    default:
+      return <Code2 className="h-4 w-4" />;
+  }
+};
+
+const syncSectionsWithActiveRoutes = (
+  baseSections: SectionDefinition[],
+  apiBase: string,
+): SectionDefinition[] => {
+  const sectionApiBases = baseSections.map((section) =>
+    extractApiPathFromBase(section.base),
+  );
+  const sectionTitles = baseSections.map((section) => section.title);
+
+  const manualKeyToSectionIndex = new Map<EndpointKey, number>();
+  for (let i = 0; i < baseSections.length; i++) {
+    const section = baseSections[i];
+    const sectionApiBase = sectionApiBases[i];
+    for (const endpoint of section.endpoints) {
+      manualKeyToSectionIndex.set(sectionEndpointKey(sectionApiBase, endpoint), i);
+    }
+  }
+
+  const routeByKey = new Map<EndpointKey, ActiveRoute>();
+  const routeKeysBySection = baseSections.map(() => new Set<EndpointKey>());
+  const unmatchedRoutes: ActiveRoute[] = [];
+
+  for (const route of ACTIVE_API_ROUTE_MANIFEST) {
+    const key = endpointKey(route.method, route.path);
+    routeByKey.set(key, route);
+
+    const mappedSectionIndex = manualKeyToSectionIndex.get(key);
+    if (mappedSectionIndex !== undefined) {
+      routeKeysBySection[mappedSectionIndex].add(key);
+      continue;
+    }
+
+    const inferredSectionIndex = assignSectionForRoute(
+      route,
+      sectionApiBases,
+      sectionTitles,
+    );
+    if (inferredSectionIndex !== null) {
+      routeKeysBySection[inferredSectionIndex].add(key);
+    } else {
+      unmatchedRoutes.push(route);
+    }
+  }
+
+  const syncedBaseSections = baseSections
+    .map((section, sectionIndex) => {
+      const sectionApiBase = sectionApiBases[sectionIndex];
+      const activeKeys = routeKeysBySection[sectionIndex];
+      const activeManualEndpoints = section.endpoints
+        .filter((endpoint) =>
+          activeKeys.has(sectionEndpointKey(sectionApiBase, endpoint)),
+        )
+        .map((endpoint) => {
+          const key = sectionEndpointKey(sectionApiBase, endpoint);
+          const route = routeByKey.get(key);
+          return {
+            ...endpoint,
+            auth: route ? route.protected : endpoint.auth,
+          };
+        });
+
+      const existingKeys = new Set(
+        activeManualEndpoints.map((endpoint) =>
+          sectionEndpointKey(sectionApiBase, endpoint),
+        ),
+      );
+
+      const missingAutoEndpoints = Array.from(activeKeys)
+        .filter((key) => !existingKeys.has(key))
+        .map((key) => routeByKey.get(key))
+        .filter((route): route is ActiveRoute => Boolean(route))
+        .sort((a, b) =>
+          `${a.path} ${a.method}`.localeCompare(`${b.path} ${b.method}`),
+        )
+        .map((route) => ({
+          method: route.method,
+          path: routeRelativePath(route.path, sectionApiBase),
+          description:
+            "Auto-discovered endpoint from the current server route registry.",
+          auth: route.protected,
+          response: { success: true },
+        }));
+
+      return {
+        ...section,
+        endpoints: [...activeManualEndpoints, ...missingAutoEndpoints],
+      };
+    })
+    .filter((section) => section.endpoints.length > 0);
+
+  if (unmatchedRoutes.length === 0) {
+    return syncedBaseSections;
+  }
+
+  const unmatchedByBase = new Map<string, ActiveRoute[]>();
+  for (const route of unmatchedRoutes) {
+    const basePath = getAutoSectionBase(route.path);
+    if (!unmatchedByBase.has(basePath)) {
+      unmatchedByBase.set(basePath, []);
+    }
+    unmatchedByBase.get(basePath)?.push(route);
+  }
+
+  const autoSections: SectionDefinition[] = Array.from(unmatchedByBase.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([basePath, routes]) => ({
+      title: getAutoSectionTitle(basePath),
+      base: `${apiBase}${basePath.replace(/^\/api/, "")}`,
+      description:
+        "Automatically generated from currently mounted backend routes.",
+      icon: getAutoSectionIcon(basePath),
+      endpoints: routes
+        .sort((a, b) =>
+          `${a.path} ${a.method}`.localeCompare(`${b.path} ${b.method}`),
+        )
+        .map((route) => ({
+          method: route.method,
+          path: routeRelativePath(route.path, basePath),
+          description:
+            "Auto-discovered endpoint from the current server route registry.",
+          auth: route.protected,
+          response: { success: true },
+        })),
+    }));
+
+  return [...syncedBaseSections, ...autoSections];
+};
+
 
 const buildCurlCommand = (base: string, endpoint: EndpointDefinition) => {
   const query = endpoint.params
@@ -98,7 +391,7 @@ export default function ApiDocs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState("");
 
-  const sections = useMemo<SectionDefinition[]>(
+  const baseSections = useMemo<SectionDefinition[]>(
     () => [
       {
         title: "Authentication & Profile",
@@ -1928,6 +2221,11 @@ export default function ApiDocs() {
     ],
     [apiBase],
   );
+  const sections = useMemo(
+    () => syncSectionsWithActiveRoutes(baseSections, apiBase),
+    [baseSections, apiBase],
+  );
+
   const filteredSections = useMemo(() => {
     if (!searchQuery) return sections;
     const query = searchQuery.toLowerCase();
