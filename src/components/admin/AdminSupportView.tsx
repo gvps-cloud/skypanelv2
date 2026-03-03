@@ -111,6 +111,45 @@ const TICKET_STATUS_META: Record<
   },
 };
 
+const ADMIN_TICKET_STATUS_ACTIONS: Record<
+  TicketStatus,
+  Array<{
+    status: TicketStatus;
+    label: string;
+    icon: React.ElementType;
+    primary?: boolean;
+  }>
+> = {
+  open: [
+    {
+      status: "in_progress",
+      label: "Mark In Progress",
+      icon: Clock,
+      primary: true,
+    },
+    { status: "resolved", label: "Mark Resolved", icon: CheckCircle },
+    { status: "closed", label: "Close Ticket", icon: MailOpen },
+  ],
+  in_progress: [
+    {
+      status: "resolved",
+      label: "Mark Resolved",
+      icon: CheckCircle,
+      primary: true,
+    },
+    { status: "open", label: "Mark Open", icon: Mail },
+    { status: "closed", label: "Close Ticket", icon: MailOpen },
+  ],
+  resolved: [
+    { status: "closed", label: "Close Ticket", icon: MailOpen, primary: true },
+    { status: "open", label: "Re-open", icon: RefreshCw },
+    { status: "in_progress", label: "Mark In Progress", icon: Clock },
+  ],
+  closed: [
+    { status: "open", label: "Re-open", icon: RefreshCw, primary: true },
+  ],
+};
+
 const TICKET_PRIORITY_META: Record<
   TicketPriority,
   { label: string; className: string }
@@ -266,11 +305,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         if (!res.ok) throw new Error(data.error || "Failed to update status");
         const updatedStatus = (data?.ticket?.status as TicketStatus) || status;
 
-        const toastMessage =
-          status === "resolved" && updatedStatus === "closed"
-            ? "Ticket resolved and closed"
-            : `Ticket marked as ${updatedStatus.replace("_", " ")}`;
-        toast.success(toastMessage);
+        toast.success(`Ticket marked as ${updatedStatus.replace("_", " ")}`);
         await fetchTickets();
         if (selectedTicket?.id === ticketId) {
           setSelectedTicket((prev) =>
@@ -541,53 +576,26 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {selectedTicket.status !== "open" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          updateTicketStatus(selectedTicket.id, "open")
-                        }
-                      >
-                        <RefreshCw className="mr-1 h-4 w-4" />
-                        Re-open
-                      </Button>
-                    )}
-                    {selectedTicket.status !== "in_progress" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          updateTicketStatus(selectedTicket.id, "in_progress")
-                        }
-                      >
-                        <Clock className="mr-1 h-4 w-4" />
-                        In Progress
-                      </Button>
-                    )}
-                    {selectedTicket.status !== "closed" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          updateTicketStatus(selectedTicket.id, "resolved")
-                        }
-                      >
-                        <CheckCircle className="mr-1 h-4 w-4" />
-                        Resolve & Close
-                      </Button>
-                    )}
-                    {selectedTicket.status !== "closed" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          updateTicketStatus(selectedTicket.id, "closed")
-                        }
-                      >
-                        <MailOpen className="mr-1 h-4 w-4" />
-                        Close
-                      </Button>
+                    {ADMIN_TICKET_STATUS_ACTIONS[selectedTicket.status].map(
+                      (action) => {
+                        const ActionIcon = action.icon;
+                        return (
+                          <Button
+                            key={`${selectedTicket.status}-${action.status}`}
+                            size="sm"
+                            variant={action.primary ? "default" : "outline"}
+                            onClick={() =>
+                              updateTicketStatus(
+                                selectedTicket.id,
+                                action.status,
+                              )
+                            }
+                          >
+                            <ActionIcon className="mr-1 h-4 w-4" />
+                            {action.label}
+                          </Button>
+                        );
+                      },
                     )}
                     <Button
                       size="sm"

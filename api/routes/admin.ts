@@ -96,6 +96,18 @@ const mergeCustomPreset = (
   return existing ?? null;
 };
 
+type SupportTicketStatus = "open" | "in_progress" | "resolved" | "closed";
+
+const ALLOWED_TICKET_STATUS_TRANSITIONS: Record<
+  SupportTicketStatus,
+  SupportTicketStatus[]
+> = {
+  open: ["in_progress", "resolved", "closed"],
+  in_progress: ["open", "resolved", "closed"],
+  resolved: ["open", "in_progress", "closed"],
+  closed: ["open"],
+};
+
 router.get("/theme", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const theme = await themeService.getThemeConfig();
@@ -391,7 +403,7 @@ router.patch(
       }
 
       const { id } = req.params;
-      const { status } = req.body as { status: string };
+      const { status } = req.body as { status: SupportTicketStatus };
       const adminUserId = (req as any).user?.id as string | undefined;
 
       const ticketRes = await query(
@@ -405,8 +417,25 @@ router.patch(
 
       const existingTicket = ticketRes.rows[0];
       const requestedStatus = status;
-      const nextStatus =
-        requestedStatus === "resolved" ? "closed" : requestedStatus;
+      const currentStatus = existingTicket.status as SupportTicketStatus;
+
+      if (requestedStatus === currentStatus) {
+        res
+          .status(400)
+          .json({ error: `Ticket is already marked as ${requestedStatus}.` });
+        return;
+      }
+
+      const allowedTransitions =
+        ALLOWED_TICKET_STATUS_TRANSITIONS[currentStatus] || [];
+      if (!allowedTransitions.includes(requestedStatus)) {
+        res.status(400).json({
+          error: `Invalid status transition from ${currentStatus} to ${requestedStatus}. Allowed transitions: ${allowedTransitions.join(", ")}`,
+        });
+        return;
+      }
+
+      const nextStatus = requestedStatus;
 
       const result = await query(
         "UPDATE support_tickets SET status = $1, updated_at = $2 WHERE id = $3 RETURNING *",
@@ -426,11 +455,14 @@ router.patch(
           status: "info",
         },
         open: {
-          message: `Your ticket was re-opened by support: "${existingTicket.subject}"`,
+          message:
+            currentStatus === "closed" || currentStatus === "resolved"
+              ? `Your ticket was re-opened by support: "${existingTicket.subject}"`
+              : `Your ticket was moved back to open by support: "${existingTicket.subject}"`,
           status: "info",
         },
         resolved: {
-          message: `Your ticket was resolved and closed: "${existingTicket.subject}"`,
+          message: `Your ticket was marked as resolved: "${existingTicket.subject}"`,
           status: "success",
         },
         closed: {
@@ -457,7 +489,6 @@ router.patch(
               old_status: existingTicket.status,
               requested_status: requestedStatus,
               new_status: nextStatus,
-              resolved_and_closed: requestedStatus === "resolved",
               updated_by: adminUserId || null,
             },
           },

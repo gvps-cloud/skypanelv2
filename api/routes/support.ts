@@ -235,6 +235,7 @@ router.post(
         });
         return;
       }
+      const shouldReopenResolvedTicket = ticket.status === "resolved";
 
       const now = new Date().toISOString();
       const insertRes = await query(
@@ -245,21 +246,24 @@ router.post(
       if (insertRes.rows.length === 0) {
         throw new Error("Failed to create reply");
       }
-      await query("UPDATE support_tickets SET updated_at = $1 WHERE id = $2", [
-        now,
-        id,
-      ]);
+      await query(
+        "UPDATE support_tickets SET status = $1, updated_at = $2 WHERE id = $3",
+        [shouldReopenResolvedTicket ? "open" : ticket.status, now, id],
+      );
 
       await notifyAdminsForTicketEvent({
         organizationId: ticket.organization_id,
         ticketId: id,
         subject: ticket.subject,
-        message: `New customer reply on ticket: "${ticket.subject}"`,
+        message: shouldReopenResolvedTicket
+          ? `Customer replied and re-opened resolved ticket: "${ticket.subject}"`
+          : `New customer reply on ticket: "${ticket.subject}"`,
         status: "info",
         metadata: {
           is_user_reply: true,
           replied_by: userId,
           reply_preview: String(message || "").substring(0, 100),
+          reopened_by_customer_reply: shouldReopenResolvedTicket,
         },
         req,
       });
