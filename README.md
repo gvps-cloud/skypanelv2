@@ -340,6 +340,7 @@ THIS IS NOT A RESELLER PANEL IN ANY SORTS
 ### Configuration Documentation
 
 - **[Environment Variables](./repo-docs/ENVIRONMENT_VARIABLES.md)** - Complete environment configuration reference
+- **[SSL Setup (Caddy + Let's Encrypt)](./repo-docs/SSL_SETUP.md)** - HTTPS setup for VPS/PM2 deployments
 
 Additional documentation for specific features is available in the `repo-docs/` directory.
 
@@ -415,9 +416,24 @@ pm2 monit
 pm2 logs
 ```
 
+#### VPS SSL with Caddy (Let's Encrypt)
+```bash
+# Start SkyPanelV2 in production
+npm run pm2:start
+
+# Configure HTTPS reverse proxy and certificate
+sudo bash scripts/setup-caddy-ssl.sh \
+  --domain panel.example.com \
+  --email ops@example.com \
+  --install-caddy
+```
+
+After SSL is enabled, set `CLIENT_URL=https://panel.example.com` and `TRUST_PROXY=1` in `.env`, then run `npm run pm2:reload`.
+
 ### Production Checklist
 
 #### Security
+- [ ] HTTPS reverse proxy configured (Caddy/Nginx) with valid TLS cert
 - [ ] Strong `JWT_SECRET` (32+ characters)
 - [ ] Secure `ENCRYPTION_KEY` for provider API tokens
 - [ ] PayPal live credentials (not sandbox)

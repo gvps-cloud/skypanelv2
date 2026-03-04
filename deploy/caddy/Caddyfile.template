@@ -1,0 +1,23 @@
+{
+    email __ACME_EMAIL__
+}
+
+__DOMAIN__ {
+    encode gzip zstd
+
+    @api path /api /api/*
+    handle @api {
+        reverse_proxy 127.0.0.1:__API_PORT__
+    }
+
+    handle {
+        reverse_proxy 127.0.0.1:__UI_PORT__
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
