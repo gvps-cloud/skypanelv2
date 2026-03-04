@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Server, Plus, ExternalLink } from 'lucide-react';
+import { Loader2, Server, Plus, ExternalLink, AlertCircle } from 'lucide-react';
 import api from '@/lib/api';
 import { Link, useNavigate } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Service {
     id: string;
@@ -18,6 +19,7 @@ interface Service {
 export default function HostingList() {
     const [services, setServices] = useState<Service[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isHostingDisabled, setIsHostingDisabled] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -28,14 +30,35 @@ export default function HostingList() {
         try {
             const data = await api.get('/hosting/store/services');
             setServices(data);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to load services', error);
+            // Check if hosting is disabled (403 error with specific message)
+            if (error?.error?.includes('disabled') || error?.status === 403) {
+                setIsHostingDisabled(true);
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
     if (isLoading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>;
+
+    if (isHostingDisabled) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
+                <div className="bg-amber-500/10 p-4 rounded-full">
+                    <AlertCircle className="h-12 w-12 text-amber-500" />
+                </div>
+                <h2 className="text-2xl font-bold">Web Hosting is Disabled</h2>
+                <p className="text-muted-foreground max-w-md">
+                    Web hosting services are currently disabled. Please contact support for more information.
+                </p>
+                <Button onClick={() => navigate('/dashboard')}>
+                    Return to Dashboard
+                </Button>
+            </div>
+        );
+    }
 
     if (services.length === 0) {
         return (

@@ -1,10 +1,12 @@
 import express from 'express';
 import { enhanceService } from '../../services/enhanceService.js';
 import { authenticateToken } from '../../middleware/auth.js';
+import { requireHostingEnabledForUsers } from '../../middleware/hosting.js';
 import { pool } from '../../lib/database.js';
 
 const router = express.Router();
 router.use(authenticateToken);
+router.use(requireHostingEnabledForUsers);
 
 // Helper to verify ownership
 async function verifyOwnership(req: any, res: any, next: any) {

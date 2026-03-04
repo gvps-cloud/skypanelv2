@@ -2,6 +2,7 @@ import express from 'express';
 import { pool } from '../../lib/database.js';
 import { enhanceService } from '../../services/enhanceService.js';
 import { authenticateToken } from '../../middleware/auth.js';
+import { requireHostingEnabledForUsers } from '../../middleware/hosting.js';
 
 const router = express.Router();
 
@@ -17,6 +18,8 @@ router.get('/status', async (req, res) => {
 });
 
 router.use(authenticateToken);
+// Apply hosting enabled check to all subsequent routes (except for admins)
+router.use(requireHostingEnabledForUsers);
 
 // List Available Plans
 router.get('/plans', async (req, res) => {
