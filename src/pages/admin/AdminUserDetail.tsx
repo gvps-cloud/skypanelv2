@@ -38,6 +38,7 @@ import {
   UserBillingInfo,
   UserEditModal
 } from '@/components/admin';
+import { getTimezoneLabel } from '@/lib/timezones';
 
 interface AdminUserDetailResponse {
   user: {
@@ -567,7 +568,7 @@ const AdminUserDetail: React.FC = () => {
               </div>
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Timezone</Label>
-                <p className="text-sm">{user?.timezone || 'Not set'}</p>
+                <p className="text-sm">{user?.timezone ? getTimezoneLabel(user.timezone) : 'Not set'}</p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Member Since</Label>

@@ -44,6 +44,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { TIMEZONE_OPTIONS } from "@/lib/timezones";
 
 const Settings: React.FC = () => {
   const {
@@ -446,24 +447,11 @@ const Settings: React.FC = () => {
                         <SelectValue placeholder="Select timezone" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="UTC">
-                          UTC (Coordinated Universal Time)
-                        </SelectItem>
-                        <SelectItem value="America/New_York">
-                          Eastern Time (US & Canada)
-                        </SelectItem>
-                        <SelectItem value="America/Chicago">
-                          Central Time (US & Canada)
-                        </SelectItem>
-                        <SelectItem value="America/Denver">
-                          Mountain Time (US & Canada)
-                        </SelectItem>
-                        <SelectItem value="America/Los_Angeles">
-                          Pacific Time (US & Canada)
-                        </SelectItem>
-                        <SelectItem value="Europe/London">London</SelectItem>
-                        <SelectItem value="Europe/Paris">Paris</SelectItem>
-                        <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
+                        {TIMEZONE_OPTIONS.map((tz) => (
+                          <SelectItem key={tz.value} value={tz.value}>
+                            {tz.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

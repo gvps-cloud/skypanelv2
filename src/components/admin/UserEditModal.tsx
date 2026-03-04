@@ -24,6 +24,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { validateForm, ValidationSchemas } from '@/lib/validation';
 import { handleApiError, displaySuccess, displayInfo } from '@/lib/errorHandling';
+import { TIMEZONE_OPTIONS, getTimezoneLabel } from '@/lib/timezones';
 
 interface User {
   id: string;
@@ -312,15 +313,22 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="timezone">Timezone</Label>
-            <Input
-              id="timezone"
-              value={formData.timezone}
-              onChange={(e) => handleFieldChange('timezone', e.target.value)}
-              onBlur={() => handleFieldBlur('timezone')}
-              placeholder="e.g., America/New_York (optional)"
+            <Select
+              value={formData.timezone || 'UTC'}
+              onValueChange={(value) => handleFieldChange('timezone', value)}
               disabled={updateUserMutation.isPending}
-              className={errors.timezone && touched.timezone ? 'border-red-500' : ''}
-            />
+            >
+              <SelectTrigger className={errors.timezone && touched.timezone ? 'border-red-500' : ''}>
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.timezone && touched.timezone && (
               <p className="text-sm text-red-500">{errors.timezone}</p>
             )}

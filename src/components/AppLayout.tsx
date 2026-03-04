@@ -633,18 +633,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const handleAdminUserSelect = useCallback(
     (userId: string) => {
-      navigate("/admin#user-management");
+      navigate(`/admin/user/${userId}`);
       setCommandOpen(false);
-
-      if (typeof window !== "undefined") {
-        window.setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent("admin:focus-user", {
-              detail: { userId },
-            }),
-          );
-        }, 120);
-      }
     },
     [navigate],
   );
