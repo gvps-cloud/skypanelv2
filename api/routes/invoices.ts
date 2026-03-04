@@ -25,6 +25,7 @@ const resolveCompanyLogo = (): string | undefined =>
 
 type AuthenticatedRequest = Request & {
   user: {
+    id: string;
     organizationId: string;
     [key: string]: unknown;
   };
@@ -210,6 +211,7 @@ router.post(
       }
 
   const organizationId = (req as AuthenticatedRequest).user.organizationId;
+      const userId = (req as AuthenticatedRequest).user.id;
       const transactionId = req.params.transactionId;
 
       // Get the specific transaction
@@ -247,7 +249,8 @@ router.post(
             createdAt: transaction.created_at ? new Date(transaction.created_at).toISOString() : undefined,
           },
         ],
-        invoiceNumber
+        invoiceNumber,
+        userId
       );
 
       // Generate HTML with organization theme
@@ -295,6 +298,7 @@ router.post(
   async (req: Request, res: Response) => {
     try {
   const organizationId = (req as AuthenticatedRequest).user.organizationId;
+      const userId = (req as AuthenticatedRequest).user.id;
       const invoiceNumber = `INV-${Date.now()}`;
 
       // Get recent transactions for this organization
@@ -320,7 +324,8 @@ router.post(
           currency: tx.currency || 'USD',
           createdAt: tx.createdAt,
         })),
-        invoiceNumber
+        invoiceNumber,
+        userId
       );
 
       // Generate HTML with organization theme
@@ -387,6 +392,7 @@ router.post(
       }
 
       const organizationId = (req as AuthenticatedRequest).user.organizationId;
+      const userId = (req as AuthenticatedRequest).user.id;
       const invoiceNumber = `INV-VPS-${Date.now()}`;
 
       // Get date range from query params or default to last 30 days
@@ -446,7 +452,8 @@ router.post(
         organizationId,
         billingCycles,
         invoiceNumber,
-        'USD'
+        'USD',
+        userId
       );
 
       // Generate HTML with organization theme

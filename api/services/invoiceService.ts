@@ -10,6 +10,7 @@ export interface InvoiceData {
   id: string;
   invoiceNumber: string;
   organizationId: string;
+  userId?: string;
   title?: string;
   description?: string;
   items: InvoiceItem[];
@@ -347,8 +348,14 @@ export class InvoiceService {
     })}</span>
           </div>
           ` : ''}
+          ${invoiceData.userId ? `
           <div class="invoice-meta-item">
-            <span class="invoice-meta-label">Account ID</span>
+            <span class="invoice-meta-label">User ID</span>
+            <span class="invoice-meta-value" style="font-family: monospace; font-size: 14px;">${invoiceData.userId}</span>
+          </div>
+          ` : ''}
+          <div class="invoice-meta-item">
+            <span class="invoice-meta-label">Organization ID</span>
             <span class="invoice-meta-value" style="font-family: monospace; font-size: 14px;">${invoiceData.organizationId}</span>
           </div>
         </div>
@@ -538,7 +545,8 @@ export class InvoiceService {
       totalAmount: number;
     }>,
     invoiceNumber: string,
-    currency: string = 'USD'
+    currency: string = 'USD',
+    userId?: string
   ): InvoiceData {
     const items: InvoiceItem[] = [];
 
@@ -583,6 +591,7 @@ export class InvoiceService {
       id: `inv-${Date.now()}`,
       invoiceNumber,
       organizationId,
+      userId,
       title: 'VPS Billing Statement',
       description: `Hourly VPS billing from ${periodStart.toLocaleDateString()} to ${periodEnd.toLocaleDateString()}`,
       items,
@@ -601,7 +610,8 @@ export class InvoiceService {
   static generateInvoiceFromTransactions(
     organizationId: string,
     transactions: Array<{ description?: string; amount: string | number; currency?: string; createdAt?: string }>,
-    invoiceNumber: string
+    invoiceNumber: string,
+    userId?: string
   ): InvoiceData {
     const detectedCurrency = transactions.find(
       tx => typeof tx.currency === 'string' && tx.currency.trim().length > 0
@@ -627,6 +637,7 @@ export class InvoiceService {
       id: `inv-${Date.now()}`,
       invoiceNumber,
       organizationId,
+      userId,
       title: 'Billing Statement',
       description: `Payment transactions from ${transactions[transactions.length - 1]?.createdAt || 'unknown'} to ${transactions[0]?.createdAt || 'unknown'}`,
       items,
