@@ -105,10 +105,13 @@ export class InvoiceService {
       || (process.env.VITE_COMPANY_NAME && process.env.VITE_COMPANY_NAME.trim())
       || 'SkyVPS360';
 
-    const formattedDate = invoiceData.createdAt.toLocaleDateString('en-US', {
+    const formattedDate = new Date(invoiceData.createdAt).toLocaleString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
     });
 
     const palette = themePalette ?? defaultInvoicePalette;
@@ -341,23 +344,22 @@ export class InvoiceService {
           ${invoiceData.dueDate ? `
           <div class="invoice-meta-item">
             <span class="invoice-meta-label">Due Date</span>
-            <span class="invoice-meta-value">${invoiceData.dueDate.toLocaleDateString('en-US', {
+            <span class="invoice-meta-value">${invoiceData.dueDate.toLocaleString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
     })}</span>
           </div>
           ` : ''}
           ${invoiceData.userId ? `
           <div class="invoice-meta-item">
-            <span class="invoice-meta-label">User ID</span>
+            <span class="invoice-meta-label">Account ID</span>
             <span class="invoice-meta-value" style="font-family: monospace; font-size: 14px;">${invoiceData.userId}</span>
           </div>
           ` : ''}
-          <div class="invoice-meta-item">
-            <span class="invoice-meta-label">Organization ID</span>
-            <span class="invoice-meta-value" style="font-family: monospace; font-size: 14px;">${invoiceData.organizationId}</span>
-          </div>
         </div>
 
   ${invoiceData.title ? `<h3 style="margin-bottom: 20px; color: ${colors.cardForeground};">${invoiceData.title}</h3>` : ''}
@@ -403,7 +405,7 @@ export class InvoiceService {
         <div class="footer">
           <p style="margin: 10px 0; color: ${colors.cardForeground};">Thank you for your business with ${resolvedCompanyName}</p>
           <p style="margin: 10px 0; color: ${colors.mutedForeground};">This is an automated invoice. Please retain this document for your records.</p>
-          <p style="margin: 10px 0; color: ${colors.mutedForeground};">Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} UTC</p>
+          <p style="margin: 10px 0; color: ${colors.mutedForeground};">Generated on ${new Date().toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' })}</p>
         </div>
       </div>
     </body>
