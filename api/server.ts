@@ -5,6 +5,7 @@
 import app from "./app.js";
 import { initSSHBridge } from "./services/sshBridge.js";
 import { BillingService } from "./services/billingService.js";
+import { notificationService } from "./services/notificationService.js";
 
 /**
  * start server with port
@@ -15,6 +16,10 @@ const server = app.listen(PORT, () => {
   console.log(`Server ready on port ${PORT}`);
   // Initialize websocket SSH bridge on same HTTP server
   initSSHBridge(server);
+
+  notificationService.start().catch((error) => {
+    console.error("Failed to start notification service:", error);
+  });
 
   // Start hourly billing scheduler
   startBillingScheduler();
@@ -32,9 +37,12 @@ function startBillingScheduler() {
   }, 5000); // Wait 5 seconds after server start
 
   // Schedule hourly billing (every hour)
-  setInterval(async () => {
-    await runHourlyBilling("scheduled");
-  }, 60 * 60 * 1000); // Run every hour (3600000 ms)
+  setInterval(
+    async () => {
+      await runHourlyBilling("scheduled");
+    },
+    60 * 60 * 1000,
+  ); // Run every hour (3600000 ms)
 }
 
 /**
@@ -47,13 +55,13 @@ async function runHourlyBilling(runType: "initial" | "scheduled") {
     console.log(
       `✅ Billing completed: ${
         result.billedInstances
-      } instances billed, $${result.totalAmount.toFixed(2)} total`
+      } instances billed, $${result.totalAmount.toFixed(2)} total`,
     );
 
     if (result.failedInstances.length > 0) {
       console.warn(
         `⚠️ ${result.failedInstances.length} instances failed billing:`,
-        result.errors
+        result.errors,
       );
     }
   } catch (error) {
@@ -66,6 +74,7 @@ async function runHourlyBilling(runType: "initial" | "scheduled") {
  */
 process.on("SIGTERM", () => {
   console.log("SIGTERM signal received");
+  void notificationService.stop();
   server.close(() => {
     console.log("Server closed");
     process.exit(0);
@@ -74,6 +83,7 @@ process.on("SIGTERM", () => {
 
 process.on("SIGINT", () => {
   console.log("SIGINT signal received");
+  void notificationService.stop();
   server.close(() => {
     console.log("Server closed");
     process.exit(0);

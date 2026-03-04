@@ -1,6 +1,7 @@
-import { Request } from 'express';
-import { query } from '../lib/database.js';
-import { getIP } from '../lib/ipDetection.js';
+import { Request } from "express";
+import { query } from "../lib/database.js";
+import { getIP } from "../lib/ipDetection.js";
+import { sendActivityNotificationEmail } from "./activityEmailService.js";
 
 export interface ActivityPayload {
   userId: string;
@@ -9,7 +10,7 @@ export interface ActivityPayload {
   entityType: string;
   entityId?: string | null;
   message?: string | null;
-  status?: 'success' | 'warning' | 'error' | 'info';
+  status?: "success" | "warning" | "error" | "info";
   metadata?: any;
   suppressNotification?: boolean;
 }
@@ -18,7 +19,7 @@ export interface RateLimitEventPayload {
   userId?: string;
   organizationId?: string | null;
   endpoint: string;
-  userType: 'anonymous' | 'authenticated' | 'admin';
+  userType: "anonymous" | "authenticated" | "admin";
   limit: number;
   windowMs: number;
   currentCount: number;
@@ -39,8 +40,8 @@ export const ensureActivityLogsTable = async (): Promise<void> => {
       await query('CREATE EXTENSION IF NOT EXISTS "pgcrypto"');
     } catch (err: any) {
       // Non-critical: some providers restrict extension creation; continue if that happens.
-      if (err?.code !== '42501') {
-        console.warn('Activity logs extension check failed:', err);
+      if (err?.code !== "42501") {
+        console.warn("Activity logs extension check failed:", err);
       }
     }
 
@@ -63,20 +64,76 @@ export const ensureActivityLogsTable = async (): Promise<void> => {
       )
     `);
 
-    await query('ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT FALSE');
-    await query('ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ');
+    await query(
+      "ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT FALSE",
+    );
+    await query(
+      "ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ",
+    );
 
     const indexStatements = [
-      'CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id)',
-      'CREATE INDEX IF NOT EXISTS idx_activity_logs_org_id ON activity_logs(organization_id)',
-      'CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at)',
-      'CREATE INDEX IF NOT EXISTS idx_activity_logs_event_type ON activity_logs(event_type)'
+      "CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id)",
+      "CREATE INDEX IF NOT EXISTS idx_activity_logs_org_id ON activity_logs(organization_id)",
+      "CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at)",
+      "CREATE INDEX IF NOT EXISTS idx_activity_logs_event_type ON activity_logs(event_type)",
     ];
 
     for (const stmt of indexStatements) {
       await query(stmt);
     }
-  })().catch(err => {
+
+    try {
+      await query(`
+        CREATE OR REPLACE FUNCTION notify_new_activity()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          IF NEW.event_type IN (
+            'vps.create', 'vps.boot', 'vps.shutdown', 'vps.reboot', 'vps.delete',
+            'vps.backups.enable', 'vps.backups.disable', 'vps.backups.schedule',
+            'vps.backups.snapshot', 'vps.backups.restore',
+            'vps.firewall.attach', 'vps.firewall.detach',
+            'vps.network.rdns', 'vps.hostname.update',
+            'auth.login', 'auth.password_change', 'auth.2fa.enabled', 'auth.2fa.disabled',
+            'api_key.create', 'api_key.revoke',
+            'ticket_reply',
+            'user_update',
+            'impersonation_target', 'impersonation_ended',
+            'billing.payment.completed', 'billing.payment.failed', 'billing.payment.cancelled', 'billing.refund.completed',
+            'platform_availability.update', 'platform_settings.update', 'theme_update'
+          ) THEN
+            PERFORM pg_notify(
+              'new_activity',
+              json_build_object(
+                'id', NEW.id,
+                'user_id', NEW.user_id,
+                'organization_id', NEW.organization_id,
+                'event_type', NEW.event_type,
+                'entity_type', NEW.entity_type,
+                'entity_id', NEW.entity_id,
+                'message', NEW.message,
+                'status', NEW.status,
+                'created_at', NEW.created_at,
+                'is_read', NEW.is_read
+              )::text
+            );
+          END IF;
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql
+      `);
+      await query(
+        "DROP TRIGGER IF EXISTS activity_notify_trigger ON activity_logs",
+      );
+      await query(`
+        CREATE TRIGGER activity_notify_trigger
+        AFTER INSERT ON activity_logs
+        FOR EACH ROW
+        EXECUTE FUNCTION notify_new_activity()
+      `);
+    } catch (err) {
+      console.warn("Activity notification trigger setup failed:", err);
+    }
+  })().catch((err) => {
     ensurePromise = null;
     throw err;
   });
@@ -84,7 +141,10 @@ export const ensureActivityLogsTable = async (): Promise<void> => {
   return ensurePromise;
 };
 
-export async function logActivity(payload: ActivityPayload, req?: Request): Promise<void> {
+export async function logActivity(
+  payload: ActivityPayload,
+  req?: Request,
+): Promise<void> {
   try {
     const {
       userId,
@@ -93,15 +153,18 @@ export async function logActivity(payload: ActivityPayload, req?: Request): Prom
       entityType,
       entityId = null,
       message = null,
-      status = 'info',
+      status = "info",
       metadata = {},
-      suppressNotification = false
+      suppressNotification = false,
     } = payload;
 
     const ip = req ? getIP(req, { enableLogging: false }) : undefined;
-    const ua = req?.headers['user-agent'] || undefined;
+    const ua = req?.headers["user-agent"] || undefined;
     const isRead = suppressNotification;
     const readAt = suppressNotification ? new Date().toISOString() : null;
+    const normalizedUserId =
+      userId && userId !== "undefined" && userId !== "null" ? userId : null;
+    const occurredAt = new Date().toISOString();
 
     await ensureActivityLogsTable();
 
@@ -109,8 +172,7 @@ export async function logActivity(payload: ActivityPayload, req?: Request): Prom
       `INSERT INTO activity_logs (user_id, organization_id, event_type, entity_type, entity_id, message, status, ip_address, user_agent, metadata, is_read, read_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
-        // Fix: Only pass userId if it's a valid UUID string, otherwise null for system events
-        (userId && userId !== 'undefined' && userId !== 'null') ? userId : null,
+        normalizedUserId,
         organizationId,
         eventType,
         entityType,
@@ -121,19 +183,37 @@ export async function logActivity(payload: ActivityPayload, req?: Request): Prom
         ua,
         metadata,
         isRead,
-        readAt
-      ]
+        readAt,
+      ],
     );
+
+    if (normalizedUserId && !suppressNotification) {
+      void sendActivityNotificationEmail({
+        userId: normalizedUserId,
+        eventType,
+        entityType,
+        entityId,
+        message,
+        status,
+        metadata,
+        occurredAt,
+      }).catch((error) => {
+        console.warn("Activity notification email failed:", error);
+      });
+    }
   } catch (e) {
     // Non-blocking: do not throw, but log to server console
-    console.warn('Activity log insert failed:', e);
+    console.warn("Activity log insert failed:", e);
   }
 }
 
 /**
  * Logs rate limiting events with detailed metadata for security monitoring
  */
-export async function logRateLimitEvent(payload: RateLimitEventPayload, req: Request): Promise<void> {
+export async function logRateLimitEvent(
+  payload: RateLimitEventPayload,
+  req: Request,
+): Promise<void> {
   try {
     const {
       userId,
@@ -145,7 +225,7 @@ export async function logRateLimitEvent(payload: RateLimitEventPayload, req: Req
       currentCount,
       resetTime,
       clientIP,
-      userAgent
+      userAgent,
     } = payload;
 
     // Create detailed metadata for rate limiting event
@@ -160,16 +240,16 @@ export async function logRateLimitEvent(payload: RateLimitEventPayload, req: Req
       requestMethod: req.method,
       requestPath: req.path,
       requestQuery: req.query,
-      violationType: currentCount > limit ? 'exceeded' : 'approaching'
+      violationType: currentCount > limit ? "exceeded" : "approaching",
     };
 
     // Determine message and status based on violation severity
     const isExceeded = currentCount > limit;
-    const message = isExceeded 
+    const message = isExceeded
       ? `Rate limit exceeded for ${userType} user on ${endpoint} (${currentCount}/${limit} requests)`
       : `Rate limit approaching for ${userType} user on ${endpoint} (${currentCount}/${limit} requests)`;
-    
-    const status = isExceeded ? 'warning' : 'info';
+
+    const status = isExceeded ? "warning" : "info";
 
     await ensureActivityLogsTable();
 
@@ -179,22 +259,22 @@ export async function logRateLimitEvent(payload: RateLimitEventPayload, req: Req
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         // Fix: Only pass userId if it's a valid UUID string, otherwise null for system events
-        (userId && userId !== 'undefined' && userId !== 'null') ? userId : null,
+        userId && userId !== "undefined" && userId !== "null" ? userId : null,
         organizationId,
-        'rate_limit_violation',
-        'api_request',
+        "rate_limit_violation",
+        "api_request",
         endpoint,
         message,
         status,
         clientIP,
-        userAgent || req.headers['user-agent'],
-        metadata
-      ]
+        userAgent || req.headers["user-agent"],
+        metadata,
+      ],
     );
 
     // Also log to console for immediate monitoring
     if (isExceeded) {
-      console.warn('Rate Limit Exceeded:', {
+      console.warn("Rate Limit Exceeded:", {
         timestamp: new Date().toISOString(),
         clientIP,
         userId,
@@ -202,12 +282,12 @@ export async function logRateLimitEvent(payload: RateLimitEventPayload, req: Req
         endpoint,
         limit,
         currentCount,
-        userAgent: userAgent || req.headers['user-agent']
+        userAgent: userAgent || req.headers["user-agent"],
       });
     }
   } catch (e) {
     // Non-blocking: do not throw, but log to server console
-    console.warn('Rate limit activity log insert failed:', e);
+    console.warn("Rate limit activity log insert failed:", e);
   }
 }
 
@@ -222,7 +302,7 @@ export async function logRateLimitConfig(config: any): Promise<void> {
       adminLimit: config.adminMaxRequests,
       windowMs: config.anonymousWindowMs,
       trustProxy: config.trustProxy,
-      configSource: 'environment_variables'
+      configSource: "environment_variables",
     };
 
     await ensureActivityLogsTable();
@@ -233,17 +313,17 @@ export async function logRateLimitConfig(config: any): Promise<void> {
       [
         null, // System event, no specific user
         null,
-        'rate_limit_config',
-        'system',
-        'rate_limiter',
-        'Rate limiting configuration loaded',
-        'info',
+        "rate_limit_config",
+        "system",
+        "rate_limiter",
+        "Rate limiting configuration loaded",
+        "info",
         null,
-        'system',
-        metadata
-      ]
+        "system",
+        metadata,
+      ],
     );
   } catch (e) {
-    console.warn('Rate limit config activity log insert failed:', e);
+    console.warn("Rate limit config activity log insert failed:", e);
   }
 }

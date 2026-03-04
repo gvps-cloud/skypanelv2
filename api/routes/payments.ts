@@ -3,13 +3,19 @@
  * Handles PayPal payments, wallet management, and billing
  */
 
-import express, { Request, Response } from 'express';
-import { body, param, query as queryValidator, validationResult } from 'express-validator';
-import { PayPalService } from '../services/paypalService.js';
-import { BillingService } from '../services/billingService.js';
-import { authenticateToken, requireOrganization } from '../middleware/auth.js';
-import { query as dbQuery } from '../lib/database.js';
-import { config } from '../config/index.js';
+import express, { Request, Response } from "express";
+import {
+  body,
+  param,
+  query as queryValidator,
+  validationResult,
+} from "express-validator";
+import { PayPalService } from "../services/paypalService.js";
+import { BillingService } from "../services/billingService.js";
+import { authenticateToken, requireOrganization } from "../middleware/auth.js";
+import { query as dbQuery } from "../lib/database.js";
+import { config } from "../config/index.js";
+import { logActivity } from "../services/activityLogger.js";
 
 const router = express.Router();
 
@@ -22,10 +28,10 @@ type AuthenticatedRequest = Request & {
 };
 
 const safeParseNumber = (value: unknown): number | null => {
-  if (typeof value === 'number' && Number.isFinite(value)) {
+  if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const parsed = parseFloat(value);
     return Number.isFinite(parsed) ? parsed : null;
   }
@@ -35,25 +41,28 @@ const safeParseNumber = (value: unknown): number | null => {
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
 
-router.get('/config', requireOrganization, (req: Request, res: Response) => {
+router.get("/config", requireOrganization, (req: Request, res: Response) => {
   if (!config.PAYPAL_CLIENT_ID) {
     return res.status(503).json({
       success: false,
-      error: 'PayPal configuration is unavailable. Please contact support.',
+      error: "PayPal configuration is unavailable. Please contact support.",
     });
   }
 
-  const disableFunding = ['paylater'];
+  const disableFunding = ["paylater"];
 
   res.json({
     success: true,
     config: {
       clientId: config.PAYPAL_CLIENT_ID,
-      currency: 'USD',
-      intent: 'capture',
-      mode: config.PAYPAL_MODE === 'production' || config.PAYPAL_MODE === 'live' ? 'live' : 'sandbox',
+      currency: "USD",
+      intent: "capture",
+      mode:
+        config.PAYPAL_MODE === "production" || config.PAYPAL_MODE === "live"
+          ? "live"
+          : "sandbox",
       disableFunding,
-      brandName: 'SkyPanelV2',
+      brandName: "SkyPanelV2",
     },
   });
 });
@@ -62,17 +71,19 @@ router.get('/config', requireOrganization, (req: Request, res: Response) => {
  * Create a payment intent for adding funds to wallet
  */
 router.post(
-  '/create-payment',
+  "/create-payment",
   [
-    body('amount')
+    body("amount")
       .isFloat({ min: 1 })
-      .withMessage('Amount must be a positive number'),
-    body('currency')
-      .isIn(['USD', 'EUR', 'GBP'])
-      .withMessage('Currency must be USD, EUR, or GBP'),
-    body('description')
+      .withMessage("Amount must be a positive number"),
+    body("currency")
+      .isIn(["USD", "EUR", "GBP"])
+      .withMessage("Currency must be USD, EUR, or GBP"),
+    body("description")
       .isLength({ min: 1, max: 255 })
-      .withMessage('Description is required and must be less than 255 characters'),
+      .withMessage(
+        "Description is required and must be less than 255 characters",
+      ),
   ],
   requireOrganization,
   async (req: Request, res: Response) => {
@@ -81,7 +92,7 @@ router.post(
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          error: 'Validation failed',
+          error: "Validation failed",
           details: errors.array(),
         });
       }
@@ -91,15 +102,22 @@ router.post(
       if (amountValue === null) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid payment amount',
+          error: "Invalid payment amount",
         });
       }
       const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
 
-      const originHeader = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
-      const forwardedProto = typeof req.headers['x-forwarded-proto'] === 'string' ? req.headers['x-forwarded-proto'] : undefined;
-      const forwardedHost = typeof req.headers['x-forwarded-host'] === 'string' ? req.headers['x-forwarded-host'] : undefined;
-      const host = req.get('host');
+      const originHeader =
+        typeof req.headers.origin === "string" ? req.headers.origin : undefined;
+      const forwardedProto =
+        typeof req.headers["x-forwarded-proto"] === "string"
+          ? req.headers["x-forwarded-proto"]
+          : undefined;
+      const forwardedHost =
+        typeof req.headers["x-forwarded-host"] === "string"
+          ? req.headers["x-forwarded-host"]
+          : undefined;
+      const host = req.get("host");
 
       let clientBaseUrl = process.env.CLIENT_URL;
       if (!clientBaseUrl) {
@@ -111,7 +129,7 @@ router.post(
         } else if (host) {
           clientBaseUrl = `${req.protocol}://${host}`;
         } else {
-          clientBaseUrl = 'http://localhost:5173';
+          clientBaseUrl = "http://localhost:5173";
         }
       }
 
@@ -137,72 +155,110 @@ router.post(
         });
       }
     } catch (error) {
-      console.error('Create payment error:', error);
+      console.error("Create payment error:", error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
+        error: "Internal server error",
       });
     }
-  }
+  },
 );
 
 /**
  * Capture a PayPal payment after user approval
  */
 router.post(
-  '/capture-payment/:orderId',
-  [
-    param('orderId')
-      .isLength({ min: 1 })
-      .withMessage('Order ID is required'),
-  ],
+  "/capture-payment/:orderId",
+  [param("orderId").isLength({ min: 1 }).withMessage("Order ID is required")],
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          error: 'Validation failed',
+          error: "Validation failed",
           details: errors.array(),
         });
       }
 
       const { orderId } = req.params;
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      const organizationId = authReq.user?.organizationId ?? null;
 
       const result = await PayPalService.capturePayment(orderId);
 
       if (result.success) {
+        if (userId) {
+          try {
+            await logActivity(
+              {
+                userId,
+                organizationId,
+                eventType: "billing.payment.completed",
+                entityType: "payment_transaction",
+                entityId: orderId,
+                message: `Payment ${orderId} was captured and your wallet was credited.`,
+                status: "success",
+                metadata: {
+                  order_id: orderId,
+                  provider: "paypal",
+                },
+              },
+              req,
+            );
+          } catch {}
+        }
         res.json({
           success: true,
           paymentId: result.paymentId,
         });
       } else {
+        if (userId) {
+          try {
+            await logActivity(
+              {
+                userId,
+                organizationId,
+                eventType: "billing.payment.failed",
+                entityType: "payment_transaction",
+                entityId: orderId,
+                message: `Payment ${orderId} failed to capture.`,
+                status: "error",
+                metadata: {
+                  order_id: orderId,
+                  provider: "paypal",
+                  error: result.error || null,
+                },
+              },
+              req,
+            );
+          } catch {}
+        }
         res.status(400).json({
           success: false,
           error: result.error,
         });
       }
     } catch (error) {
-      console.error('Capture payment error:', error);
+      console.error("Capture payment error:", error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
+        error: "Internal server error",
       });
     }
-  }
+  },
 );
 
 router.post(
-  '/cancel-payment/:orderId',
+  "/cancel-payment/:orderId",
   [
-    param('orderId')
-      .isLength({ min: 1 })
-      .withMessage('Order ID is required'),
-    body('reason')
+    param("orderId").isLength({ min: 1 }).withMessage("Order ID is required"),
+    body("reason")
       .optional()
       .isString()
       .isLength({ max: 255 })
-      .withMessage('Reason must be a string up to 255 characters'),
+      .withMessage("Reason must be a string up to 255 characters"),
   ],
   requireOrganization,
   async (req: Request, res: Response) => {
@@ -211,72 +267,105 @@ router.post(
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          error: 'Validation failed',
+          error: "Validation failed",
           details: errors.array(),
         });
       }
 
       const { orderId } = req.params;
-      const reason = typeof req.body.reason === 'string' ? req.body.reason : undefined;
-      const { organizationId } = (req as AuthenticatedRequest).user;
+      const reason =
+        typeof req.body.reason === "string" ? req.body.reason : undefined;
+      const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
 
-      const result = await PayPalService.cancelPayment(orderId, organizationId, reason);
+      const result = await PayPalService.cancelPayment(
+        orderId,
+        organizationId,
+        reason,
+      );
 
       if (!result.success) {
-        return res.status(result.error === 'Payment not found' ? 404 : 400).json({
-          success: false,
-          error: result.error || 'Failed to cancel payment',
-        });
+        return res
+          .status(result.error === "Payment not found" ? 404 : 400)
+          .json({
+            success: false,
+            error: result.error || "Failed to cancel payment",
+          });
       }
+
+      try {
+        await logActivity(
+          {
+            userId,
+            organizationId,
+            eventType: "billing.payment.cancelled",
+            entityType: "payment_transaction",
+            entityId: orderId,
+            message: `Payment ${orderId} was cancelled.`,
+            status: "warning",
+            metadata: {
+              order_id: orderId,
+              reason: reason || "user_cancelled",
+              provider: "paypal",
+            },
+          },
+          req,
+        );
+      } catch {}
 
       return res.json({
         success: true,
       });
     } catch (error) {
-      console.error('Cancel payment error:', error);
+      console.error("Cancel payment error:", error);
       return res.status(500).json({
         success: false,
-        error: 'Internal server error',
+        error: "Internal server error",
       });
     }
-  }
+  },
 );
 
 /**
  * Get wallet balance for the organization
  */
-router.get('/wallet/balance', requireOrganization, async (req: Request, res: Response) => {
-  try {
-    const { organizationId } = (req as AuthenticatedRequest).user;
+router.get(
+  "/wallet/balance",
+  requireOrganization,
+  async (req: Request, res: Response) => {
+    try {
+      const { organizationId } = (req as AuthenticatedRequest).user;
 
-    const balance = await PayPalService.getWalletBalance(organizationId);
+      const balance = await PayPalService.getWalletBalance(organizationId);
 
-    // Return 0 balance if wallet doesn't exist yet (instead of 404)
-    res.json({
-      success: true,
-      balance: balance ?? 0,
-    });
-  } catch (error) {
-    console.error('Get wallet balance error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error',
-    });
-  }
-});
+      // Return 0 balance if wallet doesn't exist yet (instead of 404)
+      res.json({
+        success: true,
+        balance: balance ?? 0,
+      });
+    } catch (error) {
+      console.error("Get wallet balance error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      });
+    }
+  },
+);
 
 /**
  * Deduct funds from wallet for VPS creation
  */
 router.post(
-  '/wallet/deduct',
+  "/wallet/deduct",
   [
-    body('amount')
+    body("amount")
       .isFloat({ min: 0.01 })
-      .withMessage('Amount must be a positive number'),
-    body('description')
+      .withMessage("Amount must be a positive number"),
+    body("description")
       .isLength({ min: 1, max: 255 })
-      .withMessage('Description is required and must be less than 255 characters'),
+      .withMessage(
+        "Description is required and must be less than 255 characters",
+      ),
   ],
   requireOrganization,
   async (req: Request, res: Response) => {
@@ -285,7 +374,7 @@ router.post(
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          error: 'Validation failed',
+          error: "Validation failed",
           details: errors.array(),
         });
       }
@@ -296,44 +385,45 @@ router.post(
       const success = await PayPalService.deductFundsFromWallet(
         organizationId,
         amount,
-        description
+        description,
       );
 
       if (success) {
         res.json({
           success: true,
-          message: 'Funds deducted successfully',
+          message: "Funds deducted successfully",
         });
       } else {
         res.status(400).json({
           success: false,
-          error: 'Failed to deduct funds. Insufficient balance or wallet not found.',
+          error:
+            "Failed to deduct funds. Insufficient balance or wallet not found.",
         });
       }
     } catch (error) {
-      console.error('Deduct funds error:', error);
+      console.error("Deduct funds error:", error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
+        error: "Internal server error",
       });
     }
-  }
+  },
 );
 
 /**
  * Get wallet transactions for the organization
  */
 router.get(
-  '/wallet/transactions',
+  "/wallet/transactions",
   [
-    queryValidator('limit')
+    queryValidator("limit")
       .optional()
       .isInt({ min: 1, max: 100 })
-      .withMessage('Limit must be between 1 and 100'),
-    queryValidator('offset')
+      .withMessage("Limit must be between 1 and 100"),
+    queryValidator("offset")
       .optional()
       .isInt({ min: 0 })
-      .withMessage('Offset must be a non-negative integer'),
+      .withMessage("Offset must be a non-negative integer"),
   ],
   requireOrganization,
   async (req: Request, res: Response) => {
@@ -342,7 +432,7 @@ router.get(
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          error: 'Validation failed',
+          error: "Validation failed",
           details: errors.array(),
         });
       }
@@ -354,7 +444,7 @@ router.get(
       const transactions = await PayPalService.getWalletTransactions(
         organizationId,
         limit,
-        offset
+        offset,
       );
 
       res.json({
@@ -367,33 +457,35 @@ router.get(
         },
       });
     } catch (error) {
-      console.error('Get wallet transactions error:', error);
+      console.error("Get wallet transactions error:", error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
+        error: "Internal server error",
       });
     }
-  }
+  },
 );
 
 /**
  * Get payment history for the organization
  */
 router.get(
-  '/history',
+  "/history",
   [
-    queryValidator('limit')
+    queryValidator("limit")
       .optional()
       .isInt({ min: 1, max: 100 })
-      .withMessage('Limit must be between 1 and 100'),
-    queryValidator('offset')
+      .withMessage("Limit must be between 1 and 100"),
+    queryValidator("offset")
       .optional()
       .isInt({ min: 0 })
-      .withMessage('Offset must be a non-negative integer'),
-    queryValidator('status')
+      .withMessage("Offset must be a non-negative integer"),
+    queryValidator("status")
       .optional()
-      .isIn(['pending', 'completed', 'failed', 'cancelled', 'refunded'])
-      .withMessage('Status must be pending, completed, failed, cancelled, or refunded'),
+      .isIn(["pending", "completed", "failed", "cancelled", "refunded"])
+      .withMessage(
+        "Status must be pending, completed, failed, cancelled, or refunded",
+      ),
   ],
   requireOrganization,
   async (req: Request, res: Response) => {
@@ -402,7 +494,7 @@ router.get(
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          error: 'Validation failed',
+          error: "Validation failed",
           details: errors.array(),
         });
       }
@@ -412,7 +504,7 @@ router.get(
       const offset = parseInt(req.query.offset as string) || 0;
       const status = req.query.status as string;
 
-      const whereClauses: string[] = ['organization_id = $1'];
+      const whereClauses: string[] = ["organization_id = $1"];
       const params: Array<string | number> = [organizationId];
 
       if (status) {
@@ -427,7 +519,7 @@ router.get(
 
       const sql = `SELECT id, organization_id, amount, currency, description, status, payment_provider AS provider, provider_transaction_id AS provider_payment_id, created_at, updated_at
                    FROM payment_transactions
-                   WHERE ${whereClauses.join(' AND ')}
+                   WHERE ${whereClauses.join(" AND ")}
                    ORDER BY created_at DESC
                    LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`;
 
@@ -443,25 +535,21 @@ router.get(
         },
       });
     } catch (error) {
-      console.error('Get payment history error:', error);
+      console.error("Get payment history error:", error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
+        error: "Internal server error",
       });
     }
-  }
+  },
 );
 
 /**
  * Get details for a specific payment transaction
  */
 router.get(
-  '/transactions/:id',
-  [
-    param('id')
-      .isUUID()
-      .withMessage('Transaction ID must be a valid UUID'),
-  ],
+  "/transactions/:id",
+  [param("id").isUUID().withMessage("Transaction ID must be a valid UUID")],
   requireOrganization,
   async (req: Request, res: Response) => {
     try {
@@ -469,7 +557,7 @@ router.get(
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          error: 'Validation failed',
+          error: "Validation failed",
           details: errors.array(),
         });
       }
@@ -481,23 +569,32 @@ router.get(
         `SELECT id, organization_id, amount, currency, payment_method, payment_provider, provider_transaction_id, status, description, metadata, created_at, updated_at
          FROM payment_transactions
          WHERE id = $1 AND organization_id = $2`,
-        [transactionId, organizationId]
+        [transactionId, organizationId],
       );
 
       if (result.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'Transaction not found',
+          error: "Transaction not found",
         });
       }
 
       const row = result.rows[0];
       const amount = safeParseNumber(row.amount) ?? 0;
-      const metadataRaw = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
-      const metadata = metadataRaw && typeof metadataRaw === 'object' ? metadataRaw : null;
-      const metadataBalance = metadata?.balance_after ?? metadata?.balanceAfter ?? metadata?.balance ?? null;
+      const metadataRaw =
+        typeof row.metadata === "string"
+          ? JSON.parse(row.metadata)
+          : row.metadata;
+      const metadata =
+        metadataRaw && typeof metadataRaw === "object" ? metadataRaw : null;
+      const metadataBalance =
+        metadata?.balance_after ??
+        metadata?.balanceAfter ??
+        metadata?.balance ??
+        null;
       const balanceAfter = safeParseNumber(metadataBalance);
-      const metadataBalanceBefore = metadata?.balance_before ?? metadata?.balanceBefore ?? null;
+      const metadataBalanceBefore =
+        metadata?.balance_before ?? metadata?.balanceBefore ?? null;
       const balanceBefore =
         safeParseNumber(metadataBalanceBefore) ??
         (balanceAfter !== null
@@ -515,8 +612,8 @@ router.get(
           provider: row.payment_provider,
           providerPaymentId: row.provider_transaction_id,
           status: row.status,
-          description: row.description || 'Wallet transaction',
-          type: amount >= 0 ? 'credit' : 'debit',
+          description: row.description || "Wallet transaction",
+          type: amount >= 0 ? "credit" : "debit",
           balanceBefore,
           balanceAfter,
           metadata,
@@ -525,33 +622,31 @@ router.get(
         },
       });
     } catch (error) {
-      console.error('Get transaction details error:', error);
+      console.error("Get transaction details error:", error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
+        error: "Internal server error",
       });
     }
-  }
+  },
 );
 
 /**
  * Create a refund/payout
  */
 router.post(
-  '/refund',
+  "/refund",
   [
-    body('email')
-      .isEmail()
-      .withMessage('Valid email is required'),
-    body('amount')
+    body("email").isEmail().withMessage("Valid email is required"),
+    body("amount")
       .isFloat({ min: 0.01 })
-      .withMessage('Amount must be a positive number'),
-    body('currency')
-      .isIn(['USD', 'EUR', 'GBP'])
-      .withMessage('Currency must be USD, EUR, or GBP'),
-    body('reason')
+      .withMessage("Amount must be a positive number"),
+    body("currency")
+      .isIn(["USD", "EUR", "GBP"])
+      .withMessage("Currency must be USD, EUR, or GBP"),
+    body("reason")
       .isLength({ min: 1, max: 255 })
-      .withMessage('Reason is required and must be less than 255 characters'),
+      .withMessage("Reason is required and must be less than 255 characters"),
   ],
   requireOrganization,
   async (req: Request, res: Response) => {
@@ -560,20 +655,20 @@ router.post(
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          error: 'Validation failed',
+          error: "Validation failed",
           details: errors.array(),
         });
       }
 
       const { email, amount, currency, reason } = req.body;
-      const { organizationId } = (req as AuthenticatedRequest).user;
+      const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
 
       // Check if organization has sufficient funds
       const balance = await PayPalService.getWalletBalance(organizationId);
       if (balance === null || balance < parseFloat(amount)) {
         return res.status(400).json({
           success: false,
-          error: 'Insufficient funds for refund',
+          error: "Insufficient funds for refund",
         });
       }
 
@@ -582,7 +677,7 @@ router.post(
         email,
         parseFloat(amount),
         currency,
-        reason
+        reason,
       );
 
       if (result.success) {
@@ -590,8 +685,30 @@ router.post(
         await PayPalService.deductFundsFromWallet(
           organizationId,
           parseFloat(amount),
-          `Refund: ${reason}`
+          `Refund: ${reason}`,
         );
+
+        try {
+          await logActivity(
+            {
+              userId,
+              organizationId,
+              eventType: "billing.refund.completed",
+              entityType: "payment_transaction",
+              entityId: result.paymentId || null,
+              message: `Refund of ${amount} ${currency} was sent to ${email}.`,
+              status: "success",
+              metadata: {
+                recipient_email: email,
+                amount: parseFloat(amount),
+                currency,
+                reason,
+                payout_id: result.paymentId || null,
+              },
+            },
+            req,
+          );
+        } catch {}
 
         res.json({
           success: true,
@@ -604,36 +721,40 @@ router.post(
         });
       }
     } catch (error) {
-      console.error('Create refund error:', error);
+      console.error("Create refund error:", error);
       res.status(500).json({
         success: false,
-        error: 'Internal server error',
+        error: "Internal server error",
       });
     }
-  }
+  },
 );
 
 /**
  * Get billing summary for the organization
  * Returns monthly spending totals and statistics
  */
-router.get('/billing/summary', requireOrganization, async (req: Request, res: Response) => {
-  try {
-    const { organizationId } = (req as AuthenticatedRequest).user;
+router.get(
+  "/billing/summary",
+  requireOrganization,
+  async (req: Request, res: Response) => {
+    try {
+      const { organizationId } = (req as AuthenticatedRequest).user;
 
-    const summary = await BillingService.getBillingSummary(organizationId);
+      const summary = await BillingService.getBillingSummary(organizationId);
 
-    res.json({
-      success: true,
-      summary,
-    });
-  } catch (error) {
-    console.error('Get billing summary error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to load billing summary',
-    });
-  }
-});
+      res.json({
+        success: true,
+        summary,
+      });
+    } catch (error) {
+      console.error("Get billing summary error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to load billing summary",
+      });
+    }
+  },
+);
 
 export default router;

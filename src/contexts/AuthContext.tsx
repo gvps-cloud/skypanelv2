@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 export interface User {
   id: string;
@@ -23,9 +23,20 @@ export interface AuthContextType {
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   refreshToken: () => Promise<void>;
-  updateProfile: (data: { firstName?: string; lastName?: string; phone?: string; timezone?: string }) => Promise<void>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  updatePreferences: (notifications?: any, security?: any) => Promise<void>;
+  updateProfile: (data: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    timezone?: string;
+  }) => Promise<void>;
+  changePassword: (
+    currentPassword: string,
+    newPassword: string,
+  ) => Promise<void>;
+  updatePreferences: (
+    notificationsOrPayload?: any,
+    security?: any,
+  ) => Promise<void>;
   getApiKeys: () => Promise<any[]>;
   createApiKey: (name: string) => Promise<any>;
   revokeApiKey: (id: string) => Promise<void>;
@@ -46,7 +57,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -54,13 +65,13 @@ export const useAuth = () => {
 // Check if token is expired
 const isTokenExpired = (token: string): boolean => {
   try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     const jsonPayload = decodeURIComponent(
       atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(""),
     );
     const decoded = JSON.parse(jsonPayload);
 
@@ -76,7 +87,9 @@ const isTokenExpired = (token: string): boolean => {
   }
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,20 +99,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setToken(null);
     setIsImpersonating(false);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
   };
 
   useEffect(() => {
     // Check for existing token in localStorage
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
+    const storedToken = localStorage.getItem("auth_token");
+    const storedUser = localStorage.getItem("auth_user");
 
     if (storedToken && storedUser) {
       // Check if token is expired
       if (isTokenExpired(storedToken)) {
         logout();
-        window.location.href = '/';
+        window.location.href = "/";
         setLoading(false);
         return;
       }
@@ -109,13 +122,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Check if this is an impersonation token
       try {
-        const base64Url = storedToken.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const base64Url = storedToken.split(".")[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
         const jsonPayload = decodeURIComponent(
           atob(base64)
-            .split('')
-            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-            .join('')
+            .split("")
+            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+            .join(""),
         );
         const decoded = JSON.parse(jsonPayload);
         setIsImpersonating(Boolean(decoded?.isImpersonating));
@@ -128,10 +141,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Set up periodic token expiration check (every minute)
     const tokenCheckInterval = setInterval(() => {
-      const currentToken = localStorage.getItem('auth_token');
+      const currentToken = localStorage.getItem("auth_token");
       if (currentToken && isTokenExpired(currentToken)) {
         logout();
-        window.location.href = '/';
+        window.location.href = "/";
       }
     }, 60000); // Check every 60 seconds
 
@@ -142,17 +155,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string, code?: string) => {
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password, code }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Login failed');
+        throw new Error(error.error || "Login failed");
       }
 
       const data = await response.json();
@@ -165,29 +178,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(data.token);
 
       // Store in localStorage
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      localStorage.setItem("auth_token", data.token);
+      localStorage.setItem("auth_user", JSON.stringify(data.user));
 
       return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       throw error;
     }
   };
 
   const register = async (data: RegisterData) => {
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Registration failed');
+        throw new Error(error.error || "Registration failed");
       }
 
       const result = await response.json();
@@ -196,10 +209,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(result.token);
 
       // Store in localStorage
-      localStorage.setItem('auth_token', result.token);
-      localStorage.setItem('auth_user', JSON.stringify(result.user));
+      localStorage.setItem("auth_token", result.token);
+      localStorage.setItem("auth_user", JSON.stringify(result.user));
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error("Registration error:", error);
       throw error;
     }
   };
@@ -207,239 +220,268 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshToken = async () => {
     try {
       if (!token) {
-        throw new Error('No token available');
+        throw new Error("No token available");
       }
 
-      const response = await fetch('/api/auth/refresh', {
-        method: 'POST',
+      const response = await fetch("/api/auth/refresh", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
-        throw new Error('Token refresh failed');
+        throw new Error("Token refresh failed");
       }
 
       const data = await response.json();
 
       setToken(data.token);
-      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem("auth_token", data.token);
 
       // Update user data if returned from refresh
       if (data.user) {
         setUser(data.user);
-        localStorage.setItem('auth_user', JSON.stringify(data.user));
+        localStorage.setItem("auth_user", JSON.stringify(data.user));
       }
     } catch (error) {
-      console.error('Token refresh error:', error);
+      console.error("Token refresh error:", error);
       logout(); // If refresh fails, logout the user
       throw error;
     }
   };
 
-  const updateProfile = async (data: { firstName?: string; lastName?: string; phone?: string; timezone?: string }) => {
+  const updateProfile = async (data: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    timezone?: string;
+  }) => {
     try {
-      if (!token) throw new Error('Not authenticated');
-      const response = await fetch('/api/auth/profile', {
-        method: 'PUT',
+      if (!token) throw new Error("Not authenticated");
+      const response = await fetch("/api/auth/profile", {
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to update profile');
+        throw new Error(result.error || "Failed to update profile");
       }
       setUser(result.user);
-      localStorage.setItem('auth_user', JSON.stringify(result.user));
+      localStorage.setItem("auth_user", JSON.stringify(result.user));
     } catch (error) {
-      console.error('Update profile error:', error);
+      console.error("Update profile error:", error);
       throw error;
     }
   };
 
-
-  const changePassword = async (currentPassword: string, newPassword: string) => {
+  const changePassword = async (
+    currentPassword: string,
+    newPassword: string,
+  ) => {
     try {
-      if (!token) throw new Error('Not authenticated');
-      const response = await fetch('/api/auth/password', {
-        method: 'PUT',
+      if (!token) throw new Error("Not authenticated");
+      const response = await fetch("/api/auth/password", {
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to change password');
+        throw new Error(result.error || "Failed to change password");
       }
       return result;
     } catch (error) {
-      console.error('Change password error:', error);
+      console.error("Change password error:", error);
       throw error;
     }
   };
 
-  const updatePreferences = async (notifications?: any, security?: any) => {
+  const updatePreferences = async (
+    notificationsOrPayload?: any,
+    security?: any,
+  ) => {
     try {
-      if (!token) throw new Error('Not authenticated');
-      const response = await fetch('/api/auth/preferences', {
-        method: 'PUT',
+      if (!token) throw new Error("Not authenticated");
+
+      const hasPayloadShape =
+        notificationsOrPayload &&
+        typeof notificationsOrPayload === "object" &&
+        !Array.isArray(notificationsOrPayload) &&
+        (Object.prototype.hasOwnProperty.call(
+          notificationsOrPayload,
+          "notifications",
+        ) ||
+          Object.prototype.hasOwnProperty.call(
+            notificationsOrPayload,
+            "security",
+          ));
+
+      const payload = hasPayloadShape
+        ? notificationsOrPayload
+        : { notifications: notificationsOrPayload, security };
+
+      const response = await fetch("/api/auth/preferences", {
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ notifications, security }),
+        body: JSON.stringify(payload),
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to update preferences');
+        throw new Error(result.error || "Failed to update preferences");
       }
 
       // Update local user state
       if (user) {
         const updatedUser = { ...user, preferences: result.preferences };
         setUser(updatedUser);
-        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+        localStorage.setItem("auth_user", JSON.stringify(updatedUser));
       }
 
       return result.preferences;
     } catch (error) {
-      console.error('Update preferences error:', error);
+      console.error("Update preferences error:", error);
       throw error;
     }
   };
 
   const getApiKeys = async () => {
     try {
-      if (!token) throw new Error('Not authenticated');
-      const response = await fetch('/api/auth/api-keys', {
+      if (!token) throw new Error("Not authenticated");
+      const response = await fetch("/api/auth/api-keys", {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch API keys');
+        throw new Error(result.error || "Failed to fetch API keys");
       }
       return result.apiKeys;
     } catch (error) {
-      console.error('Get API keys error:', error);
+      console.error("Get API keys error:", error);
       throw error;
     }
   };
 
   const createApiKey = async (name: string) => {
     try {
-      if (!token) throw new Error('Not authenticated');
-      const response = await fetch('/api/auth/api-keys', {
-        method: 'POST',
+      if (!token) throw new Error("Not authenticated");
+      const response = await fetch("/api/auth/api-keys", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ name }),
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to create API key');
+        throw new Error(result.error || "Failed to create API key");
       }
       return result.apiKey;
     } catch (error) {
-      console.error('Create API key error:', error);
+      console.error("Create API key error:", error);
       throw error;
     }
   };
 
   const revokeApiKey = async (id: string) => {
     try {
-      if (!token) throw new Error('Not authenticated');
+      if (!token) throw new Error("Not authenticated");
       const response = await fetch(`/api/auth/api-keys/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to revoke API key');
+        throw new Error(result.error || "Failed to revoke API key");
       }
       return result;
     } catch (error) {
-      console.error('Revoke API key error:', error);
+      console.error("Revoke API key error:", error);
       throw error;
     }
   };
 
   const setup2FA = async () => {
     try {
-      if (!token) throw new Error('Not authenticated');
-      const response = await fetch('/api/auth/2fa/setup', {
-        method: 'POST',
+      if (!token) throw new Error("Not authenticated");
+      const response = await fetch("/api/auth/2fa/setup", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed to setup 2FA');
+      if (!response.ok) throw new Error(result.error || "Failed to setup 2FA");
       return result;
     } catch (error) {
-      console.error('Setup 2FA error:', error);
+      console.error("Setup 2FA error:", error);
       throw error;
     }
   };
 
   const verify2FA = async (otpToken: string) => {
     try {
-      if (!token) throw new Error('Not authenticated');
-      const response = await fetch('/api/auth/2fa/verify', {
-        method: 'POST',
+      if (!token) throw new Error("Not authenticated");
+      const response = await fetch("/api/auth/2fa/verify", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ token: otpToken }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed to verify 2FA');
+      if (!response.ok) throw new Error(result.error || "Failed to verify 2FA");
 
       // Update local user state
       if (user) {
         const updatedUser = { ...user, twoFactorEnabled: true };
         setUser(updatedUser);
-        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+        localStorage.setItem("auth_user", JSON.stringify(updatedUser));
       }
     } catch (error) {
-      console.error('Verify 2FA error:', error);
+      console.error("Verify 2FA error:", error);
       throw error;
     }
   };
 
   const disable2FA = async () => {
     try {
-      if (!token) throw new Error('Not authenticated');
-      const response = await fetch('/api/auth/2fa/disable', {
-        method: 'POST',
+      if (!token) throw new Error("Not authenticated");
+      const response = await fetch("/api/auth/2fa/disable", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed to disable 2FA');
+      if (!response.ok)
+        throw new Error(result.error || "Failed to disable 2FA");
 
       // Update local user state
       if (user) {
         const updatedUser = { ...user, twoFactorEnabled: false };
         setUser(updatedUser);
-        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+        localStorage.setItem("auth_user", JSON.stringify(updatedUser));
       }
     } catch (error) {
-      console.error('Disable 2FA error:', error);
+      console.error("Disable 2FA error:", error);
       throw error;
     }
   };

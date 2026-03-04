@@ -1,6 +1,6 @@
-import nodemailer, { type SendMailOptions, type Transporter } from 'nodemailer';
-import { config } from '../config/index.js';
-import { Resend } from 'resend';
+import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
+import { config } from "../config/index.js";
+import { Resend } from "resend";
 
 let transporter: Transporter | null = null;
 
@@ -12,51 +12,58 @@ function ensureTransporter(): Transporter {
   const user = config.SMTP2GO_USERNAME;
   const pass = config.SMTP2GO_PASSWORD || config.SMTP2GO_API_KEY;
 
-  console.log('Initializing SMTP2GO transporter with config:', {
-    host: process.env.SMTP2GO_HOST || 'mail.smtp2go.com',
+  console.log("Initializing SMTP2GO transporter with config:", {
+    host: process.env.SMTP2GO_HOST || "mail.smtp2go.com",
     port: Number(process.env.SMTP2GO_PORT || 2525),
     hasUsername: !!user,
     hasPassword: !!pass,
     usernameLength: user?.length,
     secure: false,
-    requireTLS: true
+    requireTLS: true,
   });
 
   if (!user || !pass) {
-    const error = new Error('SMTP2GO credentials are not configured. Please set SMTP2GO_USERNAME and SMTP2GO_PASSWORD environment variables.');
-    console.error('SMTP Configuration Error:', error.message);
+    const error = new Error(
+      "SMTP2GO credentials are not configured. Please set SMTP2GO_USERNAME and SMTP2GO_PASSWORD environment variables.",
+    );
+    console.error("SMTP Configuration Error:", error.message);
     throw error;
   }
 
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP2GO_HOST || 'mail.smtp2go.com',
+    host: process.env.SMTP2GO_HOST || "mail.smtp2go.com",
     port: Number(process.env.SMTP2GO_PORT || 2525),
     secure: false,
     requireTLS: true,
     auth: {
       user,
-      pass
+      pass,
     },
-    debug: process.env.NODE_ENV !== 'production', // Enable debug in development
-    logger: process.env.NODE_ENV !== 'production' // Enable logging in development
+    debug: process.env.NODE_ENV !== "production", // Enable debug in development
+    logger: process.env.NODE_ENV !== "production", // Enable logging in development
   });
 
-  console.log('SMTP2GO transporter created successfully');
+  console.log("SMTP2GO transporter created successfully");
   return transporter;
 }
 
 async function sendEmail(options: SendMailOptions): Promise<void> {
-  const senderEmail = config.FROM_EMAIL || config.CONTACT_FORM_RECIPIENT || config.SMTP2GO_USERNAME;
+  const senderEmail =
+    config.FROM_EMAIL ||
+    config.CONTACT_FORM_RECIPIENT ||
+    config.SMTP2GO_USERNAME;
   if (!senderEmail) {
-    const error = new Error('FROM_EMAIL is not configured. Please set FROM_EMAIL environment variable.');
-    console.error('Email Configuration Error:', error.message);
+    const error = new Error(
+      "FROM_EMAIL is not configured. Please set FROM_EMAIL environment variable.",
+    );
+    console.error("Email Configuration Error:", error.message);
     throw error;
   }
 
-  const senderName = config.FROM_NAME || 'SkyVPS360';
+  const senderName = config.FROM_NAME || "SkyVPS360";
   const mailOptions: SendMailOptions = {
     from: options.from || `${senderName} <${senderEmail}>`,
-    ...options
+    ...options,
   };
 
   // If Resend is configured, try to send with Resend first
@@ -64,58 +71,69 @@ async function sendEmail(options: SendMailOptions): Promise<void> {
     const resend = new Resend(config.RESEND_API_KEY);
 
     try {
-      console.log('Attempting to send email via Resend to:', mailOptions.to);
+      console.log("Attempting to send email via Resend to:", mailOptions.to);
       const { data, error } = await resend.emails.send({
         from: mailOptions.from as string,
-        to: Array.isArray(mailOptions.to) ? mailOptions.to as string[] : [mailOptions.to as string],
-        subject: mailOptions.subject as string || '',
-        html: mailOptions.html as string || '',
-        text: mailOptions.text as string || ''
+        to: Array.isArray(mailOptions.to)
+          ? (mailOptions.to as string[])
+          : [mailOptions.to as string],
+        subject: (mailOptions.subject as string) || "",
+        html: (mailOptions.html as string) || "",
+        text: (mailOptions.text as string) || "",
       });
 
       if (error) {
-        console.error('Failed to send email via Resend (falling back to SMTP):', error);
+        console.error(
+          "Failed to send email via Resend (falling back to SMTP):",
+          error,
+        );
       } else {
-        console.log('Email sent via Resend successfully:', data);
+        console.log("Email sent via Resend successfully:", data);
         return;
       }
     } catch (error) {
-      console.error('Exception sending via Resend (falling back to SMTP):', error);
+      console.error(
+        "Exception sending via Resend (falling back to SMTP):",
+        error,
+      );
     }
   }
 
   // Fallback to standard SMTP2GO sender
 
-  console.log('Attempting to send email:', {
+  console.log("Attempting to send email:", {
     to: mailOptions.to,
     from: mailOptions.from,
     subject: mailOptions.subject,
     hasHtml: !!mailOptions.html,
-    hasText: !!mailOptions.text
+    hasText: !!mailOptions.text,
   });
 
   try {
     const transport = ensureTransporter();
     const info = await transport.sendMail(mailOptions);
-    console.log('Email sent successfully:', {
+    console.log("Email sent successfully:", {
       messageId: info.messageId,
       response: info.response,
-      to: mailOptions.to
+      to: mailOptions.to,
     });
   } catch (error) {
-    console.error('Failed to send email:', {
+    console.error("Failed to send email:", {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       to: mailOptions.to,
-      from: mailOptions.from
+      from: mailOptions.from,
     });
     throw error;
   }
 }
 
-export async function sendWelcomeEmail(to: string, name?: string): Promise<void> {
-  const displayName = name || 'there';
-  const subject = 'Welcome to SkyVPS360';
+export async function sendWelcomeEmail(
+  to: string,
+  name?: string,
+): Promise<void> {
+  const displayName = name || "there";
+  const subject = "Welcome to SkyVPS360";
   const html = `
     <p>Hi ${displayName},</p>
     <p>Welcome to SkyVPS360. Your account is ready to go.</p>
@@ -127,9 +145,12 @@ export async function sendWelcomeEmail(to: string, name?: string): Promise<void>
   await sendEmail({ to, subject, html, text });
 }
 
-export async function sendLoginNotificationEmail(to: string, name?: string): Promise<void> {
-  const displayName = name || 'there';
-  const subject = 'SkyVPS360 login notification';
+export async function sendLoginNotificationEmail(
+  to: string,
+  name?: string,
+): Promise<void> {
+  const displayName = name || "there";
+  const subject = "SkyVPS360 login notification";
   const html = `
     <p>Hi ${displayName},</p>
     <p>We noticed a successful login to your SkyVPS360 account just now.</p>
@@ -141,11 +162,18 @@ export async function sendLoginNotificationEmail(to: string, name?: string): Pro
   await sendEmail({ to, subject, html, text });
 }
 
-export async function sendPasswordResetEmail(to: string, token: string, name?: string): Promise<void> {
-  const baseUrl = (config.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
+export async function sendPasswordResetEmail(
+  to: string,
+  token: string,
+  name?: string,
+): Promise<void> {
+  const baseUrl = (config.CLIENT_URL || "http://localhost:5173").replace(
+    /\/$/,
+    "",
+  );
   const resetPageUrl = `${baseUrl}/reset-password`;
-  const displayName = name || 'there';
-  const subject = 'Reset your SkyVPS360 password';
+  const displayName = name || "there";
+  const subject = "Reset your SkyVPS360 password";
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <p>Hi ${displayName},</p>
@@ -195,6 +223,81 @@ export interface ContactEmailOptions {
   replyTo?: string;
 }
 
-export async function sendContactEmail({ to, from, subject, text, html, replyTo }: ContactEmailOptions): Promise<void> {
+export async function sendContactEmail({
+  to,
+  from,
+  subject,
+  text,
+  html,
+  replyTo,
+}: ContactEmailOptions): Promise<void> {
   await sendEmail({ to, from, subject, text, html, replyTo });
+}
+
+export interface AccountNotificationEmailOptions {
+  to: string;
+  name?: string;
+  category: "general" | "security" | "billing" | "maintenance";
+  title: string;
+  message: string;
+  eventType: string;
+  occurredAt?: string;
+}
+
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+export async function sendAccountNotificationEmail({
+  to,
+  name,
+  category,
+  title,
+  message,
+  eventType,
+  occurredAt,
+}: AccountNotificationEmailOptions): Promise<void> {
+  const displayName = name || "there";
+  const safeTitle = escapeHtml(title);
+  const safeMessage = escapeHtml(message);
+  const safeEventType = escapeHtml(eventType);
+  const safeTimestamp = escapeHtml(occurredAt || new Date().toISOString());
+
+  const subject = `SkyVPS360 alert: ${title}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto;">
+      <p>Hi ${escapeHtml(displayName)},</p>
+      <p>You have a new <strong>${escapeHtml(category)}</strong> alert from SkyVPS360.</p>
+      <div style="border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; margin: 16px 0;">
+        <p style="margin: 0 0 8px 0; font-weight: 700;">${safeTitle}</p>
+        <p style="margin: 0 0 8px 0;">${safeMessage}</p>
+        <p style="margin: 0; color: #4b5563; font-size: 12px;">Event: ${safeEventType}</p>
+        <p style="margin: 4px 0 0 0; color: #4b5563; font-size: 12px;">Time: ${safeTimestamp}</p>
+      </div>
+      <p style="color: #4b5563; font-size: 14px;">
+        You can manage alert categories in your account settings.
+      </p>
+      <p>Thanks,<br/><strong>The SkyVPS360 Team</strong></p>
+    </div>
+  `;
+
+  const text = `Hi ${displayName},
+
+You have a new ${category} alert from SkyVPS360.
+
+${title}
+${message}
+Event: ${eventType}
+Time: ${occurredAt || new Date().toISOString()}
+
+You can manage alert categories in your account settings.
+
+Thanks,
+The SkyVPS360 Team`;
+
+  await sendEmail({ to, subject, html, text });
 }
