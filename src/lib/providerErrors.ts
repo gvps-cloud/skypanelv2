@@ -21,23 +21,47 @@ export function getUserFriendlyErrorMessage(error: any, _provider?: string): str
     return getUserFriendlyMessage(providerError);
   }
 
-  // Handle API response errors
+  // Handle API response errors - check for password strength errors
   if (error && typeof error === 'object' && 'error' in error) {
-    return String(error.error);
+    const errorMsg = String(error.error);
+    if (isPasswordStrengthError(errorMsg)) {
+      return 'Password does not meet strength requirements. Use at least 8 characters with uppercase, lowercase, numbers, and special characters.';
+    }
+    return errorMsg;
   }
 
-  // Handle Error objects
+  // Handle Error objects - check for password errors
   if (error instanceof Error) {
+    if (isPasswordStrengthError(error.message)) {
+      return 'Password does not meet strength requirements. Use at least 8 characters with uppercase, lowercase, numbers, and special characters.';
+    }
     return error.message;
   }
 
-  // Handle string errors
+  // Handle string errors - check for password errors
   if (typeof error === 'string') {
+    if (isPasswordStrengthError(error)) {
+      return 'Password does not meet strength requirements. Use at least 8 characters with uppercase, lowercase, numbers, and special characters.';
+    }
     return error;
   }
 
   // Fallback
   return 'An unexpected error occurred. Please try again.';
+}
+
+/**
+ * Check if error message is about password strength
+ */
+function isPasswordStrengthError(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+  return (
+    lowerMessage.includes('password') &&
+    (lowerMessage.includes('strength') ||
+     lowerMessage.includes('complexity') ||
+     message.includes('did not meet') ||
+     lowerMessage.includes('root_pass'))
+  );
 }
 
 /**
@@ -52,20 +76,20 @@ function getUserFriendlyMessage(error: ProviderError): string {
     'INVALID_CREDENTIALS': `${providerName} API credentials are invalid. Please contact your administrator.`,
     'HTTP_401': `${providerName} authentication failed. Please contact your administrator.`,
     'UNAUTHORIZED': `${providerName} authentication failed. Please contact your administrator.`,
-    
+
     // Permission errors
     'HTTP_403': `Access forbidden. Your ${providerName} account may not have sufficient permissions.`,
     'FORBIDDEN': `Access forbidden. Your ${providerName} account may not have sufficient permissions.`,
-    
+
     // Resource errors
     'HTTP_404': 'The requested resource was not found.',
     'NOT_FOUND': 'The requested resource was not found.',
     'RESOURCE_NOT_FOUND': 'The requested resource was not found.',
-    
+
     // Rate limiting
     'HTTP_429': `${providerName} rate limit exceeded. Please wait a moment and try again.`,
     'RATE_LIMIT_EXCEEDED': `${providerName} rate limit exceeded. Please wait a moment and try again.`,
-    
+
     // Server errors
     'HTTP_500': `${providerName} is experiencing technical difficulties. Please try again later.`,
     'HTTP_502': `${providerName} service is temporarily unavailable. Please try again later.`,
@@ -73,16 +97,19 @@ function getUserFriendlyMessage(error: ProviderError): string {
     'HTTP_504': `${providerName} request timed out. Please try again.`,
     'SERVICE_UNAVAILABLE': `${providerName} service is temporarily unavailable. Please try again later.`,
     'PROVIDER_UNAVAILABLE': `${providerName} is currently unavailable. Please try again later.`,
-    
+
     // Validation errors
     'VALIDATION_ERROR': error.message || 'Invalid input. Please check your data and try again.',
     'HTTP_400': 'Invalid request. Please check your input and try again.',
     'HTTP_422': 'Invalid data provided. Please check your input and try again.',
-    
+
+    // Password errors - specific user-friendly messages
+    'PASSWORD_TOO_WEAK': 'Password does not meet strength requirements. Use at least 8 characters with uppercase, lowercase, numbers, and special characters.',
+
     // Network errors
     'NETWORK_ERROR': `Unable to connect to ${providerName}. Please check your internet connection.`,
     'TIMEOUT': `Request to ${providerName} timed out. Please try again.`,
-    
+
     // Generic errors
     'API_ERROR': error.message || `An error occurred while communicating with ${providerName}.`,
     'UNKNOWN_ERROR': 'An unexpected error occurred. Please try again.',

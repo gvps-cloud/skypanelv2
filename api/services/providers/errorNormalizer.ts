@@ -12,10 +12,30 @@ export function normalizeLinodeError(error: any, provider: ProviderType = 'linod
   // Linode error format: { errors: [{ field: string, reason: string }] }
   if (error?.errors && Array.isArray(error.errors) && error.errors.length > 0) {
     const firstError = error.errors[0];
+    const reason = firstError.reason || '';
+    const field = firstError.field;
+
+    // Detect password strength errors from Linode
+    if (
+      field === 'root_pass' ||
+      reason.toLowerCase().includes('password') &&
+      (reason.toLowerCase().includes('strength') ||
+       reason.toLowerCase().includes('complexity') ||
+       reason.includes('did not meet'))
+    ) {
+      return {
+        code: 'PASSWORD_TOO_WEAK',
+        message: 'Password does not meet strength requirements',
+        field,
+        provider,
+        originalError: error,
+      };
+    }
+
     return {
       code: 'VALIDATION_ERROR',
-      message: firstError.reason || 'Validation error',
-      field: firstError.field,
+      message: reason || 'Validation error',
+      field,
       provider,
       originalError: error,
     };

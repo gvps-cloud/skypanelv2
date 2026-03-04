@@ -1533,6 +1533,35 @@ const VPS: React.FC = () => {
       const payload = await res.json();
       if (!res.ok) {
         mobileLoading.hideLoading();
+
+        // Helper to check if error is password-related
+        const isPasswordError = (code: string, message: string): boolean => {
+          return (
+            code === "PASSWORD_TOO_WEAK" ||
+            (message &&
+              (message.toLowerCase().includes("password") &&
+                (message.toLowerCase().includes("strength") ||
+                  message.toLowerCase().includes("complexity") ||
+                  message.includes("did not meet") ||
+                  message.includes("root_pass"))))
+          );
+        };
+
+        const errorMessage = payload.error || "";
+        const errorCode = payload.code || "";
+
+        // Handle password strength errors with special UX - keep modal open and show helpful message
+        if (isPasswordError(errorCode, errorMessage)) {
+          mobileToast.error(
+            "Password does not meet strength requirements. Please use at least 8 characters with uppercase, lowercase, numbers, and special characters.",
+            {
+              duration: 10000,
+            },
+          );
+          // Keep modal open - user stays on finalize step to update password
+          return;
+        }
+
         // Handle specific error codes with better user feedback
         if (payload.code === "INSUFFICIENT_BALANCE") {
           mobileToast.error(
@@ -1554,7 +1583,7 @@ const VPS: React.FC = () => {
             "Failed to verify wallet balance. Please try again.",
           );
         } else {
-          mobileToast.error(payload.error || "Failed to create VPS");
+          mobileToast.error(errorMessage || "Failed to create VPS");
         }
         return;
       }

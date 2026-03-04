@@ -23,6 +23,7 @@ export const ErrorCodes = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   INVALID_INPUT: 'INVALID_INPUT',
   DUPLICATE_RESOURCE: 'DUPLICATE_RESOURCE',
+  PASSWORD_TOO_WEAK: 'PASSWORD_TOO_WEAK',
   
   // Provider errors
   PROVIDER_API_ERROR: 'PROVIDER_API_ERROR',
@@ -201,28 +202,55 @@ export function extractProviderErrorMessage(error: any, provider: string): strin
   // Check for response data with error message
   if (error.response?.data) {
     const data = error.response.data;
-    
+
+    // Check for Linode errors array format
+    if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+      const firstError = data.errors[0];
+      const reason = firstError.reason || '';
+      const field = firstError.field;
+
+      // Handle password strength errors with user-friendly message
+      if (
+        field === 'root_pass' ||
+        (reason.toLowerCase().includes('password') &&
+         (reason.toLowerCase().includes('strength') ||
+          reason.toLowerCase().includes('complexity') ||
+          reason.includes('did not meet')))
+      ) {
+        return 'Password does not meet strength requirements. Please use a stronger password with at least 8 characters, including uppercase, lowercase, numbers, and special characters.';
+      }
+
+      return reason || firstError.message || JSON.stringify(firstError);
+    }
+
     // Common error message fields
     if (data.message) return data.message;
     if (data.error) {
       if (typeof data.error === 'string') return data.error;
       if (data.error.message) return data.error.message;
     }
-    if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
-      return data.errors[0].message || data.errors[0];
-    }
   }
-  
+
   // Check for error message directly
   if (error.message) {
-    // Remove technical details from message
+    // Check for password strength error in message
     const message = error.message;
+    if (
+      message.toLowerCase().includes('password') &&
+      (message.toLowerCase().includes('strength') ||
+       message.toLowerCase().includes('complexity') ||
+       message.includes('did not meet'))
+    ) {
+      return 'Password does not meet strength requirements. Please use a stronger password with at least 8 characters, including uppercase, lowercase, numbers, and special characters.';
+    }
+
+    // Remove technical details from message
     if (message.includes('Request failed with status code')) {
       return `${provider} API error: ${error.response?.status || 'Unknown error'}`;
     }
     return message;
   }
-  
+
   // Fallback
   return `${provider} API request failed`;
 }
