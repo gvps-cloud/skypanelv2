@@ -211,7 +211,7 @@ THIS IS NOT A RESELLER PANEL IN ANY SORTS
    ```
 
    This starts both servers concurrently:
-   - **Frontend**: Vite dev server at `http://localhost:5173` with hot reload
+   - **Frontend**: Vite dev server at `http://localhost:8000` with hot reload
    - **Backend**: Express API at `http://localhost:3001` with auto-restart via Nodemon
    - **Features**: SSE notifications, PayPal webhooks, SSH WebSocket bridge, API proxy
 
@@ -239,9 +239,9 @@ THIS IS NOT A RESELLER PANEL IN ANY SORTS
 ### Development
 - `npm run dev` – Start Vite + Nodemon concurrently for full-stack development.
 - `npm run dev-up` – Kill ports and start development servers (convenience script).
-- `npm run client:dev` – Run frontend only (Vite dev server on port 5173).
+- `npm run client:dev` – Run frontend only (Vite dev server on port 8000).
 - `npm run server:dev` – Run backend only (Nodemon on port 3001).
-- `npm run kill-ports` – Free ports `3001` and `5173` before restarting dev servers.
+- `npm run kill-ports` – Free ports `3001` and `8000` before restarting dev servers.
 
 ### Building & Testing
 - `npm run build` – TypeScript check + Vite build for production.
@@ -445,7 +445,7 @@ pm2 logs
 ## Troubleshooting
 
 ### Common Development Issues
-- **Ports in use**: Run `npm run kill-ports` to free ports 3001 and 5173 before starting dev servers
+- **Ports in use**: Run `npm run kill-ports` to free ports 3001 and 8000 before starting dev servers
 - **API unreachable**: Confirm backend is running on correct `PORT` from `.env` and all migrations completed
 - **Build failures**: Run `npm run check` for TypeScript errors, `npm run lint` for ESLint issues
 - **Database connection**: Use `node scripts/test-connection.js` to verify PostgreSQL connectivity
