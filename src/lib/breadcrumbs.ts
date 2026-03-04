@@ -13,6 +13,9 @@ export interface DynamicBreadcrumbOverride {
   label: string;
 }
 
+// Segments that should be skipped when followed by an ID (they act as path prefixes, not routes)
+const SKIP_SEGMENTS_BEFORE_ID = ["invoice", "transaction", "user"];
+
 const routeLabels: Record<string, string> = {
   "/": "Home",
   "/dashboard": "Dashboard",
@@ -35,7 +38,7 @@ const routeLabels: Record<string, string> = {
 };
 
 export function generateBreadcrumbs(
-  pathname: string, 
+  pathname: string,
   dynamicOverrides?: DynamicBreadcrumbOverride[]
 ): BreadcrumbItem[] {
   // Start with dashboard as home
@@ -55,6 +58,16 @@ export function generateBreadcrumbs(
   let currentPath = "";
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
+    const nextSegment = segments[i + 1];
+    const isNextSegmentId = nextSegment && (/^[0-9a-f-]{36}$/.test(nextSegment) || /^\d+$/.test(nextSegment));
+
+    // Skip segments that act as path prefixes (e.g., 'invoice' in /billing/invoice/:id)
+    // when they are followed by an ID, since they don't represent a real page
+    if (SKIP_SEGMENTS_BEFORE_ID.includes(segment) && isNextSegmentId) {
+      currentPath += `/${segment}`;
+      continue;
+    }
+
     currentPath += `/${segment}`;
 
     // Check if this is an ID parameter (UUID or number)
