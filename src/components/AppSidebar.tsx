@@ -234,7 +234,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
 
   const userData = {
     name: displayName,
-    email: user?.email || "user@example.com",
+    email: user?.email || "",
     avatar: "/avatars/user.jpg", // You can add user avatar support later
     role: user?.role,
   };

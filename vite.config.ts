@@ -1,12 +1,48 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
+import type { Plugin } from 'vite';
+
+// Plugin to remove mock data from all source files in production builds
+function removeMockData(): Plugin {
+  return {
+    name: 'remove-mock-data',
+    transform(code, id) {
+      // Only process TS/TSX files in src directory
+      if (id.includes('/src/') && (id.endsWith('.tsx') || id.endsWith('.ts') || id.endsWith('.jsx') || id.endsWith('.js'))) {
+        // Replace all example emails with generic placeholders
+        let transformed = code
+          // Replace specific example emails
+          .replace(/admin@example\.com/gi, '***@***.***')
+          .replace(/customer@example\.com/gi, '***@***.***')
+          .replace(/sales@example\.com/gi, '***@***.***')
+          .replace(/support@example\.com/gi, '***@***.***')
+          .replace(/user@example\.com/gi, '***@***.***')
+          // Replace dynamic brand emails (legal@, privacy@, security@)
+          .replace(/legal@\{BRAND_NAME\.toLowerCase\(\)\}\.com/g, '***@***.***')
+          .replace(/privacy@\{BRAND_NAME\.toLowerCase\(\)\}\.com/g, '***@***.***')
+          .replace(/security@\{BRAND_NAME\.toLowerCase\(\)\}\.com/g, '***@***.***')
+          // Replace example passwords
+          .replace(/Sup3rSecure!/g, '***')
+          .replace(/N3wSecurePass!/g, '***')
+          // Replace example API tokens
+          .replace(/sk_live_[\*]+/g, 'sk_live_***')
+          .replace(/reset_token_here/g, '***');
+
+        // Only return if something actually changed
+        if (transformed !== code) {
+          return { code: transformed, map: null };
+        }
+      }
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [react(), tsconfigPaths(), removeMockData()],
   // Expose custom env prefix so frontend can read COMPANY-NAME
-  envPrefix: ["VITE_", "COMPANY-"],
+  envPrefix: ["VITE_"], // Removed COMPANY- to prevent accidental bundling of sensitive env vars
   server: {
     host: "0.0.0.0", // Allow connections from any IP address
     port: 8000, // Default Vite port
