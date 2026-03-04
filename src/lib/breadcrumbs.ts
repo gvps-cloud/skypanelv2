@@ -22,7 +22,7 @@ const routeLabels: Record<string, string> = {
   "/containers/:id": "Container Details",
   "/billing": "Billing",
   "/billing/invoice": "Invoices",
-  "/billing/invoice/:id": "Invoice",
+  "/billing/invoice/:id": "Invoice Details",
   "/billing/transaction": "Transactions",
   "/billing/transaction/:id": "Transaction",
   "/billing/payment/success": "Payment Success",
