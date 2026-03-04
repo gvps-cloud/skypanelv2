@@ -503,64 +503,64 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         icon: Home,
         label: "Dashboard",
         href: "/dashboard",
-        shortcut: isMac ? "⌘D" : "Ctrl+D",
+        shortcut: isMac ? "⌥D" : "Alt+D",
         shortcutKey: "d",
         requiresShift: false,
-        requiresAlt: false,
+        requiresAlt: true,
       },
       {
         icon: Server,
         label: "VPS Instances",
         href: "/vps",
-        shortcut: isMac ? "⌘V" : "Ctrl+V",
+        shortcut: isMac ? "⌥V" : "Alt+V",
         shortcutKey: "v",
         requiresShift: false,
-        requiresAlt: false,
+        requiresAlt: true,
       },
       {
         icon: Key,
         label: "SSH Keys",
         href: "/ssh-keys",
-        shortcut: isMac ? "⌘K" : "Ctrl+K",
+        shortcut: isMac ? "⌥K" : "Alt+K",
         shortcutKey: "k",
         requiresShift: false,
-        requiresAlt: false,
+        requiresAlt: true,
       },
       {
         icon: CreditCard,
         label: "Billing",
         href: "/billing",
-        shortcut: isMac ? "⌘B" : "Ctrl+B",
+        shortcut: isMac ? "⌥B" : "Alt+B",
         shortcutKey: "b",
         requiresShift: false,
-        requiresAlt: false,
+        requiresAlt: true,
       },
       {
         icon: Activity,
         label: "Activity",
         href: "/activity",
-        shortcut: isMac ? "⌘A" : "Ctrl+A",
+        shortcut: isMac ? "⌥A" : "Alt+A",
         shortcutKey: "a",
         requiresShift: false,
-        requiresAlt: false,
+        requiresAlt: true,
       },
       {
         icon: MessageCircle,
         label: "Support",
         href: "/support",
-        shortcut: isMac ? "⌘H" : "Ctrl+H",
-        shortcutKey: "h",
+        shortcut: isMac ? "⌥U" : "Alt+U",
+        shortcutKey: "u",
         requiresShift: false,
-        requiresAlt: false,
+        requiresAlt: true,
       },
       {
         icon: Settings,
         label: "Settings",
         href: "/settings",
-        shortcut: isMac ? "⌘S" : "Ctrl+S",
+        shortcut: isMac ? "⌥S" : "Alt+S",
         shortcutKey: "s",
         requiresShift: false,
-        requiresAlt: false,
+        requiresAlt: true,
       },
     ],
     [isMac],
@@ -570,12 +570,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     () => [
       {
         label: "Toggle theme",
-        shortcut: isMac ? "⌘⇧L" : "Ctrl+Shift+L",
+        shortcut: isMac ? "⌥L" : "Alt+L",
         shortcutKey: "l",
         onSelect: () => toggleTheme(),
         icon: isDark ? Sun : Moon,
-        requiresShift: true,
-        requiresAlt: false,
+        requiresShift: false,
+        requiresAlt: true,
       },
     ],
     [isMac, toggleTheme, isDark],
@@ -663,11 +663,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     }
 
     const handleShortcut = (event: KeyboardEvent) => {
-      const modifierActive = isMac ? event.metaKey : event.ctrlKey;
-      if (!modifierActive) {
-        return;
-      }
-
       const pressedKey = event.key.toLowerCase();
       const matchesModifiers = (item: {
         requiresShift?: boolean;
@@ -676,11 +671,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         const needsShift = item.requiresShift === true;
         const needsAlt = item.requiresAlt === true;
 
-        if (needsShift !== event.shiftKey) {
+        // Check if correct modifier is pressed
+        // For Alt shortcuts: Alt must be pressed, Ctrl/Cmd should NOT be pressed
+        // For Ctrl shortcuts: Ctrl/Cmd must be pressed, Alt should NOT be pressed
+        const modifierActive = needsAlt
+          ? event.altKey && !event.ctrlKey && !event.metaKey
+          : (isMac ? event.metaKey : event.ctrlKey) && !event.altKey;
+
+        if (!modifierActive) {
           return false;
         }
 
-        if (needsAlt !== event.altKey) {
+        if (needsShift !== event.shiftKey) {
           return false;
         }
 
@@ -883,7 +885,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   >
                     <Icon className="mr-2 h-4 w-4" />
                     <span>{item.label}</span>
-                    <CommandShortcut>{item.shortcut}</CommandShortcut>
+                    {item.shortcut && <CommandShortcut>{item.shortcut}</CommandShortcut>}
                   </CommandItem>
                 );
               })}
@@ -1049,6 +1051,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                         key={adminUser.id}
                         onSelect={() => handleAdminUserSelect(adminUser.id)}
                         className="flex items-center justify-between"
+                        value={`${adminUser.name} ${adminUser.email} ${adminUser.id}`}
                       >
                         <div className="flex items-center">
                           <Users className="mr-2 h-4 w-4" />
@@ -1090,7 +1093,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   >
                     <Icon className="mr-2 h-4 w-4" />
                     <span>{item.label}</span>
-                    <CommandShortcut>{item.shortcut}</CommandShortcut>
+                    {item.shortcut && <CommandShortcut>{item.shortcut}</CommandShortcut>}
                   </CommandItem>
                 );
               })}
