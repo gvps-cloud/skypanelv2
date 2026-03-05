@@ -770,7 +770,7 @@ router.put(
     body("backup_upcharge_hourly").optional().isFloat({ min: 0 }),
     body("daily_backups_enabled").optional().isBoolean(),
     body("weekly_backups_enabled").optional().isBoolean(),
-    body("type_class").optional().isIn(["standard", "cpu", "memory", "premium", "gpu", "accelerated"]),
+    body("type_class").optional().isIn(["standard", "dedicated", "premium", "gpu", "accelerated", "highmem", "nanode"]),
     body("regions").optional().isArray(),
   ],
   async (req: Request, res: Response) => {
@@ -997,7 +997,7 @@ router.post(
     body("markup_price").isFloat({ min: 0 }),
     body("active").optional().isBoolean(),
     body("specifications").optional().isObject(),
-    body("type_class").optional().isIn(["standard", "cpu", "memory", "premium", "gpu", "accelerated"]),
+    body("type_class").optional().isIn(["standard", "dedicated", "premium", "gpu", "accelerated", "highmem", "nanode"]),
     body("regions").optional().isArray(),
   ],
   async (req: Request, res: Response) => {

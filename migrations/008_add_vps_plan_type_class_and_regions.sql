@@ -8,7 +8,7 @@ ADD COLUMN IF NOT EXISTS type_class VARCHAR(50) DEFAULT 'standard';
 CREATE INDEX IF NOT EXISTS idx_vps_plans_type_class ON vps_plans(type_class);
 
 -- Add comment for type_class
-COMMENT ON COLUMN vps_plans.type_class IS 'Plan type class: standard, cpu, memory, premium, gpu, accelerated';
+COMMENT ON COLUMN vps_plans.type_class IS 'Plan type class from Linode API: standard, dedicated, premium, gpu, accelerated, highmem, nanode';
 
 -- Create vps_plan_regions junction table
 CREATE TABLE IF NOT EXISTS vps_plan_regions (

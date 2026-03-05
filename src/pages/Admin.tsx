@@ -298,6 +298,8 @@ interface VPSPlan {
   daily_backups_enabled?: boolean;
   weekly_backups_enabled?: boolean;
   specifications: Record<string, unknown>;
+  type_class?: string;
+  regions?: Array<{ region_id: string }>;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -887,6 +889,20 @@ const Admin: React.FC = () => {
     return linodeRegions.filter((r) => set.has(r.id));
   }, [linodeRegions, allowedRegionIds]);
 
+  // Helper function to get category display label
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      standard: "Standard",
+      dedicated: "Dedicated",
+      premium: "Premium",
+      gpu: "GPU",
+      accelerated: "Accelerated",
+      highmem: "High Memory",
+      nanode: "Nanode",
+    };
+    return labels[category] || category;
+  };
+
   // Filter plan types by category
   const filteredPlanTypes = useMemo(() => {
     if (planTypeFilter === "all") return linodeTypes;
@@ -943,18 +959,33 @@ const Admin: React.FC = () => {
   }, [availableStackscripts, stackscriptSearch]);
 
   const filteredPlans = useMemo(() => {
-    if (planProviderFilter === "all") return plans;
-    return plans.filter((plan) => plan.provider_id === planProviderFilter);
-  }, [plans, planProviderFilter]);
+    let result = plans;
+
+    if (planProviderFilter !== "all") {
+      result = result.filter((plan) => plan.provider_id === planProviderFilter);
+    }
+
+    if (planTypeFilter !== "all") {
+      result = result.filter((plan) => {
+        const planTypeClass = (plan.type_class || "").toLowerCase().trim();
+        return planTypeClass === planTypeFilter.toLowerCase();
+      });
+    }
+
+    return result;
+  }, [plans, planProviderFilter, planTypeFilter]);
 
   const groupedPlans = useMemo(() => {
     const groups: Record<string, VPSPlan[]> = {};
     filteredPlans.forEach((plan) => {
       const providerId = plan.provider_id || "unknown";
-      if (!groups[providerId]) {
-        groups[providerId] = [];
+      const typeClass = plan.type_class || "standard";
+      const groupKey = `${providerId}-${typeClass}`;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
       }
-      groups[providerId].push(plan);
+      groups[groupKey].push(plan);
     });
     return groups;
   }, [filteredPlans]);
@@ -2502,6 +2533,35 @@ const Admin: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex items-center gap-3">
+                <Label
+                  htmlFor="plan-type-filter"
+                  className="text-sm font-medium whitespace-nowrap"
+                >
+                  Filter by Category:
+                </Label>
+                <Select
+                  value={planTypeFilter}
+                  onValueChange={setPlanTypeFilter}
+                >
+                  <SelectTrigger
+                    id="plan-type-filter"
+                    className="w-[250px]"
+                  >
+                    <SelectValue placeholder="All categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="dedicated">Dedicated</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                    <SelectItem value="gpu">GPU</SelectItem>
+                    <SelectItem value="accelerated">Accelerated</SelectItem>
+                    <SelectItem value="highmem">High Memory</SelectItem>
+                    <SelectItem value="nanode">Nanode</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
             <CardContent className="px-0">
               <div className="overflow-x-auto">
@@ -2513,6 +2573,7 @@ const Admin: React.FC = () => {
                       <TableHead className="min-w-[10rem]">
                         Provider Plan ID
                       </TableHead>
+                      <TableHead className="min-w-[8rem]">Category</TableHead>
                       <TableHead className="min-w-[8rem]">Base Price</TableHead>
                       <TableHead className="min-w-[8rem]">Markup</TableHead>
                       <TableHead className="min-w-[10rem]">
@@ -2527,38 +2588,43 @@ const Admin: React.FC = () => {
                     {filteredPlans.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={9}
+                          colSpan={10}
                           className="py-10 text-center text-muted-foreground"
                         >
-                          {planProviderFilter === "all"
+                          {planProviderFilter === "all" && planTypeFilter === "all"
                             ? "No plans available"
-                            : "No plans for selected provider"}
+                            : planProviderFilter !== "all" && planTypeFilter !== "all"
+                            ? "No plans for selected provider and category"
+                            : planProviderFilter !== "all"
+                            ? "No plans for selected provider"
+                            : "No plans for selected category"}
                         </TableCell>
                       </TableRow>
                     ) : (
                       // Grouped view with pagination
                       Object.entries(groupedPlans).map(
-                        ([providerId, providerPlans]) => {
+                        ([groupKey, groupPlans]) => {
+                          const [providerId, typeClass] = groupKey.split('-');
                           const provider = providers.find(
                             (p) => p.id === providerId,
                           );
                           const currentPage =
-                            providerPlanPages[providerId] || 1;
+                            providerPlanPages[groupKey] || 1;
                           const totalPages = Math.ceil(
-                            providerPlans.length / plansPerPage,
+                            groupPlans.length / plansPerPage,
                           );
                           const startIndex = (currentPage - 1) * plansPerPage;
                           const endIndex = startIndex + plansPerPage;
-                          const paginatedPlans = providerPlans.slice(
+                          const paginatedPlans = groupPlans.slice(
                             startIndex,
                             endIndex,
                           );
 
                           return (
-                            <React.Fragment key={providerId}>
+                            <React.Fragment key={groupKey}>
                               <TableRow className="bg-muted/50 hover:bg-muted/50">
                                 <TableCell
-                                  colSpan={9}
+                                  colSpan={10}
                                   className="py-3 font-semibold"
                                 >
                                   <div className="flex items-center justify-between">
@@ -2567,9 +2633,12 @@ const Admin: React.FC = () => {
                                       {provider
                                         ? `${provider.name} (${provider.type})`
                                         : "Unknown Provider"}
+                                      <Badge variant="secondary" className="ml-2">
+                                        {getCategoryLabel(typeClass)}
+                                      </Badge>
                                       <Badge variant="outline" className="ml-2">
-                                        {providerPlans.length}{" "}
-                                        {providerPlans.length === 1
+                                        {groupPlans.length}{" "}
+                                        {groupPlans.length === 1
                                           ? "plan"
                                           : "plans"}
                                       </Badge>
@@ -2582,7 +2651,7 @@ const Admin: React.FC = () => {
                                           onClick={() =>
                                             setProviderPlanPages((prev) => ({
                                               ...prev,
-                                              [providerId]: Math.max(
+                                              [groupKey]: Math.max(
                                                 1,
                                                 currentPage - 1,
                                               ),
@@ -2660,6 +2729,40 @@ const Admin: React.FC = () => {
                                       <span className="text-sm text-muted-foreground">
                                         {plan.provider_plan_id}
                                       </span>
+                                    </TableCell>
+                                    <TableCell>
+                                      {isEditing ? (
+                                        <Select
+                                          value={
+                                            (editPlan.type_class as
+                                              | string
+                                              | undefined) ?? plan.type_class ?? "standard"
+                                          }
+                                          onValueChange={(value) =>
+                                            setEditPlan((prev) => ({
+                                              ...prev,
+                                              type_class: value,
+                                            }))
+                                          }
+                                        >
+                                          <SelectTrigger className="max-w-[8rem]">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="standard">Standard</SelectItem>
+                                            <SelectItem value="dedicated">Dedicated</SelectItem>
+                                            <SelectItem value="premium">Premium</SelectItem>
+                                            <SelectItem value="gpu">GPU</SelectItem>
+                                            <SelectItem value="accelerated">Accelerated</SelectItem>
+                                            <SelectItem value="highmem">High Memory</SelectItem>
+                                            <SelectItem value="nanode">Nanode</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      ) : (
+                                        <Badge variant="secondary">
+                                          {getCategoryLabel(plan.type_class || "standard")}
+                                        </Badge>
+                                      )}
                                     </TableCell>
                                     <TableCell>
                                       {isEditing ? (
