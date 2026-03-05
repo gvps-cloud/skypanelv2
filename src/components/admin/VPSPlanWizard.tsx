@@ -32,6 +32,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface Provider {
@@ -70,6 +72,14 @@ interface NewVPSPlanState {
   dailyBackupsEnabled: boolean;
   weeklyBackupsEnabled: boolean;
   active: boolean;
+  selectedRegions: string[];
+}
+
+interface LinodeRegion {
+  id: string;
+  label: string;
+  country: string;
+  capabilities: string[];
 }
 
 interface VPSPlanWizardProps {
@@ -83,12 +93,14 @@ interface VPSPlanWizardProps {
   setNewVPSPlan: React.Dispatch<React.SetStateAction<NewVPSPlanState>>;
   onProviderChange: (providerId: string) => void;
   onSubmit: () => void;
+  regions?: LinodeRegion[];
 }
 
 const STEPS = [
   { id: 1, title: "Provider & Plan", icon: Server },
-  { id: 2, title: "Pricing", icon: DollarSign },
-  { id: 3, title: "Review", icon: Check },
+  { id: 2, title: "Regions", icon: Cloud },
+  { id: 3, title: "Pricing", icon: DollarSign },
+  { id: 4, title: "Review", icon: Check },
 ];
 
 const PLAN_CATEGORIES = [
@@ -111,6 +123,7 @@ export function VPSPlanWizard({
   setNewVPSPlan,
   onProviderChange,
   onSubmit,
+  regions = [],
 }: VPSPlanWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -145,8 +158,36 @@ export function VPSPlanWizard({
     [providers, newVPSPlan.selectedProviderId]
   );
 
+  // Filter regions based on plan type capabilities
+  const filteredRegions = useMemo(() => {
+    if (!selectedType) return [];
+
+    const typeClass = selectedType.type_class?.toLowerCase() || "";
+
+    // For premium, GPU, and accelerated plans, filter by region capabilities
+    if (typeClass === "premium") {
+      return regions.filter((r) =>
+        r.capabilities.includes("Premium Plans")
+      );
+    }
+    if (typeClass === "gpu") {
+      return regions.filter((r) =>
+        r.capabilities.includes("GPU Linodes")
+      );
+    }
+    if (typeClass === "accelerated") {
+      return regions.filter((r) =>
+        r.capabilities.includes("Accelerated")
+      );
+    }
+
+    // For standard, cpu, memory plans - all regions are available
+    return regions;
+  }, [selectedType, regions]);
+
   const canProceedToStep2 = newVPSPlan.selectedProviderId && newVPSPlan.selectedType;
-  const canProceedToStep3 = canProceedToStep2;
+  const canProceedToStep3 = canProceedToStep2 && newVPSPlan.selectedRegions.length > 0;
+  const canProceedToStep4 = canProceedToStep3;
 
   const handleClose = () => {
     onOpenChange(false);
@@ -164,6 +205,7 @@ export function VPSPlanWizard({
       dailyBackupsEnabled: false,
       weeklyBackupsEnabled: true,
       active: true,
+      selectedRegions: [],
     });
   };
 
@@ -352,6 +394,133 @@ export function VPSPlanWizard({
 
   const renderStep2 = () => (
     <div className="space-y-5">
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">Select Available Regions</Label>
+        <p className="text-xs text-muted-foreground">
+          Choose which regions this plan should be available in.
+          {selectedType?.type_class === "premium" && (
+            <span className="text-amber-500 ml-2">Premium plans are only available in regions with Premium Plans capability.</span>
+          )}
+          {selectedType?.type_class === "gpu" && (
+            <span className="text-purple-500 ml-2">GPU plans are only available in regions with GPU Linodes capability.</span>
+          )}
+          {selectedType?.type_class === "accelerated" && (
+            <span className="text-blue-500 ml-2">Accelerated plans are only available in regions with Accelerated capability.</span>
+          )}
+        </p>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            if (filteredRegions.length > 0) {
+              setNewVPSPlan((prev) => ({
+                ...prev,
+                selectedRegions: filteredRegions.map((r) => r.id),
+              }));
+            }
+          }}
+          disabled={filteredRegions.length === 0}
+        >
+          Select All ({filteredRegions.length})
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setNewVPSPlan((prev) => ({
+              ...prev,
+              selectedRegions: [],
+            }));
+          }}
+        >
+          Clear All
+        </Button>
+      </div>
+
+      {/* Region List */}
+      <div className="max-h-[240px] overflow-y-auto rounded-lg border bg-background">
+        {filteredRegions.length === 0 ? (
+          <div className="p-4 text-center text-sm text-muted-foreground">
+            No regions available for this plan type.
+          </div>
+        ) : (
+          <div className="divide-y">
+            {filteredRegions.map((region) => (
+              <div
+                key={region.id}
+                className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors"
+              >
+                <Checkbox
+                  id={`region-${region.id}`}
+                  checked={newVPSPlan.selectedRegions?.includes(region.id) || false}
+                  onCheckedChange={(checked) => {
+                    setNewVPSPlan((prev) => ({
+                      ...prev,
+                      selectedRegions: checked
+                        ? [...(prev.selectedRegions || []), region.id]
+                        : (prev.selectedRegions || []).filter((r) => r !== region.id),
+                    }));
+                  }}
+                />
+                <div className="flex-1">
+                  <Label
+                    htmlFor={`region-${region.id}`}
+                    className="cursor-pointer font-medium"
+                  >
+                    {region.label}
+                  </Label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {region.id}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {region.country}
+                    </Badge>
+                    {region.capabilities.includes("Premium Plans") && (
+                      <Badge variant="default" className="text-xs bg-amber-500 hover:bg-amber-600">
+                        Premium
+                      </Badge>
+                    )}
+                    {region.capabilities.includes("GPU Linodes") && (
+                      <Badge variant="default" className="text-xs bg-purple-500 hover:bg-purple-600">
+                        GPU
+                      </Badge>
+                    )}
+                    {region.capabilities.includes("Accelerated") && (
+                      <Badge variant="default" className="text-xs bg-blue-500 hover:bg-blue-600">
+                        Accelerated
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Selection Summary */}
+      {newVPSPlan.selectedRegions && newVPSPlan.selectedRegions.length > 0 && (
+        <div className="rounded-lg border bg-primary/5 p-3">
+          <p className="text-sm font-medium">
+            {newVPSPlan.selectedRegions.length} region{newVPSPlan.selectedRegions.length !== 1 ? "s" : ""} selected
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            This plan will be available in: {newVPSPlan.selectedRegions.join(", ")}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div className="space-y-5">
       {/* Display Name */}
       <div className="space-y-2">
         <Label htmlFor="plan-name" className="text-sm font-medium">
@@ -537,7 +706,7 @@ export function VPSPlanWizard({
     </div>
   );
 
-  const renderStep3 = () => {
+  const renderStep4 = () => {
     const finalPrice = (selectedType?.price.monthly || 0) + newVPSPlan.markupPrice;
     const backupTotal =
       (parseFloat(String(newVPSPlan.backupPriceMonthly)) || 0) +
@@ -661,6 +830,7 @@ export function VPSPlanWizard({
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
+          {currentStep === 4 && renderStep4()}
         </div>
 
         {/* Footer */}
@@ -679,10 +849,16 @@ export function VPSPlanWizard({
             {currentStep === 1 ? "Cancel" : "Back"}
           </Button>
 
-          {currentStep < 3 ? (
+          {currentStep < 4 ? (
             <Button
               onClick={() => setCurrentStep((prev) => prev + 1)}
-              disabled={currentStep === 1 ? !canProceedToStep2 : !canProceedToStep3}
+              disabled={
+                currentStep === 1
+                  ? !canProceedToStep2
+                  : currentStep === 2
+                  ? !canProceedToStep3
+                  : !canProceedToStep4
+              }
             >
               Next
               <ChevronRight className="w-4 h-4 ml-1" />

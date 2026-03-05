@@ -60,6 +60,7 @@ export interface CreateVPSForm {
   provider_type: ProviderType;
   label: string;
   type: string;
+  type_class: string; // Plan category: standard, cpu, memory, premium, gpu, accelerated
   region: string;
   image: string;
   rootPassword: string;

@@ -13,6 +13,8 @@ interface RegionSelectorProps {
   onSelect: (regionId: string) => void;
   token: string;
   disabled?: boolean;
+  filterByCapabilities?: string[];
+  typeClass?: string; // VPS plan type_class to filter regions by available plans
 }
 
 export const RegionSelector: React.FC<RegionSelectorProps> = ({
@@ -21,10 +23,22 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
   onSelect,
   token,
   disabled = false,
+  filterByCapabilities,
+  typeClass,
 }) => {
   const [regions, setRegions] = useState<ProviderRegion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Filter regions by capabilities if specified
+  const filteredRegions = React.useMemo(() => {
+    if (!filterByCapabilities || filterByCapabilities.length === 0) {
+      return regions;
+    }
+    return regions.filter((region) =>
+      filterByCapabilities.every((cap) => region.capabilities?.includes(cap))
+    );
+  }, [regions, filterByCapabilities]);
 
   useEffect(() => {
     const fetchRegions = async () => {
@@ -38,7 +52,12 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
       setError(null);
 
       try {
-        const res = await fetch(`/api/vps/providers/${providerId}/regions`, {
+        // Build URL with type_class query parameter if provided
+        const url = typeClass
+          ? `/api/vps/providers/${providerId}/regions?type_class=${encodeURIComponent(typeClass)}`
+          : `/api/vps/providers/${providerId}/regions`;
+
+        const res = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -59,7 +78,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
     };
 
     fetchRegions();
-  }, [providerId, token]);
+  }, [providerId, token, typeClass]);
 
   if (loading) {
     return (
@@ -78,11 +97,13 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
     );
   }
 
-  if (regions.length === 0) {
+  if (filteredRegions.length === 0) {
     return (
       <div className="p-4 border border-dashed rounded-lg">
         <p className="text-sm text-muted-foreground">
-          No regions available for this provider.
+          {filterByCapabilities && filterByCapabilities.length > 0
+            ? `No regions available with the required capabilities: ${filterByCapabilities.join(", ")}.`
+            : "No regions available for this provider."}
         </p>
       </div>
     );
@@ -91,7 +112,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {regions.map((region) => {
+        {filteredRegions.map((region) => {
           const isSelected = selectedRegion === region.id;
 
           return (

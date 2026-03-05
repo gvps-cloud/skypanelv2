@@ -411,6 +411,7 @@ interface NewVPSPlanState {
   dailyBackupsEnabled: boolean;
   weeklyBackupsEnabled: boolean;
   active: boolean;
+  selectedRegions: string[];
 }
 
 type EditablePlanState = Partial<VPSPlan>;
@@ -692,6 +693,7 @@ const Admin: React.FC = () => {
     dailyBackupsEnabled: false,
     weeklyBackupsEnabled: true,
     active: true,
+    selectedRegions: [],
   });
   const [editPlanId, setEditPlanId] = useState<string | null>(null);
   const [editPlan, setEditPlan] = useState<EditablePlanState>({});
@@ -1551,6 +1553,8 @@ const Admin: React.FC = () => {
             transfer: selectedType.transfer,
             type_class: selectedType.type_class,
           },
+          type_class: selectedType.type_class,
+          regions: newVPSPlan.selectedRegions,
           active: newVPSPlan.active,
         }),
       });
@@ -1570,6 +1574,7 @@ const Admin: React.FC = () => {
         dailyBackupsEnabled: false,
         weeklyBackupsEnabled: true,
         active: true,
+        selectedRegions: [],
       });
       setShowAddVPSPlan(false);
       toast.success("VPS plan created successfully");
@@ -2967,6 +2972,7 @@ const Admin: React.FC = () => {
                 ...prev,
                 selectedProviderId: value,
                 selectedType: "",
+                selectedRegions: [],
               }));
               const provider = providers.find((p) => p.id === value);
               if (provider) {
@@ -2974,6 +2980,7 @@ const Admin: React.FC = () => {
               }
             }}
             onSubmit={createVPSPlan}
+            regions={linodeRegions}
           />
         </SectionPanel>
 

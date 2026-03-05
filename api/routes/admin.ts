@@ -705,15 +705,26 @@ router.get(
     try {
       const result = await query(
         `SELECT
-          id, name, provider_id, provider_plan_id,
-          base_price, markup_price,
-          backup_price_monthly, backup_price_hourly,
-          backup_upcharge_monthly, backup_upcharge_hourly,
-          daily_backups_enabled, weekly_backups_enabled,
-          specifications, active, created_at, updated_at
-         FROM vps_plans
-         WHERE active = true
-         ORDER BY created_at DESC`,
+          p.id, p.name, p.provider_id, p.provider_plan_id,
+          p.base_price, p.markup_price,
+          p.backup_price_monthly, p.backup_price_hourly,
+          p.backup_upcharge_monthly, p.backup_upcharge_hourly,
+          p.daily_backups_enabled, p.weekly_backups_enabled,
+          p.specifications, p.active, p.type_class,
+          p.created_at, p.updated_at,
+          COALESCE(
+            json_agg(
+              json_build_object(
+                'region_id', vpr.region_id
+              ) ORDER BY vpr.region_id
+            ) FILTER (WHERE vpr.region_id IS NOT NULL),
+            '[]'::json
+          ) as regions
+         FROM vps_plans p
+         LEFT JOIN vps_plan_regions vpr ON p.id = vpr.vps_plan_id
+         WHERE p.active = true
+         GROUP BY p.id
+         ORDER BY p.created_at DESC`,
       );
 
       res.json({ plans: result.rows || [] });
@@ -759,6 +770,8 @@ router.put(
     body("backup_upcharge_hourly").optional().isFloat({ min: 0 }),
     body("daily_backups_enabled").optional().isBoolean(),
     body("weekly_backups_enabled").optional().isBoolean(),
+    body("type_class").optional().isIn(["standard", "cpu", "memory", "premium", "gpu", "accelerated"]),
+    body("regions").optional().isArray(),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -783,6 +796,8 @@ router.put(
         backup_upcharge_hourly,
         daily_backups_enabled,
         weekly_backups_enabled,
+        type_class,
+        regions,
       } = req.body as any;
 
       // If provider_id is being updated, validate it exists
@@ -862,6 +877,8 @@ router.put(
         updateFields.daily_backups_enabled = daily_backups_enabled;
       if (typeof weekly_backups_enabled !== "undefined")
         updateFields.weekly_backups_enabled = weekly_backups_enabled;
+      if (typeof type_class !== "undefined")
+        updateFields.type_class = type_class;
       updateFields.updated_at = new Date().toISOString();
 
       const setClauses: string[] = [];
@@ -885,7 +902,30 @@ router.put(
         throw new Error("Plan not found");
       }
 
-      res.json({ plan: result.rows[0] });
+      const updatedPlan = result.rows[0];
+
+      // Handle regions update if provided
+      if (typeof regions !== "undefined") {
+        // Delete existing regions
+        await query(
+          "DELETE FROM vps_plan_regions WHERE vps_plan_id = $1",
+          [id]
+        );
+
+        // Insert new regions if array is not empty
+        if (regions.length > 0) {
+          for (const regionId of regions) {
+            await query(
+              `INSERT INTO vps_plan_regions (vps_plan_id, region_id)
+               VALUES ($1, $2)
+               ON CONFLICT (vps_plan_id, region_id) DO NOTHING`,
+              [id, regionId]
+            );
+          }
+        }
+      }
+
+      res.json({ plan: updatedPlan });
     } catch (err: any) {
       console.error("Admin plan update error:", err);
       res.status(500).json({ error: err.message || "Failed to update plan" });
@@ -957,6 +997,8 @@ router.post(
     body("markup_price").isFloat({ min: 0 }),
     body("active").optional().isBoolean(),
     body("specifications").optional().isObject(),
+    body("type_class").optional().isIn(["standard", "cpu", "memory", "premium", "gpu", "accelerated"]),
+    body("regions").optional().isArray(),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -980,6 +1022,8 @@ router.post(
         backup_upcharge_hourly = 0,
         daily_backups_enabled = false,
         weekly_backups_enabled = true,
+        type_class = "standard",
+        regions = [],
       } = req.body as any;
 
       // Ensure provider exists
@@ -1008,9 +1052,9 @@ router.post(
           backup_price_monthly, backup_price_hourly,
           backup_upcharge_monthly, backup_upcharge_hourly,
           daily_backups_enabled, weekly_backups_enabled,
-          specifications, active, created_at, updated_at
+          specifications, active, type_class, created_at, updated_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
          RETURNING *`,
         [
           name,
@@ -1026,12 +1070,27 @@ router.post(
           weekly_backups_enabled,
           specifications,
           active,
+          type_class,
           now,
           now,
         ],
       );
 
-      res.status(201).json({ plan: insertResult.rows[0] });
+      const newPlan = insertResult.rows[0];
+
+      // Insert regions if provided
+      if (regions && regions.length > 0) {
+        for (const regionId of regions) {
+          await query(
+            `INSERT INTO vps_plan_regions (vps_plan_id, region_id)
+             VALUES ($1, $2)
+             ON CONFLICT (vps_plan_id, region_id) DO NOTHING`,
+            [newPlan.id, regionId]
+          );
+        }
+      }
+
+      res.status(201).json({ plan: newPlan });
     } catch (err: any) {
       console.error("Admin plan create error:", err);
       res.status(500).json({ error: err.message || "Failed to create plan" });

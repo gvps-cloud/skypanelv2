@@ -1017,11 +1017,13 @@ router.get("/images", async (req: Request, res: Response) => {
 });
 
 // Get available regions for a specific provider
+// Optionally filtered by type_class to only show regions with active plans of that type
 router.get(
   "/providers/:providerId/regions",
   async (req: Request, res: Response) => {
     try {
       const { providerId } = req.params;
+      const { type_class } = req.query as any;
 
       // Fetch provider details
       const providerResult = await query(
@@ -1093,10 +1095,138 @@ router.get(
         );
       }
 
+      // If type_class is specified, filter to only show regions with active plans of that type
+      if (type_class && typeof type_class === "string") {
+        try {
+          // Get unique region IDs that have active plans with the specified type_class
+          const plansResult = await query(
+            `SELECT DISTINCT vpr.region_id
+             FROM vps_plan_regions vpr
+             INNER JOIN vps_plans p ON vpr.vps_plan_id = p.id
+             WHERE p.provider_id = $1
+               AND p.active = true
+               AND p.type_class = $2`,
+            [providerId, type_class]
+          );
+
+          const regionsWithPlans = new Set(
+            (plansResult.rows || []).map((row: any) => row.region_id)
+          );
+
+          // Only return regions that have active plans for this type_class
+          regions = regions.filter(
+            (region) =>
+              region &&
+              typeof region.id === "string" &&
+              regionsWithPlans.has(region.id)
+          );
+        } catch (plansErr: any) {
+          const message = String(plansErr?.message || "").toLowerCase();
+          // If the vps_plan_regions table doesn't exist yet, just return all regions
+          if (!message.includes("does not exist") && !message.includes("relation")) {
+            throw plansErr;
+          }
+        }
+      }
+
       res.json({ regions });
     } catch (err: any) {
       console.error("Regions fetch error:", err);
       res.status(500).json({ error: err.message || "Failed to fetch regions" });
+    }
+  },
+);
+
+/**
+ * GET /api/vps/providers/:providerId/plans/:regionId
+ *
+ * Get VPS plans available for a specific provider and region.
+ *
+ * Query parameters:
+ * - type_class: Optional filter by plan type (standard, cpu, memory, premium, gpu, accelerated)
+ *
+ * Returns plans that are:
+ * - Active
+ * - Belong to the specified provider
+ * - Available in the specified region (via vps_plan_regions junction table)
+ * - Optionally filtered by type_class
+ */
+router.get(
+  "/providers/:providerId/plans/:regionId",
+  async (req: Request, res: Response) => {
+    try {
+      const { providerId, regionId } = req.params;
+      const { type_class } = req.query as any;
+
+      // Verify provider exists
+      const providerCheck = await query(
+        "SELECT id FROM service_providers WHERE id = $1 AND active = true LIMIT 1",
+        [providerId]
+      );
+
+      if (providerCheck.rows.length === 0) {
+        return res.status(404).json({ error: "Provider not found or inactive" });
+      }
+
+      let queryText = `
+        SELECT
+          p.id,
+          p.name,
+          COALESCE(p.specifications->>'description', '') AS description,
+          p.provider_id,
+          p.provider_plan_id,
+          p.base_price,
+          p.markup_price,
+          p.backup_price_monthly,
+          p.backup_price_hourly,
+          p.backup_upcharge_monthly,
+          p.backup_upcharge_hourly,
+          p.daily_backups_enabled,
+          p.weekly_backups_enabled,
+          p.type_class,
+          p.specifications
+        FROM vps_plans p
+        INNER JOIN vps_plan_regions vpr ON p.id = vpr.vps_plan_id
+        WHERE p.active = true
+          AND p.provider_id = $1
+          AND vpr.region_id = $2
+      `;
+
+      const queryParams: any[] = [providerId, regionId];
+
+      if (type_class && typeof type_class === "string") {
+        queryText += ` AND p.type_class = $3`;
+        queryParams.push(type_class);
+      }
+
+      queryText += ` ORDER BY p.base_price ASC`;
+
+      const result = await query(queryText, queryParams);
+
+      const plans = (result.rows || []).map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        provider_id: row.provider_id,
+        provider_plan_id: row.provider_plan_id,
+        base_price: row.base_price,
+        markup_price: row.markup_price,
+        backup_price_monthly: row.backup_price_monthly || 0,
+        backup_price_hourly: row.backup_price_hourly || 0,
+        backup_upcharge_monthly: row.backup_upcharge_monthly || 0,
+        backup_upcharge_hourly: row.backup_upcharge_hourly || 0,
+        daily_backups_enabled: row.daily_backups_enabled || false,
+        weekly_backups_enabled: row.weekly_backups_enabled !== false,
+        type_class: row.type_class || "standard",
+        specifications: row.specifications,
+      }));
+
+      res.json({ plans });
+    } catch (error) {
+      console.error("Region-filtered plans fetch error:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch plans";
+      res.status(500).json({ error: message });
     }
   },
 );

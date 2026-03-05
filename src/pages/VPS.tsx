@@ -141,6 +141,7 @@ const VPS: React.FC = () => {
       provider_type: "linode" as ProviderType,
       label: "",
       type: "",
+      type_class: "standard",
       region: "",
       image: "linode/ubuntu22.04",
       rootPassword: "",
@@ -716,14 +717,22 @@ const VPS: React.FC = () => {
 
   const loadVPSPlans = useCallback(async () => {
     try {
-      const res = await fetch("/api/vps/plans", {
+      let plansUrl = "/api/vps/plans";
+      let plansPayload;
+
+      // If provider, region, and type_class are selected, use the new region-filtered endpoint
+      if (createForm.provider_id && createForm.region && createForm.type_class) {
+        plansUrl = `/api/vps/providers/${createForm.provider_id}/plans/${createForm.region}?type_class=${createForm.type_class}`;
+      }
+
+      const res = await fetch(plansUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.error || "Failed to load VPS plans");
+      plansPayload = await res.json();
+      if (!res.ok) throw new Error(plansPayload.error || "Failed to load VPS plans");
 
       // Map admin plans to ProviderPlan format
-      const mappedPlans: ProviderPlan[] = (payload.plans || []).map(
+      const mappedPlans: ProviderPlan[] = (plansPayload.plans || []).map(
         (plan: any) => {
           const specs = plan.specifications || {};
           const basePrice = Number(plan.base_price || 0);
@@ -786,7 +795,7 @@ const VPS: React.FC = () => {
       console.error("Failed to load VPS plans:", error);
       toast.error(error.message || "Failed to load VPS plans");
     }
-  }, [token]);
+  }, [token, createForm.provider_id, createForm.region, createForm.type_class]);
 
   const loadProviderImages = useCallback(async () => {
     try {
@@ -1764,12 +1773,13 @@ const VPS: React.FC = () => {
             <ProviderSelector
               value={createForm.provider_id}
               onChange={(providerId: string, providerType: ProviderType) => {
-                // Reset plan and region when provider changes
+                // Reset plan, region, and type_class when provider changes
                 const updates: Partial<CreateVPSForm> = {
                   provider_id: providerId,
                   provider_type: providerType,
                   type: "", // Reset plan selection when provider changes
                   region: "", // Reset region when provider changes
+                  type_class: "standard", // Reset to default category
                 };
 
                 setCreateForm(updates);
@@ -1801,78 +1811,127 @@ const VPS: React.FC = () => {
               </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
-                Plan
-              </label>
-              <select
-                value={createForm.type}
-                onChange={(e) => {
-                  const newType = e.target.value;
-                  // Don't auto-select region anymore - user will select it separately
-                  setCreateForm({
-                    type: newType,
-                    region: "", // Clear region when plan changes
-                  });
-                }}
-                className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base"
-              >
-                <option value="">Click to choose plan</option>
-                {filteredProviderPlans.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-
-              {createForm.type &&
-                (() => {
-                  const selectedType = providerPlans.find(
-                    (t) => t.id === createForm.type,
-                  );
-                  if (!selectedType) return null;
-                  return (
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className="gap-1">
-                        <Cpu className="h-3.5 w-3.5 mr-1" />
-                        {selectedType.vcpus} vCPU
-                      </Badge>
-                      <Badge variant="outline" className="gap-1">
-                        <MemoryStick className="h-3.5 w-3.5 mr-1" />
-                        {formatSelectedPlanMemory(selectedType.memory)} RAM
-                      </Badge>
-                      <Badge variant="outline" className="gap-1">
-                        <HardDrive className="h-3.5 w-3.5 mr-1" />
-                        {Math.round(selectedType.disk / 1024)} GB Storage
-                      </Badge>
-                      <Badge variant="outline" className="gap-1">
-                        <Network className="h-3.5 w-3.5 mr-1" />
-                        {selectedType.transfer} GB Transfer
-                      </Badge>
-                      <Badge variant="secondary" className="gap-1">
-                        <DollarSign className="h-3.5 w-3.5 mr-1" />
-                        {formatCurrency(selectedType.price.monthly)} / mo
-                      </Badge>
-                    </div>
-                  );
-                })()}
-            </div>
+            {/* Category Selection */}
+            {createForm.provider_id && (
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                  Category *
+                </label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Choose the type of server that best fits your workload
+                </p>
+                <select
+                  value={createForm.type_class}
+                  onChange={(e) => {
+                    const newTypeClass = e.target.value;
+                    // Reset plan and region when category changes
+                    setCreateForm({
+                      type_class: newTypeClass,
+                      type: "",
+                      region: "",
+                    });
+                  }}
+                  className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base"
+                >
+                  <option value="standard">Standard VPS (Shared CPU)</option>
+                  <option value="cpu">Dedicated CPU</option>
+                  <option value="memory">High Memory</option>
+                  <option value="premium">Premium (G7 Dedicated CPU)</option>
+                  <option value="gpu">GPU</option>
+                </select>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {createForm.type_class === "premium" && "Premium plans offer the latest AMD EPYC™ CPUs with consistent high performance. Available in select regions only."}
+                  {createForm.type_class === "gpu" && "GPU plans include dedicated NVIDIA Quadro® RTX 6000 GPUs for ML, AI, and video transcoding. Available in select regions only."}
+                  {createForm.type_class === "cpu" && "Dedicated CPU plans give you full access to CPU cores for consistent performance."}
+                  {createForm.type_class === "memory" && "High Memory plans favor RAM over other resources, great for caching and in-memory databases."}
+                  {createForm.type_class === "standard" && "Standard VPS plans offer a good mix of performance, resources, and price for most workloads."}
+                </p>
+              </div>
+            )}
 
             {/* Region Selection */}
-            {createForm.provider_id && createForm.type && (
+            {createForm.provider_id && createForm.type_class && (
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-2">
                   Region *
                 </label>
                 <p className="text-sm text-muted-foreground mb-3">
                   Select the datacenter location for your VPS
+                  {createForm.type_class === "premium" && " • Premium plans only available in regions with Premium capability"}
+                  {createForm.type_class === "gpu" && " • GPU plans only available in regions with GPU capability"}
                 </p>
                 <RegionSelector
                   providerId={createForm.provider_id}
                   selectedRegion={createForm.region}
-                  onSelect={(regionId) => setCreateForm({ region: regionId })}
+                  onSelect={(regionId) => setCreateForm({ type: "", region: regionId })}
                   token={token || ""}
+                  typeClass={createForm.type_class}
+                  filterByCapabilities={
+                    createForm.type_class === "premium" ? ["Premium Plans"] :
+                    createForm.type_class === "gpu" ? ["GPU Linodes"] :
+                    createForm.type_class === "accelerated" ? ["Accelerated"] :
+                    undefined
+                  }
                 />
+              </div>
+            )}
+
+            {/* Plan Selection */}
+            {createForm.provider_id && createForm.region && createForm.type_class && (
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                  Plan *
+                </label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Available plans for your selected category and region
+                </p>
+                <select
+                  value={createForm.type}
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    setCreateForm({ type: newType });
+                  }}
+                  className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base"
+                >
+                  <option value="">Click to choose plan</option>
+                  {filteredProviderPlans.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+
+                {createForm.type &&
+                  (() => {
+                    const selectedType = providerPlans.find(
+                      (t) => t.id === createForm.type,
+                    );
+                    if (!selectedType) return null;
+                    return (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="gap-1">
+                          <Cpu className="h-3.5 w-3.5 mr-1" />
+                          {selectedType.vcpus} vCPU
+                        </Badge>
+                        <Badge variant="outline" className="gap-1">
+                          <MemoryStick className="h-3.5 w-3.5 mr-1" />
+                          {formatSelectedPlanMemory(selectedType.memory)} RAM
+                        </Badge>
+                        <Badge variant="outline" className="gap-1">
+                          <HardDrive className="h-3.5 w-3.5 mr-1" />
+                          {Math.round(selectedType.disk / 1024)} GB Storage
+                        </Badge>
+                        <Badge variant="outline" className="gap-1">
+                          <Network className="h-3.5 w-3.5 mr-1" />
+                          {selectedType.transfer} GB Transfer
+                        </Badge>
+                        <Badge variant="secondary" className="gap-1">
+                          <DollarSign className="h-3.5 w-3.5 mr-1" />
+                          {formatCurrency(selectedType.price.monthly)} / mo
+                        </Badge>
+                      </div>
+                    );
+                  })()}
               </div>
             )}
           </div>
