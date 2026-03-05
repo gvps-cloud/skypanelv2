@@ -76,20 +76,11 @@ interface ActivityItem {
   status: "success" | "warning" | "error" | "info";
 }
 
-interface HostingService {
-  id: string;
-  domain: string;
-  status: string;
-  plan_name: string;
-}
-
 const Dashboard: React.FC = () => {
   const [vpsInstances, setVpsInstances] = useState<VPSStats[]>([]);
-  const [hostingServices, setHostingServices] = useState<HostingService[]>([]);
   const [billing, setBilling] = useState<BillingStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isHostingEnabled, setIsHostingEnabled] = useState(true);
   const { token, user } = useAuth();
   const navigate = useNavigate();
 
@@ -159,19 +150,6 @@ const Dashboard: React.FC = () => {
         },
       });
 
-      // Check if web hosting is enabled before fetching services
-      try {
-        const statusData = await apiClient.get("/hosting/store/status");
-        setIsHostingEnabled(statusData.enabled);
-
-        if (statusData.enabled) {
-          const hostingData = await apiClient.get("/hosting/store/services");
-          setHostingServices(hostingData || []);
-        }
-      } catch (err) {
-        console.warn("Failed to load hosting status/services", err);
-      }
-
       try {
         const actData = await apiClient.get("/activity/recent?limit=10");
         const mapped: ActivityItem[] = (actData.activities || []).map(
@@ -221,18 +199,8 @@ const Dashboard: React.FC = () => {
       },
     ];
 
-    // Only show Deploy Website action if hosting is enabled
-    if (isHostingEnabled) {
-      actions.splice(1, 0, {
-        title: "Deploy Website",
-        description: "Host a new site with ease.",
-        to: "/hosting/new",
-        icon: <Server className="h-4 w-4" />,
-      });
-    }
-
     return actions;
-  }, [isHostingEnabled]);
+  }, []);
 
   const heroStats = useMemo(() => {
     if (!vpsInstances.length) {
@@ -355,10 +323,8 @@ const Dashboard: React.FC = () => {
 
       {/* Key Metrics Grid */}
       <div className="space-y-4">
-        {/* Top Row: VPS & Web Hosting */}
-        <div
-          className={`grid gap-4 ${isHostingEnabled ? "md:grid-cols-2" : "md:grid-cols-1"}`}
-        >
+        {/* Top Row: VPS */}
+        <div className="grid gap-4 md:grid-cols-1">
           <Card className="overflow-hidden">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
@@ -379,29 +345,6 @@ const Dashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-
-          {isHostingEnabled && (
-            <Card className="overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Web Hosting
-                    </p>
-                    <p className="text-3xl font-bold tracking-tight">
-                      {hostingServices.length}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Active websites
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-blue-500/10 p-3">
-                    <Server className="h-6 w-6 text-blue-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Bottom Row: Billing Stats */}
@@ -484,12 +427,6 @@ const Dashboard: React.FC = () => {
             <div className="h-2 w-2 rounded-full bg-primary" />
             {heroStats.running} vps active
           </Badge>
-          {isHostingEnabled && hostingServices.length > 0 && (
-            <Badge variant="outline" className="gap-2 px-3 py-1.5">
-              <div className="h-2 w-2 rounded-full bg-primary" />
-              {hostingServices.length} sites active
-            </Badge>
-          )}
           {heroStats.flagged > 0 && (
             <Badge variant="secondary" className="gap-2 px-3 py-1.5">
               <AlertTriangle className="h-3 w-3" />
@@ -535,86 +472,8 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Services & VPS Fleet - Side by Side */}
-        <div
-          className={`grid gap-6 ${isHostingEnabled ? "lg:grid-cols-2" : "lg:grid-cols-1"}`}
-        >
-          {/* Hosting Services Card */}
-          {isHostingEnabled && (
-            <Card className="h-full">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                <div>
-                  <CardTitle>Web Hosting</CardTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Your active web hosting plans
-                  </p>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/hosting">
-                    Manage all
-                    <ArrowUpRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {hostingServices.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center h-[200px]">
-                      <div className="rounded-full bg-muted p-4">
-                        <Server className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <h3 className="mt-4 text-sm font-semibold">
-                        No hosting plans yet
-                      </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Deploy your first website
-                      </p>
-                      <Button asChild size="sm" className="mt-4">
-                        <Link to="/hosting/new">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Get Hosting
-                        </Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    hostingServices.slice(0, 5).map((service) => (
-                      <Link
-                        key={service.id}
-                        to={`/hosting/${service.id}`}
-                        className="group block w-full rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="rounded-md bg-blue-100 dark:bg-blue-900/30 p-2 text-blue-600 dark:text-blue-400">
-                              <Server className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <h4 className="font-semibold group-hover:text-primary">
-                                {service.domain}
-                              </h4>
-                              <p className="text-xs text-muted-foreground capitalize">
-                                {service.plan_name}
-                              </p>
-                            </div>
-                          </div>
-                          <Badge
-                            variant={
-                              service.status === "active"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {service.status}
-                          </Badge>
-                        </div>
-                      </Link>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
+        {/* Services & VPS Fleet */}
+        <div className="grid gap-6 lg:grid-cols-1">
           {/* VPS Fleet */}
           <Card className="h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">

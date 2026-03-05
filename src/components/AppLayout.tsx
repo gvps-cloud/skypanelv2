@@ -43,7 +43,6 @@ import {
 } from "@/components/ui/popover";
 import {
   Activity,
-  Cloud,
   CreditCard,
   FileText,
   HelpCircle,
@@ -242,7 +241,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [adminUsersLoading, setAdminUsersLoading] = useState(false);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceCommandItem[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
-  const [isHostingEnabled, setIsHostingEnabled] = useState(true);
   const isMac = useMemo(() => {
     if (typeof navigator === "undefined") {
       return false;
@@ -275,33 +273,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   // Use the proper theme hook for persistence
   const { isDark, toggleTheme } = useTheme();
-
-  useEffect(() => {
-    let active = true;
-
-    const fetchHostingStatus = async () => {
-      try {
-        const res = await fetch("/api/hosting/store/status");
-        const payload = await res.json();
-
-        if (!active) {
-          return;
-        }
-
-        if (res.ok && typeof payload?.enabled === "boolean") {
-          setIsHostingEnabled(payload.enabled);
-        }
-      } catch {
-        // Keep default enabled behavior if status endpoint is unavailable.
-      }
-    };
-
-    fetchHostingStatus();
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   // Fetch VPS instances
   const fetchVPSInstances = useCallback(async () => {
@@ -603,17 +574,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       },
     ];
 
-    if (isHostingEnabled) {
-      items.splice(1, 0, {
-        label: "Deploy website",
-        description: "Provision a new hosting service",
-        href: "/hosting/new",
-        icon: Cloud,
-      });
-    }
-
     return items;
-  }, [isHostingEnabled]);
+  }, []);
 
   const handleNavigate = useCallback(
     (href: string) => {

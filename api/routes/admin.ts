@@ -3316,36 +3316,6 @@ router.get(
         supportTickets = [];
       }
 
-      // Get hosting subscriptions
-      let hostingServices: any[] = [];
-      try {
-        const hostingResult = await query(
-          `SELECT
-            hs.id,
-            hs.domain,
-            hs.status,
-            hs.enhance_website_id,
-            hs.primary_ip,
-            hs.created_at,
-            hs.updated_at,
-            hp.name as plan_name,
-            hp.service_type,
-            hp.price_monthly
-          FROM hosting_subscriptions hs
-          JOIN hosting_plans hp ON hp.id = hs.plan_id
-          WHERE hs.user_id = $1
-          ORDER BY hs.created_at DESC`,
-          [id],
-        );
-        hostingServices = hostingResult.rows || [];
-      } catch (hostingErr: any) {
-        console.warn(
-          "Error fetching hosting services for user:",
-          hostingErr.message,
-        );
-        hostingServices = [];
-      }
-
       // Get organizations count
       let totalOrganizations = 0;
       try {
@@ -3368,9 +3338,6 @@ router.get(
         totalVPS: vpsInstances.length,
         activeVPS: vpsInstances.filter((vps) => vps.status === "running")
           .length,
-        totalHosting: hostingServices.length,
-        activeHosting: hostingServices.filter((hs) => hs.status === "active")
-          .length,
         totalSpend: billing.total_spend,
         monthlySpend: billing.monthly_spend,
         totalOrganizations,
@@ -3388,7 +3355,6 @@ router.get(
           preferences: user.preferences || {},
         },
         vpsInstances,
-        hostingServices,
         billing,
         activity,
         supportTickets,

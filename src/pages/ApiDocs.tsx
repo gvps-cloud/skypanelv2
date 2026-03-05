@@ -170,9 +170,6 @@ const assignSectionForRoute = (
 };
 
 const getAutoSectionBase = (routePath: string): string => {
-  if (routePath.startsWith("/api/hosting/")) {
-    return "/api/hosting";
-  }
   const parts = routePath.split("/").filter(Boolean);
   if (parts.length >= 2) {
     return `/${parts[0]}/${parts[1]}`;
@@ -181,9 +178,6 @@ const getAutoSectionBase = (routePath: string): string => {
 };
 
 const getAutoSectionTitle = (basePath: string): string => {
-  if (basePath === "/api/hosting") {
-    return "Hosting Services";
-  }
   if (basePath === "/api/contact") {
     return "Contact";
   }
@@ -212,8 +206,6 @@ const getAutoSectionIcon = (basePath: string): React.ReactNode => {
       return <Mail className="h-4 w-4" />;
     case "/api/faq":
       return <HelpCircle className="h-4 w-4" />;
-    case "/api/hosting":
-      return <Globe className="h-4 w-4" />;
     case "/api/pricing":
       return <DollarSign className="h-4 w-4" />;
     case "/api/theme":

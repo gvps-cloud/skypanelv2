@@ -34,7 +34,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   UserProfileCard,
   UserVPSList,
-  UserHostingList,
   UserBillingInfo,
   UserEditModal
 } from '@/components/admin';
@@ -60,17 +59,6 @@ interface AdminUserDetailResponse {
     plan_name: string | null;
     provider_name: string | null;
     region_label: string | null;
-    created_at: string;
-  }>;
-  hostingServices: Array<{
-    id: string;
-    domain: string;
-    status: string;
-    enhance_website_id: string | null;
-    primary_ip: string | null;
-    plan_name: string | null;
-    service_type: string | null;
-    price_monthly: number | null;
     created_at: string;
   }>;
   billing: {
@@ -105,8 +93,6 @@ interface AdminUserDetailResponse {
   statistics: {
     totalVPS: number;
     activeVPS: number;
-    totalHosting: number;
-    activeHosting: number;
     totalSpend: number;
     monthlySpend: number;
     totalSupportTickets: number;
@@ -410,7 +396,7 @@ const AdminUserDetail: React.FC = () => {
     );
   }
 
-  const { user, vpsInstances, hostingServices, billing, activity, supportTickets, statistics } = data;
+  const { user, vpsInstances, billing, activity, supportTickets, statistics } = data;
 
   return (
     <div className="space-y-6">
@@ -473,30 +459,20 @@ const AdminUserDetail: React.FC = () => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="vps">VPS ({vpsInstances?.length || 0})</TabsTrigger>
-          <TabsTrigger value="hosting">Web Hosting ({hostingServices?.length || 0})</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {/* VPS Stats */}
             <div className="rounded-lg border bg-card p-6">
               <h3 className="font-semibold mb-2">VPS Instances</h3>
               <p className="text-3xl font-bold">{statistics?.totalVPS || vpsInstances?.length || 0}</p>
               <p className="text-sm text-muted-foreground">
                 {statistics?.activeVPS || vpsInstances?.filter(v => v.status === 'running').length || 0} running
-              </p>
-            </div>
-
-            {/* Web Hosting Stats */}
-            <div className="rounded-lg border bg-card p-6">
-              <h3 className="font-semibold mb-2">Web Hosting</h3>
-              <p className="text-3xl font-bold">{statistics?.totalHosting || hostingServices?.length || 0}</p>
-              <p className="text-sm text-muted-foreground">
-                {statistics?.activeHosting || hostingServices?.filter(h => h.status === 'active').length || 0} active
               </p>
             </div>
 
@@ -642,10 +618,6 @@ const AdminUserDetail: React.FC = () => {
 
         <TabsContent value="vps">
           <UserVPSList vpsInstances={vpsInstances || []} />
-        </TabsContent>
-
-        <TabsContent value="hosting">
-          <UserHostingList hostingServices={hostingServices || []} />
         </TabsContent>
 
         <TabsContent value="billing">
