@@ -2480,94 +2480,85 @@ const Admin: React.FC = () => {
         </SectionPanel>
 
         <SectionPanel section="vps-plans" activeSection={activeTab}>
-          {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-            <div className="relative z-10 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div>
-                <Badge variant="secondary" className="mb-3">
-                  Infrastructure
-                </Badge>
-                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                  VPS Plans
-                </h2>
-                <p className="mt-2 max-w-2xl text-muted-foreground">
-                  Curate what customers see when provisioning infrastructure
-                </p>
+          {/* Integrated VPS Plans Section */}
+          <div className="space-y-4">
+            {/* Header with integrated filters */}
+            <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20">
+              <div className="relative z-10 p-4 sm:p-6 md:p-8">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+                  <div>
+                    <Badge variant="secondary" className="mb-3 text-xs">
+                      Infrastructure
+                    </Badge>
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                      VPS Plans
+                    </h2>
+                    <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
+                      Curate what customers see when provisioning infrastructure
+                    </p>
+                  </div>
+                  <Button onClick={() => setShowAddVPSPlan(true)} className="gap-2 sm:self-start shrink-0">
+                    <Plus className="h-4 w-4" /> Add VPS Plan
+                  </Button>
+                </div>
+
+                {/* Integrated Filters */}
+                <div className="grid gap-3 sm:grid-cols-2 bg-background/50 rounded-lg p-4 border">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="plan-provider-filter" className="text-xs font-medium">
+                      Filter by Provider
+                    </Label>
+                    <Select
+                      value={planProviderFilter}
+                      onValueChange={setPlanProviderFilter}
+                    >
+                      <SelectTrigger id="plan-provider-filter" className="w-full">
+                        <SelectValue placeholder="All providers" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Providers</SelectItem>
+                        {providers.map((provider) => (
+                          <SelectItem key={provider.id} value={provider.id}>
+                            {provider.name} ({provider.type})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="plan-type-filter" className="text-xs font-medium">
+                      Filter by Category
+                    </Label>
+                    <Select
+                      value={planTypeFilter}
+                      onValueChange={setPlanTypeFilter}
+                    >
+                      <SelectTrigger id="plan-type-filter" className="w-full">
+                        <SelectValue placeholder="All categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="dedicated">Dedicated</SelectItem>
+                        <SelectItem value="premium">Premium</SelectItem>
+                        <SelectItem value="gpu">GPU</SelectItem>
+                        <SelectItem value="accelerated">Accelerated</SelectItem>
+                        <SelectItem value="highmem">High Memory</SelectItem>
+                        <SelectItem value="nanode">Nanode</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
-              <Button onClick={() => setShowAddVPSPlan(true)} className="gap-2 sm:self-start">
-                <Plus className="h-4 w-4" /> Add VPS Plan
-              </Button>
+
+              {/* Background decoration */}
+              <div className="absolute right-0 top-0 h-full w-1/3 opacity-5 pointer-events-none">
+                <DollarSign className="absolute right-4 sm:right-10 top-4 sm:top-10 h-20 w-20 sm:h-32 sm:w-32 rotate-12" />
+              </div>
             </div>
 
-            {/* Background decoration */}
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <DollarSign className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-            </div>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Plan Configuration</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 overflow-x-auto">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <Label
-                  htmlFor="plan-provider-filter"
-                  className="text-sm font-medium whitespace-nowrap"
-                >
-                  Filter by Provider:
-                </Label>
-                <Select
-                  value={planProviderFilter}
-                  onValueChange={setPlanProviderFilter}
-                >
-                  <SelectTrigger
-                    id="plan-provider-filter"
-                    className="w-full sm:w-auto sm:min-w-[250px]"
-                  >
-                    <SelectValue placeholder="All providers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Providers</SelectItem>
-                    {providers.map((provider) => (
-                      <SelectItem key={provider.id} value={provider.id}>
-                        {provider.name} ({provider.type})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <Label
-                  htmlFor="plan-type-filter"
-                  className="text-sm font-medium whitespace-nowrap"
-                >
-                  Filter by Category:
-                </Label>
-                <Select
-                  value={planTypeFilter}
-                  onValueChange={setPlanTypeFilter}
-                >
-                  <SelectTrigger
-                    id="plan-type-filter"
-                    className="w-full sm:w-auto sm:min-w-[250px]"
-                  >
-                    <SelectValue placeholder="All categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Categories</SelectItem>
-                    <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="dedicated">Dedicated</SelectItem>
-                    <SelectItem value="premium">Premium</SelectItem>
-                    <SelectItem value="gpu">GPU</SelectItem>
-                    <SelectItem value="accelerated">Accelerated</SelectItem>
-                    <SelectItem value="highmem">High Memory</SelectItem>
-                    <SelectItem value="nanode">Nanode</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-            <CardContent className="px-0">
+            {/* Plans Content */}
+            <div className="px-0">
               {/* Mobile/Card View (keep active through tablet sizes) */}
               <div className="2xl:hidden space-y-4">
                 {filteredPlans.length === 0 ? (
@@ -3353,8 +3344,8 @@ const Admin: React.FC = () => {
                 </Table>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           <VPSPlanWizard
             open={showAddVPSPlan}
@@ -4088,8 +4079,8 @@ const Admin: React.FC = () => {
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </SectionPanel>
 
         <SectionPanel section="networking" activeSection={activeTab}>
