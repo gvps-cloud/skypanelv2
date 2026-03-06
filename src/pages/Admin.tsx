@@ -2500,7 +2500,7 @@ const Admin: React.FC = () => {
             <CardHeader>
               <CardTitle>Plan Configuration</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 overflow-x-auto">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <Label
                   htmlFor="plan-provider-filter"
@@ -2559,8 +2559,8 @@ const Admin: React.FC = () => {
               </div>
             </CardContent>
             <CardContent className="px-0">
-              {/* Mobile Card View */}
-              <div className="lg:hidden space-y-4">
+              {/* Mobile/Card View (keep active through tablet sizes) */}
+              <div className="2xl:hidden space-y-4">
                 {filteredPlans.length === 0 ? (
                   <div className="py-10 text-center text-muted-foreground">
                     {planProviderFilter === "all" && planTypeFilter === "all"
@@ -2854,42 +2854,38 @@ const Admin: React.FC = () => {
                 )}
               </div>
 
-              {/* Desktop Table View */}
-              <div className="hidden lg:block overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[12rem]">Name</TableHead>
-                      <TableHead className="min-w-[10rem]">Provider</TableHead>
-                      <TableHead className="min-w-[10rem]">Provider Plan ID</TableHead>
-                      <TableHead className="min-w-[8rem]">Category</TableHead>
-                      <TableHead className="min-w-[8rem]">Base Price</TableHead>
-                      <TableHead className="min-w-[8rem]">Markup</TableHead>
-                      <TableHead className="min-w-[10rem]">Backup Price</TableHead>
-                      <TableHead className="min-w-[8rem]">Backups</TableHead>
-                      <TableHead className="w-32">Active</TableHead>
-                      <TableHead className="w-36 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPlans.length === 0 ? (
+              {/* Table View for large/desktop only (use xl breakpoint) */}
+              <div className="hidden 2xl:block overflow-x-auto">
+                {filteredPlans.length === 0 ? (
+                  <div className="py-10 text-center text-muted-foreground">
+                    {planProviderFilter === "all" && planTypeFilter === "all"
+                      ? "No plans available"
+                      : planProviderFilter !== "all" && planTypeFilter !== "all"
+                      ? "No plans for selected provider and category"
+                      : planProviderFilter !== "all"
+                      ? "No plans for selected provider"
+                      : "No plans for selected category"}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell
-                          colSpan={10}
-                          className="py-10 text-center text-muted-foreground"
-                        >
-                          {planProviderFilter === "all" && planTypeFilter === "all"
-                            ? "No plans available"
-                            : planProviderFilter !== "all" && planTypeFilter !== "all"
-                            ? "No plans for selected provider and category"
-                            : planProviderFilter !== "all"
-                            ? "No plans for selected provider"
-                            : "No plans for selected category"}
-                        </TableCell>
+                        <TableHead className="min-w-[12rem]">Name</TableHead>
+                        <TableHead className="min-w-[10rem]">Provider</TableHead>
+                        <TableHead className="min-w-[10rem]">Provider Plan ID</TableHead>
+                        <TableHead className="min-w-[8rem]">Category</TableHead>
+                        <TableHead className="min-w-[8rem]">Base Price</TableHead>
+                        <TableHead className="min-w-[8rem]">Markup</TableHead>
+                        <TableHead className="min-w-[10rem]">Backup Price</TableHead>
+                        <TableHead className="min-w-[8rem]">Backups</TableHead>
+                        <TableHead className="w-32">Active</TableHead>
+                        <TableHead className="w-36 text-right">Actions</TableHead>
                       </TableRow>
-                    ) : (
+                    </TableHeader>
+                    <TableBody>
                       // Grouped view with pagination
-                      Object.entries(groupedPlans).map(
+                      <React.Fragment>
+                        {Object.entries(groupedPlans).map(
                         ([groupKey, groupPlans]) => {
                           const [providerId, typeClass] = groupKey.split('-');
                           const provider = providers.find(
@@ -3341,9 +3337,12 @@ const Admin: React.FC = () => {
                           );
                         },
                       )
-                    )}
+                    }
+                  )
+                      </React.Fragment>
                   </TableBody>
                 </Table>
+                )}
               </div>
             </CardContent>
           </Card>
