@@ -84,58 +84,68 @@ const MobileMappingCard: React.FC<{
   onToggleEnabled: (mapping: CategoryMapping) => void;
 }> = ({ mapping, onEdit, onDelete, onToggleEnabled }) => {
   return (
-    <Card className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-3">
+    <Card className="mb-4">
+      <CardContent className="p-4 space-y-3">
+        {/* Header Section */}
+        <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-sm truncate">{mapping.custom_name}</h3>
-              <Badge variant={mapping.enabled ? 'default' : 'secondary'} className="shrink-0">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <h3 className="font-semibold text-sm break-words">{mapping.custom_name}</h3>
+              <Badge 
+                variant={mapping.enabled ? 'default' : 'secondary'} 
+                className="shrink-0 text-xs"
+              >
                 {mapping.enabled ? 'Active' : 'Inactive'}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              Original: <span className="font-medium">{mapping.original_category}</span>
+              Original: <span className="font-medium text-foreground">{mapping.original_category}</span>
             </p>
           </div>
-          <div className="flex items-center gap-1 ml-2 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               onClick={() => onEdit(mapping)}
-              className="h-8 w-8 p-0"
+              className="h-9 w-9 p-0"
+              title="Edit"
             >
               <Edit className="h-4 w-4" />
             </Button>
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               onClick={() => onDelete(mapping)}
-              className="h-8 w-8 p-0 text-destructive"
+              className="h-9 w-9 p-0 text-destructive hover:text-destructive"
+              title="Delete"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
+        {/* Description Section */}
         {mapping.custom_description && (
-          <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-            {mapping.custom_description}
-          </p>
+          <div className="border-t pt-3">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {mapping.custom_description}
+            </p>
+          </div>
         )}
 
-        <div className="flex items-center justify-between pt-2 border-t">
+        {/* Footer Section */}
+        <div className="flex items-center justify-between border-t pt-3">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              Order: {mapping.display_order}
+            <Badge variant="outline" className="text-xs font-medium">
+              Order {mapping.display_order}
             </Badge>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Enabled</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs text-muted-foreground">Enable</span>
             <Switch
               checked={mapping.enabled}
               onCheckedChange={() => onToggleEnabled(mapping)}
-              className="scale-75"
+              aria-label={`Toggle ${mapping.custom_name}`}
             />
           </div>
         </div>
@@ -444,13 +454,13 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
 
   // Header content
   const headerContent = (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="flex flex-col gap-4 sm:gap-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex-1 min-w-0">
         {!noCard && (
           <>
-            <CardTitle className="text-xl">Category Mappings</CardTitle>
-            <CardDescription className="text-sm mt-1">
-              Manage custom names and descriptions for VPS plan categories to white-label your platform.
+            <CardTitle className="text-lg sm:text-xl">Category Mappings</CardTitle>
+            <CardDescription className="text-xs sm:text-sm mt-1">
+              Manage custom names and descriptions for VPS plan categories.
             </CardDescription>
           </>
         )}
@@ -458,10 +468,11 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
       <Button
         onClick={() => handleOpenDialog()}
         className="w-full sm:w-auto shrink-0"
-        size={noCard ? "default" : "sm"}
+        size="sm"
       >
         <Plus className="h-4 w-4 mr-2" />
-        Add Mapping
+        <span className="hidden xs:inline">Add Mapping</span>
+        <span className="inline xs:hidden">Add</span>
       </Button>
     </div>
   );
@@ -470,16 +481,16 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
   const mainContent = (
     <>
       {mappings.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
+        <div className="text-center py-8 sm:py-12 text-muted-foreground px-2">
           <div className="max-w-md mx-auto">
-            <p className="text-lg font-medium mb-2">No category mappings yet</p>
-            <p className="text-sm mb-6">Click "Add Mapping" to create your first custom category name.</p>
+            <p className="text-base sm:text-lg font-medium mb-2">No category mappings yet</p>
+            <p className="text-xs sm:text-sm mb-6">Click "Add Mapping" to create your first custom category name.</p>
           </div>
         </div>
       ) : (
         <>
           {/* Mobile Card View */}
-          <div className="md:hidden">
+          <div className="md:hidden space-y-2">
             {mappings.map((mapping) => (
               <MobileMappingCard
                 key={mapping.id}
@@ -492,7 +503,7 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden md:block rounded-md border">
+          <div className="hidden md:block rounded-md border overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -539,31 +550,33 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
   if (noCard) {
     return (
       <>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col gap-4 sm:gap-0 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-semibold">Category Mappings</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Manage custom names and descriptions for VPS plan categories to white-label your platform.
+            <h2 className="text-lg sm:text-xl font-semibold">Category Mappings</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              Manage custom names and descriptions for VPS plan categories.
             </p>
           </div>
           <Button
             onClick={() => handleOpenDialog()}
             className="w-full sm:w-auto shrink-0"
+            size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Mapping
+            <span className="hidden xs:inline">Add Mapping</span>
+            <span className="inline xs:hidden">Add</span>
           </Button>
         </div>
         {mainContent}
 
-        {/* Add/Edit Dialog */}
+      {/* Add/Edit Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg">
+          <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[85vh] overflow-y-auto">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-base sm:text-lg">
                 {editingMapping ? 'Edit Category Mapping' : 'Add Category Mapping'}
               </DialogTitle>
-              <DialogDescription className="text-sm">
+              <DialogDescription className="text-xs sm:text-sm">
                 {editingMapping
                   ? 'Update the custom name and description for this category.'
                   : 'Create a new custom name and description for a VPS category.'}
@@ -688,16 +701,16 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent className="w-[95vw] max-w-md">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Category Mapping?</AlertDialogTitle>
-              <AlertDialogDescription className="text-sm">
+          <AlertDialogContent className="w-[95vw] max-w-sm">
+            <AlertDialogHeader className="pb-2">
+              <AlertDialogTitle className="text-base sm:text-lg">Delete Category Mapping?</AlertDialogTitle>
+              <AlertDialogDescription className="text-xs sm:text-sm">
                 Are you sure you want to delete the category mapping for "
                 {mappingToDelete?.original_category}"? This action cannot be undone.
                 The default category name will be used instead.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
               <AlertDialogCancel className="w-full sm:w-auto">
                 Cancel
               </AlertDialogCancel>
@@ -714,22 +727,22 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
   return (
     <>
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-3 sm:pb-4">
           {headerContent}
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {mainContent}
         </CardContent>
       </Card>
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg">
+        <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-base sm:text-lg">
               {editingMapping ? 'Edit Category Mapping' : 'Add Category Mapping'}
             </DialogTitle>
-            <DialogDescription className="text-sm">
+            <DialogDescription className="text-xs sm:text-sm">
               {editingMapping
                 ? 'Update the custom name and description for this category.'
                 : 'Create a new custom name and description for a VPS category.'}
@@ -854,16 +867,16 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="w-[95vw] max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Category Mapping?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm">
+        <AlertDialogContent className="w-[95vw] max-w-sm">
+          <AlertDialogHeader className="pb-2">
+            <AlertDialogTitle className="text-base sm:text-lg">Delete Category Mapping?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs sm:text-sm">
               Are you sure you want to delete the category mapping for "
               {mappingToDelete?.original_category}"? This action cannot be undone.
               The default category name will be used instead.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+          <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4">
             <AlertDialogCancel className="w-full sm:w-auto">
               Cancel
             </AlertDialogCancel>

@@ -308,6 +308,8 @@ interface VPSPlan {
   active: boolean;
   created_at: string;
   updated_at: string;
+  provider_name?: string;
+  provider_type?: string;
 }
 
 interface AdminServerInstance {
@@ -885,16 +887,15 @@ const Admin: React.FC = () => {
     );
     const list =
       linodeProvider &&
-      linodeProvider.configuration &&
-      Array.isArray(linodeProvider.configuration.allowed_regions)
-        ? (linodeProvider.configuration.allowed_regions as string[])
+      Array.isArray(linodeProvider.allowed_regions)
+        ? (linodeProvider.allowed_regions as string[])
         : [];
     return list;
   }, [providers]);
 
   const _allowedLinodeRegions = useMemo(() => {
     if (!allowedRegionIds || allowedRegionIds.length === 0) {
-      return linodeRegions;
+      return [];
     }
     const set = new Set(allowedRegionIds);
     return linodeRegions.filter((r) => set.has(r.id));
@@ -2598,13 +2599,8 @@ const Admin: React.FC = () => {
                             <div className="flex items-center gap-2">
                               <Server className="h-4 w-4 text-muted-foreground" />
                               <span className="font-semibold text-sm">
-                                {provider
-                                  ? `${provider.name} (${provider.type})`
-                                  : "Unknown Provider"}
+                                {groupPlans[0]?.provider_name || "Cloud Provider"}
                               </span>
-                              <Badge variant="secondary" className="ml-1">
-                                <CategoryLabel category={typeClass} />
-                              </Badge>
                               <Badge variant="outline" className="ml-1">
                                 {groupPlans.length}{" "}
                                 {groupPlans.length === 1 ? "plan" : "plans"}
@@ -2913,12 +2909,7 @@ const Admin: React.FC = () => {
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                       <Server className="h-4 w-4 text-muted-foreground" />
-                                      {provider
-                                        ? `${provider.name} (${provider.type})`
-                                        : "Unknown Provider"}
-                                      <Badge variant="secondary" className="ml-2">
-                                        <CategoryLabel category={typeClass} />
-                                      </Badge>
+                                      {groupPlans[0]?.provider_name || "Cloud Provider"}
                                       <Badge variant="outline" className="ml-2">
                                         {groupPlans.length}{" "}
                                         {groupPlans.length === 1
@@ -3369,7 +3360,7 @@ const Admin: React.FC = () => {
               }
             }}
             onSubmit={createVPSPlan}
-            regions={linodeRegions}
+            regions={_allowedLinodeRegions}
           />
         </SectionPanel>
 
@@ -4079,8 +4070,8 @@ const Admin: React.FC = () => {
                   </TableBody>
                 </Table>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </SectionPanel>
 
         <SectionPanel section="networking" activeSection={activeTab}>

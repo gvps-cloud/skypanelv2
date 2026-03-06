@@ -712,6 +712,8 @@ router.get(
           p.daily_backups_enabled, p.weekly_backups_enabled,
           p.specifications, p.active, p.type_class,
           p.created_at, p.updated_at,
+          sp.name as provider_name,
+          sp.type as provider_type,
           COALESCE(
             json_agg(
               json_build_object(
@@ -721,9 +723,10 @@ router.get(
             '[]'::json
           ) as regions
          FROM vps_plans p
+         LEFT JOIN service_providers sp ON p.provider_id = sp.id
          LEFT JOIN vps_plan_regions vpr ON p.id = vpr.vps_plan_id
          WHERE p.active = true
-         GROUP BY p.id
+         GROUP BY p.id, sp.id
          ORDER BY p.created_at DESC`,
       );
 
