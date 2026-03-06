@@ -45,8 +45,6 @@ export const VALID_ORIGINAL_CATEGORIES = [
   'highmem',
   'gpu',
   'accelerated',
-  'memory',
-  'cpu'
 ] as const;
 
 export type OriginalCategory = typeof VALID_ORIGINAL_CATEGORIES[number];
