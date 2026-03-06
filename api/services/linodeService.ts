@@ -715,11 +715,12 @@ class LinodeService {
       }
 
       // Map Linode type_class values to standardized categories
+      // Use exact values from Linode API to match frontend filtering
       const TYPE_CLASS_MAP: Record<string, string> = {
-        'nanode': 'standard',
+        'nanode': 'nanode',
         'standard': 'standard',
-        'dedicated': 'cpu',
-        'highmem': 'memory',
+        'dedicated': 'dedicated',
+        'highmem': 'highmem',
         'premium': 'premium',
         'gpu': 'gpu',
         'accelerated': 'accelerated',

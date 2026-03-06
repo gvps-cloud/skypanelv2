@@ -907,23 +907,18 @@ const Admin: React.FC = () => {
   const filteredPlanTypes = useMemo(() => {
     if (planTypeFilter === "all") return linodeTypes;
 
-    // Mapping for backward compatibility if backend hasn't been restarted
-    const FALLBACK_TYPE_CLASS_MAP: Record<string, string> = {
-      nanode: "standard",
-      standard: "standard",
-      dedicated: "cpu",
-      highmem: "memory",
-      premium: "premium",
-      gpu: "gpu",
-      accelerated: "accelerated",
+    // Legacy mapping for backward compatibility with old backend values
+    const LEGACY_TYPE_MAP: Record<string, string> = {
+      cpu: "dedicated",
+      memory: "highmem",
     };
 
     const filtered = linodeTypes.filter((type) => {
       let typeClass = (type.type_class || "").toLowerCase().trim();
 
-      // Apply fallback mapping if backend returns unmapped values
-      if (FALLBACK_TYPE_CLASS_MAP[typeClass]) {
-        typeClass = FALLBACK_TYPE_CLASS_MAP[typeClass];
+      // Handle legacy backend values
+      if (LEGACY_TYPE_MAP[typeClass]) {
+        typeClass = LEGACY_TYPE_MAP[typeClass];
       }
 
       return typeClass === planTypeFilter.toLowerCase();
@@ -2197,7 +2192,7 @@ const Admin: React.FC = () => {
           </div>
 
           {/* Key Metrics Grid - matching dashboard style */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card className="overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -2478,7 +2473,7 @@ const Admin: React.FC = () => {
         <SectionPanel section="vps-plans" activeSection={activeTab}>
           {/* Hero Section */}
           <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-            <div className="relative z-10 flex items-start justify-between">
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
                 <Badge variant="secondary" className="mb-3">
                   Infrastructure
@@ -2490,7 +2485,7 @@ const Admin: React.FC = () => {
                   Curate what customers see when provisioning infrastructure
                 </p>
               </div>
-              <Button onClick={() => setShowAddVPSPlan(true)} className="gap-2">
+              <Button onClick={() => setShowAddVPSPlan(true)} className="gap-2 sm:self-start">
                 <Plus className="h-4 w-4" /> Add VPS Plan
               </Button>
             </div>
@@ -2506,7 +2501,7 @@ const Admin: React.FC = () => {
               <CardTitle>Plan Configuration</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <Label
                   htmlFor="plan-provider-filter"
                   className="text-sm font-medium whitespace-nowrap"
@@ -2519,7 +2514,7 @@ const Admin: React.FC = () => {
                 >
                   <SelectTrigger
                     id="plan-provider-filter"
-                    className="w-[250px]"
+                    className="w-full sm:w-auto sm:min-w-[250px]"
                   >
                     <SelectValue placeholder="All providers" />
                   </SelectTrigger>
@@ -2533,7 +2528,7 @@ const Admin: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <Label
                   htmlFor="plan-type-filter"
                   className="text-sm font-medium whitespace-nowrap"
@@ -2546,7 +2541,7 @@ const Admin: React.FC = () => {
                 >
                   <SelectTrigger
                     id="plan-type-filter"
-                    className="w-[250px]"
+                    className="w-full sm:w-auto sm:min-w-[250px]"
                   >
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
@@ -2564,21 +2559,313 @@ const Admin: React.FC = () => {
               </div>
             </CardContent>
             <CardContent className="px-0">
-              <div className="overflow-x-auto">
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-4">
+                {filteredPlans.length === 0 ? (
+                  <div className="py-10 text-center text-muted-foreground">
+                    {planProviderFilter === "all" && planTypeFilter === "all"
+                      ? "No plans available"
+                      : planProviderFilter !== "all" && planTypeFilter !== "all"
+                      ? "No plans for selected provider and category"
+                      : planProviderFilter !== "all"
+                      ? "No plans for selected provider"
+                      : "No plans for selected category"}
+                  </div>
+                ) : (
+                  // Grouped mobile view
+                  Object.entries(groupedPlans).map(
+                    ([groupKey, groupPlans]) => {
+                      const [providerId, typeClass] = groupKey.split('-');
+                      const provider = providers.find(
+                        (p) => p.id === providerId,
+                      );
+                      const currentPage =
+                        providerPlanPages[groupKey] || 1;
+                      const totalPages = Math.ceil(
+                        groupPlans.length / plansPerPage,
+                      );
+                      const startIndex = (currentPage - 1) * plansPerPage;
+                      const endIndex = startIndex + plansPerPage;
+                      const paginatedPlans = groupPlans.slice(
+                        startIndex,
+                        endIndex,
+                      );
+
+                      return (
+                        <div key={groupKey} className="space-y-3">
+                          {/* Group Header */}
+                          <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center gap-2">
+                              <Server className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-semibold text-sm">
+                                {provider
+                                  ? `${provider.name} (${provider.type})`
+                                  : "Unknown Provider"}
+                              </span>
+                              <Badge variant="secondary" className="ml-1">
+                                {getCategoryLabel(typeClass)}
+                              </Badge>
+                              <Badge variant="outline" className="ml-1">
+                                {groupPlans.length}{" "}
+                                {groupPlans.length === 1 ? "plan" : "plans"}
+                              </Badge>
+                            </div>
+                            {totalPages > 1 && (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    setProviderPlanPages((prev) => ({
+                                      ...prev,
+                                      [groupKey]: Math.max(1, currentPage - 1),
+                                    }))
+                                  }
+                                  disabled={currentPage === 1}
+                                  className="h-7 px-2"
+                                >
+                                  Previous
+                                </Button>
+                                <span className="text-xs text-muted-foreground px-1">
+                                  {currentPage}/{totalPages}
+                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    setProviderPlanPages((prev) => ({
+                                      ...prev,
+                                      [groupKey]: Math.min(totalPages, currentPage + 1),
+                                    }))
+                                  }
+                                  disabled={currentPage === totalPages}
+                                  className="h-7 px-2"
+                                >
+                                  Next
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Mobile Cards */}
+                          {paginatedPlans.map((plan) => {
+                            const isEditing = editPlanId === plan.id;
+                            const planProvider = providers.find(
+                              (p) => p.id === plan.provider_id,
+                            );
+
+                            return (
+                              <Card key={plan.id} className="overflow-hidden">
+                                <CardContent className="p-4 space-y-3">
+                                  {/* Plan Name & Status */}
+                                  <div className="flex items-start justify-between gap-2">
+                                    {isEditing ? (
+                                      <Input
+                                        value={
+                                          (editPlan.name as string | undefined) ?? plan.name
+                                        }
+                                        onChange={(e) =>
+                                          setEditPlan((prev) => ({
+                                            ...prev,
+                                            name: e.target.value,
+                                          }))
+                                        }
+                                        className="flex-1"
+                                      />
+                                    ) : (
+                                      <div className="flex-1">
+                                        <h3 className="font-semibold text-sm">{plan.name}</h3>
+                                        {planProvider && (
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            {planProvider.name} ({planProvider.type})
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                    <Badge
+                                      variant={plan.active ? "default" : "secondary"}
+                                      className="shrink-0"
+                                    >
+                                      {plan.active ? "Active" : "Inactive"}
+                                    </Badge>
+                                  </div>
+
+                                  {/* Category */}
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">Category:</span>
+                                    {isEditing ? (
+                                      <Select
+                                        value={
+                                          (editPlan.type_class as string | undefined) ?? plan.type_class ?? "standard"
+                                        }
+                                        onValueChange={(value) =>
+                                          setEditPlan((prev) => ({
+                                            ...prev,
+                                            type_class: value,
+                                          }))
+                                        }
+                                      >
+                                        <SelectTrigger className="h-8 flex-1">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="standard">Standard</SelectItem>
+                                          <SelectItem value="dedicated">Dedicated</SelectItem>
+                                          <SelectItem value="premium">Premium</SelectItem>
+                                          <SelectItem value="gpu">GPU</SelectItem>
+                                          <SelectItem value="accelerated">Accelerated</SelectItem>
+                                          <SelectItem value="highmem">High Memory</SelectItem>
+                                          <SelectItem value="nanode">Nanode</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    ) : (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {getCategoryLabel(plan.type_class || "standard")}
+                                      </Badge>
+                                    )}
+                                  </div>
+
+                                  {/* Pricing */}
+                                  <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                                    <div>
+                                      <p className="text-xs text-muted-foreground mb-1">Base Price</p>
+                                      {isEditing ? (
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          value={
+                                            (editPlan.base_price as number | undefined) ?? plan.base_price
+                                          }
+                                          onChange={(e) =>
+                                            setEditPlan((prev) => ({
+                                              ...prev,
+                                              base_price: parseFloat(e.target.value),
+                                            }))
+                                          }
+                                          className="h-8"
+                                        />
+                                      ) : (
+                                        <p className="text-sm font-medium">
+                                          ${Number(plan.base_price).toFixed(2)}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground mb-1">Markup</p>
+                                      {isEditing ? (
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          value={
+                                            (editPlan.markup_price as number | undefined) ?? plan.markup_price
+                                          }
+                                          onChange={(e) =>
+                                            setEditPlan((prev) => ({
+                                              ...prev,
+                                              markup_price: parseFloat(e.target.value),
+                                            }))
+                                          }
+                                          className="h-8"
+                                        />
+                                      ) : (
+                                        <p className="text-sm font-medium">
+                                          ${Number(plan.markup_price).toFixed(2)}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Additional Info */}
+                                  {planProvider && (
+                                    <div className="pt-2 border-t">
+                                      <p className="text-xs text-muted-foreground">
+                                        Provider ID: <span className="font-mono text-foreground">{plan.provider_plan_id}</span>
+                                      </p>
+                                      {(Number(plan.backup_price_monthly) || 0) > 0 && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          Backups: <span className="text-foreground">${(Number(plan.backup_price_monthly) + Number(plan.backup_upcharge_monthly || 0)).toFixed(2)}/mo</span>
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Actions */}
+                                  <div className="flex gap-2 pt-2 border-t">
+                                    {isEditing ? (
+                                      <>
+                                        <Button size="sm" onClick={savePlan} className="flex-1">
+                                          Save
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setEditPlanId(null);
+                                            setEditPlan({});
+                                          }}
+                                          className="flex-1"
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setEditPlanId(plan.id);
+                                            setEditPlan({
+                                              name: plan.name,
+                                              base_price: plan.base_price,
+                                              markup_price: plan.markup_price,
+                                              backup_price_monthly: plan.backup_price_monthly || 0,
+                                              backup_price_hourly: plan.backup_price_hourly || 0,
+                                              backup_upcharge_monthly: plan.backup_upcharge_monthly || 0,
+                                              backup_upcharge_hourly: plan.backup_upcharge_hourly || 0,
+                                              daily_backups_enabled: plan.daily_backups_enabled ?? false,
+                                              weekly_backups_enabled: plan.weekly_backups_enabled ?? true,
+                                              active: plan.active,
+                                            });
+                                          }}
+                                          className="flex-1"
+                                        >
+                                          <Edit className="h-4 w-4 mr-1" /> Edit
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          onClick={() => setDeletePlanId(plan.id)}
+                                          className="flex-1"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-1" /> Delete
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+                  )
+                )}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[12rem]">Name</TableHead>
                       <TableHead className="min-w-[10rem]">Provider</TableHead>
-                      <TableHead className="min-w-[10rem]">
-                        Provider Plan ID
-                      </TableHead>
+                      <TableHead className="min-w-[10rem]">Provider Plan ID</TableHead>
                       <TableHead className="min-w-[8rem]">Category</TableHead>
                       <TableHead className="min-w-[8rem]">Base Price</TableHead>
                       <TableHead className="min-w-[8rem]">Markup</TableHead>
-                      <TableHead className="min-w-[10rem]">
-                        Backup Price
-                      </TableHead>
+                      <TableHead className="min-w-[10rem]">Backup Price</TableHead>
                       <TableHead className="min-w-[8rem]">Backups</TableHead>
                       <TableHead className="w-32">Active</TableHead>
                       <TableHead className="w-36 text-right">Actions</TableHead>

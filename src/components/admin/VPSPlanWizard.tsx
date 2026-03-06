@@ -106,10 +106,11 @@ const STEPS = [
 const PLAN_CATEGORIES = [
   { value: "all", label: "All Types" },
   { value: "standard", label: "Shared CPU (Standard/Nanode)" },
-  { value: "cpu", label: "Dedicated CPU" },
-  { value: "memory", label: "High Memory" },
+  { value: "dedicated", label: "Dedicated CPU" },
+  { value: "highmem", label: "High Memory" },
   { value: "premium", label: "Premium CPU" },
   { value: "gpu", label: "GPU" },
+  { value: "accelerated", label: "Accelerated" },
 ];
 
 export function VPSPlanWizard({
@@ -129,19 +130,34 @@ export function VPSPlanWizard({
 
   const filteredPlanTypes = useMemo(() => {
     if (planTypeFilter === "all") return linodeTypes;
+
+    // Legacy mapping for backward compatibility with old backend values
+    const LEGACY_TYPE_MAP: Record<string, string> = {
+      cpu: "dedicated",
+      memory: "highmem",
+    };
+
     return linodeTypes.filter((t) => {
-      const tc = t.type_class?.toLowerCase() || "";
+      let tc = (t.type_class?.toLowerCase() || "");
+
+      // Handle legacy backend values
+      if (LEGACY_TYPE_MAP[tc]) {
+        tc = LEGACY_TYPE_MAP[tc];
+      }
+
       switch (planTypeFilter) {
         case "standard":
           return tc.includes("standard") || tc.includes("nanode");
-        case "cpu":
-          return tc.includes("dedicated") && !tc.includes("premium");
-        case "memory":
+        case "dedicated":
+          return tc.includes("dedicated");
+        case "highmem":
           return tc.includes("highmem");
         case "premium":
           return tc.includes("premium");
         case "gpu":
           return tc.includes("gpu");
+        case "accelerated":
+          return tc.includes("accelerated");
         default:
           return true;
       }
