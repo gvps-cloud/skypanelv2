@@ -701,8 +701,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <AppSidebar onOpenCommand={() => setCommandOpen(true)} />
       <SidebarInset>
         {/* Two-Tier Navigation Header */}
-        <Card className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-[width,height] ease-linear">
-          <CardContent className="flex h-16 shrink-0 items-center justify-between gap-2 px-4 py-0">
+        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b transition-[width,height] ease-linear">
+          <div className="flex h-14 sm:h-16 shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-0">
             <div className="flex items-center gap-2">
               <SidebarTrigger
                 className={cn(isSidebarOpen ? "-ml-1" : "ml-2")}
@@ -812,15 +812,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <span className="sr-only">Toggle theme</span>
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </header>
 
         {/* Main Content Area */}
-        <Card className="flex-1">
-          <CardContent className="flex flex-1 flex-col gap-4 p-4 pt-6">
-            <main className="flex-1">{children}</main>
-          </CardContent>
-        </Card>
+        <div className="flex-1 overflow-auto">
+          <Card className="h-full">
+            <CardContent className="flex flex-1 flex-col gap-4 p-3 sm:p-4 md:p-6 pt-4 sm:pt-6 md:pt-6">
+              <main className="flex-1 min-h-0">{children}</main>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Command Dialog */}
         <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>

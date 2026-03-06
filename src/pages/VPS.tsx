@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import type { ProviderType } from "@/types/provider";
 import type { CreateVPSForm, VPSInstance } from "@/types/vps";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCategoryDisplayName, useCategoryDescription } from "@/hooks/useCategoryMappings";
 import { useFormPersistence } from "@/hooks/use-form-persistence";
 import { useMobileNavigation } from "@/hooks/use-mobile-navigation";
 import { useMobilePerformance } from "@/hooks/use-mobile-performance";
@@ -91,6 +92,46 @@ interface RegionOption {
   providerIds: string[];
   providerNames: string[];
 }
+
+// Category selection helper components
+const CategorySelectOptions: React.FC = () => {
+  const categories = ['standard', 'cpu', 'memory', 'premium', 'gpu'] as const;
+
+  return (
+    <>
+      {categories.map((cat) => (
+        <CategorySelectOption key={cat} category={cat} />
+      ))}
+    </>
+  );
+};
+
+const CategorySelectOption: React.FC<{ category: string }> = ({ category }) => {
+  const displayName = useCategoryDisplayName(category);
+
+  return (
+    <option value={category}>
+      {displayName} ({category === 'standard' ? 'Shared CPU' :
+                      category === 'cpu' ? 'Dedicated CPU' :
+                      category === 'memory' ? 'High Memory' :
+                      category === 'premium' ? 'G7 Dedicated CPU' :
+                      category === 'gpu' ? 'GPU' : category})
+    </option>
+  );
+};
+
+const CategoryDescription: React.FC<{ typeClass?: string }> = ({ typeClass }) => {
+  const description = useCategoryDescription(typeClass || 'standard');
+
+  if (!description) return null;
+
+  return (
+    <p className="mt-2 text-xs text-muted-foreground">
+      {description}
+      {(typeClass === 'premium' || typeClass === 'gpu') && ' Available in select regions only.'}
+    </p>
+  );
+};
 
 const VPS: React.FC = () => {
   const [instances, setInstances] = useState<VPSInstance[]>([]);
@@ -1833,19 +1874,9 @@ const VPS: React.FC = () => {
                   }}
                   className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base"
                 >
-                  <option value="standard">Standard VPS (Shared CPU)</option>
-                  <option value="cpu">Dedicated CPU</option>
-                  <option value="memory">High Memory</option>
-                  <option value="premium">Premium (G7 Dedicated CPU)</option>
-                  <option value="gpu">GPU</option>
+                  <CategorySelectOptions />
                 </select>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {createForm.type_class === "premium" && "Premium plans offer the latest AMD EPYC™ CPUs with consistent high performance. Available in select regions only."}
-                  {createForm.type_class === "gpu" && "GPU plans include dedicated NVIDIA Quadro® RTX 6000 GPUs for ML, AI, and video transcoding. Available in select regions only."}
-                  {createForm.type_class === "cpu" && "Dedicated CPU plans give you full access to CPU cores for consistent performance."}
-                  {createForm.type_class === "memory" && "High Memory plans favor RAM over other resources, great for caching and in-memory databases."}
-                  {createForm.type_class === "standard" && "Standard VPS plans offer a good mix of performance, resources, and price for most workloads."}
-                </p>
+                <CategoryDescription typeClass={createForm.type_class} />
               </div>
             )}
 

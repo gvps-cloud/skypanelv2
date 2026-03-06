@@ -12,6 +12,7 @@ import {
   ServerCog,
   Settings,
   Users,
+  Tags,
   type LucideIcon,
 } from "lucide-react";
 
@@ -85,6 +86,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               "providers",
               "regions",
               "vps-plans",
+              "category-mappings",
             ].includes(activeAnchor),
             items: [
               { title: "Servers", url: `/admin#servers`, isActive: activeAnchor === "servers" },
@@ -93,6 +95,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               { title: "Regions", url: `/admin#regions`, isActive: activeAnchor === "regions" },
               { title: "Providers", url: `/admin#providers`, isActive: activeAnchor === "providers" },
               { title: "VPS Plans", url: `/admin#vps-plans`, isActive: activeAnchor === "vps-plans" },
+              { title: "Category Mappings", url: `/admin#category-mappings`, isActive: activeAnchor === "category-mappings" },
             ],
           },
           {

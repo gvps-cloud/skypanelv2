@@ -39,6 +39,7 @@ export const LINODE_SPEED_TEST_URLS: Record<string, string> = {
   "es-mad": "https://speedtest.madrid.linode.com/",
   "it-mil": "https://speedtest.milan.linode.com/",
   "fr-par": "https://speedtest.paris.linode.com/",
+  "fr-par-2": "https://fr-par-2.speedtest.linode.com/",
   "se-sto": "https://speedtest.stockholm.linode.com/",
   // Asia-Pacific
   "in-maa": "https://speedtest.chennai.linode.com/",

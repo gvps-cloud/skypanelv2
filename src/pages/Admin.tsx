@@ -29,6 +29,7 @@ import {
   Shield,
   Trash2,
   Users,
+  Tags,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -43,10 +44,12 @@ import { UpdatesManager } from "@/components/admin/UpdatesManager";
 import { ContactCategoryManager } from "@/components/admin/ContactCategoryManager";
 import { ContactMethodManager } from "@/components/admin/ContactMethodManager";
 import PlatformAvailabilityManager from "@/components/admin/PlatformAvailabilityManager";
+import { CategoryMappingManager } from "@/components/admin/CategoryMappingManager";
 import { RegionAccessManager } from "@/components/admin/RegionAccessManager";
 import { AdminSupportView } from "@/components/admin/AdminSupportView";
 import { VPSPlanWizard } from "@/components/admin/VPSPlanWizard";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
+import { useCategoryDisplayName } from "@/hooks/useCategoryMappings";
 
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge } from "@/components/ui/badge";
@@ -127,6 +130,7 @@ type AdminSection =
   | "dashboard"
   | "support"
   | "vps-plans"
+  | "category-mappings"
   | "servers"
   | "providers"
   | "regions"
@@ -143,6 +147,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "dashboard",
   "support",
   "vps-plans",
+  "category-mappings",
   "servers",
   "providers",
   "regions",
@@ -602,6 +607,12 @@ const SortableProviderRow: React.FC<SortableProviderRowProps> = ({
   );
 };
 
+// Helper component to get category display name
+const CategoryLabel: React.FC<{ category: string }> = ({ category }) => {
+  const displayName = useCategoryDisplayName(category);
+  return <>{displayName}</>;
+};
+
 const Admin: React.FC = () => {
   const { token } = useAuth();
   const { themeId, setTheme, themes, reloadTheme } = useTheme();
@@ -888,20 +899,6 @@ const Admin: React.FC = () => {
     const set = new Set(allowedRegionIds);
     return linodeRegions.filter((r) => set.has(r.id));
   }, [linodeRegions, allowedRegionIds]);
-
-  // Helper function to get category display label
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      standard: "Standard",
-      dedicated: "Dedicated",
-      premium: "Premium",
-      gpu: "GPU",
-      accelerated: "Accelerated",
-      highmem: "High Memory",
-      nanode: "Nanode",
-    };
-    return labels[category] || category;
-  };
 
   // Filter plan types by category
   const filteredPlanTypes = useMemo(() => {
@@ -1977,6 +1974,18 @@ const Admin: React.FC = () => {
         actionLabel: "Manage access",
       },
       {
+        id: "category-mappings",
+        title: "Category Mappings",
+        description: "White-label VPS categories with custom names and descriptions.",
+        icon: Tags,
+        accent: "text-teal-600",
+        summary: [
+          { label: "Custom", value: "Mappings" },
+          { label: "VPS", value: "Categories" },
+        ],
+        actionLabel: "Customize names",
+      },
+      {
         id: "providers",
         title: "Cloud Providers",
         description: "Validate credentials and enforce deployment guardrails.",
@@ -2045,21 +2054,21 @@ const Admin: React.FC = () => {
   }, [servers]);
 
   return (
-    <div className={isDashboardView ? "space-y-6" : ""}>
+    <div className={isDashboardView ? "space-y-6" : "min-h-full"}>
       {isDashboardView ? (
         <>
           {/* Clean Hero Section - matching dashboard style */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8">
             <div className="relative z-10">
               <div className="mb-2">
-                <Badge variant="secondary" className="mb-3">
+                <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
                   Admin Panel
                 </Badge>
               </div>
-              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
                 {BRAND_NAME} Administration
               </h1>
-              <p className="mt-2 max-w-2xl text-muted-foreground">
+              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
                 Manage infrastructure, support tickets, and platform
                 configuration from a unified control panel.
               </p>
@@ -2067,12 +2076,12 @@ const Admin: React.FC = () => {
 
             {/* Background decoration */}
             <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <Settings className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-              <Shield className="absolute bottom-10 right-20 h-24 w-24 -rotate-6" />
+              <Settings className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
+              <Shield className="absolute bottom-4 sm:bottom-10 right-8 sm:right-20 h-16 w-16 sm:h-24 sm:w-24 -rotate-6" />
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             <Card className="h-full">
               <CardHeader className="space-y-1">
                 <CardTitle className="text-lg font-semibold text-foreground">
@@ -2341,7 +2350,7 @@ const Admin: React.FC = () => {
         </>
       ) : null}
 
-      <div className={isDashboardView ? "space-y-12" : "space-y-6"}>
+      <div className={isDashboardView ? "space-y-12" : "space-y-6 px-1 sm:px-0"}>
         <SectionPanel section="theme" activeSection={activeTab}>
           {/* Hero Section */}
           <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
@@ -2603,7 +2612,7 @@ const Admin: React.FC = () => {
                                   : "Unknown Provider"}
                               </span>
                               <Badge variant="secondary" className="ml-1">
-                                {getCategoryLabel(typeClass)}
+                                <CategoryLabel category={typeClass} />
                               </Badge>
                               <Badge variant="outline" className="ml-1">
                                 {groupPlans.length}{" "}
@@ -2720,7 +2729,7 @@ const Admin: React.FC = () => {
                                       </Select>
                                     ) : (
                                       <Badge variant="secondary" className="text-xs">
-                                        {getCategoryLabel(plan.type_class || "standard")}
+                                        <CategoryLabel category={plan.type_class || "standard"} />
                                       </Badge>
                                     )}
                                   </div>
@@ -2917,7 +2926,7 @@ const Admin: React.FC = () => {
                                         ? `${provider.name} (${provider.type})`
                                         : "Unknown Provider"}
                                       <Badge variant="secondary" className="ml-2">
-                                        {getCategoryLabel(typeClass)}
+                                        <CategoryLabel category={typeClass} />
                                       </Badge>
                                       <Badge variant="outline" className="ml-2">
                                         {groupPlans.length}{" "}
@@ -3043,7 +3052,7 @@ const Admin: React.FC = () => {
                                         </Select>
                                       ) : (
                                         <Badge variant="secondary">
-                                          {getCategoryLabel(plan.type_class || "standard")}
+                                          <CategoryLabel category={plan.type_class || "standard"} />
                                         </Badge>
                                       )}
                                     </TableCell>
@@ -3377,24 +3386,48 @@ const Admin: React.FC = () => {
           <UserManagement />
         </SectionPanel>
 
+        <SectionPanel section="category-mappings" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8 mb-6">
+            <div className="relative z-10">
+              <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
+                White-Label
+              </Badge>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
+                Category Mappings
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground mb-4">
+                Customize how VPS plan categories appear to your customers with branded names and descriptions.
+              </p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Tags className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">White-label your infrastructure offerings</span>
+              </div>
+            </div>
+            <Tags className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12 text-teal-600/20" />
+          </div>
+
+          <CategoryMappingManager noCard />
+        </SectionPanel>
+
         <SectionPanel section="rate-limiting" activeSection={activeTab}>
           {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8 mb-6">
             <div className="relative z-10">
-              <Badge variant="secondary" className="mb-3">
+              <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
                 Security
               </Badge>
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
                 Rate Limiting
               </h2>
-              <p className="mt-2 max-w-2xl text-muted-foreground">
+              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
                 Monitor and manage API rate limits across the platform
               </p>
             </div>
 
             {/* Background decoration */}
             <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <Shield className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+              <Shield className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
             </div>
           </div>
 
@@ -3403,15 +3436,15 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="faq-management" activeSection={activeTab}>
           {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8 mb-6">
             <div className="relative z-10">
-              <Badge variant="secondary" className="mb-3">
+              <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
                 Support
               </Badge>
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
                 FAQ Management
               </h2>
-              <p className="mt-2 max-w-2xl text-muted-foreground">
+              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
                 Manage FAQ categories, items, and latest updates for the public
                 FAQ page
               </p>
@@ -3419,7 +3452,7 @@ const Admin: React.FC = () => {
 
             {/* Background decoration */}
             <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <HelpCircle className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+              <HelpCircle className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
             </div>
           </div>
 
@@ -3446,13 +3479,18 @@ const Admin: React.FC = () => {
             </div>
 
             <Tabs defaultValue="availability" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
+              <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 lg:w-auto lg:inline-grid">
                 <TabsTrigger value="availability">Availability</TabsTrigger>
                 <TabsTrigger value="theme">Theme</TabsTrigger>
+                <TabsTrigger value="category-mappings">Category Mappings</TabsTrigger>
               </TabsList>
 
               <TabsContent value="availability">
                 <PlatformAvailabilityManager />
+              </TabsContent>
+
+              <TabsContent value="category-mappings">
+                <CategoryMappingManager />
               </TabsContent>
 
               <TabsContent value="theme">
@@ -3570,28 +3608,28 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="contact-management" activeSection={activeTab}>
           {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8 mb-6">
             <div className="relative z-10">
-              <Badge variant="secondary" className="mb-3">
+              <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
                 Support
               </Badge>
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
                 Contact Management
               </h2>
-              <p className="mt-2 max-w-2xl text-muted-foreground">
+              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
                 Manage contact page content, methods, and availability schedules
               </p>
             </div>
 
             {/* Background decoration */}
             <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <ClipboardList className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+              <ClipboardList className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
             </div>
           </div>
 
           <div className="space-y-6">
             <Tabs defaultValue="categories" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+              <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 lg:w-auto lg:inline-grid">
                 <TabsTrigger value="categories">Categories</TabsTrigger>
                 <TabsTrigger value="methods">Contact Methods</TabsTrigger>
                 <TabsTrigger value="availability">Availability</TabsTrigger>
