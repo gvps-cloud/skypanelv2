@@ -291,7 +291,7 @@ const NotificationDropdown: React.FC = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className="relative text-muted-foreground"
           aria-label="Open notifications"
         >
           <Bell className="h-5 w-5" />

@@ -705,7 +705,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <div className="flex h-14 sm:h-16 shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-0">
             <div className="flex items-center gap-2">
               <SidebarTrigger
-                className={cn(isSidebarOpen ? "-ml-1" : "ml-2")}
+                className={cn(isSidebarOpen ? "-ml-1" : "ml-2", "text-muted-foreground")}
               />
 
               <Separator
@@ -733,7 +733,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
                     <Plus className="h-4 w-4" />
                     <span className="sr-only">Create new service</span>
                   </Button>
@@ -769,7 +769,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               {/* Keyboard Help Menu */}
               <Popover open={helpOpen} onOpenChange={setHelpOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
                     <HelpCircle className="h-4 w-4" />
                     <span className="sr-only">Keyboard shortcuts</span>
                   </Button>
@@ -802,7 +802,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 variant="ghost"
                 size="icon"
                 onClick={toggleTheme}
-                className="h-9 w-9"
+                className="h-9 w-9 text-muted-foreground"
               >
                 {isDark ? (
                   <Sun className="h-4 w-4" />
