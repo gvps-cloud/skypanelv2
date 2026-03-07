@@ -398,4 +398,48 @@ router.get('/invoices',
   }
 );
 
+/**
+ * Get invoice details (Admin)
+ */
+router.get('/invoices/:id',
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const invoice = await InvoiceService.getInvoiceById(id);
+
+      if (!invoice) {
+        return res.status(404).json({ success: false, error: 'Invoice not found' });
+      }
+
+      res.json({ success: true, invoice });
+    } catch (error) {
+      console.error('Get invoice error:', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  }
+);
+
+/**
+ * Download invoice (Admin)
+ */
+router.get('/invoices/:id/download',
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const invoice = await InvoiceService.getInvoiceById(id);
+
+      if (!invoice) {
+        return res.status(404).json({ success: false, error: 'Invoice not found' });
+      }
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber}.html"`);
+      res.send(invoice.htmlContent);
+    } catch (error) {
+      console.error('Download invoice error:', error);
+      res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  }
+);
+
 export default router;

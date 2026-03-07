@@ -3,6 +3,7 @@ import { apiClient } from '@/lib/api';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import Pagination from '@/components/ui/Pagination';
 import { Loader2, ArrowUpRight, ArrowDownLeft, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -151,29 +152,13 @@ export const BillingTransactions: React.FC = () => {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between py-4">
-        <div className="text-sm text-muted-foreground">
-           Total {total} transactions
-        </div>
-        <div className="space-x-2">
-            <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => Math.max(0, p - 1))}
-            disabled={page === 0 || loading}
-            >
-            Previous
-            </Button>
-            <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage(p => p + 1)}
-            disabled={(page + 1) * limit >= total || loading}
-            >
-            Next
-            </Button>
-        </div>
-      </div>
+      <Pagination
+        currentPage={page + 1}
+        totalItems={total}
+        itemsPerPage={limit}
+        onPageChange={(newPage) => setPage(newPage - 1)}
+        showItemsPerPage={false}
+      />
     </div>
   );
 };

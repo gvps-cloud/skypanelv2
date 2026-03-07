@@ -2640,7 +2640,7 @@ const Admin: React.FC = () => {
             {/* Plans Content */}
             <div className="px-0">
               {/* Mobile/Card View (keep active through tablet sizes) */}
-              <div className="2xl:hidden space-y-4">
+              <div className="min-[1800px]:hidden space-y-4">
                 {filteredPlans.length === 0 ? (
                   <div className="py-10 text-center text-muted-foreground">
                     {planProviderFilter === "all" && planTypeFilter === "all"
@@ -2948,7 +2948,7 @@ const Admin: React.FC = () => {
               </div>
 
               {/* Table View for large/desktop only (use xl breakpoint) */}
-              <div className="hidden 2xl:block overflow-x-auto">
+              <div className="hidden min-[1800px]:block overflow-x-auto">
                 {filteredPlans.length === 0 ? (
                   <div className="py-10 text-center text-muted-foreground">
                     {planProviderFilter === "all" && planTypeFilter === "all"
@@ -3042,7 +3042,7 @@ const Admin: React.FC = () => {
                                           onClick={() =>
                                             setProviderPlanPages((prev) => ({
                                               ...prev,
-                                              [providerId]: Math.min(
+                                              [groupKey]: Math.min(
                                                 totalPages,
                                                 currentPage + 1,
                                               ),

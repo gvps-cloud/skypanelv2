@@ -496,6 +496,51 @@ export class InvoiceService {
   }
 
   /**
+   * Get invoice by ID (Admin - no organization check)
+   */
+  static async getInvoiceById(invoiceId: string) {
+    try {
+      await this.ensureInvoiceTable();
+
+      const result = await query(
+        `SELECT 
+          id, 
+          organization_id, 
+          invoice_number, 
+          html_content, 
+          data, 
+          total_amount, 
+          currency, 
+          created_at, 
+          updated_at
+        FROM billing_invoices
+        WHERE id = $1`,
+        [invoiceId]
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        organizationId: row.organization_id,
+        invoiceNumber: row.invoice_number,
+        htmlContent: row.html_content,
+        data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
+        totalAmount: parseFloat(row.total_amount),
+        currency: row.currency,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+    } catch (error) {
+      console.error('Failed to get invoice by ID:', error);
+      return null;
+    }
+  }
+
+  /**
    * List invoices for organization
    */
   static async listInvoices(organizationId: string, limit: number = 50, offset: number = 0) {

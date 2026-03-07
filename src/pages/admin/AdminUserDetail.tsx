@@ -9,7 +9,8 @@ import {
   AlertTriangle,
   Loader2,
   RefreshCw,
-  WifiOff
+  WifiOff,
+  DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,6 +29,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription
+} from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -38,6 +48,7 @@ import {
   UserEditModal
 } from '@/components/admin';
 import { getTimezoneLabel } from '@/lib/timezones';
+import { apiClient } from '@/lib/api';
 
 interface AdminUserDetailResponse {
   user: {
@@ -119,6 +130,13 @@ const AdminUserDetail: React.FC = () => {
     email: string;
     role: string;
   } | null>(null);
+
+  // Billing Adjustment State
+  const [showAdjustBalanceModal, setShowAdjustBalanceModal] = useState(false);
+  const [adjustAmount, setAdjustAmount] = useState('');
+  const [adjustType, setAdjustType] = useState<'credit' | 'debit'>('credit');
+  const [adjustReason, setAdjustReason] = useState('');
+  const [adjustSubmitting, setAdjustSubmitting] = useState(false);
 
   // Fetch user detail data with retry mechanism
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
@@ -276,6 +294,37 @@ const AdminUserDetail: React.FC = () => {
     refetch();
   };
 
+  const handleAdjustBalance = async () => {
+    if (!id || !adjustAmount || !adjustReason) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    setAdjustSubmitting(true);
+    try {
+      await apiClient.post('/admin/billing/transactions', {
+        userId: id,
+        amount: parseFloat(adjustAmount),
+        type: adjustType,
+        description: adjustReason,
+        sendEmail: false
+      });
+      
+      toast.success('Balance adjusted successfully');
+      setShowAdjustBalanceModal(false);
+      refetch(); // Refresh user details to show new balance/history
+      
+      // Reset form
+      setAdjustAmount('');
+      setAdjustReason('');
+      setAdjustType('credit');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to adjust balance');
+    } finally {
+      setAdjustSubmitting(false);
+    }
+  };
+
   const getErrorMessage = (error: any): string => {
     if (!error) return 'An unknown error occurred';
 
@@ -422,6 +471,13 @@ const AdminUserDetail: React.FC = () => {
         }}
         actions={
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowAdjustBalanceModal(true)}
+            >
+              <DollarSign className="mr-2 h-4 w-4" />
+              Adjust Balance
+            </Button>
             <Button
               variant="outline"
               onClick={() => setShowEditModal(true)}
@@ -621,15 +677,18 @@ const AdminUserDetail: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="billing">
-          <UserBillingInfo billing={billing || {
-            wallet_balance: 0,
-            monthly_spend: 0,
-            total_spend: 0,
-            total_payments: 0,
-            last_payment_date: null,
-            last_payment_amount: null,
-            payment_history: []
-          }} />
+          <UserBillingInfo 
+            userId={user.id}
+            billing={billing || {
+              wallet_balance: 0,
+              monthly_spend: 0,
+              total_spend: 0,
+              total_payments: 0,
+              last_payment_date: null,
+              last_payment_amount: null,
+              payment_history: []
+            }} 
+          />
         </TabsContent>
       </Tabs>
 
@@ -792,6 +851,67 @@ const AdminUserDetail: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Adjust Balance Modal */}
+      <Dialog open={showAdjustBalanceModal} onOpenChange={setShowAdjustBalanceModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adjust Balance</DialogTitle>
+            <DialogDescription>
+              Manually add or remove funds for {user?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="type" className="text-right">
+                Type
+              </Label>
+              <Select value={adjustType} onValueChange={(v: 'credit' | 'debit') => setAdjustType(v)}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="credit">Credit (Add Funds)</SelectItem>
+                  <SelectItem value="debit">Debit (Remove Funds)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="amount" className="text-right">
+                Amount
+              </Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                value={adjustAmount}
+                onChange={(e) => setAdjustAmount(e.target.value)}
+                className="col-span-3"
+                placeholder="0.00"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="reason" className="text-right">
+                Reason
+              </Label>
+              <Input
+                id="reason"
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                className="col-span-3"
+                placeholder="Reason for adjustment"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdjustBalanceModal(false)}>Cancel</Button>
+            <Button onClick={handleAdjustBalance} disabled={adjustSubmitting}>
+              {adjustSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Adjustment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

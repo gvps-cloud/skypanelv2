@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '@/lib/api';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, MoreHorizontal, DollarSign, Loader2 } from 'lucide-react';
+import { Search, MoreHorizontal, DollarSign, Loader2, User } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import Pagination from '@/components/ui/Pagination';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -24,6 +26,7 @@ interface BillingUser {
 }
 
 export const BillingClientList: React.FC = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<BillingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -164,9 +167,10 @@ export const BillingClientList: React.FC = () => {
                           <DollarSign className="mr-2 h-4 w-4" />
                           Adjust Balance
                         </DropdownMenuItem>
-                        {/* <DropdownMenuItem onClick={() => navigate(`/admin/users/${user.id}`)}>
+                        <DropdownMenuItem onClick={() => navigate(`/admin/user/${user.id}`)}>
+                          <User className="mr-2 h-4 w-4" />
                           View Profile
-                        </DropdownMenuItem> */}
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -178,27 +182,13 @@ export const BillingClientList: React.FC = () => {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="text-sm text-muted-foreground">
-            Page {page + 1} of {Math.max(1, Math.ceil(total / limit))}
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPage(p => Math.max(0, p - 1))}
-          disabled={page === 0 || loading}
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setPage(p => p + 1)}
-          disabled={(page + 1) * limit >= total || loading}
-        >
-          Next
-        </Button>
-      </div>
+      <Pagination
+        currentPage={page + 1}
+        totalItems={total}
+        itemsPerPage={limit}
+        onPageChange={(newPage) => setPage(newPage - 1)}
+        showItemsPerPage={false}
+      />
 
       {/* Adjust Balance Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

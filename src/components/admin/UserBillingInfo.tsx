@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,7 +17,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Wallet, CreditCard, TrendingUp, Receipt, ExternalLink } from 'lucide-react';
+import { Wallet, CreditCard, TrendingUp, Receipt, ExternalLink, Loader2 } from 'lucide-react';
+import Pagination from '@/components/ui/Pagination';
+import { apiClient } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
 
 interface BillingInfo {
   wallet_balance: number;
@@ -35,10 +38,37 @@ interface BillingInfo {
 
 interface UserBillingInfoProps {
   billing: BillingInfo;
+  userId: string;
 }
 
-export const UserBillingInfo: React.FC<UserBillingInfoProps> = ({ billing }) => {
+interface Transaction {
+  id: string;
+  amount: number;
+  status: string;
+  created_at: string;
+  description?: string;
+  payment_method?: string;
+}
+
+export const UserBillingInfo: React.FC<UserBillingInfoProps> = ({ billing, userId }) => {
   const location = useLocation();
+  const [page, setPage] = useState(0);
+  const limit = 10;
+
+  const { data: transactionData, isLoading: isLoadingTransactions } = useQuery({
+    queryKey: ['admin', 'user-transactions', userId, page],
+    queryFn: async () => {
+      const response = await apiClient.get<{ transactions: Transaction[]; pagination: { total: number } }>(
+        `/admin/billing/transactions?userId=${userId}&limit=${limit}&offset=${page * limit}`
+      );
+      return response;
+    },
+    enabled: !!userId,
+    placeholderData: (previousData) => previousData,
+  });
+
+  const transactions = transactionData?.transactions || billing.payment_history.map(p => ({ ...p, description: '', payment_method: '' }));
+  const totalTransactions = transactionData?.pagination?.total || billing.total_payments || billing.payment_history.length;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -153,7 +183,11 @@ export const UserBillingInfo: React.FC<UserBillingInfoProps> = ({ billing }) => 
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {billing.payment_history.length === 0 ? (
+            {isLoadingTransactions && !transactions.length ? (
+               <div className="h-24 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+               </div>
+            ) : transactions.length === 0 ? (
               <div className="text-center py-8">
                 <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Payment History</h3>
@@ -162,62 +196,74 @@ export const UserBillingInfo: React.FC<UserBillingInfoProps> = ({ billing }) => 
                 </p>
               </div>
             ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Transaction ID</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {billing.payment_history.map((payment) => (
-                      <TableRow key={payment.id}>
-                        <TableCell className="font-mono text-sm max-w-[150px]">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="cursor-help border-b border-dashed border-muted-foreground/50 pb-0.5 inline-block truncate w-full">
-                                {payment.id.slice(0, 8)}...
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="font-mono text-xs">{payment.id}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          {formatCurrency(payment.amount)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={getPaymentStatusBadgeClass(payment.status)}
-                          >
-                            {payment.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(payment.created_at)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link
-                              to={`/billing/transaction/${payment.id}`}
-                              state={{ from: location.pathname, fromLabel: 'Back to User' }}
-                            >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              View
-                            </Link>
-                          </Button>
-                        </TableCell>
+              <>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Transaction ID</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {transactions.map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell className="font-mono text-sm max-w-[150px]">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="cursor-help border-b border-dashed border-muted-foreground/50 pb-0.5 inline-block truncate w-full">
+                                  {payment.id.slice(0, 8)}...
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-mono text-xs">{payment.id}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell className="font-semibold">
+                            {formatCurrency(payment.amount)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={getPaymentStatusBadgeClass(payment.status)}
+                            >
+                              {payment.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(payment.created_at)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link
+                                to={`/billing/transaction/${payment.id}`}
+                                state={{ from: location.pathname, fromLabel: 'Back to User' }}
+                              >
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                View
+                              </Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                
+                <div className="mt-4">
+                  <Pagination
+                    currentPage={page + 1}
+                    totalItems={totalTransactions}
+                    itemsPerPage={limit}
+                    onPageChange={(newPage) => setPage(newPage - 1)}
+                    showItemsPerPage={false}
+                  />
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
