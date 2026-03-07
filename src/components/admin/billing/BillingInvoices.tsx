@@ -25,7 +25,6 @@ export const BillingInvoices: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
-  const [viewLoading, setViewLoading] = useState(false);
   const limit = 20;
 
   const fetchInvoices = useCallback(async () => {
@@ -48,13 +47,6 @@ export const BillingInvoices: React.FC = () => {
   const handleDownload = async (id: string, number: string) => {
     try {
       // Using fetch with blob to support auth header
-      const token = localStorage.getItem('token'); // Changed back to 'token' based on typical usage, or 'auth_token' if that's what app uses. Previous file had 'auth_token'.
-      // Let's check what useAuth uses. AdminUserDetail uses useAuth -> token.
-      // But typically it's stored in localStorage as 'token' or 'auth_token'. 
-      // The previous code used 'auth_token'. I'll stick to that to be safe, or check AuthContext.
-      // Actually, apiClient usually handles this. But for blob download we might need manual fetch.
-      // Let's try to use the new admin endpoint.
-      
       const authToken = localStorage.getItem('token') || localStorage.getItem('auth_token');
       const apiUrl = import.meta.env.VITE_API_URL || '/api';
       
@@ -93,20 +85,17 @@ export const BillingInvoices: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (error) {
+    } catch {
       toast.error('Failed to download invoice');
     }
   };
 
   const handleView = async (invoice: Invoice) => {
-    setViewLoading(true);
     try {
       const data = await apiClient.get<{ invoice: Invoice }>(`/admin/billing/invoices/${invoice.id}`);
       setViewInvoice(data.invoice);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load invoice details');
-    } finally {
-      setViewLoading(false);
     }
   };
 

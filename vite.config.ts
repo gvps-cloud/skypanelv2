@@ -11,7 +11,7 @@ function removeMockData(): Plugin {
       // Only process TS/TSX files in src directory
       if (id.includes('/src/') && (id.endsWith('.tsx') || id.endsWith('.ts') || id.endsWith('.jsx') || id.endsWith('.js'))) {
         // Replace all example emails with generic placeholders
-        let transformed = code
+        const transformed = code
           // Replace specific example emails
           .replace(/admin@example\.com/gi, '***@***.***')
           .replace(/customer@example\.com/gi, '***@***.***')
@@ -26,7 +26,7 @@ function removeMockData(): Plugin {
           .replace(/Sup3rSecure!/g, '***')
           .replace(/N3wSecurePass!/g, '***')
           // Replace example API tokens
-          .replace(/sk_live_[\*]+/g, 'sk_live_***')
+          .replace(/sk_live_[*]+/g, 'sk_live_***')
           .replace(/reset_token_here/g, '***');
 
         // Only return if something actually changed

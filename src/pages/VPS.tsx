@@ -764,7 +764,6 @@ const VPS: React.FC = () => {
   const loadVPSPlans = useCallback(async () => {
     try {
       let plansUrl = "/api/vps/plans";
-      let plansPayload;
 
       // If provider, region, and type_class are selected, use the new region-filtered endpoint
       if (createForm.provider_id && createForm.region && createForm.type_class) {
@@ -774,7 +773,7 @@ const VPS: React.FC = () => {
       const res = await fetch(plansUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      plansPayload = await res.json();
+      const plansPayload = await res.json();
       if (!res.ok) throw new Error(plansPayload.error || "Failed to load VPS plans");
 
       // Map admin plans to ProviderPlan format

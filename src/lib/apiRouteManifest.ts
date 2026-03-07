@@ -27,6 +27,81 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/admin/billing/invoices",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/billing/invoices/:id",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/billing/invoices/:id/download",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/billing/stats",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/billing/transactions",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/billing/transactions",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/billing/users",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/category-mappings",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/category-mappings",
+    "protected": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/category-mappings/:id",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/category-mappings/:id",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/category-mappings/:id",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/category-mappings/enabled",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/category-mappings/reorder",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/category-mappings/sync",
+    "protected": true
+  },
+  {
+    "method": "GET",
     "path": "/api/admin/contact/categories",
     "protected": true
   },
@@ -63,41 +138,6 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "PUT",
     "path": "/api/admin/contact/methods/:method_type",
-    "protected": true
-  },
-  {
-    "method": "GET",
-    "path": "/api/admin/enhance/config",
-    "protected": true
-  },
-  {
-    "method": "POST",
-    "path": "/api/admin/enhance/config",
-    "protected": true
-  },
-  {
-    "method": "GET",
-    "path": "/api/admin/enhance/plans",
-    "protected": true
-  },
-  {
-    "method": "PUT",
-    "path": "/api/admin/enhance/plans/:id",
-    "protected": true
-  },
-  {
-    "method": "GET",
-    "path": "/api/admin/enhance/status",
-    "protected": true
-  },
-  {
-    "method": "POST",
-    "path": "/api/admin/enhance/sync-plans",
-    "protected": true
-  },
-  {
-    "method": "POST",
-    "path": "/api/admin/enhance/test-connection",
     "protected": true
   },
   {
@@ -878,6 +918,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "GET",
     "path": "/api/vps/providers",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/vps/providers/:providerId/plans/:regionId",
     "protected": true
   },
   {

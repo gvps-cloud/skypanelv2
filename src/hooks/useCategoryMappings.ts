@@ -6,7 +6,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { categoryMappingService } from '../services/categoryMappingService.js';
 import type {
-  CategoryMapping,
   CreateCategoryMappingInput,
   UpdateCategoryMappingInput,
   CategoryMappingOrdering,

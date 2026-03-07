@@ -1,0 +1,2583 @@
+{
+  "generatedAt": "2026-03-07T09:00:12.178Z",
+  "actualCount": 187,
+  "actualProtectedCount": 166,
+  "docsCount": 120,
+  "docsProtectedCount": 110,
+  "missingInDocs": [
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/invoices",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/invoices/:id",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/invoices/:id/download",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/stats",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/transactions",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/billing/transactions",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/users",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/category-mappings",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/category-mappings",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/category-mappings/:id",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/category-mappings/:id",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/category-mappings/:id",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/category-mappings/enabled",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/category-mappings/reorder",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/category-mappings/sync",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/contact/methods/:method_type",
+      "protected": true,
+      "source": "api\\routes\\admin\\contact.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/contact/methods/:method_type",
+      "protected": true,
+      "source": "api\\routes\\admin\\contact.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/github/commits",
+      "protected": true,
+      "source": "api\\routes\\github.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/rdns",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/networking/rdns",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/organizations",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/organizations",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/organizations/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/organizations/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/organizations/:id/members",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/organizations/:id/members/:userId",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/organizations/:id/members/:userId",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/plans",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/plans",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/plans/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/plans/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/providers",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/providers/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/providers/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/providers/:id/regions",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/providers/:id/validate",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/providers/reorder",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/servers",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/stackscripts/configs",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/stackscripts/configs",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/stackscripts/configs/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/stackscripts/configs/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/tickets/:id/replies",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/upstream/plans",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/upstream/regions",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/upstream/stackscripts",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/users/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/users/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users/:id/detail",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users/:id/impersonate",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users/search",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/2fa/disable",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/2fa/setup",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/2fa/verify",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/debug/user",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/contact",
+      "protected": false,
+      "source": "api\\routes\\contact.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/contact/config",
+      "protected": false,
+      "source": "api\\routes\\contact.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/faq/categories",
+      "protected": false,
+      "source": "api\\routes\\faq.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/faq/updates",
+      "protected": false,
+      "source": "api\\routes\\faq.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/config-validation",
+      "protected": false,
+      "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications",
+      "protected": true,
+      "source": "api\\routes\\notifications.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/transactions/:id",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/wallet/deduct",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/pricing",
+      "protected": false,
+      "source": "api\\routes\\pricing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/pricing/public-regions",
+      "protected": false,
+      "source": "api\\routes\\pricing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/pricing/vps",
+      "protected": false,
+      "source": "api\\routes\\pricing.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/support/tickets/:id/reopen-request",
+      "protected": true,
+      "source": "api\\routes\\support.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/theme",
+      "protected": false,
+      "source": "api\\routes\\theme.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/apps",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/providers/:providerId/plans/:regionId",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/providers/:providerId/regions",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    }
+  ],
+  "staleInDocs": [
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "GET",
+      "relativePath": "/transactions/:transactionId",
+      "path": "/api/payments/transactions/:transactionId",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Catalog & Integrations",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/providers/:id/regions",
+      "path": "/api/vps/providers/:id/regions",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PATCH",
+      "relativePath": "/users/:userId",
+      "path": "/api/admin/users/:userId",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/users/:userId/impersonate",
+      "path": "/api/admin/users/:userId/impersonate",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PUT",
+      "relativePath": "/contact/methods/:methodType",
+      "path": "/api/admin/contact/methods/:methodType",
+      "auth": true
+    }
+  ],
+  "authMismatches": [
+    {
+      "key": "GET /api/health/metrics",
+      "actualProtected": false,
+      "docsProtected": true,
+      "section": "Platform Health"
+    },
+    {
+      "key": "GET /api/health/rate-limiting",
+      "actualProtected": false,
+      "docsProtected": true,
+      "section": "Platform Health"
+    }
+  ],
+  "actualRoutes": [
+    {
+      "method": "GET",
+      "path": "/api/activity",
+      "protected": true,
+      "source": "api\\routes\\activity.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/activity/export",
+      "protected": true,
+      "source": "api\\routes\\activity.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/activity/recent",
+      "protected": true,
+      "source": "api\\routes\\activity.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/activity/summary",
+      "protected": true,
+      "source": "api\\routes\\activity.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/invoices",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/invoices/:id",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/invoices/:id/download",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/stats",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/transactions",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/billing/transactions",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/billing/users",
+      "protected": true,
+      "source": "api\\routes\\admin\\billing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/category-mappings",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/category-mappings",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/category-mappings/:id",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/category-mappings/:id",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/category-mappings/:id",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/category-mappings/enabled",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/category-mappings/reorder",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/category-mappings/sync",
+      "protected": true,
+      "source": "api\\routes\\admin\\categoryMappings.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/contact/categories",
+      "protected": true,
+      "source": "api\\routes\\admin\\contact.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/contact/categories",
+      "protected": true,
+      "source": "api\\routes\\admin\\contact.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/contact/categories/:id",
+      "protected": true,
+      "source": "api\\routes\\admin\\contact.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/contact/categories/:id",
+      "protected": true,
+      "source": "api\\routes\\admin\\contact.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/contact/categories/reorder",
+      "protected": true,
+      "source": "api\\routes\\admin\\contact.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/contact/methods",
+      "protected": true,
+      "source": "api\\routes\\admin\\contact.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/contact/methods/:method_type",
+      "protected": true,
+      "source": "api\\routes\\admin\\contact.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/contact/methods/:method_type",
+      "protected": true,
+      "source": "api\\routes\\admin\\contact.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/faq/categories",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/faq/categories",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/faq/categories/:id",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/faq/categories/:id",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/faq/categories/reorder",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/faq/items",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/faq/items",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/faq/items/:id",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/faq/items/:id",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/faq/items/reorder",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/faq/updates",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/faq/updates",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/faq/updates/:id",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/faq/updates/:id",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/faq/updates/reorder",
+      "protected": true,
+      "source": "api\\routes\\adminFaq.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/github/commits",
+      "protected": true,
+      "source": "api\\routes\\github.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/impersonation/exit",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/rdns",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/networking/rdns",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/organizations",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/organizations",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/organizations/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/organizations/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/organizations/:id/members",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/organizations/:id/members/:userId",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/organizations/:id/members/:userId",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/plans",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/plans",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/plans/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/plans/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/platform/availability",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/platform/availability",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/providers",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/providers",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/providers/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/providers/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/providers/:id/regions",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/providers/:id/regions",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/providers/:id/validate",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/providers/reorder",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/rate-limits/overrides",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/rate-limits/overrides",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/rate-limits/overrides/:userId",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/servers",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/stackscripts/configs",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/stackscripts/configs",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/stackscripts/configs/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/stackscripts/configs/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/theme",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/theme",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/tickets",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/tickets/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/tickets/:id/replies",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/tickets/:id/replies",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/tickets/:id/status",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/upstream/plans",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/upstream/regions",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/upstream/stackscripts",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/users/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/users/:id",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users/:id/detail",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users/:id/impersonate",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users/search",
+      "protected": true,
+      "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/2fa/disable",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/2fa/setup",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/2fa/verify",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/api-keys",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/api-keys",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/auth/api-keys/:id",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/debug/user",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/forgot-password",
+      "protected": false,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "protected": false,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/auth/password",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/auth/preferences",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/auth/profile",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "protected": false,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/reset-password",
+      "protected": false,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify-email",
+      "protected": false,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify-password",
+      "protected": true,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/contact",
+      "protected": false,
+      "source": "api\\routes\\contact.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/contact/config",
+      "protected": false,
+      "source": "api\\routes\\contact.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/faq/categories",
+      "protected": false,
+      "source": "api\\routes\\faq.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/faq/updates",
+      "protected": false,
+      "source": "api\\routes\\faq.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "protected": false,
+      "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/config-validation",
+      "protected": false,
+      "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/detailed",
+      "protected": false,
+      "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/metrics",
+      "protected": false,
+      "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/platform-stats",
+      "protected": false,
+      "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/rate-limiting",
+      "protected": false,
+      "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/stats",
+      "protected": false,
+      "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/status",
+      "protected": false,
+      "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/invoices",
+      "protected": true,
+      "source": "api\\routes\\invoices.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/invoices/:id",
+      "protected": true,
+      "source": "api\\routes\\invoices.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/invoices/:id/download",
+      "protected": true,
+      "source": "api\\routes\\invoices.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/invoices/from-billing-cycles",
+      "protected": true,
+      "source": "api\\routes\\invoices.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/invoices/from-transaction/:transactionId",
+      "protected": true,
+      "source": "api\\routes\\invoices.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/invoices/from-transactions",
+      "protected": true,
+      "source": "api\\routes\\invoices.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications",
+      "protected": true,
+      "source": "api\\routes\\notifications.ts"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/notifications/:id/read",
+      "protected": true,
+      "source": "api\\routes\\notifications.ts"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/notifications/read-all",
+      "protected": true,
+      "source": "api\\routes\\notifications.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/stream",
+      "protected": true,
+      "source": "api\\routes\\notifications.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/unread",
+      "protected": true,
+      "source": "api\\routes\\notifications.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/unread-count",
+      "protected": true,
+      "source": "api\\routes\\notifications.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/billing/summary",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/cancel-payment/:orderId",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/capture-payment/:orderId",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/config",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/create-payment",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/history",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/refund",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/transactions/:id",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/wallet/balance",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/wallet/deduct",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/wallet/transactions",
+      "protected": true,
+      "source": "api\\routes\\payments.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/pricing",
+      "protected": false,
+      "source": "api\\routes\\pricing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/pricing/public-regions",
+      "protected": false,
+      "source": "api\\routes\\pricing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/pricing/vps",
+      "protected": false,
+      "source": "api\\routes\\pricing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ssh-keys",
+      "protected": true,
+      "source": "api\\routes\\sshKeys.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/ssh-keys",
+      "protected": true,
+      "source": "api\\routes\\sshKeys.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/ssh-keys/:keyId",
+      "protected": true,
+      "source": "api\\routes\\sshKeys.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/support/tickets",
+      "protected": true,
+      "source": "api\\routes\\support.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/support/tickets",
+      "protected": true,
+      "source": "api\\routes\\support.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/support/tickets/:id/reopen-request",
+      "protected": true,
+      "source": "api\\routes\\support.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/support/tickets/:id/replies",
+      "protected": true,
+      "source": "api\\routes\\support.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/support/tickets/:id/replies",
+      "protected": true,
+      "source": "api\\routes\\support.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/support/tickets/:id/stream",
+      "protected": true,
+      "source": "api\\routes\\support.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/theme",
+      "protected": false,
+      "source": "api\\routes\\theme.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/vps/:id",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/:id",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps/:id/backups/:backupId/restore",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps/:id/backups/disable",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps/:id/backups/enable",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps/:id/backups/schedule",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps/:id/backups/snapshot",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps/:id/boot",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps/:id/firewalls/attach",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps/:id/firewalls/detach",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/vps/:id/hostname",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps/:id/networking/rdns",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/:id/notes",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/vps/:id/notes",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps/:id/reboot",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/vps/:id/shutdown",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/apps",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/images",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/linode/ssh-keys",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/networking/config",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/plans",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/providers",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/providers/:providerId/plans/:regionId",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/providers/:providerId/regions",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/stackscripts",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/uptime-summary",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    }
+  ],
+  "docEndpoints": [
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/register",
+      "path": "/api/auth/register",
+      "auth": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/login",
+      "path": "/api/auth/login",
+      "auth": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/refresh",
+      "path": "/api/auth/refresh",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "GET",
+      "relativePath": "/me",
+      "path": "/api/auth/me",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/verify-password",
+      "path": "/api/auth/verify-password",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/logout",
+      "path": "/api/auth/logout",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "PUT",
+      "relativePath": "/profile",
+      "path": "/api/auth/profile",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "PUT",
+      "relativePath": "/password",
+      "path": "/api/auth/password",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "PUT",
+      "relativePath": "/preferences",
+      "path": "/api/auth/preferences",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "GET",
+      "relativePath": "/api-keys",
+      "path": "/api/auth/api-keys",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/api-keys",
+      "path": "/api/auth/api-keys",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "DELETE",
+      "relativePath": "/api-keys/:id",
+      "path": "/api/auth/api-keys/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/forgot-password",
+      "path": "/api/auth/forgot-password",
+      "auth": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/reset-password",
+      "path": "/api/auth/reset-password",
+      "auth": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/verify-email",
+      "path": "/api/auth/verify-email",
+      "auth": false
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "POST",
+      "relativePath": "/create-payment",
+      "path": "/api/payments/create-payment",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "POST",
+      "relativePath": "/capture-payment/:orderId",
+      "path": "/api/payments/capture-payment/:orderId",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "POST",
+      "relativePath": "/cancel-payment/:orderId",
+      "path": "/api/payments/cancel-payment/:orderId",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "GET",
+      "relativePath": "/config",
+      "path": "/api/payments/config",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "GET",
+      "relativePath": "/wallet/balance",
+      "path": "/api/payments/wallet/balance",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "GET",
+      "relativePath": "/wallet/transactions",
+      "path": "/api/payments/wallet/transactions",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "GET",
+      "relativePath": "/history",
+      "path": "/api/payments/history",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "GET",
+      "relativePath": "/transactions/:transactionId",
+      "path": "/api/payments/transactions/:transactionId",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "POST",
+      "relativePath": "/refund",
+      "path": "/api/payments/refund",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "GET",
+      "relativePath": "/billing/summary",
+      "path": "/api/payments/billing/summary",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Invoices & Financial Records",
+      "sectionBase": "/api/invoices",
+      "method": "GET",
+      "relativePath": "/",
+      "path": "/api/invoices",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Invoices & Financial Records",
+      "sectionBase": "/api/invoices",
+      "method": "GET",
+      "relativePath": "/:id",
+      "path": "/api/invoices/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Invoices & Financial Records",
+      "sectionBase": "/api/invoices",
+      "method": "GET",
+      "relativePath": "/:id/download",
+      "path": "/api/invoices/:id/download",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Invoices & Financial Records",
+      "sectionBase": "/api/invoices",
+      "method": "POST",
+      "relativePath": "/from-transaction/:transactionId",
+      "path": "/api/invoices/from-transaction/:transactionId",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Invoices & Financial Records",
+      "sectionBase": "/api/invoices",
+      "method": "POST",
+      "relativePath": "/from-transactions",
+      "path": "/api/invoices/from-transactions",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Invoices & Financial Records",
+      "sectionBase": "/api/invoices",
+      "method": "POST",
+      "relativePath": "/from-billing-cycles",
+      "path": "/api/invoices/from-billing-cycles",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/",
+      "path": "/api/vps",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/",
+      "path": "/api/vps",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/:id",
+      "path": "/api/vps/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/boot",
+      "path": "/api/vps/:id/boot",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/shutdown",
+      "path": "/api/vps/:id/shutdown",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/reboot",
+      "path": "/api/vps/:id/reboot",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "DELETE",
+      "relativePath": "/:id",
+      "path": "/api/vps/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/:id/notes",
+      "path": "/api/vps/:id/notes",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "PUT",
+      "relativePath": "/:id/notes",
+      "path": "/api/vps/:id/notes",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/uptime-summary",
+      "path": "/api/vps/uptime-summary",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "PUT",
+      "relativePath": "/:id/hostname",
+      "path": "/api/vps/:id/hostname",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/backups/enable",
+      "path": "/api/vps/:id/backups/enable",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/backups/disable",
+      "path": "/api/vps/:id/backups/disable",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/backups/snapshot",
+      "path": "/api/vps/:id/backups/snapshot",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/backups/schedule",
+      "path": "/api/vps/:id/backups/schedule",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/backups/:backupId/restore",
+      "path": "/api/vps/:id/backups/:backupId/restore",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/firewalls/attach",
+      "path": "/api/vps/:id/firewalls/attach",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/firewalls/detach",
+      "path": "/api/vps/:id/firewalls/detach",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Catalog & Integrations",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/providers",
+      "path": "/api/vps/providers",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Catalog & Integrations",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/providers/:id/regions",
+      "path": "/api/vps/providers/:id/regions",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Catalog & Integrations",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/plans",
+      "path": "/api/vps/plans",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Catalog & Integrations",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/images",
+      "path": "/api/vps/images",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Catalog & Integrations",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/stackscripts",
+      "path": "/api/vps/stackscripts",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Catalog & Integrations",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/linode/ssh-keys",
+      "path": "/api/vps/linode/ssh-keys",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Networking",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/networking/config",
+      "path": "/api/vps/networking/config",
+      "auth": true
+    },
+    {
+      "sectionTitle": "VPS Networking",
+      "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/networking/rdns",
+      "path": "/api/vps/:id/networking/rdns",
+      "auth": true
+    },
+    {
+      "sectionTitle": "User SSH Keys",
+      "sectionBase": "/api/ssh-keys",
+      "method": "GET",
+      "relativePath": "/",
+      "path": "/api/ssh-keys",
+      "auth": true
+    },
+    {
+      "sectionTitle": "User SSH Keys",
+      "sectionBase": "/api/ssh-keys",
+      "method": "POST",
+      "relativePath": "/",
+      "path": "/api/ssh-keys",
+      "auth": true
+    },
+    {
+      "sectionTitle": "User SSH Keys",
+      "sectionBase": "/api/ssh-keys",
+      "method": "DELETE",
+      "relativePath": "/:keyId",
+      "path": "/api/ssh-keys/:keyId",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Activity & Audit Log",
+      "sectionBase": "/api/activity",
+      "method": "GET",
+      "relativePath": "/",
+      "path": "/api/activity",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Activity & Audit Log",
+      "sectionBase": "/api/activity",
+      "method": "GET",
+      "relativePath": "/recent",
+      "path": "/api/activity/recent",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Activity & Audit Log",
+      "sectionBase": "/api/activity",
+      "method": "GET",
+      "relativePath": "/export",
+      "path": "/api/activity/export",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Activity & Audit Log",
+      "sectionBase": "/api/activity",
+      "method": "GET",
+      "relativePath": "/summary",
+      "path": "/api/activity/summary",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
+      "method": "GET",
+      "relativePath": "/tickets",
+      "path": "/api/support/tickets",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
+      "method": "POST",
+      "relativePath": "/tickets",
+      "path": "/api/support/tickets",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
+      "method": "GET",
+      "relativePath": "/tickets/:id/replies",
+      "path": "/api/support/tickets/:id/replies",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
+      "method": "POST",
+      "relativePath": "/tickets/:id/replies",
+      "path": "/api/support/tickets/:id/replies",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
+      "method": "GET",
+      "relativePath": "/tickets/:id/stream",
+      "path": "/api/support/tickets/:id/stream",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Notifications",
+      "sectionBase": "/api/notifications",
+      "method": "GET",
+      "relativePath": "/unread",
+      "path": "/api/notifications/unread",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Notifications",
+      "sectionBase": "/api/notifications",
+      "method": "GET",
+      "relativePath": "/unread-count",
+      "path": "/api/notifications/unread-count",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Notifications",
+      "sectionBase": "/api/notifications",
+      "method": "PATCH",
+      "relativePath": "/:id/read",
+      "path": "/api/notifications/:id/read",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Notifications",
+      "sectionBase": "/api/notifications",
+      "method": "PATCH",
+      "relativePath": "/read-all",
+      "path": "/api/notifications/read-all",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Notifications",
+      "sectionBase": "/api/notifications",
+      "method": "GET",
+      "relativePath": "/stream",
+      "path": "/api/notifications/stream",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/users",
+      "path": "/api/admin/users",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PATCH",
+      "relativePath": "/users/:userId",
+      "path": "/api/admin/users/:userId",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/users/:userId/impersonate",
+      "path": "/api/admin/users/:userId/impersonate",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/impersonation/exit",
+      "path": "/api/admin/impersonation/exit",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/tickets",
+      "path": "/api/admin/tickets",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/tickets/:id/replies",
+      "path": "/api/admin/tickets/:id/replies",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PATCH",
+      "relativePath": "/tickets/:id/status",
+      "path": "/api/admin/tickets/:id/status",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "DELETE",
+      "relativePath": "/tickets/:id",
+      "path": "/api/admin/tickets/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/faq/categories",
+      "path": "/api/admin/faq/categories",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/faq/categories",
+      "path": "/api/admin/faq/categories",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PUT",
+      "relativePath": "/faq/categories/:id",
+      "path": "/api/admin/faq/categories/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "DELETE",
+      "relativePath": "/faq/categories/:id",
+      "path": "/api/admin/faq/categories/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/faq/categories/reorder",
+      "path": "/api/admin/faq/categories/reorder",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/faq/items",
+      "path": "/api/admin/faq/items",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/faq/items",
+      "path": "/api/admin/faq/items",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PUT",
+      "relativePath": "/faq/items/:id",
+      "path": "/api/admin/faq/items/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "DELETE",
+      "relativePath": "/faq/items/:id",
+      "path": "/api/admin/faq/items/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/faq/items/reorder",
+      "path": "/api/admin/faq/items/reorder",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/faq/updates",
+      "path": "/api/admin/faq/updates",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/faq/updates",
+      "path": "/api/admin/faq/updates",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PUT",
+      "relativePath": "/faq/updates/:id",
+      "path": "/api/admin/faq/updates/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "DELETE",
+      "relativePath": "/faq/updates/:id",
+      "path": "/api/admin/faq/updates/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/faq/updates/reorder",
+      "path": "/api/admin/faq/updates/reorder",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/contact/categories",
+      "path": "/api/admin/contact/categories",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/contact/categories",
+      "path": "/api/admin/contact/categories",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PUT",
+      "relativePath": "/contact/categories/:id",
+      "path": "/api/admin/contact/categories/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "DELETE",
+      "relativePath": "/contact/categories/:id",
+      "path": "/api/admin/contact/categories/:id",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/contact/categories/reorder",
+      "path": "/api/admin/contact/categories/reorder",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/contact/methods",
+      "path": "/api/admin/contact/methods",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PUT",
+      "relativePath": "/contact/methods/:methodType",
+      "path": "/api/admin/contact/methods/:methodType",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/providers",
+      "path": "/api/admin/providers",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/providers/:id/regions",
+      "path": "/api/admin/providers/:id/regions",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/rate-limits/overrides",
+      "path": "/api/admin/rate-limits/overrides",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/rate-limits/overrides",
+      "path": "/api/admin/rate-limits/overrides",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "DELETE",
+      "relativePath": "/rate-limits/overrides/:userId",
+      "path": "/api/admin/rate-limits/overrides/:userId",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/platform/availability",
+      "path": "/api/admin/platform/availability",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PUT",
+      "relativePath": "/platform/availability",
+      "path": "/api/admin/platform/availability",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/theme",
+      "path": "/api/admin/theme",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PUT",
+      "relativePath": "/theme",
+      "path": "/api/admin/theme",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/",
+      "path": "/api/health",
+      "auth": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/status",
+      "path": "/api/health/status",
+      "auth": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/detailed",
+      "path": "/api/health/detailed",
+      "auth": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/stats",
+      "path": "/api/health/stats",
+      "auth": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/platform-stats",
+      "path": "/api/health/platform-stats",
+      "auth": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/metrics",
+      "path": "/api/health/metrics",
+      "auth": true
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/rate-limiting",
+      "path": "/api/health/rate-limiting",
+      "auth": true
+    }
+  ]
+}

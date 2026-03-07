@@ -296,7 +296,7 @@ export const categoryMappingService = {
    * Reorder category mappings
    */
   async reorderCategoryMappings(ordering: { id: string; display_order: number }[]): Promise<void> {
-    const client = await query('BEGIN', []);
+    await query('BEGIN', []);
 
     try {
       for (const item of ordering) {

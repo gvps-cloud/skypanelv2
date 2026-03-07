@@ -2937,7 +2937,6 @@ router.post("/:id/boot", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Instance not found" });
 
     const row = rowRes.rows[0];
-    const providerType = row.provider_type || "linode";
     const providerInstanceId = Number(row.provider_instance_id);
 
     await linodeService.bootLinodeInstance(providerInstanceId);
@@ -2993,7 +2992,6 @@ router.post("/:id/shutdown", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Instance not found" });
 
     const row = rowRes.rows[0];
-    const providerType = row.provider_type || "linode";
     const providerInstanceId = Number(row.provider_instance_id);
 
     await linodeService.shutdownLinodeInstance(providerInstanceId);
@@ -3019,7 +3017,7 @@ router.post("/:id/shutdown", async (req: Request, res: Response) => {
           eventType: "vps.shutdown",
           entityType: "vps",
           entityId: String(id),
-          message: `Shutdown VPS '${row.label}' on ${providerType}`,
+          message: `Shutdown VPS '${row.label}'`,
           status: "success",
         },
         req as any,
@@ -3049,7 +3047,6 @@ router.post("/:id/reboot", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Instance not found" });
 
     const row = rowRes.rows[0];
-    const providerType = row.provider_type || "linode";
     const providerInstanceId = Number(row.provider_instance_id);
 
     await linodeService.rebootLinodeInstance(providerInstanceId);
@@ -3771,7 +3768,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
           eventType: "vps.delete",
           entityType: "vps",
           entityId: String(id),
-          message: `Deleted VPS '${row.label}' from ${providerType}`,
+          message: `Deleted VPS '${row.label}'`,
           status: "success",
           metadata: {
             provider_type: providerType,

@@ -12,7 +12,6 @@ import {
   ServerCog,
   Settings,
   Users,
-  Tags,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,7 +22,6 @@ import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
-import api from "@/lib/api";
 import {
   Sidebar,
   SidebarContent,
@@ -184,7 +182,6 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       isDashboardActive,
       isSshKeysActive,
       isVpsActive,
-      pathname,
     ]
   );
 

@@ -132,7 +132,6 @@ export default function Status() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
 
   // Measure latency to a speed test URL
   const measureLatency = useCallback(async (regionId: string, speedTestUrl: string) => {
@@ -160,7 +159,7 @@ export default function Status() {
         [regionId]: { loading: false, latency },
       }));
       return latency;
-    } catch (err) {
+    } catch {
       setLatencyState((prev) => ({
         ...prev,
         [regionId]: { loading: false, error: true },

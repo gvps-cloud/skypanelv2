@@ -500,10 +500,19 @@ const formatPlanMemory = (memoryMb: number): string => {
   return `${memoryMb} MB RAM`;
 };
 
-const formatPlanDisk = (diskGb: number): string => `${diskGb} GB SSD`;
+const formatPlanDisk = (diskMb: number): string => {
+  if (diskMb >= 1024) {
+    return `${Math.round(diskMb / 1024)} GB Storage`;
+  }
+  return `${diskMb} MB Storage`;
+};
 
-const formatPlanTransfer = (transferTb: number): string =>
-  `${transferTb} TB Transfer`;
+const formatPlanTransfer = (transferGb: number): string => {
+  if (transferGb >= 1000) {
+    return `${transferGb / 1000} TB Transfer`;
+  }
+  return `${transferGb} GB Transfer`;
+};
 
 const getPlanResourceSummary = (
   plan: VPSPlan,
@@ -968,42 +977,8 @@ const Admin: React.FC = () => {
     return linodeRegions.filter((r) => set.has(r.id));
   }, [linodeRegions, allowedRegionIds]);
 
-  // Filter plan types by category
-  const filteredPlanTypes = useMemo(() => {
-    if (planTypeFilter === "all") return linodeTypes;
-
-    // Legacy mapping for backward compatibility with old backend values
-    const LEGACY_TYPE_MAP: Record<string, string> = {
-      cpu: "dedicated",
-      memory: "highmem",
-    };
-
-    const filtered = linodeTypes.filter((type) => {
-      let typeClass = (type.type_class || "").toLowerCase().trim();
-
-      // Handle legacy backend values
-      if (LEGACY_TYPE_MAP[typeClass]) {
-        typeClass = LEGACY_TYPE_MAP[typeClass];
-      }
-
-      return typeClass === planTypeFilter.toLowerCase();
-    });
-
-    // Enhanced debug logging
-    console.log("Filter Debug:", {
-      planTypeFilter,
-      totalPlans: linodeTypes.length,
-      filteredCount: filtered.length,
-      allTypeClasses: [...new Set(linodeTypes.map((t) => t.type_class))],
-      samplePlans: linodeTypes.slice(0, 3).map((t) => ({
-        id: t.id,
-        label: t.label,
-        type_class: t.type_class,
-      })),
-    });
-
-    return filtered;
-  }, [linodeTypes, planTypeFilter]);
+  // Filter plan types by category - REMOVED unused filteredPlanTypes
+  // const filteredPlanTypes = useMemo(...)
 
   const filteredAvailableStackscripts = useMemo(() => {
     const searchTerm = stackscriptSearch.trim().toLowerCase();
@@ -2655,10 +2630,6 @@ const Admin: React.FC = () => {
                   // Grouped mobile view
                   Object.entries(groupedPlans).map(
                     ([groupKey, groupPlans]) => {
-                      const [providerId, typeClass] = groupKey.split('-');
-                      const provider = providers.find(
-                        (p) => p.id === providerId,
-                      );
                       const currentPage =
                         providerPlanPages[groupKey] || 1;
                       const totalPages = Math.ceil(
@@ -2981,10 +2952,6 @@ const Admin: React.FC = () => {
                       <React.Fragment>
                         {Object.entries(groupedPlans).map(
                         ([groupKey, groupPlans]) => {
-                          const [providerId, typeClass] = groupKey.split('-');
-                          const provider = providers.find(
-                            (p) => p.id === providerId,
-                          );
                           const currentPage =
                             providerPlanPages[groupKey] || 1;
                           const totalPages = Math.ceil(

@@ -24,7 +24,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { validateForm, ValidationSchemas } from '@/lib/validation';
 import { handleApiError, displaySuccess, displayInfo } from '@/lib/errorHandling';
-import { TIMEZONE_OPTIONS, getTimezoneLabel } from '@/lib/timezones';
+import { TIMEZONE_OPTIONS } from '@/lib/timezones';
 
 interface User {
   id: string;

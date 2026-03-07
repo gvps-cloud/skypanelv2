@@ -8,7 +8,6 @@ import {
   Code2,
   Zap,
   DollarSign,
-  Globe,
   HelpCircle,
   Mail,
   Palette,

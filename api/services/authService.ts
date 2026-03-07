@@ -187,13 +187,11 @@ export class AuthService {
       }
 
       // Get user's organization (if organization_members table exists)
-      let orgMember = null;
       try {
-        const orgResult = await query(
+        await query(
           'SELECT organization_id, role FROM organization_members WHERE user_id = $1',
           [user.id]
         );
-        orgMember = orgResult.rows[0] || null;
       } catch (err) {
         // Table might not exist yet, continue without error
         console.warn('organization_members table not found, skipping organization lookup', err);

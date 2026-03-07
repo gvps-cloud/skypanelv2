@@ -13,7 +13,6 @@ import {
   Plus,
   ArrowUpRight,
   ShieldCheck,
-  Compass,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
@@ -516,9 +515,9 @@ const Dashboard: React.FC = () => {
                       100,
                       Math.max(0, vps.metrics?.cpu?.last ?? vps.cpu ?? 0),
                     );
-                    const inbound = vps.metrics?.network?.inbound?.last ?? null;
-                    const outbound =
-                      vps.metrics?.network?.outbound?.last ?? null;
+                    // Metrics variables unused but kept for future use if needed
+                    // const inbound = vps.metrics?.network?.inbound?.last ?? null;
+                    // const outbound = vps.metrics?.network?.outbound?.last ?? null;
 
                     return (
                       <button

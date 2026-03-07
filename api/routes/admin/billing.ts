@@ -3,7 +3,6 @@ import express, { Request, Response } from 'express';
 import { body, query as queryValidator, validationResult } from 'express-validator';
 import { authenticateToken, requireAdmin } from '../../middleware/auth.js';
 import { query } from '../../lib/database.js';
-import { PayPalService } from '../../services/paypalService.js';
 import { logActivity } from '../../services/activityLogger.js';
 import { InvoiceService } from '../../services/invoiceService.js';
 

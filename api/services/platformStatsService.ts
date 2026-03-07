@@ -255,7 +255,7 @@ export class PlatformStatsService {
                 }
               });
             }
-          } catch (err) {
+          } catch {
             // If table doesn't exist, skip
           }
         }

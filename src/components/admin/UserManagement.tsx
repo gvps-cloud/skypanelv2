@@ -75,15 +75,9 @@ interface AdminUser {
     updated_at: string;
 }
 
-interface UserManagementProps {
-    onUserAction?: (userId: string, action: string) => void;
-}
-
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
-export const UserManagement: React.FC<UserManagementProps> = ({
-    onUserAction,
-}) => {
+export const UserManagement: React.FC = () => {
     const { token } = useAuth();
     const { startImpersonation, isStarting } = useImpersonation();
     const navigate = useNavigate();
