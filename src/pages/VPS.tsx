@@ -246,6 +246,8 @@ const VPS: React.FC = () => {
   );
   const [providerOptions, setProviderOptions] = useState<ProviderOption[]>([]);
   const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
+  // Rate limiting for label regeneration
+  const [labelRegenerationTimestamps, setLabelRegenerationTimestamps] = useState<number[]>([]);
   // OS selection redesign: tabs, grouping, and per-OS version selection
   const [osTab, setOsTab] = useState<"templates" | "iso">("templates");
   const [selectedOSGroup, setSelectedOSGroup] = useState<string | null>(null);
@@ -1362,6 +1364,43 @@ const VPS: React.FC = () => {
     }
   };
 
+  const regenerateLabel = () => {
+    const now = Date.now();
+    const fiveMinutesAgo = now - 5 * 60 * 1000; // 5 minutes in milliseconds
+
+    // Filter out timestamps older than 5 minutes
+    const recentTimestamps = labelRegenerationTimestamps.filter(
+      timestamp => timestamp > fiveMinutesAgo
+    );
+
+    // Check if user has exceeded the rate limit (3 uses within 5 minutes)
+    if (recentTimestamps.length >= 3) {
+      const oldestTimestamp = Math.min(...recentTimestamps);
+      const timeUntilReset = Math.ceil((oldestTimestamp + 5 * 60 * 1000 - now) / 1000 / 60); // minutes
+
+      toast.error(
+        `Rate limit exceeded. Please wait ${timeUntilReset} minute${timeUntilReset !== 1 ? 's' : ''} before generating another label.`,
+        { duration: 5000 }
+      );
+      return;
+    }
+
+    // Generate new label
+    const existingLabels = instances.map((i) => i.label);
+    const newLabel = generateUniqueVPSLabel("vps", existingLabels);
+    setCreateForm({ label: newLabel });
+
+    // Update timestamps with the new click
+    setLabelRegenerationTimestamps([...recentTimestamps, now]);
+
+    // Calculate remaining attempts
+    const remainingAttempts = 3 - (recentTimestamps.length + 1);
+    toast.success(
+      `New label generated${remainingAttempts > 0 ? `. ${remainingAttempts} regeneration${remainingAttempts !== 1 ? 's' : ''} remaining (within 5 minutes)` : ''}`,
+      { duration: 3000 }
+    );
+  };
+
   const confirmDeleteInstance = async () => {
     try {
       if (deleteModal.input.trim() !== deleteModal.label.trim()) {
@@ -1814,26 +1853,29 @@ const VPS: React.FC = () => {
       content: (
         <div className="space-y-4">
           <div className="space-y-4">
-            <ProviderSelector
-              value={createForm.provider_id}
-              onChange={(providerId: string, providerType: ProviderType) => {
-                // Reset plan, region, and type_class when provider changes
-                const updates: Partial<CreateVPSForm> = {
-                  provider_id: providerId,
-                  provider_type: providerType,
-                  type: "", // Reset plan selection when provider changes
-                  region: "", // Reset region when provider changes
-                  type_class: "standard", // Reset to default category
-                };
+            {/* Only show provider selector if there are multiple providers */}
+            {providerOptions.length > 1 && (
+              <ProviderSelector
+                value={createForm.provider_id}
+                onChange={(providerId: string, providerType: ProviderType) => {
+                  // Reset plan, region, and type_class when provider changes
+                  const updates: Partial<CreateVPSForm> = {
+                    provider_id: providerId,
+                    provider_type: providerType,
+                    type: "", // Reset plan selection when provider changes
+                    region: "", // Reset region when provider changes
+                    type_class: "standard", // Reset to default category
+                  };
 
-                setCreateForm(updates);
+                  setCreateForm(updates);
 
-                // Reset to step 1 when provider changes
-                setCreateStep(1);
-              }}
-              disabled={false}
-              token={token || ""}
-            />
+                  // Reset to step 1 when provider changes
+                  setCreateStep(1);
+                }}
+                disabled={false}
+                token={token || ""}
+              />
+            )}
 
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-2">
@@ -1842,16 +1884,44 @@ const VPS: React.FC = () => {
                   (auto-generated)
                 </span>
               </label>
-              <input
-                type="text"
-                value={createForm.label}
-                readOnly
-                disabled
-                className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-muted text-muted-foreground placeholder-gray-500 dark:placeholder-gray-400 cursor-not-allowed text-base"
-                placeholder="Generating unique label..."
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={createForm.label}
+                  readOnly
+                  disabled
+                  className="flex-1 px-4 py-3 min-h-[48px] border border-rounded-md bg-muted text-muted-foreground placeholder-gray-500 dark:placeholder-gray-400 cursor-not-allowed text-base"
+                  placeholder="Generating unique label..."
+                />
+                <button
+                  type="button"
+                  onClick={regenerateLabel}
+                  disabled={(() => {
+                    const now = Date.now();
+                    const fiveMinutesAgo = now - 5 * 60 * 1000;
+                    const recentTimestamps = labelRegenerationTimestamps.filter(
+                      timestamp => timestamp > fiveMinutesAgo
+                    );
+                    return recentTimestamps.length >= 3;
+                  })()}
+                  className="px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary hover:bg-secondary/80 active:bg-secondary/90 text-muted-foreground hover:text-foreground transition-colors duration-200 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-secondary"
+                  title="Generate new label"
+                  aria-label="Generate new random label"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                A unique server name is automatically generated for you
+                A unique server name is automatically generated for you. Click the refresh icon to generate a new one.
+                {(() => {
+                  const now = Date.now();
+                  const fiveMinutesAgo = now - 5 * 60 * 1000;
+                  const recentTimestamps = labelRegenerationTimestamps.filter(
+                    timestamp => timestamp > fiveMinutesAgo
+                  );
+                  const remainingAttempts = 3 - recentTimestamps.length;
+                  return remainingAttempts < 3 ? ` (${remainingAttempts} regeneration${remainingAttempts !== 1 ? 's' : ''} remaining)` : '';
+                })()}
               </p>
             </div>
 
