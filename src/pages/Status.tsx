@@ -680,104 +680,103 @@ export default function Status() {
           {showMapView && (
             <Card className="shadow-sm">
               <CardContent className="p-6">
-                {/* Side Control Menu */}
-                <div className="absolute top-8 left-8 z-10 flex flex-col gap-3 bg-white/95 dark:bg-slate-800/95 rounded-lg border p-3 shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-semibold">Map Controls</span>
-                  </div>
-
-                  {/* Search */}
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search regions..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-700"
-                    />
-                    {searchQuery && (
-                      <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-auto bg-white dark:bg-slate-700 border rounded-md shadow-lg z-20">
-                        {regions
-                          .filter(r =>
-                            r.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            r.country.toLowerCase().includes(searchQuery.toLowerCase())
-                          )
-                          .slice(0, 5)
-                          .map(region => (
-                            <div
-                              key={region.id}
-                              className="px-3 py-2 hover:bg-primary/10 cursor-pointer text-sm border-b last:border-b-0"
-                              onClick={() => {
-                                handleRegionClick(region.id);
-                                setSearchQuery("");
-                              }}
-                            >
-                              <div className="font-medium">{region.label}</div>
-                              <div className="text-xs text-muted-foreground">{region.country}</div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <Separator />
-
-                  {/* Quick Actions */}
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="justify-start h-8 text-sm"
-                      onClick={handleResetZoom}
-                    >
-                      <RotateCcw className="mr-2 h-3 w-3" />
-                      Reset View
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="justify-start h-8 text-sm"
-                      onClick={() => {
-                        setZoom(1);
-                        setCenter([0, 0]);
-                        setSelectedRegion(null);
-                      }}
-                    >
-                      <MapPin className="mr-2 h-3 w-3" />
-                      World View
-                    </Button>
-                  </div>
-
-                  {/* Zoom Info */}
-                  <div className="text-xs text-muted-foreground">
-                    Zoom: {zoom.toFixed(1)}x
-                  </div>
-                </div>
-
-                {/* Zoom controls (compact, on right) */}
-                <div className="absolute top-8 right-8 z-10 flex flex-col gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 w-8 p-0 bg-white/90 dark:bg-slate-800/90"
-                    onClick={handleZoomIn}
-                    disabled={zoom >= 4}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 w-8 p-0 bg-white/90 dark:bg-slate-800/90"
-                    onClick={handleZoomOut}
-                    disabled={zoom <= 1}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                </div>
-
                 <div className="w-full" style={{ height: "500px", position: "relative" }}>
+                  {/* Side Control Menu */}
+                  <div className="absolute bottom-8 left-8 z-10 flex flex-col gap-3 bg-white/95 dark:bg-slate-800/95 rounded-lg border p-3 shadow-lg">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-semibold">Map Controls</span>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search regions..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-white dark:bg-slate-700"
+                      />
+                      {searchQuery && (
+                        <div className="absolute bottom-full mb-1 left-0 right-0 max-h-48 overflow-auto bg-white dark:bg-slate-700 border rounded-md shadow-lg z-20">
+                          {regions
+                            .filter(r =>
+                              r.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              r.country.toLowerCase().includes(searchQuery.toLowerCase())
+                            )
+                            .slice(0, 5)
+                            .map(region => (
+                              <div
+                                key={region.id}
+                                className="px-3 py-2 hover:bg-primary/10 cursor-pointer text-sm border-b last:border-b-0"
+                                onClick={() => {
+                                  handleRegionClick(region.id);
+                                  setSearchQuery("");
+                                }}
+                              >
+                                <div className="font-medium">{region.label}</div>
+                                <div className="text-xs text-muted-foreground">{region.country}</div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    {/* Quick Actions */}
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="justify-start h-8 text-sm"
+                        onClick={handleResetZoom}
+                      >
+                        <RotateCcw className="mr-2 h-3 w-3" />
+                        Reset View
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="justify-start h-8 text-sm"
+                        onClick={() => {
+                          setZoom(1);
+                          setCenter([0, 0]);
+                          setSelectedRegion(null);
+                        }}
+                      >
+                        <MapPin className="mr-2 h-3 w-3" />
+                        World View
+                      </Button>
+                    </div>
+
+                    {/* Zoom Info */}
+                    <div className="text-xs text-muted-foreground">
+                      Zoom: {zoom.toFixed(1)}x
+                    </div>
+                  </div>
+
+                  {/* Zoom controls (compact, on right) */}
+                  <div className="absolute bottom-8 right-8 z-10 flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0 bg-white/90 dark:bg-slate-800/90"
+                      onClick={handleZoomIn}
+                      disabled={zoom >= 4}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0 bg-white/90 dark:bg-slate-800/90"
+                      onClick={handleZoomOut}
+                      disabled={zoom <= 1}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <ComposableMap
                     projection="geoEqualEarth"
                     width={800}

@@ -3479,10 +3479,10 @@ const Admin: React.FC = () => {
               <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
                 White-Label
               </Badge>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
                 Category Mappings
-              </h1>
-              <p className="text-sm sm:text-base text-muted-foreground mb-4">
+              </h2>
+              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
                 Customize how VPS plan categories appear to your customers with branded names and descriptions.
               </p>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -3493,7 +3493,7 @@ const Admin: React.FC = () => {
             <Tags className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12 text-teal-600/20" />
           </div>
 
-          <CategoryMappingManager noCard />
+          <CategoryMappingManager />
         </SectionPanel>
 
         <SectionPanel section="rate-limiting" activeSection={activeTab}>
