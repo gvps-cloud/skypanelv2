@@ -78,40 +78,66 @@ export async function fetchGitHubCommits(
     headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
   }
 
-  const response = await fetch(url, { headers });
+  try {
+    const response = await fetch(url, { headers });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`GitHub API error: ${response.status} ${response.statusText} - ${errorText}`);
-  }
+    if (!response.ok) {
+      // Handle Rate Limit specifically (403 Forbidden or 429 Too Many Requests)
+      if (response.status === 403 || response.status === 429) {
+        console.warn(`GitHub API rate limit exceeded (${response.status}).`);
+        
+        // Return stale cache if available
+        if (commitsCache) {
+          console.warn('Returning stale cache data due to rate limit.');
+          return commitsCache.data.slice(0, limit);
+        }
+        
+        console.warn('No cache available. Returning empty list to prevent crash. Please add GITHUB_TOKEN to .env to increase rate limits.');
+        return [];
+      }
 
-  const data: GitHubApiCommit[] = await response.json();
+      const errorText = await response.text();
+      throw new Error(`GitHub API error: ${response.status} ${response.statusText} - ${errorText}`);
+    }
 
-  const commits: GitHubCommit[] = data.map((commit) => {
-    const { title, description } = parseCommitMessage(commit.commit.message);
-    
-    return {
-      sha: commit.sha,
-      shortSha: commit.sha.substring(0, 7),
-      title,
-      description,
-      date: commit.commit.author.date,
-      author: {
-        name: commit.commit.author.name,
-        username: commit.author?.login || commit.commit.author.name,
-        avatarUrl: commit.author?.avatar_url || '',
-      },
-      url: commit.html_url,
+    const data: GitHubApiCommit[] = await response.json();
+
+    const commits: GitHubCommit[] = data.map((commit) => {
+      const { title, description } = parseCommitMessage(commit.commit.message);
+      
+      return {
+        sha: commit.sha,
+        shortSha: commit.sha.substring(0, 7),
+        title,
+        description,
+        date: commit.commit.author.date,
+        author: {
+          name: commit.commit.author.name,
+          username: commit.author?.login || commit.commit.author.name,
+          avatarUrl: commit.author?.avatar_url || '',
+        },
+        url: commit.html_url,
+      };
+    });
+
+    // Update cache
+    commitsCache = {
+      data: commits,
+      timestamp: Date.now(),
     };
-  });
 
-  // Update cache
-  commitsCache = {
-    data: commits,
-    timestamp: Date.now(),
-  };
-
-  return commits.slice(0, limit);
+    return commits.slice(0, limit);
+  } catch (error) {
+    console.error('Error fetching GitHub commits:', error);
+    
+    // Fallback to cache if available on error
+    if (commitsCache) {
+      return commitsCache.data.slice(0, limit);
+    }
+    
+    // Return empty array to prevent UI crash
+    return [];
+  }
 }
 
 /**
