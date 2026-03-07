@@ -477,6 +477,69 @@ const statusBadgeClass = (status: string | null | undefined) => {
   return "border-muted-foreground/20 bg-muted text-muted-foreground";
 };
 
+const parseSpecNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
+};
+
+const formatPlanMemory = (memoryMb: number): string => {
+  if (memoryMb >= 1024 && memoryMb % 1024 === 0) {
+    return `${memoryMb / 1024} GB RAM`;
+  }
+  return `${memoryMb} MB RAM`;
+};
+
+const formatPlanDisk = (diskGb: number): string => `${diskGb} GB SSD`;
+
+const formatPlanTransfer = (transferTb: number): string =>
+  `${transferTb} TB Transfer`;
+
+const getPlanResourceSummary = (
+  plan: VPSPlan,
+  linodeTypes: LinodeType[],
+): string[] => {
+  const specRecord =
+    plan.specifications && typeof plan.specifications === "object"
+      ? (plan.specifications as Record<string, unknown>)
+      : null;
+  const upstreamType = linodeTypes.find((type) => type.id === plan.provider_plan_id);
+
+  const vcpus =
+    parseSpecNumber(specRecord?.vcpus) ??
+    parseSpecNumber(specRecord?.cpu) ??
+    parseSpecNumber(specRecord?.cores) ??
+    upstreamType?.vcpus;
+  const memory =
+    parseSpecNumber(specRecord?.memory) ??
+    parseSpecNumber(specRecord?.memory_mb) ??
+    parseSpecNumber(specRecord?.ram) ??
+    upstreamType?.memory;
+  const disk =
+    parseSpecNumber(specRecord?.disk) ??
+    parseSpecNumber(specRecord?.storage) ??
+    parseSpecNumber(specRecord?.storage_gb) ??
+    upstreamType?.disk;
+  const transfer =
+    parseSpecNumber(specRecord?.transfer) ??
+    parseSpecNumber(specRecord?.bandwidth) ??
+    upstreamType?.transfer;
+
+  return [
+    typeof vcpus === "number" ? `${vcpus} vCPU` : null,
+    typeof memory === "number" ? formatPlanMemory(memory) : null,
+    typeof disk === "number" ? formatPlanDisk(disk) : null,
+    typeof transfer === "number" ? formatPlanTransfer(transfer) : null,
+  ].filter((value): value is string => Boolean(value));
+};
+
 // Sortable Provider Row Component
 interface SortableProviderRowProps {
   provider: any;
@@ -2650,6 +2713,10 @@ const Admin: React.FC = () => {
                             const planProvider = providers.find(
                               (p) => p.id === plan.provider_id,
                             );
+                            const resourceSummary = getPlanResourceSummary(
+                              plan,
+                              linodeTypes,
+                            );
 
                             return (
                               <Card key={plan.id} className="overflow-hidden">
@@ -2721,6 +2788,20 @@ const Admin: React.FC = () => {
                                       </Badge>
                                     )}
                                   </div>
+
+                                  {resourceSummary.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                      {resourceSummary.map((item) => (
+                                        <Badge
+                                          key={`${plan.id}-${item}`}
+                                          variant="outline"
+                                          className="text-[11px]"
+                                        >
+                                          {item}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
 
                                   {/* Pricing */}
                                   <div className="grid grid-cols-2 gap-3 pt-2 border-t">
@@ -2870,6 +2951,7 @@ const Admin: React.FC = () => {
                         <TableHead className="min-w-[12rem]">Name</TableHead>
                         <TableHead className="min-w-[10rem]">Provider</TableHead>
                         <TableHead className="min-w-[10rem]">Provider Plan ID</TableHead>
+                        <TableHead className="min-w-[16rem]">Resources</TableHead>
                         <TableHead className="min-w-[8rem]">Category</TableHead>
                         <TableHead className="min-w-[8rem]">Base Price</TableHead>
                         <TableHead className="min-w-[8rem]">Markup</TableHead>
@@ -2904,7 +2986,7 @@ const Admin: React.FC = () => {
                             <React.Fragment key={groupKey}>
                               <TableRow className="bg-muted/50 hover:bg-muted/50">
                                 <TableCell
-                                  colSpan={10}
+                                  colSpan={11}
                                   className="py-3 font-semibold"
                                 >
                                   <div className="flex items-center justify-between">
@@ -2965,6 +3047,10 @@ const Admin: React.FC = () => {
                                 const planProvider = providers.find(
                                   (p) => p.id === plan.provider_id,
                                 );
+                                const resourceSummary = getPlanResourceSummary(
+                                  plan,
+                                  linodeTypes,
+                                );
 
                                 return (
                                   <TableRow key={plan.id} className="align-top">
@@ -3004,6 +3090,25 @@ const Admin: React.FC = () => {
                                       <span className="text-sm text-muted-foreground">
                                         {plan.provider_plan_id}
                                       </span>
+                                    </TableCell>
+                                    <TableCell>
+                                      {resourceSummary.length > 0 ? (
+                                        <div className="flex flex-wrap gap-2">
+                                          {resourceSummary.map((item) => (
+                                            <Badge
+                                              key={`${plan.id}-${item}`}
+                                              variant="outline"
+                                              className="text-[11px]"
+                                            >
+                                              {item}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <span className="text-sm text-muted-foreground">
+                                          No specs available
+                                        </span>
+                                      )}
                                     </TableCell>
                                     <TableCell>
                                       {isEditing ? (
