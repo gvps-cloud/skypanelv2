@@ -74,7 +74,11 @@ router.get("/tickets", async (req: Request, res: Response) => {
   try {
     const organizationId = (req as any).user.organizationId;
     const result = await query(
-      "SELECT * FROM support_tickets WHERE organization_id = $1 ORDER BY created_at DESC",
+      `SELECT st.*, vi.label as vps_label 
+       FROM support_tickets st
+       LEFT JOIN vps_instances vi ON st.vps_id = vi.id
+       WHERE st.organization_id = $1 
+       ORDER BY st.created_at DESC`,
       [organizationId],
     );
 
@@ -95,6 +99,7 @@ router.post(
       .isIn(["low", "medium", "high", "urgent"])
       .withMessage("Invalid priority"),
     body("category").isLength({ min: 2 }).withMessage("Category is required"),
+    body("vpsId").optional().isUUID().withMessage("Invalid VPS ID"),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -106,16 +111,40 @@ router.post(
 
       const organizationId = (req as any).user.organizationId;
       const userId = (req as any).user.id;
-      const { subject, message, priority, category } = req.body;
+      const { subject, message, priority, category, vpsId } = req.body;
 
       const result = await query(
-        `INSERT INTO support_tickets (organization_id, created_by, subject, message, priority, category, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO support_tickets (organization_id, created_by, subject, message, priority, category, status, vps_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
-        [organizationId, userId, subject, message, priority, category, "open"],
+        [
+          organizationId,
+          userId,
+          subject,
+          message,
+          priority,
+          category,
+          "open",
+          vpsId || null,
+        ],
       );
 
       const ticket = result.rows[0];
+
+      // If a VPS was linked, fetch its label for the notification
+      let vpsLabel = null;
+      if (vpsId) {
+        try {
+          const vpsRes = await query(
+            "SELECT label FROM vps_instances WHERE id = $1",
+            [vpsId],
+          );
+          vpsLabel = vpsRes.rows[0]?.label;
+        } catch (err) {
+          console.warn("Failed to fetch VPS label for ticket notification", err);
+        }
+      }
+
       await notifyAdminsForTicketEvent({
         organizationId,
         ticketId: ticket.id,
@@ -128,6 +157,8 @@ router.post(
           priority,
           category,
           message_preview: String(message || "").substring(0, 100),
+          vps_id: vpsId,
+          vps_label: vpsLabel,
         },
         req,
       });

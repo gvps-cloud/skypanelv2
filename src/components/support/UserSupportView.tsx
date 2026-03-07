@@ -60,6 +60,8 @@ interface SupportTicket {
   created_at: string;
   updated_at: string;
   has_staff_reply: boolean;
+  vps_id?: string;
+  vps_label?: string;
   messages: TicketMessage[];
 }
 
@@ -164,12 +166,39 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
     description: "",
     priority: "medium" as TicketPriority,
     category: "general" as TicketCategory,
+    vpsId: "none",
   });
+
+  const [vpsInstances, setVpsInstances] = useState<
+    Array<{ id: string; label: string }>
+  >([]);
 
   const authHeader = useMemo(
     () => ({ Authorization: `Bearer ${token}` }),
     [token],
   );
+
+  const fetchVpsInstances = useCallback(async () => {
+    try {
+      const res = await fetch(buildApiUrl("/api/vps"), {
+        headers: authHeader,
+      });
+      const data = await res.json();
+      if (res.ok && data.instances) {
+        setVpsInstances(
+          data.instances.map((i: any) => ({ id: i.id, label: i.label })),
+        );
+      }
+    } catch (err) {
+      console.warn("Failed to fetch VPS instances for ticket creation", err);
+    }
+  }, [authHeader]);
+
+  useEffect(() => {
+    if (isCreateModalOpen) {
+      fetchVpsInstances();
+    }
+  }, [isCreateModalOpen, fetchVpsInstances]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -194,6 +223,8 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         created_at: t.created_at,
         updated_at: t.updated_at,
         has_staff_reply: t.has_staff_reply || false,
+        vps_id: t.vps_id,
+        vps_label: t.vps_label,
         messages: [],
       }));
 
@@ -446,6 +477,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
           message: newTicket.description.trim(),
           priority: newTicket.priority,
           category: newTicket.category,
+          vpsId: newTicket.vpsId === "none" ? undefined : newTicket.vpsId,
         }),
       });
       const data = await res.json();
@@ -457,6 +489,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         description: "",
         priority: "medium",
         category: "general",
+        vpsId: "none",
       });
       setIsCreateModalOpen(false);
       await fetchTickets();
@@ -712,6 +745,17 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
                       <span className="capitalize text-muted-foreground">
                         {selectedTicket.category.replace("_", " ")}
                       </span>
+                      {selectedTicket.vps_label && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-muted/50 font-normal"
+                          >
+                            VPS: {selectedTicket.vps_label}
+                          </Badge>
+                        </>
+                      )}
                       <span className="text-muted-foreground">•</span>
                       <span className="text-muted-foreground">
                         {new Date(selectedTicket.created_at).toLocaleString()}
@@ -941,6 +985,30 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vps">Related VPS (Optional)</Label>
+              <Select
+                value={newTicket.vpsId}
+                onValueChange={(value) =>
+                  setNewTicket((prev) => ({
+                    ...prev,
+                    vpsId: value,
+                  }))
+                }
+              >
+                <SelectTrigger id="vps">
+                  <SelectValue placeholder="Select a VPS instance" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {vpsInstances.map((vps) => (
+                    <SelectItem key={vps.id} value={vps.id}>
+                      {vps.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Description *</Label>
