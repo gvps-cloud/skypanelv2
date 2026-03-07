@@ -2640,7 +2640,7 @@ const Admin: React.FC = () => {
             {/* Plans Content */}
             <div className="px-0">
               {/* Mobile/Card View (keep active through tablet sizes) */}
-              <div className="min-[1800px]:hidden space-y-4">
+              <div className="2xl:hidden space-y-4">
                 {filteredPlans.length === 0 ? (
                   <div className="py-10 text-center text-muted-foreground">
                     {planProviderFilter === "all" && planTypeFilter === "all"
@@ -2947,8 +2947,8 @@ const Admin: React.FC = () => {
                 )}
               </div>
 
-              {/* Table View for large/desktop only (use xl breakpoint) */}
-              <div className="hidden min-[1800px]:block overflow-x-auto">
+              {/* Table View for large/desktop only (use 2xl breakpoint) */}
+              <div className="hidden 2xl:block overflow-x-auto">
                 {filteredPlans.length === 0 ? (
                   <div className="py-10 text-center text-muted-foreground">
                     {planProviderFilter === "all" && planTypeFilter === "all"
@@ -2963,17 +2963,17 @@ const Admin: React.FC = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="min-w-[12rem]">Name</TableHead>
-                        <TableHead className="min-w-[10rem]">Provider</TableHead>
-                        <TableHead className="min-w-[10rem]">Provider Plan ID</TableHead>
-                        <TableHead className="min-w-[16rem]">Resources</TableHead>
-                        <TableHead className="min-w-[8rem]">Category</TableHead>
-                        <TableHead className="min-w-[8rem]">Base Price</TableHead>
-                        <TableHead className="min-w-[8rem]">Markup</TableHead>
-                        <TableHead className="min-w-[10rem]">Backup Price</TableHead>
-                        <TableHead className="min-w-[8rem]">Backups</TableHead>
-                        <TableHead className="w-32">Active</TableHead>
-                        <TableHead className="w-36 text-right">Actions</TableHead>
+                        <TableHead className="min-w-[10rem]">Name</TableHead>
+                        <TableHead className="min-w-[8rem]">Provider</TableHead>
+                        <TableHead className="min-w-[8rem]">Provider Plan ID</TableHead>
+                        <TableHead className="min-w-[14rem]">Resources</TableHead>
+                        <TableHead className="min-w-[6rem]">Category</TableHead>
+                        <TableHead className="min-w-[6rem]">Base Price</TableHead>
+                        <TableHead className="min-w-[6rem]">Markup</TableHead>
+                        <TableHead className="min-w-[8rem]">Backup Price</TableHead>
+                        <TableHead className="min-w-[6rem]">Backups</TableHead>
+                        <TableHead className="w-24">Active</TableHead>
+                        <TableHead className="w-28 text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -3140,9 +3140,9 @@ const Admin: React.FC = () => {
                                             }))
                                           }
                                         >
-                                          <SelectTrigger className="max-w-[8rem]">
-                                            <SelectValue />
-                                          </SelectTrigger>
+                                          <SelectTrigger className="max-w-[6rem]">
+                                          <SelectValue />
+                                        </SelectTrigger>
                                           <SelectContent>
                                             <SelectItem value="standard">Standard</SelectItem>
                                             <SelectItem value="dedicated">Dedicated</SelectItem>
@@ -3177,7 +3177,7 @@ const Admin: React.FC = () => {
                                               ),
                                             }))
                                           }
-                                          className="max-w-[8rem]"
+                                          className="max-w-[6rem]"
                                         />
                                       ) : (
                                         <span className="text-sm text-muted-foreground">
@@ -3203,7 +3203,7 @@ const Admin: React.FC = () => {
                                               ),
                                             }))
                                           }
-                                          className="max-w-[8rem]"
+                                          className="max-w-[6rem]"
                                         />
                                       ) : (
                                         <span className="text-sm text-muted-foreground">
