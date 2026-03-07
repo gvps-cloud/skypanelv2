@@ -13,6 +13,7 @@ export interface Provider {
   configuration: Record<string, any>;
   created_at: string;
   updated_at: string;
+  allowed_regions?: string[] | null;
 }
 
 export interface ProviderPlan {

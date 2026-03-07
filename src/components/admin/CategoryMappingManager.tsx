@@ -505,23 +505,23 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
           {/* Desktop Table View */}
           <div className="hidden md:block rounded-md border overflow-hidden">
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]" />
-                    <TableHead>Original Category</TableHead>
-                    <TableHead>Custom Name</TableHead>
-                    <TableHead className="max-w-xs">Description</TableHead>
-                    <TableHead>Display Order</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]" />
+                      <TableHead>Original Category</TableHead>
+                      <TableHead>Custom Name</TableHead>
+                      <TableHead className="max-w-xs">Description</TableHead>
+                      <TableHead>Display Order</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
                   <TableBody>
                     <SortableContext
                       items={mappings.map((m) => m.id)}
@@ -538,8 +538,8 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
                       ))}
                     </SortableContext>
                   </TableBody>
-                </DndContext>
-              </Table>
+                </Table>
+              </DndContext>
             </div>
           </div>
         </>

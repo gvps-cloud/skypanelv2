@@ -287,6 +287,7 @@ interface Provider {
   last_api_call?: string | null;
   validation_status?: "valid" | "invalid" | "pending" | "unknown";
   validation_message?: string | null;
+  allowed_regions?: string[] | null;
 }
 
 interface VPSPlan {
@@ -2879,7 +2880,7 @@ const Admin: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      // Grouped view with pagination
+                      {/* Grouped view with pagination */}
                       <React.Fragment>
                         {Object.entries(groupedPlans).map(
                         ([groupKey, groupPlans]) => {
@@ -3172,17 +3173,17 @@ const Admin: React.FC = () => {
                                           {(Number(plan.backup_price_monthly) ||
                                             0) > 0 ||
                                           (Number(
-                                            plan.backup_upcharge_monthly,
+                                            plan.backup_upcharge_monthly
                                           ) || 0) > 0 ? (
                                             <>
                                               <div className="text-muted-foreground">
                                                 $
                                                 {(
                                                   (Number(
-                                                    plan.backup_price_monthly,
+                                                    plan.backup_price_monthly
                                                   ) || 0) +
                                                   (Number(
-                                                    plan.backup_upcharge_monthly,
+                                                    plan.backup_upcharge_monthly
                                                   ) || 0)
                                                 ).toFixed(2)}
                                                 /mo
@@ -3191,13 +3192,13 @@ const Admin: React.FC = () => {
                                                 Base: $
                                                 {(
                                                   Number(
-                                                    plan.backup_price_monthly,
+                                                    plan.backup_price_monthly
                                                   ) || 0
                                                 ).toFixed(2)}{" "}
                                                 + Upcharge: $
                                                 {(
                                                   Number(
-                                                    plan.backup_upcharge_monthly,
+                                                    plan.backup_upcharge_monthly
                                                   ) || 0
                                                 ).toFixed(2)}
                                               </div>
@@ -3326,10 +3327,8 @@ const Admin: React.FC = () => {
                               })}
                             </React.Fragment>
                           );
-                        },
-                      )
-                    }
-                  )
+                        }
+                      )}
                       </React.Fragment>
                   </TableBody>
                 </Table>
