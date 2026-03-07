@@ -95,7 +95,8 @@ interface RegionOption {
 
 // Category selection helper components
 const CategorySelectOptions: React.FC = () => {
-  const categories = ['standard', 'cpu', 'memory', 'premium', 'gpu'] as const;
+  // Must match backend VALID_ORIGINAL_CATEGORIES in api/routes/admin/categoryMappings.ts
+  const categories = ['standard', 'nanode', 'dedicated', 'premium', 'highmem', 'gpu', 'accelerated'] as const;
 
   return (
     <>
@@ -112,10 +113,12 @@ const CategorySelectOption: React.FC<{ category: string }> = ({ category }) => {
   return (
     <option value={category}>
       {displayName} ({category === 'standard' ? 'Shared CPU' :
-                      category === 'cpu' ? 'Dedicated CPU' :
-                      category === 'memory' ? 'High Memory' :
+                      category === 'nanode' ? 'Basic VPS' :
+                      category === 'dedicated' || category === 'cpu' ? 'Dedicated CPU' :
+                      category === 'memory' || category === 'highmem' ? 'High Memory' :
                       category === 'premium' ? 'G7 Dedicated CPU' :
-                      category === 'gpu' ? 'GPU' : category})
+                      category === 'gpu' ? 'GPU' :
+                      category === 'accelerated' ? 'Accelerated' : category})
     </option>
   );
 };
