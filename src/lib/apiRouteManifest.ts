@@ -56,6 +56,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "protected": true
   },
   {
+    "method": "POST",
+    "path": "/api/admin/billing/transactions/:transactionId/invoice",
+    "protected": true
+  },
+  {
     "method": "GET",
     "path": "/api/admin/billing/users",
     "protected": true
