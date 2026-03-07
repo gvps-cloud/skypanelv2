@@ -19,6 +19,8 @@ export interface RateLimitConfig {
   trustProxy: boolean | string | number;
 }
 
+export type EmailProvider = "resend" | "smtp";
+
 export interface Config {
   PORT: number;
   NODE_ENV: string;
@@ -34,10 +36,14 @@ export interface Config {
   PAYPAL_CLIENT_ID: string;
   PAYPAL_CLIENT_SECRET: string;
   PAYPAL_MODE: string;
-  SMTP2GO_API_KEY?: string;
-  SMTP2GO_USERNAME?: string;
-  SMTP2GO_PASSWORD?: string;
   RESEND_API_KEY?: string;
+  EMAIL_PROVIDER_PRIORITY: EmailProvider[];
+  SMTP_HOST?: string;
+  SMTP_PORT?: number;
+  SMTP_SECURE: boolean;
+  SMTP_REQUIRE_TLS: boolean;
+  SMTP_USERNAME?: string;
+  SMTP_PASSWORD?: string;
   FROM_EMAIL?: string;
   FROM_NAME?: string;
   LINODE_API_TOKEN?: string;
@@ -68,6 +74,43 @@ function parseTrustProxy(value?: string): boolean | string | number {
 /**
  * Validate and parse rate limiting configuration
  */
+function parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
+  if (value === undefined) {
+    return defaultValue;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "0", "no", "off"].includes(normalized)) {
+    return false;
+  }
+  return defaultValue;
+}
+
+function parseEmailProviderPriority(value?: string): EmailProvider[] {
+  const defaultOrder: EmailProvider[] = ["resend", "smtp"];
+  if (!value) {
+    return defaultOrder;
+  }
+
+  const allowed = new Set<EmailProvider>(["resend", "smtp"]);
+  const parsed = value
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry): entry is EmailProvider => allowed.has(entry as EmailProvider));
+
+  const deduped: EmailProvider[] = [];
+  for (const provider of parsed) {
+    if (!deduped.includes(provider)) {
+      deduped.push(provider);
+    }
+  }
+
+  return deduped.length > 0 ? deduped : defaultOrder;
+}
+
 function parseRateLimitConfig(): RateLimitConfig {
   const config: RateLimitConfig = {
     // Anonymous user limits (default: 200 requests per 15 minutes)
@@ -135,8 +178,18 @@ function parseRateLimitConfig(): RateLimitConfig {
 function getConfig(): Config {
   const rateLimitingConfig = parseRateLimitConfig();
 
+  const smtpPort = process.env.SMTP_PORT
+    ? parseInt(process.env.SMTP_PORT, 10)
+    : undefined;
+  const smtpSecure = parseBoolean(process.env.SMTP_SECURE, false);
+  const smtpRequireTls = parseBoolean(process.env.SMTP_REQUIRE_TLS, true);
+  const emailProviderPriority = parseEmailProviderPriority(
+    process.env.EMAIL_PROVIDER_PRIORITY,
+  );
+
   const config = {
     PORT: parseInt(process.env.PORT || '3001', 10),
+
     NODE_ENV: process.env.NODE_ENV || 'development',
     JWT_SECRET: process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production',
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
@@ -150,12 +203,17 @@ function getConfig(): Config {
     PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID || '',
     PAYPAL_CLIENT_SECRET: process.env.PAYPAL_CLIENT_SECRET || '',
     PAYPAL_MODE: process.env.PAYPAL_MODE || 'sandbox',
-    SMTP2GO_API_KEY: process.env.SMTP2GO_API_KEY,
-    SMTP2GO_USERNAME: process.env.SMTP2GO_USERNAME,
-    SMTP2GO_PASSWORD: process.env.SMTP2GO_PASSWORD,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
+    EMAIL_PROVIDER_PRIORITY: emailProviderPriority,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PORT: smtpPort,
+    SMTP_SECURE: smtpSecure,
+    SMTP_REQUIRE_TLS: smtpRequireTls,
+    SMTP_USERNAME: process.env.SMTP_USERNAME,
+    SMTP_PASSWORD: process.env.SMTP_PASSWORD,
     FROM_EMAIL: process.env.FROM_EMAIL,
     FROM_NAME: process.env.FROM_NAME,
+
     LINODE_API_TOKEN: process.env.LINODE_API_TOKEN,
     SSH_CRED_SECRET: process.env.SSH_CRED_SECRET,
     CONTACT_FORM_RECIPIENT: process.env.CONTACT_FORM_RECIPIENT,
@@ -167,14 +225,23 @@ function getConfig(): Config {
 
   // Debug logging
   console.log('Config loaded:', {
+
     hasPayPalClientId: !!config.PAYPAL_CLIENT_ID,
     hasPayPalClientSecret: !!config.PAYPAL_CLIENT_SECRET,
     paypalMode: config.PAYPAL_MODE,
-    hasSmtpCredentials: !!config.SMTP2GO_USERNAME && !!config.SMTP2GO_PASSWORD,
+    hasSmtpCredentials: !!config.SMTP_USERNAME && !!config.SMTP_PASSWORD,
     hasResendKey: !!config.RESEND_API_KEY,
     hasFromEmail: !!config.FROM_EMAIL,
+    emailProviderPriority: config.EMAIL_PROVIDER_PRIORITY,
+    smtp: {
+      host: config.SMTP_HOST,
+      port: config.SMTP_PORT,
+      secure: config.SMTP_SECURE,
+      requireTLS: config.SMTP_REQUIRE_TLS
+    },
     rateLimiting: {
       anonymous: `${config.rateLimiting.anonymousMaxRequests}/${config.rateLimiting.anonymousWindowMs}ms`,
+
       authenticated: `${config.rateLimiting.authenticatedMaxRequests}/${config.rateLimiting.authenticatedWindowMs}ms`,
       admin: `${config.rateLimiting.adminMaxRequests}/${config.rateLimiting.adminWindowMs}ms`,
       trustProxy: config.rateLimiting.trustProxy

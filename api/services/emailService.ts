@@ -1,57 +1,139 @@
 import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
-import { config } from "../config/index.js";
 import { Resend } from "resend";
+import { config, type EmailProvider } from "../config/index.js";
 
 let transporter: Transporter | null = null;
+
+const logPrefix = "[EmailService]";
 
 function ensureTransporter(): Transporter {
   if (transporter) {
     return transporter;
   }
 
-  const user = config.SMTP2GO_USERNAME;
-  const pass = config.SMTP2GO_PASSWORD || config.SMTP2GO_API_KEY;
+  const host = config.SMTP_HOST;
+  const port = config.SMTP_PORT || 587;
+  const user = config.SMTP_USERNAME;
+  const pass = config.SMTP_PASSWORD;
 
-  console.log("Initializing SMTP2GO transporter with config:", {
-    host: process.env.SMTP2GO_HOST || "mail.smtp2go.com",
-    port: Number(process.env.SMTP2GO_PORT || 2525),
+  console.log(`${logPrefix} Initializing SMTP transporter with config:`, {
+    host,
+    port,
     hasUsername: !!user,
     hasPassword: !!pass,
-    usernameLength: user?.length,
-    secure: false,
-    requireTLS: true,
+    secure: config.SMTP_SECURE,
+    requireTLS: config.SMTP_REQUIRE_TLS,
   });
 
-  if (!user || !pass) {
+  if (!host || !user || !pass) {
     const error = new Error(
-      "SMTP2GO credentials are not configured. Please set SMTP2GO_USERNAME and SMTP2GO_PASSWORD environment variables.",
+      "SMTP credentials are not fully configured. Please set SMTP_HOST, SMTP_USERNAME, and SMTP_PASSWORD environment variables.",
     );
-    console.error("SMTP Configuration Error:", error.message);
+    console.error(`${logPrefix} SMTP Configuration Error:`, error.message);
     throw error;
   }
 
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP2GO_HOST || "mail.smtp2go.com",
-    port: Number(process.env.SMTP2GO_PORT || 2525),
-    secure: false,
-    requireTLS: true,
+    host,
+    port,
+    secure: config.SMTP_SECURE,
+    requireTLS: config.SMTP_REQUIRE_TLS,
     auth: {
       user,
       pass,
     },
-    debug: process.env.NODE_ENV !== "production", // Enable debug in development
-    logger: process.env.NODE_ENV !== "production", // Enable logging in development
+    debug: process.env.NODE_ENV !== "production",
+    logger: process.env.NODE_ENV !== "production",
   });
 
-  console.log("SMTP2GO transporter created successfully");
+  console.log(`${logPrefix} SMTP transporter created successfully`);
   return transporter;
+}
+
+function normalizeRecipients(
+  recipients: SendMailOptions["to"],
+): string[] {
+  if (!recipients) {
+    return [];
+  }
+  return Array.isArray(recipients)
+    ? (recipients as string[])
+    : [recipients as string];
+}
+
+async function sendViaResend(mailOptions: SendMailOptions): Promise<void> {
+  if (!config.RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY is not configured");
+  }
+
+  const resend = new Resend(config.RESEND_API_KEY);
+  console.log(`${logPrefix} Attempting to send via Resend`, {
+    to: mailOptions.to,
+  });
+
+  const { data, error } = await resend.emails.send({
+    from: mailOptions.from as string,
+    to: normalizeRecipients(mailOptions.to),
+    subject: (mailOptions.subject as string) || "",
+    html: (mailOptions.html as string) || "",
+    text: (mailOptions.text as string) || "",
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  console.log(`${logPrefix} Email sent via Resend successfully`, data);
+}
+
+async function sendViaSmtp(mailOptions: SendMailOptions): Promise<void> {
+  console.log(`${logPrefix} Attempting to send via SMTP`, {
+    to: mailOptions.to,
+    from: mailOptions.from,
+    subject: mailOptions.subject,
+    hasHtml: !!mailOptions.html,
+    hasText: !!mailOptions.text,
+  });
+
+  const transport = ensureTransporter();
+  const info = await transport.sendMail(mailOptions);
+  console.log(`${logPrefix} Email sent via SMTP successfully`, {
+    messageId: info.messageId,
+    response: info.response,
+    to: mailOptions.to,
+  });
+}
+
+async function attemptProvider(
+  provider: EmailProvider,
+  mailOptions: SendMailOptions,
+): Promise<void> {
+  if (provider === "resend") {
+    if (!config.RESEND_API_KEY) {
+      throw new Error("Resend provider selected but RESEND_API_KEY is missing");
+    }
+    await sendViaResend(mailOptions);
+    return;
+  }
+
+  if (provider === "smtp") {
+    if (!config.SMTP_HOST || !config.SMTP_USERNAME || !config.SMTP_PASSWORD) {
+      throw new Error(
+        "SMTP provider selected but SMTP_HOST/SMTP_USERNAME/SMTP_PASSWORD are missing",
+      );
+    }
+    await sendViaSmtp(mailOptions);
+    return;
+  }
+
+  throw new Error(`Unsupported email provider: ${provider}`);
 }
 
 async function sendEmail(options: SendMailOptions): Promise<void> {
   const senderEmail =
     config.FROM_EMAIL ||
     config.CONTACT_FORM_RECIPIENT ||
-    config.SMTP2GO_USERNAME;
+    config.SMTP_USERNAME;
   if (!senderEmail) {
     const error = new Error(
       "FROM_EMAIL is not configured. Please set FROM_EMAIL environment variable.",
@@ -60,72 +142,28 @@ async function sendEmail(options: SendMailOptions): Promise<void> {
     throw error;
   }
 
-  const senderName = config.FROM_NAME || "SkyVPS360";
+  const senderName = config.FROM_NAME || config.COMPANY_BRAND_NAME || "SkyVPS360";
   const mailOptions: SendMailOptions = {
     from: options.from || `${senderName} <${senderEmail}>`,
     ...options,
   };
 
-  // If Resend is configured, try to send with Resend first
-  if (config.RESEND_API_KEY) {
-    const resend = new Resend(config.RESEND_API_KEY);
-
+  const attempts: { provider: EmailProvider; error: unknown }[] = [];
+  for (const provider of config.EMAIL_PROVIDER_PRIORITY) {
     try {
-      console.log("Attempting to send email via Resend to:", mailOptions.to);
-      const { data, error } = await resend.emails.send({
-        from: mailOptions.from as string,
-        to: Array.isArray(mailOptions.to)
-          ? (mailOptions.to as string[])
-          : [mailOptions.to as string],
-        subject: (mailOptions.subject as string) || "",
-        html: (mailOptions.html as string) || "",
-        text: (mailOptions.text as string) || "",
-      });
-
-      if (error) {
-        console.error(
-          "Failed to send email via Resend (falling back to SMTP):",
-          error,
-        );
-      } else {
-        console.log("Email sent via Resend successfully:", data);
-        return;
-      }
+      await attemptProvider(provider, mailOptions);
+      return;
     } catch (error) {
-      console.error(
-        "Exception sending via Resend (falling back to SMTP):",
-        error,
-      );
+      attempts.push({ provider, error });
+      console.error(`${logPrefix} Provider '${provider}' failed`, error);
     }
   }
 
-  // Fallback to standard SMTP2GO sender
+  const errorSummary = attempts
+    .map(({ provider, error }) => `${provider}: ${error instanceof Error ? error.message : String(error)}`)
+    .join(" | ");
 
-  console.log("Attempting to send email:", {
-    to: mailOptions.to,
-    from: mailOptions.from,
-    subject: mailOptions.subject,
-    hasHtml: !!mailOptions.html,
-    hasText: !!mailOptions.text,
-  });
-
-  try {
-    const transport = ensureTransporter();
-    const info = await transport.sendMail(mailOptions);
-    console.log("Email sent successfully:", {
-      messageId: info.messageId,
-      response: info.response,
-      to: mailOptions.to,
-    });
-  } catch (error) {
-    console.error("Failed to send email:", {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      to: mailOptions.to,
-      from: mailOptions.from,
-    });
-    throw error;
-  }
+  throw new Error(`All email providers failed. Details: ${errorSummary}`);
 }
 
 export async function sendWelcomeEmail(
