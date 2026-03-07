@@ -3939,28 +3939,19 @@ const Admin: React.FC = () => {
         <SectionPanel section="servers" activeSection={activeTab}>
           {/* Hero Section */}
           <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-            <div className="relative z-10">
-              <Badge variant="secondary" className="mb-3">
-                Infrastructure
-              </Badge>
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                VPS Servers
-              </h2>
-              <p className="mt-2 max-w-2xl text-muted-foreground">
-                Monitor and manage all VPS instances provisioned through the
-                platform
-              </p>
-            </div>
-
-            {/* Background decoration */}
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <ServerCog className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-            </div>
-          </div>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Server List</CardTitle>
+            <div className="relative z-10 flex items-start justify-between">
+              <div>
+                <Badge variant="secondary" className="mb-3">
+                  Infrastructure
+                </Badge>
+                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                  VPS Servers
+                </h2>
+                <p className="mt-2 max-w-2xl text-muted-foreground">
+                  Monitor and manage all VPS instances provisioned through the
+                  platform
+                </p>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -3971,6 +3962,17 @@ const Admin: React.FC = () => {
                 <RefreshCw className="h-4 w-4" />
                 {serversLoading ? "Refreshing…" : "Refresh"}
               </Button>
+            </div>
+
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <ServerCog className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Server List</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
