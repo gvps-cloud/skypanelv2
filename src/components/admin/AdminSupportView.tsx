@@ -19,7 +19,9 @@ import {
   Search,
   Send,
   Trash2,
+  User,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,6 +57,7 @@ interface SupportTicket {
   id: string;
   organization_id: string;
   created_by: string;
+  creator?: TicketCreator;
   subject: string;
   message: string;
   status: TicketStatus;
@@ -74,6 +77,13 @@ interface TicketMessage {
   created_at: string;
 }
 
+interface TicketCreator {
+  id: string;
+  name: string | null;
+  email: string | null;
+  displayName: string;
+}
+
 const REOPEN_REQUEST_PREFIX = "[REOPEN_REQUEST]";
 const isReopenRequestMessage = (message: string): boolean =>
   typeof message === "string" && message.startsWith(REOPEN_REQUEST_PREFIX);
@@ -81,6 +91,8 @@ const formatTicketMessage = (message: string): string =>
   isReopenRequestMessage(message)
     ? message.replace(REOPEN_REQUEST_PREFIX, "").trim()
     : message;
+const getCreatorDisplay = (ticket: SupportTicket): string =>
+  ticket.creator?.displayName || ticket.creator?.email || ticket.created_by;
 
 const TICKET_STATUS_META: Record<
   TicketStatus,
@@ -185,6 +197,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
   pendingFocusTicketId,
   onFocusTicketHandled,
 }) => {
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
     null,
@@ -357,11 +370,18 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
   const filteredTickets = tickets.filter((ticket) => {
     const matchesStatus =
       statusFilter === "all" || ticket.status === statusFilter;
+    const creatorDisplay = getCreatorDisplay(ticket).toLowerCase();
+    const creatorEmail = (ticket.creator?.email || "").toLowerCase();
+    const creatorId = (ticket.creator?.id || ticket.created_by || "").toLowerCase();
+    const normalizedSearch = searchQuery.toLowerCase();
     const matchesSearch =
       !searchQuery ||
-      ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.category.toLowerCase().includes(searchQuery.toLowerCase());
+      ticket.subject.toLowerCase().includes(normalizedSearch) ||
+      ticket.message.toLowerCase().includes(normalizedSearch) ||
+      ticket.category.toLowerCase().includes(normalizedSearch) ||
+      creatorDisplay.includes(normalizedSearch) ||
+      creatorEmail.includes(normalizedSearch) ||
+      creatorId.includes(normalizedSearch);
     return matchesStatus && matchesSearch;
   });
 
@@ -486,6 +506,12 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                       <p className="text-xs text-muted-foreground line-clamp-2">
                         {ticket.message}
                       </p>
+                      <p className="text-xs text-muted-foreground line-clamp-1">
+                        Customer:{" "}
+                        {ticket.creator?.email
+                          ? `${getCreatorDisplay(ticket)} (${ticket.creator.email})`
+                          : getCreatorDisplay(ticket)}
+                      </p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Badge
                           variant="outline"
@@ -573,9 +599,28 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                       <span className="text-muted-foreground">
                         {new Date(selectedTicket.created_at).toLocaleString()}
                       </span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-muted-foreground">
+                        Customer:{" "}
+                        {selectedTicket.creator?.email
+                          ? `${getCreatorDisplay(selectedTicket)} (${selectedTicket.creator.email})`
+                          : getCreatorDisplay(selectedTicket)}
+                      </span>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {selectedTicket.creator?.id && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          navigate(`/admin/user/${selectedTicket.creator?.id}`)
+                        }
+                      >
+                        <User className="mr-1 h-4 w-4" />
+                        View Customer
+                      </Button>
+                    )}
                     {ADMIN_TICKET_STATUS_ACTIONS[selectedTicket.status].map(
                       (action) => {
                         const ActionIcon = action.icon;

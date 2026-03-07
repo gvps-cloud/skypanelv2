@@ -372,10 +372,38 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const result = await query(
-        "SELECT * FROM support_tickets ORDER BY created_at DESC",
+        `SELECT
+           st.*,
+           u.id AS creator_id,
+           u.name AS creator_name,
+           u.email AS creator_email
+         FROM support_tickets st
+         LEFT JOIN users u ON u.id = st.created_by
+         ORDER BY st.created_at DESC`,
       );
 
-      res.json({ tickets: result.rows || [] });
+      const tickets = (result.rows || []).map((row: any) => {
+        const {
+          creator_id,
+          creator_name,
+          creator_email,
+          ...ticketFields
+        } = row;
+
+        return {
+          ...ticketFields,
+          creator: creator_id
+            ? {
+                id: creator_id,
+                name: creator_name ?? null,
+                email: creator_email ?? null,
+                displayName: creator_name || creator_email || row.created_by,
+              }
+            : undefined,
+        };
+      });
+
+      res.json({ tickets });
     } catch (err: any) {
       console.error("Admin tickets list error:", err);
       res.status(500).json({ error: err.message || "Failed to fetch tickets" });
