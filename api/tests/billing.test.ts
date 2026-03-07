@@ -189,4 +189,39 @@ describe('Admin Billing API', () => {
     expect(res.headers['content-type']).toContain('text/html');
     expect(res.text).toBe(htmlContent);
   });
+
+  it('POST /api/admin/billing/transactions/:transactionId/invoice generates an invoice', async () => {
+    const mockQuery = query as any;
+    const transactionId = '550e8400-e29b-41d4-a716-446655440001';
+    const invoiceId = '550e8400-e29b-41d4-a716-446655440099';
+
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM payment_transactions')) {
+        return {
+          rows: [{
+            id: transactionId,
+            organization_id: '550e8400-e29b-41d4-a716-446655440010',
+            amount: '25.50',
+            currency: 'USD',
+            description: 'Wallet top-up',
+            created_at: new Date().toISOString(),
+            user_id: '550e8400-e29b-41d4-a716-446655440020',
+          }],
+        };
+      }
+
+      if (sql.includes('INSERT INTO billing_invoices') && sql.includes('RETURNING id')) {
+        return { rows: [{ id: invoiceId }] };
+      }
+
+      return { rows: [] };
+    });
+
+    const res = await request(app).post(`/api/admin/billing/transactions/${transactionId}/invoice`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.invoiceId).toBe(invoiceId);
+    expect(typeof res.body.invoiceNumber).toBe('string');
+  });
 });

@@ -4,10 +4,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Pagination from '@/components/ui/Pagination';
-import { Loader2, ArrowUpRight, ArrowDownLeft, RefreshCw } from 'lucide-react';
+import { Loader2, ArrowUpRight, ArrowDownLeft, RefreshCw, FileText, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Transaction {
   id: string;
@@ -22,9 +28,17 @@ interface Transaction {
   user_name: string;
 }
 
+interface InvoicePreview {
+  id: string;
+  invoiceNumber?: string;
+  htmlContent?: string;
+}
+
 export const BillingTransactions: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [invoiceLoadingId, setInvoiceLoadingId] = useState<string | null>(null);
+  const [viewInvoice, setViewInvoice] = useState<InvoicePreview | null>(null);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -60,6 +74,71 @@ export const BillingTransactions: React.FC = () => {
       case 'failed': return <Badge variant="destructive">Failed</Badge>;
       case 'refunded': return <Badge variant="secondary">Refunded</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const handleViewInvoice = async (transactionId: string) => {
+    setInvoiceLoadingId(transactionId);
+    try {
+      const created = await apiClient.post<{ success: boolean; invoiceId?: string; error?: string }>(
+        `/admin/billing/transactions/${transactionId}/invoice`
+      );
+
+      if (!created?.success || !created.invoiceId) {
+        toast.error(created?.error || 'Failed to generate invoice');
+        return;
+      }
+
+      const detail = await apiClient.get<{ success: boolean; invoice?: { invoiceNumber?: string; htmlContent?: string } }>(
+        `/admin/billing/invoices/${created.invoiceId}`
+      );
+
+      const html = detail?.invoice?.htmlContent;
+      if (!detail?.success || !html) {
+        toast.error('Failed to load invoice HTML');
+        return;
+      }
+
+      setViewInvoice({
+        id: created.invoiceId,
+        invoiceNumber: detail.invoice?.invoiceNumber,
+        htmlContent: html,
+      });
+    } catch (error) {
+      console.error('Failed to view invoice:', error);
+      toast.error('Failed to view invoice');
+    } finally {
+      setInvoiceLoadingId(null);
+    }
+  };
+
+  const handleDownloadInvoice = async (invoiceId: string, invoiceNumber?: string) => {
+    try {
+      const authToken = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
+
+      const response = await fetch(`${apiUrl}/admin/billing/invoices/${invoiceId}/download`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `invoice-${invoiceNumber || invoiceId}.html`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Failed to download invoice:', error);
+      toast.error('Failed to download invoice');
     }
   };
 
@@ -106,18 +185,19 @@ export const BillingTransactions: React.FC = () => {
               <TableHead>Amount</TableHead>
               <TableHead>Method</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : transactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -144,6 +224,21 @@ export const BillingTransactions: React.FC = () => {
                   </TableCell>
                   <TableCell className="capitalize">{tx.payment_method?.replace('_', ' ') || tx.payment_provider}</TableCell>
                   <TableCell>{getStatusBadge(tx.status)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleViewInvoice(tx.id)}
+                      disabled={invoiceLoadingId === tx.id}
+                    >
+                      {invoiceLoadingId === tx.id ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileText className="mr-2 h-4 w-4" />
+                      )}
+                      View Invoice
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -159,6 +254,38 @@ export const BillingTransactions: React.FC = () => {
         onPageChange={(newPage) => setPage(newPage - 1)}
         showItemsPerPage={false}
       />
+
+      <Dialog open={!!viewInvoice} onOpenChange={(open) => !open && setViewInvoice(null)}>
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              Invoice {viewInvoice?.invoiceNumber || viewInvoice?.id}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 w-full border rounded-md overflow-hidden bg-white">
+            {viewInvoice?.htmlContent ? (
+              <iframe
+                srcDoc={viewInvoice.htmlContent}
+                className="w-full h-full border-none"
+                title="Invoice Preview"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setViewInvoice(null)}>
+              Close
+            </Button>
+            <Button onClick={() => viewInvoice && handleDownloadInvoice(viewInvoice.id, viewInvoice.invoiceNumber)}>
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

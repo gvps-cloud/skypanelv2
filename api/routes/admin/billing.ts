@@ -1,6 +1,6 @@
 
 import express, { Request, Response } from 'express';
-import { body, query as queryValidator, validationResult } from 'express-validator';
+import { body, param, query as queryValidator, validationResult } from 'express-validator';
 import { authenticateToken, requireAdmin } from '../../middleware/auth.js';
 import { query } from '../../lib/database.js';
 import { logActivity } from '../../services/activityLogger.js';
@@ -248,6 +248,90 @@ router.get('/transactions',
     } catch (error) {
       console.error('Get all transactions error:', error);
       res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+  }
+);
+
+/**
+ * Generate invoice from a specific transaction (Admin)
+ */
+router.post(
+  '/transactions/:transactionId/invoice',
+  [
+    param('transactionId').isUUID().withMessage('Transaction ID must be a valid UUID'),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
+
+      const { transactionId } = req.params;
+
+      const txResult = await query(
+        `SELECT 
+          pt.id,
+          pt.organization_id,
+          pt.amount,
+          pt.currency,
+          pt.description,
+          pt.created_at,
+          o.owner_id as user_id
+        FROM payment_transactions pt
+        JOIN organizations o ON pt.organization_id = o.id
+        WHERE pt.id = $1
+        LIMIT 1`,
+        [transactionId]
+      );
+
+      if (txResult.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Transaction not found' });
+      }
+
+      const tx = txResult.rows[0];
+      const invoiceNumber = `INV-ADMIN-TXN-${Date.now()}`;
+      const amountRaw = typeof tx.amount === 'string' ? parseFloat(tx.amount) : Number(tx.amount ?? 0);
+      const amount = Number.isFinite(amountRaw) ? amountRaw : 0;
+      const currency = (tx.currency || 'USD').toUpperCase();
+
+      const invoiceData = InvoiceService.generateInvoiceFromTransactions(
+        tx.organization_id,
+        [
+          {
+            description: tx.description || 'Wallet transaction',
+            amount,
+            currency,
+            createdAt: tx.created_at ? new Date(tx.created_at).toISOString() : undefined,
+          },
+        ],
+        invoiceNumber,
+        tx.user_id || undefined
+      );
+
+      const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData);
+
+      const invoiceId = await InvoiceService.createInvoice(
+        tx.organization_id,
+        invoiceNumber,
+        htmlContent,
+        {
+          ...invoiceData,
+          sourceTransactionId: tx.id,
+          generatedBy: 'admin',
+        } as unknown as Record<string, unknown>,
+        invoiceData.total,
+        invoiceData.currency || 'USD'
+      );
+
+      return res.json({
+        success: true,
+        invoiceId,
+        invoiceNumber,
+      });
+    } catch (error) {
+      console.error('Generate admin transaction invoice error:', error);
+      return res.status(500).json({ success: false, error: 'Internal server error' });
     }
   }
 );
