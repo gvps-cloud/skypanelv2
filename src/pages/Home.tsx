@@ -1547,11 +1547,14 @@ export default function Home() {
       try {
         const regionsResponse = await fetch("/api/pricing/public-regions");
         const regionsData = await regionsResponse.json();
-        if (regionsData.success && Array.isArray(regionsData.data)) {
-          setRegionCount(regionsData.data.length);
+        // The API returns { regions: [...] }, so we check for regionsData.regions
+        if (regionsData.success && Array.isArray(regionsData.regions)) {
+          setRegionCount(regionsData.regions.length);
+        } else if (regionsData.success && typeof regionsData.count === "number") {
+           setRegionCount(regionsData.count);
         }
       } catch {
-        // Fallback handled by initial state
+        // Fallback handled by initial state or subsequent stats call
       }
 
       try {
@@ -1564,6 +1567,10 @@ export default function Home() {
           }
           if (typeof stats.users?.total === "number") {
             setCustomerCount(stats.users.total);
+          }
+          // Fallback: if region count is still default (10) or we want to trust platform-stats
+          if (typeof stats.regions?.total === "number" && stats.regions.total > 0) {
+             setRegionCount(stats.regions.total);
           }
         }
       } catch {

@@ -532,6 +532,56 @@ export class InvoiceService {
   }
 
   /**
+   * List all invoices (Admin)
+   */
+  static async listAllInvoices(limit: number = 50, offset: number = 0, userId?: string) {
+    try {
+      await this.ensureInvoiceTable();
+
+      const params: any[] = [limit, offset];
+      let whereClause = '';
+      
+      if (userId) {
+        // Find organization for user
+        const orgResult = await query('SELECT id FROM organizations WHERE owner_id = $1', [userId]);
+        if (orgResult.rows.length > 0) {
+            params.push(orgResult.rows[0].id);
+            whereClause = 'WHERE organization_id = $3';
+        } else {
+            return []; // User has no organization
+        }
+      }
+
+      const result = await query(
+        `SELECT 
+          id, 
+          organization_id, 
+          invoice_number, 
+          total_amount, 
+          currency, 
+          created_at
+        FROM billing_invoices
+        ${whereClause}
+        ORDER BY created_at DESC
+        LIMIT $1 OFFSET $2`,
+        params
+      );
+
+      return result.rows.map(row => ({
+        id: row.id,
+        organizationId: row.organization_id,
+        invoiceNumber: row.invoice_number,
+        totalAmount: parseFloat(row.total_amount),
+        currency: row.currency,
+        createdAt: row.created_at,
+      }));
+    } catch (error) {
+      console.error('Failed to list all invoices:', error);
+      return [];
+    }
+  }
+
+  /**
    * Generate invoice from VPS billing cycles with itemized backup costs
    */
   static generateInvoiceFromBillingCycles(

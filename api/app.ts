@@ -41,11 +41,13 @@ import sshKeysRoutes from "./routes/sshKeys.js";
 import pricingRoutes from "./routes/pricing.js";
 import adminFaqRoutes from "./routes/adminFaq.js";
 import adminContactRoutes from "./routes/admin/contact.js";
+import adminBillingRoutes from "./routes/admin/billing.js";
 import githubRoutes from "./routes/github.js";
 import {
   initializeMetricsCollection,
   startMetricsPersistence,
 } from "./services/rateLimitMetrics.js";
+import { BillingCronService } from "./services/billingCronService.js";
 
 // for esm mode
 
@@ -80,6 +82,7 @@ app.use("/api", smartRateLimit);
 // Initialize metrics
 initializeMetricsCollection();
 startMetricsPersistence();
+BillingCronService.start();
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -96,6 +99,7 @@ app.use("/api/theme", themeRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/contact", contactRouter);
 app.use("/api/admin/contact", adminContactRoutes);
+app.use("/api/admin/billing", adminBillingRoutes);
 app.use("/api/faq", faqRoutes);
 app.use("/api/admin/faq", adminFaqRoutes);
 app.use("/api/admin/github", githubRoutes);

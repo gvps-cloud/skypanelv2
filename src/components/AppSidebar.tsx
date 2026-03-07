@@ -116,6 +116,12 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             url: `/admin#user-management`,
             isActive: activeAnchor === "user-management",
           },
+          {
+            title: "Billing & Finance",
+            icon: CreditCard,
+            url: `/admin#billing`,
+            isActive: activeAnchor === "billing",
+          },
         ];
 
         return adminGroups;

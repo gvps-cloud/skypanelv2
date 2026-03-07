@@ -34,6 +34,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
+import { BillingDashboard } from "@/components/admin/billing/BillingDashboard";
 import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
 import { UserManagement } from "@/components/admin/UserManagement";
@@ -141,7 +142,8 @@ type AdminSection =
   | "rate-limiting"
   | "faq-management"
   | "platform"
-  | "contact-management";
+  | "contact-management"
+  | "billing";
 
 const ADMIN_SECTIONS: AdminSection[] = [
   "dashboard",
@@ -159,6 +161,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "faq-management",
   "platform",
   "contact-management",
+  "billing",
 ];
 
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
@@ -2062,6 +2065,18 @@ const Admin: React.FC = () => {
         ],
         actionLabel: "Review integrations",
       },
+      {
+        id: "billing",
+        title: "Billing & Finance",
+        description: "Manage transactions, invoices, and client balances.",
+        icon: DollarSign,
+        accent: "text-green-600",
+        summary: [
+          { label: "Revenue", value: "View Stats" },
+          { label: "Invoices", value: "Manage" },
+        ],
+        actionLabel: "Manage billing",
+      },
     ];
   }, [
     activePlanCount,
@@ -3734,6 +3749,10 @@ const Admin: React.FC = () => {
               </TabsContent>
             </Tabs>
           </div>
+        </SectionPanel>
+
+        <SectionPanel section="billing" activeSection={activeTab}>
+          <BillingDashboard />
         </SectionPanel>
 
         {/* Legacy application sections removed */}
