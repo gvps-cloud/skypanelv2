@@ -30,7 +30,7 @@ const router = express.Router();
 
 router.use(authenticateToken, requireOrganization);
 
-const DEFAULT_RDNS_BASE_DOMAIN = "ip.rev.skyvps360.xyz";
+const DEFAULT_RDNS_BASE_DOMAIN = "ip.rev.skyvps360.dpdns.org";
 
 async function loadActiveProviderToken(
   providerType: "linode",
@@ -2813,7 +2813,7 @@ router.post("/", async (req: Request, res: Response) => {
       setImmediate(async () => {
         try {
           // Fetch configured base domain from admin networking config
-          let baseDomain = "ip.rev.skyvps360.xyz";
+          let baseDomain = "ip.rev.skyvps360.dpdns.org";
           try {
             const cfgRes = await query(
               "SELECT rdns_base_domain FROM networking_config ORDER BY updated_at DESC LIMIT 1",

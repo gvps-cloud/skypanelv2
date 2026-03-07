@@ -1915,7 +1915,7 @@ class LinodeService {
    * This will set the rDNS to use skyvps360.xyz domain instead of linodeusercontent.com
    * This method is designed to run in the background without blocking VPS creation
    */
-  async setupCustomRDNSAsync(instanceId: number, label: string = `instance-${instanceId}`, baseDomain: string = 'ip.rev.skyvps360.xyz'): Promise<void> {
+  async setupCustomRDNSAsync(instanceId: number, label: string = `instance-${instanceId}`, baseDomain: string = 'ip.rev.skyvps360.dpdns.org'): Promise<void> {
     const logPrefix = `[rDNS-${instanceId}]`;
 
     try {

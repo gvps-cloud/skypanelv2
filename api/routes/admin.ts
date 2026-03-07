@@ -1787,11 +1787,11 @@ router.get(
         return res.json({ config });
       }
       // Fallback to default if no row exists
-      return res.json({ config: { rdns_base_domain: "ip.rev.skyvps360.xyz" } });
+      return res.json({ config: { rdns_base_domain: "ip.rev.skyvps360.dpdns.org" } });
     } catch (err: any) {
       if (isMissingTableError(err)) {
         return res.json({
-          config: { rdns_base_domain: "ip.rev.skyvps360.xyz" },
+          config: { rdns_base_domain: "ip.rev.skyvps360.dpdns.org" },
           warning: "networking_config table not found. Apply migrations.",
         });
       }

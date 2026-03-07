@@ -1279,7 +1279,7 @@ const Admin: React.FC = () => {
       if (!res.ok)
         throw new Error(data.error || "Failed to load rDNS configuration");
       const base = (data.config?.rdns_base_domain ??
-        "ip.rev.skyvps360.xyz") as string;
+        "ip.rev.skyvps360.dpdns.org") as string;
       setRdnsBaseDomain(base);
       if (data.warning) {
         toast.message(data.warning);
@@ -4212,7 +4212,7 @@ const Admin: React.FC = () => {
                       <p className="text-sm text-muted-foreground">
                         Define the base domain used when setting custom rDNS for
                         VPS instances. If unset, the system falls back to{" "}
-                        <span className="font-mono">ip.rev.skyvps360.xyz</span>.
+                        <span className="font-mono">ip.rev.skyvps360.dpdns.org</span>.
                       </p>
                     </div>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -4222,14 +4222,14 @@ const Admin: React.FC = () => {
                           id="rdns-domain"
                           value={rdnsBaseDomain}
                           onChange={(e) => setRdnsBaseDomain(e.target.value)}
-                          placeholder="ip.rev.skyvps360.xyz"
+                          placeholder="ip.rev.skyvps360.dpdns.org"
                           disabled={rdnsLoading}
                         />
                         <p className="text-xs text-muted-foreground">
                           Example final rDNS:{" "}
                           <span className="font-mono">
                             123-45-67-89.
-                            {rdnsBaseDomain || "ip.rev.skyvps360.xyz"}
+                            {rdnsBaseDomain || "ip.rev.skyvps360.dpdns.org"}
                           </span>
                         </p>
                       </div>

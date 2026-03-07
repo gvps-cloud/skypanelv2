@@ -593,7 +593,7 @@ const VPSDetail: React.FC = () => {
   const [notesSaving, setNotesSaving] = useState<boolean>(false);
 
   // rDNS base domain configuration
-  const [rdnsBaseDomain, setRdnsBaseDomain] = useState<string>('ip.rev.skyvps360.xyz');
+  const [rdnsBaseDomain, setRdnsBaseDomain] = useState<string>('ip.rev.skyvps360.dpdns.org');
 
   const tabDefinitions = useMemo<TabDefinition[]>(() => {
     const tabs: TabDefinition[] = [

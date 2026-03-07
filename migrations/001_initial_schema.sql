@@ -441,7 +441,7 @@ CREATE INDEX IF NOT EXISTS idx_vps_stackscript_configs_order ON vps_stackscript_
 -- Migration 007: Networking config
 CREATE TABLE IF NOT EXISTS networking_config (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  rdns_base_domain TEXT NOT NULL DEFAULT 'ip.rev.skyvps360.xyz',
+  rdns_base_domain TEXT NOT NULL DEFAULT 'ip.rev.skyvps360.dpdns.org',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
