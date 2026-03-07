@@ -756,7 +756,7 @@ export default function ApiDocs() {
           },
           {
             method: "GET",
-            path: "/transactions/:transactionId",
+            path: "/transactions/:id",
             description:
               "Detailed view of a single payment transaction used by the transaction drawer.",
             auth: true,
@@ -1219,7 +1219,7 @@ export default function ApiDocs() {
           },
           {
             method: "GET",
-            path: "/providers/:id/regions",
+            path: "/providers/:providerId/regions",
             description:
               "Fetch regions for a specific provider, merged across admin-configured accounts.",
             auth: true,
@@ -1656,8 +1656,8 @@ export default function ApiDocs() {
             },
           },
           {
-            method: "PATCH",
-            path: "/users/:userId",
+            method: "PUT",
+            path: "/users/:id",
             description:
               "Update a user's role or account status (used by the admin user editor).",
             auth: true,
@@ -1672,7 +1672,7 @@ export default function ApiDocs() {
           },
           {
             method: "POST",
-            path: "/users/:userId/impersonate",
+            path: "/users/:id/impersonate",
             description:
               "Start an impersonation session as the target user (admin only).",
             auth: true,
@@ -2011,7 +2011,7 @@ export default function ApiDocs() {
           },
           {
             method: "PUT",
-            path: "/contact/methods/:methodType",
+            path: "/contact/methods/:method_type",
             description:
               "Update a specific contact method configuration (e.g. toggle live chat).",
             auth: true,
@@ -2185,7 +2185,7 @@ export default function ApiDocs() {
             path: "/metrics",
             description:
               "Rolling metrics (request rate, error rate) used by the admin rate-limit dashboard.",
-            auth: true,
+            auth: false,
             params: { window: 15 },
             response: {
               metrics: {
@@ -2200,7 +2200,7 @@ export default function ApiDocs() {
             path: "/rate-limiting",
             description:
               "Detailed rate limit performance and current throttle states.",
-            auth: true,
+            auth: false,
             response: {
               activeRules: [
                 { route: "/api/vps", limit: 60, window: 60, current: 15 },

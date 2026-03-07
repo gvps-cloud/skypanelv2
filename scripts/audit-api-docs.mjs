@@ -5,6 +5,8 @@ import ts from "typescript";
 const repoRoot = process.cwd();
 const appFile = path.join(repoRoot, "api", "app.ts");
 const apiDocsFile = path.join(repoRoot, "src", "pages", "ApiDocs.tsx");
+const args = new Set(process.argv.slice(2));
+const manifestOnly = args.has("--manifest-only");
 
 const ROUTE_METHODS = new Set(["get", "post", "put", "patch", "delete"]);
 const AUTH_MARKERS = [
@@ -333,71 +335,75 @@ for (const [key, route] of actualMap.entries()) {
   }
 }
 
-console.log("=== API Docs Audit ===");
-console.log(`Actual endpoints: ${actualRoutes.length}`);
-console.log(
-  `Actual protected endpoints: ${actualRoutes.filter((r) => r.protected).length}`,
-);
-console.log(`Documented endpoints: ${docEndpoints.length}`);
-console.log(
-  `Documented protected endpoints: ${docEndpoints.filter((r) => r.auth).length}`,
-);
-console.log("");
-console.log(`Missing in docs: ${missingInDocs.length}`);
-console.log(`Stale in docs: ${staleInDocs.length}`);
-console.log(`Auth mismatches: ${authMismatches.length}`);
+if (!manifestOnly) {
+  console.log("=== API Docs Audit ===");
+  console.log(`Actual endpoints: ${actualRoutes.length}`);
+  console.log(
+    `Actual protected endpoints: ${actualRoutes.filter((r) => r.protected).length}`,
+  );
+  console.log(`Documented endpoints: ${docEndpoints.length}`);
+  console.log(
+    `Documented protected endpoints: ${docEndpoints.filter((r) => r.auth).length}`,
+  );
+  console.log("");
+  console.log(`Missing in docs: ${missingInDocs.length}`);
+  console.log(`Stale in docs: ${staleInDocs.length}`);
+  console.log(`Auth mismatches: ${authMismatches.length}`);
 
-if (missingInDocs.length > 0) {
-  console.log("\n-- Missing in docs (first 50) --");
-  for (const route of missingInDocs.slice(0, 50)) {
-    console.log(`${route.method} ${route.path} [protected=${route.protected}]`);
+  if (missingInDocs.length > 0) {
+    console.log("\n-- Missing in docs (first 50) --");
+    for (const route of missingInDocs.slice(0, 50)) {
+      console.log(
+        `${route.method} ${route.path} [protected=${route.protected}]`,
+      );
+    }
   }
-}
 
-if (staleInDocs.length > 0) {
-  console.log("\n-- Stale in docs (first 50) --");
-  for (const endpoint of staleInDocs.slice(0, 50)) {
-    console.log(
-      `${endpoint.method} ${endpoint.path} [section=${endpoint.sectionTitle}]`,
-    );
+  if (staleInDocs.length > 0) {
+    console.log("\n-- Stale in docs (first 50) --");
+    for (const endpoint of staleInDocs.slice(0, 50)) {
+      console.log(
+        `${endpoint.method} ${endpoint.path} [section=${endpoint.sectionTitle}]`,
+      );
+    }
   }
-}
 
-if (authMismatches.length > 0) {
-  console.log("\n-- Auth mismatches (first 50) --");
-  for (const mismatch of authMismatches.slice(0, 50)) {
-    console.log(
-      `${mismatch.key} [docs=${mismatch.docsProtected}, actual=${mismatch.actualProtected}]`,
-    );
+  if (authMismatches.length > 0) {
+    console.log("\n-- Auth mismatches (first 50) --");
+    for (const mismatch of authMismatches.slice(0, 50)) {
+      console.log(
+        `${mismatch.key} [docs=${mismatch.docsProtected}, actual=${mismatch.actualProtected}]`,
+      );
+    }
   }
+
+  const reportPath = path.join(repoRoot, "data", "api-docs-audit-report.json");
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+  fs.writeFileSync(
+    reportPath,
+    JSON.stringify(
+      {
+        generatedAt: new Date().toISOString(),
+        actualCount: actualRoutes.length,
+        actualProtectedCount: actualRoutes.filter((r) => r.protected).length,
+        docsCount: docEndpoints.length,
+        docsProtectedCount: docEndpoints.filter((r) => r.auth).length,
+        missingInDocs,
+        staleInDocs,
+        authMismatches,
+        actualRoutes,
+        docEndpoints,
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  console.log(
+    `\nDetailed report written to ${path.relative(repoRoot, reportPath)}`,
+  );
 }
-
-const reportPath = path.join(repoRoot, "data", "api-docs-audit-report.json");
-fs.mkdirSync(path.dirname(reportPath), { recursive: true });
-fs.writeFileSync(
-  reportPath,
-  JSON.stringify(
-    {
-      generatedAt: new Date().toISOString(),
-      actualCount: actualRoutes.length,
-      actualProtectedCount: actualRoutes.filter((r) => r.protected).length,
-      docsCount: docEndpoints.length,
-      docsProtectedCount: docEndpoints.filter((r) => r.auth).length,
-      missingInDocs,
-      staleInDocs,
-      authMismatches,
-      actualRoutes,
-      docEndpoints,
-    },
-    null,
-    2,
-  ),
-  "utf8",
-);
-
-console.log(
-  `\nDetailed report written to ${path.relative(repoRoot, reportPath)}`,
-);
 
 
 const manifestPath = path.join(repoRoot, "src", "lib", "apiRouteManifest.ts");

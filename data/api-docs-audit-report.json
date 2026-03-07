@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-03-07T09:00:12.178Z",
+  "generatedAt": "2026-03-07T09:03:56.052Z",
   "actualCount": 187,
   "actualProtectedCount": 166,
   "docsCount": 120,
-  "docsProtectedCount": 110,
+  "docsProtectedCount": 108,
   "missingInDocs": [
     {
       "method": "GET",
@@ -97,12 +97,6 @@
     },
     {
       "method": "GET",
-      "path": "/api/admin/contact/methods/:method_type",
-      "protected": true,
-      "source": "api\\routes\\admin\\contact.ts"
-    },
-    {
-      "method": "PUT",
       "path": "/api/admin/contact/methods/:method_type",
       "protected": true,
       "source": "api\\routes\\admin\\contact.ts"
@@ -294,20 +288,8 @@
       "source": "api\\routes\\admin.ts"
     },
     {
-      "method": "PUT",
-      "path": "/api/admin/users/:id",
-      "protected": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
       "method": "GET",
       "path": "/api/admin/users/:id/detail",
-      "protected": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/users/:id/impersonate",
       "protected": true,
       "source": "api\\routes\\admin.ts"
     },
@@ -378,12 +360,6 @@
       "source": "api\\routes\\notifications.ts"
     },
     {
-      "method": "GET",
-      "path": "/api/payments/transactions/:id",
-      "protected": true,
-      "source": "api\\routes\\payments.ts"
-    },
-    {
       "method": "POST",
       "path": "/api/payments/wallet/deduct",
       "protected": true,
@@ -430,70 +406,10 @@
       "path": "/api/vps/providers/:providerId/plans/:regionId",
       "protected": true,
       "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/providers/:providerId/regions",
-      "protected": true,
-      "source": "api\\routes\\vps.ts"
     }
   ],
-  "staleInDocs": [
-    {
-      "sectionTitle": "Billing & Payments",
-      "sectionBase": "/api/payments",
-      "method": "GET",
-      "relativePath": "/transactions/:transactionId",
-      "path": "/api/payments/transactions/:transactionId",
-      "auth": true
-    },
-    {
-      "sectionTitle": "VPS Catalog & Integrations",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/providers/:id/regions",
-      "path": "/api/vps/providers/:id/regions",
-      "auth": true
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PATCH",
-      "relativePath": "/users/:userId",
-      "path": "/api/admin/users/:userId",
-      "auth": true
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/users/:userId/impersonate",
-      "path": "/api/admin/users/:userId/impersonate",
-      "auth": true
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/contact/methods/:methodType",
-      "path": "/api/admin/contact/methods/:methodType",
-      "auth": true
-    }
-  ],
-  "authMismatches": [
-    {
-      "key": "GET /api/health/metrics",
-      "actualProtected": false,
-      "docsProtected": true,
-      "section": "Platform Health"
-    },
-    {
-      "key": "GET /api/health/rate-limiting",
-      "actualProtected": false,
-      "docsProtected": true,
-      "section": "Platform Health"
-    }
-  ],
+  "staleInDocs": [],
+  "authMismatches": [],
   "actualRoutes": [
     {
       "method": "GET",
@@ -1799,8 +1715,8 @@
       "sectionTitle": "Billing & Payments",
       "sectionBase": "/api/payments",
       "method": "GET",
-      "relativePath": "/transactions/:transactionId",
-      "path": "/api/payments/transactions/:transactionId",
+      "relativePath": "/transactions/:id",
+      "path": "/api/payments/transactions/:id",
       "auth": true
     },
     {
@@ -2023,8 +1939,8 @@
       "sectionTitle": "VPS Catalog & Integrations",
       "sectionBase": "/api/vps",
       "method": "GET",
-      "relativePath": "/providers/:id/regions",
-      "path": "/api/vps/providers/:id/regions",
+      "relativePath": "/providers/:providerId/regions",
+      "path": "/api/vps/providers/:providerId/regions",
       "auth": true
     },
     {
@@ -2222,17 +2138,17 @@
     {
       "sectionTitle": "Admin Platform Management",
       "sectionBase": "/api/admin",
-      "method": "PATCH",
-      "relativePath": "/users/:userId",
-      "path": "/api/admin/users/:userId",
+      "method": "PUT",
+      "relativePath": "/users/:id",
+      "path": "/api/admin/users/:id",
       "auth": true
     },
     {
       "sectionTitle": "Admin Platform Management",
       "sectionBase": "/api/admin",
       "method": "POST",
-      "relativePath": "/users/:userId/impersonate",
-      "path": "/api/admin/users/:userId/impersonate",
+      "relativePath": "/users/:id/impersonate",
+      "path": "/api/admin/users/:id/impersonate",
       "auth": true
     },
     {
@@ -2447,8 +2363,8 @@
       "sectionTitle": "Admin Platform Management",
       "sectionBase": "/api/admin",
       "method": "PUT",
-      "relativePath": "/contact/methods/:methodType",
-      "path": "/api/admin/contact/methods/:methodType",
+      "relativePath": "/contact/methods/:method_type",
+      "path": "/api/admin/contact/methods/:method_type",
       "auth": true
     },
     {
@@ -2569,7 +2485,7 @@
       "method": "GET",
       "relativePath": "/metrics",
       "path": "/api/health/metrics",
-      "auth": true
+      "auth": false
     },
     {
       "sectionTitle": "Platform Health",
@@ -2577,7 +2493,7 @@
       "method": "GET",
       "relativePath": "/rate-limiting",
       "path": "/api/health/rate-limiting",
-      "auth": true
+      "auth": false
     }
   ]
 }
