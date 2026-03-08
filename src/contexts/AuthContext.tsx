@@ -12,6 +12,7 @@ export interface User {
   emailVerified: boolean;
   preferences?: any;
   twoFactorEnabled?: boolean;
+  organizationId?: string;
 }
 
 export interface AuthContextType {
@@ -103,6 +104,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem("auth_user");
   };
 
+  const refreshToken = async (currentToken?: string) => {
+    try {
+      const tokenToUse = currentToken || token;
+      if (!tokenToUse) {
+        throw new Error("No token available");
+      }
+
+      const response = await fetch("/api/auth/refresh", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${tokenToUse}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Token refresh failed");
+      }
+
+      const data = await response.json();
+
+      setToken(data.token);
+      localStorage.setItem("auth_token", data.token);
+
+      // Update user data if returned from refresh
+      if (data.user) {
+        setUser(data.user);
+        localStorage.setItem("auth_user", JSON.stringify(data.user));
+      }
+    } catch (error) {
+      console.error("Token refresh error:", error);
+      logout(); // If refresh fails, logout the user
+      throw error;
+    }
+  };
+
   useEffect(() => {
     // Check for existing token in localStorage
     const storedToken = localStorage.getItem("auth_token");
@@ -135,6 +172,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch {
         setIsImpersonating(false);
       }
+
+      // Automatically refresh user data (and ensure org membership) on load
+      refreshToken(storedToken).catch((err) => {
+        console.warn("Background refresh failed on load:", err);
+        // We don't necessarily want to logout here if it's just a network blip,
+        // but refreshToken already calls logout on error.
+      });
     }
 
     setLoading(false);
@@ -213,41 +257,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       localStorage.setItem("auth_user", JSON.stringify(result.user));
     } catch (error) {
       console.error("Registration error:", error);
-      throw error;
-    }
-  };
-
-  const refreshToken = async () => {
-    try {
-      if (!token) {
-        throw new Error("No token available");
-      }
-
-      const response = await fetch("/api/auth/refresh", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Token refresh failed");
-      }
-
-      const data = await response.json();
-
-      setToken(data.token);
-      localStorage.setItem("auth_token", data.token);
-
-      // Update user data if returned from refresh
-      if (data.user) {
-        setUser(data.user);
-        localStorage.setItem("auth_user", JSON.stringify(data.user));
-      }
-    } catch (error) {
-      console.error("Token refresh error:", error);
-      logout(); // If refresh fails, logout the user
       throw error;
     }
   };

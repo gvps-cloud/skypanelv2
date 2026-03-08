@@ -97,6 +97,14 @@ export const authenticateToken = async (
         );
         organizationId = newOrg.rows[0].id;
         console.log('Created automatic organization for user:', { userId: user.id, organizationId });
+
+        // Add user to organization members
+        await query(
+          `INSERT INTO organization_members (organization_id, user_id, role, created_at)
+           VALUES ($1, $2, $3, NOW())
+           ON CONFLICT (organization_id, user_id) DO NOTHING`,
+          [organizationId, user.id, 'owner']
+        );
       } catch (orgCreateError) {
         console.error('Failed to create automatic organization:', orgCreateError);
         // Continue without organization - this will be handled by requireOrganization middleware
@@ -230,6 +238,14 @@ export const optionalAuth = async (
         );
         organizationId = newOrg.rows[0].id;
         console.log('Created automatic organization for user:', { userId: user.id, organizationId });
+
+        // Add user to organization members
+        await query(
+          `INSERT INTO organization_members (organization_id, user_id, role, created_at)
+           VALUES ($1, $2, $3, NOW())
+           ON CONFLICT (organization_id, user_id) DO NOTHING`,
+          [organizationId, user.id, 'owner']
+        );
       } catch (orgCreateError) {
         console.error('Failed to create automatic organization:', orgCreateError);
         // Continue without organization - this will be handled by requireOrganization middleware

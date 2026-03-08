@@ -9,6 +9,12 @@ const requireOrgAccess = async (req: AuthenticatedRequest, res: Response, next: 
   const { id } = req.params;
   const user = req.user;
 
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    return res.status(400).json({ error: 'Invalid organization ID format' });
+  }
+
   if (!user) {
     return res.status(401).json({ error: 'Authentication required' });
   }

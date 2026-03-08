@@ -132,6 +132,8 @@ export class AuthService {
           lastName: result.user.name.split(' ').slice(1).join(' ') || '',
           role: result.user.role,
           emailVerified: true,
+          organizationId: result.organizationId,
+          organizationRole: 'owner',
           preferences: {},
           twoFactorEnabled: false
         },
@@ -187,11 +189,13 @@ export class AuthService {
       }
 
       // Get user's organization (if organization_members table exists)
+      let orgMember = null;
       try {
-        await query(
+        const orgResult = await query(
           'SELECT organization_id, role FROM organization_members WHERE user_id = $1',
           [user.id]
         );
+        orgMember = orgResult.rows[0] || null;
       } catch (err) {
         // Table might not exist yet, continue without error
         console.warn('organization_members table not found, skipping organization lookup', err);
@@ -214,6 +218,8 @@ export class AuthService {
           timezone: user.timezone,
           role: user.role,
           emailVerified: true,
+          organizationId: orgMember?.organization_id,
+          organizationRole: orgMember?.role,
           preferences: user.preferences,
           twoFactorEnabled: user.two_factor_enabled || false
         },

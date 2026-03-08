@@ -1,10 +1,10 @@
-- [ ] Backend: `api/routes/organizations.ts` created with CRUD endpoints
-- [ ] Backend: API handles user not found error for adding members
-- [ ] Backend: API prevents removing the last owner
-- [ ] Backend: Route registered in `api/app.ts`
-- [ ] Frontend: "Team" tab appears in Settings layout
-- [ ] Frontend: Team page lists current members
-- [ ] Frontend: Can add member by email
-- [ ] Frontend: Can remove member
-- [ ] Frontend: Can change member role
-- [ ] Frontend: Shows error if user not found when adding
+- [x] Backend: `api/routes/organizations.ts` created with CRUD endpoints
+- [x] Backend: API handles user not found error for adding members
+- [x] Backend: API prevents removing the last owner
+- [x] Backend: Route registered in `api/app.ts`
+- [x] Frontend: "Team" tab appears in Settings layout
+- [x] Frontend: Team page lists current members
+- [x] Frontend: Can add member by email
+- [x] Frontend: Can remove member
+- [x] Frontend: Can change member role
+- [x] Frontend: Shows error if user not found when adding
