@@ -216,16 +216,37 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
   if (!user) return res.status(401).json({ error: 'Authentication required' });
 
   try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 12;
+    const offset = (page - 1) * limit;
+
     let orgs;
+    let totalCount;
     
     if (user.role === 'admin') {
+      const countResult = await query(
+        `SELECT COUNT(*) as count FROM organizations`
+      );
+      totalCount = parseInt(countResult.rows[0].count);
+
       const result = await query(
         `SELECT o.id, o.name, o.slug, 'owner' as member_role, '[]'::jsonb as role_permissions
          FROM organizations o
-         ORDER BY o.created_at DESC`
+         ORDER BY o.created_at DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
       );
       orgs = result.rows;
     } else {
+      const countResult = await query(
+        `SELECT COUNT(*) as count
+         FROM organizations o
+         JOIN organization_members om ON o.id = om.organization_id
+         WHERE om.user_id = $1`,
+        [user.id]
+      );
+      totalCount = parseInt(countResult.rows[0].count);
+
       const result = await query(
         `SELECT o.id, o.name, o.slug, om.role as member_role, 
                 COALESCE(r.permissions, '[]'::jsonb) as role_permissions
@@ -233,8 +254,9 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
          JOIN organization_members om ON o.id = om.organization_id
          LEFT JOIN organization_roles r ON om.role_id = r.id
          WHERE om.user_id = $1
-         ORDER BY o.created_at DESC`,
-        [user.id]
+         ORDER BY o.created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [user.id, limit, offset]
       );
       orgs = result.rows;
     }
@@ -265,7 +287,15 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
       };
     }));
 
-    res.json({ organizations: enrichedOrgs });
+    res.json({ 
+      organizations: enrichedOrgs,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    });
   } catch (error) {
     console.error('Failed to fetch organizations:', error);
     res.status(500).json({ error: 'Failed to fetch organizations' });

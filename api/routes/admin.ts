@@ -3560,6 +3560,84 @@ router.delete(
         return;
       }
 
+      // Get user's organizations
+      const orgsResult = await query(
+        `SELECT DISTINCT om.organization_id
+        FROM organization_members om
+        WHERE om.user_id = $1`,
+        [id],
+      );
+
+      const organizationIds = orgsResult.rows.map(
+        (row) => row.organization_id,
+      );
+
+      // Check for negative wallet balance (outstanding payments)
+      if (organizationIds.length > 0) {
+        const walletCheck = await query(
+          `SELECT organization_id, balance
+          FROM wallets
+          WHERE organization_id = ANY($1) AND balance < 0`,
+          [organizationIds],
+        );
+
+        if (walletCheck.rows.length > 0) {
+          res.status(400).json({
+            error:
+              "Cannot delete user with negative wallet balance. Outstanding payments must be resolved first.",
+            details: {
+              organizations_with_debt: walletCheck.rows.map((row) => ({
+                organization_id: row.organization_id,
+                balance: row.balance,
+              })),
+            },
+          });
+          return;
+        }
+      }
+
+      // Check for active VPS instances
+      if (organizationIds.length > 0) {
+        const activeVpsCheck = await query(
+          `SELECT COUNT(*) as count
+          FROM vps_instances
+          WHERE organization_id = ANY($1)
+          AND status NOT IN ('deleted', 'terminated')`,
+          [organizationIds],
+        );
+
+        if (parseInt(activeVpsCheck.rows[0].count) > 0) {
+          res.status(400).json({
+            error:
+              "Cannot delete user with active VPS instances. All VPS instances must be terminated first.",
+            details: {
+              active_vps_count: activeVpsCheck.rows[0].count,
+            },
+          });
+          return;
+        }
+      }
+
+      // Check for open support tickets
+      const openTicketsCheck = await query(
+        `SELECT COUNT(*) as count
+        FROM support_tickets
+        WHERE created_by = $1
+        AND status NOT IN ('resolved', 'closed')`,
+        [id],
+      );
+
+      if (parseInt(openTicketsCheck.rows[0].count) > 0) {
+        res.status(400).json({
+          error:
+            "Cannot delete user with open support tickets. All tickets must be resolved or closed first.",
+          details: {
+            open_tickets_count: openTicketsCheck.rows[0].count,
+          },
+        });
+        return;
+      }
+
       // Start transaction for cascading deletes
       await query("BEGIN");
 
@@ -3576,6 +3654,27 @@ router.delete(
           (row) => row.organization_id,
         );
 
+        // Delete organization invitations sent by this user
+        await query(
+          `DELETE FROM organization_invitations WHERE inviter_id = $1`,
+          [id],
+        );
+
+        // Delete support ticket replies
+        await query(
+          `DELETE FROM support_ticket_replies
+          WHERE ticket_id IN (
+            SELECT id FROM support_tickets WHERE created_by = $1
+          )`,
+          [id],
+        );
+
+        // Delete support tickets
+        await query(`DELETE FROM support_tickets WHERE created_by = $1`, [id]);
+
+        // Delete activity logs
+        await query(`DELETE FROM activity_logs WHERE user_id = $1`, [id]);
+
         // Delete VPS instances for user's organizations
         if (organizationIds.length > 0) {
           await query(
@@ -3585,50 +3684,20 @@ router.delete(
           );
         }
 
-        // Delete billing records
-        try {
-          if (organizationIds.length > 0) {
-            await query(
-              `DELETE FROM billing_transactions
-              WHERE organization_id = ANY($1)`,
-              [organizationIds],
-            );
-
-            await query(
-              `DELETE FROM wallet_balances
-              WHERE organization_id = ANY($1)`,
-              [organizationIds],
-            );
-          }
-        } catch (billingErr: any) {
-          // Billing tables might not exist, continue
-          console.warn("Billing cleanup not available:", billingErr.message);
-        }
-
-        // Delete activity logs
-        try {
-          await query(`DELETE FROM activity_logs WHERE user_id = $1`, [id]);
-        } catch (activityErr: any) {
-          // Activity table might not exist, continue
-          console.warn("Activity cleanup not available:", activityErr.message);
-        }
-
-        // Delete support tickets and replies
-        try {
+        // Delete payment transactions (billing records)
+        if (organizationIds.length > 0) {
           await query(
-            `DELETE FROM support_ticket_replies
-            WHERE ticket_id IN (
-              SELECT id FROM support_tickets WHERE created_by = $1
-            )`,
-            [id],
+            `DELETE FROM payment_transactions
+            WHERE organization_id = ANY($1)`,
+            [organizationIds],
           );
 
-          await query(`DELETE FROM support_tickets WHERE created_by = $1`, [
-            id,
-          ]);
-        } catch (supportErr: any) {
-          // Support tables might not exist, continue
-          console.warn("Support cleanup not available:", supportErr.message);
+          // Delete wallets for organizations owned by this user
+          await query(
+            `DELETE FROM wallets
+            WHERE organization_id = ANY($1)`,
+            [organizationIds],
+          );
         }
 
         // Delete organization memberships
@@ -3637,6 +3706,7 @@ router.delete(
         ]);
 
         // Delete organizations owned by this user (if they're the only member)
+        // This will CASCADE delete organization_roles automatically
         if (organizationIds.length > 0) {
           await query(
             `DELETE FROM organizations

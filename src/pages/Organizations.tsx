@@ -10,7 +10,6 @@ import {
   Users,
   Server,
   Ticket,
-  Settings,
   ChevronRight,
   Search,
   Filter,
@@ -18,20 +17,16 @@ import {
   List,
   Shield,
   Clock,
-  AlertCircle,
   CheckCircle2,
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/api";
-import { formatCurrency } from "@/lib/formatters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -45,10 +40,18 @@ import {
 } from "@/types/organizations";
 import { StatsGrid } from "@/components/layouts/StatsGrid";
 import { Skeleton } from "@/components/ui/skeleton";
+import Pagination from "@/components/ui/Pagination";
 
 interface ViewMode {
   type: "all" | "organization";
   organizationId?: string;
+}
+
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
 const Organizations: React.FC = () => {
@@ -64,24 +67,34 @@ const Organizations: React.FC = () => {
     "grid",
   );
   const [selectedOrgFilter, setSelectedOrgFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    limit: 12,
+    total: 0,
+    totalPages: 0,
+  });
   const { token, user, switchOrganization } = useAuth();
   const navigate = useNavigate();
 
-  const loadOrganizations = useCallback(async () => {
+  const loadOrganizations = useCallback(async (page = currentPage, limit = itemsPerPage) => {
     if (!token) return;
     setLoading(true);
     try {
       const data = await apiClient.get<{
         organizations: OrganizationWithStats[];
-      }>("/organizations");
+        pagination: PaginationInfo;
+      }>(`/organizations?page=${page}&limit=${limit}`);
       setOrganizations(data.organizations || []);
+      setPagination(data.pagination);
     } catch (error: any) {
       console.error("Failed to load organizations:", error);
       toast.error(error.message || "Failed to load organizations");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, currentPage, itemsPerPage]);
 
   const loadOrganizationResources = useCallback(async () => {
     if (!token) return;
@@ -100,11 +113,15 @@ const Organizations: React.FC = () => {
   }, [token]);
 
   useEffect(() => {
-    loadOrganizations();
+    loadOrganizations(currentPage, itemsPerPage);
+  }, [currentPage, itemsPerPage, token]);
+
+  useEffect(() => {
     loadOrganizationResources();
-  }, [loadOrganizations, loadOrganizationResources]);
+  }, [loadOrganizationResources]);
 
   const filteredOrganizations = useMemo(() => {
+    if (!searchTerm) return organizations;
     return organizations.filter((org) =>
       org.name.toLowerCase().includes(searchTerm.toLowerCase()),
     );
@@ -133,6 +150,16 @@ const Organizations: React.FC = () => {
   const handleSwitchOrganization = async (orgId: string) => {
     await switchOrganization(orgId);
     toast.success("Switched organization context");
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleItemsPerPageChange = (newLimit: number) => {
+    setItemsPerPage(newLimit);
+    setCurrentPage(1);
   };
 
   const selectedOrganization = useMemo(() => {
@@ -183,7 +210,7 @@ const Organizations: React.FC = () => {
 
   const totalStats = useMemo(() => {
     return {
-      organizations: organizations.length,
+      organizations: pagination.total || organizations.length,
       vpsInstances: organizations.reduce(
         (sum, org) => sum + org.stats.vps_count,
         0,
@@ -197,9 +224,9 @@ const Organizations: React.FC = () => {
         0,
       ),
     };
-  }, [organizations]);
+  }, [organizations, pagination.total]);
 
-  if (loading) {
+  if (loading && currentPage === 1) {
     return (
       <div className="space-y-6">
         <div className="space-y-4">
@@ -280,11 +307,7 @@ const Organizations: React.FC = () => {
                 <div>
                   <CardTitle>Your Organizations</CardTitle>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {filteredOrganizations.length}{" "}
-                    {filteredOrganizations.length === 1
-                      ? "organization"
-                      : "organizations"}{" "}
-                    found
+                    {searchTerm ? `${filteredOrganizations.length} filtered` : `Page ${pagination.page} of ${pagination.totalPages}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -292,7 +315,7 @@ const Organizations: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      loadOrganizations();
+                      loadOrganizations(currentPage, itemsPerPage);
                       loadOrganizationResources();
                     }}
                   >
@@ -314,7 +337,17 @@ const Organizations: React.FC = () => {
                 />
               </div>
 
-              {filteredOrganizations.length === 0 ? (
+              {loading ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i}>
+                      <CardContent className="p-6">
+                        <Skeleton className="h-32" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : filteredOrganizations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
                   <div className="rounded-full bg-muted p-4">
                     <Building2 className="h-8 w-8 text-muted-foreground" />
@@ -376,6 +409,17 @@ const Organizations: React.FC = () => {
                 </div>
               )}
             </CardContent>
+            {!searchTerm && pagination.total > 0 && (
+              <Pagination
+                currentPage={pagination.page}
+                totalItems={pagination.total}
+                itemsPerPage={pagination.limit}
+                onPageChange={handlePageChange}
+                onItemsPerPageChange={handleItemsPerPageChange}
+                showItemsPerPage={true}
+                itemsPerPageOptions={[6, 12, 24, 48]}
+              />
+            )}
           </Card>
 
           <Card>
@@ -714,249 +758,19 @@ const Organizations: React.FC = () => {
             </div>
           </div>
 
-          <Tabs defaultValue="resources" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="resources">Resources</TabsTrigger>
-              <TabsTrigger value="members">Members</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="resources" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Accessible Resources</CardTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    VPS instances and tickets you have permission to view
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-6 p-6">
-                  {(() => {
-                    const resources = organizationResources.find(
-                      (r) => r.organization_id === selectedOrganization.id,
-                    );
-                    if (!resources) return null;
-
-                    return (
-                      <>
-                        {resources.permissions.vps_view && (
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-sm font-semibold">
-                                VPS Instances
-                              </h4>
-                              {resources.permissions.vps_create && (
-                                <Link
-                                  to="/vps?create=1"
-                                  className="text-sm text-primary hover:underline"
-                                >
-                                  Create VPS
-                                </Link>
-                              )}
-                            </div>
-                            {resources.vps_instances.length === 0 ? (
-                              <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                                No VPS instances available
-                              </div>
-                            ) : (
-                              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                {resources.vps_instances.map((vps) => (
-                                  <Card
-                                    key={vps.id}
-                                    className="group cursor-pointer transition-all hover:border-primary/50"
-                                  >
-                                    <CardContent className="p-4">
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div className="flex-1 space-y-2">
-                                          <div className="flex items-center gap-2">
-                                            <h5 className="font-semibold text-sm">
-                                              {vps.label}
-                                            </h5>
-                                            <Badge
-                                              variant={getStatusBadgeVariant(
-                                                vps.status,
-                                              )}
-                                              className="text-xs"
-                                            >
-                                              {vps.status}
-                                            </Badge>
-                                          </div>
-                                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                            <span>
-                                              {vps.configuration.type}
-                                            </span>
-                                            <span>•</span>
-                                            <span>
-                                              {vps.configuration.region}
-                                            </span>
-                                          </div>
-                                          {vps.ip_address && (
-                                            <div className="text-xs text-muted-foreground">
-                                              {vps.ip_address}
-                                            </div>
-                                          )}
-                                        </div>
-                                        <Link
-                                          to={`/vps/${vps.id}`}
-                                          className="text-muted-foreground hover:text-primary"
-                                        >
-                                          <ChevronRight className="h-4 w-4" />
-                                        </Link>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {resources.permissions.tickets_view && (
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <h4 className="text-sm font-semibold">
-                                Support Tickets
-                              </h4>
-                              {resources.permissions.tickets_create && (
-                                <Link
-                                  to="/support"
-                                  className="text-sm text-primary hover:underline"
-                                >
-                                  Create ticket
-                                </Link>
-                              )}
-                            </div>
-                            {resources.tickets.length === 0 ? (
-                              <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                                No support tickets available
-                              </div>
-                            ) : (
-                              <div className="space-y-3">
-                                {resources.tickets.map((ticket) => (
-                                  <Card
-                                    key={ticket.id}
-                                    className="group cursor-pointer transition-all hover:border-primary/50"
-                                  >
-                                    <CardContent className="p-4">
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div className="flex-1 space-y-2">
-                                          <div className="flex items-center gap-2">
-                                            <h5 className="font-semibold text-sm">
-                                              {ticket.subject}
-                                            </h5>
-                                            <Badge
-                                              variant={getStatusBadgeVariant(
-                                                ticket.status,
-                                              )}
-                                              className="text-xs"
-                                            >
-                                              {ticket.status}
-                                            </Badge>
-                                            <Badge
-                                              variant="outline"
-                                              className="text-xs"
-                                            >
-                                              {ticket.priority}
-                                            </Badge>
-                                          </div>
-                                          <div className="text-xs text-muted-foreground">
-                                            {formatTimestamp(
-                                              ticket.created_at,
-                                            )}
-                                          </div>
-                                        </div>
-                                        <Link
-                                          to={`/support?ticket=${ticket.id}`}
-                                          className="text-muted-foreground hover:text-primary"
-                                        >
-                                          <ChevronRight className="h-4 w-4" />
-                                        </Link>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {!resources.permissions.vps_view &&
-                          !resources.permissions.tickets_view && (
-                            <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                              You don't have permission to view any resources in
-                              this organization
-                            </div>
-                          )}
-                      </>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="members" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Team Members</CardTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Manage team members and their roles
-                  </p>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="flex flex-col items-center justify-center py-8 space-y-4 text-center">
-                    <div className="rounded-full bg-muted p-4">
-                      <Users className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">Manage Team Members</h3>
-                      <p className="text-sm text-muted-foreground max-w-sm mt-1">
-                        Team member management is handled in your organization settings.
-                      </p>
-                    </div>
-                    <Button 
-                      onClick={() => {
-                        handleSwitchOrganization(selectedOrganization.id);
-                        navigate("/settings?tab=team");
-                      }}
-                    >
-                      Go to Team Settings
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="settings" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Organization Settings</CardTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Manage organization configuration and permissions
-                  </p>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="flex flex-col items-center justify-center py-8 space-y-4 text-center">
-                    <div className="rounded-full bg-muted p-4">
-                      <Settings className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold">Organization Settings</h3>
-                      <p className="text-sm text-muted-foreground max-w-sm mt-1">
-                        Configure your organization settings, billing, and permissions.
-                      </p>
-                    </div>
-                    <Button 
-                      onClick={() => {
-                        handleSwitchOrganization(selectedOrganization.id);
-                        navigate("/settings");
-                      }}
-                    >
-                      Go to Settings
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          <Card>
+            <CardHeader>
+              <CardTitle>Organization Resources</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                View and manage resources for this organization
+              </p>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Navigate to specific sections to manage VPS instances, support tickets, and team members.
+              </p>
+            </CardContent>
+          </Card>
         </>
       ) : null}
     </div>

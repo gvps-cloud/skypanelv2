@@ -680,38 +680,40 @@ export const UserManagement: React.FC = () => {
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete User Account</AlertDialogTitle>
-                        <AlertDialogDescription className="space-y-4">
-                            <p>
-                                This will permanently delete <strong>{selectedUser?.name}</strong> and all associated data.
-                            </p>
-
-                            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4">
-                                <p className="text-sm font-medium text-destructive">
-                                    This action cannot be undone. All user data will be permanently lost.
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-4">
+                                <p>
+                                    This will permanently delete <strong>{selectedUser?.name}</strong> and all associated data.
                                 </p>
+
+                                <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4">
+                                    <p className="text-sm font-medium text-destructive">
+                                        This action cannot be undone. All user data will be permanently lost.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="confirm-delete-email" className="text-sm font-medium">
+                                        To confirm deletion, type the user's email address:
+                                    </Label>
+                                    <p className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                                        {selectedUser?.email}
+                                    </p>
+                                    <Input
+                                        id="confirm-delete-email"
+                                        value={deleteConfirmEmail}
+                                        onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                                        placeholder="Type the email address above"
+                                        className="font-mono"
+                                    />
+                                </div>
+
+                                {deleteConfirmEmail && deleteConfirmEmail !== selectedUser?.email && (
+                                    <p className="text-sm text-destructive">
+                                        Email address does not match. Please type the exact email address.
+                                    </p>
+                                )}
                             </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="confirm-delete-email" className="text-sm font-medium">
-                                    To confirm deletion, type the user's email address:
-                                </Label>
-                                <p className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                                    {selectedUser?.email}
-                                </p>
-                                <Input
-                                    id="confirm-delete-email"
-                                    value={deleteConfirmEmail}
-                                    onChange={(e) => setDeleteConfirmEmail(e.target.value)}
-                                    placeholder="Type the email address above"
-                                    className="font-mono"
-                                />
-                            </div>
-
-                            {deleteConfirmEmail && deleteConfirmEmail !== selectedUser?.email && (
-                                <p className="text-sm text-destructive">
-                                    Email address does not match. Please type the exact email address.
-                                </p>
-                            )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
 
@@ -740,22 +742,24 @@ export const UserManagement: React.FC = () => {
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirm Admin Impersonation</AlertDialogTitle>
-                        <AlertDialogDescription className="space-y-2">
-                            <p>
-                                You are about to impersonate <strong>{impersonationConfirmDialog.targetUser?.name}</strong>, who is also an administrator.
-                            </p>
-                            <div className="rounded-lg bg-muted p-3 space-y-1">
-                                <p className="text-sm font-medium">Target User Details:</p>
-                                <p className="text-sm">Name: {impersonationConfirmDialog.targetUser?.name}</p>
-                                <p className="text-sm">Email: {impersonationConfirmDialog.targetUser?.email}</p>
-                                <p className="text-sm">Role: {impersonationConfirmDialog.targetUser?.role}</p>
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-2">
+                                <p>
+                                    You are about to impersonate <strong>{impersonationConfirmDialog.targetUser?.name}</strong>, who is also an administrator.
+                                </p>
+                                <div className="rounded-lg bg-muted p-3 space-y-1">
+                                    <p className="text-sm font-medium">Target User Details:</p>
+                                    <p className="text-sm">Name: {impersonationConfirmDialog.targetUser?.name}</p>
+                                    <p className="text-sm">Email: {impersonationConfirmDialog.targetUser?.email}</p>
+                                    <p className="text-sm">Role: {impersonationConfirmDialog.targetUser?.role}</p>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    This action will be logged for security purposes. You will have full access to their account and data.
+                                </p>
+                                <p className="font-semibold text-amber-600">
+                                    Are you sure you want to proceed?
+                                </p>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                                This action will be logged for security purposes. You will have full access to their account and data.
-                            </p>
-                            <p className="font-semibold text-amber-600">
-                                Are you sure you want to proceed?
-                            </p>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
 

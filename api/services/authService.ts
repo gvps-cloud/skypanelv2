@@ -80,10 +80,23 @@ export class AuthService {
 
           // Add user to organization as owner (if organization_members table exists)
           try {
+            // Query for the owner role_id from organization_roles
+            const ownerRoleResult = await client.query(
+              `SELECT id FROM organization_roles WHERE organization_id = $1 AND name = 'owner'`,
+              [organizationId]
+            );
+
+            if (ownerRoleResult.rows.length === 0) {
+              throw new Error('Owner role not found for organization');
+            }
+
+            const ownerRoleId = ownerRoleResult.rows[0].id;
+
+            // Insert with both role_id (new) and role (legacy) columns
             await client.query(
-              `INSERT INTO organization_members (organization_id, user_id, role, created_at) 
-               VALUES ($1, $2, $3, $4)`,
-              [organizationId, userId, 'owner', now]
+              `INSERT INTO organization_members (organization_id, user_id, role, role_id, created_at) 
+               VALUES ($1, $2, $3, $4, $5)`,
+              [organizationId, userId, 'owner', ownerRoleId, now]
             );
           } catch (err) {
             // Table might not exist yet, continue without error
