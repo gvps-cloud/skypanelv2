@@ -31,6 +31,7 @@ export const createMockAuthContext = (overrides: Partial<AuthContextType> = {}):
   setup2FA: vi.fn(),
   verify2FA: vi.fn(),
   disable2FA: vi.fn(),
+  switchOrganization: vi.fn(),
   ...overrides,
 });
 
