@@ -77,6 +77,103 @@ interface AdminUser {
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
+// Helper to format date
+const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
+};
+
+interface UserRowProps {
+    user: AdminUser;
+    onView: (user: AdminUser) => void;
+    onEdit: (user: AdminUser) => void;
+    onImpersonate: (user: AdminUser) => void;
+    onDelete: (user: AdminUser) => void;
+    isImpersonating: boolean;
+}
+
+const UserRow: React.FC<UserRowProps> = ({ user, onView, onEdit, onImpersonate, onDelete, isImpersonating }) => (
+    <TableRow className="group">
+        <TableCell>
+            <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+                    {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                    <p className="font-medium">{user.name}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {user.email}
+                    </p>
+                </div>
+            </div>
+        </TableCell>
+        <TableCell>
+            <Badge
+                variant="outline"
+                className={cn(
+                    user.role === 'admin' &&
+                    'border-red-400/30 bg-red-400/10 text-red-600 dark:text-red-400'
+                )}
+            >
+                {user.role === 'admin' && (
+                    <Shield className="h-3 w-3 mr-1" />
+                )}
+                {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+            </Badge>
+        </TableCell>
+        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {formatDate(user.created_at)}
+            </div>
+        </TableCell>
+        <TableCell className="text-right">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                    >
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Open menu</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => onView(user)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(user)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit User
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        onClick={() => onImpersonate(user)}
+                        disabled={isImpersonating}
+                    >
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        Impersonate
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                        onClick={() => onDelete(user)}
+                        className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+                    >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete User
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </TableCell>
+    </TableRow>
+);
+
 export const UserManagement: React.FC = () => {
     const { token } = useAuth();
     const { startImpersonation, isStarting } = useImpersonation();
@@ -144,12 +241,21 @@ export const UserManagement: React.FC = () => {
         setCurrentPage(1);
     }, [searchTerm, roleFilter]);
 
-    // Pagination calculations
-    const totalItems = filteredUsers.length;
+    // Split users by role
+    const adminUsers = useMemo(() => {
+        return filteredUsers.filter(u => u.role === 'admin');
+    }, [filteredUsers]);
+
+    const regularUsers = useMemo(() => {
+        return filteredUsers.filter(u => u.role !== 'admin');
+    }, [filteredUsers]);
+
+    // Pagination calculations (for regular users)
+    const totalItems = regularUsers.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-    const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+    const paginatedRegularUsers = regularUsers.slice(startIndex, endIndex);
 
     // Pagination handlers
     const goToPage = (page: number) => {
@@ -167,14 +273,6 @@ export const UserManagement: React.FC = () => {
         setCurrentPage(1);
     };
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
-    };
 
     // Handlers
     const handleViewUser = (user: AdminUser) => {
@@ -357,7 +455,7 @@ export const UserManagement: React.FC = () => {
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>
                             {searchTerm || roleFilter !== 'all' ? (
-                                <>Showing {filteredUsers.length} of {totalUsers} users</>
+                                <>Found {filteredUsers.length} results</>
                             ) : (
                                 <>{totalUsers} users total</>
                             )}
@@ -388,113 +486,104 @@ export const UserManagement: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Users Table */}
-                    <div className="rounded-lg border">
-                        {loading ? (
-                            <div className="py-12 text-center text-muted-foreground">
-                                <RefreshCw className="mx-auto h-8 w-8 animate-spin mb-2" />
-                                <p>Loading users...</p>
-                            </div>
-                        ) : paginatedUsers.length === 0 ? (
-                            <div className="py-12 text-center text-muted-foreground">
-                                <Users className="mx-auto h-8 w-8 opacity-50 mb-2" />
-                                <p>No users found</p>
-                                {searchTerm && (
-                                    <p className="text-xs mt-1">Try adjusting your search</p>
-                                )}
-                            </div>
-                        ) : (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>User</TableHead>
-                                        <TableHead>Role</TableHead>
-                                        <TableHead className="hidden md:table-cell">Created</TableHead>
-                                        <TableHead className="w-16 text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {paginatedUsers.map((user) => (
-                                        <TableRow key={user.id} className="group">
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
-                                                        {user.name.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium">{user.name}</p>
-                                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                                            <Mail className="h-3 w-3" />
-                                                            {user.email}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge
-                                                    variant="outline"
-                                                    className={cn(
-                                                        user.role === 'admin' &&
-                                                        'border-red-400/30 bg-red-400/10 text-red-600 dark:text-red-400'
-                                                    )}
-                                                >
-                                                    {user.role === 'admin' && (
-                                                        <Shield className="h-3 w-3 mr-1" />
-                                                    )}
-                                                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                                                <div className="flex items-center gap-1">
-                                                    <Calendar className="h-3 w-3" />
-                                                    {formatDate(user.created_at)}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                            <span className="sr-only">Open menu</span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-48">
-                                                        <DropdownMenuItem onClick={() => handleViewUser(user)}>
-                                                            <Eye className="h-4 w-4 mr-2" />
-                                                            View Details
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                                            <Edit className="h-4 w-4 mr-2" />
-                                                            Edit User
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => handleImpersonate(user)}
-                                                            disabled={isStarting}
-                                                        >
-                                                            <UserCheck className="h-4 w-4 mr-2" />
-                                                            Impersonate
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            onClick={() => handleDeleteClick(user)}
-                                                            className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
-                                                        >
-                                                            <Trash2 className="h-4 w-4 mr-2" />
-                                                            Delete User
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        )}
-                    </div>
+                    {loading ? (
+                        <div className="py-12 text-center text-muted-foreground">
+                            <RefreshCw className="mx-auto h-8 w-8 animate-spin mb-2" />
+                            <p>Loading users...</p>
+                        </div>
+                    ) : filteredUsers.length === 0 ? (
+                        <div className="py-12 text-center text-muted-foreground">
+                            <Users className="mx-auto h-8 w-8 opacity-50 mb-2" />
+                            <p>No users found</p>
+                            {searchTerm && (
+                                <p className="text-xs mt-1">Try adjusting your search</p>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-8">
+                            {/* Administrators Table */}
+                            {adminUsers.length > 0 && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Shield className="h-4 w-4 text-primary" />
+                                        <h3 className="font-semibold text-lg">Administrators</h3>
+                                        <Badge variant="secondary" className="ml-2">{adminUsers.length}</Badge>
+                                    </div>
+                                    <div className="rounded-lg border">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>User</TableHead>
+                                                    <TableHead>Role</TableHead>
+                                                    <TableHead className="hidden md:table-cell">Created</TableHead>
+                                                    <TableHead className="w-16 text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {adminUsers.map((user) => (
+                                                    <UserRow
+                                                        key={user.id}
+                                                        user={user}
+                                                        onView={handleViewUser}
+                                                        onEdit={handleEditUser}
+                                                        onImpersonate={handleImpersonate}
+                                                        onDelete={handleDeleteClick}
+                                                        isImpersonating={isStarting}
+                                                    />
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Regular Users Table */}
+                            {(paginatedRegularUsers.length > 0 || (adminUsers.length === 0 && !loading)) && (
+                                <div className="space-y-3">
+                                    {adminUsers.length > 0 && (
+                                        <div className="flex items-center gap-2">
+                                            <Users className="h-4 w-4 text-muted-foreground" />
+                                            <h3 className="font-semibold text-lg">Users</h3>
+                                            <Badge variant="secondary" className="ml-2">{regularUsers.length}</Badge>
+                                        </div>
+                                    )}
+                                    <div className="rounded-lg border">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>User</TableHead>
+                                                    <TableHead>Role</TableHead>
+                                                    <TableHead className="hidden md:table-cell">Created</TableHead>
+                                                    <TableHead className="w-16 text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {paginatedRegularUsers.length > 0 ? (
+                                                    paginatedRegularUsers.map((user) => (
+                                                        <UserRow
+                                                            key={user.id}
+                                                            user={user}
+                                                            onView={handleViewUser}
+                                                            onEdit={handleEditUser}
+                                                            onImpersonate={handleImpersonate}
+                                                            onDelete={handleDeleteClick}
+                                                            isImpersonating={isStarting}
+                                                        />
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                                            No users found on this page.
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Pagination Controls */}
                     {!loading && totalItems > 0 && (

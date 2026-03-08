@@ -670,6 +670,14 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
                         >
                           {TICKET_PRIORITY_META[ticket.priority].label}
                         </Badge>
+                        {ticket.vps_label && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-muted/50 font-normal max-w-[120px] truncate"
+                          >
+                            {ticket.vps_label}
+                          </Badge>
+                        )}
                         <span>•</span>
                         <span>
                           {new Date(ticket.created_at).toLocaleDateString()}

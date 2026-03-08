@@ -525,6 +525,17 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                         </Badge>
                         <span>•</span>
                         <span className="capitalize">{ticket.category}</span>
+                        {ticket.vps_label && (
+                          <>
+                            <span>•</span>
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-muted/50 font-normal max-w-[120px] truncate"
+                            >
+                              {ticket.vps_label}
+                            </Badge>
+                          </>
+                        )}
                         <span>•</span>
                         <span>
                           {new Date(ticket.created_at).toLocaleDateString()}
