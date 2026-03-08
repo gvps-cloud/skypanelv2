@@ -93,7 +93,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
             isImpersonating: true,
             impersonatedUser: {
               id: user.id,
-              name: user.firstName + ' ' + user.lastName || user.name || user.email,
+              name: user.name || (user.firstName ? `${user.firstName} ${user.lastName}` : user.email),
               email: user.email,
               role: user.role,
               organizationId: user.organizationId

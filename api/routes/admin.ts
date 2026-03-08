@@ -2866,7 +2866,7 @@ router.post(
 
       // Check if target user exists
       const targetUserResult = await query(
-        "SELECT id, email, name, role FROM users WHERE id = $1",
+        "SELECT id, email, name, role, phone, timezone, preferences, two_factor_enabled FROM users WHERE id = $1",
         [targetUserId],
       );
 
@@ -2989,13 +2989,24 @@ router.post(
         req,
       );
 
+      // Split name into first and last for frontend compatibility
+      const nameParts = (targetUser.name || "").split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
       res.json({
         impersonationToken,
         user: {
           id: targetUser.id,
           email: targetUser.email,
           name: targetUser.name,
+          firstName,
+          lastName,
           role: targetUser.role,
+          phone: targetUser.phone,
+          timezone: targetUser.timezone,
+          preferences: targetUser.preferences,
+          twoFactorEnabled: targetUser.two_factor_enabled,
           organizationId: targetUserOrgId,
         },
         originalAdmin: {
@@ -3048,7 +3059,7 @@ router.post(
 
       // Get original admin user details
       const adminResult = await query(
-        "SELECT id, email, name, role FROM users WHERE id = $1",
+        "SELECT id, email, name, role, phone, timezone, preferences, two_factor_enabled FROM users WHERE id = $1",
         [decoded.originalAdminId],
       );
 
@@ -3142,13 +3153,24 @@ router.post(
         req,
       );
 
+      // Split name for frontend compatibility
+      const nameParts = (originalAdmin.name || "").split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
       res.json({
         adminToken,
         admin: {
           id: originalAdmin.id,
           email: originalAdmin.email,
           name: originalAdmin.name,
+          firstName,
+          lastName,
           role: originalAdmin.role,
+          phone: originalAdmin.phone,
+          timezone: originalAdmin.timezone,
+          preferences: originalAdmin.preferences,
+          twoFactorEnabled: originalAdmin.two_factor_enabled,
           organizationId: adminOrgId,
         },
         message: "Impersonation session ended successfully",
