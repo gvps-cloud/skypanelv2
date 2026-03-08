@@ -1,6 +1,8 @@
 import express, { Response, NextFunction } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js';
 import { query } from '../lib/database.js';
+import { InvitationService } from '../services/invitations.js';
+import { ActivityFeedService } from '../services/activityFeed.js';
 
 const router = express.Router();
 
@@ -27,8 +29,10 @@ const requireOrgAccess = async (req: AuthenticatedRequest, res: Response, next: 
   // Check if user is member of the organization with sufficient role
   try {
     const result = await query(
-      `SELECT role FROM organization_members 
-       WHERE organization_id = $1 AND user_id = $2`,
+      `SELECT om.role, r.permissions, r.name as role_name
+       FROM organization_members om
+       LEFT JOIN organization_roles r ON om.role_id = r.id
+       WHERE om.organization_id = $1 AND om.user_id = $2`,
       [id, user.id]
     );
 
@@ -36,8 +40,11 @@ const requireOrgAccess = async (req: AuthenticatedRequest, res: Response, next: 
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const memberRole = result.rows[0].role;
-    if (memberRole === 'owner' || memberRole === 'admin') {
+    const member = result.rows[0];
+    const roleName = member.role_name || member.role;
+    
+    // Check if user has admin or owner role
+    if (roleName === 'owner' || roleName === 'admin') {
       return next();
     }
 
@@ -48,16 +55,232 @@ const requireOrgAccess = async (req: AuthenticatedRequest, res: Response, next: 
   }
 };
 
+// Middleware to check if user is a member of the organization
+const checkOrganizationMembership = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  const user = req.user;
+
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  // System admin bypass
+  if (user.role === 'admin') {
+    return next();
+  }
+
+  try {
+    const result = await query(
+      'SELECT id FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+      [id, user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(403).json({ error: 'Not a member of this organization' });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Organization membership check failed:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 router.use(authenticateToken);
 
+// GET /resources - List resources across all organizations
+router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
+  const user = req.user;
+  if (!user) return res.status(401).json({ error: 'Authentication required' });
+
+  try {
+    let orgs = [];
+
+    if (user.role === 'admin') {
+      const result = await query(
+        `SELECT id, name FROM organizations ORDER BY name ASC`
+      );
+      orgs = result.rows;
+    } else {
+      const result = await query(
+        `SELECT o.id, o.name 
+         FROM organizations o
+         JOIN organization_members om ON o.id = om.organization_id
+         WHERE om.user_id = $1
+         ORDER BY o.name ASC`,
+        [user.id]
+      );
+      orgs = result.rows;
+    }
+
+    const resources = await Promise.all(orgs.map(async (org) => {
+      // Get user's permissions for this org
+      let permissions = {
+        vps_view: false,
+        vps_create: false,
+        vps_manage: false,
+        tickets_view: false,
+        tickets_create: false,
+        tickets_manage: false,
+        billing_view: false,
+        billing_manage: false,
+        members_manage: false,
+        settings_manage: false
+      };
+
+      if (user.role === 'admin') {
+        Object.keys(permissions).forEach(key => {
+          (permissions as any)[key] = true;
+        });
+      } else {
+        const memberResult = await query(
+          `SELECT om.role_id, r.permissions, om.role as legacy_role
+           FROM organization_members om
+           LEFT JOIN organization_roles r ON om.role_id = r.id
+           WHERE om.organization_id = $1 AND om.user_id = $2`,
+          [org.id, user.id]
+        );
+
+        if (memberResult.rows.length > 0) {
+          const member = memberResult.rows[0];
+          
+          // Add permissions from role
+          if (member.permissions) {
+            const perms = Array.isArray(member.permissions) 
+              ? member.permissions 
+              : JSON.parse(member.permissions);
+            
+            perms.forEach((p: string) => {
+              if (p in permissions) (permissions as any)[p] = true;
+            });
+          }
+
+          // Fallback for legacy roles if no granular permissions
+          if (member.legacy_role === 'owner') {
+            Object.keys(permissions).forEach(key => (permissions as any)[key] = true);
+          } else if (member.legacy_role === 'admin') {
+            ['vps_view', 'vps_create', 'vps_delete', 'vps_manage', 
+             'tickets_view', 'tickets_create', 'tickets_manage', 
+             'billing_view', 'settings_manage'].forEach(p => {
+               if (p in permissions) (permissions as any)[p] = true;
+             });
+          }
+        }
+      }
+
+      // Fetch resources if authorized
+      let vpsInstances: any[] = [];
+      let tickets: any[] = [];
+
+      if (permissions.vps_view) {
+        const vpsResult = await query(
+          `SELECT id, label, status, ip_address, plan_id, created_at 
+           FROM vps_instances 
+           WHERE organization_id = $1 
+           ORDER BY created_at DESC LIMIT 5`,
+          [org.id]
+        );
+        vpsInstances = vpsResult.rows;
+      }
+
+      if (permissions.tickets_view) {
+        const ticketResult = await query(
+          `SELECT id, subject, status, priority, category, created_at 
+           FROM support_tickets 
+           WHERE organization_id = $1 
+           ORDER BY created_at DESC LIMIT 5`,
+          [org.id]
+        );
+        tickets = ticketResult.rows;
+      }
+
+      return {
+        organization_id: org.id,
+        organization_name: org.name,
+        permissions,
+        vps_instances: vpsInstances,
+        tickets
+      };
+    }));
+
+    res.json(resources);
+  } catch (error) {
+    console.error('Failed to fetch organization resources:', error);
+    res.status(500).json({ error: 'Failed to fetch organization resources' });
+  }
+});
+
+// GET / - List user's organizations with stats
+router.get('/', async (req: AuthenticatedRequest, res: Response) => {
+  const user = req.user;
+  if (!user) return res.status(401).json({ error: 'Authentication required' });
+
+  try {
+    let orgs;
+    
+    if (user.role === 'admin') {
+      const result = await query(
+        `SELECT o.id, o.name, o.slug, 'owner' as member_role, '[]'::jsonb as role_permissions
+         FROM organizations o
+         ORDER BY o.created_at DESC`
+      );
+      orgs = result.rows;
+    } else {
+      const result = await query(
+        `SELECT o.id, o.name, o.slug, om.role as member_role, 
+                COALESCE(r.permissions, '[]'::jsonb) as role_permissions
+         FROM organizations o
+         JOIN organization_members om ON o.id = om.organization_id
+         LEFT JOIN organization_roles r ON om.role_id = r.id
+         WHERE om.user_id = $1
+         ORDER BY o.created_at DESC`,
+        [user.id]
+      );
+      orgs = result.rows;
+    }
+
+    const enrichedOrgs = await Promise.all(orgs.map(async (org) => {
+      const vpsCount = await query(
+        'SELECT COUNT(*) as count FROM vps_instances WHERE organization_id = $1',
+        [org.id]
+      );
+      
+      const ticketCount = await query(
+        'SELECT COUNT(*) as count FROM support_tickets WHERE organization_id = $1',
+        [org.id]
+      );
+
+      const memberCount = await query(
+        'SELECT COUNT(*) as count FROM organization_members WHERE organization_id = $1',
+        [org.id]
+      );
+
+      return {
+        ...org,
+        stats: {
+          vps_count: parseInt(vpsCount.rows[0].count),
+          tickets_count: parseInt(ticketCount.rows[0].count),
+          members_count: parseInt(memberCount.rows[0].count)
+        }
+      };
+    }));
+
+    res.json(enrichedOrgs);
+  } catch (error) {
+    console.error('Failed to fetch organizations:', error);
+    res.status(500).json({ error: 'Failed to fetch organizations' });
+  }
+});
+
 // GET /:id/members
-router.get('/:id/members', requireOrgAccess, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/:id/members', checkOrganizationMembership, async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   try {
     const result = await query(
-      `SELECT u.id, u.email, u.name, om.role, om.created_at as joined_at
+      `SELECT u.id, u.email, u.name, om.role_id, r.name as role_name, om.created_at as joined_at
        FROM organization_members om
        JOIN users u ON om.user_id = u.id
+       LEFT JOIN organization_roles r ON om.role_id = r.id
        WHERE om.organization_id = $1
        ORDER BY om.created_at DESC`,
       [id]
@@ -78,18 +301,24 @@ router.post('/:id/members', requireOrgAccess, async (req: AuthenticatedRequest, 
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  const validRoles = ['admin', 'member']; // Owner is usually singular or handled differently
+  const validRoles = ['admin', 'member'];
   const newRole = validRoles.includes(role) ? role : 'member';
 
   try {
+    const user = req.user;
     // 1. Find user by email
-    const userResult = await query('SELECT id FROM users WHERE email = $1', [email]);
+    const userResult = await query('SELECT id, name FROM users WHERE email = $1', [email]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
     const userId = userResult.rows[0].id;
+    const userName = userResult.rows[0].name || email;
 
-    // 2. Add to organization
+    // 2. Get organization name
+    const orgResult = await query('SELECT name FROM organizations WHERE id = $1', [id]);
+    const orgName = orgResult.rows[0]?.name || 'the organization';
+
+    // 3. Add to organization
     const insertResult = await query(
       `INSERT INTO organization_members (organization_id, user_id, role)
        VALUES ($1, $2, $3)
@@ -99,6 +328,43 @@ router.post('/:id/members', requireOrgAccess, async (req: AuthenticatedRequest, 
 
     if (insertResult.rowCount === 0) {
         return res.status(409).json({ error: 'User is already a member of this organization' });
+    }
+
+    await ActivityFeedService.createActivity({
+      userId,
+      organizationId: id,
+      type: 'member_added',
+      title: `You have been added to ${orgName}`,
+      description: `${user?.name || 'An admin'} has added you to ${orgName} as a ${newRole}.`,
+      data: {
+        organizationName: orgName,
+        roleName: newRole,
+        addedBy: user?.name || 'An admin'
+      }
+    });
+
+    const membersResult = await query(
+      `SELECT om.user_id
+       FROM organization_members om
+       WHERE om.organization_id = $1 AND om.user_id != $2`,
+      [id, userId]
+    );
+
+    for (const member of membersResult.rows) {
+      await ActivityFeedService.createActivity({
+        userId: member.user_id,
+        organizationId: id,
+        type: 'member_joined',
+        title: `${userName} has joined ${orgName}`,
+        description: `${userName} has been added to ${orgName} as a ${newRole}.`,
+        data: {
+          userId,
+          userName,
+          organizationName: orgName,
+          roleName: newRole,
+          addedBy: user?.name || 'An admin'
+        }
+      });
     }
 
     res.status(201).json({ message: 'Member added successfully' });
@@ -111,42 +377,148 @@ router.post('/:id/members', requireOrgAccess, async (req: AuthenticatedRequest, 
 // PUT /:id/members/:userId (Update role)
 router.put('/:id/members/:userId', requireOrgAccess, async (req: AuthenticatedRequest, res: Response) => {
   const { id, userId } = req.params;
-  const { role } = req.body;
-
-  const validRoles = ['admin', 'member', 'owner']; 
-  if (!validRoles.includes(role)) {
-    return res.status(400).json({ error: 'Invalid role' });
-  }
+  const { role, roleId } = req.body;
 
   try {
-    // Check if trying to demote the last owner
-    if (role !== 'owner') {
-        const memberCheck = await query(
-            `SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`,
-            [id, userId]
+    const user = req.user;
+    const memberCheck = await query(
+      `SELECT role, role_id FROM organization_members WHERE organization_id = $1 AND user_id = $2`,
+      [id, userId]
+    );
+
+    if (memberCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    const oldRole = memberCheck.rows[0].role;
+    const oldRoleId = memberCheck.rows[0].role_id;
+    let updateField, updateValue, newRoleDisplay, oldRoleDisplay;
+
+    // Handle new role_id system
+    if (roleId) {
+      // Validate that the role exists and belongs to this organization
+      const roleCheck = await query(
+        `SELECT name FROM organization_roles WHERE id = $1 AND organization_id = $2`,
+        [roleId, id]
+      );
+
+      if (roleCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid role' });
+      }
+
+      // Check if trying to demote the last owner
+      const ownerRoleCheck = await query(
+        `SELECT id FROM organization_roles WHERE name = 'owner' AND organization_id = $1`,
+        [id]
+      );
+
+      if (oldRoleId === ownerRoleCheck.rows[0]?.id && roleId !== oldRoleId) {
+        const ownerCount = await query(
+          `SELECT COUNT(*) as count FROM organization_members om
+           JOIN organization_roles r ON om.role_id = r.id
+           WHERE om.organization_id = $1 AND r.name = 'owner'`,
+          [id]
         );
-        
-        if (memberCheck.rows.length > 0 && memberCheck.rows[0].role === 'owner') {
-            const ownerCount = await query(
-                `SELECT COUNT(*) as count FROM organization_members WHERE organization_id = $1 AND role = 'owner'`,
-                [id]
-            );
-            if (parseInt(ownerCount.rows[0].count) <= 1) {
-                return res.status(400).json({ error: 'Cannot demote the last owner' });
-            }
+        if (parseInt(ownerCount.rows[0].count) <= 1) {
+          return res.status(400).json({ error: 'Cannot demote the last owner' });
         }
+      }
+
+      updateField = 'role_id';
+      updateValue = roleId;
+      newRoleDisplay = roleCheck.rows[0].name;
+
+      // Get old role name for activity feed
+      if (oldRoleId) {
+        const oldRoleNameCheck = await query(
+          `SELECT name FROM organization_roles WHERE id = $1`,
+          [oldRoleId]
+        );
+        oldRoleDisplay = oldRoleNameCheck.rows[0]?.name || oldRole;
+      } else {
+        oldRoleDisplay = oldRole;
+      }
+    }
+    // Handle legacy role system
+    else if (role) {
+      const validRoles = ['admin', 'member', 'owner'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+      }
+
+      if (role !== 'owner' && oldRole === 'owner') {
+        const ownerCount = await query(
+          `SELECT COUNT(*) as count FROM organization_members WHERE organization_id = $1 AND role = 'owner'`,
+          [id]
+        );
+        if (parseInt(ownerCount.rows[0].count) <= 1) {
+          return res.status(400).json({ error: 'Cannot demote the last owner' });
+        }
+      }
+
+      updateField = 'role';
+      updateValue = role;
+      newRoleDisplay = role;
+      oldRoleDisplay = oldRole;
+    } else {
+      return res.status(400).json({ error: 'Either role or roleId must be provided' });
     }
 
     const result = await query(
       `UPDATE organization_members
-       SET role = $1
+       SET ${updateField} = $1
        WHERE organization_id = $2 AND user_id = $3
        RETURNING *`,
-      [role, id, userId]
+      [updateValue, id, userId]
     );
 
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Member not found' });
+    }
+
+    const orgResult = await query('SELECT name FROM organizations WHERE id = $1', [id]);
+    const orgName = orgResult.rows[0]?.name || 'the organization';
+
+    const userResult = await query('SELECT name FROM users WHERE id = $1', [userId]);
+    const userName = userResult.rows[0]?.name || 'A team member';
+
+    await ActivityFeedService.createActivity({
+      userId,
+      organizationId: id,
+      type: 'role_updated',
+      title: `Your role in ${orgName} has been updated`,
+      description: `Your role in ${orgName} has been changed from ${oldRoleDisplay} to ${newRoleDisplay}.`,
+      data: {
+        organizationName: orgName,
+        oldRole: oldRoleDisplay,
+        newRole: newRoleDisplay,
+        updatedBy: user?.name || 'An admin'
+      }
+    });
+
+    const membersResult = await query(
+      `SELECT om.user_id
+       FROM organization_members om
+       WHERE om.organization_id = $1 AND om.user_id != $2`,
+      [id, userId]
+    );
+
+    for (const member of membersResult.rows) {
+      await ActivityFeedService.createActivity({
+        userId: member.user_id,
+        organizationId: id,
+        type: 'member_role_updated',
+        title: `${userName}'s role has been updated`,
+        description: `${userName}'s role in ${orgName} has been changed from ${oldRoleDisplay} to ${newRoleDisplay}.`,
+        data: {
+          userId,
+          userName,
+          organizationName: orgName,
+          oldRole: oldRoleDisplay,
+          newRole: newRoleDisplay,
+          updatedBy: user?.name || 'An admin'
+        }
+      });
     }
 
     res.json({ message: 'Member role updated' });
@@ -161,21 +533,24 @@ router.delete('/:id/members/:userId', requireOrgAccess, async (req: Authenticate
   const { id, userId } = req.params;
 
   try {
-    // Check if trying to remove the last owner
+    const user = req.user;
     const memberCheck = await query(
-        `SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`,
-        [id, userId]
+      `SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`,
+      [id, userId]
     );
-    
+
     if (memberCheck.rows.length > 0 && memberCheck.rows[0].role === 'owner') {
-        const ownerCount = await query(
-            `SELECT COUNT(*) as count FROM organization_members WHERE organization_id = $1 AND role = 'owner'`,
-            [id]
-        );
-        if (parseInt(ownerCount.rows[0].count) <= 1) {
-            return res.status(400).json({ error: 'Cannot remove the last owner' });
-        }
+      const ownerCount = await query(
+        `SELECT COUNT(*) as count FROM organization_members WHERE organization_id = $1 AND role = 'owner'`,
+        [id]
+      );
+      if (parseInt(ownerCount.rows[0].count) <= 1) {
+        return res.status(400).json({ error: 'Cannot remove the last owner' });
+      }
     }
+
+    const userResult = await query('SELECT name FROM users WHERE id = $1', [userId]);
+    const userName = userResult.rows[0]?.name || 'A team member';
 
     const result = await query(
       `DELETE FROM organization_members
@@ -187,10 +562,365 @@ router.delete('/:id/members/:userId', requireOrgAccess, async (req: Authenticate
       return res.status(404).json({ error: 'Member not found' });
     }
 
+    const orgResult = await query('SELECT name FROM organizations WHERE id = $1', [id]);
+    const orgName = orgResult.rows[0]?.name || 'the organization';
+
+    await ActivityFeedService.createActivity({
+      userId,
+      organizationId: id,
+      type: 'member_removed',
+      title: `You have been removed from ${orgName}`,
+      description: `You have been removed from ${orgName} by ${user?.name || 'an admin'}.`,
+      data: {
+        organizationName: orgName,
+        removedBy: user?.name || 'An admin'
+      }
+    });
+
+    const membersResult = await query(
+      `SELECT om.user_id
+       FROM organization_members om
+       WHERE om.organization_id = $1`,
+      [id]
+    );
+
+    for (const member of membersResult.rows) {
+      await ActivityFeedService.createActivity({
+        userId: member.user_id,
+        organizationId: id,
+        type: 'member_left',
+        title: `${userName} has left ${orgName}`,
+        description: `${userName} has been removed from ${orgName} by ${user?.name || 'an admin'}.`,
+        data: {
+          userId,
+          userName,
+          organizationName: orgName,
+          removedBy: user?.name || 'An admin'
+        }
+      });
+    }
+
     res.json({ message: 'Member removed' });
   } catch (error) {
     console.error('Failed to remove member:', error);
     res.status(500).json({ error: 'Failed to remove member' });
+  }
+});
+
+// POST /:id/members/invite - Create invitation
+router.post('/:id/members/invite', requireOrgAccess, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { email, roleId } = req.body;
+  const user = req.user;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  if (!roleId) {
+    return res.status(400).json({ error: 'Role ID is required' });
+  }
+
+  try {
+    const invitation = await InvitationService.createInvitation(
+      id,
+      email,
+      roleId,
+      user!.id
+    );
+
+    res.status(201).json({
+      id: invitation.id,
+      organization_id: invitation.organization_id,
+      invited_email: invitation.invited_email,
+      role_id: invitation.role_id,
+      token: invitation.token,
+      status: invitation.status,
+      expires_at: invitation.expires_at,
+      created_at: invitation.created_at
+    });
+  } catch (error) {
+    console.error('Failed to create invitation:', error);
+    const message = error instanceof Error ? error.message : 'Failed to create invitation';
+    res.status(400).json({ error: message });
+  }
+});
+
+// POST /invitations/:token/accept - Accept invitation
+router.post('/invitations/:token/accept', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  const { token } = req.params;
+  const user = req.user;
+
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  try {
+    const result = await InvitationService.acceptInvitation(token, user.id);
+    res.json({ 
+      message: 'Invitation accepted successfully',
+      organization_id: result.organization_id 
+    });
+  } catch (error) {
+    console.error('Failed to accept invitation:', error);
+    const message = error instanceof Error ? error.message : 'Failed to accept invitation';
+    res.status(400).json({ error: message });
+  }
+});
+
+// GET /invitations/:token - Validate invitation (public endpoint, no auth required)
+router.get('/invitations/:token', async (req: AuthenticatedRequest, res: Response) => {
+  const { token } = req.params;
+
+  try {
+    const invitation = await InvitationService.validateInvitation(token);
+    res.json(invitation);
+  } catch (error) {
+    console.error('Failed to validate invitation:', error);
+    const message = error instanceof Error ? error.message : 'Failed to validate invitation';
+    res.status(400).json({ error: message });
+  }
+});
+
+// POST /invitations/:token/decline - Decline invitation
+router.post('/invitations/:token/decline', async (req: AuthenticatedRequest, res: Response) => {
+  const { token } = req.params;
+
+  try {
+    await InvitationService.declineInvitation(token);
+    res.json({ message: 'Invitation declined successfully' });
+  } catch (error) {
+    console.error('Failed to decline invitation:', error);
+    const message = error instanceof Error ? error.message : 'Failed to decline invitation';
+    res.status(400).json({ error: message });
+  }
+});
+
+// DELETE /invitations/:id - Cancel invitation
+router.delete('/invitations/:id', requireOrgAccess, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    await InvitationService.cancelInvitation(id);
+    res.json({ message: 'Invitation cancelled successfully' });
+  } catch (error) {
+    console.error('Failed to cancel invitation:', error);
+    const message = error instanceof Error ? error.message : 'Failed to cancel invitation';
+    res.status(400).json({ error: message });
+  }
+});
+
+// GET /:id/invitations - List pending invitations for organization
+router.get('/:id/invitations', requireOrgAccess, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const invitations = await InvitationService.getPendingInvitations(id);
+    res.json(invitations);
+  } catch (error) {
+    console.error('Failed to fetch invitations:', error);
+    res.status(500).json({ error: 'Failed to fetch invitations' });
+  }
+});
+
+// GET /:id/roles - List all roles for organization
+router.get('/:id/roles', checkOrganizationMembership, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const result = await query(
+      `SELECT 
+         id, 
+         name, 
+         permissions, 
+         is_custom,
+         created_at,
+         updated_at
+       FROM organization_roles 
+       WHERE organization_id = $1
+       ORDER BY is_custom ASC, name ASC`,
+      [id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Failed to fetch roles:', error);
+    res.status(500).json({ error: 'Failed to fetch roles' });
+  }
+});
+
+// POST /:id/roles - Create custom role
+router.post('/:id/roles', requireOrgAccess, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { name, permissions } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Role name is required' });
+  }
+
+  if (!Array.isArray(permissions)) {
+    return res.status(400).json({ error: 'Permissions must be an array' });
+  }
+
+  const validPermissions = [
+    'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
+    'tickets_view', 'tickets_create', 'tickets_manage',
+    'billing_view', 'billing_manage',
+    'members_manage', 'settings_manage'
+  ];
+
+  const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
+  if (invalidPermissions.length > 0) {
+    return res.status(400).json({ 
+      error: `Invalid permissions: ${invalidPermissions.join(', ')}` 
+    });
+  }
+
+  try {
+    const result = await query(
+      `INSERT INTO organization_roles (organization_id, name, permissions, is_custom, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       RETURNING *`,
+      [id, name.trim(), permissions, true]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error: any) {
+    console.error('Failed to create role:', error);
+    if (error.code === '23505') {
+      return res.status(409).json({ error: 'Role name already exists' });
+    }
+    res.status(500).json({ error: 'Failed to create role' });
+  }
+});
+
+// PUT /:id/roles/:roleId - Update custom role
+router.put('/:id/roles/:roleId', requireOrgAccess, async (req: AuthenticatedRequest, res: Response) => {
+  const { id, roleId } = req.params;
+  const { name, permissions } = req.body;
+
+  try {
+    const roleCheck = await query(
+      `SELECT is_custom FROM organization_roles WHERE id = $1 AND organization_id = $2`,
+      [roleId, id]
+    );
+
+    if (roleCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Role not found' });
+    }
+
+    if (!roleCheck.rows[0].is_custom) {
+      return res.status(400).json({ error: 'Cannot modify predefined roles' });
+    }
+
+    if (name !== undefined && !name.trim()) {
+      return res.status(400).json({ error: 'Role name cannot be empty' });
+    }
+
+    if (permissions !== undefined && !Array.isArray(permissions)) {
+      return res.status(400).json({ error: 'Permissions must be an array' });
+    }
+
+    if (permissions) {
+      const validPermissions = [
+        'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
+        'tickets_view', 'tickets_create', 'tickets_manage',
+        'billing_view', 'billing_manage',
+        'members_manage', 'settings_manage'
+      ];
+
+      const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
+      if (invalidPermissions.length > 0) {
+        return res.status(400).json({ 
+          error: `Invalid permissions: ${invalidPermissions.join(', ')}` 
+        });
+      }
+    }
+
+    const updateFields: string[] = [];
+    const updateValues: any[] = [];
+    let paramIndex = 1;
+
+    if (name !== undefined) {
+      updateFields.push(`name = $${paramIndex++}`);
+      updateValues.push(name.trim());
+    }
+
+    if (permissions !== undefined) {
+      updateFields.push(`permissions = $${paramIndex++}`);
+      updateValues.push(permissions);
+    }
+
+    updateFields.push(`updated_at = NOW()`);
+    updateValues.push(roleId);
+    updateValues.push(id);
+
+    const result = await query(
+      `UPDATE organization_roles
+       SET ${updateFields.join(', ')}
+       WHERE id = $${paramIndex++} AND organization_id = $${paramIndex}
+       RETURNING *`,
+      updateValues
+    );
+
+    res.json(result.rows[0]);
+  } catch (error: any) {
+    console.error('Failed to update role:', error);
+    if (error.code === '23505') {
+      return res.status(409).json({ error: 'Role name already exists' });
+    }
+    res.status(500).json({ error: 'Failed to update role' });
+  }
+});
+
+// DELETE /:id/roles/:roleId - Delete custom role
+router.delete('/:id/roles/:roleId', requireOrgAccess, async (req: AuthenticatedRequest, res: Response) => {
+  const { id, roleId } = req.params;
+
+  try {
+    const roleCheck = await query(
+      `SELECT is_custom FROM organization_roles WHERE id = $1 AND organization_id = $2`,
+      [roleId, id]
+    );
+
+    if (roleCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Role not found' });
+    }
+
+    if (!roleCheck.rows[0].is_custom) {
+      return res.status(400).json({ error: 'Cannot delete predefined roles' });
+    }
+
+    const memberCount = await query(
+      `SELECT COUNT(*) as count FROM organization_members WHERE role_id = $1`,
+      [roleId]
+    );
+
+    if (parseInt(memberCount.rows[0].count) > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete role that is assigned to members. Reassign members first.' 
+      });
+    }
+
+    const invitationCount = await query(
+      `SELECT COUNT(*) as count FROM organization_invitations WHERE role_id = $1 AND status = 'pending'`,
+      [roleId]
+    );
+
+    if (parseInt(invitationCount.rows[0].count) > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete role that is used in pending invitations. Cancel invitations first.' 
+      });
+    }
+
+    await query(
+      'DELETE FROM organization_roles WHERE id = $1 AND organization_id = $2',
+      [roleId, id]
+    );
+
+    res.json({ message: 'Role deleted successfully' });
+  } catch (error) {
+    console.error('Failed to delete role:', error);
+    res.status(500).json({ error: 'Failed to delete role' });
   }
 });
 

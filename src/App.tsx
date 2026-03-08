@@ -57,6 +57,8 @@ import Pricing from "./pages/Pricing";
 import SSHKeys from "./pages/SSHKeys";
 
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
+import Organizations from "./pages/Organizations";
+import AcceptInvitation from "./pages/AcceptInvitation";
 
 // Component to handle impersonation banner display
 function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
@@ -278,6 +280,22 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/organizations"
+          element={
+            <ProtectedRoute>
+              <Organizations />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/organizations/:id"
+          element={
+            <ProtectedRoute>
+              <Organizations />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/billing"
           element={
             <ProtectedRoute>
@@ -372,6 +390,9 @@ function AppRoutes() {
         <Route path="/status" element={<Status />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/organizations/invitations/:token" element={<AcceptInvitation />} />
+        <Route path="/organizations/invitations/:token/accept" element={<AcceptInvitation />} />
+        <Route path="/organizations/invitations/:token/decline" element={<AcceptInvitation />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

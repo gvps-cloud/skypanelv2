@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   User,
   Key,
@@ -62,8 +63,14 @@ const Settings: React.FC = () => {
     disable2FA,
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState("profile");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
 
   // API Keys State
   const [apiKeys, setApiKeys] = useState<any[]>([]);

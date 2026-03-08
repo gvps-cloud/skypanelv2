@@ -172,7 +172,7 @@ router.get('/transactions',
   [
     queryValidator('limit').optional().isInt({ min: 1, max: 100 }),
     queryValidator('offset').optional().isInt({ min: 0 }),
-    queryValidator('status').optional().isIn(['completed', 'pending', 'failed', 'refunded']),
+    queryValidator('status').optional().isIn(['completed', 'failed', 'refunded']),
     queryValidator('type').optional().isIn(['credit', 'debit']),
     queryValidator('userId').optional().isUUID()
   ],

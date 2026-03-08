@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/hooks/useTheme";
 import { BRAND_NAME } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
+import ActivityFeed from "@/components/ActivityFeed";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -108,7 +109,7 @@ const Navigation: React.FC = () => {
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
-          <NotificationDropdown />
+          <ActivityFeed />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

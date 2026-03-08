@@ -70,7 +70,6 @@ export const BillingTransactions: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed': return <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>;
-      case 'pending': return <Badge variant="outline" className="text-yellow-500 border-yellow-500">Pending</Badge>;
       case 'failed': return <Badge variant="destructive">Failed</Badge>;
       case 'refunded': return <Badge variant="secondary">Refunded</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
@@ -153,7 +152,6 @@ export const BillingTransactions: React.FC = () => {
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
               <SelectItem value="refunded">Refunded</SelectItem>
             </SelectContent>

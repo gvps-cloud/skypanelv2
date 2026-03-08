@@ -126,9 +126,22 @@ export interface PaymentTransactionDetail {
 class PaymentService {
   private getAuthHeaders(): HeadersInit {
     const token = localStorage.getItem("auth_token");
+    const userStr = localStorage.getItem("auth_user");
+    let organizationId: string | undefined;
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        organizationId = user.organizationId;
+      } catch (e) {
+        // ignore
+      }
+    }
+
     return {
       "Content-Type": "application/json",
       Authorization: token ? `Bearer ${token}` : "",
+      ...(organizationId && { "X-Organization-ID": organizationId }),
     };
   }
 
@@ -701,9 +714,22 @@ export const paymentService = new PaymentService();
 class ApiClient {
   private getAuthHeaders(): HeadersInit {
     const token = localStorage.getItem("auth_token");
+    const userStr = localStorage.getItem("auth_user");
+    let organizationId: string | undefined;
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        organizationId = user.organizationId;
+      } catch (e) {
+        // ignore
+      }
+    }
+
     return {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
+      ...(organizationId && { "X-Organization-ID": organizationId }),
     };
   }
 

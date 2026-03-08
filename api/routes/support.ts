@@ -3,6 +3,7 @@ import { body, param, validationResult } from "express-validator";
 import { authenticateToken, requireOrganization } from "../middleware/auth.js";
 import { query, pool } from "../lib/database.js";
 import { logActivity } from "../services/activityLogger.js";
+import { RoleService } from "../services/roles.js";
 
 const router = express.Router();
 
@@ -67,18 +68,50 @@ const notifyAdminsForTicketEvent = async ({
   }
 };
 
-// List support tickets for the user's organization
+// List support tickets for user's organization with permission-based filtering
 router.get("/tickets", authenticateToken, requireOrganization, async (req: Request, res: Response) => {
   try {
-    const organizationId = (req as any).user.organizationId;
-    const result = await query(
-      `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
-       FROM support_tickets st
-       LEFT JOIN vps_instances vi ON st.vps_id = vi.id
-       WHERE st.organization_id = $1 
-       ORDER BY st.created_at DESC`,
-      [organizationId],
-    );
+    const user = (req as any).user;
+    const userId = user.id;
+    const userRole = user.role;
+    const organizationId = user.organizationId;
+
+    let result;
+
+    if (userRole === 'admin') {
+      result = await query(
+        `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
+         FROM support_tickets st
+         LEFT JOIN vps_instances vi ON st.vps_id = vi.id
+         ORDER BY st.created_at DESC`,
+      );
+    } else {
+      const hasTicketsViewPermission = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        'tickets_view'
+      );
+
+      if (hasTicketsViewPermission) {
+        result = await query(
+          `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
+           FROM support_tickets st
+           LEFT JOIN vps_instances vi ON st.vps_id = vi.id
+           WHERE st.organization_id = $1 
+           ORDER BY st.created_at DESC`,
+          [organizationId],
+        );
+      } else {
+        result = await query(
+          `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
+           FROM support_tickets st
+           LEFT JOIN vps_instances vi ON st.vps_id = vi.id
+           WHERE st.organization_id IS NULL AND st.created_by = $1
+           ORDER BY st.created_at DESC`,
+          [userId],
+        );
+      }
+    }
 
     res.json({ tickets: result.rows || [] });
   } catch (err: any) {
@@ -109,8 +142,27 @@ router.post(
         return;
       }
 
-      const organizationId = (req as any).user.organizationId;
-      const userId = (req as any).user.id;
+      const user = (req as any).user;
+      const organizationId = user.organizationId;
+      const userId = user.id;
+      const userRole = user.role;
+
+      // Check tickets_create permission for non-admin users
+      if (userRole !== 'admin') {
+        const hasTicketsCreatePermission = await RoleService.checkPermission(
+          userId,
+          organizationId,
+          'tickets_create'
+        );
+
+        if (!hasTicketsCreatePermission) {
+          return res.status(403).json({
+            error: 'Insufficient permissions',
+            required: 'tickets_create',
+          });
+        }
+      }
+
       const { subject, message, priority, category, vpsId } = req.body;
 
     // If a VPS is linked, fetch its details first to store a snapshot
@@ -261,8 +313,33 @@ router.post(
 
       const { id } = req.params;
       const { message } = req.body as { message: string };
-      const organizationId = (req as any).user.organizationId;
-      const userId = (req as any).user.id;
+      const user = (req as any).user;
+      const organizationId = user.organizationId;
+      const userId = user.id;
+      const userRole = user.role;
+
+      // Check tickets_manage permission for non-admin users
+      if (userRole !== 'admin') {
+        const hasTicketsManagePermission = await RoleService.checkPermission(
+          userId,
+          organizationId,
+          'tickets_manage'
+        );
+
+        if (!hasTicketsManagePermission) {
+          // Allow ticket creator to reply
+          const ticketCreatorRes = await query(
+            "SELECT created_by FROM support_tickets WHERE id = $1",
+            [id],
+          );
+          if (ticketCreatorRes.rows.length === 0 || ticketCreatorRes.rows[0].created_by !== userId) {
+            return res.status(403).json({
+              error: 'Insufficient permissions to reply to this ticket',
+              required: 'tickets_manage',
+            });
+          }
+        }
+      }
 
       const ticketCheckRes = await query(
         "SELECT id, status, subject, organization_id FROM support_tickets WHERE id = $1 AND organization_id = $2",
@@ -352,6 +429,512 @@ router.post(
       }
       console.error("Create ticket reply error:", err);
       res.status(500).json({ error: err.message || "Failed to add reply" });
+    }
+  },
+);
+
+// Update ticket status
+router.put(
+  "/tickets/:id/status",
+  authenticateToken,
+  requireOrganization,
+  [
+    param("id").isUUID().withMessage("Invalid ticket id"),
+    body("status")
+      .isIn(["open", "in_progress", "resolved", "closed"])
+      .withMessage("Invalid status"),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { id } = req.params;
+      const { status } = req.body;
+      const user = (req as any).user;
+      const organizationId = user.organizationId;
+      const userId = user.id;
+      const userRole = user.role;
+
+      // Check tickets_manage permission for non-admin users
+      if (userRole !== 'admin') {
+        const hasTicketsManagePermission = await RoleService.checkPermission(
+          userId,
+          organizationId,
+          'tickets_manage'
+        );
+
+        if (!hasTicketsManagePermission) {
+          return res.status(403).json({
+            error: 'Insufficient permissions',
+            required: 'tickets_manage',
+          });
+        }
+      }
+
+      const ticketRes = await query(
+        "SELECT id, subject, organization_id FROM support_tickets WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+
+      if (ticketRes.rows.length === 0) {
+        res.status(404).json({ error: "Ticket not found" });
+        return;
+      }
+
+      const result = await query(
+        "UPDATE support_tickets SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
+        [status, id],
+      );
+
+      const ticket = ticketRes.rows[0];
+
+      await notifyAdminsForTicketEvent({
+        organizationId,
+        ticketId: id,
+        subject: ticket.subject,
+        message: `Ticket status updated to "${status}"`,
+        status: "info",
+        metadata: {
+          status_change: status,
+          updated_by: userId,
+        },
+        req,
+      });
+
+      res.json({ ticket: result.rows[0] });
+    } catch (err: any) {
+      console.error("Update ticket status error:", err);
+      res.status(500).json({ error: err.message || "Failed to update ticket status" });
+    }
+  },
+);
+
+// Update ticket priority
+router.put(
+  "/tickets/:id/priority",
+  authenticateToken,
+  requireOrganization,
+  [
+    param("id").isUUID().withMessage("Invalid ticket id"),
+    body("priority")
+      .isIn(["low", "medium", "high", "urgent"])
+      .withMessage("Invalid priority"),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { id } = req.params;
+      const { priority } = req.body;
+      const user = (req as any).user;
+      const organizationId = user.organizationId;
+      const userId = user.id;
+      const userRole = user.role;
+
+      // Check tickets_manage permission for non-admin users
+      if (userRole !== 'admin') {
+        const hasTicketsManagePermission = await RoleService.checkPermission(
+          userId,
+          organizationId,
+          'tickets_manage'
+        );
+
+        if (!hasTicketsManagePermission) {
+          return res.status(403).json({
+            error: 'Insufficient permissions',
+            required: 'tickets_manage',
+          });
+        }
+      }
+
+      const ticketRes = await query(
+        "SELECT id, subject, organization_id FROM support_tickets WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+
+      if (ticketRes.rows.length === 0) {
+        res.status(404).json({ error: "Ticket not found" });
+        return;
+      }
+
+      const result = await query(
+        "UPDATE support_tickets SET priority = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
+        [priority, id],
+      );
+
+      const ticket = ticketRes.rows[0];
+
+      await notifyAdminsForTicketEvent({
+        organizationId,
+        ticketId: id,
+        subject: ticket.subject,
+        message: `Ticket priority updated to "${priority}"`,
+        status: "info",
+        metadata: {
+          priority_change: priority,
+          updated_by: userId,
+        },
+        req,
+      });
+
+      res.json({ ticket: result.rows[0] });
+    } catch (err: any) {
+      console.error("Update ticket priority error:", err);
+      res.status(500).json({ error: err.message || "Failed to update ticket priority" });
+    }
+  },
+);
+
+// Assign ticket to a user
+router.put(
+  "/tickets/:id/assign",
+  authenticateToken,
+  requireOrganization,
+  [
+    param("id").isUUID().withMessage("Invalid ticket id"),
+    body("assigned_to").isUUID().withMessage("Invalid user ID"),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { id } = req.params;
+      const { assigned_to } = req.body;
+      const user = (req as any).user;
+      const organizationId = user.organizationId;
+      const userId = user.id;
+      const userRole = user.role;
+
+      // Check tickets_manage permission for non-admin users
+      if (userRole !== 'admin') {
+        const hasTicketsManagePermission = await RoleService.checkPermission(
+          userId,
+          organizationId,
+          'tickets_manage'
+        );
+
+        if (!hasTicketsManagePermission) {
+          return res.status(403).json({
+            error: 'Insufficient permissions',
+            required: 'tickets_manage',
+          });
+        }
+      }
+
+      // Verify the assigned user exists and belongs to the organization
+      const userRes = await query(
+        "SELECT id, name FROM users WHERE id = $1 AND organization_id = $2",
+        [assigned_to, organizationId],
+      );
+
+      if (userRes.rows.length === 0) {
+        res.status(404).json({ error: "User not found in organization" });
+        return;
+      }
+
+      const ticketRes = await query(
+        "SELECT id, subject, organization_id FROM support_tickets WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+
+      if (ticketRes.rows.length === 0) {
+        res.status(404).json({ error: "Ticket not found" });
+        return;
+      }
+
+      const result = await query(
+        "UPDATE support_tickets SET assigned_to = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
+        [assigned_to, id],
+      );
+
+      const ticket = ticketRes.rows[0];
+      const assignedUser = userRes.rows[0];
+
+      await notifyAdminsForTicketEvent({
+        organizationId,
+        ticketId: id,
+        subject: ticket.subject,
+        message: `Ticket assigned to ${assignedUser.name}`,
+        status: "info",
+        metadata: {
+          assigned_to: assigned_to,
+          assigned_to_name: assignedUser.name,
+          updated_by: userId,
+        },
+        req,
+      });
+
+      res.json({ ticket: result.rows[0] });
+    } catch (err: any) {
+      console.error("Assign ticket error:", err);
+      res.status(500).json({ error: err.message || "Failed to assign ticket" });
+    }
+  },
+);
+
+// Delete a ticket
+router.delete(
+  "/tickets/:id",
+  authenticateToken,
+  requireOrganization,
+  [param("id").isUUID().withMessage("Invalid ticket id")],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { id } = req.params;
+      const user = (req as any).user;
+      const organizationId = user.organizationId;
+      const userId = user.id;
+      const userRole = user.role;
+
+      // Check tickets_manage permission for non-admin users
+      if (userRole !== 'admin') {
+        const hasTicketsManagePermission = await RoleService.checkPermission(
+          userId,
+          organizationId,
+          'tickets_manage'
+        );
+
+        if (!hasTicketsManagePermission) {
+          return res.status(403).json({
+            error: 'Insufficient permissions',
+            required: 'tickets_manage',
+          });
+        }
+      }
+
+      const ticketRes = await query(
+        "SELECT id, subject FROM support_tickets WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+
+      if (ticketRes.rows.length === 0) {
+        res.status(404).json({ error: "Ticket not found" });
+        return;
+      }
+
+      const _ticket = ticketRes.rows[0];
+
+      // Delete the ticket (cascade will delete replies)
+      await query("DELETE FROM support_tickets WHERE id = $1", [id]);
+
+      res.json({ message: "Ticket deleted successfully", ticket_id: id });
+    } catch (err: any) {
+      console.error("Delete ticket error:", err);
+      res.status(500).json({ error: err.message || "Failed to delete ticket" });
+    }
+  },
+);
+
+// Update a ticket reply
+router.put(
+  "/tickets/:id/replies/:replyId",
+  authenticateToken,
+  requireOrganization,
+  [
+    param("id").isUUID().withMessage("Invalid ticket id"),
+    param("replyId").isUUID().withMessage("Invalid reply id"),
+    body("message").isLength({ min: 1 }).withMessage("Message is required"),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { id, replyId } = req.params;
+      const { message } = req.body;
+      const user = (req as any).user;
+      const organizationId = user.organizationId;
+      const userId = user.id;
+      const userRole = user.role;
+
+      // Check tickets_manage permission for non-admin users
+      if (userRole !== 'admin') {
+        const hasTicketsManagePermission = await RoleService.checkPermission(
+          userId,
+          organizationId,
+          'tickets_manage'
+        );
+
+        if (!hasTicketsManagePermission) {
+          // Allow reply creator to update their own reply
+          const replyRes = await query(
+            "SELECT user_id FROM support_ticket_replies WHERE id = $1 AND ticket_id = $2",
+            [replyId, id],
+          );
+
+          if (replyRes.rows.length === 0 || replyRes.rows[0].user_id !== userId) {
+            return res.status(403).json({
+              error: 'Insufficient permissions to update this reply',
+              required: 'tickets_manage',
+            });
+          }
+        }
+      }
+
+      // Verify ticket belongs to organization
+      const ticketRes = await query(
+        "SELECT id, subject, organization_id FROM support_tickets WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+
+      if (ticketRes.rows.length === 0) {
+        res.status(404).json({ error: "Ticket not found" });
+        return;
+      }
+
+      const ticket = ticketRes.rows[0];
+
+      // Update the reply
+      const result = await query(
+        "UPDATE support_ticket_replies SET message = $1 WHERE id = $2 AND ticket_id = $3 RETURNING *",
+        [message, replyId, id],
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: "Reply not found" });
+        return;
+      }
+
+      await notifyAdminsForTicketEvent({
+        organizationId,
+        ticketId: id,
+        subject: ticket.subject,
+        message: `Reply updated on ticket: "${ticket.subject}"`,
+        status: "info",
+        metadata: {
+          reply_id: replyId,
+          updated_by: userId,
+        },
+        req,
+      });
+
+      res.json({ reply: result.rows[0] });
+    } catch (err: any) {
+      if (isMissingTableError(err)) {
+        return res.status(400).json({
+          error: "support_ticket_replies table not found. Apply migrations before updating replies.",
+        });
+      }
+      console.error("Update reply error:", err);
+      res.status(500).json({ error: err.message || "Failed to update reply" });
+    }
+  },
+);
+
+// Delete a ticket reply
+router.delete(
+  "/tickets/:id/replies/:replyId",
+  authenticateToken,
+  requireOrganization,
+  [
+    param("id").isUUID().withMessage("Invalid ticket id"),
+    param("replyId").isUUID().withMessage("Invalid reply id"),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { id, replyId } = req.params;
+      const user = (req as any).user;
+      const organizationId = user.organizationId;
+      const userId = user.id;
+      const userRole = user.role;
+
+      // Check tickets_manage permission for non-admin users
+      if (userRole !== 'admin') {
+        const hasTicketsManagePermission = await RoleService.checkPermission(
+          userId,
+          organizationId,
+          'tickets_manage'
+        );
+
+        if (!hasTicketsManagePermission) {
+          // Allow reply creator to delete their own reply
+          const replyRes = await query(
+            "SELECT user_id FROM support_ticket_replies WHERE id = $1 AND ticket_id = $2",
+            [replyId, id],
+          );
+
+          if (replyRes.rows.length === 0 || replyRes.rows[0].user_id !== userId) {
+            return res.status(403).json({
+              error: 'Insufficient permissions to delete this reply',
+              required: 'tickets_manage',
+            });
+          }
+        }
+      }
+
+      // Verify ticket belongs to organization
+      const ticketRes = await query(
+        "SELECT id, subject, organization_id FROM support_tickets WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+
+      if (ticketRes.rows.length === 0) {
+        res.status(404).json({ error: "Ticket not found" });
+        return;
+      }
+
+      const ticket = ticketRes.rows[0];
+
+      // Delete the reply
+      const result = await query(
+        "DELETE FROM support_ticket_replies WHERE id = $1 AND ticket_id = $2 RETURNING *",
+        [replyId, id],
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: "Reply not found" });
+        return;
+      }
+
+      await notifyAdminsForTicketEvent({
+        organizationId,
+        ticketId: id,
+        subject: ticket.subject,
+        message: `Reply deleted from ticket: "${ticket.subject}"`,
+        status: "warning",
+        metadata: {
+          reply_id: replyId,
+          deleted_by: userId,
+        },
+        req,
+      });
+
+      res.json({ message: "Reply deleted successfully", reply_id: replyId });
+    } catch (err: any) {
+      if (isMissingTableError(err)) {
+        return res.status(400).json({
+          error: "support_ticket_replies table not found. Apply migrations before deleting replies.",
+        });
+      }
+      console.error("Delete reply error:", err);
+      res.status(500).json({ error: err.message || "Failed to delete reply" });
     }
   },
 );

@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Activity,
+  Building2,
   CreditCard,
   BookOpen,
   Key,
@@ -144,6 +145,12 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               isActive: isVpsActive,
             },
           ],
+        },
+        {
+          title: "Organizations",
+          url: "/organizations",
+          icon: Building2,
+          isActive: pathname.startsWith("/organizations"),
         },
         {
           title: "SSH Keys",

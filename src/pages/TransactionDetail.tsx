@@ -236,8 +236,8 @@ const TransactionDetail: React.FC = () => {
             <span
               className={`mt-4 md:mt-0 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${transaction.status === 'completed'
                   ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                  : transaction.status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                  : transaction.status === 'cancelled' || transaction.status === 'refunded'
+                    ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
                     : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
                 }`}
             >

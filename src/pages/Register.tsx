@@ -59,7 +59,14 @@ export default function Register() {
         lastName: formData.lastName
       });
       toast.success(`Registration successful! Welcome to ${BRAND_NAME}!`);
-      navigate('/dashboard');
+      // Check for post-login redirect URL (works for registration too)
+      const redirectUrl = sessionStorage.getItem('postLoginRedirect');
+      if (redirectUrl) {
+        sessionStorage.removeItem('postLoginRedirect');
+        navigate(redirectUrl);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       toast.error(error.message || 'Registration failed');
     } finally {

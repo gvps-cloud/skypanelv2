@@ -35,6 +35,12 @@ vi.mock('../services/rateLimitMetrics.js', () => ({
   startMetricsPersistence: vi.fn(),
   recordRateLimitEvent: vi.fn(),
 }));
+// Mock role service permission checks; tests can override
+vi.mock('../services/roles.js', () => ({
+  RoleService: {
+    checkPermission: vi.fn().mockResolvedValue(true),
+  },
+}));
 
 describe('Admin Billing API', () => {
   beforeEach(() => {
@@ -79,6 +85,52 @@ describe('Admin Billing API', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.users).toHaveLength(1);
+  });
+
+  it('admin without organization cannot access billing summary', async () => {
+    // re-mock auth to simulate admin without org context
+    vi.mocked(require('../middleware/auth.js')).authenticateToken = (req: any, res: any, next: any) => {
+      req.user = { id: 'admin-id', role: 'admin' };
+      next();
+    };
+    // ensure permission check fails
+    const { RoleService } = require('../services/roles.js');
+    RoleService.checkPermission.mockResolvedValue(false);
+
+    const res = await request(app).get('/api/payments/billing/summary');
+    expect(res.status).toBe(403);
+  });
+
+  it('wallet transactions require billing_view permission', async () => {
+    // simulate normal member with organization
+    vi.mocked(require('../middleware/auth.js')).authenticateToken = (req: any, res: any, next: any) => {
+      req.user = { id: 'user-10', role: 'user', organizationId: 'org-10' };
+      next();
+    };
+    const { RoleService } = require('../services/roles.js');
+    // first scenario: no permission -> 403
+    RoleService.checkPermission.mockResolvedValue(false);
+
+    let res = await request(app).get('/api/payments/wallet/transactions');
+    expect(res.status).toBe(403);
+
+    res = await request(app).get('/api/payments/wallet/balance');
+    expect(res.status).toBe(403);
+
+    // second scenario: permission granted -> successful fetch
+    RoleService.checkPermission.mockResolvedValue(true);
+    const mockQuery = query as any;
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ id: 't1', amount: '10' }] });
+
+    res = await request(app).get('/api/payments/wallet/transactions');
+    expect(res.status).toBe(200);
+    expect(res.body.transactions).toHaveLength(1);
+
+    mockQuery.mockResolvedValueOnce({ rows: [{ balance: '55.00' }] });
+    res = await request(app).get('/api/payments/wallet/balance');
+    expect(res.status).toBe(200);
+    expect(res.body.balance).toBe(55);
   });
 
   it('POST /api/admin/billing/transactions creates manual adjustment', async () => {
@@ -188,6 +240,17 @@ describe('Admin Billing API', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/html');
     expect(res.text).toBe(htmlContent);
+  });
+
+  it('admin with no organization cannot access billing summary', async () => {
+    // re-mock auth to simulate admin without org
+    vi.mocked(require('../middleware/auth.js')).authenticateToken = (req: any, res: any, next: any) => {
+      req.user = { id: 'admin-id', role: 'admin' };
+      next();
+    };
+
+    const res = await request(app).get('/api/payments/billing/summary');
+    expect(res.status).toBe(403);
   });
 
   it('POST /api/admin/billing/transactions/:transactionId/invoice generates an invoice', async () => {

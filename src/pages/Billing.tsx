@@ -50,8 +50,8 @@ const Billing: React.FC = () => {
   const [addFundsAmount, setAddFundsAmount] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'history'>('overview');
   const [isPayPalDialogOpen, setIsPayPalDialogOpen] = useState(false);
-  const [pendingPaymentAmount, setPendingPaymentAmount] = useState<number | null>(null);
-  const [pendingPaymentDescription, setPendingPaymentDescription] = useState('');
+  const [currentPaymentAmount, setCurrentPaymentAmount] = useState<number | null>(null);
+  const [currentPaymentDescription, setCurrentPaymentDescription] = useState('');
   const [showFilter, setShowFilter] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     status: '',
@@ -201,9 +201,14 @@ const Billing: React.FC = () => {
         setBillingSummary(result.summary);
       } else {
         console.error('Failed to load billing summary:', result.error);
+        if (result.error) {
+          // notify user if there was a permission issue or other problem
+          toast.error(result.error);
+        }
       }
     } catch (error) {
       console.error('Failed to load billing summary:', error);
+      toast.error('Failed to load billing summary');
     } finally {
       setSummaryLoading(false);
     }
@@ -300,7 +305,10 @@ const Billing: React.FC = () => {
       const balance = await paymentService.getWalletBalance();
       if (balance) {
         setWalletBalance(balance.balance);
+      } else {
+        toast.error('Unable to retrieve wallet balance (permission denied)');
       }
+
       await loadOverviewData();
       await Promise.all([
         loadVPSUptimeData(),
@@ -346,10 +354,6 @@ const Billing: React.FC = () => {
 
   const handlePayPalDialogOpenChange = React.useCallback((nextOpen: boolean) => {
     setIsPayPalDialogOpen(nextOpen);
-    if (!nextOpen) {
-      setPendingPaymentAmount(null);
-      setPendingPaymentDescription('');
-    }
   }, []);
 
   const handlePayPalSuccess = React.useCallback(async () => {
@@ -379,8 +383,9 @@ const Billing: React.FC = () => {
     }
 
     const normalizedAmount = Math.round(parsed * 100) / 100;
-    setPendingPaymentAmount(normalizedAmount);
-    setPendingPaymentDescription(`Add ${formatCurrencyValue(normalizedAmount)} to wallet`);
+    // Store the current payment amount and description directly
+    setCurrentPaymentAmount(normalizedAmount);
+    setCurrentPaymentDescription(`Add ${formatCurrencyValue(normalizedAmount)} to wallet`);
     setIsPayPalDialogOpen(true);
   };
 
@@ -431,8 +436,6 @@ const Billing: React.FC = () => {
     switch (status) {
       case 'completed':
         return 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/20 dark:text-emerald-400';
-      case 'pending':
-        return 'bg-amber-500/15 text-amber-600 border border-amber-500/20 dark:text-amber-400';
       case 'failed':
         return 'bg-destructive/10 text-destructive border border-destructive/20';
       case 'cancelled':
@@ -780,8 +783,8 @@ const Billing: React.FC = () => {
 
       <PayPalCheckoutDialog
         open={isPayPalDialogOpen}
-        amount={pendingPaymentAmount}
-        description={pendingPaymentDescription}
+        amount={currentPaymentAmount}
+        description={currentPaymentDescription}
         onOpenChange={handlePayPalDialogOpenChange}
         onPaymentSuccess={handlePayPalSuccess}
         onPaymentCancel={handlePayPalCancel}
@@ -1221,7 +1224,6 @@ const Billing: React.FC = () => {
                       >
                         <option value="">All Statuses</option>
                         <option value="completed">Completed</option>
-                        <option value="pending">Pending</option>
                         <option value="failed">Failed</option>
                         <option value="cancelled">Cancelled</option>
                         <option value="refunded">Refunded</option>

@@ -44,6 +44,7 @@ export interface AuthContextType {
   setup2FA: () => Promise<{ secret: string; qrCode: string }>;
   verify2FA: (token: string) => Promise<void>;
   disable2FA: () => Promise<void>;
+  switchOrganization: (orgId: string) => Promise<void>;
 }
 
 export interface RegisterData {
@@ -495,6 +496,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const switchOrganization = async (orgId: string) => {
+    if (!user) return;
+    
+    // Update local user state
+    const updatedUser = { ...user, organizationId: orgId };
+    setUser(updatedUser);
+    localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+    
+    // You might want to reload the page or invalidate queries here
+    // window.location.reload(); 
+  };
+
   const value = {
     user,
     token,
@@ -513,6 +526,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setup2FA,
     verify2FA,
     disable2FA,
+    switchOrganization,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

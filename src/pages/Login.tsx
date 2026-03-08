@@ -37,7 +37,14 @@ export default function Login() {
       }
 
       toast.success("Login successful!");
-      navigate("/dashboard");
+      // Check for post-login redirect URL
+      const redirectUrl = sessionStorage.getItem('postLoginRedirect');
+      if (redirectUrl) {
+        sessionStorage.removeItem('postLoginRedirect');
+        navigate(redirectUrl);
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Login failed";
       toast.error(message);

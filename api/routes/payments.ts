@@ -16,6 +16,7 @@ import { authenticateToken, requireOrganization } from "../middleware/auth.js";
 import { query as dbQuery } from "../lib/database.js";
 import { config } from "../config/index.js";
 import { logActivity } from "../services/activityLogger.js";
+import { RoleService } from "../services/roles.js";
 
 const router = express.Router();
 
@@ -186,7 +187,7 @@ router.post(
       const userId = authReq.user?.id;
       const organizationId = authReq.user?.organizationId ?? null;
 
-      const result = await PayPalService.capturePayment(orderId);
+      const result = await PayPalService.capturePayment(orderId, organizationId ?? undefined);
 
       if (result.success) {
         if (userId) {
@@ -250,81 +251,6 @@ router.post(
   },
 );
 
-router.post(
-  "/cancel-payment/:orderId",
-  [
-    param("orderId").isLength({ min: 1 }).withMessage("Order ID is required"),
-    body("reason")
-      .optional()
-      .isString()
-      .isLength({ max: 255 })
-      .withMessage("Reason must be a string up to 255 characters"),
-  ],
-  requireOrganization,
-  async (req: Request, res: Response) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          error: "Validation failed",
-          details: errors.array(),
-        });
-      }
-
-      const { orderId } = req.params;
-      const reason =
-        typeof req.body.reason === "string" ? req.body.reason : undefined;
-      const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
-
-      const result = await PayPalService.cancelPayment(
-        orderId,
-        organizationId,
-        reason,
-      );
-
-      if (!result.success) {
-        return res
-          .status(result.error === "Payment not found" ? 404 : 400)
-          .json({
-            success: false,
-            error: result.error || "Failed to cancel payment",
-          });
-      }
-
-      try {
-        await logActivity(
-          {
-            userId,
-            organizationId,
-            eventType: "billing.payment.cancelled",
-            entityType: "payment_transaction",
-            entityId: orderId,
-            message: `Payment ${orderId} was cancelled.`,
-            status: "warning",
-            metadata: {
-              order_id: orderId,
-              reason: reason || "user_cancelled",
-              provider: "paypal",
-            },
-          },
-          req,
-        );
-      } catch {}
-
-      return res.json({
-        success: true,
-      });
-    } catch (error) {
-      console.error("Cancel payment error:", error);
-      return res.status(500).json({
-        success: false,
-        error: "Internal server error",
-      });
-    }
-  },
-);
-
 /**
  * Get wallet balance for the organization
  */
@@ -333,7 +259,16 @@ router.get(
   requireOrganization,
   async (req: Request, res: Response) => {
     try {
-      const { organizationId } = (req as AuthenticatedRequest).user;
+      const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
+
+      const hasBilling = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        'billing_view'
+      );
+      if (!hasBilling) {
+        return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+      }
 
       const balance = await PayPalService.getWalletBalance(organizationId);
 
@@ -437,9 +372,21 @@ router.get(
         });
       }
 
-      const { organizationId } = (req as AuthenticatedRequest).user;
+      const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
+
+      // only members with the billing_view permission may access the
+      // organization wallet.  others receive a 403 to prevent viewing
+      // other users' transactions.
+      const hasBilling = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        'billing_view'
+      );
+      if (!hasBilling) {
+        return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+      }
 
       const transactions = await PayPalService.getWalletTransactions(
         organizationId,
@@ -482,9 +429,9 @@ router.get(
       .withMessage("Offset must be a non-negative integer"),
     queryValidator("status")
       .optional()
-      .isIn(["pending", "completed", "failed", "cancelled", "refunded"])
+      .isIn(["completed", "failed", "cancelled", "refunded"])
       .withMessage(
-        "Status must be pending, completed, failed, cancelled, or refunded",
+        "Status must be completed, failed, cancelled, or refunded",
       ),
   ],
   requireOrganization,
@@ -739,7 +686,16 @@ router.get(
   requireOrganization,
   async (req: Request, res: Response) => {
     try {
-      const { organizationId } = (req as AuthenticatedRequest).user;
+      const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
+
+      const hasBilling = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        'billing_view'
+      );
+      if (!hasBilling) {
+        return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+      }
 
       const summary = await BillingService.getBillingSummary(organizationId);
 

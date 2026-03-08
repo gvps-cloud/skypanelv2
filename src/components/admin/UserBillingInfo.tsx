@@ -92,8 +92,6 @@ export const UserBillingInfo: React.FC<UserBillingInfoProps> = ({ billing, userI
       case 'completed':
       case 'success':
         return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
-      case 'pending':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
       case 'failed':
       case 'error':
         return 'bg-red-500/10 text-red-500 border-red-500/20';

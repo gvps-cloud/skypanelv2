@@ -55,19 +55,38 @@ export const authenticateToken = async (
 
     // Get user's organization (if organization_members table exists)
     let orgMember = null;
+    let organizationId: string | undefined;
+
     try {
-      const orgResult = await query(
-        'SELECT organization_id FROM organization_members WHERE user_id = $1',
-        [user.id]
-      );
-      orgMember = orgResult.rows[0] || null;
+      // Check for X-Organization-ID header
+      const requestedOrgId = req.headers['x-organization-id'] as string;
+      
+      if (requestedOrgId) {
+        // Validate membership for requested organization
+        const orgResult = await query(
+          'SELECT organization_id FROM organization_members WHERE user_id = $1 AND organization_id = $2',
+          [user.id, requestedOrgId]
+        );
+        if (orgResult.rows.length > 0) {
+          organizationId = orgResult.rows[0].organization_id;
+        }
+      }
+
+      // Fallback to default organization if header not present or invalid
+      if (!organizationId) {
+        const orgResult = await query(
+          'SELECT organization_id FROM organization_members WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1',
+          [user.id]
+        );
+        orgMember = orgResult.rows[0] || null;
+        organizationId = orgMember?.organization_id;
+      }
     } catch {
       // Table might not exist yet, continue without error
       console.warn('organization_members table not found, skipping organization lookup');
     }
 
     // Fallback: use organization owned by the user if no membership
-    let organizationId = orgMember?.organization_id;
     if (!organizationId) {
       try {
         const ownerOrg = await query(
@@ -82,8 +101,12 @@ export const authenticateToken = async (
       }
     }
 
-    // If still no organization, create one automatically for the user
-    if (!organizationId) {
+    // Admins should not receive an automatic organization because their
+    // billing and resource views should be scoped explicitly. Leaving them
+    // without a default org prevents accidental data leakage from other
+    // customers.  The `requireOrganization` middleware will still block
+    // org-specific endpoints for admins unless they explicitly switch context.
+    if (!organizationId && user.role !== 'admin') {
       try {
         const newOrg = await query(
           `INSERT INTO organizations (name, slug, owner_id, created_at, updated_at)
@@ -198,17 +221,34 @@ export const optionalAuth = async (
 
     // Get user's organization
     let orgMember = null;
+    let organizationId: string | undefined;
+
     try {
-      const orgResult = await query(
-        'SELECT organization_id FROM organization_members WHERE user_id = $1',
-        [user.id]
-      );
-      orgMember = orgResult.rows[0] || null;
+      // Check for X-Organization-ID header
+      const requestedOrgId = req.headers['x-organization-id'] as string;
+      
+      if (requestedOrgId) {
+        const orgResult = await query(
+          'SELECT organization_id FROM organization_members WHERE user_id = $1 AND organization_id = $2',
+          [user.id, requestedOrgId]
+        );
+        if (orgResult.rows.length > 0) {
+          organizationId = orgResult.rows[0].organization_id;
+        }
+      }
+
+      if (!organizationId) {
+        const orgResult = await query(
+          'SELECT organization_id FROM organization_members WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1',
+          [user.id]
+        );
+        orgMember = orgResult.rows[0] || null;
+        organizationId = orgMember?.organization_id;
+      }
     } catch {
       console.warn('organization_members table not found, skipping organization lookup');
     }
 
-    let organizationId = orgMember?.organization_id;
     if (!organizationId) {
       try {
         const ownerOrg = await query(

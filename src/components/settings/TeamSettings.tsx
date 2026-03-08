@@ -33,47 +33,139 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { MoreHorizontal, Plus, Trash2, Shield, UserPlus } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  MoreHorizontal, 
+  Plus, 
+  Trash2, 
+  Shield, 
+  UserPlus, 
+  X, 
+  Edit3,
+  Clock,
+  AlertCircle
+} from "lucide-react";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface OrganizationMember {
   id: string;
   email: string;
   name: string;
-  role: "owner" | "admin" | "member";
+  role: string;
+  role_id: string | null;
+  role_name: string | null;
   joined_at: string;
 }
+
+interface PendingInvitation {
+  id: string;
+  organization_id: string;
+  invited_email: string;
+  role_id: string;
+  role_name: string;
+  created_at: string;
+  expires_at: string;
+}
+
+interface OrganizationRole {
+  id: string;
+  name: string;
+  permissions: string[];
+  is_custom: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+const PERMISSIONS = [
+  { id: 'vps_view', label: 'VPS View', description: 'View VPS instances' },
+  { id: 'vps_create', label: 'VPS Create', description: 'Create new VPS instances' },
+  { id: 'vps_delete', label: 'VPS Delete', description: 'Delete VPS instances' },
+  { id: 'vps_manage', label: 'VPS Manage', description: 'Manage VPS instances (start, stop, restart)' },
+  { id: 'tickets_view', label: 'Tickets View', description: 'View support tickets' },
+  { id: 'tickets_create', label: 'Tickets Create', description: 'Create support tickets' },
+  { id: 'tickets_manage', label: 'Tickets Manage', description: 'Manage support tickets' },
+  { id: 'billing_view', label: 'Billing View', description: 'View billing information' },
+  { id: 'billing_manage', label: 'Billing Manage', description: 'Manage billing and invoices' },
+  { id: 'members_manage', label: 'Members Manage', description: 'Manage team members' },
+  { id: 'settings_manage', label: 'Settings Manage', description: 'Manage organization settings' },
+];
 
 export default function TeamSettings() {
   const { user, token } = useAuth();
   const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
+  const [roles, setRoles] = useState<OrganizationRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("members");
+
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("member");
+  const [inviteRoleId, setInviteRoleId] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
 
-  // Placeholder organization ID if not available in user context
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<OrganizationRole | null>(null);
+  const [roleName, setRoleName] = useState("");
+  const [rolePermissions, setRolePermissions] = useState<string[]>([]);
+  const [roleLoading, setRoleLoading] = useState(false);
+
+  const [cancelModal, setCancelModal] = useState<{
+    isOpen: boolean;
+    invitationId: string;
+    email: string;
+  }>({
+    isOpen: false,
+    invitationId: "",
+    email: "",
+  });
+
+  const [deleteRoleModal, setDeleteRoleModal] = useState<{
+    isOpen: boolean;
+    roleId: string;
+    roleName: string;
+  }>({
+    isOpen: false,
+    roleId: "",
+    roleName: "",
+  });
+
+  const [updateRoleModal, setUpdateRoleModal] = useState<{
+    isOpen: boolean;
+    memberId: string;
+    memberName: string;
+    currentRoleId: string;
+  }>({
+    isOpen: false,
+    memberId: "",
+    memberName: "",
+    currentRoleId: "",
+  });
+
+  const [newMemberRoleId, setNewMemberRoleId] = useState("");
+
   const orgId = user?.organizationId || "default-org-id";
 
   const fetchMembers = async () => {
     if (!orgId || orgId === "default-org-id") {
-      console.warn("No organization ID found for user, using placeholder");
       setLoading(false);
       return;
     }
 
     try {
       const response = await fetch(`/api/organizations/${orgId}/members`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch members");
-      }
+      if (!response.ok) throw new Error("Failed to fetch members");
 
       const data = await response.json();
       setMembers(data);
@@ -85,9 +177,45 @@ export default function TeamSettings() {
     }
   };
 
+  const fetchInvitations = async () => {
+    if (!orgId || orgId === "default-org-id") return;
+
+    try {
+      const response = await fetch(`/api/organizations/${orgId}/invitations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch invitations");
+
+      const data = await response.json();
+      setInvitations(data);
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+    }
+  };
+
+  const fetchRoles = async () => {
+    if (!orgId || orgId === "default-org-id") return;
+
+    try {
+      const response = await fetch(`/api/organizations/${orgId}/roles`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch roles");
+
+      const data = await response.json();
+      setRoles(data);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+    }
+  };
+
   useEffect(() => {
     if (token && orgId) {
       fetchMembers();
+      fetchInvitations();
+      fetchRoles();
     }
   }, [token, orgId]);
 
@@ -102,9 +230,14 @@ export default function TeamSettings() {
       return;
     }
 
+    if (!inviteRoleId) {
+      toast.error("Please select a role");
+      return;
+    }
+
     setInviteLoading(true);
     try {
-      const response = await fetch(`/api/organizations/${orgId}/members`, {
+      const response = await fetch(`/api/organizations/${orgId}/members/invite`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -112,7 +245,7 @@ export default function TeamSettings() {
         },
         body: JSON.stringify({
           email: inviteEmail,
-          role: inviteRole,
+          roleId: inviteRoleId,
         }),
       });
 
@@ -121,16 +254,42 @@ export default function TeamSettings() {
         throw new Error(error.error || "Failed to invite member");
       }
 
-      toast.success("Member invited successfully");
+      toast.success("Invitation sent successfully");
       setIsInviteOpen(false);
       setInviteEmail("");
-      setInviteRole("member");
-      fetchMembers();
+      setInviteRoleId("");
+      fetchInvitations();
     } catch (error: any) {
       console.error("Error inviting member:", error);
       toast.error(error.message);
     } finally {
       setInviteLoading(false);
+    }
+  };
+
+  const handleCancelInvitation = async () => {
+    if (orgId === "default-org-id") return;
+
+    try {
+      const response = await fetch(
+        `/api/organizations/invitations/${cancelModal.invitationId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to cancel invitation");
+      }
+
+      toast.success("Invitation cancelled successfully");
+      setCancelModal({ isOpen: false, invitationId: "", email: "" });
+      fetchInvitations();
+    } catch (error: any) {
+      console.error("Error cancelling invitation:", error);
+      toast.error(error.message);
     }
   };
 
@@ -143,9 +302,7 @@ export default function TeamSettings() {
         `/api/organizations/${orgId}/members/${memberId}`,
         {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -162,18 +319,24 @@ export default function TeamSettings() {
     }
   };
 
-  const handleUpdateRole = async (memberId: string, newRole: string) => {
+  const handleUpdateMemberRole = async () => {
     if (orgId === "default-org-id") return;
+
+    if (!newMemberRoleId) {
+      toast.error("Please select a role");
+      return;
+    }
+
     try {
       const response = await fetch(
-        `/api/organizations/${orgId}/members/${memberId}`,
+        `/api/organizations/${orgId}/members/${updateRoleModal.memberId}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ role: newRole }),
+          body: JSON.stringify({ roleId: newMemberRoleId }),
         }
       );
 
@@ -183,11 +346,148 @@ export default function TeamSettings() {
       }
 
       toast.success("Role updated successfully");
+      setUpdateRoleModal({ isOpen: false, memberId: "", memberName: "", currentRoleId: "" });
+      setNewMemberRoleId("");
       fetchMembers();
     } catch (error: any) {
       console.error("Error updating role:", error);
       toast.error(error.message);
     }
+  };
+
+  const handleCreateRole = async () => {
+    if (!roleName.trim()) {
+      toast.error("Please enter a role name");
+      return;
+    }
+
+    if (rolePermissions.length === 0) {
+      toast.error("Please select at least one permission");
+      return;
+    }
+
+    setRoleLoading(true);
+    try {
+      const response = await fetch(`/api/organizations/${orgId}/roles`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: roleName.trim(),
+          permissions: rolePermissions,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create role");
+      }
+
+      toast.success("Role created successfully");
+      setIsRoleModalOpen(false);
+      setRoleName("");
+      setRolePermissions([]);
+      fetchRoles();
+    } catch (error: any) {
+      console.error("Error creating role:", error);
+      toast.error(error.message);
+    } finally {
+      setRoleLoading(false);
+    }
+  };
+
+  const handleUpdateRole = async () => {
+    if (!editingRole) return;
+
+    if (!roleName.trim()) {
+      toast.error("Please enter a role name");
+      return;
+    }
+
+    setRoleLoading(true);
+    try {
+      const response = await fetch(
+        `/api/organizations/${orgId}/roles/${editingRole.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: roleName.trim(),
+            permissions: rolePermissions,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update role");
+      }
+
+      toast.success("Role updated successfully");
+      setIsRoleModalOpen(false);
+      setEditingRole(null);
+      setRoleName("");
+      setRolePermissions([]);
+      fetchRoles();
+    } catch (error: any) {
+      console.error("Error updating role:", error);
+      toast.error(error.message);
+    } finally {
+      setRoleLoading(false);
+    }
+  };
+
+  const handleDeleteRole = async () => {
+    if (orgId === "default-org-id") return;
+
+    try {
+      const response = await fetch(
+        `/api/organizations/${orgId}/roles/${deleteRoleModal.roleId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete role");
+      }
+
+      toast.success("Role deleted successfully");
+      setDeleteRoleModal({ isOpen: false, roleId: "", roleName: "" });
+      fetchRoles();
+    } catch (error: any) {
+      console.error("Error deleting role:", error);
+      toast.error(error.message);
+    }
+  };
+
+  const openCreateRoleModal = () => {
+    setEditingRole(null);
+    setRoleName("");
+    setRolePermissions([]);
+    setIsRoleModalOpen(true);
+  };
+
+  const openEditRoleModal = (role: OrganizationRole) => {
+    setEditingRole(role);
+    setRoleName(role.name);
+    setRolePermissions(role.permissions);
+    setIsRoleModalOpen(true);
+  };
+
+  const togglePermission = (permissionId: string) => {
+    setRolePermissions((prev) =>
+      prev.includes(permissionId)
+        ? prev.filter((p) => p !== permissionId)
+        : [...prev, permissionId]
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -198,162 +498,558 @@ export default function TeamSettings() {
     });
   };
 
+  const getDaysUntilExpiration = (dateString: string) => {
+    const now = new Date();
+    const expiration = new Date(dateString);
+    const diffTime = expiration.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getPermissionCount = (permissions: string[]) => {
+    return permissions.length;
+  };
+
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <div className="space-y-1">
-            <CardTitle>Team Members</CardTitle>
-            <CardDescription>
-              Manage your team members and their roles.
-            </CardDescription>
-          </div>
-          <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Add Member
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Team Member</DialogTitle>
-                <DialogDescription>
-                  Invite a new member to your organization. They will receive an email invitation.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <label htmlFor="email" className="text-sm font-medium">
-                    Email Address
-                  </label>
-                  <Input
-                    id="email"
-                    placeholder="colleague@example.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <label htmlFor="role" className="text-sm font-medium">
-                    Role
-                  </label>
-                  <Select value={inviteRole} onValueChange={setInviteRole}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="member">Member</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Admins have full access to organization settings. Members can only view and manage resources.
-                  </p>
-                </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="members">Team Members</TabsTrigger>
+          <TabsTrigger value="invitations">Pending Invitations</TabsTrigger>
+          <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="members" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <div className="space-y-1">
+                <CardTitle>Team Members</CardTitle>
+                <CardDescription>
+                  Manage your team members and their roles.
+                </CardDescription>
               </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsInviteOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleInviteMember} disabled={inviteLoading}>
-                  {inviteLoading ? "Sending..." : "Send Invitation"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      Loading members...
-                    </TableCell>
-                  </TableRow>
-                ) : members.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      No members found. Invite someone to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  members.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell className="font-medium">
-                        {member.name || "N/A"}
-                      </TableCell>
-                      <TableCell>{member.email}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            member.role === "owner"
-                              ? "default"
-                              : member.role === "admin"
-                              ? "secondary"
-                              : "outline"
-                          }
-                        >
-                          {member.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatDate(member.joined_at)}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleUpdateRole(
-                                  member.id,
-                                  member.role === "admin" ? "member" : "admin"
-                                )
-                              }
-                              disabled={member.role === "owner"}
-                            >
-                              <Shield className="mr-2 h-4 w-4" />
-                              {member.role === "admin"
-                                ? "Demote to Member"
-                                : "Promote to Admin"}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => handleRemoveMember(member.id)}
-                              disabled={member.role === "owner"}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Remove Member
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+              <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Add Member
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Invite Team Member</DialogTitle>
+                    <DialogDescription>
+                      Send an invitation to join your organization.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input
+                        id="email"
+                        placeholder="colleague@example.com"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="role">Role</Label>
+                      <Select value={inviteRoleId} onValueChange={setInviteRoleId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roles.map((role) => (
+                            <SelectItem key={role.id} value={role.id}>
+                              {role.name}
+                              {role.is_custom && (
+                                <Badge variant="outline" className="ml-2 text-xs">
+                                  Custom
+                                </Badge>
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {inviteRoleId && (
+                        <p className="text-xs text-muted-foreground">
+                          {getPermissionCount(roles.find(r => r.id === inviteRoleId)?.permissions || [])} permissions
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsInviteOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleInviteMember} disabled={inviteLoading}>
+                      {inviteLoading ? "Sending..." : "Send Invitation"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center">
+                          Loading members...
+                        </TableCell>
+                      </TableRow>
+                    ) : members.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center">
+                          No members found. Invite someone to get started.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      members.map((member) => (
+                        <TableRow key={member.id}>
+                          <TableCell className="font-medium">
+                            {member.name || "N/A"}
+                          </TableCell>
+                          <TableCell>{member.email}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                member.role === "owner"
+                                  ? "default"
+                                  : member.role === "admin"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                            >
+                              {member.role_name || member.role}
+                            </Badge>
+                            {member.role_name && member.role_name !== member.role && (
+                              <Badge variant="outline" className="ml-2 text-xs">
+                                {getPermissionCount(
+                                  roles.find(r => r.id === member.role_id)?.permissions || []
+                                )} perms
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>{formatDate(member.joined_at)}</TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setUpdateRoleModal({
+                                      isOpen: true,
+                                      memberId: member.id,
+                                      memberName: member.name || member.email,
+                                      currentRoleId: member.role_id || "",
+                                    })
+                                  }
+                                  disabled={member.role === "owner"}
+                                >
+                                  <Shield className="mr-2 h-4 w-4" />
+                                  Update Role
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => handleRemoveMember(member.id)}
+                                  disabled={member.role === "owner"}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Remove Member
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="invitations" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Invitations</CardTitle>
+              <CardDescription>
+                Manage invitations sent to join your organization.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Invited</TableHead>
+                      <TableHead>Expires</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invitations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center">
+                          No pending invitations.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      invitations.map((invitation) => (
+                        <TableRow key={invitation.id}>
+                          <TableCell className="font-medium">
+                            {invitation.invited_email}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{invitation.role_name}</Badge>
+                          </TableCell>
+                          <TableCell>{formatDate(invitation.created_at)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span className={
+                                getDaysUntilExpiration(invitation.expires_at) <= 2
+                                  ? "text-orange-600 font-medium"
+                                  : "text-muted-foreground"
+                              }>
+                                {getDaysUntilExpiration(invitation.expires_at)} days
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                setCancelModal({
+                                  isOpen: true,
+                                  invitationId: invitation.id,
+                                  email: invitation.invited_email,
+                                })
+                              }
+                              className="text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="roles" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <div className="space-y-1">
+                <CardTitle>Roles & Permissions</CardTitle>
+                <CardDescription>
+                  Define roles with specific permissions for your team.
+                </CardDescription>
+              </div>
+              <Button onClick={openCreateRoleModal}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Role
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Role Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Permissions</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {roles.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center">
+                          No roles found. Create a role to get started.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      roles.map((role) => (
+                        <TableRow key={role.id}>
+                          <TableCell className="font-medium">
+                            {role.name}
+                          </TableCell>
+                          <TableCell>
+                            {role.is_custom ? (
+                              <Badge variant="secondary">Custom</Badge>
+                            ) : (
+                              <Badge variant="outline">Predefined</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {getPermissionCount(role.permissions)} permissions
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0"
+                                  disabled={!role.is_custom}
+                                >
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => openEditRoleModal(role)}
+                                >
+                                  <Edit3 className="mr-2 h-4 w-4" />
+                                  Edit Role
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() =>
+                                    setDeleteRoleModal({
+                                      isOpen: true,
+                                      roleId: role.id,
+                                      roleName: role.name,
+                                    })
+                                  }
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete Role
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingRole ? "Edit Role" : "Create New Role"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingRole
+                ? "Update role permissions."
+                : "Create a custom role with specific permissions."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="roleName">Role Name</Label>
+              <Input
+                id="roleName"
+                placeholder="e.g., Billing Manager"
+                value={roleName}
+                onChange={(e) => setRoleName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-4">
+              <Label>Permissions</Label>
+              <div className="grid gap-3">
+                {PERMISSIONS.map((permission) => (
+                  <div key={permission.id} className="flex items-start space-x-3">
+                    <Checkbox
+                      id={permission.id}
+                      checked={rolePermissions.includes(permission.id)}
+                      onCheckedChange={() => togglePermission(permission.id)}
+                    />
+                    <div className="flex-1">
+                      <Label
+                        htmlFor={permission.id}
+                        className="font-medium cursor-pointer"
+                      >
+                        {permission.label}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {permission.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRoleModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={editingRole ? handleUpdateRole : handleCreateRole}
+              disabled={roleLoading}
+            >
+              {roleLoading
+                ? "Saving..."
+                : editingRole
+                ? "Update Role"
+                : "Create Role"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={cancelModal.isOpen}
+        onOpenChange={(open) =>
+          !open && setCancelModal({ ...cancelModal, isOpen: false })
+        }
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Cancel Invitation
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel the invitation for{" "}
+              <strong>{cancelModal.email}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setCancelModal({ ...cancelModal, isOpen: false })
+              }
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleCancelInvitation}>
+              Cancel Invitation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteRoleModal.isOpen}
+        onOpenChange={(open) =>
+          !open && setDeleteRoleModal({ ...deleteRoleModal, isOpen: false })
+        }
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Delete Role
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the role{" "}
+              <strong>{deleteRoleModal.roleName}</strong>? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setDeleteRoleModal({ ...deleteRoleModal, isOpen: false })
+              }
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteRole}>
+              Delete Role
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={updateRoleModal.isOpen}
+        onOpenChange={(open) =>
+          !open && setUpdateRoleModal({ ...updateRoleModal, isOpen: false })
+        }
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Member Role</DialogTitle>
+            <DialogDescription>
+              Update the role for {updateRoleModal.memberName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="newRole">New Role</Label>
+              <Select
+                value={newMemberRoleId}
+                onValueChange={setNewMemberRoleId}
+              >
+                <SelectTrigger id="newRole">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                      {role.is_custom && (
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          Custom
+                        </Badge>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {newMemberRoleId && (
+                <p className="text-xs text-muted-foreground">
+                  {getPermissionCount(
+                    roles.find((r) => r.id === newMemberRoleId)?.permissions ||
+                      []
+                  )}{" "}
+                  permissions
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setUpdateRoleModal({ ...updateRoleModal, isOpen: false })
+              }
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateMemberRole}>Update Role</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

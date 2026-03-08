@@ -183,6 +183,117 @@ export async function sendWelcomeEmail(
   await sendEmail({ to, subject, html, text });
 }
 
+export interface InvitationEmailData {
+  organizationName: string;
+  inviterName: string;
+  inviterEmail: string;
+  role: string;
+  token: string;
+  invitedEmail: string;
+  expiresAt: string;
+}
+
+export async function sendInvitationEmail(
+  invitationData: InvitationEmailData
+): Promise<void> {
+  const baseUrl = (config.CLIENT_URL || "http://localhost:5173").replace(/\/$/, "");
+  const invitationLink = `${baseUrl}/organizations/invitations/${invitationData.token}`;
+  const acceptLink = `${baseUrl}/organizations/invitations/${invitationData.token}`;
+  const declineLink = `${baseUrl}/organizations/invitations/${invitationData.token}?action=decline`;
+
+  const subject = `You've been invited to join ${invitationData.organizationName}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
+      <div style="background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h2 style="color: #1f2937; margin-top: 0;">You've been invited to join ${invitationData.organizationName}</h2>
+        
+        <p>Hi there,</p>
+        
+        <p><strong>${invitationData.inviterName}</strong> (${invitationData.inviterEmail}) has invited you to join <strong>${invitationData.organizationName}</strong> as a <strong>${invitationData.role}</strong>.</p>
+        
+        ${invitationData.organizationName ? `
+        <div style="background-color: #f3f4f6; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0;">
+          <p style="margin: 0; color: #374151;">
+            <strong>Organization:</strong> ${invitationData.organizationName}<br>
+            <strong>Role:</strong> ${invitationData.role}<br>
+            <strong>Invited by:</strong> ${invitationData.inviterName}
+          </p>
+        </div>
+        ` : ''}
+        
+        <p>You have two options:</p>
+
+        <table role="presentation" style="width: 100%; border-collapse: separate; border-spacing: 0 10px; margin: 20px 0;">
+          <tr>
+            <td style="text-align: center;">
+              <a href="${acceptLink}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                View Invitation & Accept
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">
+              <a href="${declineLink}" style="display: inline-block; background-color: white; color: #6b7280; padding: 12px 24px; text-decoration: none; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 600;">
+                Decline Invitation
+              </a>
+            </td>
+          </tr>
+        </table>
+        
+        <p style="color: #6b7280; font-size: 14px;">
+          This invitation will expire on <strong>${new Date(invitationData.expiresAt).toLocaleDateString()}</strong> (7 days from now).
+        </p>
+        
+        <p style="color: #6b7280; font-size: 14px;">
+          If the buttons above don't work, you can copy and paste these links into your browser:
+        </p>
+        
+        <p style="color: #6b7280; font-size: 12px; word-break: break-all;">
+          View Invitation: ${invitationLink}<br>
+          Decline Directly: ${declineLink}
+        </p>
+        
+        <p style="color: #6b7280; font-size: 14px;">
+          If you didn't expect this invitation, you can safely ignore this email.
+        </p>
+        
+        <p style="margin-top: 30px;">Thanks,<br/><strong>The ${config.COMPANY_BRAND_NAME} Team</strong></p>
+      </div>
+    </div>
+  `;
+
+  const text = `You've been invited to join ${invitationData.organizationName}
+
+Hi there,
+
+${invitationData.inviterName} (${invitationData.inviterEmail}) has invited you to join ${invitationData.organizationName} as a ${invitationData.role}.
+
+Organization: ${invitationData.organizationName}
+Role: ${invitationData.role}
+Invited by: ${invitationData.inviterName}
+
+You have two options:
+
+1. View Invitation & Accept: ${invitationLink}
+2. Decline Invitation: ${declineLink}
+
+This invitation will expire on ${new Date(invitationData.expiresAt).toLocaleDateString()} (7 days from now).
+
+If the links above don't work, you can copy and paste them into your browser.
+
+If you didn't expect this invitation, you can safely ignore this email.
+
+Thanks,
+The ${config.COMPANY_BRAND_NAME} Team`;
+
+  await sendEmail({ 
+    to: invitationData.invitedEmail, 
+    subject, 
+    html, 
+    text 
+  });
+}
+
 export async function sendLoginNotificationEmail(
   to: string,
   name?: string,

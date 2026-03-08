@@ -40,6 +40,7 @@ import faqRoutes from "./routes/faq.js";
 import sshKeysRoutes from "./routes/sshKeys.js";
 import organizationRoutes from "./routes/organizations.js";
 import pricingRoutes from "./routes/pricing.js";
+import activitiesRoutes from "./routes/activities.js";
 import adminFaqRoutes from "./routes/adminFaq.js";
 import adminContactRoutes from "./routes/admin/contact.js";
 import adminBillingRoutes from "./routes/admin/billing.js";
@@ -106,6 +107,7 @@ app.use("/api/admin/faq", adminFaqRoutes);
 app.use("/api/admin/github", githubRoutes);
 app.use("/api/ssh-keys", sshKeysRoutes);
 app.use("/api/organizations", organizationRoutes);
+app.use("/api/activities", activitiesRoutes);
 app.use("/api/pricing", pricingRoutes);
 
 // Health check routes are now handled by the dedicated health router

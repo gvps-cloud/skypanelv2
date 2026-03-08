@@ -195,12 +195,8 @@ export class PayPalService {
         const order = response.result;
         const approvalUrl = order.links?.find(link => link.rel === 'approve')?.href;
 
-        // Store payment transaction in database
-        await query(
-          `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, provider_transaction_id, status, description)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [paymentIntent.organizationId, paymentIntent.amount, paymentIntent.currency, 'paypal', 'paypal', order.id, 'pending', paymentIntent.description]
-        );
+        // Don't create transaction record yet - will be created when payment is captured
+        // Transaction records are only created for completed payments
 
         return {
           success: true,
@@ -235,7 +231,7 @@ export class PayPalService {
   /**
    * Capture a PayPal payment after approval
    */
-  static async capturePayment(orderId: string): Promise<PaymentResult> {
+  static async capturePayment(orderId: string, organizationId?: string): Promise<PaymentResult> {
     try {
       const request = {
         id: orderId,
@@ -250,6 +246,18 @@ export class PayPalService {
         const capture = order.purchaseUnits?.[0]?.payments?.captures?.[0];
 
         if (capture && capture.status === 'COMPLETED') {
+          if (!organizationId) {
+            console.error('Cannot finalize PayPal capture: organizationId is required');
+            return {
+              success: false,
+              error: 'Payment capture failed: missing organization information',
+            };
+          }
+
+          const amount = parseFloat(capture.amount?.value ?? '0');
+          const currency = capture.amount?.currencyCode ?? 'USD';
+          const description = `PayPal payment ${orderId}`;
+
           const metadata: Record<string, unknown> = {
             capture_id: capture.id,
             capture_status: capture.status,
@@ -258,7 +266,7 @@ export class PayPalService {
             capture_update_time: capture.updateTime ?? new Date().toISOString(),
           };
 
-          return await this.finalizeSuccessfulCapture(orderId, metadata);
+          return await this.finalizeSuccessfulCapture(orderId, organizationId, amount, currency, description, metadata);
         }
 
         await this.recordCaptureFailure(orderId, {
@@ -278,12 +286,44 @@ export class PayPalService {
       };
     } catch (error) {
       if (isOrderAlreadyCapturedError(error)) {
-        const reconciliationResult = await this.finalizeSuccessfulCapture(orderId, {
-          reconciliation: 'ORDER_ALREADY_CAPTURED',
-        });
+        // For already captured orders, we need to get the order details from PayPal
+        if (!organizationId) {
+          console.error('Cannot reconcile PayPal capture: organizationId is required');
+          return {
+            success: false,
+            error: 'Payment capture failed: missing organization information',
+          };
+        }
 
-        if (reconciliationResult.success) {
-          return reconciliationResult;
+        try {
+          const { orders } = getPayPalClient();
+          const orderResponse = await orders.ordersGet({ id: orderId });
+
+          if (orderResponse.statusCode === 200 && orderResponse.result) {
+            const order = orderResponse.result;
+            const capture = order.purchaseUnits?.[0]?.payments?.captures?.[0];
+
+            if (capture && capture.status === 'COMPLETED') {
+              const amount = parseFloat(capture.amount?.value ?? '0');
+              const currency = capture.amount?.currencyCode ?? 'USD';
+              const description = `PayPal payment ${orderId}`;
+
+              const reconciliationResult = await this.finalizeSuccessfulCapture(
+                orderId,
+                organizationId,
+                amount,
+                currency,
+                description,
+                { reconciliation: 'ORDER_ALREADY_CAPTURED' }
+              );
+
+              if (reconciliationResult.success) {
+                return reconciliationResult;
+              }
+            }
+          }
+        } catch (reconcileError) {
+          console.error('Failed to reconcile already captured order:', reconcileError);
         }
       }
 
@@ -611,59 +651,51 @@ export class PayPalService {
 
   private static async finalizeSuccessfulCapture(
     orderId: string,
+    organizationId: string,
+    amount: number,
+    currency: string,
+    description: string,
     metadata: Record<string, unknown> = {}
   ): Promise<PaymentResult> {
     try {
-      const result = await query(
-        `UPDATE payment_transactions
-           SET status = 'completed', updated_at = NOW()
-         WHERE provider_transaction_id = $1 AND status <> 'completed'
-         RETURNING id, organization_id, amount, description`,
+      // Check if transaction already exists (for already captured orders)
+      const existing = await query(
+        `SELECT id, status FROM payment_transactions WHERE provider_transaction_id = $1`,
         [orderId]
       );
 
+      if (existing.rows.length > 0 && existing.rows[0].status === 'completed') {
+        return {
+          success: true,
+          paymentId: orderId,
+        };
+      }
+
+      // Create new transaction record with completed status
+      const result = await query(
+        `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, provider_transaction_id, status, description, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id`,
+        [organizationId, amount, currency, 'paypal', 'paypal', orderId, 'completed', description, JSON.stringify(metadata)]
+      );
+
       if (result.rows.length === 0) {
-        const existing = await query(
-          `SELECT status FROM payment_transactions WHERE provider_transaction_id = $1`,
-          [orderId]
-        );
-
-        if (existing.rows.length > 0 && existing.rows[0].status === 'completed') {
-          return {
-            success: true,
-            paymentId: orderId,
-          };
-        }
-
-        console.error('PayPal capture referenced unknown transaction:', orderId);
+        console.error('Failed to create payment transaction for order:', orderId);
         return {
           success: false,
-          error: 'Payment capture failed: transaction not found',
+          error: 'Payment capture failed: could not create transaction record',
         };
       }
 
-      const paymentTransaction = result.rows[0];
-      const creditAmount = toNumber(paymentTransaction.amount);
+      const paymentTransactionId = result.rows[0].id;
 
-      if (creditAmount === null) {
-        console.error('Invalid transaction amount for PayPal capture:', paymentTransaction.amount, 'order:', orderId);
-        return {
-          success: false,
-          error: 'Payment capture failed due to invalid amount',
-        };
-      }
-
-      const description =
-        typeof paymentTransaction.description === 'string' && paymentTransaction.description.trim().length > 0
-          ? paymentTransaction.description
-          : `PayPal payment ${orderId}`;
-
+      // Add funds to wallet
       const credited = await this.addFundsToWallet(
-        paymentTransaction.organization_id,
-        creditAmount,
+        organizationId,
+        amount,
         description,
         orderId,
-        paymentTransaction.id,
+        paymentTransactionId,
         metadata
       );
 
@@ -690,76 +722,11 @@ export class PayPalService {
 
   private static async recordCaptureFailure(orderId: string, metadata: Record<string, unknown>): Promise<void> {
     try {
-      await query(
-        `UPDATE payment_transactions
-           SET status = 'failed',
-               metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
-               updated_at = NOW()
-         WHERE provider_transaction_id = $1 AND status <> 'completed'`,
-        [orderId, JSON.stringify({ ...metadata, failure_time: new Date().toISOString() })]
-      );
+      // Log the payment failure - no transaction record was created since payment wasn't completed
+      console.error('PayPal capture failure for order:', orderId, metadata);
     } catch (error) {
       console.error('Failed to record PayPal capture failure metadata for order:', orderId, error);
     }
   }
 
-  static async cancelPayment(
-    orderId: string,
-    organizationId: string,
-    reason?: string
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const cancellationMetadata = {
-        cancel_reason: reason ?? 'user_cancelled',
-        cancelled_at: new Date().toISOString(),
-      };
-
-      const result = await query(
-        `UPDATE payment_transactions
-           SET status = 'cancelled',
-               metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb,
-               updated_at = NOW()
-         WHERE provider_transaction_id = $1
-           AND organization_id = $2
-           AND status = 'pending'
-         RETURNING id`,
-        [orderId, organizationId, JSON.stringify(cancellationMetadata)]
-      );
-
-      if (result.rowCount === 0) {
-        const existing = await query(
-          `SELECT status FROM payment_transactions WHERE provider_transaction_id = $1 AND organization_id = $2`,
-          [orderId, organizationId]
-        );
-
-        if (existing.rowCount === 0) {
-          return {
-            success: false,
-            error: 'Payment not found',
-          };
-        }
-
-        if (existing.rows[0].status === 'cancelled') {
-          return {
-            success: true,
-          };
-        }
-
-        return {
-          success: false,
-          error: 'Payment is no longer pending',
-        };
-      }
-
-      return {
-        success: true,
-      };
-    } catch (error) {
-      console.error('Failed to cancel PayPal payment:', orderId, error);
-      return {
-        success: false,
-        error: 'Failed to cancel payment',
-      };
-    }
-  }
 }

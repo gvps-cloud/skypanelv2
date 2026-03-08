@@ -7,6 +7,36 @@ export type ActiveApiRoute = {
 export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "GET",
+    "path": "/api/activities",
+    "protected": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/activities/:id",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/activities/:id/read",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/activities/organization/:organizationId",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/activities/read-all",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/activities/unread-count",
+    "protected": true
+  },
+  {
+    "method": "GET",
     "path": "/api/activity",
     "protected": true
   },
@@ -692,6 +722,16 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/organizations",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/organizations/:id/invitations",
+    "protected": true
+  },
+  {
+    "method": "GET",
     "path": "/api/organizations/:id/members",
     "protected": true
   },
@@ -711,13 +751,58 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "protected": true
   },
   {
+    "method": "POST",
+    "path": "/api/organizations/:id/members/invite",
+    "protected": true
+  },
+  {
     "method": "GET",
-    "path": "/api/payments/billing/summary",
+    "path": "/api/organizations/:id/roles",
     "protected": true
   },
   {
     "method": "POST",
-    "path": "/api/payments/cancel-payment/:orderId",
+    "path": "/api/organizations/:id/roles",
+    "protected": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/organizations/:id/roles/:roleId",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/organizations/:id/roles/:roleId",
+    "protected": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/organizations/invitations/:id",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/organizations/invitations/:token",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/organizations/invitations/:token/accept",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/organizations/invitations/:token/decline",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/organizations/resources",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/payments/billing/summary",
     "protected": true
   },
   {
@@ -806,6 +891,21 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "protected": true
   },
   {
+    "method": "DELETE",
+    "path": "/api/support/tickets/:id",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/support/tickets/:id/assign",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/support/tickets/:id/priority",
+    "protected": true
+  },
+  {
     "method": "POST",
     "path": "/api/support/tickets/:id/reopen-request",
     "protected": true
@@ -818,6 +918,21 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "POST",
     "path": "/api/support/tickets/:id/replies",
+    "protected": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/support/tickets/:id/replies/:replyId",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/support/tickets/:id/replies/:replyId",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/support/tickets/:id/status",
     "protected": true
   },
   {
