@@ -259,8 +259,8 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
         ...org,
         stats: {
           vps_count: parseInt(vpsCount.rows[0].count),
-          tickets_count: parseInt(ticketCount.rows[0].count),
-          members_count: parseInt(memberCount.rows[0].count)
+          ticket_count: parseInt(ticketCount.rows[0].count),
+          member_count: parseInt(memberCount.rows[0].count)
         }
       };
     }));
