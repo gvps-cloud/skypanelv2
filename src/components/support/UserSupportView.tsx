@@ -459,7 +459,13 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
       const res = await fetch(buildApiUrl("/api/support/tickets"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          subject: data.subject,
+          message: data.description, // Backend expects 'message' not 'description'
+          priority: data.priority,
+          category: data.category,
+          vpsId: data.vpsId,
+        }),
       });
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.error || "Failed to create ticket");
