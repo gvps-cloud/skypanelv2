@@ -3,13 +3,15 @@
  * Manage support tickets and VPS plans
  */
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
   Calendar,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Clock,
   DollarSign,
@@ -20,10 +22,14 @@ import {
   HelpCircle,
   LifeBuoy,
   Palette,
+  Play,
   Plus,
+  PowerOff,
   RefreshCw,
+  RotateCcw,
   Search,
   Server,
+  Terminal,
   ServerCog,
   Settings,
   Shield,
@@ -50,8 +56,8 @@ import { RegionAccessManager } from "@/components/admin/RegionAccessManager";
 import { AdminSupportView } from "@/components/admin/AdminSupportView";
 import { VPSPlanWizard } from "@/components/admin/VPSPlanWizard";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
+import { SSHTerminal } from "@/components/VPS/SSHTerminal";
 import { useCategoryDisplayName } from "@/hooks/useCategoryMappings";
-
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1067,6 +1073,62 @@ const Admin: React.FC = () => {
       return haystack.includes(term);
     });
   }, [serverSearch, serverStatusFilter, servers]);
+
+  const [serverPage, setServerPage] = useState(1);
+  const serverItemsPerPage = 5;
+  const [serverActionLoading, setServerActionLoading] = useState<{
+    serverId: string;
+    action: "boot" | "reboot" | "shutdown";
+  } | null>(null);
+  const [sshModalOpen, setSshModalOpen] = useState(false);
+  const [selectedSshServerId, setSelectedSshServerId] = useState<string | null>(
+    null,
+  );
+
+  const handleSshAction = (serverId: string) => {
+    setSelectedSshServerId(serverId);
+    setSshModalOpen(true);
+  };
+
+  useEffect(() => {
+    setServerPage(1);
+  }, [serverSearch, serverStatusFilter]);
+
+  const paginatedServers = useMemo(() => {
+    const start = (serverPage - 1) * serverItemsPerPage;
+    return filteredServers.slice(start, start + serverItemsPerPage);
+  }, [filteredServers, serverPage, serverItemsPerPage]);
+
+  const totalServerPages = Math.ceil(filteredServers.length / serverItemsPerPage);
+
+  const handleServerAction = async (
+    serverId: string,
+    action: "boot" | "reboot" | "shutdown",
+  ) => {
+    if (!token || serverActionLoading) return;
+    setServerActionLoading({ serverId, action });
+    try {
+      const response = await fetch(buildApiUrl(`/api/vps/${serverId}/${action}`), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || `Failed to ${action} server`);
+      }
+
+      toast.success(`Server ${action} command sent successfully`);
+      setTimeout(() => fetchServers(), 2000);
+    } catch (error: any) {
+      toast.error(error.message || `Failed to ${action} server`);
+    } finally {
+      setServerActionLoading(null);
+    }
+  };
 
   const formattedThemeUpdatedAt = useMemo(() => {
     if (!themeUpdatedAt) {
@@ -4009,161 +4071,291 @@ const Admin: React.FC = () => {
                   </Select>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[14rem]">Label</TableHead>
+              <div className="space-y-4">
+                {serversLoading ? (
+                  <div className="rounded-lg border py-10 text-center text-muted-foreground">
+                    Loading servers…
+                  </div>
+                ) : filteredServers.length === 0 ? (
+                  <div className="rounded-lg border py-10 text-center text-muted-foreground">
+                    No servers match the current filters.
+                  </div>
+                ) : (
+                  paginatedServers.map((server) => {
+                    const specRecord =
+                      server.plan_specifications &&
+                      typeof server.plan_specifications === "object"
+                        ? (server.plan_specifications as Record<string, unknown>)
+                        : null;
+                    const readNumber = (key: string) => {
+                      if (!specRecord) return undefined;
+                      const raw = specRecord[key];
+                      if (typeof raw === "number") return raw;
+                      if (typeof raw === "string") {
+                        const parsed = Number(raw);
+                        return Number.isFinite(parsed) ? parsed : undefined;
+                      }
+                      return undefined;
+                    };
+                    const specParts: string[] = [];
+                    const vcpus =
+                      readNumber("vcpus") ??
+                      readNumber("cpu") ??
+                      readNumber("cores");
+                    const memory =
+                      readNumber("memory") ??
+                      readNumber("memory_mb") ??
+                      readNumber("ram");
+                    const disk = readNumber("disk") ?? readNumber("storage");
+                    const transfer =
+                      readNumber("transfer") ?? readNumber("bandwidth");
+                    if (typeof vcpus !== "undefined") {
+                      specParts.push(`${vcpus} vCPU`);
+                    }
+                    if (typeof memory !== "undefined") {
+                      specParts.push(`${memory} MB RAM`);
+                    }
+                    if (typeof disk !== "undefined") {
+                      specParts.push(`${disk} GB Disk`);
+                    }
+                    if (typeof transfer !== "undefined") {
+                      specParts.push(`${transfer} TB Transfer`);
+                    }
+                    const specSummary =
+                      specParts.length > 0 ? specParts.join(" • ") : "—";
+                    const configurationRecord =
+                      server.configuration &&
+                      typeof server.configuration === "object"
+                        ? (server.configuration as Record<string, unknown>)
+                        : null;
+                    const regionValue = configurationRecord
+                      ? configurationRecord["region"]
+                      : undefined;
+                    const region =
+                      typeof regionValue === "string" ? regionValue : null;
+                    const normalizedStatus = (server.status ?? "").toLowerCase();
+                    const canBoot = normalizedStatus === "stopped";
+                    const canShutdown = normalizedStatus === "running";
+                    const canReboot =
+                      normalizedStatus === "running" ||
+                      normalizedStatus === "rebooting";
+                    const canSsh = normalizedStatus === "running";
+                    const loadingForServer =
+                      serverActionLoading?.serverId === server.id;
 
-                      <TableHead className="w-32">Status</TableHead>
-                      <TableHead className="min-w-[10rem]">
-                        IP Address
-                      </TableHead>
-                      <TableHead className="min-w-[12rem]">Plan</TableHead>
-                      <TableHead className="min-w-[10rem]">Region</TableHead>
-                      <TableHead className="min-w-[10rem]">Provider</TableHead>
-                      <TableHead className="min-w-[12rem]">Updated</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {serversLoading ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className="py-10 text-center text-muted-foreground"
-                        >
-                          Loading servers…
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredServers.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className="py-10 text-center text-muted-foreground"
-                        >
-                          No servers match the current filters.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredServers.map((server) => {
-                        const specRecord =
-                          server.plan_specifications &&
-                          typeof server.plan_specifications === "object"
-                            ? (server.plan_specifications as Record<
-                                string,
-                                unknown
-                              >)
-                            : null;
-                        const readNumber = (key: string) => {
-                          if (!specRecord) return undefined;
-                          const raw = specRecord[key];
-                          if (typeof raw === "number") return raw;
-                          if (typeof raw === "string") {
-                            const parsed = Number(raw);
-                            return Number.isFinite(parsed) ? parsed : undefined;
-                          }
-                          return undefined;
-                        };
-                        const specParts: string[] = [];
-                        const vcpus =
-                          readNumber("vcpus") ??
-                          readNumber("cpu") ??
-                          readNumber("cores");
-                        const memory =
-                          readNumber("memory") ??
-                          readNumber("memory_mb") ??
-                          readNumber("ram");
-                        const disk =
-                          readNumber("disk") ?? readNumber("storage");
-                        const transfer =
-                          readNumber("transfer") ?? readNumber("bandwidth");
-                        if (typeof vcpus !== "undefined") {
-                          specParts.push(`${vcpus} vCPU`);
-                        }
-                        if (typeof memory !== "undefined") {
-                          specParts.push(`${memory} MB RAM`);
-                        }
-                        if (typeof disk !== "undefined") {
-                          specParts.push(`${disk} GB Disk`);
-                        }
-                        if (typeof transfer !== "undefined") {
-                          specParts.push(`${transfer} TB Transfer`);
-                        }
-                        const specSummary =
-                          specParts.length > 0 ? specParts.join(" • ") : "—";
-                        const configurationRecord =
-                          server.configuration &&
-                          typeof server.configuration === "object"
-                            ? (server.configuration as Record<string, unknown>)
-                            : null;
-                        const regionValue = configurationRecord
-                          ? configurationRecord["region"]
-                          : undefined;
-                        const region =
-                          typeof regionValue === "string" ? regionValue : null;
-
-                        return (
-                          <TableRow key={server.id} className="align-top">
-                            <TableCell>
-                              <div className="space-y-1">
-                                <p className="font-medium text-foreground">
-                                  {server.label}
-                                </p>
+                    return (
+                      <Card key={server.id} className="border-border/70">
+                        <CardContent className="space-y-4 p-4">
+                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="space-y-1">
+                              <p className="text-base font-semibold text-foreground">
+                                {server.label}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Provider ID #{server.provider_instance_id}
+                              </p>
+                              {server.owner_email && (
                                 <p className="text-xs text-muted-foreground">
-                                  Provider ID #{server.provider_instance_id}
+                                  Owner {server.owner_name || "Unknown"} •{" "}
+                                  {server.owner_email}
                                 </p>
-                              </div>
-                            </TableCell>
+                              )}
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={statusBadgeClass(server.status)}
+                            >
+                              {formatStatusLabel(server.status)}
+                            </Badge>
+                          </div>
 
-                            <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={statusBadgeClass(server.status)}
-                              >
-                                {formatStatusLabel(server.status)}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm text-muted-foreground">
+                          <div className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                IP Address
+                              </p>
+                              <p className="font-medium text-foreground">
                                 {server.ip_address || "—"}
                               </p>
-                            </TableCell>
-                            <TableCell>
-                              <div className="space-y-1">
-                                <p className="text-sm text-foreground">
-                                  {server.plan_name ||
-                                    server.plan_provider_plan_id ||
-                                    server.plan_id}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {specSummary}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm text-muted-foreground">
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Plan
+                              </p>
+                              <p className="font-medium text-foreground">
+                                {server.plan_name ||
+                                  server.plan_provider_plan_id ||
+                                  server.plan_id}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {specSummary}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Region / Provider
+                              </p>
+                              <p className="font-medium text-foreground">
                                 {server.region_label || region || "—"}
                               </p>
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-xs text-muted-foreground">
                                 {server.provider_name || "—"}
                               </p>
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm text-muted-foreground">
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Updated
+                              </p>
+                              <p className="font-medium text-foreground">
                                 {formatDateTime(server.updated_at)}
                               </p>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button size="sm" variant="outline" asChild>
+                                <Link to={`/vps/${server.id}`}>View</Link>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={!canSsh}
+                                onClick={() => handleSshAction(server.id)}
+                              >
+                                <Terminal className="mr-1 h-4 w-4" />
+                                SSH
+                              </Button>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={loadingForServer || !canBoot}
+                                onClick={() => handleServerAction(server.id, "boot")}
+                              >
+                                {loadingForServer &&
+                                serverActionLoading?.action === "boot" ? (
+                                  <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Play className="mr-1 h-4 w-4 text-emerald-500" />
+                                )}
+                                Boot
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={loadingForServer || !canShutdown}
+                                onClick={() =>
+                                  handleServerAction(server.id, "shutdown")
+                                }
+                              >
+                                {loadingForServer &&
+                                serverActionLoading?.action === "shutdown" ? (
+                                  <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <PowerOff className="mr-1 h-4 w-4 text-red-500" />
+                                )}
+                                Power Off
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={loadingForServer || !canReboot}
+                                onClick={() => handleServerAction(server.id, "reboot")}
+                              >
+                                {loadingForServer &&
+                                serverActionLoading?.action === "reboot" ? (
+                                  <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <RotateCcw className="mr-1 h-4 w-4" />
+                                )}
+                                Reboot
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
               </div>
+
+              {totalServerPages > 1 && (
+                <div className="flex items-center justify-between py-4">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {Math.min((serverPage - 1) * serverItemsPerPage + 1, filteredServers.length)} to {Math.min(serverPage * serverItemsPerPage, filteredServers.length)} of {filteredServers.length} servers
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setServerPage((p) => Math.max(1, p - 1))}
+                      disabled={serverPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalServerPages) }, (_, i) => {
+                        let p = i + 1;
+                        if (totalServerPages > 5) {
+                            if (serverPage > 3) {
+                                p = serverPage - 2 + i;
+                            }
+                            if (p > totalServerPages) {
+                                p = totalServerPages - (4 - i);
+                            }
+                        }
+                        return (
+                          <Button
+                            key={p}
+                            variant={serverPage === p ? "default" : "outline"}
+                            size="sm"
+                            className="w-8 h-8 p-0"
+                            onClick={() => setServerPage(p)}
+                          >
+                            {p}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setServerPage((p) => Math.min(totalServerPages, p + 1))}
+                      disabled={serverPage === totalServerPages}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          <Dialog open={sshModalOpen} onOpenChange={setSshModalOpen}>
+            <DialogContent className="max-w-[90vw] w-full h-[80vh] flex flex-col p-0 gap-0 bg-black border-border">
+              <DialogHeader className="px-4 py-2 border-b border-border/20 bg-muted/10 shrink-0">
+                <DialogTitle className="text-sm font-mono flex items-center gap-2 text-foreground">
+                  <Terminal className="h-4 w-4" />
+                  SSH Console{" "}
+                  {selectedSshServerId && (
+                    <span className="opacity-50">:: {selectedSshServerId}</span>
+                  )}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 overflow-hidden relative bg-black">
+                {selectedSshServerId && (
+                  <SSHTerminal
+                    instanceId={selectedSshServerId}
+                    fitContainer={true}
+                  />
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </SectionPanel>
 
         <SectionPanel section="networking" activeSection={activeTab}>

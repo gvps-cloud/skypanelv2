@@ -1,7 +1,3 @@
-/**
- * Admin Support View - Inbox-style support ticket management
- * Uses shadcn sidebar pattern for a modern support interface
- */
 import React, {
   useCallback,
   useEffect,
@@ -12,30 +8,19 @@ import React, {
 import {
   CheckCircle,
   Clock,
-  Inbox,
   Mail,
   MailOpen,
   RefreshCw,
-  Search,
   Send,
   Trash2,
   User,
+  Ticket,
+  Info,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
@@ -47,82 +32,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { buildApiUrl } from "@/lib/api";
-
-type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
-type TicketPriority = "low" | "medium" | "high" | "urgent";
-
-interface SupportTicket {
-  id: string;
-  organization_id: string;
-  created_by: string;
-  creator?: TicketCreator;
-  subject: string;
-  message: string;
-  status: TicketStatus;
-  priority: TicketPriority;
-  category: string;
-  created_at: string;
-  updated_at: string;
-  vps_label?: string;
-  messages: TicketMessage[];
-}
-
-interface TicketMessage {
-  id: string;
-  ticket_id: string;
-  sender_type: "user" | "admin";
-  sender_name: string;
-  message: string;
-  created_at: string;
-}
-
-interface TicketCreator {
-  id: string;
-  name: string | null;
-  email: string | null;
-  displayName: string;
-}
-
-const REOPEN_REQUEST_PREFIX = "[REOPEN_REQUEST]";
-const isReopenRequestMessage = (message: string): boolean =>
-  typeof message === "string" && message.startsWith(REOPEN_REQUEST_PREFIX);
-const formatTicketMessage = (message: string): string =>
-  isReopenRequestMessage(message)
-    ? message.replace(REOPEN_REQUEST_PREFIX, "").trim()
-    : message;
-const getCreatorDisplay = (ticket: SupportTicket): string =>
-  ticket.creator?.displayName || ticket.creator?.email || ticket.created_by;
-
-const TICKET_STATUS_META: Record<
+import {
+  SupportTicket,
+  TicketMessage,
   TicketStatus,
-  { label: string; className: string; icon: React.ElementType }
-> = {
-  open: {
-    label: "Open",
-    className:
-      "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-    icon: Mail,
-  },
-  in_progress: {
-    label: "In Progress",
-    className:
-      "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
-    icon: Clock,
-  },
-  resolved: {
-    label: "Resolved",
-    className:
-      "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    icon: CheckCircle,
-  },
-  closed: {
-    label: "Closed",
-    className: "border-muted-foreground/15 bg-muted text-muted-foreground",
-    icon: MailOpen,
-  },
-};
+} from "@/types/support";
+import { TicketList } from "../support/shared/TicketList";
+import { TicketDetailHeader } from "../support/shared/TicketDetailHeader";
+import { MessageBubble } from "../support/shared/MessageBubble";
+import { TicketInfoSidebar } from "../support/shared/TicketInfoSidebar";
 
 const ADMIN_TICKET_STATUS_ACTIONS: Record<
   TicketStatus,
@@ -163,30 +89,6 @@ const ADMIN_TICKET_STATUS_ACTIONS: Record<
   ],
 };
 
-const TICKET_PRIORITY_META: Record<
-  TicketPriority,
-  { label: string; className: string }
-> = {
-  low: {
-    label: "Low",
-    className: "border-muted-foreground/15 bg-muted text-muted-foreground",
-  },
-  medium: {
-    label: "Medium",
-    className:
-      "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  },
-  high: {
-    label: "High",
-    className:
-      "border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400",
-  },
-  urgent: {
-    label: "Urgent",
-    className: "border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400",
-  },
-};
-
 interface AdminSupportViewProps {
   token: string;
   pendingFocusTicketId?: string | null;
@@ -200,23 +102,25 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
 }) => {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
-    null,
-  );
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [replyMessage, setReplyMessage] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | TicketStatus>("all");
-  const [searchQuery, setSearchQuery] = useState("");
   const [deleteTicketId, setDeleteTicketId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [clientBalance, setClientBalance] = useState<number | null>(null);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const ticketStatusRef = useRef<TicketStatus | undefined>(undefined);
 
   const authHeader = useMemo(
     () => ({ Authorization: `Bearer ${token}` }),
-    [token],
+    [token]
   );
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   }, []);
 
   const fetchTickets = useCallback(async () => {
@@ -236,19 +140,139 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
   }, [authHeader]);
 
   useEffect(() => {
+    ticketStatusRef.current = selectedTicket?.status;
+  }, [selectedTicket?.status]);
+
+  useEffect(() => {
     fetchTickets();
   }, [fetchTickets]);
 
+  useEffect(() => {
+    const fetchClientBalance = async () => {
+      if (!selectedTicket?.creator?.id) {
+        setClientBalance(null);
+        return;
+      }
+      try {
+        const res = await fetch(
+          buildApiUrl(`/api/admin/users/${selectedTicket.creator.id}/detail`),
+          { headers: authHeader }
+        );
+        const data = await res.json();
+        if (res.ok && data.billing) {
+          setClientBalance(data.billing.wallet_balance);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch client balance", err);
+      }
+    };
+
+    if (selectedTicket) {
+      fetchClientBalance();
+    }
+  }, [selectedTicket?.creator?.id, authHeader]);
+
+  // Set up real-time updates for selected ticket
+  useEffect(() => {
+    if (!selectedTicket || !token) return;
+
+    // Close existing connection if any
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    const es = new EventSource(
+      buildApiUrl(
+        `/api/admin/tickets/${selectedTicket.id}/stream?token=${token}`
+      )
+    );
+    eventSourceRef.current = es;
+
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "ticket_message" && data.ticket_id === selectedTicket.id) {
+          const newMsg: TicketMessage = {
+            id: data.message_id,
+            ticket_id: data.ticket_id,
+            sender_type: data.is_staff_reply ? "admin" : "user",
+            sender_name: data.is_staff_reply ? "Support Team" : (data.sender_name || "User"),
+            message: data.message,
+            created_at: data.created_at,
+          };
+
+          setSelectedTicket((prev) => {
+            if (!prev || prev.id !== data.ticket_id) return prev;
+            if (prev.messages.some((m) => m.id === newMsg.id)) return prev;
+
+            const updated = {
+              ...prev,
+              messages: [...prev.messages, newMsg],
+              has_staff_reply: prev.has_staff_reply || data.is_staff_reply,
+            };
+
+            // Notify if it's a new message from the user (not staff)
+            if (!data.is_staff_reply) {
+              toast.info("New customer reply received");
+            }
+
+            return updated;
+          });
+          
+          setTimeout(scrollToBottom, 100);
+        }
+
+        if (
+          data.type === "ticket_status_change" &&
+          data.ticket_id === selectedTicket.id
+        ) {
+          const newStatus = data.new_status;
+          
+          // Skip if we already have this status (e.g. we just updated it manually)
+          if (newStatus === ticketStatusRef.current) return;
+
+          setSelectedTicket((prev) =>
+            prev ? { ...prev, status: newStatus } : prev
+          );
+          setTickets((prev) =>
+            prev.map((t) =>
+              t.id === data.ticket_id ? { ...t, status: newStatus } : t
+            )
+          );
+          toast.info(
+            `Ticket status updated to: ${newStatus.replace("_", " ")}`
+          );
+        }
+      } catch (err) {
+        console.error("Error parsing SSE message:", err);
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+    };
+
+    return () => {
+      es.close();
+      eventSourceRef.current = null;
+    };
+  }, [selectedTicket?.id, token, scrollToBottom]);
+
   const openTicket = useCallback(
     async (ticket: SupportTicket) => {
-      setSelectedTicket({ ...ticket, messages: [] });
+      if (selectedTicket?.id !== ticket.id) {
+        setSelectedTicket({ ...ticket, messages: [] });
+      }
+
       try {
         const res = await fetch(
           buildApiUrl(`/api/admin/tickets/${ticket.id}/replies`),
-          { headers: authHeader },
+          { headers: authHeader }
         );
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to load replies");
+        
         const msgs: TicketMessage[] = (data.replies || []).map((m: any) => ({
           id: m.id,
           ticket_id: m.ticket_id,
@@ -257,15 +281,16 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
           message: m.message,
           created_at: m.created_at,
         }));
+        
         setSelectedTicket((prev) =>
-          prev ? { ...prev, messages: msgs } : prev,
+          prev ? { ...prev, messages: msgs } : prev
         );
         setTimeout(scrollToBottom, 100);
       } catch (e: any) {
         toast.error(e.message || "Failed to load replies");
       }
     },
-    [authHeader, scrollToBottom],
+    [authHeader, scrollToBottom, selectedTicket?.id]
   );
 
   // Handle pending focus ticket once the opener is ready
@@ -291,14 +316,37 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
           method: "POST",
           headers: { ...authHeader, "Content-Type": "application/json" },
           body: JSON.stringify({ message: replyMessage }),
-        },
+        }
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send reply");
 
       toast.success("Reply sent successfully");
       setReplyMessage("");
-      await openTicket(selectedTicket);
+      
+      const newReply = data.reply;
+      if (newReply) {
+        const newMsg: TicketMessage = {
+          id: newReply.id,
+          ticket_id: newReply.ticket_id,
+          sender_type: newReply.sender_type,
+          sender_name: newReply.sender_name,
+          message: newReply.message,
+          created_at: newReply.created_at,
+        };
+        
+        setSelectedTicket((prev) => {
+          if (!prev || prev.id !== newReply.ticket_id) return prev;
+          if (prev.messages.some(m => m.id === newMsg.id)) return prev;
+          return {
+            ...prev,
+            messages: [...prev.messages, newMsg]
+          };
+        });
+        setTimeout(scrollToBottom, 100);
+      } else {
+        await openTicket(selectedTicket);
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to send reply");
     }
@@ -313,7 +361,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
             method: "PATCH",
             headers: { ...authHeader, "Content-Type": "application/json" },
             body: JSON.stringify({ status }),
-          },
+          }
         );
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to update status");
@@ -323,14 +371,14 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         await fetchTickets();
         if (selectedTicket?.id === ticketId) {
           setSelectedTicket((prev) =>
-            prev ? { ...prev, status: updatedStatus } : prev,
+            prev ? { ...prev, status: updatedStatus } : prev
           );
         }
       } catch (error: any) {
         toast.error(error.message || "Failed to update ticket status");
       }
     },
-    [authHeader, fetchTickets, selectedTicket],
+    [authHeader, fetchTickets, selectedTicket]
   );
 
   const deleteTicket = useCallback(async () => {
@@ -342,7 +390,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         {
           method: "DELETE",
           headers: authHeader,
-        },
+        }
       );
       const raw = await res.text();
       let data: any;
@@ -368,382 +416,163 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
     }
   }, [deleteTicketId, authHeader, selectedTicket, fetchTickets]);
 
-  const filteredTickets = tickets.filter((ticket) => {
-    const matchesStatus =
-      statusFilter === "all" || ticket.status === statusFilter;
-    const creatorDisplay = getCreatorDisplay(ticket).toLowerCase();
-    const creatorEmail = (ticket.creator?.email || "").toLowerCase();
-    const creatorId = (ticket.creator?.id || ticket.created_by || "").toLowerCase();
-    const normalizedSearch = searchQuery.toLowerCase();
-    const matchesSearch =
-      !searchQuery ||
-      ticket.subject.toLowerCase().includes(normalizedSearch) ||
-      ticket.message.toLowerCase().includes(normalizedSearch) ||
-      ticket.category.toLowerCase().includes(normalizedSearch) ||
-      creatorDisplay.includes(normalizedSearch) ||
-      creatorEmail.includes(normalizedSearch) ||
-      creatorId.includes(normalizedSearch);
-    return matchesStatus && matchesSearch;
-  });
-
-  const ticketCounts = {
-    all: tickets.length,
-    open: tickets.filter((t) => t.status === "open").length,
-    in_progress: tickets.filter((t) => t.status === "in_progress").length,
-    resolved: tickets.filter((t) => t.status === "resolved").length,
-    closed: tickets.filter((t) => t.status === "closed").length,
-  };
-
   return (
     <>
-      <div className="flex h-[calc(100vh-12rem)] overflow-hidden rounded-lg border border-border bg-background relative">
+      <div className="flex h-[calc(100vh-12rem)] overflow-hidden rounded-xl border border-border bg-background shadow-sm">
         {/* Sidebar - Ticket List */}
         <div
           className={cn(
-            "flex flex-col border-r border-border bg-muted/30 w-full md:w-80 shrink-0",
-            selectedTicket ? "hidden md:flex" : "flex",
+            "flex flex-col border-r border-border bg-muted/10 w-full md:w-80 lg:w-96 shrink-0 transition-all duration-300 ease-in-out",
+            selectedTicket ? "hidden md:flex" : "flex"
           )}
         >
-          {/* Sidebar Header */}
-          <div className="flex items-center justify-between border-b border-border bg-background px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Inbox className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-lg font-semibold">Support Inbox</h2>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={fetchTickets}
-              disabled={loading}
-              className="h-8 w-8"
-            >
-              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-            </Button>
-          </div>
-
-          {/* Search */}
-          <div className="border-b border-border p-3">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search tickets..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
-
-          {/* Status Filter */}
-          <div className="border-b border-border p-3">
-            <Select
-              value={statusFilter}
-              onValueChange={(value) =>
-                setStatusFilter(value as typeof statusFilter)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  All Tickets ({ticketCounts.all})
-                </SelectItem>
-                <SelectItem value="open">Open ({ticketCounts.open})</SelectItem>
-                <SelectItem value="in_progress">
-                  In Progress ({ticketCounts.in_progress})
-                </SelectItem>
-                <SelectItem value="resolved">
-                  Resolved ({ticketCounts.resolved})
-                </SelectItem>
-                <SelectItem value="closed">
-                  Closed ({ticketCounts.closed})
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Ticket List */}
-          <ScrollArea className="flex-1">
-            {filteredTickets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-8 text-center text-sm text-muted-foreground">
-                <Inbox className="mb-2 h-8 w-8 opacity-50" />
-                <p>No tickets found</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {filteredTickets.map((ticket) => {
-                  const StatusIcon = TICKET_STATUS_META[ticket.status].icon;
-                  const isSelected = selectedTicket?.id === ticket.id;
-
-                  return (
-                    <button
-                      key={ticket.id}
-                      onClick={() => openTicket(ticket)}
-                      className={cn(
-                        "flex w-full flex-col gap-2 p-4 text-left transition-colors",
-                        isSelected
-                          ? "bg-primary/10 border-l-2 border-l-primary"
-                          : "hover:bg-muted/50",
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <StatusIcon className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium text-sm line-clamp-1">
-                            {ticket.subject}
-                          </span>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-xs",
-                            TICKET_PRIORITY_META[ticket.priority].className,
-                          )}
-                        >
-                          {TICKET_PRIORITY_META[ticket.priority].label}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {ticket.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">
-                        Customer:{" "}
-                        {ticket.creator?.email
-                          ? `${getCreatorDisplay(ticket)} (${ticket.creator.email})`
-                          : getCreatorDisplay(ticket)}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-xs",
-                            TICKET_STATUS_META[ticket.status].className,
-                          )}
-                        >
-                          {TICKET_STATUS_META[ticket.status].label}
-                        </Badge>
-                        <span>•</span>
-                        <span className="capitalize">{ticket.category}</span>
-                        {ticket.vps_label && (
-                          <>
-                            <span>•</span>
-                            <Badge
-                              variant="outline"
-                              className="text-xs bg-muted/50 font-normal max-w-[120px] truncate"
-                            >
-                              {ticket.vps_label}
-                            </Badge>
-                          </>
-                        )}
-                        <span>•</span>
-                        <span>
-                          {new Date(ticket.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
+          <TicketList
+            tickets={tickets}
+            selectedTicketId={selectedTicket?.id || null}
+            onSelectTicket={openTicket}
+            isLoading={loading}
+            isAdmin={true}
+          />
         </div>
 
         {/* Main Content - Ticket Detail */}
         <div
           className={cn(
-            "flex flex-1 flex-col",
-            !selectedTicket ? "hidden md:flex" : "flex",
+            "flex flex-1 flex-col bg-background transition-all duration-300 ease-in-out",
+            !selectedTicket ? "hidden md:flex" : "flex"
           )}
         >
           {!selectedTicket ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-              <Mail className="h-16 w-16 text-muted-foreground/40" />
-              <div>
-                <h3 className="text-lg font-semibold">No ticket selected</h3>
-                <p className="text-sm text-muted-foreground">
-                  Select a ticket from the list to view details and respond
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center p-8 bg-muted/5">
+              <div className="rounded-full bg-primary/5 p-6 ring-1 ring-primary/10">
+                <Ticket className="h-12 w-12 text-primary/40" />
+              </div>
+              <div className="max-w-sm space-y-2">
+                <h3 className="text-xl font-semibold tracking-tight">Select a ticket</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Choose a ticket from the list to view details, respond to customers, or update status.
                 </p>
               </div>
             </div>
           ) : (
-            <>
-              {/* Ticket Header */}
-              <div className="border-b border-border bg-background px-6 py-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2 md:hidden">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedTicket(null)}
-                        className="h-auto p-0 text-sm text-primary hover:text-primary/80"
-                      >
-                        ← Back to Tickets
-                      </Button>
-                    </div>
-                    <h2 className="text-xl font-semibold">
-                      {selectedTicket.subject}
-                    </h2>
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          TICKET_STATUS_META[selectedTicket.status].className,
-                        )}
-                      >
-                        {TICKET_STATUS_META[selectedTicket.status].label}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          TICKET_PRIORITY_META[selectedTicket.priority]
-                            .className,
-                        )}
-                      >
-                        {TICKET_PRIORITY_META[selectedTicket.priority].label}
-                      </Badge>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="capitalize text-muted-foreground">
-                        {selectedTicket.category}
-                      </span>
-                      {selectedTicket.vps_label && (
-                        <>
-                          <span className="text-muted-foreground">•</span>
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-muted/50 font-normal"
-                          >
-                            VPS: {selectedTicket.vps_label}
-                          </Badge>
-                        </>
-                      )}
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-muted-foreground">
-                        {new Date(selectedTicket.created_at).toLocaleString()}
-                      </span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-muted-foreground">
-                        Customer:{" "}
-                        {selectedTicket.creator?.email
-                          ? `${getCreatorDisplay(selectedTicket)} (${selectedTicket.creator.email})`
-                          : getCreatorDisplay(selectedTicket)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedTicket.creator?.id && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          navigate(`/admin/user/${selectedTicket.creator?.id}`)
-                        }
-                      >
-                        <User className="mr-1 h-4 w-4" />
-                        View Customer
-                      </Button>
-                    )}
-                    {ADMIN_TICKET_STATUS_ACTIONS[selectedTicket.status].map(
-                      (action) => {
-                        const ActionIcon = action.icon;
-                        return (
-                          <Button
-                            key={`${selectedTicket.status}-${action.status}`}
-                            size="sm"
-                            variant={action.primary ? "default" : "outline"}
-                            onClick={() =>
-                              updateTicketStatus(
-                                selectedTicket.id,
-                                action.status,
-                              )
-                            }
-                          >
-                            <ActionIcon className="mr-1 h-4 w-4" />
-                            {action.label}
-                          </Button>
-                        );
-                      },
-                    )}
+            <div className="flex flex-1 h-full overflow-hidden">
+              <div className="flex flex-col flex-1 min-w-0 h-full">
+                {/* Ticket Header */}
+                <TicketDetailHeader
+                  ticket={selectedTicket}
+                  onBack={() => setSelectedTicket(null)}
+                  showCustomer={true}
+              >
+                <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="lg:hidden h-8 w-full sm:w-auto border-dashed border-primary/20 text-primary hover:bg-primary/5 mr-auto" 
+                    onClick={() => setIsInfoOpen(true)}
+                  >
+                    <Info className="mr-1.5 h-3.5 w-3.5" />
+                    Info
+                  </Button>
+
+                  {selectedTicket.creator?.id && (
                     <Button
                       size="sm"
-                      variant="destructive"
-                      onClick={() => setDeleteTicketId(selectedTicket.id)}
+                      variant="outline"
+                      className="h-8"
+                      onClick={() =>
+                        navigate(`/admin/user/${selectedTicket.creator?.id}`)
+                      }
                     >
-                      <Trash2 className="mr-1 h-4 w-4" />
-                      Delete
+                      <User className="mr-1.5 h-3.5 w-3.5" />
+                      View Customer
                     </Button>
-                  </div>
+                  )}
+                  
+                  <div className="w-px h-6 bg-border mx-1 hidden sm:block" />
+                  
+                  {ADMIN_TICKET_STATUS_ACTIONS[selectedTicket.status].map(
+                    (action) => {
+                      const ActionIcon = action.icon;
+                      return (
+                        <Button
+                          key={`${selectedTicket.status}-${action.status}`}
+                          size="sm"
+                          variant={action.primary ? "default" : "outline"}
+                          className="h-8"
+                          onClick={() =>
+                            updateTicketStatus(
+                              selectedTicket.id,
+                              action.status,
+                            )
+                          }
+                        >
+                          <ActionIcon className="mr-1.5 h-3.5 w-3.5" />
+                          {action.label}
+                        </Button>
+                      );
+                    }
+                  )}
+                  
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="h-8 ml-auto"
+                    onClick={() => setDeleteTicketId(selectedTicket.id)}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete
+                  </Button>
                 </div>
-              </div>
+              </TicketDetailHeader>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 p-6">
-                <div className="space-y-6">
+              <ScrollArea className="flex-1 p-6 bg-muted/5">
+                <div className="space-y-6 max-w-4xl mx-auto">
                   {/* Original Message */}
-                  <div className="rounded-lg border border-border bg-muted/50 p-4">
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Original Message
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                      <div className="w-full border-t border-border"></div>
                     </div>
-                    <p className="whitespace-pre-wrap text-sm">
+                    <div className="relative flex justify-center">
+                      <span className="bg-background px-2 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                        Original Request
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-xl border border-border bg-background p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-medium text-xs">
+                        User
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">
+                          {selectedTicket.creator?.displayName || selectedTicket.creator?.email || "User"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(selectedTicket.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
                       {selectedTicket.message}
                     </p>
                   </div>
 
-                  <Separator />
-
                   {/* Replies */}
-                  {selectedTicket.messages &&
-                  selectedTicket.messages.length > 0 ? (
-                    <div className="space-y-4">
-                      {selectedTicket.messages.map((msg) => {
-                        const isReopenRequest =
-                          msg.sender_type === "user" &&
-                          isReopenRequestMessage(msg.message);
-
-                        return (
-                          <div
-                            key={msg.id}
-                            className={cn(
-                              "flex",
-                              msg.sender_type === "admin"
-                                ? "justify-end"
-                                : "justify-start",
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                "max-w-2xl rounded-lg border p-4",
-                                msg.sender_type === "admin"
-                                  ? "border-primary/30 bg-primary text-primary-foreground"
-                                  : "border-border bg-background",
-                                isReopenRequest &&
-                                  "border-amber-500/30 bg-amber-500/10",
-                              )}
-                            >
-                              <div className="mb-2 flex items-center justify-between gap-4 text-xs">
-                                <span className="font-medium">
-                                  {msg.sender_name}
-                                </span>
-                                <span className="text-muted-foreground">
-                                  {new Date(msg.created_at).toLocaleString()}
-                                </span>
-                              </div>
-                              {isReopenRequest && (
-                                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                                  Re-open Request
-                                </div>
-                              )}
-                              <p className="whitespace-pre-wrap text-sm">
-                                {formatTicketMessage(msg.message)}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
+                  {selectedTicket.messages && selectedTicket.messages.length > 0 ? (
+                    <div className="space-y-6 pt-4">
+                      {selectedTicket.messages.map((msg) => (
+                        <MessageBubble
+                          key={msg.id}
+                          message={msg}
+                          isCurrentUser={msg.sender_type === "admin"}
+                          showSenderName={true}
+                        />
+                      ))}
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+                    <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground mt-4 bg-muted/20">
                       No replies yet. Be the first to respond!
                     </div>
                   )}
@@ -752,38 +581,66 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
               </ScrollArea>
 
               {/* Reply Box */}
-              <div className="border-t border-border bg-muted/30 p-4">
-                <div className="space-y-3">
-                  <Label
-                    htmlFor="reply-message"
-                    className="text-sm font-medium"
-                  >
-                    Reply to ticket
-                  </Label>
-                  <Textarea
-                    id="reply-message"
-                    rows={4}
-                    value={replyMessage}
-                    onChange={(e) => setReplyMessage(e.target.value)}
-                    placeholder="Type your response..."
-                    className="resize-none"
-                  />
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setReplyMessage("")}
-                      disabled={!replyMessage.trim()}
-                    >
-                      Clear
-                    </Button>
-                    <Button onClick={sendReply} disabled={!replyMessage.trim()}>
-                      <Send className="mr-2 h-4 w-4" />
-                      Send Reply
-                    </Button>
+              <div className="border-t border-border bg-background p-4 md:p-6">
+                <div className="max-w-4xl mx-auto space-y-3">
+                  <div className="relative">
+                    <Textarea
+                      rows={4}
+                      value={replyMessage}
+                      onChange={(e) => setReplyMessage(e.target.value)}
+                      placeholder="Type your response..."
+                      className="resize-none pr-12 min-h-[100px] shadow-sm focus-visible:ring-primary/20"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                          e.preventDefault();
+                          sendReply();
+                        }
+                      }}
+                    />
+                    <div className="absolute bottom-3 right-3 flex gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={sendReply} 
+                        disabled={!replyMessage.trim()}
+                        className="h-8 w-8 p-0 rounded-full"
+                        title="Send Reply (Ctrl+Enter)"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-xs text-muted-foreground px-1">
+                    <span>Markdown supported</span>
+                    <span>Press Ctrl+Enter to send</span>
                   </div>
                 </div>
               </div>
-            </>
+              </div>
+              <TicketInfoSidebar 
+                ticket={selectedTicket}
+                walletBalance={clientBalance}
+                isAdmin={true}
+                clientName={selectedTicket.creator?.displayName}
+                clientEmail={selectedTicket.creator?.email || undefined}
+                className="hidden lg:flex w-80 shrink-0"
+              />
+
+              <Sheet open={isInfoOpen} onOpenChange={setIsInfoOpen}>
+                <SheetContent side="right" className="p-0 sm:max-w-md w-full border-l border-border">
+                  <SheetHeader className="px-6 py-4 border-b border-border">
+                    <SheetTitle>Ticket Details</SheetTitle>
+                  </SheetHeader>
+                  <TicketInfoSidebar 
+                    ticket={selectedTicket}
+                    walletBalance={clientBalance}
+                    isAdmin={true}
+                    clientName={selectedTicket.creator?.displayName}
+                    clientEmail={selectedTicket.creator?.email || undefined}
+                    className="w-full border-none bg-background"
+                  />
+                </SheetContent>
+              </Sheet>
+            </div>
           )}
         </div>
       </div>
@@ -805,7 +662,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={deleteTicket}
-              className="bg-destructive text-destructive-foreground"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
             </AlertDialogAction>

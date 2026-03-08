@@ -7,7 +7,7 @@ import { body, param, validationResult } from "express-validator";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
-import { query } from "../lib/database.js";
+import { query, pool } from "../lib/database.js";
 import { linodeService } from "../services/linodeService.js";
 import { logActivity } from "../services/activityLogger.js";
 import {
@@ -476,6 +476,14 @@ router.patch(
         throw new Error("Failed to update ticket status");
       }
 
+      // Notify SSE listeners
+      const statusNotification = {
+        type: "ticket_status_change",
+        ticket_id: id,
+        new_status: nextStatus,
+      };
+      await query(`NOTIFY "ticket_${id}", '${JSON.stringify(statusNotification)}'`);
+
       const userMessageByStatus: Record<
         string,
         { message: string; status: "success" | "warning" | "error" | "info" }
@@ -631,6 +639,19 @@ router.post(
       );
 
       const replyRow = replyResult.rows[0];
+
+      // Notify SSE listeners
+      const notificationPayload = {
+        type: "ticket_message",
+        ticket_id: id,
+        message_id: replyRow.id,
+        message: replyRow.message,
+        is_staff_reply: true,
+        created_at: replyRow.created_at,
+        sender_name: "Support Team",
+      };
+      await query(`NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload)}'`);
+
       res.status(201).json({
         reply: {
           id: replyRow.id,
@@ -5047,6 +5068,109 @@ router.put(
             "USER_UPDATE_ERROR",
           ),
         );
+    }
+  },
+);
+
+// Stream real-time updates for a specific ticket (SSE) - Admin
+router.get(
+  "/tickets/:id/stream",
+  [param("id").isUUID().withMessage("Invalid ticket id")],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { id } = req.params;
+
+      // For SSE, we need to get token from query param since EventSource doesn't support headers
+      const token = req.query.token as string;
+      if (!token) {
+        res.status(401).json({ error: "Authentication token required" });
+        return;
+      }
+
+      // Validate token manually
+      let decoded: { userId: string; role?: string };
+      try {
+        decoded = jwt.verify(token, config.JWT_SECRET) as {
+          userId: string;
+          role?: string;
+        };
+      } catch {
+        res.status(401).json({ error: "Invalid or expired token" });
+        return;
+      }
+
+      // Verify user is admin
+      const userRes = await query("SELECT role FROM users WHERE id = $1", [decoded.userId]);
+      if (userRes.rows.length === 0 || userRes.rows[0].role !== "admin") {
+         res.status(403).json({ error: "Admin access required" });
+         return;
+      }
+
+      // Verify ticket exists
+      const ticketCheck = await query(
+        "SELECT id FROM support_tickets WHERE id = $1",
+        [id],
+      );
+
+      if (ticketCheck.rows.length === 0) {
+        res.status(404).json({ error: "Ticket not found" });
+        return;
+      }
+
+      // Set up SSE
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+      // Send initial connection success
+      res.write('data: {"type":"connected"}\n\n');
+
+      // Create PostgreSQL client for LISTEN
+      const client = await pool.connect();
+      const channelName = `ticket_${id}`;
+
+      await client.query(`LISTEN "${channelName}"`);
+
+      // Handle notifications
+      const notificationHandler = (msg: {
+        channel: string;
+        payload?: string;
+      }) => {
+        if (msg.channel === channelName && msg.payload) {
+          res.write(`data: ${msg.payload}\n\n`);
+        }
+      };
+
+      client.on("notification", notificationHandler);
+
+      // Send heartbeat every 30 seconds
+      const heartbeat = setInterval(() => {
+        res.write(": heartbeat\n\n");
+      }, 30000);
+
+      // Cleanup on client disconnect
+      req.on("close", async () => {
+        clearInterval(heartbeat);
+        client.removeListener("notification", notificationHandler);
+        await client.query(`UNLISTEN "${channelName}"`);
+        client.release();
+        res.end();
+      });
+    } catch (err: unknown) {
+      console.error("Admin ticket stream error:", err);
+      const error = err as Error;
+      if (!res.headersSent) {
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to establish stream" });
+      }
     }
   },
 );

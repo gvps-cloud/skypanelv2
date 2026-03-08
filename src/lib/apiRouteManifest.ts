@@ -422,6 +422,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/admin/tickets/:id/stream",
+    "protected": false
+  },
+  {
+    "method": "GET",
     "path": "/api/admin/upstream/plans",
     "protected": true
   },
@@ -687,6 +692,26 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/organizations/:id/members",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/organizations/:id/members",
+    "protected": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/organizations/:id/members/:userId",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/organizations/:id/members/:userId",
+    "protected": true
+  },
+  {
+    "method": "GET",
     "path": "/api/payments/billing/summary",
     "protected": true
   },
@@ -798,7 +823,7 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "GET",
     "path": "/api/support/tickets/:id/stream",
-    "protected": true
+    "protected": false
   },
   {
     "method": "GET",

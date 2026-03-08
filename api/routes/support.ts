@@ -6,8 +6,6 @@ import { logActivity } from "../services/activityLogger.js";
 
 const router = express.Router();
 
-router.use(authenticateToken, requireOrganization);
-
 const isMissingTableError = (err: any): boolean => {
   const msg = (err?.message || "").toLowerCase();
   return (
@@ -70,7 +68,7 @@ const notifyAdminsForTicketEvent = async ({
 };
 
 // List support tickets for the user's organization
-router.get("/tickets", async (req: Request, res: Response) => {
+router.get("/tickets", authenticateToken, requireOrganization, async (req: Request, res: Response) => {
   try {
     const organizationId = (req as any).user.organizationId;
     const result = await query(
@@ -92,6 +90,8 @@ router.get("/tickets", async (req: Request, res: Response) => {
 // Create a new support ticket
 router.post(
   "/tickets",
+  authenticateToken,
+  requireOrganization,
   [
     body("subject").isLength({ min: 3 }).withMessage("Subject is required"),
     body("message").isLength({ min: 10 }).withMessage("Message is required"),
@@ -184,6 +184,8 @@ router.post(
 // List replies for a ticket (organization scoped)
 router.get(
   "/tickets/:id/replies",
+  authenticateToken,
+  requireOrganization,
   [param("id").isUUID().withMessage("Invalid ticket id")],
   async (req: Request, res: Response) => {
     try {
@@ -243,6 +245,8 @@ router.get(
 // Reply to a ticket (organization scoped, user reply)
 router.post(
   "/tickets/:id/replies",
+  authenticateToken,
+  requireOrganization,
   [
     param("id").isUUID().withMessage("Invalid ticket id"),
     body("message").isLength({ min: 1 }).withMessage("Message is required"),
@@ -317,6 +321,18 @@ router.post(
       const senderName =
         userRes.rows[0]?.name || userRes.rows[0]?.email || "Unknown";
 
+      // Notify SSE listeners
+      const notificationPayload = {
+        type: "ticket_message",
+        ticket_id: replyRow.ticket_id,
+        message_id: replyRow.id,
+        message: replyRow.message,
+        is_staff_reply: false,
+        created_at: replyRow.created_at,
+        sender_name: senderName,
+      };
+      await query(`NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload)}'`);
+
       res.status(201).json({
         reply: {
           id: replyRow.id,
@@ -343,6 +359,8 @@ router.post(
 // Request ticket reopen (organization scoped, user request)
 router.post(
   "/tickets/:id/reopen-request",
+  authenticateToken,
+  requireOrganization,
   [
     param("id").isUUID().withMessage("Invalid ticket id"),
     body("message")

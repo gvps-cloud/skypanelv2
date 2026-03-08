@@ -1771,11 +1771,21 @@ router.get("/uptime-summary", async (req: Request, res: Response) => {
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const organizationId = (req as any).user.organizationId;
-    const detailRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2 LIMIT 1",
-      [id, organizationId],
-    );
+    const user = (req as any).user;
+    const organizationId = user.organizationId;
+
+    let detailRes;
+    if (user.role === "admin") {
+      detailRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 LIMIT 1",
+        [id],
+      );
+    } else {
+      detailRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2 LIMIT 1",
+        [id, organizationId],
+      );
+    }
 
     if (detailRes.rows.length === 0) {
       res.status(404).json({ error: "Instance not found" });
@@ -2928,11 +2938,19 @@ router.post("/", async (req: Request, res: Response) => {
 router.post("/:id/boot", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const organizationId = (req as any).user.organizationId;
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    const user = (req as any).user;
+    const organizationId = user.organizationId;
+    
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0)
       return res.status(404).json({ error: "Instance not found" });
 
@@ -2984,11 +3002,19 @@ router.post("/:id/boot", async (req: Request, res: Response) => {
 router.post("/:id/shutdown", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const organizationId = (req as any).user.organizationId;
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    const user = (req as any).user;
+    const organizationId = user.organizationId;
+    
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+    
     if (rowRes.rows.length === 0)
       return res.status(404).json({ error: "Instance not found" });
 
@@ -3039,11 +3065,19 @@ router.post("/:id/shutdown", async (req: Request, res: Response) => {
 router.post("/:id/reboot", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const organizationId = (req as any).user.organizationId;
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    const user = (req as any).user;
+    const organizationId = user.organizationId;
+    
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0)
       return res.status(404).json({ error: "Instance not found" });
 
@@ -3096,10 +3130,17 @@ router.post("/:id/backups/enable", async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
     const organizationId = user.organizationId;
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
     }
@@ -3143,10 +3184,17 @@ router.post("/:id/backups/disable", async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
     const organizationId = user.organizationId;
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
     }
@@ -3190,10 +3238,17 @@ router.post("/:id/backups/schedule", async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
     const organizationId = user.organizationId;
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
     }
@@ -3303,10 +3358,17 @@ router.post("/:id/backups/snapshot", async (req: Request, res: Response) => {
         : undefined;
     const user = (req as any).user;
     const organizationId = user.organizationId;
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
     }
@@ -3362,10 +3424,17 @@ router.post(
       }
 
       const { overwrite } = (req.body || {}) as { overwrite?: boolean };
-      const rowRes = await query(
-        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-        [id, organizationId],
-      );
+      
+      let rowRes;
+      if (user.role === 'admin') {
+        rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+      } else {
+        rowRes = await query(
+          "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+          [id, organizationId],
+        );
+      }
+
       if (rowRes.rows.length === 0) {
         return res.status(404).json({ error: "Instance not found" });
       }
@@ -3429,10 +3498,17 @@ router.post("/:id/firewalls/attach", async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
     const organizationId = user.organizationId;
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
     }
@@ -3497,10 +3573,17 @@ router.post("/:id/firewalls/detach", async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
     const organizationId = user.organizationId;
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
     }
@@ -3559,10 +3642,17 @@ router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
     const organizationId = user.organizationId;
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
     }
@@ -3666,11 +3756,16 @@ router.put("/:id/hostname", async (req: Request, res: Response) => {
     const user = (req as any).user;
     const organizationId = user.organizationId;
 
-    // Check if instance exists and belongs to organization
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
     }
@@ -3745,10 +3840,16 @@ router.delete("/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid password" });
     }
 
-    const rowRes = await query(
-      "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0)
       return res.status(404).json({ error: "Instance not found" });
 
@@ -3811,11 +3912,16 @@ router.put("/:id/notes", async (req: Request, res: Response) => {
         .json({ error: "Notes cannot exceed 10,000 characters" });
     }
 
-    // Check if instance exists and belongs to organization
-    const rowRes = await query(
-      "SELECT id, label FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT id, label FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT id, label FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
     }
@@ -3869,11 +3975,16 @@ router.get("/:id/notes", async (req: Request, res: Response) => {
     const user = (req as any).user;
     const organizationId = user.organizationId;
 
-    // Check if instance exists and belongs to organization
-    const rowRes = await query(
-      "SELECT notes FROM vps_instances WHERE id = $1 AND organization_id = $2",
-      [id, organizationId],
-    );
+    let rowRes;
+    if (user.role === 'admin') {
+      rowRes = await query("SELECT notes FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT notes FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
     if (rowRes.rows.length === 0) {
       return res.status(404).json({ error: "Instance not found" });
     }

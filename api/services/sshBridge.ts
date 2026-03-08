@@ -96,8 +96,13 @@ export function initSSHBridge(server: Server) {
       return;
     }
 
-    // Load VPS instance and verify ownership
-    const instRes = await query('SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2', [instanceId, user.organizationId]);
+    const instRes =
+      user.role === "admin"
+        ? await query("SELECT * FROM vps_instances WHERE id = $1", [instanceId])
+        : await query(
+            "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+            [instanceId, user.organizationId],
+          );
     if (instRes.rows.length === 0) {
       send(ws, { type: 'error', message: 'Instance not found' });
       ws.close();
