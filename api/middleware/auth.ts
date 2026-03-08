@@ -8,6 +8,11 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email: string;
     role: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    timezone?: string;
     organizationId?: string;
     preferences?: any;
     twoFactorEnabled?: boolean;
@@ -34,7 +39,7 @@ export const authenticateToken = async (
 
     // Get user from database
     const userResult = await query(
-      'SELECT id, email, role, preferences, two_factor_enabled AS "twoFactorEnabled" FROM users WHERE id = $1',
+      'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled AS "twoFactorEnabled" FROM users WHERE id = $1',
       [decoded.userId]
     );
 
@@ -101,7 +106,12 @@ export const authenticateToken = async (
     req.user = {
       id: user.id,
       email: user.email,
+      name: user.name,
+      firstName: user.name ? user.name.split(' ')[0] || '' : '',
+      lastName: user.name ? user.name.split(' ').slice(1).join(' ') || '' : '',
       role: user.role,
+      phone: user.phone,
+      timezone: user.timezone,
       organizationId,
       preferences: user.preferences,
       twoFactorEnabled: user.twoFactorEnabled
@@ -167,7 +177,7 @@ export const optionalAuth = async (
 
     // Get user from database
     const userResult = await query(
-      'SELECT id, email, role FROM users WHERE id = $1',
+      'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled AS "twoFactorEnabled" FROM users WHERE id = $1',
       [decoded.userId]
     );
 
@@ -229,8 +239,15 @@ export const optionalAuth = async (
     req.user = {
       id: user.id,
       email: user.email,
+      name: user.name,
+      firstName: user.name ? user.name.split(' ')[0] || '' : '',
+      lastName: user.name ? user.name.split(' ').slice(1).join(' ') || '' : '',
       role: user.role,
-      organizationId
+      phone: user.phone,
+      timezone: user.timezone,
+      organizationId,
+      preferences: user.preferences,
+      twoFactorEnabled: user.twoFactorEnabled
     };
     (req as any).userId = user.id;
     (req as any).organizationId = organizationId;
