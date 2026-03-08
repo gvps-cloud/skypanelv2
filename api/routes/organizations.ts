@@ -265,7 +265,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
       };
     }));
 
-    res.json(enrichedOrgs);
+    res.json({ organizations: enrichedOrgs });
   } catch (error) {
     console.error('Failed to fetch organizations:', error);
     res.status(500).json({ error: 'Failed to fetch organizations' });
