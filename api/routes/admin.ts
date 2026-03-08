@@ -376,9 +376,11 @@ router.get(
            st.*,
            u.id AS creator_id,
            u.name AS creator_name,
-           u.email AS creator_email
+           u.email AS creator_email,
+           COALESCE(vi.label, st.vps_label_snapshot) as vps_label
          FROM support_tickets st
          LEFT JOIN users u ON u.id = st.created_by
+         LEFT JOIN vps_instances vi ON st.vps_id = vi.id
          ORDER BY st.created_at DESC`,
       );
 

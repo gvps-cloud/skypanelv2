@@ -65,6 +65,7 @@ interface SupportTicket {
   category: string;
   created_at: string;
   updated_at: string;
+  vps_label?: string;
   messages: TicketMessage[];
 }
 
@@ -595,6 +596,17 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                       <span className="capitalize text-muted-foreground">
                         {selectedTicket.category}
                       </span>
+                      {selectedTicket.vps_label && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-muted/50 font-normal"
+                          >
+                            VPS: {selectedTicket.vps_label}
+                          </Badge>
+                        </>
+                      )}
                       <span className="text-muted-foreground">•</span>
                       <span className="text-muted-foreground">
                         {new Date(selectedTicket.created_at).toLocaleString()}

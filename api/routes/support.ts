@@ -74,7 +74,7 @@ router.get("/tickets", async (req: Request, res: Response) => {
   try {
     const organizationId = (req as any).user.organizationId;
     const result = await query(
-      `SELECT st.*, vi.label as vps_label 
+      `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
        FROM support_tickets st
        LEFT JOIN vps_instances vi ON st.vps_id = vi.id
        WHERE st.organization_id = $1 
@@ -113,37 +113,47 @@ router.post(
       const userId = (req as any).user.id;
       const { subject, message, priority, category, vpsId } = req.body;
 
-      const result = await query(
-        `INSERT INTO support_tickets (organization_id, created_by, subject, message, priority, category, status, vps_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING *`,
-        [
-          organizationId,
-          userId,
-          subject,
-          message,
-          priority,
-          category,
-          "open",
-          vpsId || null,
-        ],
-      );
+    // If a VPS is linked, fetch its details first to store a snapshot
+    let vpsLabelSnapshot = null;
+    let vpsIpSnapshot = null;
 
-      const ticket = result.rows[0];
-
-      // If a VPS was linked, fetch its label for the notification
-      let vpsLabel = null;
-      if (vpsId) {
-        try {
-          const vpsRes = await query(
-            "SELECT label FROM vps_instances WHERE id = $1",
-            [vpsId],
-          );
-          vpsLabel = vpsRes.rows[0]?.label;
-        } catch (err) {
-          console.warn("Failed to fetch VPS label for ticket notification", err);
+    if (vpsId) {
+      try {
+        const vpsRes = await query(
+          "SELECT label, ip_address FROM vps_instances WHERE id = $1",
+          [vpsId],
+        );
+        if (vpsRes.rows.length > 0) {
+          vpsLabelSnapshot = vpsRes.rows[0].label;
+          vpsIpSnapshot = vpsRes.rows[0].ip_address;
         }
+      } catch (err) {
+        console.warn("Failed to fetch VPS details for ticket snapshot", err);
       }
+    }
+
+    const result = await query(
+      `INSERT INTO support_tickets (organization_id, created_by, subject, message, priority, category, status, vps_id, vps_label_snapshot, vps_ip_snapshot)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
+      [
+        organizationId,
+        userId,
+        subject,
+        message,
+        priority,
+        category,
+        "open",
+        vpsId || null,
+        vpsLabelSnapshot,
+        vpsIpSnapshot,
+      ],
+    );
+
+    const ticket = result.rows[0];
+
+    // Use the snapshot label for notification if available
+    const vpsLabel = vpsLabelSnapshot;
 
       await notifyAdminsForTicketEvent({
         organizationId,
