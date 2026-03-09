@@ -141,9 +141,9 @@ export default function Status() {
     }));
 
     try {
-      // Use a small file or favicon to minimize download time
-      // We measure round-trip time using fetch with cache disabled
-      const testUrl = `${speedTestUrl}favicon.ico?t=${Date.now()}`;
+      // Measure round-trip time to the speedtest server root
+      // Using no-cors mode to avoid CORS issues, we just measure connection time
+      const testUrl = `${speedTestUrl}?t=${Date.now()}`;
       const startTime = performance.now();
 
       await fetch(testUrl, {
