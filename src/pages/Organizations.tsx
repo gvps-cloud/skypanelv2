@@ -647,7 +647,13 @@ const Organizations: React.FC = () => {
                                   </Link>
                                 )}
                               </div>
-                              <div className="space-y-3">
+                              <div
+                                className={`grid gap-3 ${
+                                  resourceViewMode === "grid"
+                                    ? "sm:grid-cols-2 lg:grid-cols-3"
+                                    : "grid-cols-1"
+                                }`}
+                              >
                                 {resourceGroup.tickets.map((ticket) => (
                                   <Card
                                     key={ticket.id}
