@@ -238,6 +238,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [adminCommandUsers, setAdminCommandUsers] = useState<
     AdminUserCommandItem[]
   >([]);
+  const [regularCommandUsers, setRegularCommandUsers] = useState<
+    AdminUserCommandItem[]
+  >([]);
   const [adminUsersLoading, setAdminUsersLoading] = useState(false);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceCommandItem[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
@@ -378,7 +381,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         throw new Error(payload.error || "Failed to load admin users");
       }
 
-      const rows: AdminUserCommandItem[] = Array.isArray(payload.users)
+      const allUsers: AdminUserCommandItem[] = Array.isArray(payload.users)
         ? payload.users.slice(0, 15).map((user: any) => ({
             id: user.id,
             name: user.name || user.email,
@@ -387,7 +390,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           }))
         : [];
 
-      setAdminCommandUsers(rows);
+      // Separate admins and regular users
+      const admins = allUsers.filter(u => u.role === 'admin');
+      const regularUsers = allUsers.filter(u => u.role !== 'admin');
+
+      setAdminCommandUsers(admins);
+      setRegularCommandUsers(regularUsers);
     } catch (error) {
       console.error("Failed to load admin users:", error);
     } finally {
@@ -993,7 +1001,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             {isAdmin && (adminCommandUsers.length > 0 || adminUsersLoading) && (
               <>
                 <CommandSeparator />
-                <CommandGroup heading="Admin Users">
+                <CommandGroup heading="Admins">
                   {adminUsersLoading ? (
                     <CommandItem disabled>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1029,6 +1037,43 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       </CommandItem>
                     ))
                   )}
+                </CommandGroup>
+              </>
+            )}
+
+            {/* Regular Users Group (Admin) */}
+            {isAdmin && regularCommandUsers.length > 0 && !adminUsersLoading && (
+              <>
+                <CommandSeparator />
+                <CommandGroup heading="Users">
+                  {regularCommandUsers.map((regularUser) => (
+                    <CommandItem
+                      key={regularUser.id}
+                      onSelect={() => handleAdminUserSelect(regularUser.id)}
+                      className="flex items-center justify-between"
+                      value={`${regularUser.name} ${regularUser.email} ${regularUser.id}`}
+                    >
+                      <div className="flex items-center">
+                        <Users className="mr-2 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {regularUser.name || regularUser.email}
+                          </span>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span className="truncate max-w-[220px]">
+                              {regularUser.email}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className="border px-1.5 py-0.5 font-medium border-muted-foreground/25 text-muted-foreground"
+                            >
+                              {formatRoleLabel(regularUser.role)}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </CommandItem>
+                  ))}
                 </CommandGroup>
               </>
             )}
