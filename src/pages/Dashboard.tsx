@@ -497,7 +497,7 @@ const Dashboard: React.FC = () => {
                   Live signal across your deployments
                 </p>
               </div>
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="outline" size="sm" asChild>
                 <Link to="/vps">
                   Manage all
                   <ArrowUpRight className="ml-2 h-4 w-4" />
@@ -598,7 +598,7 @@ const Dashboard: React.FC = () => {
               Track your platform events
             </p>
           </div>
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="outline" size="sm" asChild>
             <Link to="/activity">
               View all
               <ArrowUpRight className="ml-2 h-4 w-4" />

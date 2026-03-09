@@ -550,9 +550,8 @@ const Organizations: React.FC = () => {
                           </div>
                           <Link
                             to={`/organizations/${resourceGroup.organization_id}`}
-                            className="text-sm text-muted-foreground hover:text-primary"
                           >
-                            <Button variant="ghost" size="sm">
+                            <Button variant="outline" size="sm">
                               View details
                               <ChevronRight className="ml-2 h-4 w-4" />
                             </Button>
@@ -568,11 +567,10 @@ const Organizations: React.FC = () => {
                                   VPS Instances
                                 </h4>
                                 {resourceGroup.permissions.vps_create && (
-                                  <Link
-                                    to="/vps?create=1"
-                                    className="text-xs text-primary hover:underline"
-                                  >
-                                    Create VPS
+                                  <Link to="/vps?create=1">
+                                    <Button variant="outline" size="sm">
+                                      Create VPS
+                                    </Button>
                                   </Link>
                                 )}
                               </div>
@@ -639,11 +637,10 @@ const Organizations: React.FC = () => {
                                   Support Tickets
                                 </h4>
                                 {resourceGroup.permissions.tickets_create && (
-                                  <Link
-                                    to="/support"
-                                    className="text-xs text-primary hover:underline"
-                                  >
-                                    Create ticket
+                                  <Link to="/support">
+                                    <Button variant="outline" size="sm">
+                                      Create ticket
+                                    </Button>
                                   </Link>
                                 )}
                               </div>
@@ -806,11 +803,10 @@ const Organizations: React.FC = () => {
                           VPS Instances
                         </CardTitle>
                         {selectedOrganizationResources.permissions.vps_create && (
-                          <Link
-                            to="/vps?create=1"
-                            className="text-xs text-primary hover:underline"
-                          >
-                            Create
+                          <Link to="/vps?create=1">
+                            <Button variant="outline" size="sm">
+                              Create
+                            </Button>
                           </Link>
                         )}
                       </div>
@@ -885,11 +881,10 @@ const Organizations: React.FC = () => {
                           Support Tickets
                         </CardTitle>
                         {selectedOrganizationResources.permissions.tickets_create && (
-                          <Link
-                            to="/support"
-                            className="text-xs text-primary hover:underline"
-                          >
-                            Create
+                          <Link to="/support">
+                            <Button variant="outline" size="sm">
+                              Create
+                            </Button>
                           </Link>
                         )}
                       </div>
