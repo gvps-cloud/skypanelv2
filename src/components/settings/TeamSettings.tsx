@@ -99,7 +99,11 @@ const PERMISSIONS = [
   { id: 'settings_manage', label: 'Settings Manage', description: 'Manage organization settings' },
 ];
 
-export default function TeamSettings() {
+interface TeamSettingsProps {
+  organizationId?: string;
+}
+
+export default function TeamSettings({ organizationId: propOrganizationId }: TeamSettingsProps = {}) {
   const { user, token } = useAuth();
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
@@ -152,7 +156,7 @@ export default function TeamSettings() {
 
   const [newMemberRoleId, setNewMemberRoleId] = useState("");
 
-  const orgId = user?.organizationId || "default-org-id";
+  const orgId = propOrganizationId || user?.organizationId || "default-org-id";
 
   const fetchMembers = async () => {
     if (!orgId || orgId === "default-org-id") {

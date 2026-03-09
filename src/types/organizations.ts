@@ -43,6 +43,7 @@ export interface OrganizationWithStats extends Organization {
   member_role: string;
   role_permissions: string[];
   stats: OrganizationStats;
+  joined_at?: string;
 }
 
 export interface OrganizationVPS {
@@ -53,6 +54,7 @@ export interface OrganizationVPS {
     type: string;
     region: string;
   };
+  plan_name?: string | null;
   ip_address: string | null;
   created_at: string;
 }

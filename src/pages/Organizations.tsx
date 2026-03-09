@@ -41,6 +41,8 @@ import {
 import { StatsGrid } from "@/components/layouts/StatsGrid";
 import { Skeleton } from "@/components/ui/skeleton";
 import Pagination from "@/components/ui/Pagination";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import TeamSettings from "@/components/settings/TeamSettings";
 
 interface ViewMode {
   type: "all" | "organization";
@@ -177,6 +179,13 @@ const Organizations: React.FC = () => {
     }
     return null;
   }, [viewMode, organizations]);
+
+  const selectedOrganizationResources = useMemo(() => {
+    if (selectedOrganization) {
+      return organizationResources.find(r => r.organization_id === selectedOrganization.id) || null;
+    }
+    return null;
+  }, [selectedOrganization, organizationResources]);
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role.toLowerCase()) {
@@ -407,7 +416,7 @@ const Organizations: React.FC = () => {
 
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Clock className="h-3 w-3" />
-                              Joined {formatTimestamp(org.created_at)}
+                              Joined {formatTimestamp(org.joined_at || org.created_at)}
                             </div>
                           </div>
                           <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
@@ -577,7 +586,8 @@ const Organizations: React.FC = () => {
                                 {resourceGroup.vps_instances.map((vps) => (
                                   <Card
                                     key={vps.id}
-                                    className="group cursor-pointer transition-all hover:border-primary/50"
+                                    className="group cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+                                    onClick={() => navigate(`/vps/${vps.id}`)}
                                   >
                                     <CardContent className="p-4">
                                       <div className="flex items-start justify-between gap-3">
@@ -597,7 +607,7 @@ const Organizations: React.FC = () => {
                                           </div>
                                           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                                             <span>
-                                              {vps.configuration.type}
+                                              {vps.plan_name || vps.configuration.type}
                                             </span>
                                             <span>•</span>
                                             <span>
@@ -610,12 +620,9 @@ const Organizations: React.FC = () => {
                                             </div>
                                           )}
                                         </div>
-                                        <Link
-                                          to={`/vps/${vps.id}`}
-                                          className="text-muted-foreground hover:text-primary"
-                                        >
+                                        <div className="text-muted-foreground group-hover:text-primary transition-colors">
                                           <ChevronRight className="h-4 w-4" />
-                                        </Link>
+                                        </div>
                                       </div>
                                     </CardContent>
                                   </Card>
@@ -644,7 +651,8 @@ const Organizations: React.FC = () => {
                                 {resourceGroup.tickets.map((ticket) => (
                                   <Card
                                     key={ticket.id}
-                                    className="group cursor-pointer transition-all hover:border-primary/50"
+                                    className="group cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+                                    onClick={() => navigate(`/support?ticket=${ticket.id}`)}
                                   >
                                     <CardContent className="p-4">
                                       <div className="flex items-start justify-between gap-3">
@@ -674,12 +682,9 @@ const Organizations: React.FC = () => {
                                             )}
                                           </div>
                                         </div>
-                                        <Link
-                                          to={`/support?ticket=${ticket.id}`}
-                                          className="text-muted-foreground hover:text-primary"
-                                        >
+                                        <div className="text-muted-foreground group-hover:text-primary transition-colors">
                                           <ChevronRight className="h-4 w-4" />
-                                        </Link>
+                                        </div>
                                       </div>
                                     </CardContent>
                                   </Card>
@@ -767,19 +772,190 @@ const Organizations: React.FC = () => {
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Organization Resources</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                View and manage resources for this organization
-              </p>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Navigate to specific sections to manage VPS instances, support tickets, and team members.
-              </p>
-            </CardContent>
-          </Card>
+          <Tabs defaultValue="resources" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="resources">Resources</TabsTrigger>
+              <TabsTrigger value="settings">Team Settings</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="resources" className="space-y-6">
+              {loadingResources ? (
+                <div className="space-y-4">
+                  {[1, 2].map((i) => (
+                    <Card key={i}>
+                      <CardContent className="p-6">
+                        <Skeleton className="h-20" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : selectedOrganizationResources ? (
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* VPS Instances Card */}
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Server className="h-5 w-5" />
+                          VPS Instances
+                        </CardTitle>
+                        {selectedOrganizationResources.permissions.vps_create && (
+                          <Link
+                            to="/vps?create=1"
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Create
+                          </Link>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrganizationResources.vps_instances.length} servers
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      {selectedOrganizationResources.permissions.vps_view ? (
+                        selectedOrganizationResources.vps_instances.length > 0 ? (
+                          <div className="space-y-3">
+                            {selectedOrganizationResources.vps_instances.map((vps) => (
+                              <Card
+                                key={vps.id}
+                                className="group cursor-pointer transition-all hover:border-primary/50"
+                              >
+                                <CardContent className="p-4">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <h5 className="font-semibold text-sm">
+                                          {vps.label}
+                                        </h5>
+                                        <Badge
+                                          variant={getStatusBadgeVariant(vps.status)}
+                                          className="text-xs"
+                                        >
+                                          {vps.status}
+                                        </Badge>
+                                      </div>
+                                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                        <span>{vps.plan_name || vps.configuration.type}</span>
+                                        <span>•</span>
+                                        <span>{vps.configuration.region}</span>
+                                      </div>
+                                      {vps.ip_address && (
+                                        <div className="text-xs text-muted-foreground">
+                                          {vps.ip_address}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <Link
+                                      to={`/vps/${vps.id}`}
+                                      className="text-muted-foreground hover:text-primary"
+                                    >
+                                      <ChevronRight className="h-4 w-4" />
+                                    </Link>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg">
+                            No VPS instances found
+                          </div>
+                        )
+                      ) : (
+                        <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg bg-muted/50">
+                          You do not have permission to view VPS instances
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Support Tickets Card */}
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Ticket className="h-5 w-5" />
+                          Support Tickets
+                        </CardTitle>
+                        {selectedOrganizationResources.permissions.tickets_create && (
+                          <Link
+                            to="/support"
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Create
+                          </Link>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrganizationResources.tickets.length} tickets
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      {selectedOrganizationResources.permissions.tickets_view ? (
+                        selectedOrganizationResources.tickets.length > 0 ? (
+                          <div className="space-y-3">
+                            {selectedOrganizationResources.tickets.map((ticket) => (
+                              <Card
+                                key={ticket.id}
+                                className="group cursor-pointer transition-all hover:border-primary/50"
+                              >
+                                <CardContent className="p-4">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <h5 className="font-semibold text-sm">
+                                          {ticket.subject}
+                                        </h5>
+                                        <Badge
+                                          variant={getStatusBadgeVariant(ticket.status)}
+                                          className="text-xs"
+                                        >
+                                          {ticket.status}
+                                        </Badge>
+                                        <Badge variant="outline" className="text-xs">
+                                          {ticket.priority}
+                                        </Badge>
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {formatTimestamp(ticket.created_at)}
+                                      </div>
+                                    </div>
+                                    <Link
+                                      to={`/support?ticket=${ticket.id}`}
+                                      className="text-muted-foreground hover:text-primary"
+                                    >
+                                      <ChevronRight className="h-4 w-4" />
+                                    </Link>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg">
+                            No active tickets found
+                          </div>
+                        )
+                      ) : (
+                        <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg bg-muted/50">
+                          You do not have permission to view tickets
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  No resources available for this organization
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="settings">
+              <TeamSettings organizationId={selectedOrganization.id} />
+            </TabsContent>
+          </Tabs>
         </>
       ) : null}
     </div>

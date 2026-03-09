@@ -1009,6 +1009,7 @@ const VPS: React.FC = () => {
           },
           pricing,
           progress: progress ?? undefined,
+          planName: i.plan_name || null,
         };
         return instance;
       });

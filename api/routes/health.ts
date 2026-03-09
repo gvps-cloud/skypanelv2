@@ -361,12 +361,7 @@ router.get("/stats", optionalAuth, async (req: AuthenticatedRequest, res: Respon
       vps: {
         total: stats.vps.total,
         byStatus: stats.vps.byStatus,
-        // Omit detailed resource information for public access
-        resources: {
-          totalVCPUs: 0,
-          totalMemoryGB: 0,
-          totalDiskGB: 0
-        }
+        resources: stats.vps.resources
       },
       lastUpdated: stats.lastUpdated
     });

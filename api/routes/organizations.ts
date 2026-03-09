@@ -155,10 +155,17 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
 
       if (permissions.vps_view) {
         const vpsResult = await query(
-          `SELECT id, label, status, ip_address, plan_id, created_at, configuration 
-           FROM vps_instances 
-           WHERE organization_id = $1 
-           ORDER BY created_at DESC LIMIT 5`,
+          `SELECT v.id, v.label, v.status, v.ip_address, v.plan_id, v.created_at, v.configuration, p.name as plan_name
+           FROM vps_instances v
+           LEFT JOIN LATERAL (
+             SELECT name
+             FROM vps_plans p
+             WHERE p.id::text = v.plan_id OR p.provider_plan_id = v.plan_id
+             ORDER BY (p.id::text = v.plan_id)::int DESC, p.created_at DESC
+             LIMIT 1
+           ) p ON true
+           WHERE v.organization_id = $1 
+           ORDER BY v.created_at DESC LIMIT 5`,
           [org.id]
         );
         vpsInstances = vpsResult.rows;
@@ -214,8 +221,9 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     totalCount = parseInt(countResult.rows[0].count);
 
     const result = await query(
-      `SELECT o.id, o.name, o.slug, om.role as member_role, 
-              COALESCE(r.permissions, '[]'::jsonb) as role_permissions
+      `SELECT o.id, o.name, o.slug, o.created_at, om.role as member_role, 
+              COALESCE(r.permissions, '[]'::jsonb) as role_permissions,
+              om.created_at as joined_at
        FROM organizations o
        JOIN organization_members om ON o.id = om.organization_id
        LEFT JOIN organization_roles r ON om.role_id = r.id

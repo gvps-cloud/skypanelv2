@@ -78,7 +78,7 @@ export function VPSInfrastructureCard() {
 
   const { vps } = data;
   
-  // Check if resource data is available (authenticated users get real data)
+  // Check if resource data is available
   const hasResourceData = vps.resources.totalVCPUs > 0 || vps.resources.totalMemoryGB > 0 || vps.resources.totalDiskGB > 0;
 
   return (
@@ -120,7 +120,7 @@ export function VPSInfrastructureCard() {
           </div>
         </div>
 
-        {/* Total Resources - Only show for authenticated users with data */}
+        {/* Total Resources - Show if data is available */}
         {hasResourceData && (
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">Total Allocated Resources</h4>

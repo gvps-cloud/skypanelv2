@@ -124,7 +124,7 @@ const Dashboard: React.FC = () => {
             id: instance.id,
             name: instance.label || "instance",
             status: instance.status || "provisioning",
-            plan: instance.configuration?.type || "",
+            plan: instance.plan_name || instance.configuration?.type || "",
             location: instance.configuration?.region || "",
             cpu: Math.round(cpu * 100) / 100,
             memory: null,

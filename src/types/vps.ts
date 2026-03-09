@@ -25,6 +25,7 @@ export interface VPSInstance {
   provider_id?: string | null;
   provider_type?: ProviderType | null;
   providerName?: string | null;
+  planName?: string | null;
   backup_frequency?: "daily" | "weekly" | "none";
   organization_id?: string | null;
   organization_name?: string | null;

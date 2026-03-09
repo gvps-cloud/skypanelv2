@@ -244,6 +244,7 @@ export function VpsInstancesTable({
                 </div>
               )}
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                {instance.planName && <span className="font-medium text-foreground/80">{instance.planName}</span>}
                 {instance.ipv4[0] && <span className="font-mono text-xs">{instance.ipv4[0]}</span>}
                 <span className="text-xs">{regionLabel}</span>
               </div>

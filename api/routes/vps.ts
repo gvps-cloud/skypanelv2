@@ -1572,8 +1572,8 @@ router.get("/", async (req: Request, res: Response) => {
 
             let planSpecs = { vcpus: 0, memory: 0, disk: 0, transfer: 0 };
             let planPricing = { hourly: 0, monthly: 0 };
+            let planRow: any = null;
             try {
-              let planRow: any = null;
               if (row.plan_id) {
                 const byId = await query(
                   "SELECT * FROM vps_plans WHERE id = $1 LIMIT 1",
@@ -1651,6 +1651,7 @@ router.get("/", async (req: Request, res: Response) => {
 
             (row as any).plan_specs = planSpecs;
             (row as any).plan_pricing = planPricing;
+            (row as any).plan_name = planRow ? planRow.name : null;
 
             const normalizedStatus =
               typeof row.status === "string" ? row.status.toLowerCase() : "";
