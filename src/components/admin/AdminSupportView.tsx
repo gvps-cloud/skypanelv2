@@ -422,8 +422,8 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         {/* Sidebar - Ticket List */}
         <div
           className={cn(
-            "flex flex-col border-r border-border bg-muted/10 w-full md:w-80 lg:w-96 shrink-0 transition-all duration-300 ease-in-out",
-            selectedTicket ? "hidden md:flex" : "flex"
+            "flex flex-col border-r border-border bg-muted/10 shrink-0 transition-all duration-300 ease-in-out",
+            selectedTicket ? "hidden md:flex md:w-80 lg:w-96" : "flex w-full md:w-80 lg:w-96"
           )}
         >
           <TicketList
@@ -438,7 +438,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         {/* Main Content - Ticket Detail */}
         <div
           className={cn(
-            "flex flex-1 flex-col bg-background transition-all duration-300 ease-in-out",
+            "flex flex-1 flex-col bg-background transition-all duration-300 ease-in-out overflow-hidden",
             !selectedTicket ? "hidden md:flex" : "flex"
           )}
         >
@@ -463,17 +463,20 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                   onBack={() => setSelectedTicket(null)}
                   showCustomer={true}
               >
+                {/* Action buttons - responsive layout */}
                 <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
+                  {/* Info button for mobile only */}
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="lg:hidden h-8 w-full sm:w-auto border-dashed border-primary/20 text-primary hover:bg-primary/5 mr-auto" 
+                    className="lg:hidden h-8 border-dashed border-primary/20 text-primary hover:bg-primary/5" 
                     onClick={() => setIsInfoOpen(true)}
                   >
                     <Info className="mr-1.5 h-3.5 w-3.5" />
                     Info
                   </Button>
 
+                  {/* View Customer button */}
                   {selectedTicket.creator?.id && (
                     <Button
                       size="sm"
@@ -488,8 +491,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                     </Button>
                   )}
                   
-                  <div className="w-px h-6 bg-border mx-1 hidden sm:block" />
-                  
+                  {/* Status action buttons */}
                   {ADMIN_TICKET_STATUS_ACTIONS[selectedTicket.status].map(
                     (action) => {
                       const ActionIcon = action.icon;
@@ -513,10 +515,11 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                     }
                   )}
                   
+                  {/* Delete button */}
                   <Button
                     size="sm"
                     variant="destructive"
-                    className="h-8 ml-auto"
+                    className="h-8"
                     onClick={() => setDeleteTicketId(selectedTicket.id)}
                   >
                     <Trash2 className="mr-1.5 h-3.5 w-3.5" />
