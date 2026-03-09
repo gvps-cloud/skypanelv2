@@ -291,10 +291,26 @@ const Settings: React.FC = () => {
   };
 
   // Real-time update wrapper
-  const updateNotificationSetting = (key: string, value: boolean) => {
+  const toggleLabels: Record<string, string> = {
+    emailNotifications: "Email notifications",
+    billingAlerts: "Billing alerts",
+    securityAlerts: "Security alerts",
+    maintenanceAlerts: "Maintenance updates",
+  };
+
+  const updateNotificationSetting = async (key: string, value: boolean) => {
+    const previous = { ...notificationData };
     const updated = { ...notificationData, [key]: value };
     setNotificationData(updated);
-    handleSaveNotifications(updated);
+
+    try {
+      await handleSaveNotifications(updated);
+      const label = toggleLabels[key] || "Notification preference";
+      toast.success(`${label} ${value ? "enabled" : "disabled"}`);
+    } catch {
+      setNotificationData(previous);
+      toast.error("Failed to update notification preferences");
+    }
   };
 
   // API Key Handlers
