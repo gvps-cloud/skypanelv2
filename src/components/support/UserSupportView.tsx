@@ -651,8 +651,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
                           </Button>
                         </div>
                       </div>
-                      <div className="flex justify-between items-center text-xs text-muted-foreground px-1">
-                        <span>Markdown supported</span>
+                      <div className="flex justify-end items-center text-xs text-muted-foreground px-1">
                         <span>Press Ctrl+Enter to send</span>
                       </div>
                     </div>
