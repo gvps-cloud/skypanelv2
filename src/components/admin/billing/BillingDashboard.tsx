@@ -18,7 +18,7 @@ export const BillingDashboard: React.FC = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="clients">Clients</TabsTrigger>

@@ -109,9 +109,10 @@ export const BillingOverview: React.FC = () => {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="h-[350px] w-full pt-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={stats.monthlyRevenue} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <CardContent className="pt-4">
+          <div style={{ width: '100%', height: '350px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={stats.monthlyRevenue} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
@@ -176,6 +177,7 @@ export const BillingOverview: React.FC = () => {
               />
             </AreaChart>
           </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
     </div>

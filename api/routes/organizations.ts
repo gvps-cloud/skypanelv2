@@ -43,6 +43,17 @@ const requireOrgAccess = async (req: AuthenticatedRequest, res: Response, next: 
       return next();
     }
 
+    // Check if user has custom role with members_manage permission
+    if (member.permissions) {
+      const permissions = typeof member.permissions === 'string' 
+        ? JSON.parse(member.permissions) 
+        : member.permissions;
+      
+      if (permissions.members_manage === true) {
+        return next();
+      }
+    }
+
     return res.status(403).json({ error: 'Insufficient permissions' });
   } catch (error) {
     console.error('Organization access check failed:', error);
@@ -393,6 +404,18 @@ router.put('/:id/members/:userId', requireOrgAccess, async (req: AuthenticatedRe
       return res.status(404).json({ error: 'Member not found' });
     }
 
+    // Get requester's role to check for ownership transfer authorization
+    const requesterRoleResult = await query(
+      `SELECT om.role, r.name as role_name
+       FROM organization_members om
+       LEFT JOIN organization_roles r ON om.role_id = r.id
+       WHERE om.organization_id = $1 AND om.user_id = $2`,
+      [id, req.user!.id]
+    );
+
+    const requesterRoleName = requesterRoleResult.rows[0]?.role_name || 
+                              requesterRoleResult.rows[0]?.role;
+
     const oldRole = memberCheck.rows[0].role;
     const oldRoleId = memberCheck.rows[0].role_id;
     let updateField, updateValue, newRoleDisplay, oldRoleDisplay;
@@ -407,6 +430,15 @@ router.put('/:id/members/:userId', requireOrgAccess, async (req: AuthenticatedRe
 
       if (roleCheck.rows.length === 0) {
         return res.status(400).json({ error: 'Invalid role' });
+      }
+
+      const targetRoleName = roleCheck.rows[0].name;
+
+      // Ownership transfer authorization check
+      if (targetRoleName === 'owner' && requesterRoleName !== 'owner') {
+        return res.status(403).json({ 
+          error: 'Only the organization owner can transfer ownership' 
+        });
       }
 
       // Check if trying to demote the last owner
@@ -447,6 +479,13 @@ router.put('/:id/members/:userId', requireOrgAccess, async (req: AuthenticatedRe
       const validRoles = ['admin', 'member', 'owner'];
       if (!validRoles.includes(role)) {
         return res.status(400).json({ error: 'Invalid role' });
+      }
+
+      // Ownership transfer authorization check for legacy system
+      if (role === 'owner' && requesterRoleName !== 'owner') {
+        return res.status(403).json({ 
+          error: 'Only the organization owner can transfer ownership' 
+        });
       }
 
       if (role !== 'owner' && oldRole === 'owner') {

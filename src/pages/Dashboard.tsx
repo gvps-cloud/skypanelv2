@@ -322,7 +322,7 @@ const Dashboard: React.FC = () => {
               : "Welcome to SkyPanel"}
           </h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            Deploy and manage infrastructure across your providers with live
+            Deploy and manage resources across our servers with live
             telemetry, unified billing, and proactive insights.
           </p>
         </div>

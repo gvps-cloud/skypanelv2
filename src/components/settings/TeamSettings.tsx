@@ -1018,16 +1018,30 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {role.name}
-                      {role.is_custom && (
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          Custom
-                        </Badge>
-                      )}
-                    </SelectItem>
-                  ))}
+                  {roles
+                    .filter((role) => {
+                      // Find current user's role in the organization
+                      const currentUserMember = members.find(
+                        (m) => m.email === user?.email
+                      );
+                      const currentUserRole = currentUserMember?.role_name || currentUserMember?.role;
+                      
+                      // Hide owner role from non-owners
+                      if (role.name === 'owner' && currentUserRole !== 'owner') {
+                        return false;
+                      }
+                      return true;
+                    })
+                    .map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.name}
+                        {role.is_custom && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            Custom
+                          </Badge>
+                        )}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               {newMemberRoleId && (
