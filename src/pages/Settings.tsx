@@ -391,7 +391,6 @@ const Settings: React.FC = () => {
           {[
             { id: "profile", name: "Profile", icon: User },
             { id: "security", name: "Security", icon: Shield },
-            { id: "team", name: "Team Members", icon: Users },
             { id: "notifications", name: "Notifications", icon: Bell },
             { id: "api", name: "API Keys", icon: Key },
           ].map((item) => {
@@ -639,9 +638,6 @@ const Settings: React.FC = () => {
               </Dialog>
             </div>
           )}
-
-          {/* TEAM TAB */}
-          {activeTab === "team" && <TeamSettings />}
 
           {/* NOTIFICATIONS TAB */}
           {activeTab === "notifications" && (

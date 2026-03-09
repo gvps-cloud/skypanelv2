@@ -108,12 +108,9 @@ const Dashboard: React.FC = () => {
 
           try {
             const detailData = await apiClient.get(`/vps/${instance.id}`);
-            console.log(`VPS ${instance.label} full response:`, detailData);
-            console.log(`VPS ${instance.label} metrics:`, detailData.metrics);
-            console.log(`VPS ${instance.label} instance.metrics:`, detailData.instance?.metrics);
             
-            // Try both possible locations for metrics
-            const metricsData = detailData.metrics || detailData.instance?.metrics;
+            // Metrics are nested under instance
+            const metricsData = detailData.instance?.metrics;
             
             metrics = metricsData ? {
               cpu: metricsData.cpu ?? null,
@@ -129,8 +126,6 @@ const Dashboard: React.FC = () => {
             
             cpu = metricsData?.cpu?.summary?.last || 0;
             cpuCount = detailData.instance?.plan?.specs?.vcpus || 0;
-            
-            console.log(`VPS ${instance.label} - CPU: ${cpu}%, vCPUs: ${cpuCount}`);
           } catch (error) {
             console.warn(
               `Failed to fetch metrics for VPS ${instance.id}:`,
@@ -233,7 +228,7 @@ const Dashboard: React.FC = () => {
     const running = vpsInstances.filter((v) => v.status === "running").length;
     const flagged = vpsInstances.length - running;
     const cpuSamples = vpsInstances
-      .map((v) => v.metrics?.cpu?.last ?? v.metrics?.cpu?.average ?? null)
+      .map((v) => v.metrics?.cpu?.summary?.last ?? v.metrics?.cpu?.summary?.average ?? v.cpu ?? null)
       .filter((value): value is number => typeof value === "number");
 
     const averageCpu = cpuSamples.length
@@ -246,8 +241,8 @@ const Dashboard: React.FC = () => {
 
     const topInstance = vpsInstances.reduce<VPSStats | null>(
       (top, instance) => {
-        const topCpu = top?.metrics?.cpu?.last ?? top?.cpu ?? -1;
-        const currentCpu = instance.metrics?.cpu?.last ?? instance.cpu ?? -1;
+        const topCpu = top?.metrics?.cpu?.summary?.last ?? top?.cpu ?? -1;
+        const currentCpu = instance.metrics?.cpu?.summary?.last ?? instance.cpu ?? -1;
         return currentCpu > topCpu ? instance : top;
       },
       null,
