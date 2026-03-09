@@ -712,10 +712,9 @@ const Organizations: React.FC = () => {
         </>
       ) : selectedOrganization ? (
         <>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 mb-6">
             <Button
-              variant="ghost"
-              size="sm"
+              variant="outline"
               onClick={handleBackToAll}
             >
               <ChevronRight className="mr-2 h-4 w-4 rotate-180" />
