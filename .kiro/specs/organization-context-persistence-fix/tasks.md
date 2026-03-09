@@ -1,0 +1,126 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Organization Context Persists Across Refresh
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: Scope the property to concrete failing cases: user switches to organization, then page refreshes
+  - Test that organization context is lost after page refresh (from Bug Condition in design)
+  - Test implementation details:
+    - Simulate user switching to an organization using switchOrganization function
+    - Simulate page refresh by clearing React state and reinitializing AuthContext
+    - Assert that organizationId is null/undefined after refresh (current buggy behavior)
+    - Assert that button state reverts to "Switch to Organization" instead of "Active"
+    - Assert that dashboard loads personal resources instead of organization resources
+  - The test assertions should match the Expected Behavior Properties from design:
+    - After fix: organizationId should equal the switched organization ID
+    - After fix: button state should remain "Active"
+    - After fix: dashboard should load organization resources
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found to understand root cause
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 2.1, 2.2, 2.3, 2.4_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Existing Switching Behavior Unchanged
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-buggy inputs (immediate switching without refresh)
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements:
+    - Immediate UI update: clicking "Switch to Organization" immediately updates button to "Active"
+    - Success message: success toast "Switched organization context" appears on switch
+    - Button state: button immediately shows "Active" with checkmark icon
+    - Membership validation: switching to non-member organization is prevented
+    - Logout behavior: logout clears all authentication and session data
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 3. Fix for organization context persistence
+
+  - [x] 3.1 Create database migration for active_organization_id
+    - Create new migration file `migrations/XXX_add_active_organization_to_users.sql`
+    - Add `active_organization_id` column to users table (UUID, nullable)
+    - Add foreign key constraint to organizations(id) with ON DELETE SET NULL
+    - Add index on active_organization_id for performance
+    - _Bug_Condition: isBugCondition(input) where input.action == 'page_refresh' AND input.hasActiveOrg == true_
+    - _Expected_Behavior: Organization context persists across refresh, loads from database_
+    - _Preservation: Existing switching UI, success messages, button states unchanged_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5_
+
+  - [x] 3.2 Create POST /auth/switch-organization endpoint
+    - Add new authenticated endpoint in `api/routes/auth.ts`
+    - Validate user is a member of the target organization
+    - Update user's active_organization_id in database
+    - Return updated user object with new organization context
+    - Handle edge cases: organization doesn't exist, user not a member
+    - _Bug_Condition: isBugCondition(input) where input.action == 'page_refresh' AND input.hasActiveOrg == true_
+    - _Expected_Behavior: Backend persists organization context to database_
+    - _Preservation: Existing switching UI, success messages, button states unchanged_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5_
+
+  - [x] 3.3 Update switchOrganization function to call backend API
+    - Modify `switchOrganization` function in `src/contexts/AuthContext.tsx` (line 524)
+    - Add call to POST /auth/switch-organization endpoint
+    - Wait for response before updating local state
+    - Update both user state and localStorage with returned user object
+    - Handle errors gracefully with toast notifications
+    - Maintain immediate UI responsiveness
+    - _Bug_Condition: isBugCondition(input) where input.action == 'page_refresh' AND input.hasActiveOrg == true_
+    - _Expected_Behavior: Organization context persists to backend on switch_
+    - _Preservation: Existing switching UI, success messages, button states unchanged_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5_
+
+  - [x] 3.4 Update AuthContext initialization to fetch fresh user data
+    - Modify `useEffect` initialization hook in `src/contexts/AuthContext.tsx` (lines 172-217)
+    - After validating stored token, fetch current user data from backend
+    - Ensure active_organization_id is loaded from database, not just localStorage
+    - Update both user state and localStorage with fresh data
+    - Handle missing organization gracefully (deleted or no longer member)
+    - _Bug_Condition: isBugCondition(input) where input.action == 'page_refresh' AND input.hasActiveOrg == true_
+    - _Expected_Behavior: Organization context restored from database on page load_
+    - _Preservation: Existing switching UI, success messages, button states unchanged_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5_
+
+  - [x] 3.5 Update auth endpoints to include active_organization_id
+    - Modify `/auth/refresh` endpoint to include active_organization_id in returned user object
+    - Ensure `/auth/login` endpoint returns active_organization_id if set
+    - _Bug_Condition: isBugCondition(input) where input.action == 'page_refresh' AND input.hasActiveOrg == true_
+    - _Expected_Behavior: Organization context available in all auth responses_
+    - _Preservation: Existing switching UI, success messages, button states unchanged_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5_
+
+  - [x] 3.6 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Organization Context Persists Across Refresh
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify organization context persists after page refresh
+    - Verify button state remains "Active" after refresh
+    - Verify dashboard loads organization resources after refresh
+    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+
+  - [x] 3.7 Verify preservation tests still pass
+    - **Property 2: Preservation** - Existing Switching Behavior Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm immediate UI updates still work
+    - Confirm success messages still appear
+    - Confirm button states update correctly
+    - Confirm membership validation still works
+    - Confirm logout behavior unchanged
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Run complete test suite with `npm run test`
+  - Verify bug condition test passes (organization context persists)
+  - Verify preservation tests pass (existing behavior unchanged)
+  - Verify no regressions in other parts of the application
+  - Test edge cases: deleted organization, removed membership
+  - Ensure all tests pass, ask the user if questions arise

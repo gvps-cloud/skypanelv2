@@ -177,6 +177,17 @@ export class RoleService {
     organizationId: string,
     permission: Permission
   ): Promise<boolean> {
+    // Check if user is a platform admin (bypasses organization-level permissions)
+    const userResult = await query(
+      'SELECT role FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length > 0 && userResult.rows[0].role === 'admin') {
+      // Platform admins have all permissions
+      return true;
+    }
+
     const result = await query(
       `SELECT om.role_id, r.permissions
        FROM organization_members om

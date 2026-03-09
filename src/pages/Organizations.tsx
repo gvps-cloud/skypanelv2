@@ -159,8 +159,13 @@ const Organizations: React.FC = () => {
   };
 
   const handleSwitchOrganization = async (orgId: string) => {
-    await switchOrganization(orgId);
-    toast.success("Switched organization context");
+    try {
+      await switchOrganization(orgId);
+      toast.success("Switched organization context");
+    } catch (error: any) {
+      console.error("Failed to switch organization:", error);
+      toast.error(error.message || "Failed to switch organization context");
+    }
   };
 
   const handlePageChange = (page: number) => {

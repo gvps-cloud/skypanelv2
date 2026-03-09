@@ -1002,4 +1002,124 @@ router.post(
   },
 );
 
+/**
+ * Switch Organization Context
+ * POST /api/auth/switch-organization
+ */
+router.post(
+  "/switch-organization",
+  authenticateToken,
+  [
+    body("organizationId")
+      .isUUID()
+      .withMessage("Valid organization ID is required"),
+  ],
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      if (!req.user) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+
+      const { organizationId } = req.body;
+
+      // Validate that the organization exists
+      const orgResult = await query(
+        "SELECT id FROM organizations WHERE id = $1",
+        [organizationId]
+      );
+
+      if (orgResult.rows.length === 0) {
+        res.status(404).json({ error: "Organization not found" });
+        return;
+      }
+
+      // Validate that the user is a member of the organization
+      const memberResult = await query(
+        "SELECT organization_id FROM organization_members WHERE user_id = $1 AND organization_id = $2",
+        [req.user.id, organizationId]
+      );
+
+      if (memberResult.rows.length === 0) {
+        res.status(403).json({ 
+          error: "You are not a member of this organization" 
+        });
+        return;
+      }
+
+      // Update the user's active_organization_id in the database
+      const updateResult = await query(
+        `UPDATE users 
+         SET active_organization_id = $1, updated_at = $2 
+         WHERE id = $3 
+         RETURNING id, email, role, name, phone, timezone, preferences, two_factor_enabled AS "twoFactorEnabled", active_organization_id AS "activeOrganizationId"`,
+        [organizationId, new Date().toISOString(), req.user.id]
+      );
+
+      if (updateResult.rows.length === 0) {
+        res.status(500).json({ error: "Failed to update organization context" });
+        return;
+      }
+
+      const updatedUser = updateResult.rows[0];
+
+      // Get organization name for activity log
+      const orgNameResult = await query(
+        "SELECT name FROM organizations WHERE id = $1",
+        [organizationId]
+      );
+      const orgName = orgNameResult.rows[0]?.name || "Unknown Organization";
+
+      // Log the organization switch
+      try {
+        await logActivity(
+          {
+            userId: req.user.id,
+            organizationId: organizationId,
+            eventType: "organization.switch",
+            entityType: "organization",
+            entityId: organizationId,
+            message: `Switched to ${orgName}`,
+            status: "success",
+          },
+          req as any
+        );
+      } catch (logError) {
+        console.error("Failed to log organization switch:", logError);
+        // Continue even if logging fails
+      }
+
+      // Return updated user object with new organization context
+      res.json({
+        message: "Organization context switched successfully",
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          firstName: updatedUser.name ? updatedUser.name.split(' ')[0] || '' : '',
+          lastName: updatedUser.name ? updatedUser.name.split(' ').slice(1).join(' ') || '' : '',
+          role: updatedUser.role,
+          phone: updatedUser.phone,
+          timezone: updatedUser.timezone,
+          organizationId: updatedUser.activeOrganizationId,
+          preferences: updatedUser.preferences,
+          twoFactorEnabled: updatedUser.twoFactorEnabled,
+          emailVerified: true,
+        },
+      });
+    } catch (error: any) {
+      console.error("Switch organization error:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to switch organization context" 
+      });
+    }
+  }
+);
+
 export default router;
+

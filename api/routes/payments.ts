@@ -261,12 +261,30 @@ router.get(
     try {
       const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
 
+      console.log('💰 Wallet balance request:', {
+        userId,
+        organizationId,
+        path: req.path
+      });
+
       const hasBilling = await RoleService.checkPermission(
         userId,
         organizationId,
         'billing_view'
       );
+      
+      console.log('🔐 Billing permission check:', {
+        userId,
+        organizationId,
+        hasBilling
+      });
+      
       if (!hasBilling) {
+        console.error('❌ Billing permission denied:', {
+          userId,
+          organizationId,
+          permission: 'billing_view'
+        });
         return res.status(403).json({ success: false, error: 'Insufficient permissions' });
       }
 

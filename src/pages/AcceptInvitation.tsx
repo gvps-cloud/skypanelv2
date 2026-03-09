@@ -82,7 +82,12 @@ export default function AcceptInvitation() {
     },
     onSuccess: async (data) => {
       if (data.organization_id) {
-        await switchOrganization(data.organization_id);
+        try {
+          await switchOrganization(data.organization_id);
+        } catch (error: any) {
+          console.error("Failed to switch organization context:", error);
+          toast.error("Joined organization but failed to switch context. Please switch manually.");
+        }
       }
       setInvitationState("success");
       toast.success("You have successfully joined the organization!");

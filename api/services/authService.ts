@@ -203,16 +203,34 @@ export class AuthService {
 
       // Get user's organization (if organization_members table exists)
       let orgMember = null;
+      let activeOrgMember = null;
       try {
         const orgResult = await query(
           'SELECT organization_id, role FROM organization_members WHERE user_id = $1',
           [user.id]
         );
+        
+        // Get the first organization membership (fallback)
         orgMember = orgResult.rows[0] || null;
+        
+        // If user has an active_organization_id, find that specific membership
+        if (user.active_organization_id) {
+          activeOrgMember = orgResult.rows.find(
+            (row: any) => row.organization_id === user.active_organization_id
+          );
+        }
       } catch (err) {
         // Table might not exist yet, continue without error
         console.warn('organization_members table not found, skipping organization lookup', err);
       }
+
+      // Determine the active organization ID and role
+      let activeOrgId = user.active_organization_id && activeOrgMember 
+        ? user.active_organization_id 
+        : orgMember?.organization_id;
+      let activeOrgRole = user.active_organization_id && activeOrgMember
+        ? activeOrgMember.role
+        : orgMember?.role;
 
       // Generate JWT token (include role for rate limiting user type detection)
       const token = jwt.sign(
@@ -231,8 +249,8 @@ export class AuthService {
           timezone: user.timezone,
           role: user.role,
           emailVerified: true,
-          organizationId: orgMember?.organization_id,
-          organizationRole: orgMember?.role,
+          organizationId: activeOrgId,
+          organizationRole: activeOrgRole,
           preferences: user.preferences,
           twoFactorEnabled: user.two_factor_enabled || false
         },
@@ -352,7 +370,7 @@ export class AuthService {
   static async refreshToken(userId: string) {
     try {
       const userResult = await query(
-        'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled FROM users WHERE id = $1',
+        'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled, active_organization_id FROM users WHERE id = $1',
         [userId]
       );
 
@@ -364,14 +382,47 @@ export class AuthService {
 
       // Get user's organization membership
       let orgMember = null;
+      let activeOrgMember = null;
       try {
         const orgResult = await query(
           'SELECT organization_id, role FROM organization_members WHERE user_id = $1',
           [user.id]
         );
+        
+        // Get the first organization membership (fallback)
         orgMember = orgResult.rows[0] || null;
+        
+        // If user has an active_organization_id, find that specific membership
+        if (user.active_organization_id) {
+          activeOrgMember = orgResult.rows.find(
+            (row: any) => row.organization_id === user.active_organization_id
+          );
+        }
       } catch (err) {
         console.warn('organization_members table not found, skipping organization lookup', err);
+      }
+
+      // Determine the active organization ID and role
+      let activeOrgId = null;
+      let activeOrgRole = null;
+      
+      if (user.active_organization_id && activeOrgMember) {
+        // User has a valid active organization
+        activeOrgId = user.active_organization_id;
+        activeOrgRole = activeOrgMember.role;
+      } else if (user.active_organization_id && !activeOrgMember) {
+        // User has an active_organization_id but is no longer a member - clear it
+        await query(
+          'UPDATE users SET active_organization_id = NULL WHERE id = $1',
+          [user.id]
+        );
+        // Fall back to first organization membership if available
+        activeOrgId = orgMember?.organization_id;
+        activeOrgRole = orgMember?.role;
+      } else {
+        // No active organization set, use first membership if available
+        activeOrgId = orgMember?.organization_id;
+        activeOrgRole = orgMember?.role;
       }
 
       // Generate new JWT token (include role for rate limiting user type detection)
@@ -392,8 +443,8 @@ export class AuthService {
           timezone: user.timezone,
           role: user.role,
           emailVerified: true,
-          organizationId: orgMember?.organization_id,
-          organizationRole: orgMember?.role,
+          organizationId: activeOrgId,
+          organizationRole: activeOrgRole,
           preferences: user.preferences,
           twoFactorEnabled: user.two_factor_enabled || false
         }

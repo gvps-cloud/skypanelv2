@@ -592,6 +592,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "POST",
+    "path": "/api/auth/switch-organization",
+    "protected": true
+  },
+  {
+    "method": "POST",
     "path": "/api/auth/verify-email",
     "protected": false
   },

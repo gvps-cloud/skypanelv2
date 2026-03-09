@@ -37,9 +37,9 @@ export const authenticateToken = async (
     // Verify JWT token
     const decoded = jwt.verify(token, config.JWT_SECRET) as any;
 
-    // Get user from database
+    // Get user from database (including active_organization_id)
     const userResult = await query(
-      'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled AS "twoFactorEnabled" FROM users WHERE id = $1',
+      'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled AS "twoFactorEnabled", active_organization_id FROM users WHERE id = $1',
       [decoded.userId]
     );
 
@@ -52,13 +52,21 @@ export const authenticateToken = async (
     }
 
     const user = userResult.rows[0];
+    console.log('🔍 User loaded from database:', {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      active_organization_id: user.active_organization_id,
+      hasActiveOrg: !!user.active_organization_id
+    });
 
     // Get user's organization (if organization_members table exists)
     let orgMember = null;
     let organizationId: string | undefined;
+    let activeOrgMember = null;
 
     try {
-      // Check for X-Organization-ID header
+      // Check for X-Organization-ID header (takes precedence)
       const requestedOrgId = req.headers['x-organization-id'] as string;
       
       if (requestedOrgId) {
@@ -72,7 +80,37 @@ export const authenticateToken = async (
         }
       }
 
-      // Fallback to default organization if header not present or invalid
+      // Use active_organization_id from database if no header override
+      if (!organizationId && user.active_organization_id) {
+        console.log('Using active_organization_id from database:', {
+          userId: user.id,
+          activeOrgId: user.active_organization_id
+        });
+        
+        // Verify user is still a member of the active organization
+        const activeOrgResult = await query(
+          'SELECT organization_id FROM organization_members WHERE user_id = $1 AND organization_id = $2',
+          [user.id, user.active_organization_id]
+        );
+        activeOrgMember = activeOrgResult.rows[0] || null;
+        
+        if (activeOrgMember) {
+          organizationId = user.active_organization_id;
+          console.log('Active organization verified, setting organizationId:', organizationId);
+        } else {
+          console.warn('User is no longer a member of active organization, clearing it:', {
+            userId: user.id,
+            activeOrgId: user.active_organization_id
+          });
+          // User is no longer a member of their active organization - clear it
+          await query(
+            'UPDATE users SET active_organization_id = NULL WHERE id = $1',
+            [user.id]
+          );
+        }
+      }
+
+      // Fallback to first organization membership if no active org set
       if (!organizationId) {
         const orgResult = await query(
           'SELECT organization_id FROM organization_members WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1',
@@ -150,6 +188,15 @@ export const authenticateToken = async (
     (req as any).userId = user.id;
     (req as any).organizationId = organizationId;
 
+    console.log('✅ Authentication complete:', {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      finalOrganizationId: organizationId,
+      path: req.path,
+      method: req.method
+    });
+
     next();
   } catch (error) {
     console.error('Authentication error:', error);
@@ -179,6 +226,13 @@ export const requireOrganization = async (
   next: NextFunction
 ) => {
   if (!req.user?.organizationId) {
+    console.error('requireOrganization failed:', {
+      hasUser: !!req.user,
+      userId: req.user?.id,
+      organizationId: req.user?.organizationId,
+      path: req.path,
+      method: req.method
+    });
     return res.status(403).json({ error: 'Organization membership required' });
   }
   next();

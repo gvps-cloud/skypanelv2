@@ -522,16 +522,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const switchOrganization = async (orgId: string) => {
-    if (!user) return;
-    
-    // Update local user state
-    const updatedUser = { ...user, organizationId: orgId };
-    setUser(updatedUser);
-    localStorage.setItem("auth_user", JSON.stringify(updatedUser));
-    
-    // You might want to reload the page or invalidate queries here
-    // window.location.reload(); 
-  };
+      if (!user || !token) return;
+
+      try {
+        // Call backend API to persist organization context
+        const response = await fetch("/api/auth/switch-organization", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ organizationId: orgId }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to switch organization context");
+        }
+
+        const data = await response.json();
+
+        // Update local state with the returned user object
+        const updatedUser = data.user;
+        setUser(updatedUser);
+        localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+      } catch (error) {
+        console.error("Switch organization error:", error);
+        throw error;
+      }
+    }
 
   const value = {
     user,
