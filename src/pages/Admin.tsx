@@ -4336,7 +4336,7 @@ const Admin: React.FC = () => {
           </Card>
 
           <Dialog open={sshModalOpen} onOpenChange={setSshModalOpen}>
-            <DialogContent className="max-w-[90vw] w-full h-[80vh] flex flex-col p-0 gap-0 bg-black border-border">
+            <DialogContent className="max-w-[90vw] w-full h-[80vh] flex flex-col p-0 gap-0 bg-background border-border">
               <DialogHeader className="px-4 py-2 border-b border-border/20 bg-muted/10 shrink-0">
                 <DialogTitle className="text-sm font-mono flex items-center gap-2 text-foreground">
                   <Terminal className="h-4 w-4" />
@@ -4346,7 +4346,7 @@ const Admin: React.FC = () => {
                   )}
                 </DialogTitle>
               </DialogHeader>
-              <div className="flex-1 overflow-hidden relative bg-black">
+              <div className="flex-1 overflow-hidden relative bg-background">
                 {selectedSshServerId && (
                   <SSHTerminal
                     instanceId={selectedSshServerId}
