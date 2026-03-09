@@ -38,6 +38,7 @@ export interface AuthContextType {
     notificationsOrPayload?: any,
     security?: any,
   ) => Promise<void>;
+  verifyPassword: (password: string) => Promise<boolean>;
   getApiKeys: () => Promise<any[]>;
   createApiKey: (name: string) => Promise<any>;
   revokeApiKey: (id: string) => Promise<void>;
@@ -137,6 +138,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error) {
       console.error("Token refresh error:", error);
       logout(); // If refresh fails, logout the user
+      throw error;
+    }
+  };
+
+  const verifyPassword = async (password: string) => {
+    try {
+      if (!token) throw new Error("Not authenticated");
+      const response = await fetch("/api/auth/verify-password", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Incorrect password");
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Verify password error:", error);
       throw error;
     }
   };
@@ -520,6 +545,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     updateProfile,
     changePassword,
     updatePreferences,
+    verifyPassword,
     getApiKeys,
     createApiKey,
     revokeApiKey,

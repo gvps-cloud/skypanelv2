@@ -55,6 +55,7 @@ const Settings: React.FC = () => {
     updateProfile,
     changePassword,
     updatePreferences,
+    verifyPassword,
     getApiKeys,
     createApiKey,
     revokeApiKey,
@@ -115,6 +116,9 @@ const Settings: React.FC = () => {
   const [twoFactorSecret, setTwoFactorSecret] = useState("");
   const [twoFactorQr, setTwoFactorQr] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [disable2faModalOpen, setDisable2faModalOpen] = useState(false);
+  const [disablePassword, setDisablePassword] = useState("");
+  const [disabling2FA, setDisabling2FA] = useState(false);
 
   // Notifications State
   const [notificationData, setNotificationData] = useState({
@@ -244,13 +248,29 @@ const Settings: React.FC = () => {
         setTwoFactorModalOpen(false);
       }
     } else {
-      // Disable 2FA
-      try {
-        await disable2FA(); // Backend checks permission
-        toast.success("Two-factor authentication disabled");
-      } catch {
-        toast.error("Failed to disable 2FA");
-      }
+      // Require password confirmation before disabling
+      setDisablePassword("");
+      setDisable2faModalOpen(true);
+    }
+  };
+
+  const handleConfirmDisable2FA = async () => {
+    if (!disablePassword.trim()) {
+      toast.error("Please enter your password");
+      return;
+    }
+
+    setDisabling2FA(true);
+    try {
+      await verifyPassword(disablePassword.trim());
+      await disable2FA();
+      setDisable2faModalOpen(false);
+      toast.success("Two-factor authentication disabled");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to disable 2FA");
+    } finally {
+      setDisabling2FA(false);
+      setDisablePassword("");
     }
   };
 
@@ -582,6 +602,41 @@ const Settings: React.FC = () => {
                   />
                 </CardContent>
               </Card>
+
+              <Dialog open={disable2faModalOpen} onOpenChange={setDisable2faModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Confirm disable 2FA</DialogTitle>
+                    <DialogDescription>
+                      Enter your password to confirm turning off two-factor authentication.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="disable-password">Password</Label>
+                      <Input
+                        id="disable-password"
+                        type="password"
+                        value={disablePassword}
+                        onChange={(e) => setDisablePassword(e.target.value)}
+                        placeholder="Enter your password"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setDisable2faModalOpen(false)}
+                      disabled={disabling2FA}
+                    >
+                      Cancel
+                    </Button>
+                    <Button onClick={handleConfirmDisable2FA} disabled={disabling2FA}>
+                      {disabling2FA ? "Disabling..." : "Disable 2FA"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
 
