@@ -218,7 +218,9 @@ function getConfig(): Config {
     SSH_CRED_SECRET: process.env.SSH_CRED_SECRET,
     CONTACT_FORM_RECIPIENT: process.env.CONTACT_FORM_RECIPIENT,
     COMPANY_BRAND_NAME:
+      process.env.VITE_COMPANY_NAME?.trim() ||
       process.env.COMPANY_NAME?.trim() ||
+      process.env.COMPANY_BRAND_NAME?.trim() ||
       'SkyPanelV2',
     corsOrigins: (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map(url => url.trim()),
   };

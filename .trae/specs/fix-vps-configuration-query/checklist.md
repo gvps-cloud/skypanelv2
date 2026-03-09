@@ -1,0 +1,2 @@
+- [x] Verify that `GET /organizations/resources` response includes `configuration` object for VPS instances.
+- [x] Verify that the Organizations page loads without the "Cannot read properties of undefined" error.

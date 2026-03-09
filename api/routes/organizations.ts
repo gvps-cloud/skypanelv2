@@ -21,11 +21,6 @@ const requireOrgAccess = async (req: AuthenticatedRequest, res: Response, next: 
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  // System admin bypass
-  if (user.role === 'admin') {
-    return next();
-  }
-
   // Check if user is member of the organization with sufficient role
   try {
     const result = await query(
@@ -64,11 +59,6 @@ const checkOrganizationMembership = async (req: AuthenticatedRequest, res: Respo
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  // System admin bypass
-  if (user.role === 'admin') {
-    return next();
-  }
-
   try {
     const result = await query(
       'SELECT id FROM organization_members WHERE organization_id = $1 AND user_id = $2',
@@ -96,22 +86,15 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
   try {
     let orgs = [];
 
-    if (user.role === 'admin') {
-      const result = await query(
-        `SELECT id, name FROM organizations ORDER BY name ASC`
-      );
-      orgs = result.rows;
-    } else {
-      const result = await query(
-        `SELECT o.id, o.name 
-         FROM organizations o
-         JOIN organization_members om ON o.id = om.organization_id
-         WHERE om.user_id = $1
-         ORDER BY o.name ASC`,
-        [user.id]
-      );
-      orgs = result.rows;
-    }
+    const result = await query(
+      `SELECT o.id, o.name 
+       FROM organizations o
+       JOIN organization_members om ON o.id = om.organization_id
+       WHERE om.user_id = $1
+       ORDER BY o.name ASC`,
+      [user.id]
+    );
+    orgs = result.rows;
 
     const resources = await Promise.all(orgs.map(async (org) => {
       // Get user's permissions for this org
@@ -128,43 +111,41 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
         settings_manage: false
       };
 
-      if (user.role === 'admin') {
-        Object.keys(permissions).forEach(key => {
-          (permissions as any)[key] = true;
-        });
-      } else {
-        const memberResult = await query(
-          `SELECT om.role_id, r.permissions, om.role as legacy_role
-           FROM organization_members om
-           LEFT JOIN organization_roles r ON om.role_id = r.id
-           WHERE om.organization_id = $1 AND om.user_id = $2`,
-          [org.id, user.id]
-        );
+      const memberResult = await query(
+        `SELECT om.role_id, r.permissions, om.role as legacy_role
+         FROM organization_members om
+         LEFT JOIN organization_roles r ON om.role_id = r.id
+         WHERE om.organization_id = $1 AND om.user_id = $2`,
+        [org.id, user.id]
+      );
 
-        if (memberResult.rows.length > 0) {
-          const member = memberResult.rows[0];
+      if (memberResult.rows.length > 0) {
+        const member = memberResult.rows[0];
+        
+        // Add permissions from role
+        if (member.permissions) {
+          const perms = Array.isArray(member.permissions) 
+            ? member.permissions 
+            : JSON.parse(member.permissions);
           
-          // Add permissions from role
-          if (member.permissions) {
-            const perms = Array.isArray(member.permissions) 
-              ? member.permissions 
-              : JSON.parse(member.permissions);
-            
-            perms.forEach((p: string) => {
-              if (p in permissions) (permissions as any)[p] = true;
-            });
-          }
+          perms.forEach((p: string) => {
+            if (p in permissions) (permissions as any)[p] = true;
+          });
+        }
 
-          // Fallback for legacy roles if no granular permissions
-          if (member.legacy_role === 'owner') {
-            Object.keys(permissions).forEach(key => (permissions as any)[key] = true);
-          } else if (member.legacy_role === 'admin') {
-            ['vps_view', 'vps_create', 'vps_delete', 'vps_manage', 
-             'tickets_view', 'tickets_create', 'tickets_manage', 
-             'billing_view', 'settings_manage'].forEach(p => {
-               if (p in permissions) (permissions as any)[p] = true;
-             });
-          }
+        // Fallback for legacy roles if no granular permissions
+        if (member.legacy_role === 'owner') {
+          Object.keys(permissions).forEach(key => (permissions as any)[key] = true);
+        } else if (member.legacy_role === 'admin') {
+          ['vps_view', 'vps_create', 'vps_delete', 'vps_manage', 
+           'tickets_view', 'tickets_create', 'tickets_manage', 
+           'billing_view', 'settings_manage'].forEach(p => {
+             if (p in permissions) (permissions as any)[p] = true;
+           });
+        } else if (member.legacy_role === 'member') {
+          ['vps_view', 'tickets_view'].forEach(p => {
+             if (p in permissions) (permissions as any)[p] = true;
+           });
         }
       }
 
@@ -174,7 +155,7 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
 
       if (permissions.vps_view) {
         const vpsResult = await query(
-          `SELECT id, label, status, ip_address, plan_id, created_at 
+          `SELECT id, label, status, ip_address, plan_id, created_at, configuration 
            FROM vps_instances 
            WHERE organization_id = $1 
            ORDER BY created_at DESC LIMIT 5`,
@@ -203,7 +184,7 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
       };
     }));
 
-    res.json(resources);
+    res.json({ resources });
   } catch (error) {
     console.error('Failed to fetch organization resources:', error);
     res.status(500).json({ error: 'Failed to fetch organization resources' });
@@ -223,43 +204,27 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     let orgs;
     let totalCount;
     
-    if (user.role === 'admin') {
-      const countResult = await query(
-        `SELECT COUNT(*) as count FROM organizations`
-      );
-      totalCount = parseInt(countResult.rows[0].count);
+    const countResult = await query(
+      `SELECT COUNT(*) as count
+       FROM organizations o
+       JOIN organization_members om ON o.id = om.organization_id
+       WHERE om.user_id = $1`,
+      [user.id]
+    );
+    totalCount = parseInt(countResult.rows[0].count);
 
-      const result = await query(
-        `SELECT o.id, o.name, o.slug, 'owner' as member_role, '[]'::jsonb as role_permissions
-         FROM organizations o
-         ORDER BY o.created_at DESC
-         LIMIT $1 OFFSET $2`,
-        [limit, offset]
-      );
-      orgs = result.rows;
-    } else {
-      const countResult = await query(
-        `SELECT COUNT(*) as count
-         FROM organizations o
-         JOIN organization_members om ON o.id = om.organization_id
-         WHERE om.user_id = $1`,
-        [user.id]
-      );
-      totalCount = parseInt(countResult.rows[0].count);
-
-      const result = await query(
-        `SELECT o.id, o.name, o.slug, om.role as member_role, 
-                COALESCE(r.permissions, '[]'::jsonb) as role_permissions
-         FROM organizations o
-         JOIN organization_members om ON o.id = om.organization_id
-         LEFT JOIN organization_roles r ON om.role_id = r.id
-         WHERE om.user_id = $1
-         ORDER BY o.created_at DESC
-         LIMIT $2 OFFSET $3`,
-        [user.id, limit, offset]
-      );
-      orgs = result.rows;
-    }
+    const result = await query(
+      `SELECT o.id, o.name, o.slug, om.role as member_role, 
+              COALESCE(r.permissions, '[]'::jsonb) as role_permissions
+       FROM organizations o
+       JOIN organization_members om ON o.id = om.organization_id
+       LEFT JOIN organization_roles r ON om.role_id = r.id
+       WHERE om.user_id = $1
+       ORDER BY o.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [user.id, limit, offset]
+    );
+    orgs = result.rows;
 
     const enrichedOrgs = await Promise.all(orgs.map(async (org) => {
       const vpsCount = await query(

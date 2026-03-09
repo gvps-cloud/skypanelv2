@@ -1,0 +1,5 @@
+- [x] Verify that System Admins ONLY see organizations they are members of on the `/organizations` page.
+- [x] Verify that System Admins do NOT see organizations they are NOT members of.
+- [x] Verify that regular members (legacy 'member' role) can see VPS instances for their organization on the `/organizations` page.
+- [x] Verify that regular members (legacy 'member' role) can see Support Tickets for their organization on the `/organizations` page.
+- [x] Verify that system admins cannot access organization details directly via API (`/api/organizations/:id`) unless they are members.

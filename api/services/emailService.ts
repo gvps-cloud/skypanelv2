@@ -142,7 +142,7 @@ async function sendEmail(options: SendMailOptions): Promise<void> {
     throw error;
   }
 
-  const senderName = config.FROM_NAME || config.COMPANY_BRAND_NAME || "SkyVPS360";
+  const senderName = config.FROM_NAME || config.COMPANY_BRAND_NAME;
   const mailOptions: SendMailOptions = {
     from: options.from || `${senderName} <${senderEmail}>`,
     ...options,
@@ -171,14 +171,14 @@ export async function sendWelcomeEmail(
   name?: string,
 ): Promise<void> {
   const displayName = name || "there";
-  const subject = "Welcome to SkyVPS360";
+  const subject = `Welcome to ${config.COMPANY_BRAND_NAME}`;
   const html = `
     <p>Hi ${displayName},</p>
-    <p>Welcome to SkyVPS360. Your account is ready to go.</p>
+    <p>Welcome to ${config.COMPANY_BRAND_NAME}. Your account is ready to go.</p>
     <p>If you did not create this account, please contact support right away.</p>
-    <p>Thanks,<br/>The SkyVPS360 Team</p>
+    <p>Thanks,<br/>The ${config.COMPANY_BRAND_NAME} Team</p>
   `;
-  const text = `Hi ${displayName},\n\nWelcome to SkyVPS360. Your account is ready to go.\n\nIf you did not create this account, please contact support right away.\n\nThanks,\nThe SkyVPS360 Team`;
+  const text = `Hi ${displayName},\n\nWelcome to ${config.COMPANY_BRAND_NAME}. Your account is ready to go.\n\nIf you did not create this account, please contact support right away.\n\nThanks,\nThe ${config.COMPANY_BRAND_NAME} Team`;
 
   await sendEmail({ to, subject, html, text });
 }
@@ -299,14 +299,14 @@ export async function sendLoginNotificationEmail(
   name?: string,
 ): Promise<void> {
   const displayName = name || "there";
-  const subject = "SkyVPS360 login notification";
+  const subject = `${config.COMPANY_BRAND_NAME} login notification`;
   const html = `
     <p>Hi ${displayName},</p>
-    <p>We noticed a successful login to your SkyVPS360 account just now.</p>
+    <p>We noticed a successful login to your ${config.COMPANY_BRAND_NAME} account just now.</p>
     <p>If this was not you, we recommend resetting your password immediately.</p>
-    <p>Thanks,<br/>The SkyVPS360 Team</p>
+    <p>Thanks,<br/>The ${config.COMPANY_BRAND_NAME} Team</p>
   `;
-  const text = `Hi ${displayName},\n\nWe noticed a successful login to your SkyVPS360 account just now.\n\nIf this was not you, we recommend resetting your password immediately.\n\nThanks,\nThe SkyVPS360 Team`;
+  const text = `Hi ${displayName},\n\nWe noticed a successful login to your ${config.COMPANY_BRAND_NAME} account just now.\n\nIf this was not you, we recommend resetting your password immediately.\n\nThanks,\nThe ${config.COMPANY_BRAND_NAME} Team`;
 
   await sendEmail({ to, subject, html, text });
 }
@@ -322,11 +322,11 @@ export async function sendPasswordResetEmail(
   );
   const resetPageUrl = `${baseUrl}/reset-password`;
   const displayName = name || "there";
-  const subject = "Reset your SkyVPS360 password";
+  const subject = `Reset your ${config.COMPANY_BRAND_NAME} password`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <p>Hi ${displayName},</p>
-      <p>We received a request to reset your SkyVPS360 password.</p>
+      <p>We received a request to reset your ${config.COMPANY_BRAND_NAME} password.</p>
       <p>Enter this 8-digit reset code on the password reset page:</p>
       <div style="background: #f5f5f5; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
         <p style="font-size: 28px; font-weight: 700; letter-spacing: 0.2em; margin: 0; font-family: 'Courier New', monospace;">${token}</p>
@@ -339,12 +339,12 @@ export async function sendPasswordResetEmail(
         <li>Your new password</li>
       </ol>
       <p style="color: #666; font-size: 14px; margin-top: 30px;">If you did not request this password reset, you can safely ignore this email. Your password will not be changed.</p>
-      <p style="margin-top: 30px;">Thanks,<br/><strong>The SkyVPS360 Team</strong></p>
+      <p style="margin-top: 30px;">Thanks,<br/><strong>The ${config.COMPANY_BRAND_NAME} Team</strong></p>
     </div>
   `;
   const text = `Hi ${displayName},
 
-We received a request to reset your SkyVPS360 password.
+We received a request to reset your ${config.COMPANY_BRAND_NAME} password.
 
 Your 8-digit reset code (valid for 1 hour):
 
@@ -359,7 +359,7 @@ To reset your password:
 If you did not request this password reset, you can safely ignore this email. Your password will not be changed.
 
 Thanks,
-The SkyVPS360 Team`;
+The ${config.COMPANY_BRAND_NAME} Team`;
 
   await sendEmail({ to, subject, html, text });
 }
@@ -416,11 +416,11 @@ export async function sendAccountNotificationEmail({
   const safeEventType = escapeHtml(eventType);
   const safeTimestamp = escapeHtml(occurredAt || new Date().toISOString());
 
-  const subject = `SkyVPS360 alert: ${title}`;
+  const subject = `${config.COMPANY_BRAND_NAME} alert: ${title}`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto;">
       <p>Hi ${escapeHtml(displayName)},</p>
-      <p>You have a new <strong>${escapeHtml(category)}</strong> alert from SkyVPS360.</p>
+      <p>You have a new <strong>${escapeHtml(category)}</strong> alert from ${config.COMPANY_BRAND_NAME}.</p>
       <div style="border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; margin: 16px 0;">
         <p style="margin: 0 0 8px 0; font-weight: 700;">${safeTitle}</p>
         <p style="margin: 0 0 8px 0;">${safeMessage}</p>
@@ -430,13 +430,13 @@ export async function sendAccountNotificationEmail({
       <p style="color: #4b5563; font-size: 14px;">
         You can manage alert categories in your account settings.
       </p>
-      <p>Thanks,<br/><strong>The SkyVPS360 Team</strong></p>
+      <p>Thanks,<br/><strong>The ${config.COMPANY_BRAND_NAME} Team</strong></p>
     </div>
   `;
 
   const text = `Hi ${displayName},
 
-You have a new ${category} alert from SkyVPS360.
+You have a new ${category} alert from ${config.COMPANY_BRAND_NAME}.
 
 ${title}
 ${message}
@@ -446,7 +446,7 @@ Time: ${occurredAt || new Date().toISOString()}
 You can manage alert categories in your account settings.
 
 Thanks,
-The SkyVPS360 Team`;
+The ${config.COMPANY_BRAND_NAME} Team`;
 
   await sendEmail({ to, subject, html, text });
 }

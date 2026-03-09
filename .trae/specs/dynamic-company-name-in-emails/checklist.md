@@ -1,0 +1,6 @@
+- [x] `api/config/index.ts` correctly resolves `COMPANY_BRAND_NAME` from environment variables.
+- [x] `sendWelcomeEmail` uses `config.COMPANY_BRAND_NAME` in subject and body.
+- [x] `sendLoginNotificationEmail` uses `config.COMPANY_BRAND_NAME` in subject and body.
+- [x] `sendPasswordResetEmail` uses `config.COMPANY_BRAND_NAME` in subject and body.
+- [x] `sendAccountNotificationEmail` uses `config.COMPANY_BRAND_NAME` in subject and body.
+- [x] No occurrences of "SkyVPS360" remain in `api/services/emailService.ts` (except maybe as a historical comment if strictly necessary, but preferably gone).
