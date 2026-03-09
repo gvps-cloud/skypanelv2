@@ -1058,15 +1058,18 @@ const VPS: React.FC = () => {
     }
   }, []);
 
-  // Simple polling: refresh instances while any are provisioning or rebooting
+  // Adaptive polling: always refresh instances for live status
+  // Uses faster interval (10s) for transitioning states, slower (30s) for stable states
   useEffect(() => {
-    const hasPending = instances.some(
-      (i) => i.status === "provisioning" || i.status === "rebooting",
+    const hasTransitioning = instances.some(
+      (i) => i.status === "provisioning" || i.status === "rebooting" || i.status === "restoring" || i.status === "backing_up",
     );
-    if (!hasPending) return;
+    const pollingInterval = hasTransitioning ? 10000 : 30000; // 10s for transitioning, 30s for stable
+
     const interval = setInterval(() => {
       loadInstances();
-    }, 10000);
+    }, pollingInterval);
+
     return () => clearInterval(interval);
   }, [instances, loadInstances]);
 

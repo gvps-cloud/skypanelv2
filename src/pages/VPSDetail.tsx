@@ -996,6 +996,24 @@ const VPSDetail: React.FC = () => {
     loadNetworkingConfig();
   }, [loadNetworkingConfig]);
 
+  // Adaptive polling: refresh instance detail for live status
+  // Uses faster interval (10s) for transitioning states, slower (30s) for stable states
+  useEffect(() => {
+    if (!detail) return;
+
+    const hasTransitioning = detail.status === 'provisioning' ||
+                             detail.status === 'rebooting' ||
+                             detail.status === 'restoring' ||
+                             detail.status === 'backing_up';
+    const pollingInterval = hasTransitioning ? 10000 : 30000; // 10s for transitioning, 30s for stable
+
+    const interval = setInterval(() => {
+      loadData();
+    }, pollingInterval);
+
+    return () => clearInterval(interval);
+  }, [detail, loadData]);
+
   // Set dynamic breadcrumb when VPS data is loaded
   useEffect(() => {
     if (!id) return;

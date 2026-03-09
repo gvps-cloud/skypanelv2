@@ -48,7 +48,7 @@ interface VpsMetrics {
 interface VPSStats {
   id: string;
   name: string;
-  status: "running" | "stopped" | "provisioning";
+  status: "running" | "stopped" | "provisioning" | "rebooting" | "restoring" | "backing_up" | "error";
   plan: string;
   location: string;
   cpu: number;
@@ -175,6 +175,21 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Adaptive polling: refresh dashboard data for live VPS status
+  // Uses faster interval (10s) for transitioning states, slower (30s) for stable states
+  useEffect(() => {
+    const hasTransitioning = vpsInstances.some(
+      (i) => i.status === "provisioning" || i.status === "rebooting" || i.status === "restoring" || i.status === "backing_up",
+    );
+    const pollingInterval = hasTransitioning ? 10000 : 30000; // 10s for transitioning, 30s for stable
+
+    const interval = setInterval(() => {
+      loadDashboardData();
+    }, pollingInterval);
+
+    return () => clearInterval(interval);
+  }, [vpsInstances, loadDashboardData]);
 
   const quickActions = useMemo(() => {
     const actions = [
