@@ -33,15 +33,21 @@ interface MetricSummary {
   last: number;
 }
 
+interface MetricSeriesPayload {
+  series?: Array<[number, number]>;
+  summary?: MetricSummary | null;
+  unit?: string;
+}
+
 interface VpsMetrics {
-  cpu?: MetricSummary | null;
+  cpu?: MetricSeriesPayload | null;
   network?: {
-    inbound?: MetricSummary | null;
-    outbound?: MetricSummary | null;
+    inbound?: MetricSeriesPayload | null;
+    outbound?: MetricSeriesPayload | null;
   };
   io?: {
-    read?: MetricSummary | null;
-    swap?: MetricSummary | null;
+    read?: MetricSeriesPayload | null;
+    swap?: MetricSeriesPayload | null;
   };
 }
 
@@ -52,6 +58,7 @@ interface VPSStats {
   plan: string;
   location: string;
   cpu: number;
+  cpuCount: number; // Number of vCPUs
   memory: number | null;
   storage: number;
   ip: string;
@@ -97,22 +104,33 @@ const Dashboard: React.FC = () => {
         (vpsData.instances || []).map(async (instance: any) => {
           let metrics: VpsMetrics | undefined;
           let cpu = 0;
+          let cpuCount = 0;
 
           try {
             const detailData = await apiClient.get(`/vps/${instance.id}`);
-            metrics = {
-              cpu: detailData.metrics?.cpu?.summary ?? null,
+            console.log(`VPS ${instance.label} full response:`, detailData);
+            console.log(`VPS ${instance.label} metrics:`, detailData.metrics);
+            console.log(`VPS ${instance.label} instance.metrics:`, detailData.instance?.metrics);
+            
+            // Try both possible locations for metrics
+            const metricsData = detailData.metrics || detailData.instance?.metrics;
+            
+            metrics = metricsData ? {
+              cpu: metricsData.cpu ?? null,
               network: {
-                inbound: detailData.metrics?.network?.inbound?.summary ?? null,
-                outbound:
-                  detailData.metrics?.network?.outbound?.summary ?? null,
+                inbound: metricsData.network?.inbound ?? null,
+                outbound: metricsData.network?.outbound ?? null,
               },
               io: {
-                read: detailData.metrics?.io?.read?.summary ?? null,
-                swap: detailData.metrics?.io?.swap?.summary ?? null,
+                read: metricsData.io?.read ?? null,
+                swap: metricsData.io?.swap ?? null,
               },
-            };
-            cpu = detailData.metrics?.cpu?.summary?.last || 0;
+            } : undefined;
+            
+            cpu = metricsData?.cpu?.summary?.last || 0;
+            cpuCount = detailData.instance?.plan?.specs?.vcpus || 0;
+            
+            console.log(`VPS ${instance.label} - CPU: ${cpu}%, vCPUs: ${cpuCount}`);
           } catch (error) {
             console.warn(
               `Failed to fetch metrics for VPS ${instance.id}:`,
@@ -127,6 +145,7 @@ const Dashboard: React.FC = () => {
             plan: instance.plan_name || instance.configuration?.type || "",
             location: instance.configuration?.region || "",
             cpu: Math.round(cpu * 100) / 100,
+            cpuCount,
             memory: null,
             storage: 0,
             ip: instance.ip_address || "",
@@ -175,21 +194,6 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
-
-  // Adaptive polling: refresh dashboard data for live VPS status
-  // Uses faster interval (10s) for transitioning states, slower (30s) for stable states
-  useEffect(() => {
-    const hasTransitioning = vpsInstances.some(
-      (i) => i.status === "provisioning" || i.status === "rebooting" || i.status === "restoring" || i.status === "backing_up",
-    );
-    const pollingInterval = hasTransitioning ? 10000 : 30000; // 10s for transitioning, 30s for stable
-
-    const interval = setInterval(() => {
-      loadDashboardData();
-    }, pollingInterval);
-
-    return () => clearInterval(interval);
-  }, [vpsInstances, loadDashboardData]);
 
   const quickActions = useMemo(() => {
     const actions = [
@@ -526,14 +530,10 @@ const Dashboard: React.FC = () => {
                   </div>
                 ) : (
                   vpsInstances.slice(0, 5).map((vps) => {
-                    const cpuLoad = Math.min(
-                      100,
-                      Math.max(0, vps.metrics?.cpu?.last ?? vps.cpu ?? 0),
-                    );
-                    // Metrics variables unused but kept for future use if needed
-                    // const inbound = vps.metrics?.network?.inbound?.last ?? null;
-                    // const outbound = vps.metrics?.network?.outbound?.last ?? null;
-
+                    // Use the cpu value that was already extracted during data loading
+                    const hasMetrics = vps.cpu > 0;
+                    const cpuLoad = Math.min(100, Math.max(0, vps.cpu));
+                    
                     return (
                       <button
                         key={vps.id}
@@ -565,17 +565,27 @@ const Dashboard: React.FC = () => {
                               <span>{vps.location || "Unknown region"}</span>
                             </div>
                           </div>
-                          <div className="w-32 space-y-2 text-right">
+                          <div className="w-40 space-y-2 text-right">
                             <div>
                               <div className="mb-1 flex items-center justify-between text-xs">
                                 <span className="text-muted-foreground">
-                                  CPU
+                                  CPU {vps.cpuCount > 0 ? `(${vps.cpuCount})` : ''}
                                 </span>
-                                <span className="font-semibold">
-                                  {cpuLoad.toFixed(1)}%
-                                </span>
+                                {hasMetrics ? (
+                                  <span className="font-semibold">
+                                    {cpuLoad.toFixed(1)}%
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground italic">
+                                    Pending
+                                  </span>
+                                )}
                               </div>
-                              <Progress value={cpuLoad} className="h-1.5" />
+                              {hasMetrics ? (
+                                <Progress value={cpuLoad} className="h-1.5" />
+                              ) : (
+                                <div className="h-1.5 w-full rounded-full bg-muted" />
+                              )}
                             </div>
                           </div>
                         </div>
