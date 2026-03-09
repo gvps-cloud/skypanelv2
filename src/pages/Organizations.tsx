@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Building2,
   Users,
@@ -77,6 +77,15 @@ const Organizations: React.FC = () => {
   });
   const { token, user, switchOrganization } = useAuth();
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+
+  useEffect(() => {
+    if (id) {
+      setViewMode({ type: "organization", organizationId: id });
+    } else {
+      setViewMode({ type: "all" });
+    }
+  }, [id]);
 
   const loadOrganizations = useCallback(async (page = currentPage, limit = itemsPerPage) => {
     if (!token) return;
@@ -140,11 +149,11 @@ const Organizations: React.FC = () => {
   }, [organizationResources, selectedOrgFilter]);
 
   const handleOrganizationClick = (orgId: string) => {
-    setViewMode({ type: "organization", organizationId: orgId });
+    navigate(`/organizations/${orgId}`);
   };
 
   const handleBackToAll = () => {
-    setViewMode({ type: "all" });
+    navigate("/organizations");
   };
 
   const handleSwitchOrganization = async (orgId: string) => {
