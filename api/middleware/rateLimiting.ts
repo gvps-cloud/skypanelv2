@@ -177,6 +177,17 @@ export function isDashboardEndpoint(path: string): boolean {
     '/api/notifications/',
     '/api/health',
     '/api/admin/users/search',
+    '/api/organizations',
+    '/api/vps',
+    '/api/ssh-keys',
+    '/api/support',
+    '/api/billing',
+    '/api/activities',
+    '/api/admin',
+    '/api/account',
+    '/api/profile',
+    '/api/settings',
+    '/api/dashboard',
   ];
 
   return dashboardPatterns.some(pattern => path.startsWith(pattern));
@@ -447,8 +458,8 @@ export function createRateLimiter(
 ): RateLimitRequestHandler {
   const { windowMs, limit } = getBaseLimitConfig(userType);
 
-  // Apply 10x multiplier for dashboard endpoints
-  const effectiveLimit = endpointType === 'dashboard' ? limit * 10 : limit;
+  // Apply 50x multiplier for dashboard endpoints
+  const effectiveLimit = endpointType === 'dashboard' ? limit * 50 : limit;
 
   return rateLimit({
     windowMs,

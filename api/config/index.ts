@@ -113,17 +113,17 @@ function parseEmailProviderPriority(value?: string): EmailProvider[] {
 
 function parseRateLimitConfig(): RateLimitConfig {
   const config: RateLimitConfig = {
-    // Anonymous user limits (default: 200 requests per 15 minutes)
+    // Anonymous user limits (default: 1000 requests per 15 minutes)
     anonymousWindowMs: parseInt(process.env.RATE_LIMIT_ANONYMOUS_WINDOW_MS || '900000', 10),
-    anonymousMaxRequests: parseInt(process.env.RATE_LIMIT_ANONYMOUS_MAX || '200', 10),
+    anonymousMaxRequests: parseInt(process.env.RATE_LIMIT_ANONYMOUS_MAX || '1000', 10),
 
-    // Authenticated user limits (default: 500 requests per 15 minutes)
+    // Authenticated user limits (default: 5000 requests per 15 minutes)
     authenticatedWindowMs: parseInt(process.env.RATE_LIMIT_AUTHENTICATED_WINDOW_MS || '900000', 10),
-    authenticatedMaxRequests: parseInt(process.env.RATE_LIMIT_AUTHENTICATED_MAX || '500', 10),
+    authenticatedMaxRequests: parseInt(process.env.RATE_LIMIT_AUTHENTICATED_MAX || '5000', 10),
 
-    // Admin user limits (default: 1000 requests per 15 minutes)
+    // Admin user limits (default: 10000 requests per 15 minutes)
     adminWindowMs: parseInt(process.env.RATE_LIMIT_ADMIN_WINDOW_MS || '900000', 10),
-    adminMaxRequests: parseInt(process.env.RATE_LIMIT_ADMIN_MAX || '1000', 10),
+    adminMaxRequests: parseInt(process.env.RATE_LIMIT_ADMIN_MAX || '10000', 10),
 
     // Trust proxy configuration
     trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
@@ -166,9 +166,9 @@ function parseRateLimitConfig(): RateLimitConfig {
     if (config.anonymousWindowMs < 60000) config.anonymousWindowMs = 900000;
     if (config.authenticatedWindowMs < 60000) config.authenticatedWindowMs = 900000;
     if (config.adminWindowMs < 60000) config.adminWindowMs = 900000;
-    if (config.anonymousMaxRequests < 1) config.anonymousMaxRequests = 200;
-    if (config.authenticatedMaxRequests < 1) config.authenticatedMaxRequests = 500;
-    if (config.adminMaxRequests < 1) config.adminMaxRequests = 1000;
+    if (config.anonymousMaxRequests < 1) config.anonymousMaxRequests = 1000;
+    if (config.authenticatedMaxRequests < 1) config.authenticatedMaxRequests = 5000;
+    if (config.adminMaxRequests < 1) config.adminMaxRequests = 10000;
   }
 
   return config;

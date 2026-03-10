@@ -1,0 +1,6 @@
+- [x] Backend: `POST /api/support/tickets` accepts `organizationId` and creates ticket in target org
+- [x] Backend: `POST /api/support/tickets` returns 403 if user is not a member of target org
+- [x] Backend: `POST /api/support/tickets` returns 403 if user lacks `tickets_create` permission in target org
+- [x] Frontend: Create Ticket dialog shows Organization selector
+- [x] Frontend: Organization selector lists all user's organizations (with permission)
+- [x] Frontend: Submitting ticket with selected organization creates it correctly

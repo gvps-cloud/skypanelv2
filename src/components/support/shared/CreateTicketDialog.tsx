@@ -26,6 +26,7 @@ interface CreateTicketDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: CreateTicketData) => Promise<void>;
   vpsInstances?: Array<{ id: string; label: string }>;
+  organizations?: Array<{ id: string; name: string }>;
   isLoading?: boolean;
 }
 
@@ -35,6 +36,7 @@ export interface CreateTicketData {
   priority: TicketPriority;
   category: TicketCategory;
   vpsId?: string;
+  organizationId: string;
 }
 
 export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
@@ -42,6 +44,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
   onOpenChange,
   onSubmit,
   vpsInstances = [],
+  organizations = [],
   isLoading = false,
 }) => {
   const [data, setData] = useState<CreateTicketData>({
@@ -50,6 +53,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
     priority: "medium",
     category: "general",
     vpsId: "none",
+    organizationId: "",
   });
 
   // Reset form when dialog opens
@@ -61,13 +65,14 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
         priority: "medium",
         category: "general",
         vpsId: "none",
+        organizationId: organizations[0]?.id || "",
       });
     }
-  }, [open]);
+  }, [open, organizations]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!data.subject.trim() || !data.description.trim()) return;
+    if (!data.subject.trim() || !data.description.trim() || !data.organizationId) return;
     
     await onSubmit({
       ...data,
@@ -87,6 +92,28 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="organization" className="text-sm font-medium">
+                Organization <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={data.organizationId}
+                onValueChange={(val) => setData({ ...data, organizationId: val })}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="organization" className="h-10">
+                  <SelectValue placeholder="Select an organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="subject" className="text-sm font-medium">
                 Subject <span className="text-destructive">*</span>
@@ -191,7 +218,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !data.subject.trim() || !data.description.trim()}
+              disabled={isLoading || !data.subject.trim() || !data.description.trim() || !data.organizationId}
               className="min-w-[100px]"
             >
               {isLoading ? (

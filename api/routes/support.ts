@@ -133,6 +133,7 @@ router.post(
       .withMessage("Invalid priority"),
     body("category").isLength({ min: 2 }).withMessage("Category is required"),
     body("vpsId").optional().isUUID().withMessage("Invalid VPS ID"),
+    body("organizationId").optional().isUUID().withMessage("Invalid Organization ID"),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -143,25 +144,30 @@ router.post(
       }
 
       const user = (req as any).user;
-      const organizationId = user.organizationId;
       const userId = user.id;
-      const userRole = user.role;
+      
+      // Determine target organization ID
+      const targetOrganizationId = req.body.organizationId || user.organizationId;
 
-      // Check tickets_create permission for non-admin users
-      if (userRole !== 'admin') {
-        const hasTicketsCreatePermission = await RoleService.checkPermission(
-          userId,
-          organizationId,
-          'tickets_create'
-        );
+      // Check tickets_create permission
+      // RoleService.checkPermission handles:
+      // 1. Global admin bypass (returns true)
+      // 2. Organization membership check (returns false if not member)
+      // 3. Permission check within organization
+      const hasTicketsCreatePermission = await RoleService.checkPermission(
+        userId,
+        targetOrganizationId,
+        'tickets_create'
+      );
 
-        if (!hasTicketsCreatePermission) {
-          return res.status(403).json({
-            error: 'Insufficient permissions',
-            required: 'tickets_create',
-          });
-        }
+      if (!hasTicketsCreatePermission) {
+        return res.status(403).json({
+          error: 'Insufficient permissions',
+          required: 'tickets_create',
+        });
       }
+
+      const organizationId = targetOrganizationId;
 
       const { subject, message, priority, category, vpsId } = req.body;
 
