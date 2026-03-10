@@ -46,8 +46,7 @@ const PREDEFINED_ROLES: Record<string, Permission[]> = {
   admin: [
     'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
     'tickets_view', 'tickets_create', 'tickets_manage',
-    // admins no longer receive billing_view by default; only owners should
-    // be able to inspect the organization wallet to prevent cross-user leaks.
+    'billing_view',
     'settings_manage'
   ],
   vps_manager: [
