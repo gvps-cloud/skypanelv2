@@ -114,7 +114,7 @@ import { cn } from "@/lib/utils";
 import { buildApiUrl } from "@/lib/api";
 import { BRAND_NAME } from "@/lib/brand";
 import { formatCurrency as formatCurrencyDisplay } from "@/lib/formatters";
-import type { ThemePreset } from "@/theme/presets";
+import { DEFAULT_THEME_ID, type ThemePreset } from "@/theme/presets";
 import {
   DndContext,
   closestCenter,
@@ -1144,6 +1144,18 @@ const Admin: React.FC = () => {
     }
     return parsed.toLocaleString();
   }, [themeUpdatedAt]);
+
+  const orderedThemes = useMemo(() => {
+    const defaultPreset = themes.find((preset) => preset.id === DEFAULT_THEME_ID);
+    if (!defaultPreset) {
+      return themes;
+    }
+
+    return [
+      defaultPreset,
+      ...themes.filter((preset) => preset.id !== DEFAULT_THEME_ID),
+    ];
+  }, [themes]);
 
   const fetchThemeConfiguration = useCallback(async () => {
     if (!token) {
@@ -2497,6 +2509,9 @@ const Admin: React.FC = () => {
               <p className="mt-2 max-w-2xl text-muted-foreground">
                 Choose a theme preset that updates instantly for all users
               </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Default preset: Mono (neutral surfaces with red action accents)
+              </p>
               {!themeConfigLoading && (
                 <p className="mt-1 text-sm text-muted-foreground">
                   Last updated: {formattedThemeUpdatedAt}
@@ -2529,8 +2544,9 @@ const Admin: React.FC = () => {
                   experience for every organization member.
                 </p>
                 <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  {themes.map((preset) => {
+                  {orderedThemes.map((preset) => {
                     const isActive = preset.id === themeId;
+                    const isDefault = preset.id === DEFAULT_THEME_ID;
                     const isSaving = savingPresetId === preset.id;
                     const disabled =
                       (savingPresetId !== null &&
@@ -2558,13 +2574,16 @@ const Admin: React.FC = () => {
                               {preset.description}
                             </p>
                           </div>
-                          <Badge variant={isActive ? "default" : "outline"}>
-                            {isSaving
-                              ? "Saving..."
-                              : isActive
-                                ? "Active"
-                                : "Preview"}
-                          </Badge>
+                          <div className="flex flex-col items-end gap-2">
+                            {isDefault && <Badge variant="secondary">Default</Badge>}
+                            <Badge variant={isActive ? "default" : "outline"}>
+                              {isSaving
+                                ? "Saving..."
+                                : isActive
+                                  ? "Active"
+                                  : "Preview"}
+                            </Badge>
+                          </div>
                         </div>
                         <div className="mt-4 flex gap-4">
                           <div className="flex flex-col gap-1 text-xs text-muted-foreground">

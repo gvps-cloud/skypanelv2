@@ -35,7 +35,7 @@ const withShared = (vars: ThemeVariables): ThemeVariables => ({
   ...vars,
 });
 
-export const themePresets: ThemePreset[] = [
+const rawThemePresets: ThemePreset[] = [
   {
     id: "teal",
     label: "Teal",
@@ -919,5 +919,91 @@ export const themePresets: ThemePreset[] = [
     }),
   },
 ];
+
+const SURFACE_TOKEN_KEYS = [
+  "background",
+  "foreground",
+  "muted",
+  "muted-foreground",
+  "popover",
+  "popover-foreground",
+  "card",
+  "card-foreground",
+  "border",
+  "input",
+  "secondary",
+  "secondary-foreground",
+  "accent",
+  "accent-foreground",
+  "sidebar-background",
+  "sidebar-foreground",
+  "sidebar-accent",
+  "sidebar-accent-foreground",
+  "sidebar-border",
+] as const;
+
+const MONO_RED_ACCENT: { light: ThemeVariables; dark: ThemeVariables } = {
+  light: {
+    primary: "0 72.2% 50.6%",
+    "primary-foreground": "0 85.7% 97.3%",
+    ring: "0 72.2% 50.6%",
+    "sidebar-primary": "0 72.2% 50.6%",
+    "sidebar-primary-foreground": "0 85.7% 97.3%",
+    "sidebar-ring": "0 72.2% 50.6%",
+  },
+  dark: {
+    primary: "0 72.2% 50.6%",
+    "primary-foreground": "0 85.7% 97.3%",
+    ring: "0 72.2% 50.6%",
+    "sidebar-primary": "0 72.2% 50.6%",
+    "sidebar-primary-foreground": "0 85.7% 97.3%",
+    "sidebar-ring": "0 72.2% 50.6%",
+  },
+};
+
+const applyNeutralSurfaces = (
+  vars: ThemeVariables,
+  neutralVars: ThemeVariables,
+): ThemeVariables => {
+  const next: ThemeVariables = { ...vars };
+
+  for (const key of SURFACE_TOKEN_KEYS) {
+    const neutralValue = neutralVars[key];
+    if (typeof neutralValue === "string") {
+      next[key] = neutralValue;
+    }
+  }
+
+  return next;
+};
+
+const monoBaselinePreset =
+  rawThemePresets.find((preset) => preset.id === "mono") ?? rawThemePresets[0];
+
+export const themePresets: ThemePreset[] = rawThemePresets.map((preset) => {
+  const light = applyNeutralSurfaces(preset.light, monoBaselinePreset.light);
+  const dark = applyNeutralSurfaces(preset.dark, monoBaselinePreset.dark);
+
+  if (preset.id === "mono") {
+    return {
+      ...preset,
+      description: "Neutral shadcn-style surfaces with red action accents.",
+      light: withShared({
+        ...light,
+        ...MONO_RED_ACCENT.light,
+      }),
+      dark: withShared({
+        ...dark,
+        ...MONO_RED_ACCENT.dark,
+      }),
+    };
+  }
+
+  return {
+    ...preset,
+    light: withShared(light),
+    dark: withShared(dark),
+  };
+});
 
 export const DEFAULT_THEME_ID: ThemeId = "mono";

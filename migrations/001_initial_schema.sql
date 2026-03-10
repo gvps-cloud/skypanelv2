@@ -666,7 +666,7 @@ FOR EACH ROW
 EXECUTE FUNCTION update_platform_settings_updated_at();
 
 INSERT INTO platform_settings (key, value)
-VALUES ('theme', jsonb_build_object('presetId', 'teal'))
+VALUES ('theme', jsonb_build_object('presetId', 'mono'))
 ON CONFLICT (key) DO NOTHING;
 
 -- Migration 011: Password reset columns
