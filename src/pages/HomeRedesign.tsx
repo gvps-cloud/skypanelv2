@@ -8,6 +8,7 @@ import {
   Clock3,
   Globe2,
   Lock,
+  Rocket,
   Server,
   ShieldCheck,
   Sparkles,
@@ -16,6 +17,10 @@ import {
   Zap,
   Users,
   Activity,
+  Star,
+  MapPin,
+  TrendingUp,
+  Quote,
   type LucideIcon,
 } from "lucide-react";
 
@@ -78,6 +83,52 @@ const asRecord = (value: unknown): Record<string, unknown> | null => {
 const parseNumber = (value: unknown): number | null => {
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
+}
+
+const AnimatedCounter = ({
+  value,
+  suffix = "",
+  duration = 2,
+}: {
+  value: number;
+  suffix?: string;
+  duration?: number;
+}) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let startTime: number;
+    let animationFrame: number;
+
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min(
+        (currentTime - startTime) / (duration * 1000),
+        1,
+      );
+
+      setCount(Math.floor(progress * value));
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [value, duration]);
+
+  return (
+    <>
+      {count}
+      {suffix}
+    </>
+  );
 };
 
 const BackToTopButton = () => {
@@ -242,6 +293,53 @@ const faqs = [
     answer:
       "Yes, we offer robust DDoS protection options to ensure your applications stay online and accessible, even during targeted attacks.",
   },
+  {
+    question: "Do you support nested virtualization?",
+    answer:
+      "No, we do not support nested virtualization (nested KVM) on our platform at this time. Our infrastructure is optimized for direct workloads and containerization rather than running hypervisors within our VMs.",
+  },
+];
+
+const testimonials = [
+  {
+    quote:
+      "The deployment speed is incredible. We went from signup to having our production servers running in under 5 minutes. The unified dashboard gives us complete visibility.",
+    name: "Marcus Chen",
+    role: "DevOps Engineer",
+    rating: 5,
+    results: [
+      { metric: "99.9% uptime", period: "6 months" },
+      { metric: "5 min deploy", period: "vs 2 hours" },
+    ],
+    avatar: "MC",
+    location: "San Francisco, CA",
+  },
+  {
+    quote:
+      "Finally, a platform that combines VPS and application hosting with transparent billing. The cost savings have been significant for our startup.",
+    name: "Sarah Williams",
+    role: "CTO",
+    rating: 5,
+    results: [
+      { metric: "40% cost reduction", period: "monthly" },
+      { metric: "2x performance", period: "vs previous" },
+    ],
+    avatar: "SW",
+    location: "Austin, TX",
+  },
+  {
+    quote:
+      "The web-based SSH console and real-time monitoring have transformed how we manage our infrastructure. It's like having a datacenter in our browser.",
+    name: "David Rodriguez",
+    role: "Infrastructure Lead",
+    rating: 5,
+    results: [
+      { metric: "3x faster deployments", period: "average" },
+      { metric: "Zero downtime", period: "12 months" },
+    ],
+    avatar: "DR",
+    location: "Miami, FL",
+  },
 ];
 
 export default function HomeRedesign() {
@@ -364,19 +462,19 @@ export default function HomeRedesign() {
               <div className="space-y-4">
                 <Badge variant="secondary" className="w-fit rounded-full px-4 py-1.5">
                   <Sparkles className="mr-2 h-3.5 w-3.5" />
-                  The Cloud Built for Developers
+                  Next-Gen Cloud Infrastructure Platform
                 </Badge>
 
                 <h1 className="text-balance text-4xl font-semibold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-                  Deploy high-performance servers in
+                  Cloud Infrastructure Management,
                   <span className="bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
                     {" "}
-                    seconds.
+                    Simplified
                   </span>
                 </h1>
 
                 <p className="max-w-2xl text-lg text-muted-foreground sm:text-xl">
-                  {BRAND_NAME} provides fast, secure, and scalable VPS hosting. Build your applications on reliable infrastructure with simple pricing, team collaboration, and powerful management tools.
+                  Deploy VPS instances and applications in seconds with unified billing, real-time monitoring, and enterprise-grade security.
                 </p>
               </div>
 
@@ -394,19 +492,19 @@ export default function HomeRedesign() {
 
               <div className="grid gap-4 sm:grid-cols-3">
                 {heroMetrics.map((metric) => (
-                  <Card
+                  <motion.div
                     key={metric.label}
-                    className="border-border/70 bg-card/80 shadow-sm backdrop-blur"
+                    className="flex flex-col p-4 rounded-xl home-glass-panel border-primary/20 hover:border-primary/40 transition-colors"
                   >
-                    <CardContent className="space-y-2 p-4">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{metric.label}</span>
-                        <metric.icon className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="text-2xl font-semibold tracking-tight">{metric.value}</div>
-                      <p className="text-xs text-muted-foreground">{metric.detail}</p>
-                    </CardContent>
-                  </Card>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                      <span>{metric.label}</span>
+                      <metric.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="text-3xl font-bold tracking-tight text-foreground">
+                      {metric.value.includes('+') || metric.value.includes('%') ? metric.value : <AnimatedCounter value={parseInt(metric.value.replace(/\D/g, '')) || 0} suffix={metric.value.replace(/[\d,]/g, '')} />}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{metric.detail}</p>
+                  </motion.div>
                 ))}
               </div>
             </motion.div>
@@ -481,19 +579,19 @@ export default function HomeRedesign() {
         {/* LOGO STRIP / TRUST BADGES */}
         <section className="border-b border-border/60 bg-muted/25 py-8">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-4 px-4 text-sm sm:px-6 lg:px-8">
-            <Badge variant="outline" className="rounded-full px-4 py-1.5 bg-background shadow-sm">
+            <Badge variant="outline" className="rounded-full px-4 py-1.5 bg-background shadow-sm hover:border-primary/50 transition-colors">
               <Server className="mr-2 h-3.5 w-3.5 text-primary" />
               High Performance NVMe
             </Badge>
-            <Badge variant="outline" className="rounded-full px-4 py-1.5 bg-background shadow-sm">
+            <Badge variant="outline" className="rounded-full px-4 py-1.5 bg-background shadow-sm hover:border-primary/50 transition-colors">
               <ShieldCheck className="mr-2 h-3.5 w-3.5 text-primary" />
               DDoS Protection Available
             </Badge>
-            <Badge variant="outline" className="rounded-full px-4 py-1.5 bg-background shadow-sm">
+            <Badge variant="outline" className="rounded-full px-4 py-1.5 bg-background shadow-sm hover:border-primary/50 transition-colors">
               <Users className="mr-2 h-3.5 w-3.5 text-primary" />
               Built for Teams
             </Badge>
-            <Badge variant="outline" className="rounded-full px-4 py-1.5 bg-background shadow-sm">
+            <Badge variant="outline" className="rounded-full px-4 py-1.5 bg-background shadow-sm hover:border-primary/50 transition-colors">
               <Wallet className="mr-2 h-3.5 w-3.5 text-primary" />
               Hourly Billing
             </Badge>
@@ -678,21 +776,170 @@ export default function HomeRedesign() {
                     "Host critical applications with confidence using our reliable infrastructure and security tools.",
                   bullets: ["99.9% uptime SLA", "DDoS protection options", "Automated backups"],
                 },
-              ].map((item) => (
-                <Card key={item.title} className="border-border/70 bg-card/70 shadow-sm">
-                  <CardContent className="space-y-4 p-6">
-                    <h3 className="text-xl font-semibold">{item.title}</h3>
-                    <p className="text-sm text-muted-foreground min-h-[60px]">{item.detail}</p>
-                    <ul className="space-y-2 text-sm font-medium text-foreground">
-                      {item.bullets.map((bullet) => (
-                        <li key={bullet} className="flex items-center gap-2">
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                          {bullet}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
+              ].map((item, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: idx * 0.1 }}
+                >
+                  <Card className="h-full home-feature-card group shadow-sm hover:shadow-lg transition-all">
+                    <CardContent className="space-y-4 p-6">
+                      <h3 className="text-xl font-semibold">{item.title}</h3>
+                      <p className="text-sm text-muted-foreground min-h-[60px]">{item.detail}</p>
+                      <ul className="space-y-2 text-sm font-medium text-foreground">
+                        {item.bullets.map((bullet) => (
+                          <li key={bullet} className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            {bullet}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* HOW IT WORKS */}
+        <section className="py-20 sm:py-24 border-y border-border/60 bg-muted/10 relative overflow-hidden">
+          <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.55 }}
+              className="text-center mb-16"
+            >
+              <Badge variant="outline" className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary">
+                Getting Started
+              </Badge>
+              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                From Zero to
+                <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"> Live Infrastructure</span>
+              </h2>
+              <p className="mt-4 text-xl text-muted-foreground max-w-3xl mx-auto">
+                Get your infrastructure up and running in minutes, not hours.
+              </p>
+            </motion.div>
+
+            <div className="relative">
+              <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary/20 to-transparent -translate-y-1/2" />
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {[
+                  { num: "01", title: "Sign Up & Add Funds", desc: "Create your account and add funds to your wallet.", icon: Users },
+                  { num: "02", title: "Choose Infrastructure", desc: "Select from VPS instances or curated StackScripts.", icon: Server },
+                  { num: "03", title: "Deploy Instantly", desc: "Launch your infrastructure in under 45 seconds.", icon: Rocket },
+                  { num: "04", title: "Monitor & Manage", desc: "Track performance and scale through one dashboard.", icon: Activity }
+                ].map((step, i) => (
+                  <motion.div
+                    key={step.num}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: i * 0.1 }}
+                    className="relative"
+                  >
+                    <Card className="h-full home-feature-card group hover:shadow-xl">
+                      <CardContent className="p-8 text-center">
+                        <div className="relative mb-6">
+                          <div className="w-16 h-16 mx-auto bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center text-primary-foreground text-xl font-bold group-hover:scale-110 transition-transform duration-300 shadow-lg ring-4 ring-primary/10">
+                            {step.num}
+                          </div>
+                        </div>
+                        <step.icon className="w-8 h-8 text-primary mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-3 text-foreground">
+                          {step.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {step.desc}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* TESTIMONIALS */}
+        <section className="py-20 sm:py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.55 }}
+              className="text-center mb-16"
+            >
+              <Badge variant="outline" className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary">
+                Trusted by Teams
+              </Badge>
+              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                What Our Customers Say
+              </h2>
+              <p className="mt-4 text-xl text-muted-foreground max-w-3xl mx-auto">
+                Join thousands of satisfied customers who trust {BRAND_NAME} for their infrastructure needs.
+              </p>
+            </motion.div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+              {testimonials.map((test, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: idx * 0.1 }}
+                  whileHover={{ y: -5 }}
+                  className="touch-manipulation"
+                >
+                  <Card className="h-full home-feature-card group">
+                    <CardContent className="p-8">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-1">
+                          {[...Array(test.rating)].map((_, i) => (
+                            <Star key={i} className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MapPin className="w-3 h-3" />
+                          {test.location}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/40 rounded-full flex items-center justify-center ring-2 ring-primary/20">
+                          <span className="text-primary font-bold text-sm">{test.avatar}</span>
+                        </div>
+                        <div>
+                          <div className="font-semibold text-foreground">{test.name}</div>
+                          <div className="text-xs text-muted-foreground">{test.role}</div>
+                        </div>
+                      </div>
+                      <div className="relative mb-6">
+                        <Quote className="absolute -top-3 -left-2 w-6 h-6 text-primary/10" />
+                        <p className="text-sm text-muted-foreground leading-relaxed italic relative z-10 pl-5">
+                          "{test.quote}"
+                        </p>
+                      </div>
+                      <div className="pt-4 border-t border-border/40">
+                        <div className="flex flex-wrap gap-2">
+                          {test.results.map((r, i) => (
+                            <div key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20">
+                              <TrendingUp className="w-3 h-3" />
+                              {r.metric}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))}
             </div>
           </div>
