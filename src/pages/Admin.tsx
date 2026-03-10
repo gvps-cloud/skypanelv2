@@ -2206,7 +2206,10 @@ const Admin: React.FC = () => {
           <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8">
             <div className="relative z-10">
               <div className="mb-2">
-                <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
+                <Badge
+                  variant="outline"
+                  className="mb-3 text-xs sm:text-sm border-primary/30 bg-primary/10 text-primary"
+                >
                   Admin Panel
                 </Badge>
               </div>
@@ -2230,117 +2233,62 @@ const Admin: React.FC = () => {
             <Card className="h-full">
               <CardHeader className="space-y-1">
                 <CardTitle className="text-lg font-semibold text-foreground">
-                  Support Triage
+                  Platform Health
                 </CardTitle>
                 <CardDescription>
-                  Fast access to the highest-priority customer conversations.
+                  Status at a glance across support, billing, and deployments.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {dashboardTicketHighlights.length > 0 ? (
-                  dashboardTicketHighlights.map((ticket) => (
-                    <button
-                      key={ticket.id}
-                      type="button"
-                      onClick={() => {
-                        setPendingFocusTicketId(ticket.id);
-                        handleTabChange("support");
-                      }}
-                      className="w-full rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-left transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground line-clamp-2">
-                            {ticket.subject}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            {ticket.category ? (
-                              <span className="capitalize">
-                                {ticket.category}
-                              </span>
-                            ) : (
-                              <span>General</span>
-                            )}
-                            <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-                            <span>
-                              {ticket.updated_at
-                                ? new Date(ticket.updated_at).toLocaleString()
-                                : new Date(ticket.created_at).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "shrink-0 capitalize",
-                            TICKET_PRIORITY_META[ticket.priority].className,
-                          )}
-                        >
-                          {TICKET_PRIORITY_META[ticket.priority].label}
-                        </Badge>
-                      </div>
-                      <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">
-                        {ticket.message}
-                      </p>
-                    </button>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
-                    No open tickets need attention right now.
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border border-border/80 bg-card/40 p-4">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Tickets</p>
+                    <p className="mt-1 text-2xl font-semibold text-foreground">{openTicketCount}</p>
+                    <p className="text-xs text-muted-foreground">Open • {urgentTickets} urgent • {inProgressTickets} in progress</p>
                   </div>
-                )}
+                  <div className="rounded-lg border border-border/80 bg-card/40 p-4">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Servers</p>
+                    <p className="mt-1 text-2xl font-semibold text-foreground">{activeServers}</p>
+                    <p className="text-xs text-muted-foreground">{attentionServers} needing attention • {provisioningServers} provisioning</p>
+                  </div>
+                  <div className="rounded-lg border border-border/80 bg-card/40 p-4">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Providers</p>
+                    <p className="mt-1 text-2xl font-semibold text-foreground">{activeProviders}</p>
+                    <p className="text-xs text-muted-foreground">{inactiveProviders} inactive integrations</p>
+                  </div>
+                  <div className="rounded-lg border border-border/80 bg-card/40 p-4">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Billing</p>
+                    <p className="mt-1 text-2xl font-semibold text-foreground">{formatCurrency(averagePlanMarkup || 0)}</p>
+                    <p className="text-xs text-muted-foreground">Avg plan markup • {activePlanCount} active plans</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-            <Card className="h-full">
+
+            <Card>
               <CardHeader className="space-y-1">
                 <CardTitle className="text-lg font-semibold text-foreground">
-                  Infrastructure Signals
+                  Quick Links
                 </CardTitle>
                 <CardDescription>
-                  Track servers requiring intervention across providers.
+                  Jump to frequent admin tasks.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {dashboardServerAlerts.length > 0 ? (
-                  dashboardServerAlerts.map((server) => (
-                    <div
-                      key={server.id}
-                      className="rounded-xl border border-border/60 bg-background/80 px-4 py-3"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-foreground">
-                            {server.label || server.id}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            {server.provider_name ? (
-                              <>
-                                <span>{server.provider_name}</span>
-                                <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-                              </>
-                            ) : null}
-                            {server.region_label ? (
-                              <span>{server.region_label}</span>
-                            ) : null}
-                          </div>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "capitalize",
-                            statusBadgeClass(server.status),
-                          )}
-                        >
-                          {formatStatusLabel(server.status)}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-8 text-center text-sm text-muted-foreground">
-                    All servers are running within expected thresholds.
-                  </div>
-                )}
+                <div className="flex flex-col gap-2">
+                  <Button variant="outline" className="justify-between" onClick={() => handleTabChange("email-templates")}>
+                    Email Templates
+                  </Button>
+                  <Button variant="outline" className="justify-between" onClick={() => handleTabChange("billing")}>
+                    Billing & Finance
+                  </Button>
+                  <Button variant="outline" className="justify-between" onClick={() => handleTabChange("theme")}>
+                    Theme Manager
+                  </Button>
+                  <Button variant="outline" className="justify-between" onClick={() => handleTabChange("user-management")}>
+                    User Management
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -2420,12 +2368,14 @@ const Admin: React.FC = () => {
                   Administration Sections
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Select an area to manage platform settings and resources.
+                  Quick access to the core areas of SkyPanelV2.
                 </p>
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {strategicPanels.map((panel) => {
+              {["email-templates", "billing", "user-management", "theme", "providers", "servers"].map((id) => {
+                const panel = strategicPanels.find((p) => p.id === id);
+                if (!panel) return null;
                 const Icon = panel.icon;
                 const isActive = panel.id === activeTab;
 
@@ -2453,9 +2403,7 @@ const Admin: React.FC = () => {
                               <Icon
                                 className={cn(
                                   "h-5 w-5",
-                                  isActive
-                                    ? "text-primary"
-                                    : "text-muted-foreground",
+                                  isActive ? "text-primary" : panel.accent,
                                 )}
                               />
                             </div>
@@ -2468,23 +2416,22 @@ const Admin: React.FC = () => {
                               </p>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-4 mt-4">
+                          <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground sm:grid-cols-3">
                             {panel.summary.map((item) => (
-                              <div
-                                key={`${panel.id}-${item.label}`}
-                                className="space-y-1"
-                              >
-                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                              <div key={item.label} className="flex flex-col">
+                                <span className="text-xs uppercase tracking-wide">
                                   {item.label}
-                                </p>
-                                <p className="text-lg font-semibold text-foreground">
+                                </span>
+                                <span className="font-semibold text-foreground">
                                   {item.value}
-                                </p>
+                                </span>
                               </div>
                             ))}
                           </div>
                         </div>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        <Button variant="ghost" size="sm" onClick={() => handleTabChange(panel.id)}>
+                          {panel.actionLabel || "Manage"}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
