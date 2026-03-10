@@ -175,9 +175,8 @@ export default function AcceptInvitation() {
     }
   }, [token, user]);
 
-  // Auto-accept or show UI when user logs in and email matches
+  // Handle legacy accept URL - only auto-accept if explicitly in the URL path
   useEffect(() => {
-    // Only proceed if we have all required data and haven't attempted yet
     const shouldAutoAccept =
       user &&
       invitationState === 'valid' &&
@@ -185,17 +184,18 @@ export default function AcceptInvitation() {
       !autoDecline &&
       !hasAttemptedAccept &&
       !acceptMutation.isPending &&
-      !declineMutation.isPending;
+      !declineMutation.isPending &&
+      isLegacyAcceptUrl; // Only auto-accept for legacy /accept URLs
 
     if (shouldAutoAccept) {
       const emailMatches = user?.email?.toLowerCase() === invitationData.invited_email.toLowerCase();
       if (emailMatches) {
-        // Auto-accept the invitation when user logs in with matching email
+        // Auto-accept only for legacy /accept URLs
         setHasAttemptedAccept(true);
         acceptMutation.mutate();
       }
     }
-  }, [user, invitationState, invitationData, autoDecline, hasAttemptedAccept, acceptMutation, declineMutation]);
+  }, [user, invitationState, invitationData, autoDecline, hasAttemptedAccept, acceptMutation, declineMutation, isLegacyAcceptUrl]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

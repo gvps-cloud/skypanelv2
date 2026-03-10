@@ -1,0 +1,92 @@
+# Implementation Plan
+
+- [ ] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Organization Switch Triggers Ticket Refresh
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: Scope the property to concrete failing cases: user with multiple organizations switching between them
+  - Test that when a user switches from Organization A to Organization B, the fetchTickets function is called again
+  - Test that displayed tickets update to show only tickets from the newly selected organization
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found:
+    - fetchTickets is not called when user.organizationId changes
+    - Tickets from previous organization remain displayed after switch
+    - Missing organizationId dependency in useCallback
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 2.1, 2.2, 2.3_
+
+- [ ] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Non-Switch Operations Unchanged
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-organization-switch interactions:
+    - Initial ticket fetching on component mount works correctly
+    - Creating new tickets associates them with current organization
+    - Viewing and replying to tickets works correctly
+    - Real-time SSE updates deliver new messages correctly
+    - Admin users see all tickets across all organizations
+    - Non-admin users with tickets_view see all tickets in their organization
+    - Non-admin users without tickets_view see only their own tickets
+  - Write property-based tests capturing observed behavior patterns:
+    - For all initial page loads, tickets are fetched correctly
+    - For all ticket creation actions, tickets are associated with current org
+    - For all ticket view/reply actions, functionality works correctly
+    - For all SSE update events, real-time updates are delivered
+    - For all admin user actions, all tickets are visible
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
+
+- [ ] 3. Fix for support tickets organization filter bug
+
+  - [ ] 3.1 Add organizationId dependency to fetchTickets
+    - Extract user.organizationId from AuthContext (already available via useAuth hook)
+    - Add user?.organizationId as a dependency to the fetchTickets useCallback
+    - Update dependencies array: [authHeader, user?.organizationId]
+    - The existing useEffect that calls fetchTickets will automatically re-run when fetchTickets changes
+    - _Bug_Condition: isBugCondition(input) where input.userAction == 'switchOrganization' AND input.userOrganizations.length > 1 AND input.currentOrgId != input.previousOrgId_
+    - _Expected_Behavior: ticketsListRefreshed(result) AND displayedTicketsMatchCurrentOrganization(result)_
+    - _Preservation: All non-organization-switch operations (initial load, ticket creation, replies, SSE updates, admin view, permission-based filtering) must remain unchanged_
+    - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
+
+  - [ ] 3.2 Clear selected ticket on organization switch
+    - Add a new useEffect that watches user?.organizationId
+    - When organizationId changes, call setSelectedTicket(null) to close any open ticket detail view
+    - This prevents confusion where a user sees a ticket from Org A while in Org B context
+    - The existing SSE cleanup logic will automatically close the EventSource connection when selectedTicket becomes null
+    - _Bug_Condition: isBugCondition(input) where user switches organizations while viewing a ticket detail_
+    - _Expected_Behavior: Selected ticket is cleared, preventing display of tickets from previous organization_
+    - _Preservation: SSE connection cleanup continues to work correctly_
+    - _Requirements: 2.1, 2.2, 2.3, 3.4_
+
+  - [ ] 3.3 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Organization Switch Triggers Ticket Refresh
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify that fetchTickets is called when user.organizationId changes
+    - Verify that displayed tickets update to show only tickets from the newly selected organization
+    - _Requirements: 2.1, 2.2, 2.3_
+
+  - [ ] 3.4 Verify preservation tests still pass
+    - **Property 2: Preservation** - Non-Switch Operations Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix:
+      - Initial ticket fetching works correctly
+      - Ticket creation associates with current organization
+      - Ticket viewing and replies work correctly
+      - Real-time SSE updates are delivered
+      - Admin users see all tickets
+      - Permission-based filtering works correctly
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
+
+- [ ] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
