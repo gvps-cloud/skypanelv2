@@ -386,12 +386,8 @@ router.get(
       );
 
       const tickets = (result.rows || []).map((row: any) => {
-        const {
-          creator_id,
-          creator_name,
-          creator_email,
-          ...ticketFields
-        } = row;
+        const { creator_id, creator_name, creator_email, ...ticketFields } =
+          row;
 
         return {
           ...ticketFields,
@@ -483,7 +479,9 @@ router.patch(
         ticket_id: id,
         new_status: nextStatus,
       };
-      await query(`NOTIFY "ticket_${id}", '${JSON.stringify(statusNotification)}'`);
+      await query(
+        `NOTIFY "ticket_${id}", '${JSON.stringify(statusNotification)}'`,
+      );
 
       const userMessageByStatus: Record<
         string,
@@ -651,7 +649,9 @@ router.post(
         created_at: replyRow.created_at,
         sender_name: "Support Team",
       };
-      await query(`NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload)}'`);
+      await query(
+        `NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload)}'`,
+      );
 
       res.status(201).json({
         reply: {
@@ -825,7 +825,17 @@ router.put(
     body("backup_upcharge_hourly").optional().isFloat({ min: 0 }),
     body("daily_backups_enabled").optional().isBoolean(),
     body("weekly_backups_enabled").optional().isBoolean(),
-    body("type_class").optional().isIn(["standard", "dedicated", "premium", "gpu", "accelerated", "highmem", "nanode"]),
+    body("type_class")
+      .optional()
+      .isIn([
+        "standard",
+        "dedicated",
+        "premium",
+        "gpu",
+        "accelerated",
+        "highmem",
+        "nanode",
+      ]),
     body("regions").optional().isArray(),
   ],
   async (req: Request, res: Response) => {
@@ -962,10 +972,9 @@ router.put(
       // Handle regions update if provided
       if (typeof regions !== "undefined") {
         // Delete existing regions
-        await query(
-          "DELETE FROM vps_plan_regions WHERE vps_plan_id = $1",
-          [id]
-        );
+        await query("DELETE FROM vps_plan_regions WHERE vps_plan_id = $1", [
+          id,
+        ]);
 
         // Insert new regions if array is not empty
         if (regions.length > 0) {
@@ -974,7 +983,7 @@ router.put(
               `INSERT INTO vps_plan_regions (vps_plan_id, region_id)
                VALUES ($1, $2)
                ON CONFLICT (vps_plan_id, region_id) DO NOTHING`,
-              [id, regionId]
+              [id, regionId],
             );
           }
         }
@@ -1052,7 +1061,17 @@ router.post(
     body("markup_price").isFloat({ min: 0 }),
     body("active").optional().isBoolean(),
     body("specifications").optional().isObject(),
-    body("type_class").optional().isIn(["standard", "dedicated", "premium", "gpu", "accelerated", "highmem", "nanode"]),
+    body("type_class")
+      .optional()
+      .isIn([
+        "standard",
+        "dedicated",
+        "premium",
+        "gpu",
+        "accelerated",
+        "highmem",
+        "nanode",
+      ]),
     body("regions").optional().isArray(),
   ],
   async (req: Request, res: Response) => {
@@ -1140,7 +1159,7 @@ router.post(
             `INSERT INTO vps_plan_regions (vps_plan_id, region_id)
              VALUES ($1, $2)
              ON CONFLICT (vps_plan_id, region_id) DO NOTHING`,
-            [newPlan.id, regionId]
+            [newPlan.id, regionId],
           );
         }
       }
@@ -1811,11 +1830,11 @@ router.get(
         return res.json({ config });
       }
       // Fallback to default if no row exists
-      return res.json({ config: { rdns_base_domain: "ip.rev.skyvps360.dpdns.org" } });
+      return res.json({ config: { rdns_base_domain: "ip.rev.gvps.cloud" } });
     } catch (err: any) {
       if (isMissingTableError(err)) {
         return res.json({
-          config: { rdns_base_domain: "ip.rev.skyvps360.dpdns.org" },
+          config: { rdns_base_domain: "ip.rev.gvps.cloud" },
           warning: "networking_config table not found. Apply migrations.",
         });
       }
@@ -3569,9 +3588,7 @@ router.delete(
         [id],
       );
 
-      const organizationIds = orgsResult.rows.map(
-        (row) => row.organization_id,
-      );
+      const organizationIds = orgsResult.rows.map((row) => row.organization_id);
 
       // Check for negative wallet balance (outstanding payments)
       if (organizationIds.length > 0) {
@@ -5177,10 +5194,12 @@ router.get(
       }
 
       // Verify user is admin
-      const userRes = await query("SELECT role FROM users WHERE id = $1", [decoded.userId]);
+      const userRes = await query("SELECT role FROM users WHERE id = $1", [
+        decoded.userId,
+      ]);
       if (userRes.rows.length === 0 || userRes.rows[0].role !== "admin") {
-         res.status(403).json({ error: "Admin access required" });
-         return;
+        res.status(403).json({ error: "Admin access required" });
+        return;
       }
 
       // Verify ticket exists

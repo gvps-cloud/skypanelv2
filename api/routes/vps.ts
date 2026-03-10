@@ -31,7 +31,7 @@ const router = express.Router();
 
 router.use(authenticateToken, requireOrganization);
 
-const DEFAULT_RDNS_BASE_DOMAIN = "ip.rev.skyvps360.dpdns.org";
+const DEFAULT_RDNS_BASE_DOMAIN = "ip.rev.gvps.cloud";
 
 async function loadActiveProviderToken(
   providerType: "linode",
@@ -1107,11 +1107,11 @@ router.get(
              WHERE p.provider_id = $1
                AND p.active = true
                AND p.type_class = $2`,
-            [providerId, type_class]
+            [providerId, type_class],
           );
 
           const regionsWithPlans = new Set(
-            (plansResult.rows || []).map((row: any) => row.region_id)
+            (plansResult.rows || []).map((row: any) => row.region_id),
           );
 
           // Only return regions that have active plans for this type_class
@@ -1119,12 +1119,15 @@ router.get(
             (region) =>
               region &&
               typeof region.id === "string" &&
-              regionsWithPlans.has(region.id)
+              regionsWithPlans.has(region.id),
           );
         } catch (plansErr: any) {
           const message = String(plansErr?.message || "").toLowerCase();
           // If the vps_plan_regions table doesn't exist yet, just return all regions
-          if (!message.includes("does not exist") && !message.includes("relation")) {
+          if (
+            !message.includes("does not exist") &&
+            !message.includes("relation")
+          ) {
             throw plansErr;
           }
         }
@@ -1162,11 +1165,13 @@ router.get(
       // Verify provider exists
       const providerCheck = await query(
         "SELECT id FROM service_providers WHERE id = $1 AND active = true LIMIT 1",
-        [providerId]
+        [providerId],
       );
 
       if (providerCheck.rows.length === 0) {
-        return res.status(404).json({ error: "Provider not found or inactive" });
+        return res
+          .status(404)
+          .json({ error: "Provider not found or inactive" });
       }
 
       let queryText = `
@@ -1418,18 +1423,18 @@ router.get("/", async (req: Request, res: Response) => {
 
     let result;
 
-    if (userRole === 'admin') {
+    if (userRole === "admin") {
       // System admins see all VPS instances for the current organization
       // If organizationId is not set, they might see nothing or need to handle personal view
       if (user.organizationId) {
         result = await query(
           "SELECT * FROM vps_instances WHERE organization_id = $1 ORDER BY created_at DESC",
-          [user.organizationId]
+          [user.organizationId],
         );
       } else {
         // Fallback for admin with no org (should be rare/impossible with current auth)
         result = await query(
-          "SELECT * FROM vps_instances WHERE organization_id IS NULL ORDER BY created_at DESC"
+          "SELECT * FROM vps_instances WHERE organization_id IS NULL ORDER BY created_at DESC",
         );
       }
     } else {
@@ -1438,7 +1443,7 @@ router.get("/", async (req: Request, res: Response) => {
       const hasVpsViewPermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_view'
+        "vps_view",
       );
 
       if (hasVpsViewPermission) {
@@ -1734,7 +1739,7 @@ router.get("/uptime-summary", async (req: Request, res: Response) => {
     const hasVpsViewPermission = await RoleService.checkPermission(
       userId,
       organizationId,
-      'vps_view'
+      "vps_view",
     );
 
     let result;
@@ -1854,24 +1859,24 @@ router.get("/:id", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_view permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsViewPermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_view'
+        "vps_view",
       );
 
       if (!hasVpsViewPermission) {
         // Only allow access to personal VPSs
         const personalVpsCheck = await query(
           "SELECT * FROM vps_instances WHERE id = $1 AND organization_id IS NULL AND created_by = $2 LIMIT 1",
-          [id, userId]
+          [id, userId],
         );
 
         if (personalVpsCheck.rows.length === 0) {
           return res.status(403).json({
-            error: 'Insufficient permissions',
-            required: 'vps_view',
+            error: "Insufficient permissions",
+            required: "vps_view",
           });
         }
       }
@@ -2456,17 +2461,17 @@ router.post("/", async (req: Request, res: Response) => {
     const userRole = user.role;
     const organizationId = user.organizationId;
 
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsCreatePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_create'
+        "vps_create",
       );
 
       if (!hasVpsCreatePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_create',
+          error: "Insufficient permissions",
+          required: "vps_create",
         });
       }
     }
@@ -2946,7 +2951,7 @@ router.post("/", async (req: Request, res: Response) => {
       setImmediate(async () => {
         try {
           // Fetch configured base domain from admin networking config
-          let baseDomain = "ip.rev.skyvps360.dpdns.org";
+          let baseDomain = "ip.rev.gvps.cloud";
           try {
             const cfgRes = await query(
               "SELECT rdns_base_domain FROM networking_config ORDER BY updated_at DESC LIMIT 1",
@@ -3067,23 +3072,23 @@ router.post("/:id/boot", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -3149,23 +3154,23 @@ router.post("/:id/shutdown", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -3230,23 +3235,23 @@ router.post("/:id/reboot", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -3311,23 +3316,23 @@ router.post("/:id/backups/enable", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -3383,23 +3388,23 @@ router.post("/:id/backups/disable", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -3455,23 +3460,23 @@ router.post("/:id/backups/schedule", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -3593,23 +3598,23 @@ router.post("/:id/backups/snapshot", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -3677,23 +3682,23 @@ router.post(
       const { overwrite } = (req.body || {}) as { overwrite?: boolean };
 
       // Check vps_manage permission for non-admin users
-      if (userRole !== 'admin') {
+      if (userRole !== "admin") {
         const hasVpsManagePermission = await RoleService.checkPermission(
           userId,
           organizationId,
-          'vps_manage'
+          "vps_manage",
         );
 
         if (!hasVpsManagePermission) {
           return res.status(403).json({
-            error: 'Insufficient permissions',
-            required: 'vps_manage',
+            error: "Insufficient permissions",
+            required: "vps_manage",
           });
         }
       }
 
       let rowRes;
-      if (user.role === 'admin') {
+      if (user.role === "admin") {
         rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
       } else {
         rowRes = await query(
@@ -3769,23 +3774,23 @@ router.post("/:id/firewalls/attach", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -3862,23 +3867,23 @@ router.post("/:id/firewalls/detach", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -3949,23 +3954,23 @@ router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -4080,23 +4085,23 @@ router.put("/:id/hostname", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -4182,23 +4187,23 @@ router.delete("/:id", async (req: Request, res: Response) => {
     }
 
     // Check vps_delete permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsDeletePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_delete'
+        "vps_delete",
       );
 
       if (!hasVpsDeletePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_delete',
+          error: "Insufficient permissions",
+          required: "vps_delete",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
+    if (user.role === "admin") {
       rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
     } else {
       rowRes = await query(
@@ -4272,24 +4277,27 @@ router.put("/:id/notes", async (req: Request, res: Response) => {
     }
 
     // Check vps_manage permission for non-admin users
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       const hasVpsManagePermission = await RoleService.checkPermission(
         userId,
         organizationId,
-        'vps_manage'
+        "vps_manage",
       );
 
       if (!hasVpsManagePermission) {
         return res.status(403).json({
-          error: 'Insufficient permissions',
-          required: 'vps_manage',
+          error: "Insufficient permissions",
+          required: "vps_manage",
         });
       }
     }
 
     let rowRes;
-    if (user.role === 'admin') {
-      rowRes = await query("SELECT id, label FROM vps_instances WHERE id = $1", [id]);
+    if (user.role === "admin") {
+      rowRes = await query(
+        "SELECT id, label FROM vps_instances WHERE id = $1",
+        [id],
+      );
     } else {
       rowRes = await query(
         "SELECT id, label FROM vps_instances WHERE id = $1 AND organization_id = $2",
@@ -4351,8 +4359,10 @@ router.get("/:id/notes", async (req: Request, res: Response) => {
     const organizationId = user.organizationId;
 
     let rowRes;
-    if (user.role === 'admin') {
-      rowRes = await query("SELECT notes FROM vps_instances WHERE id = $1", [id]);
+    if (user.role === "admin") {
+      rowRes = await query("SELECT notes FROM vps_instances WHERE id = $1", [
+        id,
+      ]);
     } else {
       rowRes = await query(
         "SELECT notes FROM vps_instances WHERE id = $1 AND organization_id = $2",
