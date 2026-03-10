@@ -5,11 +5,53 @@
   background-size: 24px 24px;
 }
 
+.home-aurora {
+  background:
+    radial-gradient(56rem 28rem at 10% -10%, hsl(var(--primary) / 0.14), transparent 70%),
+    radial-gradient(44rem 26rem at 88% 8%, hsl(var(--primary) / 0.1), transparent 72%),
+    linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)) 55%, hsl(var(--muted) / 0.22));
+}
+
+.home-grid-mask {
+  background-image:
+    linear-gradient(to right, hsl(var(--border) / 0.32) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border) / 0.32) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0.2), transparent);
+  opacity: 0.55;
+}
+
+.home-panel-glow::before {
+  content: "";
+  position: absolute;
+  inset: -24px;
+  border-radius: 1.25rem;
+  background: radial-gradient(circle at top, hsl(var(--primary) / 0.2), transparent 60%);
+  filter: blur(24px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.home-cta-shell {
+  background:
+    linear-gradient(130deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.88) 48%, hsl(var(--primary) / 0.12) 100%);
+}
+
 /* Mobile Optimizations */
 @media (max-width: 768px) {
   .bg-grid-pattern {
     background-size: 16px 16px;
     opacity: 0.3;
+  }
+
+  .home-grid-mask {
+    background-size: 22px 22px;
+    opacity: 0.32;
+  }
+
+  .home-panel-glow::before {
+    inset: -12px;
+    filter: blur(16px);
   }
 
   /* Reduce motion on mobile for better performance */

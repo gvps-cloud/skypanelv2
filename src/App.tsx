@@ -27,7 +27,7 @@ const queryClient = new QueryClient({
     },
   },
 });
-import Home from "./pages/Home";
+import Home from "./pages/HomeRedesign";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
