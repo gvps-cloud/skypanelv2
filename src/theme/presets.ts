@@ -1,6 +1,7 @@
 export type ThemeId =
   | "teal"
   | "mono"
+  | "red"
   | "violet"
   | "emerald"
   | "amber"
@@ -160,6 +161,69 @@ const rawThemePresets: ThemePreset[] = [
       "sidebar-accent-foreground": "0 0% 98%",
       "sidebar-border": "240 3.7% 18%",
       "sidebar-ring": "240 4.9% 83.9%",
+    }),
+  },
+  {
+    id: "red",
+    label: "Red",
+    description: "Neutral monochrome surfaces with bold red highlights.",
+    light: withShared({
+      background: "0 0% 100%",
+      foreground: "240 10% 3.9%",
+      muted: "240 4.8% 95.9%",
+      "muted-foreground": "240 3.8% 46.1%",
+      popover: "0 0% 100%",
+      "popover-foreground": "240 10% 3.9%",
+      card: "0 0% 100%",
+      "card-foreground": "240 10% 3.9%",
+      border: "240 5.9% 90%",
+      input: "240 5.9% 90%",
+      primary: "0 72.2% 50.6%",
+      "primary-foreground": "0 85.7% 97.3%",
+      secondary: "0 28% 95%",
+      "secondary-foreground": "0 58% 30%",
+      accent: "0 36% 93%",
+      "accent-foreground": "0 58% 30%",
+      destructive: "0 84.2% 60.2%",
+      "destructive-foreground": "0 0% 98%",
+      ring: "0 72.2% 50.6%",
+      "sidebar-background": "240 4.8% 98%",
+      "sidebar-foreground": "240 4.7% 26%",
+      "sidebar-primary": "0 72.2% 50.6%",
+      "sidebar-primary-foreground": "0 85.7% 97.3%",
+      "sidebar-accent": "0 34% 92%",
+      "sidebar-accent-foreground": "0 58% 30%",
+      "sidebar-border": "240 5.9% 90%",
+      "sidebar-ring": "0 72.2% 50.6%",
+    }),
+    dark: withShared({
+      background: "240 10% 3.9%",
+      foreground: "0 0% 98%",
+      muted: "240 3.7% 15.9%",
+      "muted-foreground": "240 5% 64.9%",
+      popover: "240 10% 3.9%",
+      "popover-foreground": "0 0% 98%",
+      card: "240 8% 8%",
+      "card-foreground": "0 0% 98%",
+      border: "240 3.7% 15.9%",
+      input: "240 3.7% 15.9%",
+      primary: "0 72.2% 50.6%",
+      "primary-foreground": "0 85.7% 97.3%",
+      secondary: "0 28% 18%",
+      "secondary-foreground": "0 80% 92%",
+      accent: "0 28% 20%",
+      "accent-foreground": "0 80% 92%",
+      destructive: "0 62.8% 30.6%",
+      "destructive-foreground": "0 85.7% 97.3%",
+      ring: "0 72.2% 50.6%",
+      "sidebar-background": "240 8% 6%",
+      "sidebar-foreground": "0 0% 92%",
+      "sidebar-primary": "0 72.2% 50.6%",
+      "sidebar-primary-foreground": "0 85.7% 97.3%",
+      "sidebar-accent": "0 28% 20%",
+      "sidebar-accent-foreground": "0 80% 92%",
+      "sidebar-border": "240 3.7% 18%",
+      "sidebar-ring": "0 72.2% 50.6%",
     }),
   },
   {
@@ -931,35 +995,10 @@ const SURFACE_TOKEN_KEYS = [
   "card-foreground",
   "border",
   "input",
-  "secondary",
-  "secondary-foreground",
-  "accent",
-  "accent-foreground",
   "sidebar-background",
   "sidebar-foreground",
-  "sidebar-accent",
-  "sidebar-accent-foreground",
   "sidebar-border",
 ] as const;
-
-const MONO_RED_ACCENT: { light: ThemeVariables; dark: ThemeVariables } = {
-  light: {
-    primary: "0 72.2% 50.6%",
-    "primary-foreground": "0 85.7% 97.3%",
-    ring: "0 72.2% 50.6%",
-    "sidebar-primary": "0 72.2% 50.6%",
-    "sidebar-primary-foreground": "0 85.7% 97.3%",
-    "sidebar-ring": "0 72.2% 50.6%",
-  },
-  dark: {
-    primary: "0 72.2% 50.6%",
-    "primary-foreground": "0 85.7% 97.3%",
-    ring: "0 72.2% 50.6%",
-    "sidebar-primary": "0 72.2% 50.6%",
-    "sidebar-primary-foreground": "0 85.7% 97.3%",
-    "sidebar-ring": "0 72.2% 50.6%",
-  },
-};
 
 const applyNeutralSurfaces = (
   vars: ThemeVariables,
@@ -983,21 +1022,6 @@ const monoBaselinePreset =
 export const themePresets: ThemePreset[] = rawThemePresets.map((preset) => {
   const light = applyNeutralSurfaces(preset.light, monoBaselinePreset.light);
   const dark = applyNeutralSurfaces(preset.dark, monoBaselinePreset.dark);
-
-  if (preset.id === "mono") {
-    return {
-      ...preset,
-      description: "Neutral shadcn-style surfaces with red action accents.",
-      light: withShared({
-        ...light,
-        ...MONO_RED_ACCENT.light,
-      }),
-      dark: withShared({
-        ...dark,
-        ...MONO_RED_ACCENT.dark,
-      }),
-    };
-  }
 
   return {
     ...preset,
