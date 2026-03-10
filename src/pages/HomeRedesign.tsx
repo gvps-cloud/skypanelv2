@@ -460,7 +460,10 @@ export default function HomeRedesign() {
               className="space-y-8"
             >
               <div className="space-y-4">
-                <Badge variant="secondary" className="w-fit rounded-full px-4 py-1.5">
+                <Badge
+                  variant="outline"
+                  className="w-fit rounded-full px-4 py-1.5 border-primary/30 bg-primary/10 text-primary"
+                >
                   <Sparkles className="mr-2 h-3.5 w-3.5" />
                   Next-Gen Cloud Infrastructure Platform
                 </Badge>

@@ -2433,7 +2433,7 @@ const Admin: React.FC = () => {
                   <Card
                     key={panel.id}
                     className={cn(
-                      "cursor-pointer transition-colors hover:bg-muted/50",
+                      "cursor-pointer transition-colors hover:bg-primary/5",
                       isActive ? "ring-2 ring-primary" : "",
                     )}
                   >
