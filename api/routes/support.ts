@@ -78,40 +78,32 @@ router.get("/tickets", authenticateToken, requireOrganization, async (req: Reque
 
     let result;
 
-    if (userRole === 'admin') {
+    // Check permissions (admins automatically have all permissions via RoleService.checkPermission)
+    const hasTicketsViewPermission = await RoleService.checkPermission(
+      userId,
+      organizationId,
+      'tickets_view'
+    );
+
+    if (hasTicketsViewPermission) {
       result = await query(
         `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
          FROM support_tickets st
          LEFT JOIN vps_instances vi ON st.vps_id = vi.id
+         WHERE st.organization_id = $1 
          ORDER BY st.created_at DESC`,
+        [organizationId],
       );
     } else {
-      const hasTicketsViewPermission = await RoleService.checkPermission(
-        userId,
-        organizationId,
-        'tickets_view'
+      // Users without tickets_view permission see only their own tickets within their current organization
+      result = await query(
+        `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
+         FROM support_tickets st
+         LEFT JOIN vps_instances vi ON st.vps_id = vi.id
+         WHERE st.organization_id = $1 AND st.created_by = $2
+         ORDER BY st.created_at DESC`,
+        [organizationId, userId],
       );
-
-      if (hasTicketsViewPermission) {
-        result = await query(
-          `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
-           FROM support_tickets st
-           LEFT JOIN vps_instances vi ON st.vps_id = vi.id
-           WHERE st.organization_id = $1 
-           ORDER BY st.created_at DESC`,
-          [organizationId],
-        );
-      } else {
-        // Users without tickets_view permission see only their own tickets within their current organization
-        result = await query(
-          `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
-           FROM support_tickets st
-           LEFT JOIN vps_instances vi ON st.vps_id = vi.id
-           WHERE st.organization_id = $1 AND st.created_by = $2
-           ORDER BY st.created_at DESC`,
-          [organizationId, userId],
-        );
-      }
     }
 
     res.json({ tickets: result.rows || [] });

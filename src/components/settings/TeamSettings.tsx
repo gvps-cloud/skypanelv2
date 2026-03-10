@@ -258,7 +258,14 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
         throw new Error(error.error || "Failed to invite member");
       }
 
-      toast.success("Invitation sent successfully");
+      const data = await response.json();
+      
+      if (data.emailSent === false) {
+        toast.warning(`Invitation created but email failed to send: ${data.emailError || 'Unknown error'}`);
+      } else {
+        toast.success("Invitation sent successfully");
+      }
+
       setIsInviteOpen(false);
       setInviteEmail("");
       setInviteRoleId("");

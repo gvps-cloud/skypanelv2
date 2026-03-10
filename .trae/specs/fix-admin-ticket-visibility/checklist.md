@@ -1,0 +1,2 @@
+- [x] `GET /api/support/tickets` filters by organization_id for admins
+- [x] Admins can still see tickets in the organization they are active in

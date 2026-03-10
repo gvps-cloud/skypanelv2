@@ -187,7 +187,7 @@ res.json({ success: true, data: result });
 - `node scripts/create-test-admin.js` - Create admin user with custom credentials
 - `node scripts/promote-to-admin.js` - Elevate existing user to admin role
 - `node scripts/update-admin-password.js` - Rotate admin passwords
-- `node scripts/test-smtp.js` - Send SMTP2GO test email
+- `node scripts/test-smtp.js` - Send test email using application configuration
 
 ### Development & Diagnostics
 - `node scripts/test-hourly-billing.js` - Dry-run hourly billing workflow

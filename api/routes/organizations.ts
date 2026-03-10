@@ -731,7 +731,7 @@ router.post('/:id/members/invite', requireOrgAccess, async (req: AuthenticatedRe
   }
 
   try {
-    const invitation = await InvitationService.createInvitation(
+    const result = await InvitationService.createInvitation(
       id,
       email,
       roleId,
@@ -739,14 +739,16 @@ router.post('/:id/members/invite', requireOrgAccess, async (req: AuthenticatedRe
     );
 
     res.status(201).json({
-      id: invitation.id,
-      organization_id: invitation.organization_id,
-      invited_email: invitation.invited_email,
-      role_id: invitation.role_id,
-      token: invitation.token,
-      status: invitation.status,
-      expires_at: invitation.expires_at,
-      created_at: invitation.created_at
+      id: result.invitation.id,
+      organization_id: result.invitation.organization_id,
+      invited_email: result.invitation.invited_email,
+      role_id: result.invitation.role_id,
+      token: result.invitation.token,
+      status: result.invitation.status,
+      expires_at: result.invitation.expires_at,
+      created_at: result.invitation.created_at,
+      emailSent: result.emailSent,
+      emailError: result.emailError
     });
   } catch (error) {
     console.error('Failed to create invitation:', error);

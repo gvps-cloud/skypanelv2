@@ -74,17 +74,18 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
 
 ## Email Configuration
 
-### SMTP2GO Integration
+### Email Delivery Configuration
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `SMTP2GO_API_KEY` | **Yes** | - | SMTP2GO API key for email delivery |
-| `SMTP2GO_USERNAME` | **Yes** | - | SMTP2GO username |
-| `SMTP2GO_PASSWORD` | **Yes** | - | SMTP2GO password |
-| `SMTP2GO_HOST` | No | `mail.smtp2go.com` | SMTP server hostname |
-| `SMTP2GO_PORT` | No | `2525` | SMTP server port |
-| `SMTP2GO_SECURE` | No | `false` | Use SSL/TLS encryption |
-| `SMTP2GO_REQUIRE_TLS` | No | `true` | Require STARTTLS |
+| `EMAIL_PROVIDER_PRIORITY` | No | `resend,smtp` | Order of email providers to try |
+| `RESEND_API_KEY` | No | - | API key for Resend (if used) |
+| `SMTP_HOST` | No | - | SMTP server hostname |
+| `SMTP_PORT` | No | `587` | SMTP server port |
+| `SMTP_SECURE` | No | `false` | Use SSL/TLS encryption |
+| `SMTP_REQUIRE_TLS` | No | `true` | Require STARTTLS |
+| `SMTP_USERNAME` | No | - | SMTP username |
+| `SMTP_PASSWORD` | No | - | SMTP password |
 
 ### Email Addresses
 
@@ -229,7 +230,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/skypanelv2_test
 
 **Email Delivery Problems**
 - Test SMTP configuration with `node scripts/test-smtp.js`
-- Verify SMTP2GO credentials and settings
+- Verify SMTP credentials and settings
 - Check firewall rules for SMTP ports
 
 **Rate Limiting Too Restrictive**

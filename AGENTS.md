@@ -70,10 +70,17 @@ PAYPAL_CLIENT_ID=your-paypal-client-id
 PAYPAL_CLIENT_SECRET=your-paypal-client-secret
 PAYPAL_MODE=sandbox
 
-# Email (SMTP2GO)
-SMTP2GO_API_KEY=your-smtp2go-api-key
-SMTP2GO_USERNAME=your-smtp2go-username
-SMTP2GO_PASSWORD=your-smtp2go-password
+# Email Delivery
+EMAIL_PROVIDER_PRIORITY=resend,smtp
+
+# Resend (Primary)
+RESEND_API_KEY=
+
+# Generic SMTP (Fallback)
+SMTP_HOST=mail.example.com
+SMTP_PORT=587
+SMTP_USERNAME=smtp-user@example.com
+SMTP_PASSWORD=super-secure-password
 ```
 
 ### Rate Limiting Configuration
@@ -187,7 +194,7 @@ res.json({ success: true, data: result });
 - `node scripts/create-test-admin.js` - Create admin user with custom credentials
 - `node scripts/promote-to-admin.js` - Elevate existing user to admin role
 - `node scripts/update-admin-password.js` - Rotate admin passwords
-- `node scripts/test-smtp.js` - Send SMTP2GO test email
+- `node scripts/test-smtp.js` - Send test email using application configuration
 
 ### Development & Diagnostics
 - `node scripts/test-hourly-billing.js` - Dry-run hourly billing workflow

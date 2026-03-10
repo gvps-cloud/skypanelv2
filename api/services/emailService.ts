@@ -130,7 +130,7 @@ async function attemptProvider(
   throw new Error(`Unsupported email provider: ${provider}`);
 }
 
-async function sendEmail(options: SendMailOptions): Promise<void> {
+export async function sendEmail(options: SendMailOptions): Promise<void> {
   const senderEmail =
     config.FROM_EMAIL ||
     config.CONTACT_FORM_RECIPIENT ||
@@ -156,7 +156,11 @@ async function sendEmail(options: SendMailOptions): Promise<void> {
       return;
     } catch (error) {
       attempts.push({ provider, error });
-      console.error(`${logPrefix} Provider '${provider}' failed`, error);
+      console.error(`${logPrefix} Provider '${provider}' failed:`, {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        provider
+      });
     }
   }
 
@@ -200,7 +204,7 @@ export async function sendInvitationEmail(
   const declineLink = `${baseUrl}/organizations/invitations/${invitationData.token}?action=decline`;
   const formattedExpiresAt = new Date(invitationData.expiresAt).toLocaleDateString();
 
-  const { subject, html, text } = await renderTemplate("invitation_email", {
+  const { subject, html, text } = await renderTemplate("invitation", {
     ...invitationData,
     invitationLink,
     acceptLink,

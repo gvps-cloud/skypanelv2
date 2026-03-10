@@ -808,10 +808,9 @@ npm run db:fresh
 #### Email Configuration (Optional)
 
 ```bash
-# SMTP2GO Configuration
-SMTP2GO_API_KEY=your-api-key
-SMTP2GO_USERNAME=your-username
-SMTP2GO_PASSWORD=your-password
+# Email Configuration
+# See .env.example for available providers (Resend, SMTP)
+# Configure SMTP_HOST, SMTP_PORT, etc. in .env
 
 # Test email configuration
 node scripts/test-smtp.js

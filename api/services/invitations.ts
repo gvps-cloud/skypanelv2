@@ -33,8 +33,8 @@ export class InvitationService {
     invitedEmail: string,
     roleId: string,
     inviterId: string
-  ): Promise<Invitation> {
-    return await transaction(async (client) => {
+  ): Promise<{ invitation: Invitation; emailSent: boolean; emailError?: string }> {
+    const { invitation, emailData } = await transaction(async (client) => {
       const normalizedEmail = invitedEmail.toLowerCase().trim();
 
       // Check if organization exists
@@ -141,8 +141,9 @@ export class InvitationService {
 
       const inviter = inviterResult.rows[0];
 
-      try {
-        await sendInvitationEmail({
+      return {
+        invitation,
+        emailData: {
           organizationName: orgResult.rows[0].name,
           inviterName: inviter.name || 'A team member',
           inviterEmail: inviter.email,
@@ -150,13 +151,21 @@ export class InvitationService {
           token: invitation.token,
           invitedEmail: invitation.invited_email,
           expiresAt: invitation.expires_at
-        });
-      } catch (emailError) {
-        console.error('[InvitationService] Failed to send invitation email:', emailError);
-      }
-
-      return invitation;
+        }
+      };
     });
+
+    try {
+      await sendInvitationEmail(emailData);
+      return { invitation, emailSent: true };
+    } catch (emailError) {
+      console.error('[InvitationService] Failed to send invitation email:', emailError);
+      return { 
+        invitation, 
+        emailSent: false, 
+        emailError: emailError instanceof Error ? emailError.message : 'Unknown error' 
+      };
+    }
   }
 
   static async acceptInvitation(token: string, userId: string): Promise<{ organization_id: string }> {

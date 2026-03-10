@@ -1,0 +1,4 @@
+- [x] `InvitationService.createInvitation` returns email status
+- [x] `scripts/test-smtp.js` uses application config
+- [x] `CLAUDE.md` uses `SMTP_` variables
+- [x] `api/services/emailService.ts` exports `sendEmail`
