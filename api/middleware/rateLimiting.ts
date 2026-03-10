@@ -163,6 +163,24 @@ export function getUserType(req: Request): UserType {
 
   return "authenticated";
 }
+/**
+ * Determines if a request path is a dashboard endpoint that should receive higher rate limits
+ * Dashboard endpoints support UI functionality and need high availability to prevent disruption
+ *
+ * @param path - The request path to check (e.g., '/api/auth/me')
+ * @returns true if the path is a dashboard endpoint, false otherwise
+ */
+export function isDashboardEndpoint(path: string): boolean {
+  const dashboardPatterns = [
+    '/api/auth/me',
+    '/api/auth/refresh',
+    '/api/notifications/',
+    '/api/health',
+    '/api/admin/users/search',
+  ];
+
+  return dashboardPatterns.some(pattern => path.startsWith(pattern));
+}
 
 function getAuthenticatedUserId(req: Request): string | undefined {
   const decoded = decodeToken(req);
@@ -246,6 +264,7 @@ function buildOverrideLimiter(
   userType: UserType,
   override: RateLimitOverride,
   userId: string,
+  endpointType: 'dashboard' | 'api' = 'api',
 ): RateLimitRequestHandler {
   const handler = createCustomHandler(userType, {
     limit: override.maxRequests,
@@ -257,7 +276,10 @@ function buildOverrideLimiter(
   return rateLimit({
     windowMs: override.windowMs,
     max: override.maxRequests,
-    keyGenerator: (req: Request) => generateRateLimitKey(req, userType),
+    keyGenerator: (req: Request) => {
+      const baseKey = generateRateLimitKey(req, userType);
+      return `${endpointType}:${baseKey}`;
+    },
     handler,
     standardHeaders: true,
     legacyHeaders: false,
@@ -271,8 +293,9 @@ function getOverrideLimiter(
   userType: UserType,
   override: RateLimitOverride,
   userId: string,
+  endpointType: 'dashboard' | 'api' = 'api',
 ): RateLimitRequestHandler {
-  const cacheKey = `${userType}:${userId}`;
+  const cacheKey = `${endpointType}:${userType}:${userId}`;
   const cached = overrideLimiterCache.get(cacheKey);
 
   if (
@@ -284,7 +307,7 @@ function getOverrideLimiter(
     return cached.limiter;
   }
 
-  const limiter = buildOverrideLimiter(userType, override, userId);
+  const limiter = buildOverrideLimiter(userType, override, userId, endpointType);
   overrideLimiterCache.set(cacheKey, {
     limiter,
     limit: override.maxRequests,
@@ -370,6 +393,11 @@ export function createCustomHandler(
       userId = options.overrideUserId;
     }
 
+    // Determine endpoint type for metrics
+    const requestPath = req.originalUrl.split('?')[0];
+    const isDashboard = isDashboardEndpoint(requestPath);
+    const endpointType = isDashboard ? 'dashboard' : 'api';
+
     // Record metrics event for monitoring and analysis
     recordRateLimitEvent(
       req,
@@ -379,6 +407,7 @@ export function createCustomHandler(
       windowMs,
       resetTime,
       userId,
+      endpointType,
     );
 
     // Log rate limit violation for monitoring using enhanced rate limit logging
@@ -408,15 +437,26 @@ export function createCustomHandler(
 }
 
 /**
- * Creates a rate limiter for a specific user type
+ * Creates a rate limiter for a specific user type and endpoint type
+ * @param userType - The user type (anonymous, authenticated, admin)
+ * @param endpointType - The endpoint type (dashboard or api) for separate rate limit buckets
  */
-export function createRateLimiter(userType: UserType): RateLimitRequestHandler {
+export function createRateLimiter(
+  userType: UserType,
+  endpointType: 'dashboard' | 'api' = 'api'
+): RateLimitRequestHandler {
   const { windowMs, limit } = getBaseLimitConfig(userType);
+
+  // Apply 10x multiplier for dashboard endpoints
+  const effectiveLimit = endpointType === 'dashboard' ? limit * 10 : limit;
 
   return rateLimit({
     windowMs,
-    max: limit,
-    keyGenerator: (req: Request) => generateRateLimitKey(req, userType),
+    max: effectiveLimit,
+    keyGenerator: (req: Request) => {
+      const baseKey = generateRateLimitKey(req, userType);
+      return `${endpointType}:${baseKey}`;
+    },
     handler: createCustomHandler(userType),
     standardHeaders: true,
     legacyHeaders: false,
@@ -430,10 +470,15 @@ export function createRateLimiter(userType: UserType): RateLimitRequestHandler {
   });
 }
 
-// Pre-create rate limiters to avoid creating them during request handling
-const anonymousLimiter = createRateLimiter("anonymous");
-const authenticatedLimiter = createRateLimiter("authenticated");
-const adminLimiter = createRateLimiter("admin");
+// Pre-create rate limiters for API endpoints (external API)
+const anonymousLimiter = createRateLimiter("anonymous", "api");
+const authenticatedLimiter = createRateLimiter("authenticated", "api");
+const adminLimiter = createRateLimiter("admin", "api");
+
+// Pre-create rate limiters for dashboard endpoints
+const anonymousDashboardLimiter = createRateLimiter("anonymous", "dashboard");
+const authenticatedDashboardLimiter = createRateLimiter("authenticated", "dashboard");
+const adminDashboardLimiter = createRateLimiter("admin", "dashboard");
 
 /**
  * Smart rate limiting middleware that dynamically selects limits based on user type
@@ -479,8 +524,14 @@ export async function smartRateLimit(
       requestPath.startsWith(endpoint),
     );
 
-    // Generate rate limit key for tracking
-    const rateLimitKey = generateRateLimitKey(req, userType);
+    // Determine endpoint type for separate rate limit buckets
+    const isDashboard = isDashboardEndpoint(requestPath);
+    const endpointType = isDashboard ? 'dashboard' : 'api';
+
+    // Determine endpoint type and generate rate limit key with prefix
+    // This ensures dashboard and external API requests use separate rate limit buckets
+    const baseKey = generateRateLimitKey(req, userType);
+    const rateLimitKey = `${endpointType}:${baseKey}`;
 
     if (isDevelopment && isExemptEndpoint) {
       // Skip rate limiting entirely for critical endpoints in development
@@ -497,6 +548,7 @@ export async function smartRateLimit(
         15 * 60 * 1000,
         Date.now() + 15 * 60 * 1000,
         authenticatedUserId,
+        endpointType,
       );
       return next();
     }
@@ -504,17 +556,33 @@ export async function smartRateLimit(
     if (override) {
       effectiveLimit = override.maxRequests;
       effectiveWindowMs = override.windowMs;
-      limiter = getOverrideLimiter(userType, override, authenticatedUserId!);
+      limiter = getOverrideLimiter(userType, override, authenticatedUserId!, endpointType);
     } else {
-      switch (userType) {
-        case "admin":
-          limiter = adminLimiter;
-          break;
-        case "authenticated":
-          limiter = authenticatedLimiter;
-          break;
-        default:
-          limiter = anonymousLimiter;
+      // Select the appropriate limiter based on endpoint type and user type
+      const isDashboard = isDashboardEndpoint(requestPath);
+      
+      if (isDashboard) {
+        switch (userType) {
+          case "admin":
+            limiter = adminDashboardLimiter;
+            break;
+          case "authenticated":
+            limiter = authenticatedDashboardLimiter;
+            break;
+          default:
+            limiter = anonymousDashboardLimiter;
+        }
+      } else {
+        switch (userType) {
+          case "admin":
+            limiter = adminLimiter;
+            break;
+          case "authenticated":
+            limiter = authenticatedLimiter;
+            break;
+          default:
+            limiter = anonymousLimiter;
+        }
       }
     }
 
@@ -532,6 +600,7 @@ export async function smartRateLimit(
       effectiveWindowMs,
       Date.now() + effectiveWindowMs,
       authenticatedUserId,
+      endpointType,
     );
 
     limiter(req, res, next);

@@ -51,6 +51,7 @@ export interface RateLimitEvent {
   userId?: string;
   userType: UserType;
   endpoint: string;
+  endpointType?: 'dashboard' | 'api'; // Track whether this is a dashboard or external API endpoint
   method: string;
   limit: number;
   currentCount: number;
@@ -59,6 +60,7 @@ export interface RateLimitEvent {
   userAgent?: string;
   violationType: 'exceeded' | 'approaching' | 'normal';
 }
+
 
 /**
  * In-memory metrics store for real-time aggregation
@@ -258,7 +260,8 @@ export function recordRateLimitEvent(
   currentCount: number,
   windowMs: number,
   resetTime: number,
-  userId?: string
+  userId?: string,
+  endpointType?: 'dashboard' | 'api'
 ): void {
   try {
     const ipResult = getClientIP(req, { 
@@ -272,6 +275,7 @@ export function recordRateLimitEvent(
       userId,
       userType,
       endpoint: req.path,
+      endpointType, // Track whether this is a dashboard or external API endpoint
       method: req.method,
       limit,
       currentCount,
@@ -291,6 +295,7 @@ export function recordRateLimitEvent(
         clientIP: event.clientIP,
         userId: event.userId,
         userType: event.userType,
+        endpointType: event.endpointType || 'unknown', // Show whether dashboard or external API
         endpoint: event.endpoint,
         method: event.method,
         limit: event.limit,

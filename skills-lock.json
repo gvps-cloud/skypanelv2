@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "skills": {
+    "applying-brand-guidelines": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "e74925ac6b9d20e39a685c79847e6043c965f60e6af4dd814153e98155a4c681"
+    },
+    "canvas-design": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "e1bef835e7e6624d39a161e8d7da79bb4e55887871991f06e3efdb7fcc85f6af"
+    },
+    "frontend-design": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "e8118284a6365753790d44bb2758a6032b3af27fa84696428d9233f2be0f4e78"
+    },
+    "pdf": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "cfbc539377088ca7e44a813b30c306327385bbd973cd7a721e1743f60837dd62"
+    },
+    "webapp-testing": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "cf8e5916d474886bd67b09691247f43f331523008b7d366064bc607ab42d6302"
+    }
+  }
+}
