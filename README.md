@@ -48,7 +48,7 @@ Unlike traditional reseller panels, SkyPanelV2 gives you **complete control** ov
 **How You Make Money:**
 ```
 Your Cost from Provider → Your Markup → Customer Price
-Example: $5/month Linode → +$5 Your Margin → $10/month to Customer
+Example: $5/month Linode → +$5 Your Margin → $10/month to Customer 
 ```
 
 **Revenue Streams:**
