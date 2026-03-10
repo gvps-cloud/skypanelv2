@@ -103,23 +103,13 @@ export function validateRateLimitConfiguration(): ConfigValidationResult {
     warnings.push('Rate limit window is longer than 1 hour - consider shorter windows for better responsiveness');
   }
   
-  // 4. Rate calculation validation
+  // 4. Rate calculation is kept for reference but no longer generates warnings
+  // Rate-based warnings were removed as they don't reflect VPS hosting platform needs
+  // where high API usage is legitimate for server management operations
   const anonymousRatePerMinute = rateLimitConfig.anonymousMaxRequests / windowMinutes;
   const authenticatedRatePerMinute = rateLimitConfig.authenticatedMaxRequests / windowMinutes;
   const adminRatePerMinute = rateLimitConfig.adminMaxRequests / windowMinutes;
-  
-  if (anonymousRatePerMinute > 50) {
-    warnings.push(`Anonymous rate (${anonymousRatePerMinute.toFixed(1)}/min) is very high - consider security implications`);
-  }
-  
-  if (authenticatedRatePerMinute > 100) {
-    warnings.push(`Authenticated rate (${authenticatedRatePerMinute.toFixed(1)}/min) is very high for typical API usage`);
-  }
-  
-  if (adminRatePerMinute > 200) {
-    warnings.push(`Admin rate (${adminRatePerMinute.toFixed(1)}/min) is extremely high - verify this is intentional`);
-  }
-  
+
   // 5. Trust proxy validation
   if (typeof rateLimitConfig.trustProxy === 'string') {
     // Validate subnet format if it's a string
