@@ -51,7 +51,15 @@ interface RateLimitMetrics {
   timeWindow: string;
   startTime: string;
   endTime: string;
-  topViolatingIPs: Array<{ ip: string; violations: number; userType: string }>;
+  topViolatingIPs: Array<{
+    identifier: string;
+    ip: string;
+    violations: number;
+    userType: string;
+    userId?: string;
+    userEmail?: string;
+    userName?: string;
+  }>;
   topViolatingEndpoints: Array<{ endpoint: string; violations: number }>;
   configEffectiveness: {
     anonymousLimitUtilization: number;
@@ -896,11 +904,11 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
 
         <TabsContent value="violations" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* Top Violating IPs */}
+            {/* Top Violating Sources */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Top Violating IPs</CardTitle>
-                <CardDescription>IP addresses with the most rate limit violations</CardDescription>
+                <CardTitle className="text-lg">Top Violating Sources</CardTitle>
+                <CardDescription>Users and IPs with the most rate limit violations</CardDescription>
               </CardHeader>
               <CardContent>
                 {metrics.topViolatingIPs.length === 0 ? (
@@ -909,21 +917,43 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Source</TableHead>
                         <TableHead>IP Address</TableHead>
                         <TableHead>User Type</TableHead>
                         <TableHead className="text-right">Violations</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {metrics.topViolatingIPs.map((ip, index) => (
+                      {metrics.topViolatingIPs.map((item, index) => (
                         <TableRow key={index}>
-                          <TableCell className="font-mono text-sm">{ip.ip}</TableCell>
+                          {/* User Info or Anonymous */}
+                          <TableCell className="font-mono text-sm">
+                            {item.userId ? (
+                              <div>
+                                <div className="font-medium">
+                                  {item.userName || item.userEmail || item.userId}
+                                </div>
+                                {item.userName && item.userEmail && item.userName !== item.userEmail && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {item.userEmail}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Anonymous</span>
+                            )}
+                          </TableCell>
+
+                          {/* IP Address - always shown */}
+                          <TableCell className="font-mono text-sm">{item.ip}</TableCell>
+
                           <TableCell>
                             <Badge variant="outline" className="capitalize">
-                              {ip.userType}
+                              {item.userType}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right font-medium">{ip.violations}</TableCell>
+
+                          <TableCell className="text-right font-medium">{item.violations}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

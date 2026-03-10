@@ -393,11 +393,15 @@ export function createCustomHandler(
 
     // Get user ID for logging
     let userId: string | undefined;
+    let userEmail: string | undefined;
+    let userName: string | undefined;
     try {
       const authReq = req as AuthenticatedRequest;
       userId = authReq.user?.id;
+      userEmail = authReq.user?.email;
+      userName = authReq.user?.name;
     } catch {
-      // No user ID available for anonymous requests
+      // No user info available for anonymous requests
     }
 
     if (!userId && options.overrideUserId) {
@@ -419,6 +423,8 @@ export function createCustomHandler(
       resetTime,
       userId,
       endpointType,
+      userEmail,
+      userName,
     );
 
     // Log rate limit violation for monitoring using enhanced rate limit logging
@@ -510,6 +516,8 @@ export async function smartRateLimit(
 
     const authReq = req as AuthenticatedRequest;
     const authenticatedUserId = authReq.user?.id ?? getAuthenticatedUserId(req);
+    const userEmail = authReq.user?.email;
+    const userName = authReq.user?.name;
     const baseConfig = getBaseLimitConfig(userType);
 
     let effectiveLimit = baseConfig.limit;
@@ -560,6 +568,8 @@ export async function smartRateLimit(
         Date.now() + 15 * 60 * 1000,
         authenticatedUserId,
         endpointType,
+        userEmail,
+        userName,
       );
       return next();
     }
@@ -612,6 +622,8 @@ export async function smartRateLimit(
       Date.now() + effectiveWindowMs,
       authenticatedUserId,
       endpointType,
+      userEmail,
+      userName,
     );
 
     limiter(req, res, next);

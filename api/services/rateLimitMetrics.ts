@@ -59,6 +59,8 @@ export interface RateLimitEvent {
   resetTime: Date;
   userAgent?: string;
   violationType: 'exceeded' | 'approaching' | 'normal';
+  userEmail?: string;
+  userName?: string;
 }
 
 
@@ -134,19 +136,49 @@ class RateLimitMetricsStore {
     const anonymousViolations = violations.filter(e => e.userType === 'anonymous').length;
     const authenticatedViolations = violations.filter(e => e.userType === 'authenticated').length;
     const adminViolations = violations.filter(e => e.userType === 'admin').length;
-    
-    // Top violating IPs
-    const ipViolations = new Map<string, { count: number; userType: string }>();
+
+    // Top violating sources - track comprehensive info (user + IP)
+    const topViolators = new Map<string, {
+      count: number;
+      userType: string;
+      identifier: string;      // userId or IP
+      ip: string;             // Always track IP
+      userId?: string;        // User ID if authenticated
+      userEmail?: string;     // User email if available
+      userName?: string;      // User name if available
+    }>();
     violations.forEach(event => {
-      const key = event.clientIP;
-      const existing = ipViolations.get(key) || { count: 0, userType: event.userType };
-      ipViolations.set(key, { count: existing.count + 1, userType: event.userType });
+      // Use userId as key for authenticated users, IP for anonymous
+      const key = event.userId || event.clientIP;
+
+      const existing = topViolators.get(key) || {
+        count: 0,
+        userType: event.userType,
+        identifier: event.userId || event.clientIP,
+        ip: event.clientIP,
+        userId: event.userId,
+        userEmail: event.userEmail,
+        userName: event.userName,
+      };
+
+      topViolators.set(key, {
+        ...existing,
+        count: existing.count + 1
+      });
     });
-    
-    const topViolatingIPs = Array.from(ipViolations.entries())
-      .map(([ip, data]) => ({ ip, violations: data.count, userType: data.userType }))
-      .sort((a, b) => b.violations - a.violations)
-      .slice(0, 10);
+
+    const topViolatingIPs = Array.from(topViolators.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+      .map(v => ({
+        identifier: v.identifier,
+        ip: v.ip,
+        violations: v.count,
+        userType: v.userType,
+        userId: v.userId,
+        userEmail: v.userEmail,
+        userName: v.userName,
+      }));
     
     // Top violating endpoints
     const endpointViolations = new Map<string, number>();
@@ -261,14 +293,16 @@ export function recordRateLimitEvent(
   windowMs: number,
   resetTime: number,
   userId?: string,
-  endpointType?: 'dashboard' | 'api'
+  endpointType?: 'dashboard' | 'api',
+  userEmail?: string,
+  userName?: string
 ): void {
   try {
-    const ipResult = getClientIP(req, { 
+    const ipResult = getClientIP(req, {
       trustProxy: Boolean(config.rateLimiting.trustProxy),
-      enableLogging: false 
+      enableLogging: false
     });
-    
+
     const event: RateLimitEvent = {
       timestamp: new Date(),
       clientIP: ipResult.ip,
@@ -282,8 +316,10 @@ export function recordRateLimitEvent(
       windowMs,
       resetTime: new Date(resetTime),
       userAgent: req.headers['user-agent'],
-      violationType: currentCount > limit ? 'exceeded' : 
-                   currentCount > limit * 0.8 ? 'approaching' : 'normal'
+      violationType: currentCount > limit ? 'exceeded' :
+                   currentCount > limit * 0.8 ? 'approaching' : 'normal',
+      userEmail,
+      userName,
     };
     
     metricsStore.recordEvent(event);
