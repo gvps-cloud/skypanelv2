@@ -188,11 +188,16 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
       setLoading(false);
       setTicketsInitialized(true);
     }
-  }, [authHeader]);
+  }, [authHeader, user?.organizationId]);
 
   useEffect(() => {
     fetchTickets();
   }, [fetchTickets]);
+
+  // Clear selected ticket when organization changes to prevent confusion
+  useEffect(() => {
+    setSelectedTicket(null);
+  }, [user?.organizationId]);
 
   useEffect(() => {
     ticketStatusRef.current = selectedTicket?.status;

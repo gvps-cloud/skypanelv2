@@ -102,13 +102,14 @@ router.get("/tickets", authenticateToken, requireOrganization, async (req: Reque
           [organizationId],
         );
       } else {
+        // Users without tickets_view permission see only their own tickets within their current organization
         result = await query(
           `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
            FROM support_tickets st
            LEFT JOIN vps_instances vi ON st.vps_id = vi.id
-           WHERE st.organization_id IS NULL AND st.created_by = $1
+           WHERE st.organization_id = $1 AND st.created_by = $2
            ORDER BY st.created_at DESC`,
-          [userId],
+          [organizationId, userId],
         );
       }
     }
