@@ -2510,7 +2510,8 @@ const Admin: React.FC = () => {
                 Choose a theme preset that updates instantly for all users
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Default preset: Mono (neutral monochrome palette)
+                Default preset: Mono (neutral monochrome palette). Use Red
+                for red-accent highlights.
               </p>
               {!themeConfigLoading && (
                 <p className="mt-1 text-sm text-muted-foreground">
