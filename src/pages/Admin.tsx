@@ -2397,13 +2397,13 @@ const Admin: React.FC = () => {
                             <div
                               className={cn(
                                 "rounded-lg p-2",
-                                isActive ? "bg-primary/10" : "bg-muted/50",
+                                isActive ? "bg-primary/10" : "bg-primary/5",
                               )}
                             >
                               <Icon
                                 className={cn(
                                   "h-5 w-5",
-                                  isActive ? "text-primary" : panel.accent,
+                                  isActive ? "text-primary" : "text-primary/70",
                                 )}
                               />
                             </div>
