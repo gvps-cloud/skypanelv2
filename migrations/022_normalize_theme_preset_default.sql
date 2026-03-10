@@ -22,6 +22,7 @@ WHERE key = 'theme'
     OR (value->>'presetId') NOT IN (
       'teal',
       'mono',
+      'red',
       'violet',
       'emerald',
       'amber',

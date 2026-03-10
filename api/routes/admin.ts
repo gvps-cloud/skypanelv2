@@ -71,6 +71,7 @@ const isMissingTableError = (err: any): boolean => {
 const allowedThemePresetIds = new Set([
   "teal",
   "mono",
+  "red",
   "violet",
   "emerald",
   "amber",
