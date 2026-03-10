@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BillingOverview } from './BillingOverview';
 import { BillingClientList } from './BillingClientList';
@@ -7,6 +7,8 @@ import { BillingInvoices } from './BillingInvoices';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 export const BillingDashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('overview');
+
   return (
     <div className="space-y-6 p-6 pb-16">
       <div className="flex flex-col gap-4">
@@ -18,7 +20,7 @@ export const BillingDashboard: React.FC = () => {
         </div>
       </div>
 
-      <Tabs value="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="clients">Clients</TabsTrigger>
