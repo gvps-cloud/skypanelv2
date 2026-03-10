@@ -177,6 +177,26 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/admin/email-templates",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/email-templates/:name",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/email-templates/:name",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/email-templates/preview",
+    "protected": true
+  },
+  {
+    "method": "GET",
     "path": "/api/admin/faq/categories",
     "protected": true
   },

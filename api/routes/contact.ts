@@ -5,19 +5,10 @@
 import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { query } from '../lib/database.js';
-import { sendContactEmail } from '../services/emailService.js';
+import { sendContactFormEmail } from '../services/emailService.js';
 import { config as appConfig } from '../config/index.js';
 
 const router = express.Router();
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 /**
  * Get all active contact configuration
@@ -192,40 +183,22 @@ router.post(
         return;
       }
 
-  const senderAddress = appConfig.FROM_EMAIL || appConfig.CONTACT_FORM_RECIPIENT;
-      if (!senderAddress) {
-        res.status(500).json({ error: 'Outbound email is not configured.' });
-        return;
-      }
-
-      const brandName = appConfig.FROM_NAME || 'SkyVPS360';
       const timestamp = new Date().toISOString();
       const normalizedSubject = subject.trim();
       const categoryText = categoryLabel || 'Not specified';
 
-      const plainTextBody = `New contact form submission\n\nName: ${name}\nEmail: ${email}\nCategory: ${categoryText}\nSubject: ${normalizedSubject}\nSubmitted At: ${timestamp}\n\nMessage:\n${message}\n`;
-
-      const htmlBody = `
-        <p><strong>New contact form submission received.</strong></p>
-        <ul>
-          <li><strong>Name:</strong> ${escapeHtml(name)}</li>
-          <li><strong>Email:</strong> ${escapeHtml(email)}</li>
-          <li><strong>Category:</strong> ${escapeHtml(categoryText)}</li>
-          <li><strong>Subject:</strong> ${escapeHtml(normalizedSubject)}</li>
-          <li><strong>Submitted At:</strong> ${escapeHtml(timestamp)}</li>
-        </ul>
-        <p><strong>Message:</strong></p>
-        <p>${escapeHtml(message).replace(/\n/g, '<br />')}</p>
-      `;
-
-      await sendContactEmail({
-        to: recipient,
-        from: `${brandName} Contact Form <${senderAddress}>`,
-        subject: `[Contact Form] ${normalizedSubject}`,
-        text: plainTextBody,
-        html: htmlBody,
-        replyTo: `${name} <${email}>`,
-      });
+      await sendContactFormEmail(
+        recipient,
+        {
+          name,
+          email,
+          category: categoryText,
+          subject: normalizedSubject,
+          message,
+          sentAt: timestamp,
+        },
+        `${name} <${email}>`
+      );
 
       res.json({ success: true });
     } catch (err: any) {

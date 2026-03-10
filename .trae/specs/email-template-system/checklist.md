@@ -1,0 +1,11 @@
+- [x] `handlebars` package is installed.
+- [x] Database table `email_templates` exists and has correct columns (`key`, `subject`, `body_html`, `body_text`, `variables`).
+- [x] All 6 core email types are seeded in the database (`welcome`, `invitation`, `password_reset`, `login_notification`, `account_notification`, `contact_form`).
+- [x] `EmailTemplateService` correctly renders templates with provided variables.
+- [x] `api/services/emailService.ts` no longer contains hardcoded HTML strings (uses the service).
+- [x] Contact form submission triggers the new templated email.
+- [x] Admin API `/api/admin/email-templates` returns list of templates.
+- [x] Admin API `/api/admin/email-templates/:id` updates the template in DB.
+- [x] Frontend "Email Templates" page lists all templates.
+- [x] Frontend "Edit Template" page allows saving changes.
+- [x] Received emails render HTML correctly (including the user-reported Contact Form issue).

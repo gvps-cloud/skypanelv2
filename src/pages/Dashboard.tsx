@@ -506,22 +506,22 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <div className="space-y-3">
                 {vpsInstances.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center h-[200px]">
+                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-16 text-center min-h-[250px]">
                     <div className="rounded-full bg-muted p-4">
                       <Server className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <h3 className="mt-4 text-sm font-semibold">
+                    <h3 className="mt-6 text-base font-semibold">
                       No instances yet
                     </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="mt-2 text-sm text-muted-foreground max-w-md">
                       Deploy your first VPS to see live metrics
                     </p>
-                    <Button asChild size="sm" className="mt-4">
-                      <Link to="/vps">
+                    <div className="mt-6 flex flex-wrap gap-3">
+                      <Button size="lg" onClick={() => navigate('/vps')}>
                         <Plus className="mr-2 h-4 w-4" />
                         Deploy VPS
-                      </Link>
-                    </Button>
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   vpsInstances.slice(0, 5).map((vps) => {

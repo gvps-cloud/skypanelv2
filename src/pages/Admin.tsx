@@ -36,6 +36,7 @@ import {
   Trash2,
   Users,
   Tags,
+  Mail,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ import { BillingDashboard } from "@/components/admin/billing/BillingDashboard";
 import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
 import { UserManagement } from "@/components/admin/UserManagement";
+import { EmailTemplatesManager } from "@/components/admin/email/EmailTemplatesManager";
 import { RateLimitMonitoring } from "@/components/admin/RateLimitMonitoring";
 import { CategoryManager } from "@/components/admin/CategoryManager";
 import { FAQItemManager } from "@/components/admin/FAQItemManager";
@@ -149,7 +151,8 @@ type AdminSection =
   | "faq-management"
   | "platform"
   | "contact-management"
-  | "billing";
+  | "billing"
+  | "email-templates";
 
 const ADMIN_SECTIONS: AdminSection[] = [
   "dashboard",
@@ -168,6 +171,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "platform",
   "contact-management",
   "billing",
+  "email-templates",
 ];
 
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
@@ -2114,6 +2118,18 @@ const Admin: React.FC = () => {
         ],
         actionLabel: "Manage billing",
       },
+      {
+        id: "email-templates",
+        title: "Email Templates",
+        description: "Customize system emails and notifications.",
+        icon: Mail,
+        accent: "text-rose-600",
+        summary: [
+          { label: "Templates", value: "Manage" },
+          { label: "Content", value: "Edit" },
+        ],
+        actionLabel: "Edit templates",
+      },
     ];
   }, [
     activePlanCount,
@@ -3782,6 +3798,10 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="billing" activeSection={activeTab}>
           <BillingDashboard />
+        </SectionPanel>
+
+        <SectionPanel section="email-templates" activeSection={activeTab}>
+          <EmailTemplatesManager />
         </SectionPanel>
 
         {/* Legacy application sections removed */}

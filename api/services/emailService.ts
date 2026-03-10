@@ -1,6 +1,7 @@
 import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
 import { Resend } from "resend";
 import { config, type EmailProvider } from "../config/index.js";
+import { renderTemplate } from "./emailTemplateService.js";
 
 let transporter: Transporter | null = null;
 
@@ -171,14 +172,11 @@ export async function sendWelcomeEmail(
   name?: string,
 ): Promise<void> {
   const displayName = name || "there";
-  const subject = `Welcome to ${config.COMPANY_BRAND_NAME}`;
-  const html = `
-    <p>Hi ${displayName},</p>
-    <p>Welcome to ${config.COMPANY_BRAND_NAME}. Your account is ready to go.</p>
-    <p>If you did not create this account, please contact support right away.</p>
-    <p>Thanks,<br/>The ${config.COMPANY_BRAND_NAME} Team</p>
-  `;
-  const text = `Hi ${displayName},\n\nWelcome to ${config.COMPANY_BRAND_NAME}. Your account is ready to go.\n\nIf you did not create this account, please contact support right away.\n\nThanks,\nThe ${config.COMPANY_BRAND_NAME} Team`;
+  
+  const { subject, html, text } = await renderTemplate("welcome_email", {
+    name: displayName,
+    company_name: config.COMPANY_BRAND_NAME,
+  });
 
   await sendEmail({ to, subject, html, text });
 }
@@ -200,91 +198,16 @@ export async function sendInvitationEmail(
   const invitationLink = `${baseUrl}/organizations/invitations/${invitationData.token}`;
   const acceptLink = `${baseUrl}/organizations/invitations/${invitationData.token}`;
   const declineLink = `${baseUrl}/organizations/invitations/${invitationData.token}?action=decline`;
+  const formattedExpiresAt = new Date(invitationData.expiresAt).toLocaleDateString();
 
-  const subject = `You've been invited to join ${invitationData.organizationName}`;
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
-      <div style="background-color: white; border-radius: 8px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-        <h2 style="color: #1f2937; margin-top: 0;">You've been invited to join ${invitationData.organizationName}</h2>
-        
-        <p>Hi there,</p>
-        
-        <p><strong>${invitationData.inviterName}</strong> (${invitationData.inviterEmail}) has invited you to join <strong>${invitationData.organizationName}</strong> as a <strong>${invitationData.role}</strong>.</p>
-        
-        ${invitationData.organizationName ? `
-        <div style="background-color: #f3f4f6; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0;">
-          <p style="margin: 0; color: #374151;">
-            <strong>Organization:</strong> ${invitationData.organizationName}<br>
-            <strong>Role:</strong> ${invitationData.role}<br>
-            <strong>Invited by:</strong> ${invitationData.inviterName}
-          </p>
-        </div>
-        ` : ''}
-        
-        <p>You have two options:</p>
-
-        <table role="presentation" style="width: 100%; border-collapse: separate; border-spacing: 0 10px; margin: 20px 0;">
-          <tr>
-            <td style="text-align: center;">
-              <a href="${acceptLink}" style="display: inline-block; background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                View Invitation & Accept
-              </a>
-            </td>
-          </tr>
-          <tr>
-            <td style="text-align: center;">
-              <a href="${declineLink}" style="display: inline-block; background-color: white; color: #6b7280; padding: 12px 24px; text-decoration: none; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 600;">
-                Decline Invitation
-              </a>
-            </td>
-          </tr>
-        </table>
-        
-        <p style="color: #6b7280; font-size: 14px;">
-          This invitation will expire on <strong>${new Date(invitationData.expiresAt).toLocaleDateString()}</strong> (7 days from now).
-        </p>
-        
-        <p style="color: #6b7280; font-size: 14px;">
-          If the buttons above don't work, you can copy and paste these links into your browser:
-        </p>
-        
-        <p style="color: #6b7280; font-size: 12px; word-break: break-all;">
-          View Invitation: ${invitationLink}<br>
-          Decline Directly: ${declineLink}
-        </p>
-        
-        <p style="color: #6b7280; font-size: 14px;">
-          If you didn't expect this invitation, you can safely ignore this email.
-        </p>
-        
-        <p style="margin-top: 30px;">Thanks,<br/><strong>The ${config.COMPANY_BRAND_NAME} Team</strong></p>
-      </div>
-    </div>
-  `;
-
-  const text = `You've been invited to join ${invitationData.organizationName}
-
-Hi there,
-
-${invitationData.inviterName} (${invitationData.inviterEmail}) has invited you to join ${invitationData.organizationName} as a ${invitationData.role}.
-
-Organization: ${invitationData.organizationName}
-Role: ${invitationData.role}
-Invited by: ${invitationData.inviterName}
-
-You have two options:
-
-1. View Invitation & Accept: ${invitationLink}
-2. Decline Invitation: ${declineLink}
-
-This invitation will expire on ${new Date(invitationData.expiresAt).toLocaleDateString()} (7 days from now).
-
-If the links above don't work, you can copy and paste them into your browser.
-
-If you didn't expect this invitation, you can safely ignore this email.
-
-Thanks,
-The ${config.COMPANY_BRAND_NAME} Team`;
+  const { subject, html, text } = await renderTemplate("invitation_email", {
+    ...invitationData,
+    invitationLink,
+    acceptLink,
+    declineLink,
+    formattedExpiresAt,
+    company_name: config.COMPANY_BRAND_NAME,
+  });
 
   await sendEmail({ 
     to: invitationData.invitedEmail, 
@@ -299,14 +222,11 @@ export async function sendLoginNotificationEmail(
   name?: string,
 ): Promise<void> {
   const displayName = name || "there";
-  const subject = `${config.COMPANY_BRAND_NAME} login notification`;
-  const html = `
-    <p>Hi ${displayName},</p>
-    <p>We noticed a successful login to your ${config.COMPANY_BRAND_NAME} account just now.</p>
-    <p>If this was not you, we recommend resetting your password immediately.</p>
-    <p>Thanks,<br/>The ${config.COMPANY_BRAND_NAME} Team</p>
-  `;
-  const text = `Hi ${displayName},\n\nWe noticed a successful login to your ${config.COMPANY_BRAND_NAME} account just now.\n\nIf this was not you, we recommend resetting your password immediately.\n\nThanks,\nThe ${config.COMPANY_BRAND_NAME} Team`;
+  
+  const { subject, html, text } = await renderTemplate("login_notification", {
+    name: displayName,
+    company_name: config.COMPANY_BRAND_NAME,
+  });
 
   await sendEmail({ to, subject, html, text });
 }
@@ -322,44 +242,14 @@ export async function sendPasswordResetEmail(
   );
   const resetPageUrl = `${baseUrl}/reset-password`;
   const displayName = name || "there";
-  const subject = `Reset your ${config.COMPANY_BRAND_NAME} password`;
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <p>Hi ${displayName},</p>
-      <p>We received a request to reset your ${config.COMPANY_BRAND_NAME} password.</p>
-      <p>Enter this 8-digit reset code on the password reset page:</p>
-      <div style="background: #f5f5f5; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
-        <p style="font-size: 28px; font-weight: 700; letter-spacing: 0.2em; margin: 0; font-family: 'Courier New', monospace;">${token}</p>
-      </div>
-      <p>This code will expire in <strong>one hour</strong>.</p>
-      <p>Go to <a href="${resetPageUrl}" style="color: #0066cc;">${resetPageUrl}</a> and enter:</p>
-      <ol style="line-height: 1.8;">
-        <li>Your email address: <strong>${to}</strong></li>
-        <li>The 8-digit code above</li>
-        <li>Your new password</li>
-      </ol>
-      <p style="color: #666; font-size: 14px; margin-top: 30px;">If you did not request this password reset, you can safely ignore this email. Your password will not be changed.</p>
-      <p style="margin-top: 30px;">Thanks,<br/><strong>The ${config.COMPANY_BRAND_NAME} Team</strong></p>
-    </div>
-  `;
-  const text = `Hi ${displayName},
-
-We received a request to reset your ${config.COMPANY_BRAND_NAME} password.
-
-Your 8-digit reset code (valid for 1 hour):
-
-${token}
-
-To reset your password:
-1. Go to ${resetPageUrl}
-2. Enter your email address: ${to}
-3. Enter the 8-digit code above
-4. Choose your new password
-
-If you did not request this password reset, you can safely ignore this email. Your password will not be changed.
-
-Thanks,
-The ${config.COMPANY_BRAND_NAME} Team`;
+  
+  const { subject, html, text } = await renderTemplate("password_reset", {
+    name: displayName,
+    token,
+    resetPageUrl,
+    email: to,
+    company_name: config.COMPANY_BRAND_NAME,
+  });
 
   await sendEmail({ to, subject, html, text });
 }
@@ -372,6 +262,9 @@ export interface ContactEmailOptions {
   replyTo?: string;
 }
 
+/**
+ * @deprecated Use sendContactFormEmail for contact form submissions.
+ */
 export async function sendContactEmail({
   to,
   from,
@@ -381,6 +274,39 @@ export async function sendContactEmail({
   replyTo,
 }: ContactEmailOptions): Promise<void> {
   await sendEmail({ to, from, subject, text, html, replyTo });
+}
+
+export interface ContactFormEmailData {
+  name: string;
+  email: string;
+  category: string;
+  subject: string;
+  message: string;
+  sentAt: string;
+}
+
+export async function sendContactFormEmail(
+  to: string,
+  data: ContactFormEmailData,
+  replyTo?: string,
+): Promise<void> {
+  const { subject, html, text } = await renderTemplate("contact_form", {
+    ...data,
+    company_name: config.COMPANY_BRAND_NAME,
+  });
+
+  const senderEmail = config.FROM_EMAIL || config.CONTACT_FORM_RECIPIENT;
+  const senderName = config.FROM_NAME || config.COMPANY_BRAND_NAME;
+  const from = `${senderName} Contact Form <${senderEmail}>`;
+
+  await sendEmail({
+    to,
+    from,
+    subject,
+    text,
+    html,
+    replyTo,
+  });
 }
 
 export interface AccountNotificationEmailOptions {
@@ -393,14 +319,6 @@ export interface AccountNotificationEmailOptions {
   occurredAt?: string;
 }
 
-const escapeHtml = (value: string): string =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
 export async function sendAccountNotificationEmail({
   to,
   name,
@@ -411,42 +329,16 @@ export async function sendAccountNotificationEmail({
   occurredAt,
 }: AccountNotificationEmailOptions): Promise<void> {
   const displayName = name || "there";
-  const safeTitle = escapeHtml(title);
-  const safeMessage = escapeHtml(message);
-  const safeEventType = escapeHtml(eventType);
-  const safeTimestamp = escapeHtml(occurredAt || new Date().toISOString());
-
-  const subject = `${config.COMPANY_BRAND_NAME} alert: ${title}`;
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 620px; margin: 0 auto;">
-      <p>Hi ${escapeHtml(displayName)},</p>
-      <p>You have a new <strong>${escapeHtml(category)}</strong> alert from ${config.COMPANY_BRAND_NAME}.</p>
-      <div style="border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; margin: 16px 0;">
-        <p style="margin: 0 0 8px 0; font-weight: 700;">${safeTitle}</p>
-        <p style="margin: 0 0 8px 0;">${safeMessage}</p>
-        <p style="margin: 0; color: #4b5563; font-size: 12px;">Event: ${safeEventType}</p>
-        <p style="margin: 4px 0 0 0; color: #4b5563; font-size: 12px;">Time: ${safeTimestamp}</p>
-      </div>
-      <p style="color: #4b5563; font-size: 14px;">
-        You can manage alert categories in your account settings.
-      </p>
-      <p>Thanks,<br/><strong>The ${config.COMPANY_BRAND_NAME} Team</strong></p>
-    </div>
-  `;
-
-  const text = `Hi ${displayName},
-
-You have a new ${category} alert from ${config.COMPANY_BRAND_NAME}.
-
-${title}
-${message}
-Event: ${eventType}
-Time: ${occurredAt || new Date().toISOString()}
-
-You can manage alert categories in your account settings.
-
-Thanks,
-The ${config.COMPANY_BRAND_NAME} Team`;
+  
+  const { subject, html, text } = await renderTemplate("account_notification", {
+    name: displayName,
+    category,
+    title,
+    message,
+    eventType,
+    occurredAt: occurredAt || new Date().toISOString(),
+    company_name: config.COMPANY_BRAND_NAME,
+  });
 
   await sendEmail({ to, subject, html, text });
 }
