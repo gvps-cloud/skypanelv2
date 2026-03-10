@@ -87,6 +87,73 @@ const checkOrganizationMembership = async (req: AuthenticatedRequest, res: Respo
   }
 };
 
+// Middleware to check if user can manage invitations (by invitation ID)
+const requireInvitationAccess = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const { id } = req.params; // This is the invitation ID
+  const user = req.user;
+
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(id)) {
+    return res.status(400).json({ error: 'Invalid invitation ID format' });
+  }
+
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  try {
+    // Get the invitation to find the organization
+    const invitationResult = await query(
+      `SELECT organization_id FROM organization_invitations WHERE id = $1`,
+      [id]
+    );
+
+    if (invitationResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Invitation not found' });
+    }
+
+    const organizationId = invitationResult.rows[0].organization_id;
+
+    // Check if user is member of the organization with sufficient role
+    const memberResult = await query(
+      `SELECT om.role, r.permissions, r.name as role_name
+       FROM organization_members om
+       LEFT JOIN organization_roles r ON om.role_id = r.id
+       WHERE om.organization_id = $1 AND om.user_id = $2`,
+      [organizationId, user.id]
+    );
+
+    if (memberResult.rows.length === 0) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const member = memberResult.rows[0];
+    const roleName = member.role_name || member.role;
+
+    // Check if user has admin or owner role
+    if (roleName === 'owner' || roleName === 'admin') {
+      return next();
+    }
+
+    // Check if user has custom role with members_manage permission
+    if (member.permissions) {
+      const permissions = typeof member.permissions === 'string'
+        ? JSON.parse(member.permissions)
+        : member.permissions;
+
+      if (permissions.members_manage === true) {
+        return next();
+      }
+    }
+
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  } catch (error) {
+    console.error('Invitation access check failed:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 router.use(authenticateToken);
 
 // GET /resources - List resources across all organizations
@@ -739,10 +806,49 @@ router.post('/invitations/:token/decline', async (req: AuthenticatedRequest, res
 });
 
 // DELETE /invitations/:id - Cancel invitation
-router.delete('/invitations/:id', requireOrgAccess, async (req: AuthenticatedRequest, res: Response) => {
+router.delete('/invitations/:id', async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
+  const user = req.user;
+
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
 
   try {
+    // First get the invitation to find the organization ID
+    const invitation = await InvitationService.getInvitationById(id);
+
+    // Check if user has permission to manage invitations for this organization
+    const memberCheck = await query(
+      `SELECT om.role, r.permissions, r.name as role_name
+       FROM organization_members om
+       LEFT JOIN organization_roles r ON om.role_id = r.id
+       WHERE om.organization_id = $1 AND om.user_id = $2`,
+      [invitation.organization_id, user.id]
+    );
+
+    if (memberCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const member = memberCheck.rows[0];
+    const roleName = member.role_name || member.role;
+
+    // Check if user has admin or owner role
+    const hasAdminRole = roleName === 'owner' || roleName === 'admin';
+
+    // Check if user has custom role with members_manage permission
+    const hasMembersManagePermission = member.permissions && (
+      typeof member.permissions === 'string'
+        ? JSON.parse(member.permissions).members_manage === true
+        : member.permissions.members_manage === true
+    );
+
+    if (!hasAdminRole && !hasMembersManagePermission) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Proceed with cancellation
     await InvitationService.cancelInvitation(id);
     res.json({ message: 'Invitation cancelled successfully' });
   } catch (error) {

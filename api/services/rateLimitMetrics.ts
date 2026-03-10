@@ -225,16 +225,14 @@ class RateLimitMetricsStore {
     const anonymousEvents = events.filter(e => e.userType === 'anonymous');
     const authenticatedEvents = events.filter(e => e.userType === 'authenticated');
     const adminEvents = events.filter(e => e.userType === 'admin');
-    
-    const anonymousUtilization = this.calculateAverageUtilization(anonymousEvents, rateLimitConfig.anonymousMaxRequests);
-    const authenticatedUtilization = this.calculateAverageUtilization(authenticatedEvents, rateLimitConfig.authenticatedMaxRequests);
-    const adminUtilization = this.calculateAverageUtilization(adminEvents, rateLimitConfig.adminMaxRequests);
+
+    const anonymousUtilization = this.calculateAverageUtilization(anonymousEvents);
+    const authenticatedUtilization = this.calculateAverageUtilization(authenticatedEvents);
+    const adminUtilization = this.calculateAverageUtilization(adminEvents);
     
     // Generate recommendations based on utilization patterns
     if (anonymousUtilization > 80) {
       recommendations.push('Anonymous user limits are frequently exceeded - consider increasing limits or implementing additional authentication incentives');
-    } else if (anonymousUtilization < 20) {
-      recommendations.push('Anonymous user limits may be too high - consider reducing to improve security');
     }
     
     if (authenticatedUtilization > 90) {
@@ -251,12 +249,12 @@ class RateLimitMetricsStore {
       const count = violationsByIP.get(event.clientIP) || 0;
       violationsByIP.set(event.clientIP, count + 1);
     });
-    
+
     const suspiciousIPs = Array.from(violationsByIP.entries()).filter(([, count]) => count > 10);
     if (suspiciousIPs.length > 0) {
-      recommendations.push(`${suspiciousIPs.length} IP(s) with excessive violations detected - consider implementing IP-based blocking or additional security measures`);
+      recommendations.push(`${suspiciousIPs.length} IP(s) with excessive violations detected - monitor these patterns for legitimate vs abusive traffic`);
     }
-    
+
     return {
       anonymousLimitUtilization: anonymousUtilization,
       authenticatedLimitUtilization: authenticatedUtilization,
@@ -267,14 +265,17 @@ class RateLimitMetricsStore {
   
   /**
    * Calculate average limit utilization for a set of events
+   * Uses event.limit which is the effective limit (accounting for dashboard multiplier)
    */
-  private calculateAverageUtilization(events: RateLimitEvent[], maxLimit: number): number {
+  private calculateAverageUtilization(events: RateLimitEvent[]): number {
     if (events.length === 0) return 0;
-    
+
     const totalUtilization = events.reduce((sum, event) => {
-      return sum + (event.currentCount / maxLimit) * 100;
+      // Use event.limit which is the effective limit for that specific request
+      // This accounts for dashboard vs API endpoint differences
+      return sum + (event.currentCount / event.limit) * 100;
     }, 0);
-    
+
     return totalUtilization / events.length;
   }
 }

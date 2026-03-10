@@ -62,25 +62,17 @@ export function validateRateLimitConfiguration(): ConfigValidationResult {
   
   if (isProduction) {
     // Production-specific checks
-    if (rateLimitConfig.anonymousMaxRequests > 1000) {
-      warnings.push('Anonymous rate limits are very high for production environment');
-    }
-    
     if (rateLimitConfig.trustProxy === true && !process.env.TRUST_PROXY) {
       warnings.push('Trust proxy is enabled by default in production - consider explicit configuration');
     }
-    
+
     if (rateLimitConfig.anonymousMaxRequests >= rateLimitConfig.authenticatedMaxRequests) {
       errors.push('Anonymous limits should be lower than authenticated limits in production');
     }
   }
-  
+
   if (isDevelopment) {
     // Development-specific checks
-    if (rateLimitConfig.anonymousMaxRequests < 100) {
-      warnings.push('Anonymous rate limits may be too restrictive for development');
-    }
-    
     if (!rateLimitConfig.trustProxy) {
       warnings.push('Trust proxy should be enabled in development for proper IP detection with Vite proxy');
     }
@@ -136,11 +128,6 @@ export function validateRateLimitConfiguration(): ConfigValidationResult {
   // Environment-specific recommendations
   if (isProduction) {
     recommendations.push('Monitor rate limiting metrics regularly to optimize limits based on actual usage');
-    recommendations.push('Consider implementing IP-based blocking for repeated violators');
-  }
-  
-  if (isDevelopment) {
-    recommendations.push('Use higher limits in development to avoid blocking during testing');
   }
   
   const configSummary = {
@@ -314,11 +301,7 @@ export function getConfigurationRecommendations(metrics?: {
     if (metrics.adminViolations > 0) {
       recommendations.push('Admin users are hitting rate limits - investigate for automated processes or increase admin limits');
     }
-    
-    if (metrics.rateLimitHitRate < 1) {
-      recommendations.push('Very low rate limit hit rate - limits may be too generous, consider tightening for better security');
-    }
-  }
+}
   
   return recommendations;
 }
