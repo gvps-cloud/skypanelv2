@@ -3,6 +3,10 @@
     "description": "Open-source cloud service reseller billing panel with multi-provider support and white-label branding",
     "private": true,
     "version": "1.0.0",
+    "engines": {
+        "node": "22.22.0",
+        "npm": ">=9"
+    },
     "type": "module",
     "scripts": {
         "kill-ports": "npx kill-port 3001 5173 8000",
