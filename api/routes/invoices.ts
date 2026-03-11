@@ -17,7 +17,7 @@ const resolveCompanyName = (): string =>
   (process.env['COMPANY-NAME'] && process.env['COMPANY-NAME'].trim())
   || (process.env.COMPANY_NAME && process.env.COMPANY_NAME.trim())
   || (process.env.VITE_COMPANY_NAME && process.env.VITE_COMPANY_NAME.trim())
-  || 'SkyVPS360';
+  || 'GVPS | Cloud';
 
 const resolveCompanyLogo = (): string | undefined =>
   (process.env.COMPANY_LOGO_URL && process.env.COMPANY_LOGO_URL.trim())
@@ -239,6 +239,23 @@ router.post(
       const amountValue = Number.isFinite(amountRaw) ? amountRaw : 0;
       const currency = transaction.currency || 'USD';
 
+      // Fetch user data for invoice display
+      let userName: string | undefined;
+      let userEmail: string | undefined;
+      try {
+        const userResult = await query(
+          'SELECT name, email FROM users WHERE id = $1',
+          [userId]
+        );
+        if (userResult.rows.length > 0) {
+          userName = userResult.rows[0].name || undefined;
+          userEmail = userResult.rows[0].email || undefined;
+        }
+      } catch (error) {
+        console.error('Failed to fetch user data for invoice:', error);
+        // Continue with invoice generation without user data
+      }
+
       const invoiceData = InvoiceService.generateInvoiceFromTransactions(
         organizationId,
         [
@@ -250,7 +267,9 @@ router.post(
           },
         ],
         invoiceNumber,
-        userId
+        userId,
+        userName,
+        userEmail
       );
 
       // Generate HTML with organization theme
@@ -315,6 +334,23 @@ router.post(
         });
       }
 
+      // Fetch user data for invoice display
+      let userName: string | undefined;
+      let userEmail: string | undefined;
+      try {
+        const userResult = await query(
+          'SELECT name, email FROM users WHERE id = $1',
+          [userId]
+        );
+        if (userResult.rows.length > 0) {
+          userName = userResult.rows[0].name || undefined;
+          userEmail = userResult.rows[0].email || undefined;
+        }
+      } catch (error) {
+        console.error('Failed to fetch user data for invoice:', error);
+        // Continue with invoice generation without user data
+      }
+
       // Generate invoice data
       const invoiceData = InvoiceService.generateInvoiceFromTransactions(
         organizationId,
@@ -325,7 +361,9 @@ router.post(
           createdAt: tx.createdAt,
         })),
         invoiceNumber,
-        userId
+        userId,
+        userName,
+        userEmail
       );
 
       // Generate HTML with organization theme
@@ -447,13 +485,48 @@ router.post(
         };
       });
 
+      // Fetch user data for invoice display
+      let userName: string | undefined;
+      let userEmail: string | undefined;
+      try {
+        const userResult = await query(
+          'SELECT name, email FROM users WHERE id = $1',
+          [userId]
+        );
+        if (userResult.rows.length > 0) {
+          userName = userResult.rows[0].name || undefined;
+          userEmail = userResult.rows[0].email || undefined;
+        }
+      } catch (error) {
+        console.error('Failed to fetch user data for invoice:', error);
+        // Continue with invoice generation without user data
+      }
+
+      // Fetch organization data for invoice display
+      let organizationName: string | undefined;
+      try {
+        const orgResult = await query(
+          'SELECT name FROM organizations WHERE id = $1',
+          [organizationId]
+        );
+        if (orgResult.rows.length > 0) {
+          organizationName = orgResult.rows[0].name || undefined;
+        }
+      } catch (error) {
+        console.error('Failed to fetch organization data for invoice:', error);
+        // Continue with invoice generation without organization data
+      }
+
       // Generate invoice data with itemized backup costs
       const invoiceData = InvoiceService.generateInvoiceFromBillingCycles(
         organizationId,
         billingCycles,
         invoiceNumber,
         'USD',
-        userId
+        userId,
+        userName,
+        userEmail,
+        organizationName
       );
 
       // Generate HTML with organization theme

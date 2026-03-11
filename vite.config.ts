@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { VitePWA } from 'vite-plugin-pwa';
 import type { Plugin } from 'vite';
 
 // Plugin to remove mock data from all source files in production builds
@@ -39,8 +40,67 @@ function removeMockData(): Plugin {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), tsconfigPaths(), removeMockData()],
+export default defineConfig(({ mode }) => {
+  // Load env file based on mode
+  const companyName = process.env.VITE_COMPANY_NAME || process.env.COMPANY_NAME || process.env.COMPANY_BRAND_NAME || 'GVPSCloud';
+  
+  return {
+    plugins: [
+      react(), 
+      tsconfigPaths(), 
+      removeMockData(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.svg', 'logo.svg'],
+        manifest: {
+          name: `${companyName} Cloud Panel`,
+          short_name: companyName,
+          description: `${companyName} Cloud Management Platform`,
+          theme_color: '#ffffff',
+          background_color: '#ffffff',
+          display: 'standalone',
+          start_url: '/',
+          icons: [
+            {
+              src: '/pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png'
+            },
+            {
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png'
+            },
+            {
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any maskable'
+            }
+          ]
+        },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/api\./i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 5 // 5 minutes
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
+      }
+    })
+  ],
   // Expose custom env prefix so frontend can read COMPANY-NAME
   envPrefix: ["VITE_"], // Removed COMPANY- to prevent accidental bundling of sensitive env vars
   server: {
@@ -87,4 +147,5 @@ export default defineConfig({
   preview: {
     allowedHosts: true, // Mirror dev server behaviour for Vite preview builds
   },
+};
 });

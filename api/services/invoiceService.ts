@@ -11,6 +11,9 @@ export interface InvoiceData {
   invoiceNumber: string;
   organizationId: string;
   userId?: string;
+  userName?: string;
+  userEmail?: string;
+  organizationName?: string;
   title?: string;
   description?: string;
   items: InvoiceItem[];
@@ -103,7 +106,7 @@ export class InvoiceService {
       || (process.env['COMPANY-NAME'] && process.env['COMPANY-NAME'].trim())
       || (process.env.COMPANY_NAME && process.env.COMPANY_NAME.trim())
       || (process.env.VITE_COMPANY_NAME && process.env.VITE_COMPANY_NAME.trim())
-      || 'SkyVPS360';
+      || 'GVPS | Cloud';
 
     const formattedDate = new Date(invoiceData.createdAt).toLocaleString('en-US', {
       year: 'numeric',
@@ -361,6 +364,38 @@ export class InvoiceService {
           </div>
           ` : ''}
         </div>
+
+        ${invoiceData.userName || invoiceData.userEmail || invoiceData.organizationName ? `
+        <div class="invoice-meta" style="margin-top: 20px;">
+          <div style="grid-column: 1 / -1; margin-bottom: 10px;">
+            <h3 style="font-size: 16px; color: ${colors.primary}; margin: 0;">Bill To</h3>
+          </div>
+          ${invoiceData.userName ? `
+          <div class="invoice-meta-item">
+            <span class="invoice-meta-label">Name</span>
+            <span class="invoice-meta-value">${invoiceData.userName}</span>
+          </div>
+          ` : ''}
+          ${invoiceData.userEmail ? `
+          <div class="invoice-meta-item">
+            <span class="invoice-meta-label">Email</span>
+            <span class="invoice-meta-value">${invoiceData.userEmail}</span>
+          </div>
+          ` : ''}
+          ${invoiceData.organizationId ? `
+          <div class="invoice-meta-item">
+            <span class="invoice-meta-label">Organization ID</span>
+            <span class="invoice-meta-value" style="font-family: monospace; font-size: 14px;">${invoiceData.organizationId}</span>
+          </div>
+          ` : ''}
+          ${invoiceData.organizationName ? `
+          <div class="invoice-meta-item">
+            <span class="invoice-meta-label">Organization Name</span>
+            <span class="invoice-meta-value">${invoiceData.organizationName}</span>
+          </div>
+          ` : ''}
+        </div>
+        ` : ''}
 
   ${invoiceData.title ? `<h3 style="margin-bottom: 20px; color: ${colors.cardForeground};">${invoiceData.title}</h3>` : ''}
   ${invoiceData.description ? `<p style="margin-bottom: 30px; color: ${colors.mutedForeground};">${invoiceData.description}</p>` : ''}
@@ -652,7 +687,10 @@ export class InvoiceService {
     }>,
     invoiceNumber: string,
     currency: string = 'USD',
-    userId?: string
+    userId?: string,
+    userName?: string,
+    userEmail?: string,
+    organizationName?: string
   ): InvoiceData {
     const items: InvoiceItem[] = [];
 
@@ -698,6 +736,9 @@ export class InvoiceService {
       invoiceNumber,
       organizationId,
       userId,
+      userName,
+      userEmail,
+      organizationName,
       title: 'VPS Billing Statement',
       description: `Hourly VPS billing from ${periodStart.toLocaleDateString()} to ${periodEnd.toLocaleDateString()}`,
       items,
@@ -717,7 +758,10 @@ export class InvoiceService {
     organizationId: string,
     transactions: Array<{ description?: string; amount: string | number; currency?: string; createdAt?: string }>,
     invoiceNumber: string,
-    userId?: string
+    userId?: string,
+    userName?: string,
+    userEmail?: string,
+    organizationName?: string
   ): InvoiceData {
     const detectedCurrency = transactions.find(
       tx => typeof tx.currency === 'string' && tx.currency.trim().length > 0
@@ -744,6 +788,9 @@ export class InvoiceService {
       invoiceNumber,
       organizationId,
       userId,
+      userName,
+      userEmail,
+      organizationName,
       title: 'Billing Statement',
       description: `Payment transactions from ${transactions[transactions.length - 1]?.createdAt || 'unknown'} to ${transactions[0]?.createdAt || 'unknown'}`,
       items,

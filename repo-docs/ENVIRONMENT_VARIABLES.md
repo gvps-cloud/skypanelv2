@@ -92,7 +92,7 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `FROM_EMAIL` | **Yes** | - | Default sender email address |
-| `FROM_NAME` | No | `SkyVPS360` | Default sender name |
+| `FROM_NAME` | No | `GVPSCloud` | Default sender name |
 | `CONTACT_FORM_RECIPIENT` | **Yes** | - | Email address for contact form submissions |
 | `TEST_EMAIL` | No | - | Email address for testing SMTP configuration |
 

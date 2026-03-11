@@ -33,7 +33,7 @@ interface GitHubApiCommit {
   } | null;
 }
 
-const GITHUB_REPO_OWNER = 'skyvps360';
+const GITHUB_REPO_OWNER = 'gvps-cloud';
 const GITHUB_REPO_NAME = 'skypanelv2';
 const GITHUB_API_BASE = 'https://api.github.com';
 

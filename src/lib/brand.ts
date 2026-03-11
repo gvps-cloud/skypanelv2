@@ -9,4 +9,4 @@ export const BRAND_NAME: string =
   candidates
     .map((value) => (typeof value === 'string' ? value.trim() : ''))
     .find((value) => value.length > 0) ||
-  'SkyVPS360';
+  'GVPSCloud';

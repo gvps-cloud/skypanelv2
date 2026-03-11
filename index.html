@@ -4,13 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="Cloud service reseller billing panel with multi-provider support" />
+    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
     <title>Loading...</title>
     <script type="module">
       const env = import.meta.env ?? {};
       const candidates = [env['COMPANY-NAME'], env.COMPANY_NAME, env.VITE_COMPANY_NAME];
       const companyName = candidates
         .map((value) => (typeof value === 'string' ? value.trim() : ''))
-        .find((value) => value.length > 0) || 'SkyVPS360';
+        .find((value) => value.length > 0) || 'GVPS Cloud';
       document.title = `${companyName} | Cloud`;
     </script>
     <script type="module">
