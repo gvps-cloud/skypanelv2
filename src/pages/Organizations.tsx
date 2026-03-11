@@ -669,11 +669,20 @@ const Organizations: React.FC = () => {
                                   VPS Instances
                                 </h4>
                                 {resourceGroup.permissions.vps_create && (
-                                  <Link to="/vps?create=1">
-                                    <Button variant="outline" size="sm">
-                                      Create VPS
-                                    </Button>
-                                  </Link>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleCreateOrganizationVPS(
+                                        resourceGroup.organization_id,
+                                      )
+                                    }
+                                  >
+                                    {user?.organizationId ===
+                                    resourceGroup.organization_id
+                                      ? "Create VPS"
+                                      : "Switch & Create"}
+                                  </Button>
                                 )}
                               </div>
                               <div
@@ -739,11 +748,20 @@ const Organizations: React.FC = () => {
                                   Support Tickets
                                 </h4>
                                 {resourceGroup.permissions.tickets_create && (
-                                  <Link to="/support">
-                                    <Button variant="outline" size="sm">
-                                      Create ticket
-                                    </Button>
-                                  </Link>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleCreateOrganizationTicket(
+                                        resourceGroup.organization_id,
+                                      )
+                                    }
+                                  >
+                                    {user?.organizationId ===
+                                    resourceGroup.organization_id
+                                      ? "Create ticket"
+                                      : "Switch & Create"}
+                                  </Button>
                                 )}
                               </div>
                               <div
