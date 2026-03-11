@@ -8,6 +8,7 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
+  Building2,
   Calendar,
   CheckCircle,
   ChevronLeft,
@@ -45,6 +46,7 @@ import { BillingDashboard } from "@/components/admin/billing/BillingDashboard";
 import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
 import { UserManagement } from "@/components/admin/UserManagement";
+import { OrganizationManagement } from "@/components/admin/OrganizationManagement";
 import { EmailTemplatesManager } from "@/components/admin/email/EmailTemplatesManager";
 import { RateLimitMonitoring } from "@/components/admin/RateLimitMonitoring";
 import { CategoryManager } from "@/components/admin/CategoryManager";
@@ -146,6 +148,7 @@ type AdminSection =
   | "stackscripts"
   | "networking"
   | "theme"
+  | "organizations"
   | "user-management"
   | "rate-limiting"
   | "faq-management"
@@ -165,6 +168,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "stackscripts",
   "networking",
   "theme",
+  "organizations",
   "user-management",
   "rate-limiting",
   "faq-management",
@@ -2091,6 +2095,18 @@ const Admin: React.FC = () => {
         actionLabel: "Curate catalog",
       },
       {
+        id: "organizations",
+        title: "Organizations",
+        description: "Create teams, assign owners, and move members between orgs.",
+        icon: Building2,
+        accent: "text-cyan-600",
+        summary: [
+          { label: "Create", value: "New teams" },
+          { label: "Access", value: "Manage roles" },
+        ],
+        actionLabel: "Manage orgs",
+      },
+      {
         id: "user-management",
         title: "User Management",
         description: "Grant least-privilege access and monitor impersonations.",
@@ -2333,6 +2349,13 @@ const Admin: React.FC = () => {
                   <Button
                     variant="outline"
                     className="justify-between"
+                    onClick={() => handleTabChange("organizations")}
+                  >
+                    Organizations
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-between"
                     onClick={() => handleTabChange("user-management")}
                   >
                     User Management
@@ -2425,6 +2448,7 @@ const Admin: React.FC = () => {
               {[
                 "email-templates",
                 "billing",
+                "organizations",
                 "user-management",
                 "theme",
                 "providers",
@@ -3693,6 +3717,10 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="user-management" activeSection={activeTab}>
           <UserManagement />
+        </SectionPanel>
+
+        <SectionPanel section="organizations" activeSection={activeTab}>
+          <OrganizationManagement />
         </SectionPanel>
 
         <SectionPanel section="category-mappings" activeSection={activeTab}>

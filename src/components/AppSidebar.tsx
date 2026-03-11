@@ -120,7 +120,19 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             title: "User Management",
             icon: Users,
             url: `/admin#user-management`,
-            isActive: activeAnchor === "user-management",
+            isActive: ["user-management", "organizations"].includes(activeAnchor),
+            items: [
+              {
+                title: "Users",
+                url: `/admin#user-management`,
+                isActive: activeAnchor === "user-management",
+              },
+              {
+                title: "Organizations",
+                url: `/admin#organizations`,
+                isActive: activeAnchor === "organizations",
+              },
+            ],
           },
           {
             title: "Billing & Finance",
