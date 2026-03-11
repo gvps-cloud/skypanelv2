@@ -3,21 +3,21 @@
  * Handles VPS instance creation, management, and monitoring
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Plus,
   RefreshCw,
   Search,
   DollarSign,
+  Layers3,
   Power,
   PowerOff,
   Copy,
   Trash2,
   RotateCcw,
-  Cpu,
   Server,
+  Cpu,
   HardDrive,
   Network,
   MemoryStick,
@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import type { ProviderType } from "@/types/provider";
 import type { CreateVPSForm, VPSInstance } from "@/types/vps";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCategoryDisplayName, useCategoryDescription } from "@/hooks/useCategoryMappings";
+import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
 import { useFormPersistence } from "@/hooks/use-form-persistence";
 import { useMobileNavigation } from "@/hooks/use-mobile-navigation";
 import { useMobilePerformance } from "@/hooks/use-mobile-performance";
@@ -54,6 +54,7 @@ import { generateUniqueVPSLabel } from "@/lib/vpsLabelGenerator";
 import { ProviderSelector } from "@/components/VPS/ProviderSelector";
 import { CreateVPSSteps } from "@/components/VPS/CreateVPSSteps";
 import { RegionSelector } from "@/components/VPS/RegionSelector";
+import { SearchableOptionSelect } from "@/components/VPS/SearchableOptionSelect";
 import {
   getActiveSteps,
   getCurrentStepDisplay,
@@ -63,6 +64,7 @@ import {
 } from "@/lib/vpsStepConfiguration";
 import { paymentService } from "@/services/paymentService";
 import { formatCurrency, formatGigabytes } from "@/lib/formatters";
+import { VALID_ORIGINAL_CATEGORIES, type OriginalCategory } from "@/types/categoryMappings";
 
 interface ProviderPlan {
   id: string;
@@ -89,60 +91,59 @@ interface RegionOption {
   id: string;
   label: string;
   country?: string;
-  providerIds: string[];
-  providerNames: string[];
 }
 
-// Category selection helper components
-const CategorySelectOptions: React.FC = () => {
-  // Must match backend VALID_ORIGINAL_CATEGORIES in api/routes/admin/categoryMappings.ts
-  const categories = ['standard', 'nanode', 'dedicated', 'premium', 'highmem', 'gpu', 'accelerated'] as const;
-
-  return (
-    <>
-      {categories.map((cat) => (
-        <CategorySelectOption key={cat} category={cat} />
-      ))}
-    </>
-  );
+const DEFAULT_CATEGORY_LABELS: Record<OriginalCategory, string> = {
+  standard: "Standard",
+  nanode: "Nanode",
+  dedicated: "Dedicated CPU",
+  premium: "Premium",
+  highmem: "High Memory",
+  gpu: "GPU",
+  accelerated: "Accelerated",
 };
 
-const CategorySelectOption: React.FC<{ category: string }> = ({ category }) => {
-  const displayName = useCategoryDisplayName(category);
-
-  return (
-    <option value={category}>
-      {displayName} ({category === 'standard' ? 'Shared CPU' :
-                      category === 'nanode' ? 'Basic VPS' :
-                      category === 'dedicated' || category === 'cpu' ? 'Dedicated CPU' :
-                      category === 'memory' || category === 'highmem' ? 'High Memory' :
-                      category === 'premium' ? 'G7 Dedicated CPU' :
-                      category === 'gpu' ? 'GPU' :
-                      category === 'accelerated' ? 'Accelerated' : category})
-    </option>
-  );
+const CATEGORY_VARIANT_LABELS: Record<OriginalCategory, string> = {
+  standard: "Shared CPU",
+  nanode: "Basic VPS",
+  dedicated: "Dedicated CPU",
+  premium: "G7 Dedicated CPU",
+  highmem: "High Memory",
+  gpu: "GPU",
+  accelerated: "Accelerated",
 };
 
-const CategoryDescription: React.FC<{ typeClass?: string }> = ({ typeClass }) => {
-  const description = useCategoryDescription(typeClass || 'standard');
+const DEFAULT_CATEGORY_DESCRIPTIONS: Record<OriginalCategory, string> = {
+  standard:
+    "Standard VPS plans offer a good mix of performance, resources, and price for most workloads.",
+  nanode:
+    "Affordable entry-level plans perfect for testing, development, and lightweight applications.",
+  dedicated:
+    "Dedicated CPU plans give you full access to CPU cores for consistent performance.",
+  premium:
+    "Premium plans offer the latest high-performance CPUs with consistent performance for demanding workloads.",
+  highmem:
+    "High Memory plans favor RAM over other resources, great for caching and in-memory databases.",
+  gpu: "GPU plans include dedicated GPUs for machine learning, AI, and video transcoding workloads.",
+  accelerated:
+    "Accelerated plans provide enhanced performance for I/O-intensive workloads.",
+};
 
-  if (!description) return null;
+const getCategoryAvailabilityNote = (typeClass?: string): string => {
+  if (typeClass === "premium" || typeClass === "gpu") {
+    return "Available in select regions only.";
+  }
 
-  return (
-    <p className="mt-2 text-xs text-muted-foreground">
-      {description}
-      {(typeClass === 'premium' || typeClass === 'gpu') && ' Available in select regions only.'}
-    </p>
-  );
+  return "";
 };
 
 const VPS: React.FC = () => {
   const [instances, setInstances] = useState<VPSInstance[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [isRefreshingInstances, setIsRefreshingInstances] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [regionFilter, setRegionFilter] = useState<string>("all");
-  const [providerFilter, setProviderFilter] = useState<string>("all");
   const [selectedInstances, setSelectedInstances] = useState<VPSInstance[]>([]);
   const [selectedRowSelection, setSelectedRowSelection] =
     useState<RowSelectionState>({});
@@ -201,8 +202,10 @@ const VPS: React.FC = () => {
     },
   );
   const { token } = useAuth();
+  const { data: enabledCategoryMappings } = useEnabledCategoryMappings();
   const location = useLocation();
   const navigate = useNavigate();
+  const hasLoadedInstancesRef = useRef(false);
 
   // Mobile navigation handling
   const { setModalOpen, goBack: _goBack } = useMobileNavigation({
@@ -255,14 +258,6 @@ const VPS: React.FC = () => {
     Record<string, string>
   >({});
 
-  const providerMapById = useMemo(() => {
-    const map = new Map<string, ProviderOption>();
-    providerOptions.forEach((provider) => {
-      map.set(provider.id, provider);
-    });
-    return map;
-  }, [providerOptions]);
-
   const deploymentConfigRequired = useMemo(() => {
     if (!selectedStackScript) return false;
     const fields = Array.isArray(selectedStackScript.user_defined_fields)
@@ -270,16 +265,6 @@ const VPS: React.FC = () => {
       : [];
     return fields.length > 0;
   }, [selectedStackScript]);
-
-  const providerIdsByType = useMemo(() => {
-    const map = new Map<string, string[]>();
-    providerOptions.forEach((provider) => {
-      const current = map.get(provider.type) ?? [];
-      current.push(provider.id);
-      map.set(provider.type, current);
-    });
-    return map;
-  }, [providerOptions]);
 
   const hasValidProviderSelection = useMemo(() => {
     if (!createForm.provider_id) return false;
@@ -378,6 +363,22 @@ const VPS: React.FC = () => {
     return "linode";
   }, []);
 
+  const ensureCreateLabel = useCallback(() => {
+    if (createForm.label.trim().length > 0) {
+      return;
+    }
+
+    const existingLabels = instances.map((instance) => instance.label);
+    const uniqueLabel = generateUniqueVPSLabel("vps", existingLabels);
+    setCreateForm({ label: uniqueLabel });
+  }, [createForm.label, instances, setCreateForm]);
+
+  const openCreateModal = useCallback(() => {
+    setCreateStep(1);
+    ensureCreateLabel();
+    setShowCreateModal(true);
+  }, [ensureCreateLabel]);
+
   const loadProviderOptions = useCallback(async () => {
     if (!token) {
       setProviderOptions([]);
@@ -429,8 +430,6 @@ const VPS: React.FC = () => {
         {
           label: string;
           country?: string;
-          providerIds: Set<string>;
-          providerNames: Set<string>;
         }
       >();
 
@@ -466,15 +465,9 @@ const VPS: React.FC = () => {
                   : slug;
               const country =
                 typeof region.country === "string" ? region.country : "";
-              const providerName =
-                provider.name.trim().length > 0
-                  ? provider.name
-                  : "Configured Provider";
 
               const existing = aggregate.get(slug);
               if (existing) {
-                existing.providerIds.add(provider.id);
-                existing.providerNames.add(providerName);
                 if (!existing.country && country) {
                   existing.country = country;
                 }
@@ -485,8 +478,6 @@ const VPS: React.FC = () => {
                 aggregate.set(slug, {
                   label: baseLabel,
                   country,
-                  providerIds: new Set([provider.id]),
-                  providerNames: new Set([providerName]),
                 });
               }
             });
@@ -506,23 +497,11 @@ const VPS: React.FC = () => {
       await Promise.allSettled(tasks);
 
       const combined: RegionOption[] = Array.from(aggregate.entries()).map(
-        ([id, info]) => {
-          const providerNames = Array.from(info.providerNames).sort((a, b) =>
-            a.localeCompare(b),
-          );
-          const displayLabel =
-            providerNames.length > 0
-              ? `${info.label} (${providerNames.join(", ")})`
-              : info.label;
-
-          return {
-            id,
-            label: displayLabel,
-            country: info.country,
-            providerIds: Array.from(info.providerIds),
-            providerNames,
-          };
-        },
+        ([id, info]) => ({
+          id,
+          label: info.label,
+          country: info.country,
+        }),
       );
 
       combined.sort((a, b) => a.label.localeCompare(b.label));
@@ -542,34 +521,6 @@ const VPS: React.FC = () => {
     }
     loadProviderRegions(providerOptions);
   }, [providerOptions, loadProviderRegions]);
-
-  useEffect(() => {
-    if (providerOptions.length === 0) {
-      return;
-    }
-
-    setProviderFilter((current) => {
-      if (current === "all") {
-        return current;
-      }
-
-      if (providerOptions.some((provider) => provider.id === current)) {
-        return current;
-      }
-
-      const normalized = current.toLowerCase();
-      const fallback = providerOptions.find(
-        (provider) => provider.type === normalized,
-      );
-      if (fallback) {
-        sessionStorage.setItem("vps-provider-filter", fallback.id);
-        return fallback.id;
-      }
-
-      sessionStorage.removeItem("vps-provider-filter");
-      return "all";
-    });
-  }, [providerOptions]);
 
   useEffect(() => {
     if (providerOptions.length === 0) {
@@ -604,45 +555,15 @@ const VPS: React.FC = () => {
     setCreateForm,
   ]);
 
-  const visibleRegionOptions = useMemo(() => {
-    if (providerFilter === "all") {
-      return regionOptions;
-    }
-
-    if (providerMapById.has(providerFilter)) {
-      return regionOptions.filter((region) =>
-        region.providerIds.includes(providerFilter),
-      );
-    }
-
-    const normalized = providerFilter.toLowerCase();
-    const providerIds = providerIdsByType.get(normalized) ?? [];
-    if (providerIds.length === 0) {
-      return regionOptions;
-    }
-
-    const allowedIds = new Set(providerIds);
-    return regionOptions.filter((region) =>
-      region.providerIds.some((id) => allowedIds.has(id)),
-    );
-  }, [providerFilter, providerIdsByType, providerMapById, regionOptions]);
-
-  const formatProviderOptionLabel = useCallback((provider: ProviderOption) => {
-    const trimmedName = provider.name.trim();
-    return trimmedName.length > 0 ? trimmedName : "Configured Provider";
-  }, []);
-
   useEffect(() => {
     if (regionFilter === "all") {
       return;
     }
-    const hasRegion = visibleRegionOptions.some(
-      (region) => region.id === regionFilter,
-    );
+    const hasRegion = regionOptions.some((region) => region.id === regionFilter);
     if (!hasRegion) {
       setRegionFilter("all");
     }
-  }, [visibleRegionOptions, regionFilter]);
+  }, [regionOptions, regionFilter]);
 
   // Sync default selection to current form image when images load
   useEffect(() => {
@@ -671,17 +592,6 @@ const VPS: React.FC = () => {
       setSelectedOSVersion((prev) => ({ ...prev, [key]: createForm.image }));
     }
   }, [providerImages, createForm.image]);
-
-  const providerLabelsById = useMemo<Record<string, string>>(() => {
-    const entries = providerOptions.map((provider) => {
-      const trimmed = provider.name.trim();
-      return [
-        provider.id,
-        trimmed.length > 0 ? trimmed : "Configured Provider",
-      ];
-    });
-    return Object.fromEntries(entries) as Record<string, string>;
-  }, [providerOptions]);
 
   const allowedRegions = useMemo(
     () =>
@@ -896,8 +806,22 @@ const VPS: React.FC = () => {
     }
   }, [token]);
 
-  const loadInstances = useCallback(async () => {
-    setLoading(true);
+  const loadInstances = useCallback(async (options?: { background?: boolean }) => {
+    if (!token) {
+      setInstances([]);
+      setInitialLoading(false);
+      setIsRefreshingInstances(false);
+      return;
+    }
+
+    const background = options?.background ?? hasLoadedInstancesRef.current;
+
+    if (background) {
+      setIsRefreshingInstances(true);
+    } else {
+      setInitialLoading(true);
+    }
+
     try {
       const res = await fetch("/api/vps", {
         headers: { Authorization: `Bearer ${token}` },
@@ -1015,11 +939,16 @@ const VPS: React.FC = () => {
       });
 
       setInstances(mapped);
+      hasLoadedInstancesRef.current = true;
     } catch (error: any) {
       console.error("Failed to load VPS instances:", error);
       toast.error(error.message || "Failed to load VPS instances");
     } finally {
-      setLoading(false);
+      if (background) {
+        setIsRefreshingInstances(false);
+      } else {
+        setInitialLoading(false);
+      }
     }
   }, [token, providerPlans]);
 
@@ -1028,8 +957,17 @@ const VPS: React.FC = () => {
   }, [loadVPSPlans]);
 
   useEffect(() => {
-    loadInstances();
-  }, [loadInstances]);
+    hasLoadedInstancesRef.current = false;
+    setInitialLoading(Boolean(token));
+  }, [token]);
+
+  useEffect(() => {
+    if (!token || hasLoadedInstancesRef.current) {
+      return;
+    }
+
+    loadInstances({ background: false });
+  }, [token, loadInstances]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -1037,8 +975,7 @@ const VPS: React.FC = () => {
       return;
     }
 
-    setCreateStep(1);
-    setShowCreateModal(true);
+    openCreateModal();
 
     searchParams.delete("create");
     const nextSearch = searchParams.toString();
@@ -1049,15 +986,7 @@ const VPS: React.FC = () => {
       },
       { replace: true },
     );
-  }, [location.search, navigate]);
-
-  // Restore provider filter from session storage on mount
-  useEffect(() => {
-    const savedProviderFilter = sessionStorage.getItem("vps-provider-filter");
-    if (savedProviderFilter) {
-      setProviderFilter(savedProviderFilter);
-    }
-  }, []);
+  }, [location.search, navigate, openCreateModal]);
 
   // Adaptive polling: always refresh instances for live status
   // Uses faster interval (10s) for transitioning states, slower (30s) for stable states
@@ -1068,7 +997,7 @@ const VPS: React.FC = () => {
     const pollingInterval = hasTransitioning ? 10000 : 30000; // 10s for transitioning, 30s for stable
 
     const interval = setInterval(() => {
-      loadInstances();
+      loadInstances({ background: true });
     }, pollingInterval);
 
     return () => clearInterval(interval);
@@ -1103,11 +1032,6 @@ const VPS: React.FC = () => {
       loadProviderStackScripts();
       setModalOpen(true);
 
-      // Generate unique label
-      const existingLabels = instances.map((i) => i.label);
-      const uniqueLabel = generateUniqueVPSLabel("vps", existingLabels);
-      setCreateForm({ label: uniqueLabel });
-
       // Preload critical assets for better UX
       // Protected API endpoints require auth headers, so skip preload hints here to avoid 401s.
     } else {
@@ -1118,8 +1042,6 @@ const VPS: React.FC = () => {
     loadProviderImages,
     loadProviderStackScripts,
     setModalOpen,
-    instances,
-    setCreateForm,
   ]);
 
   // Marketplace installs are removed — only account-owned StackScripts are supported
@@ -1721,50 +1643,22 @@ const VPS: React.FC = () => {
   };
 
   const filteredInstances = instances.filter((instance) => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const regionLabel = (
+      instance.regionLabel ||
+      regionOptions.find((region) => region.id === instance.region)?.label ||
+      instance.region
+    ).toLowerCase();
     const matchesSearch =
-      instance.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      instance.ipv4[0].includes(searchTerm);
+      normalizedSearch.length === 0 ||
+      instance.label.toLowerCase().includes(normalizedSearch) ||
+      (instance.ipv4[0] ?? "").includes(searchTerm.trim()) ||
+      regionLabel.includes(normalizedSearch);
     const matchesStatus =
       statusFilter === "all" || instance.status === statusFilter;
     const matchesRegion =
       regionFilter === "all" || instance.region === regionFilter;
-    const matchesProvider = (() => {
-      if (providerFilter === "all") {
-        return true;
-      }
-
-      if (instance.provider_id && instance.provider_id === providerFilter) {
-        return true;
-      }
-
-      const providerById = providerMapById.get(providerFilter);
-      if (providerById) {
-        const normalizedInstanceType = (
-          instance.provider_type || ""
-        ).toLowerCase();
-        return normalizedInstanceType === providerById.type;
-      }
-
-      const normalizedFilter = providerFilter.toLowerCase();
-      const providerIds = providerIdsByType.get(normalizedFilter) ?? [];
-      if (providerIds.length > 0) {
-        if (instance.provider_id) {
-          return providerIds.includes(instance.provider_id);
-        }
-
-        const normalizedInstanceType = (
-          instance.provider_type || ""
-        ).toLowerCase();
-        return providerIds.some((id) => {
-          const provider = providerMapById.get(id);
-          if (!provider) return false;
-          return provider.type === normalizedInstanceType;
-        });
-      }
-
-      return (instance.provider_type || "").toLowerCase() === normalizedFilter;
-    })();
-    return matchesSearch && matchesStatus && matchesRegion && matchesProvider;
+    return matchesSearch && matchesStatus && matchesRegion;
   });
 
   const formatSelectedPlanMemory = (bytes: number): string =>
@@ -1780,6 +1674,62 @@ const VPS: React.FC = () => {
         !plan.provider_id || plan.provider_id === createForm.provider_id,
     );
   }, [providerPlans, createForm.provider_id]);
+
+  const categoryOptions = useMemo(
+    () =>
+      VALID_ORIGINAL_CATEGORIES.map((category) => {
+        const mapping = enabledCategoryMappings?.find(
+          (item) => item.original_category === category,
+        );
+        const label = mapping?.custom_name || DEFAULT_CATEGORY_LABELS[category];
+        const description =
+          mapping?.custom_description || DEFAULT_CATEGORY_DESCRIPTIONS[category];
+
+        return {
+          value: category,
+          label,
+          description,
+          meta: CATEGORY_VARIANT_LABELS[category],
+          keywords: [category, CATEGORY_VARIANT_LABELS[category], label],
+          icon: <Layers3 className="h-4 w-4 text-muted-foreground" />,
+        };
+      }),
+    [enabledCategoryMappings],
+  );
+
+  const selectedCategoryOption = categoryOptions.find(
+    (option) => option.value === createForm.type_class,
+  );
+  const categoryAvailabilityNote = getCategoryAvailabilityNote(createForm.type_class);
+  const categoryHelperText = selectedCategoryOption
+    ? `${selectedCategoryOption.description}${categoryAvailabilityNote ? ` ${categoryAvailabilityNote}` : ""}`
+    : undefined;
+
+  const planOptions = useMemo(
+    () =>
+      filteredProviderPlans.map((plan) => ({
+        value: plan.id,
+        label: plan.label,
+        description: `${plan.vcpus} vCPU • ${formatSelectedPlanMemory(plan.memory)} RAM • ${Math.round(plan.disk / 1024)} GB storage • ${plan.transfer} GB transfer`,
+        meta: `${formatCurrency(plan.price.monthly)} / mo`,
+        keywords: [
+          plan.id,
+          plan.label,
+          `${plan.vcpus} vcpu`,
+          formatSelectedPlanMemory(plan.memory),
+          `${Math.round(plan.disk / 1024)} gb`,
+          `${plan.transfer} gb`,
+          formatCurrency(plan.price.monthly),
+        ],
+        icon: <Server className="h-4 w-4 text-muted-foreground" />,
+      })),
+    [filteredProviderPlans],
+  );
+
+  const selectedType = providerPlans.find((type) => type.id === createForm.type);
+  const planHelperText = selectedType
+    ? `Selected plan: ${selectedType.label} • ${formatCurrency(selectedType.price.monthly)} / mo`
+    : "Search and choose a plan for the selected region.";
 
   // Multi-step modal helpers
   const { currentDisplayStep, totalDisplaySteps } = useMemo(() => {
@@ -1937,22 +1887,24 @@ const VPS: React.FC = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Choose the type of server that best fits your workload
                 </p>
-                <select
+                <SearchableOptionSelect
                   value={createForm.type_class}
-                  onChange={(e) => {
-                    const newTypeClass = e.target.value;
-                    // Reset plan and region when category changes
+                  options={categoryOptions}
+                  onChange={(newTypeClass) => {
                     setCreateForm({
                       type_class: newTypeClass,
                       type: "",
                       region: "",
                     });
                   }}
-                  className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base"
-                >
-                  <CategorySelectOptions />
-                </select>
-                <CategoryDescription typeClass={createForm.type_class} />
+                  placeholder="Choose a category"
+                  searchPlaceholder="Search categories by name or workload..."
+                  emptyMessage="No categories available."
+                  helperText={categoryHelperText}
+                  ariaLabel="Category selector"
+                  triggerIcon={<Layers3 className="h-4 w-4 text-muted-foreground" />}
+                  triggerClassName="rounded-xl"
+                />
               </div>
             )}
 
@@ -1992,53 +1944,43 @@ const VPS: React.FC = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Available plans for your selected category and region
                 </p>
-                <select
+                <SearchableOptionSelect
                   value={createForm.type}
-                  onChange={(e) => {
-                    const newType = e.target.value;
-                    setCreateForm({ type: newType });
-                  }}
-                  className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base"
-                >
-                  <option value="">Click to choose plan</option>
-                  {filteredProviderPlans.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                  options={planOptions}
+                  onChange={(newType) => setCreateForm({ type: newType })}
+                  placeholder="Choose a plan"
+                  searchPlaceholder="Search plans by name, specs, or price..."
+                  emptyMessage="No plans available for this category and region."
+                  helperText={planHelperText}
+                  ariaLabel="Plan selector"
+                  triggerIcon={<Server className="h-4 w-4 text-muted-foreground" />}
+                  triggerClassName="rounded-xl"
+                />
 
-                {createForm.type &&
-                  (() => {
-                    const selectedType = providerPlans.find(
-                      (t) => t.id === createForm.type,
-                    );
-                    if (!selectedType) return null;
-                    return (
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <Badge variant="outline" className="gap-1">
-                          <Cpu className="h-3.5 w-3.5 mr-1" />
-                          {selectedType.vcpus} vCPU
-                        </Badge>
-                        <Badge variant="outline" className="gap-1">
-                          <MemoryStick className="h-3.5 w-3.5 mr-1" />
-                          {formatSelectedPlanMemory(selectedType.memory)} RAM
-                        </Badge>
-                        <Badge variant="outline" className="gap-1">
-                          <HardDrive className="h-3.5 w-3.5 mr-1" />
-                          {Math.round(selectedType.disk / 1024)} GB Storage
-                        </Badge>
-                        <Badge variant="outline" className="gap-1">
-                          <Network className="h-3.5 w-3.5 mr-1" />
-                          {selectedType.transfer} GB Transfer
-                        </Badge>
-                        <Badge variant="secondary" className="gap-1">
-                          <DollarSign className="h-3.5 w-3.5 mr-1" />
-                          {formatCurrency(selectedType.price.monthly)} / mo
-                        </Badge>
-                      </div>
-                    );
-                  })()}
+                {selectedType && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="gap-1">
+                      <Cpu className="h-3.5 w-3.5 mr-1" />
+                      {selectedType.vcpus} vCPU
+                    </Badge>
+                    <Badge variant="outline" className="gap-1">
+                      <MemoryStick className="h-3.5 w-3.5 mr-1" />
+                      {formatSelectedPlanMemory(selectedType.memory)} RAM
+                    </Badge>
+                    <Badge variant="outline" className="gap-1">
+                      <HardDrive className="h-3.5 w-3.5 mr-1" />
+                      {Math.round(selectedType.disk / 1024)} GB Storage
+                    </Badge>
+                    <Badge variant="outline" className="gap-1">
+                      <Network className="h-3.5 w-3.5 mr-1" />
+                      {selectedType.transfer} GB Transfer
+                    </Badge>
+                    <Badge variant="secondary" className="gap-1">
+                      <DollarSign className="h-3.5 w-3.5 mr-1" />
+                      {formatCurrency(selectedType.price.monthly)} / mo
+                    </Badge>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -2197,7 +2139,7 @@ const VPS: React.FC = () => {
     </div>
   );
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -2218,133 +2160,46 @@ const VPS: React.FC = () => {
         progress={mobileLoading.progress}
       />
 
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-        <div className="relative z-10">
-          <div className="mb-2">
-            <Badge variant="secondary" className="mb-3">
-              Infrastructure
-            </Badge>
+      {/* Page Header */}
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="space-y-3">
+          <Badge variant="secondary">Infrastructure</Badge>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+              VPS Instances
+            </h1>
+            <p className="max-w-2xl text-muted-foreground">
+              Provision, search, and manage your virtual servers from one place.
+            </p>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Compute Control Center
-          </h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Deploy, monitor, and scale your cloud infrastructure from a unified
-            control panel built for performance.
+          <p className="text-sm text-muted-foreground">
+            {instances.length} total {instances.length === 1 ? "instance" : "instances"}
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button
-              size="lg"
-              onClick={() => {
-                setCreateStep(1);
-                setShowCreateModal(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create instance
-            </Button>
-            <Button variant="outline" size="lg" onClick={loadInstances}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh data
-            </Button>
-          </div>
         </div>
 
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <Server className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-          <Network className="absolute bottom-10 right-20 h-24 w-24 -rotate-6" />
-        </div>
-      </div>
-
-      {/* Key Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Running
-                </p>
-                <p className="text-3xl font-bold tracking-tight">
-                  {instances.filter((i) => i.status === "running").length}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Active instances
-                </p>
-              </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch xl:justify-end">
+          <Card className="min-w-[220px] overflow-hidden">
+            <CardContent className="flex items-center gap-3 p-4">
               <div className="rounded-lg bg-primary/10 p-3">
-                <Power className="h-6 w-6 text-primary" />
+                <DollarSign className="h-5 w-5 text-primary" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Stopped
-                </p>
-                <p className="text-3xl font-bold tracking-tight">
-                  {instances.filter((i) => i.status === "stopped").length}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Inactive instances
-                </p>
-              </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <PowerOff className="h-6 w-6 text-foreground" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Instances
-                </p>
-                <p className="text-3xl font-bold tracking-tight">
-                  {instances.length}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Across all providers
-                </p>
-              </div>
-              <div className="rounded-lg bg-primary/10 p-3">
-                <Server className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">
+              <div className="space-y-1">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Monthly Spend
                 </p>
-                <p className="text-3xl font-bold tracking-tight">
+                <p className="text-2xl font-bold tracking-tight">
                   {formatCurrency(
-                    instances.reduce((sum, i) => sum + i.pricing.monthly, 0),
+                    instances.reduce((sum, instance) => sum + instance.pricing.monthly, 0),
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Estimated monthly cost
+                  Estimated current monthly cost
                 </p>
               </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <DollarSign className="h-6 w-6 text-foreground" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+        </div>
       </div>
 
       {/* Filters and Search */}
@@ -2363,7 +2218,7 @@ const VPS: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="vps-status-filter">Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -2387,33 +2242,11 @@ const VPS: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
                   <SelectItem value="all">All regions</SelectItem>
-                  {visibleRegionOptions.map((region) => (
+                  {regionOptions.map((region) => (
                     <SelectItem key={region.id} value={region.id}>
                       {region.country
                         ? `${region.label} · ${region.country}`
                         : region.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="vps-provider-filter">Provider</Label>
-              <Select
-                value={providerFilter}
-                onValueChange={(value) => {
-                  setProviderFilter(value);
-                  sessionStorage.setItem("vps-provider-filter", value);
-                }}
-              >
-                <SelectTrigger id="vps-provider-filter">
-                  <SelectValue placeholder="All providers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All providers</SelectItem>
-                  {providerOptions.map((provider) => (
-                    <SelectItem key={provider.id} value={provider.id}>
-                      {formatProviderOptionLabel(provider)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -2510,13 +2343,12 @@ const VPS: React.FC = () => {
           <VpsInstancesTable
             instances={filteredInstances}
             allowedRegions={allowedRegions}
-            providerLabelsById={providerLabelsById}
             onAction={handleInstanceAction}
             onCopy={copyToClipboard}
             onSelectionChange={setSelectedInstances}
             rowSelection={selectedRowSelection}
             onRowSelectionChange={setSelectedRowSelection}
-            isLoading={loading && instances.length > 0}
+            isLoading={isRefreshingInstances && instances.length > 0}
           />
         </CardContent>
       </Card>
@@ -2524,6 +2356,12 @@ const VPS: React.FC = () => {
       <DialogStack
         open={showCreateModal}
         onOpenChange={(isOpen) => {
+          if (isOpen) {
+            ensureCreateLabel();
+            setShowCreateModal(true);
+            return;
+          }
+
           if (!isOpen && isFormDirty) {
             const shouldSave = window.confirm(
               "You have unsaved changes. Would you like to save your progress?",

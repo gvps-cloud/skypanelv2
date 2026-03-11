@@ -32,7 +32,6 @@ interface VpsInstancesTableProps {
   instances: VPSInstance[];
   isLoading?: boolean;
   allowedRegions: RegionShape[];
-  providerLabelsById: Record<string, string>;
   onAction: (instanceId: string, action: "boot" | "shutdown" | "reboot" | "delete") => void;
   onCopy: (value: string) => void;
   onSelectionChange?: (selectedInstances: VPSInstance[]) => void;
@@ -138,30 +137,10 @@ const getProgressValue = (instance: VPSInstance) => {
   return null;
 };
 
-const getProviderDisplayName = (
-  instance: VPSInstance,
-  providerLabelsById: Record<string, string>
-): string => {
-  if (instance.provider_id) {
-    const configuredName = providerLabelsById[instance.provider_id];
-    if (configuredName && configuredName.trim().length > 0) {
-      return configuredName.trim();
-    }
-  }
-
-  const trimmedName = typeof instance.providerName === "string" ? instance.providerName.trim() : "";
-  if (trimmedName.length > 0) {
-    return trimmedName;
-  }
-
-  return "Configured Provider";
-};
-
 export function VpsInstancesTable({
   instances,
   isLoading,
   allowedRegions,
-  providerLabelsById,
   onAction,
   onCopy,
   onSelectionChange,
@@ -253,25 +232,6 @@ export function VpsInstancesTable({
         },
         meta: {
           className: "sticky left-0 bg-card z-10 min-w-[200px] border-r border-border"
-        }
-      },
-      {
-        accessorKey: "provider_type",
-        header: "Provider",
-        cell: ({ row }) => {
-          const instance = row.original;
-          const providerName = getProviderDisplayName(instance, providerLabelsById);
-          
-          return (
-            <div className="min-w-[100px]">
-              <Badge variant="outline" className="text-xs">
-                {providerName}
-              </Badge>
-            </div>
-          );
-        },
-        meta: {
-          className: "min-w-[100px]"
         }
       },
       {
@@ -443,7 +403,7 @@ export function VpsInstancesTable({
         }
       },
     ],
-    [onAction, onCopy, providerLabelsById, regionLookup]
+    [onAction, onCopy, regionLookup]
   );
 
   const handleMobileSelection = useCallback(
@@ -510,14 +470,6 @@ export function VpsInstancesTable({
                   {regionLabel}
                 </Badge>
               )}
-              {(() => {
-                const providerLabel = getProviderDisplayName(instance, providerLabelsById);
-                return (
-                  <Badge variant="outline" className="text-[11px]">
-                    {providerLabel}
-                  </Badge>
-                );
-              })()}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">

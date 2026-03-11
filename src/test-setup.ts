@@ -2,6 +2,12 @@ import '@testing-library/jest-dom';
 import { expect, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 // Cleanup after each test
 afterEach(() => {
   cleanup();
@@ -29,3 +35,9 @@ global.localStorage = localStorageMock as Storage;
 
 // Mock fetch globally
 global.fetch = vi.fn();
+
+// Mock ResizeObserver for Radix/cmdk based popovers in jsdom
+global.ResizeObserver = ResizeObserverMock as typeof ResizeObserver;
+
+// Mock scrollIntoView for cmdk active item focus management in jsdom
+HTMLElement.prototype.scrollIntoView = vi.fn();
