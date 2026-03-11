@@ -39,6 +39,7 @@ import {
   OrganizationWithStats,
   OrganizationResources,
 } from "@/types/organizations";
+import type { Provider } from "@/types/provider";
 import { StatsGrid } from "@/components/layouts/StatsGrid";
 import { Skeleton } from "@/components/ui/skeleton";
 import Pagination from "@/components/ui/Pagination";
@@ -77,6 +78,9 @@ const Organizations: React.FC = () => {
     limit: 12,
     total: 0,
     totalPages: 0,
+  });
+  const [providerNames, setProviderNames] = useState<Record<string, string>>({
+    linode: "Linode",
   });
   const { token, user, switchOrganization } = useAuth();
   const navigate = useNavigate();
@@ -131,6 +135,37 @@ const Organizations: React.FC = () => {
   useEffect(() => {
     loadOrganizationResources();
   }, [loadOrganizationResources]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+
+    const fetchProviders = async () => {
+      try {
+        const data = await apiClient.get<{ providers: Provider[] }>("/vps/providers");
+        if (cancelled) return;
+
+        const names =
+          data.providers?.reduce<Record<string, string>>((acc, provider) => {
+            if (provider.type) acc[provider.type] = provider.name;
+            return acc;
+          }, {}) ?? {};
+
+        if (Object.keys(names).length > 0) {
+          setProviderNames((prev) => ({ ...prev, ...names }));
+        }
+      } catch (error) {
+        console.error("Failed to load provider names:", error);
+      }
+    };
+
+    fetchProviders();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   const filteredOrganizations = useMemo(() => {
     if (!searchTerm) return organizations;
@@ -198,6 +233,20 @@ const Organizations: React.FC = () => {
     }
     return null;
   }, [viewMode, organizations]);
+
+  const getProviderSyncedLabel = useCallback(
+    (providerType: string) => {
+      const normalizedType = providerType || "provider";
+      const name =
+        providerNames[normalizedType] ||
+        normalizedType
+          .replace(/[_-]+/g, " ")
+          .replace(/\b\w/g, (char) => char.toUpperCase());
+
+      return `${name} synced`;
+    },
+    [providerNames],
+  );
 
   const selectedOrganizationResources = useMemo(() => {
     if (selectedOrganization) {
@@ -785,7 +834,7 @@ const Organizations: React.FC = () => {
                                               variant="secondary"
                                               className="text-xs"
                                             >
-                                              Linode synced
+                                              {getProviderSyncedLabel("linode")}
                                             </Badge>
                                           )}
                                         </div>
@@ -1027,14 +1076,14 @@ const Organizations: React.FC = () => {
                                       <span>
                                         Added {formatTimestamp(sshKey.created_at)}
                                       </span>
-                                      {sshKey.linode_key_id && (
-                                        <Badge
-                                          variant="secondary"
-                                          className="text-xs"
-                                        >
-                                          Linode synced
-                                        </Badge>
-                                      )}
+                                        {sshKey.linode_key_id && (
+                                          <Badge
+                                            variant="secondary"
+                                            className="text-xs"
+                                          >
+                                            {getProviderSyncedLabel("linode")}
+                                          </Badge>
+                                        )}
                                     </div>
                                   </div>
                                 </CardContent>
