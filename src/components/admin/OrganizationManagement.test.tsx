@@ -17,6 +17,41 @@ const jsonResponse = (body: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+const TEST_ORGANIZATION_PAGE_SIZE = 10;
+
+const getOrganizationMemberCount = (organization: Record<string, any>) => {
+  if (typeof organization.memberCount === "number") {
+    return organization.memberCount;
+  }
+
+  if (typeof organization.member_count === "number") {
+    return organization.member_count;
+  }
+
+  return 0;
+};
+
+const buildOrganizationListPayload = (
+  organizations: Array<Record<string, any>>,
+) => ({
+  organizations,
+  pagination: {
+    page: 1,
+    pageSize: TEST_ORGANIZATION_PAGE_SIZE,
+    totalItems: organizations.length,
+    totalPages: Math.max(
+      1,
+      Math.ceil(organizations.length / TEST_ORGANIZATION_PAGE_SIZE),
+    ),
+  },
+  statistics: {
+    totalMembers: organizations.reduce(
+      (sum, organization) => sum + getOrganizationMemberCount(organization),
+      0,
+    ),
+  },
+});
+
 const buildRoles = (suffix = "") => [
   {
     id: `role-owner${suffix}`,
@@ -103,8 +138,12 @@ describe("OrganizationManagement", () => {
       const url = String(input);
       const method = init?.method ?? "GET";
 
-      if (url.endsWith("/api/admin/organizations") && method === "GET") {
-        return jsonResponse({ organizations });
+      if (
+        url.includes("/api/admin/organizations") &&
+        url.includes("page=") &&
+        method === "GET"
+      ) {
+        return jsonResponse(buildOrganizationListPayload(organizations));
       }
 
       if (

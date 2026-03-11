@@ -63,6 +63,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import Pagination from "@/components/ui/Pagination";
 import { useAuth } from "@/contexts/AuthContext";
 
 type OrganizationDialogMode = "create" | "edit";
@@ -120,9 +121,24 @@ interface AdminUserSearchResult {
   organizations?: Array<{ id: string; name: string; role: string }>;
 }
 
+interface OrganizationPaginationInfo {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+interface OrganizationStatistics {
+  totalMembers?: number | null;
+}
+
 interface OrganizationListResponse {
   organizations: unknown[];
+  pagination?: Partial<OrganizationPaginationInfo>;
+  statistics?: OrganizationStatistics;
 }
+
+const ITEMS_PER_PAGE = 10;
 
 interface OrganizationMutationResponse {
   organization: unknown;
@@ -326,6 +342,15 @@ export const OrganizationManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedOrganizationId, setExpandedOrganizationId] = useState<string>("");
   const [loadError, setLoadError] = useState("");
+  const [requestedPage, setRequestedPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<OrganizationPaginationInfo>({
+    page: 1,
+    pageSize: ITEMS_PER_PAGE,
+    totalItems: 0,
+    totalPages: 1,
+  });
+  const [serverMemberCount, setServerMemberCount] = useState<number | null>(null);
 
   const [organizationDialogOpen, setOrganizationDialogOpen] = useState(false);
   const [organizationDialogMode, setOrganizationDialogMode] =
@@ -365,33 +390,60 @@ export const OrganizationManagement: React.FC = () => {
   const [updatingRoleKey, setUpdatingRoleKey] = useState<string | null>(null);
   const [deletingOrganization, setDeletingOrganization] = useState(false);
 
-  const fetchOrganizations = useCallback(async () => {
-    if (!token) return;
+  const fetchOrganizations = useCallback(
+    async (pageToLoad: number) => {
+      if (!token) return;
 
-    setLoading(true);
-    setLoadError("");
+      setLoading(true);
+      setLoadError("");
 
-    try {
-      const response = await apiClient.get<OrganizationListResponse>(
-        "/admin/organizations",
-      );
+      try {
+        const response = await apiClient.get<OrganizationListResponse>(
+          `/admin/organizations?page=${pageToLoad}&limit=${ITEMS_PER_PAGE}`,
+        );
 
-      setOrganizations((response.organizations ?? []).map(normalizeOrganization));
-    } catch (error) {
-      const errorMessage = getErrorMessage(
-        error,
-        "Failed to load organizations",
-      );
-      setLoadError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+        setOrganizations((response.organizations ?? []).map(normalizeOrganization));
+
+        const paginationPayload = response.pagination ?? {};
+        const pageSize = paginationPayload.pageSize ?? ITEMS_PER_PAGE;
+        const totalItems = paginationPayload.totalItems ?? 0;
+        const computedTotalPages =
+          paginationPayload.totalPages ??
+          (totalItems === 0 ? 1 : Math.max(1, Math.ceil(totalItems / pageSize)));
+        const responsePage = paginationPayload.page ?? pageToLoad;
+
+        setPagination({
+          page: responsePage,
+          pageSize,
+          totalItems,
+          totalPages: computedTotalPages,
+        });
+
+        setCurrentPage(responsePage);
+
+        const totalMembers = response.statistics?.totalMembers;
+        setServerMemberCount(
+          typeof totalMembers === "number" && Number.isFinite(totalMembers)
+            ? totalMembers
+            : null,
+        );
+      } catch (error) {
+        const errorMessage = getErrorMessage(
+          error,
+          "Failed to load organizations",
+        );
+        setLoadError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token],
+  );
 
   useEffect(() => {
-    void fetchOrganizations();
-  }, [fetchOrganizations]);
+    void fetchOrganizations(requestedPage);
+  }, [fetchOrganizations, requestedPage]);
 
   const filteredOrganizations = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -413,10 +465,12 @@ export const OrganizationManagement: React.FC = () => {
     });
   }, [organizations, searchTerm]);
 
-  const totalMembers = useMemo(
+  const pageMemberCount = useMemo(
     () => organizations.reduce((count, organization) => count + organization.memberCount, 0),
     [organizations],
   );
+  const membershipCount = serverMemberCount ?? pageMemberCount;
+  const organizationCount = pagination.totalItems ?? organizations.length;
 
   const resetOrganizationDialog = () => {
     setOrganizationDialogOpen(false);
@@ -519,7 +573,8 @@ export const OrganizationManagement: React.FC = () => {
         );
 
         const createdOrganization = normalizeOrganization(response.organization);
-        setOrganizations((previous) => [createdOrganization, ...previous]);
+        setRequestedPage(1);
+        await fetchOrganizations(1);
         setExpandedOrganizationId(createdOrganization.id);
         toast.success(`Created ${createdOrganization.name}`);
       } else if (editingOrganization) {
@@ -569,6 +624,7 @@ export const OrganizationManagement: React.FC = () => {
       }
       toast.success(`Deleted ${organizationPendingDelete.name}`);
       setOrganizationPendingDelete(null);
+      await fetchOrganizations(currentPage);
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to delete organization"));
     } finally {
@@ -614,7 +670,7 @@ export const OrganizationManagement: React.FC = () => {
         },
       );
 
-      await fetchOrganizations();
+      await fetchOrganizations(currentPage);
       setExpandedOrganizationId(memberDialogOrganization.id);
       toast.success(
         `Added ${selectedMemberCandidate.name} to ${memberDialogOrganization.name}`,
@@ -642,7 +698,7 @@ export const OrganizationManagement: React.FC = () => {
         `/admin/organizations/${organization.id}/members/${member.userId}`,
         { roleId },
       );
-      await fetchOrganizations();
+      await fetchOrganizations(currentPage);
       setExpandedOrganizationId(organization.id);
       toast.success(
         `Updated ${member.userName}'s role to ${formatRoleLabel(
@@ -665,7 +721,7 @@ export const OrganizationManagement: React.FC = () => {
       await apiClient.delete(
         `/admin/organizations/${memberPendingRemoval.organization.id}/members/${memberPendingRemoval.member.userId}`,
       );
-      await fetchOrganizations();
+      await fetchOrganizations(currentPage);
       setExpandedOrganizationId(memberPendingRemoval.organization.id);
       toast.success(
         `Removed ${memberPendingRemoval.member.userName} from ${memberPendingRemoval.organization.name}`,
@@ -696,7 +752,7 @@ export const OrganizationManagement: React.FC = () => {
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              onClick={() => void fetchOrganizations()}
+              onClick={() => void fetchOrganizations(currentPage)}
               disabled={loading}
             >
               <RefreshCw className="mr-2 h-4 w-4" /> Refresh
@@ -714,7 +770,7 @@ export const OrganizationManagement: React.FC = () => {
             <div>
               <p className="text-sm text-muted-foreground">Organizations</p>
               <p className="text-3xl font-bold tracking-tight">
-                {organizations.length}
+                {organizationCount}
               </p>
             </div>
             <div className="rounded-lg bg-primary/10 p-3">
@@ -726,7 +782,9 @@ export const OrganizationManagement: React.FC = () => {
           <CardContent className="flex items-center justify-between p-6">
             <div>
               <p className="text-sm text-muted-foreground">Memberships</p>
-              <p className="text-3xl font-bold tracking-tight">{totalMembers}</p>
+              <p className="text-3xl font-bold tracking-tight">
+                {membershipCount}
+              </p>
             </div>
             <div className="rounded-lg bg-muted/60 p-3">
               <Users className="h-6 w-6 text-foreground" />
@@ -940,8 +998,16 @@ export const OrganizationManagement: React.FC = () => {
                 </AccordionItem>
               ))}
             </Accordion>
-          )}
-        </CardContent>
+            )}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={pagination.totalItems}
+              itemsPerPage={pagination.pageSize}
+              onPageChange={(page) => setRequestedPage(page)}
+              showItemsPerPage={false}
+              className="mt-6"
+            />
+          </CardContent>
       </Card>
 
       <Dialog

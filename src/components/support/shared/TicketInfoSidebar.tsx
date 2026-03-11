@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { 
   Calendar, 
+  Copy,
   Clock, 
   CreditCard, 
   Hash, 
@@ -17,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { SupportTicket } from "@/types/support";
 import { TICKET_STATUS_META, TICKET_PRIORITY_META } from "./constants";
 import { cn } from "@/lib/utils";
@@ -51,6 +53,7 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
   const shouldShowRequester = isAdmin || showRequester;
   const requesterName = clientName || ticket.creator?.displayName || ticket.created_by || "Unknown User";
   const requesterEmail = clientEmail || ticket.creator?.email || undefined;
+  const organizationLabel = ticket.organization_name || ticket.organization_slug || "Organization";
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -63,6 +66,43 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
     e.preventDefault();
     if (!ticket.vps_id) return;
     setIsSSHOpen(true);
+  };
+
+  const handleCopy = async (value: string, label: string) => {
+    if (!value) return;
+
+    try {
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.clipboard &&
+        navigator.clipboard.writeText
+      ) {
+        await navigator.clipboard.writeText(value);
+        toast.success(`${label} copied to clipboard`);
+        return;
+      }
+
+      const textArea = document.createElement("textarea");
+      textArea.value = value;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        toast.success(`${label} copied to clipboard`);
+      } else {
+        throw new Error("Copy command failed");
+      }
+    } catch (error) {
+      console.error(`Failed to copy ${label.toLowerCase()}:`, error);
+      toast.error("Unable to copy to clipboard. Please copy manually.");
+    }
   };
 
   return (
@@ -92,20 +132,38 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
               </div>
             )}
 
-            {shouldShowRequester && (ticket.organization_name || ticket.organization_slug) && (
+            {shouldShowRequester && (ticket.organization_id || ticket.organization_name || ticket.organization_slug) && (
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Shield className="h-4 w-4 text-primary/70" />
                   <span className="truncate">
-                    {ticket.organization_name || ticket.organization_slug}
+                    {organizationLabel}
                   </span>
                 </div>
-                {ticket.organization_name && ticket.organization_slug && (
-                  <div
-                    className="text-xs text-muted-foreground pl-6 truncate"
-                    title={`@${ticket.organization_slug}`}
-                  >
-                    @{ticket.organization_slug}
+                {ticket.organization_id && (
+                  <div className="pl-6 space-y-1">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground block">
+                      Organization ID
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="font-mono text-xs bg-muted/50 p-1.5 rounded truncate select-all flex-1 min-w-0"
+                        title={ticket.organization_id}
+                      >
+                        {ticket.organization_id}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => void handleCopy(ticket.organization_id!, "Organization ID")}
+                        aria-label="Copy organization ID"
+                        title="Copy organization ID"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 )}
                 <Separator className="my-2" />

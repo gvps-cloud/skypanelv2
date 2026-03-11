@@ -209,8 +209,43 @@ const buildAdminOrganizationQuery = (whereClause = "") => `
   ${whereClause}
   ORDER BY org.created_at DESC`;
 
-const fetchAdminOrganizations = async () => {
-  const result = await query(buildAdminOrganizationQuery());
+const DEFAULT_ADMIN_ORGANIZATION_PAGE_SIZE = 10;
+const MAX_ADMIN_ORGANIZATION_PAGE_SIZE = 200;
+
+const clampOrganizationPageSize = (value?: number) => {
+  if (!Number.isFinite(value ?? NaN)) {
+    return DEFAULT_ADMIN_ORGANIZATION_PAGE_SIZE;
+  }
+
+  const positiveValue = Math.max(1, Math.floor(value as number));
+  return Math.min(positiveValue, MAX_ADMIN_ORGANIZATION_PAGE_SIZE);
+};
+
+const parsePositivePageParam = (
+  rawValue: string | string[] | undefined,
+  fallback: number,
+) => {
+  const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.max(1, Math.floor(parsed));
+};
+
+const fetchAdminOrganizations = async (options?: {
+  limit?: number;
+  offset?: number;
+}) => {
+  const limit = clampOrganizationPageSize(options?.limit);
+  const offset = Math.max(0, Math.floor(options?.offset ?? 0));
+
+  const result = await query(
+    `${buildAdminOrganizationQuery()} LIMIT $1 OFFSET $2`,
+    [limit, offset],
+  );
   return result.rows || [];
 };
 
@@ -2513,10 +2548,50 @@ router.get(
   authenticateToken,
   requireAdmin,
   auditLogger("list_organizations"),
-  async (_req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
-      const organizations = await fetchAdminOrganizations();
-      res.json({ organizations });
+      const requestedPage = parsePositivePageParam(req.query.page, 1);
+      const requestedLimit = parsePositivePageParam(
+        req.query.limit,
+        DEFAULT_ADMIN_ORGANIZATION_PAGE_SIZE,
+      );
+      const pageSize = clampOrganizationPageSize(requestedLimit);
+
+      const [organizationCountResult, memberCountResult] = await Promise.all([
+        query("SELECT COUNT(*)::INTEGER AS total FROM organizations"),
+        query("SELECT COUNT(*)::INTEGER AS total FROM organization_members"),
+      ]);
+
+      const totalOrganizations =
+        organizationCountResult.rows[0]?.total ?? 0;
+      const totalMembers = memberCountResult.rows[0]?.total ?? 0;
+      const totalPages =
+        totalOrganizations === 0
+          ? 1
+          : Math.max(1, Math.ceil(totalOrganizations / pageSize));
+      const safePage =
+        totalOrganizations === 0
+          ? 1
+          : Math.min(Math.max(requestedPage, 1), totalPages);
+      const offset = (safePage - 1) * pageSize;
+
+      const organizations = await fetchAdminOrganizations({
+        limit: pageSize,
+        offset,
+      });
+
+      res.json({
+        organizations,
+        pagination: {
+          page: safePage,
+          pageSize,
+          totalItems: totalOrganizations,
+          totalPages,
+        },
+        statistics: {
+          totalMembers,
+        },
+      });
     } catch (err: any) {
       console.error("Admin organizations list error:", err);
       res
