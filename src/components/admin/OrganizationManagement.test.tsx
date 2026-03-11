@@ -134,6 +134,7 @@ describe("OrganizationManagement", () => {
           slug: "beta-hosting",
           ownerId: "user-1",
         });
+        expect(body).not.toHaveProperty("description");
 
         organizations.unshift({
           id: "org-2",
@@ -143,7 +144,6 @@ describe("OrganizationManagement", () => {
           owner_name: "Alice Owner",
           owner_email: "alice@example.com",
           member_count: 1,
-          settings: { description: "Newly created org" },
           roles: buildRoles("-org-2"),
           members: [
             {
@@ -242,6 +242,7 @@ describe("OrganizationManagement", () => {
     fireEvent.change(screen.getByLabelText(/^Slug$/i), {
       target: { value: "beta-hosting" },
     });
+    expect(screen.queryByLabelText(/Description/i)).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Search for owner/i), {
       target: { value: "Alice" },
     });
@@ -267,149 +268,7 @@ describe("OrganizationManagement", () => {
     });
   });
 
-  it("moves a member to the first valid destination organization without requiring manual selection", async () => {
-    let organizations: Array<Record<string, any>> = [
-      {
-        id: "org-1",
-        name: "Acme Cloud",
-        slug: "acme-cloud",
-        ownerId: "user-1",
-        ownerName: "Alice Owner",
-        ownerEmail: "alice@example.com",
-        memberCount: 2,
-        roles: buildRoles("-org-1"),
-        members: [
-          {
-            userId: "user-1",
-            userName: "Alice Owner",
-            userEmail: "alice@example.com",
-            role: "owner",
-            roleId: "role-owner-org-1",
-            roleName: "owner",
-            userRole: "admin",
-            joinedAt: "2026-01-01T00:00:00.000Z",
-          },
-          {
-            userId: "user-2",
-            userName: "Bob Member",
-            userEmail: "bob@example.com",
-            role: "viewer",
-            roleId: "role-viewer-org-1",
-            roleName: "viewer",
-            userRole: "user",
-            joinedAt: "2026-01-02T00:00:00.000Z",
-          },
-        ],
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z",
-      },
-      {
-        id: "org-2",
-        name: "Beta Hosting",
-        slug: "beta-hosting",
-        ownerId: "user-3",
-        ownerName: "Betty Owner",
-        ownerEmail: "betty@example.com",
-        memberCount: 1,
-        roles: buildRoles("-org-2"),
-        members: [
-          {
-            userId: "user-3",
-            userName: "Betty Owner",
-            userEmail: "betty@example.com",
-            role: "owner",
-            roleId: "role-owner-org-2",
-            roleName: "owner",
-            userRole: "admin",
-            joinedAt: "2026-01-01T00:00:00.000Z",
-          },
-        ],
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z",
-      },
-    ];
-
-    const moveRequests: Array<{ url: string; body: any }> = [];
-    const deleteRequests: string[] = [];
-
-    vi.mocked(global.fetch).mockImplementation(async (input, init) => {
-      const url = String(input);
-      const method = init?.method ?? "GET";
-
-      if (url.endsWith("/api/admin/organizations") && method === "GET") {
-        return jsonResponse({ organizations });
-      }
-
-      if (url.endsWith("/api/admin/organizations/org-2/members") && method === "POST") {
-        const body = JSON.parse(String(init?.body ?? "{}"));
-        moveRequests.push({ url, body });
-
-        organizations = organizations.map((organization) =>
-          organization.id === "org-2"
-            ? {
-                ...organization,
-                memberCount: 2,
-                members: [
-                  ...organization.members,
-                  {
-                    userId: "user-2",
-                    userName: "Bob Member",
-                    userEmail: "bob@example.com",
-                    role: body.roleId === "role-viewer-org-2" ? "viewer" : "admin",
-                    roleId: body.roleId,
-                    roleName: body.roleId === "role-viewer-org-2" ? "viewer" : "admin",
-                    userRole: "user",
-                    joinedAt: "2026-01-03T00:00:00.000Z",
-                  },
-                ],
-              }
-            : organization,
-        );
-
-        return jsonResponse({ member: { userId: "user-2" } }, 201);
-      }
-
-      if (
-        url.endsWith("/api/admin/organizations/org-1/members/user-2") &&
-        method === "DELETE"
-      ) {
-        deleteRequests.push(url);
-        organizations = organizations.map((organization) =>
-          organization.id === "org-1"
-            ? {
-                ...organization,
-                memberCount: 1,
-                members: organization.members.filter((member: any) => member.userId !== "user-2"),
-              }
-            : organization,
-        );
-
-        return jsonResponse({ success: true });
-      }
-
-      throw new Error(`Unhandled request: ${method} ${url}`);
-    });
-
-    renderWithAuth(<OrganizationManagement />);
-
-    fireEvent.click(await screen.findByRole("button", { name: /Acme Cloud/i }));
-    fireEvent.click(await screen.findByRole("button", { name: /^Move Bob Member from Acme Cloud$/i }));
-    fireEvent.click(await screen.findByRole("button", { name: /^Move member$/i }));
-
-    await waitFor(() => {
-      expect(moveRequests).toEqual([
-        {
-          url: expect.stringContaining("/api/admin/organizations/org-2/members"),
-          body: { userId: "user-2", roleId: "role-viewer-org-2" },
-        },
-      ]);
-      expect(deleteRequests).toEqual([
-        expect.stringContaining("/api/admin/organizations/org-1/members/user-2"),
-      ]);
-    });
-  });
-
-  it("removes the description field from edit organization mode", async () => {
+  it("removes the description field from create and edit modes and hides move actions", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       jsonResponse({
         organizations: [
@@ -445,6 +304,9 @@ describe("OrganizationManagement", () => {
     renderWithAuth(<OrganizationManagement />);
 
     fireEvent.click(await screen.findByRole("button", { name: /Acme Cloud/i }));
+    expect(
+      screen.queryByRole("button", { name: /^Move Alice Owner from Acme Cloud$/i }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Edit Acme Cloud/i }));
 
     expect(screen.queryByLabelText(/Description/i)).not.toBeInTheDocument();

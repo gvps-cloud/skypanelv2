@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
-  ArrowRightLeft,
   Building2,
   Mail,
   Pencil,
@@ -25,7 +24,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -141,7 +139,6 @@ interface UserSearchResponse {
 const emptyOrganizationForm = {
   name: "",
   slug: "",
-  description: "",
   ownerId: "",
 };
 
@@ -305,25 +302,6 @@ const getDefaultAssignableRoleId = (
   );
 };
 
-const getPreferredRoleIdForOrganization = (
-  organization: AdminOrganization | null | undefined,
-  preferredRoleName?: string | null,
-) => {
-  if (!organization) return "";
-
-  const normalizedPreferredRoleName = normalizeRoleName(preferredRoleName);
-  if (normalizedPreferredRoleName && normalizedPreferredRoleName !== "owner") {
-    const matchingRole = organization.roles.find(
-      (role) => role.name === normalizedPreferredRoleName,
-    );
-    if (matchingRole) {
-      return matchingRole.id;
-    }
-  }
-
-  return getDefaultAssignableRoleId(organization);
-};
-
 const getRoleNameFromOrganization = (
   organization: AdminOrganization | null | undefined,
   roleId: string,
@@ -339,18 +317,6 @@ const buildUserSearchPath = (query: string, organizationId?: string) => {
   }
 
   return `/admin/users/search?${params.toString()}`;
-};
-
-const getAvailableMoveTargetsForMember = (
-  organizations: AdminOrganization[],
-  sourceOrganizationId: string,
-  userId: string,
-) => {
-  return organizations.filter(
-    (organization) =>
-      organization.id !== sourceOrganizationId &&
-      !organization.members.some((member) => member.userId === userId),
-  );
 };
 
 export const OrganizationManagement: React.FC = () => {
@@ -396,14 +362,6 @@ export const OrganizationManagement: React.FC = () => {
     member: AdminOrganizationMember;
   } | null>(null);
   const [removingMember, setRemovingMember] = useState(false);
-
-  const [movingMemberState, setMovingMemberState] = useState<{
-    organization: AdminOrganization;
-    member: AdminOrganizationMember;
-  } | null>(null);
-  const [moveTargetOrganizationId, setMoveTargetOrganizationId] = useState("");
-  const [moveRoleId, setMoveRoleId] = useState("");
-  const [movingMember, setMovingMember] = useState(false);
   const [updatingRoleKey, setUpdatingRoleKey] = useState<string | null>(null);
   const [deletingOrganization, setDeletingOrganization] = useState(false);
 
@@ -486,7 +444,6 @@ export const OrganizationManagement: React.FC = () => {
     setOrganizationForm({
       name: organization.name,
       slug: organization.slug,
-      description: "",
       ownerId: organization.ownerId,
     });
     setOwnerSearchTerm("");
@@ -558,7 +515,6 @@ export const OrganizationManagement: React.FC = () => {
             name: organizationForm.name.trim(),
             slug: organizationForm.slug.trim(),
             ownerId: selectedOwner?.id,
-            description: organizationForm.description.trim() || undefined,
           },
         );
 
@@ -721,127 +677,6 @@ export const OrganizationManagement: React.FC = () => {
       setRemovingMember(false);
     }
   };
-
-  const closeMoveDialog = () => {
-    setMovingMemberState(null);
-    setMoveTargetOrganizationId("");
-    setMoveRoleId("");
-  };
-
-  const openMoveDialog = (organization: AdminOrganization, member: AdminOrganizationMember) => {
-    const availableTargets = getAvailableMoveTargetsForMember(
-      organizations,
-      organization.id,
-      member.userId,
-    );
-
-    if (availableTargets.length === 0) {
-      toast.error(`${member.userName} is already in every other available organization`);
-      return;
-    }
-
-    setMovingMemberState({ organization, member });
-    setMoveTargetOrganizationId(availableTargets[0]?.id ?? "");
-    setMoveRoleId(
-      getPreferredRoleIdForOrganization(
-        availableTargets[0],
-        member.roleName === "owner" ? null : member.roleName,
-      ),
-    );
-  };
-
-  const handleMoveMember = async () => {
-    if (!movingMemberState || !moveTargetOrganizationId) {
-      toast.error("Select a destination organization");
-      return;
-    }
-
-    if (!moveRoleId) {
-      toast.error("Select a destination role");
-      return;
-    }
-
-    setMovingMember(true);
-
-    try {
-      await apiClient.post<MemberMutationResponse>(
-        `/admin/organizations/${moveTargetOrganizationId}/members`,
-        {
-          userId: movingMemberState.member.userId,
-          roleId: moveRoleId,
-        },
-      );
-
-      await apiClient.delete(
-        `/admin/organizations/${movingMemberState.organization.id}/members/${movingMemberState.member.userId}`,
-      );
-
-      await fetchOrganizations();
-      setExpandedOrganizationId(moveTargetOrganizationId);
-      toast.success(
-        `Moved ${movingMemberState.member.userName} to the selected organization`,
-      );
-      closeMoveDialog();
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Failed to move member"));
-    } finally {
-      setMovingMember(false);
-    }
-  };
-
-  const availableMoveTargets = useMemo(() => {
-    if (!movingMemberState) return [];
-
-    return getAvailableMoveTargetsForMember(
-      organizations,
-      movingMemberState.organization.id,
-      movingMemberState.member.userId,
-    );
-  }, [movingMemberState, organizations]);
-
-  const selectedMoveTarget = useMemo(
-    () =>
-      availableMoveTargets.find(
-        (organization) => organization.id === moveTargetOrganizationId,
-      ) ?? availableMoveTargets[0] ?? null,
-    [availableMoveTargets, moveTargetOrganizationId],
-  );
-
-  useEffect(() => {
-    if (!movingMemberState) return;
-
-    if (availableMoveTargets.length === 0) {
-      setMoveTargetOrganizationId("");
-      setMoveRoleId("");
-      return;
-    }
-
-    if (!availableMoveTargets.some((organization) => organization.id === moveTargetOrganizationId)) {
-      setMoveTargetOrganizationId(availableMoveTargets[0]?.id ?? "");
-    }
-  }, [availableMoveTargets, moveTargetOrganizationId, movingMemberState]);
-
-  useEffect(() => {
-    if (!movingMemberState) return;
-
-    if (!selectedMoveTarget) {
-      setMoveRoleId("");
-      return;
-    }
-
-    if (selectedMoveTarget.roles.some((role) => role.id === moveRoleId)) {
-      return;
-    }
-
-    setMoveRoleId(
-      getPreferredRoleIdForOrganization(
-        selectedMoveTarget,
-        movingMemberState.member.roleName === "owner"
-          ? null
-          : movingMemberState.member.roleName,
-      ),
-    );
-  }, [moveRoleId, movingMemberState, selectedMoveTarget]);
 
   return (
     <div className="space-y-6">
@@ -1029,12 +864,6 @@ export const OrganizationManagement: React.FC = () => {
                             {organization.members.map((member) => {
                               const roleKey = `${organization.id}:${member.userId}`;
                               const isOwner = member.roleName === "owner";
-                              const canMoveMember =
-                                getAvailableMoveTargetsForMember(
-                                  organizations,
-                                  organization.id,
-                                  member.userId,
-                                ).length > 0;
 
                               return (
                                 <TableRow key={member.userId}>
@@ -1087,15 +916,6 @@ export const OrganizationManagement: React.FC = () => {
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex justify-end gap-2">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openMoveDialog(organization, member)}
-                                        disabled={isOwner || !canMoveMember}
-                                        aria-label={`Move ${member.userName} from ${organization.name}`}
-                                      >
-                                        <ArrowRightLeft className="mr-2 h-4 w-4" /> Move
-                                      </Button>
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -1178,23 +998,6 @@ export const OrganizationManagement: React.FC = () => {
                 />
               </div>
             </div>
-
-            {organizationDialogMode === "create" ? (
-              <div className="space-y-2">
-                <Label htmlFor="organization-description">Description (optional)</Label>
-                <Textarea
-                  id="organization-description"
-                  value={organizationForm.description}
-                  onChange={(event) =>
-                    setOrganizationForm((current) => ({
-                      ...current,
-                      description: event.target.value,
-                    }))
-                  }
-                  placeholder="Internal notes or team context"
-                />
-              </div>
-            ) : null}
 
             {organizationDialogMode === "create" ? (
               <div className="space-y-3 rounded-lg border p-4">
@@ -1376,83 +1179,6 @@ export const OrganizationManagement: React.FC = () => {
             </Button>
             <Button onClick={() => void handleAddMember()} disabled={savingMember}>
               {savingMember ? "Adding..." : "Add member"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={Boolean(movingMemberState)}
-        onOpenChange={(open) => {
-          if (!open) {
-            closeMoveDialog();
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Move {movingMemberState?.member.userName ?? "member"}
-            </DialogTitle>
-            <DialogDescription>
-              Add the user to another organization, then remove them from the
-              current one.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Destination organization</Label>
-              <Select
-                value={moveTargetOrganizationId}
-                onValueChange={setMoveTargetOrganizationId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose an organization" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableMoveTargets.map((organization) => (
-                    <SelectItem key={organization.id} value={organization.id}>
-                      {organization.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Role in destination</Label>
-              <Select value={moveRoleId} onValueChange={setMoveRoleId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(selectedMoveTarget?.roles ?? []).map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {formatRoleLabel(role.name)}
-                      {role.isCustom ? " (Custom)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {availableMoveTargets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No other organizations are available for this user.
-              </p>
-            ) : null}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={closeMoveDialog}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => void handleMoveMember()}
-              disabled={movingMember || availableMoveTargets.length === 0}
-            >
-              {movingMember ? "Moving..." : "Move member"}
             </Button>
           </DialogFooter>
         </DialogContent>
