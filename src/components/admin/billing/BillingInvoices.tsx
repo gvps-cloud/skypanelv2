@@ -13,6 +13,8 @@ import {
 
 interface Invoice {
   id: string;
+  organizationId: string;
+  organizationName?: string;
   invoiceNumber: string;
   totalAmount: number;
   currency: string;
@@ -106,6 +108,7 @@ export const BillingInvoices: React.FC = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Invoice #</TableHead>
+              <TableHead>Organization</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -114,13 +117,13 @@ export const BillingInvoices: React.FC = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : invoices.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                   No invoices found
                 </TableCell>
               </TableRow>
@@ -130,6 +133,12 @@ export const BillingInvoices: React.FC = () => {
                   <TableCell className="font-medium flex items-center">
                     <FileText className="mr-2 h-4 w-4 text-muted-foreground" />
                     {inv.invoiceNumber}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{inv.organizationName || 'Unknown organization'}</span>
+                      <span className="text-xs text-muted-foreground break-all">{inv.organizationId}</span>
+                    </div>
                   </TableCell>
                   <TableCell>{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell>

@@ -17,6 +17,8 @@ import {
 
 interface Transaction {
   id: string;
+  organization_id: string;
+  organization_name?: string;
   amount: number;
   currency: string;
   status: string;
@@ -179,6 +181,7 @@ export const BillingTransactions: React.FC = () => {
             <TableRow>
               <TableHead>Date</TableHead>
               <TableHead>User</TableHead>
+              <TableHead>Organization</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Method</TableHead>
@@ -189,13 +192,13 @@ export const BillingTransactions: React.FC = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : transactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -209,6 +212,12 @@ export const BillingTransactions: React.FC = () => {
                     <div className="flex flex-col">
                         <span className="font-medium">{tx.user_name}</span>
                         <span className="text-xs text-muted-foreground">{tx.user_email}</span>
+                      </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{tx.organization_name || 'Unknown organization'}</span>
+                      <span className="text-xs text-muted-foreground break-all">{tx.organization_id}</span>
                     </div>
                   </TableCell>
                   <TableCell className="max-w-[300px] truncate" title={tx.description}>

@@ -405,6 +405,109 @@ describe('Preservation Property: Non-Owner Role Management', () => {
     expect(memberCheck.rows[0].role).toBe('admin');
   });
 
+  it('should allow an owner to rename an organization', async () => {
+    const ownerId = await createTestUser(
+      `${TEST_USER_PREFIX}rename-owner@example.com`,
+      'Rename Owner'
+    );
+
+    const { orgId, ownerRoleId } = await createTestOrganization(
+      `${TEST_ORG_PREFIX}rename-source`,
+      ownerId
+    );
+
+    await addUserToOrganization(ownerId, orgId, ownerRoleId);
+
+    const ownerToken = generateToken(ownerId);
+    const response = await request(app)
+      .put(`/api/organizations/${orgId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: `${TEST_ORG_PREFIX}renamed` });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe('Organization updated');
+    expect(response.body.organization.name).toBe(`${TEST_ORG_PREFIX}renamed`);
+
+    const orgCheck = await query(
+      `SELECT name FROM organizations WHERE id = $1`,
+      [orgId]
+    );
+    expect(orgCheck.rows[0].name).toBe(`${TEST_ORG_PREFIX}renamed`);
+  });
+
+  it('should allow duplicate organization names when renaming', async () => {
+    const ownerId = await createTestUser(
+      `${TEST_USER_PREFIX}rename-duplicate@example.com`,
+      'Duplicate Rename Owner'
+    );
+
+    const firstOrg = await createTestOrganization(
+      `${TEST_ORG_PREFIX}duplicate-one`,
+      ownerId
+    );
+    const secondOrg = await createTestOrganization(
+      `${TEST_ORG_PREFIX}duplicate-two`,
+      ownerId
+    );
+
+    await addUserToOrganization(ownerId, firstOrg.orgId, firstOrg.ownerRoleId);
+    await addUserToOrganization(ownerId, secondOrg.orgId, secondOrg.ownerRoleId);
+
+    const ownerToken = generateToken(ownerId);
+    const targetName = `${TEST_ORG_PREFIX}shared-name`;
+
+    await query(`UPDATE organizations SET name = $2 WHERE id = $1`, [secondOrg.orgId, targetName]);
+
+    const response = await request(app)
+      .put(`/api/organizations/${firstOrg.orgId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: targetName });
+
+    expect(response.status).toBe(200);
+    expect(response.body.organization.name).toBe(targetName);
+
+    const orgsCheck = await query(
+      `SELECT name FROM organizations WHERE id IN ($1, $2) ORDER BY id ASC`,
+      [firstOrg.orgId, secondOrg.orgId]
+    );
+    expect(orgsCheck.rows).toHaveLength(2);
+    expect(orgsCheck.rows.every((row: { name: string }) => row.name === targetName)).toBe(true);
+  });
+
+  it('should reject organization rename without settings permissions', async () => {
+    const ownerId = await createTestUser(
+      `${TEST_USER_PREFIX}rename-owner-no-perm@example.com`,
+      'Owner User'
+    );
+    const memberId = await createTestUser(
+      `${TEST_USER_PREFIX}rename-member-no-perm@example.com`,
+      'Viewer User'
+    );
+
+    const { orgId, ownerRoleId, memberRoleId } = await createTestOrganization(
+      `${TEST_ORG_PREFIX}rename-no-permission`,
+      ownerId
+    );
+
+    await addUserToOrganization(ownerId, orgId, ownerRoleId);
+    await addUserToOrganization(memberId, orgId, memberRoleId);
+
+    const memberToken = generateToken(memberId);
+    const response = await request(app)
+      .put(`/api/organizations/${orgId}`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ name: `${TEST_ORG_PREFIX}blocked-rename` });
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('Insufficient permissions');
+
+    const orgCheck = await query(
+      `SELECT name FROM organizations WHERE id = $1`,
+      [orgId]
+    );
+    expect(orgCheck.rows[0].name).toBe(`${TEST_ORG_PREFIX}rename-no-permission`);
+  });
+
   /**
    * Property-Based Test: Non-owner role updates preserve existing behavior
    * 

@@ -104,15 +104,23 @@ const PERMISSIONS = [
 
 interface TeamSettingsProps {
   organizationId?: string;
+  organizationName?: string;
+  onOrganizationUpdated?: (organization: { id: string; name: string }) => void | Promise<void>;
 }
 
-export default function TeamSettings({ organizationId: propOrganizationId }: TeamSettingsProps = {}) {
+export default function TeamSettings({
+  organizationId: propOrganizationId,
+  organizationName: propOrganizationName,
+  onOrganizationUpdated,
+}: TeamSettingsProps = {}) {
   const { user, token } = useAuth();
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [roles, setRoles] = useState<OrganizationRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("members");
+  const [organizationName, setOrganizationName] = useState(propOrganizationName ?? "");
+  const [organizationSaving, setOrganizationSaving] = useState(false);
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -223,6 +231,10 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
       fetchRoles();
     }
   }, [token, orgId]);
+
+  useEffect(() => {
+    setOrganizationName(propOrganizationName ?? "");
+  }, [propOrganizationName]);
 
   const handleInviteMember = async () => {
     if (orgId === "default-org-id") {
@@ -431,6 +443,53 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
     }
   };
 
+  const handleOrganizationRename = async () => {
+    if (orgId === "default-org-id") {
+      toast.error("Cannot rename organization: No organization found");
+      return;
+    }
+
+    if (!organizationName.trim()) {
+      toast.error("Organization name is required");
+      return;
+    }
+
+    setOrganizationSaving(true);
+    try {
+      const response = await fetch(`/api/organizations/${orgId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: organizationName.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update organization");
+      }
+
+      setOrganizationName(data.organization?.name || organizationName.trim());
+      toast.success("Organization renamed successfully");
+
+      if (onOrganizationUpdated && data.organization) {
+        await onOrganizationUpdated({
+          id: data.organization.id,
+          name: data.organization.name,
+        });
+      }
+    } catch (error: any) {
+      console.error("Error updating organization:", error);
+      toast.error(error.message || "Failed to update organization");
+    } finally {
+      setOrganizationSaving(false);
+    }
+  };
+
   const openCreateRoleModal = () => {
     setEditingRole(null);
     setIsRoleWizardOpen(true);
@@ -465,10 +524,49 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
+          <TabsTrigger value="organization">Organization</TabsTrigger>
           <TabsTrigger value="members">Team Members</TabsTrigger>
           <TabsTrigger value="invitations">Pending Invitations</TabsTrigger>
           <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="organization" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Organization Settings</CardTitle>
+              <CardDescription>
+                Rename your organization without affecting its UUID-based identity. Duplicate names are allowed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="organization-id">Organization ID</Label>
+                <Input id="organization-id" value={orgId} disabled className="font-mono text-xs" />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="organization-name">Organization Name</Label>
+                <Input
+                  id="organization-name"
+                  value={organizationName}
+                  onChange={(e) => setOrganizationName(e.target.value)}
+                  placeholder="Enter organization name"
+                />
+              </div>
+
+              <div className="flex items-start gap-2 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>Organization names do not need to be unique. Your organization is identified by its UUID.</p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleOrganizationRename} disabled={organizationSaving}>
+                  {organizationSaving ? "Saving..." : "Save Organization Name"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="members" className="space-y-4">
           <Card>

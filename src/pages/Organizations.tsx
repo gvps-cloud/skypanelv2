@@ -254,6 +254,13 @@ const Organizations: React.FC = () => {
     return null;
   }, [viewMode, organizations]);
 
+  const handleOrganizationUpdated = useCallback(async () => {
+    await Promise.all([
+      loadOrganizations(currentPage, itemsPerPage),
+      loadOrganizationResources(),
+    ]);
+  }, [currentPage, itemsPerPage, loadOrganizations, loadOrganizationResources]);
+
   const getProviderSyncedLabel = useCallback(
     (providerType: string) => {
       const normalizedType = providerType || "provider";
@@ -1233,7 +1240,11 @@ const Organizations: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="settings">
-              <TeamSettings organizationId={selectedOrganization.id} />
+              <TeamSettings
+                organizationId={selectedOrganization.id}
+                organizationName={selectedOrganization.name}
+                onOrganizationUpdated={handleOrganizationUpdated}
+              />
             </TabsContent>
           </Tabs>
         </>

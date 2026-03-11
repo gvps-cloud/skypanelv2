@@ -504,17 +504,19 @@ export class InvoiceService {
 
       const result = await query(
         `SELECT 
-          id, 
-          organization_id, 
-          invoice_number, 
-          html_content, 
-          data, 
-          total_amount, 
-          currency, 
-          created_at, 
-          updated_at
-        FROM billing_invoices
-        WHERE id = $1`,
+          bi.id, 
+          bi.organization_id, 
+          o.name AS organization_name,
+          bi.invoice_number, 
+          bi.html_content, 
+          bi.data, 
+          bi.total_amount, 
+          bi.currency, 
+          bi.created_at, 
+          bi.updated_at
+        FROM billing_invoices bi
+        LEFT JOIN organizations o ON o.id = bi.organization_id
+        WHERE bi.id = $1`,
         [invoiceId]
       );
 
@@ -526,6 +528,7 @@ export class InvoiceService {
       return {
         id: row.id,
         organizationId: row.organization_id,
+        organizationName: row.organization_name,
         invoiceNumber: row.invoice_number,
         htmlContent: row.html_content,
         data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
@@ -549,15 +552,17 @@ export class InvoiceService {
 
       const result = await query(
         `SELECT 
-          id, 
-          organization_id, 
-          invoice_number, 
-          total_amount, 
-          currency, 
-          created_at
-        FROM billing_invoices
-        WHERE organization_id = $1
-        ORDER BY created_at DESC
+          bi.id, 
+          bi.organization_id, 
+          o.name AS organization_name,
+          bi.invoice_number, 
+          bi.total_amount, 
+          bi.currency, 
+          bi.created_at
+        FROM billing_invoices bi
+        LEFT JOIN organizations o ON o.id = bi.organization_id
+        WHERE bi.organization_id = $1
+        ORDER BY bi.created_at DESC
         LIMIT $2 OFFSET $3`,
         [organizationId, limit, offset]
       );
@@ -565,6 +570,7 @@ export class InvoiceService {
       return result.rows.map(row => ({
         id: row.id,
         organizationId: row.organization_id,
+        organizationName: row.organization_name,
         invoiceNumber: row.invoice_number,
         totalAmount: parseFloat(row.total_amount),
         currency: row.currency,
@@ -591,7 +597,7 @@ export class InvoiceService {
         const orgResult = await query('SELECT id FROM organizations WHERE owner_id = $1', [userId]);
         if (orgResult.rows.length > 0) {
             params.push(orgResult.rows[0].id);
-            whereClause = 'WHERE organization_id = $3';
+            whereClause = 'WHERE bi.organization_id = $3';
         } else {
             return []; // User has no organization
         }
@@ -599,15 +605,17 @@ export class InvoiceService {
 
       const result = await query(
         `SELECT 
-          id, 
-          organization_id, 
-          invoice_number, 
-          total_amount, 
-          currency, 
-          created_at
-        FROM billing_invoices
+          bi.id, 
+          bi.organization_id, 
+          o.name AS organization_name,
+          bi.invoice_number, 
+          bi.total_amount, 
+          bi.currency, 
+          bi.created_at
+        FROM billing_invoices bi
+        LEFT JOIN organizations o ON o.id = bi.organization_id
         ${whereClause}
-        ORDER BY created_at DESC
+        ORDER BY bi.created_at DESC
         LIMIT $1 OFFSET $2`,
         params
       );
@@ -615,6 +623,7 @@ export class InvoiceService {
       return result.rows.map(row => ({
         id: row.id,
         organizationId: row.organization_id,
+        organizationName: row.organization_name,
         invoiceNumber: row.invoice_number,
         totalAmount: parseFloat(row.total_amount),
         currency: row.currency,

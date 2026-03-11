@@ -1,5 +1,6 @@
 import express, { Response, NextFunction } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js';
+import { requirePermission } from '../middleware/permissions.js';
 import { query } from '../lib/database.js';
 import { InvitationService } from '../services/invitations.js';
 import { ActivityFeedService } from '../services/activityFeed.js';
@@ -373,6 +374,38 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
   } catch (error) {
     console.error('Failed to fetch organizations:', error);
     res.status(500).json({ error: 'Failed to fetch organizations' });
+  }
+});
+
+// PUT /:id - Update organization settings
+router.put('/:id', requirePermission('settings_manage'), async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { name } = req.body;
+
+  if (typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Organization name is required' });
+  }
+
+  try {
+    const result = await query(
+      `UPDATE organizations
+       SET name = $2, updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, name, updated_at`,
+      [id, name.trim()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    res.json({
+      message: 'Organization updated',
+      organization: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Failed to update organization:', error);
+    res.status(500).json({ error: 'Failed to update organization' });
   }
 });
 
