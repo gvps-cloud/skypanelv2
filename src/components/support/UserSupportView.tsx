@@ -59,6 +59,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
   onCreateTicketHandled,
 }) => {
   const { user } = useAuth();
+  const currentUserDisplayName = useMemo(
+    () => `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.email || "You",
+    [user?.email, user?.firstName, user?.lastName],
+  );
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [replyMessage, setReplyMessage] = useState("");
@@ -144,6 +148,26 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
     }
   }, []);
 
+  const getTicketCreatorName = useCallback((ticket: SupportTicket) => {
+    return ticket.creator?.displayName || ticket.creator?.email || ticket.created_by || "Unknown";
+  }, []);
+
+  const isCurrentUserTicketAuthor = useCallback(
+    (ticket: SupportTicket) => Boolean(user?.id && ticket.created_by === user.id),
+    [user?.id],
+  );
+
+  const getInitials = useCallback((value: string) => {
+    const initials = value
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+    return initials || "??";
+  }, []);
+
   const fetchTickets = useCallback(async () => {
     setLoading(true);
     try {
@@ -166,6 +190,11 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         has_staff_reply: t.has_staff_reply || false,
         vps_id: t.vps_id,
         vps_label: t.vps_label,
+        organization_id: t.organization_id,
+        organization_name: t.organization_name,
+        organization_slug: t.organization_slug,
+        created_by: t.created_by,
+        creator: t.creator,
         messages: [],
       }));
 
@@ -224,9 +253,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
             id: data.message_id,
             ticket_id: data.ticket_id,
             sender_type: data.is_staff_reply ? "admin" : "user",
-            sender_name: data.is_staff_reply 
-              ? "Support Team" 
-              : (data.sender_name || (user ? `${user.firstName} ${user.lastName}`.trim() : "You")),
+            sender_user_id: data.is_staff_reply ? undefined : data.sender_user_id,
+            sender_name: data.is_staff_reply
+              ? "Support Team"
+              : (data.sender_name || "Unknown"),
             message: data.message,
             created_at: data.created_at,
           };
@@ -318,9 +348,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
           id: m.id,
           ticket_id: m.ticket_id,
           sender_type: m.sender_type,
-          sender_name: m.sender_type === "admin" 
-            ? "Support Team" 
-            : (user ? `${user.firstName} ${user.lastName}`.trim() : "You"),
+          sender_user_id: m.sender_user_id,
+          sender_name: m.sender_type === "admin"
+            ? "Support Team"
+            : (m.sender_name || "Unknown"),
           message: m.message,
           created_at: m.created_at,
         }));
@@ -333,7 +364,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         toast.error(e.message || "Failed to load messages");
       }
     },
-    [authHeader, scrollToBottom, selectedTicket?.id, user]
+    [authHeader, scrollToBottom, selectedTicket?.id]
   );
 
   useEffect(() => {
@@ -520,6 +551,8 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
             onSelectTicket={openTicket}
             onCreateTicket={() => setIsCreateModalOpen(true)}
             isLoading={loading}
+            showCustomer={true}
+            title="Support Tickets"
           />
         </div>
 
@@ -553,6 +586,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
                 <TicketDetailHeader
                   ticket={selectedTicket}
                   onBack={() => setSelectedTicket(null)}
+                  showCustomer={true}
                 >
                   <Button 
                     variant="outline" 
@@ -582,12 +616,26 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
                   <div className="rounded-xl border border-border bg-background p-5 shadow-sm max-w-3xl mx-auto w-full">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-xs">
-                        You
+                        {isCurrentUserTicketAuthor(selectedTicket)
+                          ? "You"
+                          : getInitials(getTicketCreatorName(selectedTicket))}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium">You</span>
+                        <span className="text-sm font-medium">
+                          {isCurrentUserTicketAuthor(selectedTicket)
+                            ? "You"
+                            : getTicketCreatorName(selectedTicket)}
+                        </span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(selectedTicket.created_at).toLocaleString()}
+                          {[
+                            !isCurrentUserTicketAuthor(selectedTicket)
+                              ? selectedTicket.creator?.email
+                              : null,
+                            selectedTicket.organization_name || selectedTicket.organization_slug,
+                            new Date(selectedTicket.created_at).toLocaleString(),
+                          ]
+                            .filter(Boolean)
+                            .join(" • ")}
                         </span>
                       </div>
                     </div>
@@ -603,7 +651,10 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
                         <MessageBubble
                           key={msg.id}
                           message={msg}
-                          isCurrentUser={msg.sender_type === "user"}
+                          isCurrentUser={
+                            msg.sender_type === "user" &&
+                            Boolean(user?.id && msg.sender_user_id === user.id)
+                          }
                         />
                       ))}
                     </div>
@@ -687,6 +738,9 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
               <TicketInfoSidebar 
                 ticket={selectedTicket}
                 walletBalance={walletBalance}
+                showRequester={true}
+                clientName={selectedTicket.creator?.displayName}
+                clientEmail={selectedTicket.creator?.email || undefined}
                 className="hidden lg:flex w-80 shrink-0"
               />
 
@@ -698,6 +752,9 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
                   <TicketInfoSidebar 
                     ticket={selectedTicket}
                     walletBalance={walletBalance}
+                    showRequester={true}
+                    clientName={selectedTicket.creator?.displayName}
+                    clientEmail={selectedTicket.creator?.email || undefined}
                     className="w-full border-none bg-background"
                   />
                 </SheetContent>

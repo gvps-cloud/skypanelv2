@@ -2400,6 +2400,14 @@ router.get(
   "/users/:id",
   authenticateToken,
   requireAdmin,
+  (req: Request, _res: Response, next) => {
+    if (req.params.id === "search") {
+      next("route");
+      return;
+    }
+
+    next();
+  },
   auditLogger("view_user_details"),
   [param("id").isUUID().withMessage("Invalid user id")],
   async (req: AuthenticatedRequest, res: Response) => {

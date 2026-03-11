@@ -22,6 +22,8 @@ interface TicketListProps {
   onCreateTicket?: () => void;
   isLoading?: boolean;
   isAdmin?: boolean;
+  showCustomer?: boolean;
+  title?: string;
 }
 
 export const TicketList: React.FC<TicketListProps> = ({
@@ -31,10 +33,14 @@ export const TicketList: React.FC<TicketListProps> = ({
   onCreateTicket,
   isLoading = false,
   isAdmin = false,
+  showCustomer = false,
+  title,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | TicketStatus>("all");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const showRequesterInfo = isAdmin || showCustomer;
+  const resolvedTitle = title ?? (isAdmin ? "Support Inbox" : showRequesterInfo ? "Support Tickets" : "My Tickets");
 
   const filteredTickets = tickets
     .filter((ticket) => {
@@ -45,7 +51,7 @@ export const TicketList: React.FC<TicketListProps> = ({
         ticket.subject.toLowerCase().includes(searchLower) ||
         (ticket.description || ticket.message || "").toLowerCase().includes(searchLower) ||
         ticket.category.toLowerCase().includes(searchLower) ||
-        (isAdmin && (
+        (showRequesterInfo && (
           (ticket.creator?.displayName || "").toLowerCase().includes(searchLower) ||
           (ticket.creator?.email || "").toLowerCase().includes(searchLower) ||
           (ticket.organization_name || "").toLowerCase().includes(searchLower) ||
@@ -74,7 +80,7 @@ export const TicketList: React.FC<TicketListProps> = ({
       <div className="p-4 border-b border-border bg-background/50 backdrop-blur-sm sticky top-0 z-10 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold tracking-tight">
-            {isAdmin ? "Support Inbox" : "My Tickets"}
+            {resolvedTitle}
           </h2>
           <div className="flex items-center gap-1">
             <Button
@@ -165,7 +171,7 @@ export const TicketList: React.FC<TicketListProps> = ({
                 ticket={ticket}
                 isSelected={selectedTicketId === ticket.id}
                 onClick={() => onSelectTicket(ticket)}
-                showCustomer={isAdmin}
+                showCustomer={showRequesterInfo}
               />
             ))}
           </div>

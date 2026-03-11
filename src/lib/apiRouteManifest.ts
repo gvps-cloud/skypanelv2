@@ -751,6 +751,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "protected": true
   },
   {
+    "method": "PUT",
+    "path": "/api/organizations/:id",
+    "protected": true
+  },
+  {
     "method": "GET",
     "path": "/api/organizations/:id/invitations",
     "protected": true

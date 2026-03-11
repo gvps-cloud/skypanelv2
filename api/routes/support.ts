@@ -68,6 +68,22 @@ const notifyAdminsForTicketEvent = async ({
   }
 };
 
+const mapSupportTicketRow = (row: any) => {
+  const { creator_id, creator_name, creator_email, ...ticketFields } = row;
+
+  return {
+    ...ticketFields,
+    creator: creator_id
+      ? {
+          id: creator_id,
+          name: creator_name ?? null,
+          email: creator_email ?? null,
+          displayName: creator_name || creator_email || row.created_by,
+        }
+      : undefined,
+  };
+};
+
 // List support tickets for user's organization with permission-based filtering
 router.get("/tickets", authenticateToken, requireOrganization, async (req: Request, res: Response) => {
   try {
@@ -87,8 +103,17 @@ router.get("/tickets", authenticateToken, requireOrganization, async (req: Reque
 
     if (hasTicketsViewPermission) {
       result = await query(
-        `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
+        `SELECT
+           st.*,
+           u.id AS creator_id,
+           u.name AS creator_name,
+           u.email AS creator_email,
+           org.name AS organization_name,
+           org.slug AS organization_slug,
+           COALESCE(vi.label, st.vps_label_snapshot) as vps_label
          FROM support_tickets st
+         LEFT JOIN users u ON u.id = st.created_by
+         LEFT JOIN organizations org ON org.id = st.organization_id
          LEFT JOIN vps_instances vi ON st.vps_id = vi.id
          WHERE st.organization_id = $1 
          ORDER BY st.created_at DESC`,
@@ -97,8 +122,17 @@ router.get("/tickets", authenticateToken, requireOrganization, async (req: Reque
     } else {
       // Users without tickets_view permission see only their own tickets within their current organization
       result = await query(
-        `SELECT st.*, COALESCE(vi.label, st.vps_label_snapshot) as vps_label
+        `SELECT
+           st.*,
+           u.id AS creator_id,
+           u.name AS creator_name,
+           u.email AS creator_email,
+           org.name AS organization_name,
+           org.slug AS organization_slug,
+           COALESCE(vi.label, st.vps_label_snapshot) as vps_label
          FROM support_tickets st
+         LEFT JOIN users u ON u.id = st.created_by
+         LEFT JOIN organizations org ON org.id = st.organization_id
          LEFT JOIN vps_instances vi ON st.vps_id = vi.id
          WHERE st.organization_id = $1 AND st.created_by = $2
          ORDER BY st.created_at DESC`,
@@ -106,7 +140,7 @@ router.get("/tickets", authenticateToken, requireOrganization, async (req: Reque
       );
     }
 
-    res.json({ tickets: result.rows || [] });
+    res.json({ tickets: (result.rows || []).map(mapSupportTicketRow) });
   } catch (err: any) {
     console.error("Support tickets list error:", err);
     res.status(500).json({ error: err.message || "Failed to fetch tickets" });
@@ -260,6 +294,7 @@ router.get(
 
       const repliesRes = await query(
         `SELECT r.id, r.ticket_id, r.message, r.is_staff_reply, r.created_at,
+                r.user_id as sender_user_id,
                 u.name as sender_name, u.email as sender_email
            FROM support_ticket_replies r
            JOIN users u ON u.id = r.user_id
@@ -274,6 +309,7 @@ router.get(
         message: r.message,
         created_at: r.created_at,
         sender_type: r.is_staff_reply ? "admin" : "user",
+        sender_user_id: r.is_staff_reply ? undefined : r.sender_user_id,
         sender_name: r.is_staff_reply
           ? "Staff Member"
           : r.sender_name || r.sender_email || "Unknown",
@@ -405,6 +441,7 @@ router.post(
         message: replyRow.message,
         is_staff_reply: false,
         created_at: replyRow.created_at,
+        sender_user_id: userId,
         sender_name: senderName,
       };
       await query(`NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload)}'`);
@@ -416,6 +453,7 @@ router.post(
           message: replyRow.message,
           created_at: replyRow.created_at,
           sender_type: "user",
+          sender_user_id: userId,
           sender_name: senderName,
         },
       });
@@ -1058,6 +1096,7 @@ router.post(
           message: replyRow.message,
           created_at: replyRow.created_at,
           sender_type: "user",
+          sender_user_id: userId,
           sender_name: senderName,
         },
       });

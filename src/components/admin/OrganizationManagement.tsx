@@ -216,6 +216,18 @@ const buildUserSearchPath = (query: string, organizationId?: string) => {
   return `/admin/users/search?${params.toString()}`;
 };
 
+const getAvailableMoveTargetsForMember = (
+  organizations: AdminOrganization[],
+  sourceOrganizationId: string,
+  userId: string,
+) => {
+  return organizations.filter(
+    (organization) =>
+      organization.id !== sourceOrganizationId &&
+      !organization.members.some((member) => member.userId === userId),
+  );
+};
+
 export const OrganizationManagement: React.FC = () => {
   const { token } = useAuth();
   const [organizations, setOrganizations] = useState<AdminOrganization[]>([]);
@@ -599,6 +611,23 @@ export const OrganizationManagement: React.FC = () => {
     setMoveRole("member");
   };
 
+  const openMoveDialog = (organization: AdminOrganization, member: AdminOrganizationMember) => {
+    const availableTargets = getAvailableMoveTargetsForMember(
+      organizations,
+      organization.id,
+      member.userId,
+    );
+
+    if (availableTargets.length === 0) {
+      toast.error(`${member.userName} is already in every other available organization`);
+      return;
+    }
+
+    setMovingMemberState({ organization, member });
+    setMoveTargetOrganizationId(availableTargets[0]?.id ?? "");
+    setMoveRole(member.role === "owner" ? "member" : member.role);
+  };
+
   const handleMoveMember = async () => {
     if (!movingMemberState || !moveTargetOrganizationId) {
       toast.error("Select a destination organization");
@@ -636,14 +665,25 @@ export const OrganizationManagement: React.FC = () => {
   const availableMoveTargets = useMemo(() => {
     if (!movingMemberState) return [];
 
-    return organizations.filter(
-      (organization) =>
-        organization.id !== movingMemberState.organization.id &&
-        !organization.members.some(
-          (member) => member.userId === movingMemberState.member.userId,
-        ),
+    return getAvailableMoveTargetsForMember(
+      organizations,
+      movingMemberState.organization.id,
+      movingMemberState.member.userId,
     );
   }, [movingMemberState, organizations]);
+
+  useEffect(() => {
+    if (!movingMemberState) return;
+
+    if (availableMoveTargets.length === 0) {
+      setMoveTargetOrganizationId("");
+      return;
+    }
+
+    if (!availableMoveTargets.some((organization) => organization.id === moveTargetOrganizationId)) {
+      setMoveTargetOrganizationId(availableMoveTargets[0]?.id ?? "");
+    }
+  }, [availableMoveTargets, moveTargetOrganizationId, movingMemberState]);
 
   return (
     <div className="space-y-6">
@@ -831,6 +871,12 @@ export const OrganizationManagement: React.FC = () => {
                             {organization.members.map((member) => {
                               const roleKey = `${organization.id}:${member.userId}`;
                               const isOwner = member.role === "owner";
+                              const canMoveMember =
+                                getAvailableMoveTargetsForMember(
+                                  organizations,
+                                  organization.id,
+                                  member.userId,
+                                ).length > 0;
 
                               return (
                                 <TableRow key={member.userId}>
@@ -878,12 +924,8 @@ export const OrganizationManagement: React.FC = () => {
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => {
-                                          setMovingMemberState({ organization, member });
-                                          setMoveTargetOrganizationId("");
-                                          setMoveRole(member.role === "owner" ? "member" : member.role);
-                                        }}
-                                        disabled={isOwner}
+                                        onClick={() => openMoveDialog(organization, member)}
+                                        disabled={isOwner || !canMoveMember}
                                         aria-label={`Move ${member.userName} from ${organization.name}`}
                                       >
                                         <ArrowRightLeft className="mr-2 h-4 w-4" /> Move

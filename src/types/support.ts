@@ -13,6 +13,7 @@ export interface TicketMessage {
   id: string;
   ticket_id: string;
   sender_type: "user" | "admin";
+  sender_user_id?: string;
   sender_name: string;
   message: string;
   created_at: string;

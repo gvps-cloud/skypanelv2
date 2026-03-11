@@ -32,6 +32,7 @@ interface TicketInfoSidebarProps {
   ticket: SupportTicket;
   walletBalance?: number | null;
   isAdmin?: boolean;
+  showRequester?: boolean;
   clientName?: string;
   clientEmail?: string;
   className?: string;
@@ -41,11 +42,15 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
   ticket,
   walletBalance,
   isAdmin = false,
+  showRequester = false,
   clientName,
   clientEmail,
   className,
 }) => {
   const [isSSHOpen, setIsSSHOpen] = useState(false);
+  const shouldShowRequester = isAdmin || showRequester;
+  const requesterName = clientName || ticket.creator?.displayName || ticket.created_by || "Unknown User";
+  const requesterEmail = clientEmail || ticket.creator?.email || undefined;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -68,26 +73,26 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
         <div className="space-y-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
             <User className="h-3.5 w-3.5" />
-            {isAdmin ? "Client Information" : "My Account"}
+            {isAdmin ? "Client Information" : shouldShowRequester ? "Requester & Account" : "My Account"}
           </h3>
           
           <div className="bg-background rounded-lg border border-border p-3 space-y-3 shadow-sm">
-            {isAdmin && (clientName || clientEmail) && (
+            {shouldShowRequester && (requesterName || requesterEmail) && (
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <User className="h-4 w-4 text-primary/70" />
-                  <span className="truncate">{clientName || "Unknown User"}</span>
+                  <span className="truncate">{requesterName}</span>
                 </div>
-                {clientEmail && (
-                  <div className="text-xs text-muted-foreground pl-6 truncate" title={clientEmail}>
-                    {clientEmail}
+                {requesterEmail && (
+                  <div className="text-xs text-muted-foreground pl-6 truncate" title={requesterEmail}>
+                    {requesterEmail}
                   </div>
                 )}
                 <Separator className="my-2" />
               </div>
             )}
 
-            {isAdmin && (ticket.organization_name || ticket.organization_slug) && (
+            {shouldShowRequester && (ticket.organization_name || ticket.organization_slug) && (
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Shield className="h-4 w-4 text-primary/70" />
