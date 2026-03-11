@@ -36,17 +36,18 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { 
-  MoreHorizontal, 
-  Plus, 
-  Trash2, 
-  Shield, 
-  UserPlus, 
-  X, 
+import {
+  MoreHorizontal,
+  Plus,
+  Trash2,
+  Shield,
+  UserPlus,
+  X,
   Edit3,
   Clock,
   AlertCircle
 } from "lucide-react";
+import CreateRoleWizard from "./CreateRoleWizard";
 import { 
   Card, 
   CardContent, 
@@ -118,10 +119,8 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
   const [inviteRoleId, setInviteRoleId] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
 
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isRoleWizardOpen, setIsRoleWizardOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<OrganizationRole | null>(null);
-  const [roleName, setRoleName] = useState("");
-  const [rolePermissions, setRolePermissions] = useState<string[]>([]);
   const [roleLoading, setRoleLoading] = useState(false);
 
   const [cancelModal, setCancelModal] = useState<{
@@ -368,87 +367,39 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
     }
   };
 
-  const handleCreateRole = async () => {
-    if (!roleName.trim()) {
-      toast.error("Please enter a role name");
-      return;
-    }
-
-    if (rolePermissions.length === 0) {
-      toast.error("Please select at least one permission");
-      return;
-    }
-
+  const handleRoleSave = async (roleData: { name: string; description?: string; permissions: string[] }) => {
     setRoleLoading(true);
     try {
-      const response = await fetch(`/api/organizations/${orgId}/roles`, {
-        method: "POST",
+      const url = editingRole
+        ? `/api/organizations/${orgId}/roles/${editingRole.id}`
+        : `/api/organizations/${orgId}/roles`;
+
+      const method = editingRole ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          name: roleName.trim(),
-          permissions: rolePermissions,
+          name: roleData.name,
+          description: roleData.description,
+          permissions: roleData.permissions,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to create role");
+        throw new Error(error.error || `Failed to ${editingRole ? "update" : "create"} role`);
       }
 
-      toast.success("Role created successfully");
-      setIsRoleModalOpen(false);
-      setRoleName("");
-      setRolePermissions([]);
-      fetchRoles();
-    } catch (error: any) {
-      console.error("Error creating role:", error);
-      toast.error(error.message);
-    } finally {
-      setRoleLoading(false);
-    }
-  };
-
-  const handleUpdateRole = async () => {
-    if (!editingRole) return;
-
-    if (!roleName.trim()) {
-      toast.error("Please enter a role name");
-      return;
-    }
-
-    setRoleLoading(true);
-    try {
-      const response = await fetch(
-        `/api/organizations/${orgId}/roles/${editingRole.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: roleName.trim(),
-            permissions: rolePermissions,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update role");
-      }
-
-      toast.success("Role updated successfully");
-      setIsRoleModalOpen(false);
+      toast.success(`${editingRole ? "Role updated" : "Role created"} successfully`);
+      setIsRoleWizardOpen(false);
       setEditingRole(null);
-      setRoleName("");
-      setRolePermissions([]);
       fetchRoles();
     } catch (error: any) {
-      console.error("Error updating role:", error);
+      console.error("Error saving role:", error);
       toast.error(error.message);
     } finally {
       setRoleLoading(false);
@@ -483,24 +434,12 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
 
   const openCreateRoleModal = () => {
     setEditingRole(null);
-    setRoleName("");
-    setRolePermissions([]);
-    setIsRoleModalOpen(true);
+    setIsRoleWizardOpen(true);
   };
 
   const openEditRoleModal = (role: OrganizationRole) => {
     setEditingRole(role);
-    setRoleName(role.name);
-    setRolePermissions(role.permissions);
-    setIsRoleModalOpen(true);
-  };
-
-  const togglePermission = (permissionId: string) => {
-    setRolePermissions((prev) =>
-      prev.includes(permissionId)
-        ? prev.filter((p) => p !== permissionId)
-        : [...prev, permissionId]
-    );
+    setIsRoleWizardOpen(true);
   };
 
   const formatDate = (dateString: string) => {
@@ -870,71 +809,12 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isRoleModalOpen} onOpenChange={setIsRoleModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingRole ? "Edit Role" : "Create New Role"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingRole
-                ? "Update role permissions."
-                : "Create a custom role with specific permissions."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="roleName">Role Name</Label>
-              <Input
-                id="roleName"
-                placeholder="e.g., Billing Manager"
-                value={roleName}
-                onChange={(e) => setRoleName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-4">
-              <Label>Permissions</Label>
-              <div className="grid gap-3">
-                {PERMISSIONS.map((permission) => (
-                  <div key={permission.id} className="flex items-start space-x-3">
-                    <Checkbox
-                      id={permission.id}
-                      checked={rolePermissions.includes(permission.id)}
-                      onCheckedChange={() => togglePermission(permission.id)}
-                    />
-                    <div className="flex-1">
-                      <Label
-                        htmlFor={permission.id}
-                        className="font-medium cursor-pointer"
-                      >
-                        {permission.label}
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {permission.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRoleModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={editingRole ? handleUpdateRole : handleCreateRole}
-              disabled={roleLoading}
-            >
-              {roleLoading
-                ? "Saving..."
-                : editingRole
-                ? "Update Role"
-                : "Create Role"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateRoleWizard
+        isOpen={isRoleWizardOpen}
+        onClose={() => setIsRoleWizardOpen(false)}
+        onSave={handleRoleSave}
+        editingRole={editingRole || undefined}
+      />
 
       <Dialog
         open={cancelModal.isOpen}
