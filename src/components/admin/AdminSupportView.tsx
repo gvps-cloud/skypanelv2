@@ -12,6 +12,7 @@ import {
   MailOpen,
   RefreshCw,
   Send,
+    Shield,
   Trash2,
   User,
   Ticket,
@@ -548,10 +549,19 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                       <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-medium text-xs">
                         User
                       </div>
-                      <div className="flex flex-col">
+                      <div className="flex flex-col gap-0.5">
                         <span className="text-sm font-medium">
                           {selectedTicket.creator?.displayName || selectedTicket.creator?.email || "User"}
                         </span>
+                        {(selectedTicket.organization_name || selectedTicket.organization_slug) && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Shield className="h-3 w-3" />
+                            {selectedTicket.organization_name || selectedTicket.organization_slug}
+                            {selectedTicket.organization_name && selectedTicket.organization_slug && (
+                              <span className="opacity-70">@{selectedTicket.organization_slug}</span>
+                            )}
+                          </span>
+                        )}
                         <span className="text-xs text-muted-foreground">
                           {new Date(selectedTicket.created_at).toLocaleString()}
                         </span>

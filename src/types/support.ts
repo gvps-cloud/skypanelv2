@@ -35,6 +35,8 @@ export interface SupportTicket {
   
   // Admin specific fields
   organization_id?: string;
+  organization_name?: string;
+  organization_slug?: string;
   created_by?: string;
   creator?: TicketCreator;
 }

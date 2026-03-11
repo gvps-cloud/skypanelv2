@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { UserSupportView } from './UserSupportView';
 import { AuthProvider } from '@/contexts/AuthContext';
 import * as fc from 'fast-check';
@@ -435,10 +435,11 @@ describe('Bug Condition Exploration: Support Tickets Organization Filter', () =>
   });
 
   describe('Create ticket deep-link behavior', () => {
-    it('opens the create ticket dialog when pendingCreateTicket is provided', async () => {
+    it('opens the create ticket dialog and fetches VPS instances without organizations when pendingCreateTicket is provided', async () => {
       const onCreateTicketHandled = vi.fn();
+      const fetchMock = global.fetch as any;
 
-      (global.fetch as any).mockImplementation(async (url: string) => {
+      fetchMock.mockImplementation(async (url: string) => {
         if (url.includes('/api/support/tickets')) {
           return {
             ok: true,
@@ -457,22 +458,6 @@ describe('Bug Condition Exploration: Support Tickets Organization Filter', () =>
           return {
             ok: true,
             json: async () => ({ instances: [] }),
-          };
-        }
-
-        if (url.includes('/api/organizations')) {
-          return {
-            ok: true,
-            json: async () => ({
-              organizations: [
-                {
-                  id: 'org-a',
-                  name: 'Organization A',
-                  member_role: 'owner',
-                  role_permissions: [],
-                },
-              ],
-            }),
           };
         }
 
@@ -496,6 +481,102 @@ describe('Bug Condition Exploration: Support Tickets Organization Filter', () =>
 
       await waitFor(() => {
         expect(screen.getByText('New Support Ticket')).toBeInTheDocument();
+      });
+
+      const requestedUrls = fetchMock.mock.calls.map(([url]: [string]) => url);
+      expect(requestedUrls.some((url: string) => url.includes('/api/vps'))).toBe(true);
+      expect(requestedUrls.some((url: string) => url.includes('/api/organizations'))).toBe(false);
+    });
+
+    it('submits the multi-step create flow without organizationId in the payload', async () => {
+      const fetchMock = global.fetch as any;
+
+      fetchMock.mockImplementation(async (url: string, options?: RequestInit) => {
+        if (url.includes('/api/support/tickets') && options?.method === 'POST') {
+          return {
+            ok: true,
+            json: async () => ({ success: true }),
+          };
+        }
+
+        if (url.includes('/api/support/tickets')) {
+          return {
+            ok: true,
+            json: async () => ({ tickets: [] }),
+          };
+        }
+
+        if (url.includes('/api/payments/wallet/balance')) {
+          return {
+            ok: true,
+            json: async () => ({ success: true, balance: 100 }),
+          };
+        }
+
+        if (url.includes('/api/vps')) {
+          return {
+            ok: true,
+            json: async () => ({
+              instances: [
+                { id: 'vps-1', label: 'Alpha Server' },
+                { id: 'vps-2', label: 'Beta Server' },
+              ],
+            }),
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => ({}),
+        };
+      });
+
+      render(
+        <UserSupportView
+          token="mock-jwt-token"
+          pendingCreateTicket
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('New Support Ticket')).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByLabelText(/subject/i), {
+        target: { value: 'Cannot access my server' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^next$/i }));
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByLabelText(/description/i), {
+        target: { value: 'SSH access times out after connecting.' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /create ticket/i }));
+
+      await waitFor(() => {
+        const postCall = fetchMock.mock.calls.find(
+          ([url, options]: [string, RequestInit]) =>
+            url.includes('/api/support/tickets') && options?.method === 'POST'
+        );
+
+        expect(postCall).toBeTruthy();
+
+        const [, options] = postCall as [string, RequestInit];
+        const body = JSON.parse(String(options.body));
+
+        expect(body).toEqual(
+          expect.objectContaining({
+            subject: 'Cannot access my server',
+            message: 'SSH access times out after connecting.',
+            priority: 'medium',
+            category: 'general',
+          })
+        );
+        expect(body).not.toHaveProperty('organizationId');
       });
     });
   });

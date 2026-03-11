@@ -86,6 +86,26 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
                 <Separator className="my-2" />
               </div>
             )}
+
+            {isAdmin && (ticket.organization_name || ticket.organization_slug) && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Shield className="h-4 w-4 text-primary/70" />
+                  <span className="truncate">
+                    {ticket.organization_name || ticket.organization_slug}
+                  </span>
+                </div>
+                {ticket.organization_name && ticket.organization_slug && (
+                  <div
+                    className="text-xs text-muted-foreground pl-6 truncate"
+                    title={`@${ticket.organization_slug}`}
+                  >
+                    @{ticket.organization_slug}
+                  </div>
+                )}
+                <Separator className="my-2" />
+              </div>
+            )}
             
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Wallet Balance</span>

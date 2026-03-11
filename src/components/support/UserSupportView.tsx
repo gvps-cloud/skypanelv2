@@ -77,9 +77,6 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
   const [vpsInstances, setVpsInstances] = useState<
     Array<{ id: string; label: string }>
   >([]);
-  const [organizations, setOrganizations] = useState<
-    Array<{ id: string; name: string }>
-  >([]);
 
   const authHeader = useMemo(
     () => ({ Authorization: `Bearer ${token}` }),
@@ -120,40 +117,11 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
     }
   }, [authHeader]);
 
-  const fetchOrganizations = useCallback(async () => {
-    try {
-      const res = await fetch(buildApiUrl("/api/organizations"), {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (res.ok && data.organizations) {
-        const authorizedOrgs = data.organizations.filter((o: any) => {
-          // Owners and admins always have permission
-          if (o.member_role === 'owner' || o.member_role === 'admin') return true;
-          
-          // Check granular permissions
-          const permissions = Array.isArray(o.role_permissions) 
-            ? o.role_permissions 
-            : JSON.parse(o.role_permissions || '[]');
-            
-          return permissions.includes('tickets_create');
-        });
-
-        setOrganizations(
-          authorizedOrgs.map((o: any) => ({ id: o.id, name: o.name }))
-        );
-      }
-    } catch (err) {
-      console.warn("Failed to fetch organizations for ticket creation", err);
-    }
-  }, [authHeader]);
-
   useEffect(() => {
     if (isCreateModalOpen) {
       fetchVpsInstances();
-      fetchOrganizations();
     }
-  }, [isCreateModalOpen, fetchVpsInstances, fetchOrganizations]);
+  }, [isCreateModalOpen, fetchVpsInstances]);
 
   useEffect(() => {
     if (!pendingCreateTicket) {
@@ -522,7 +490,6 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
           priority: data.priority,
           category: data.category,
           vpsId: data.vpsId,
-          organizationId: data.organizationId,
         }),
       });
       const resData = await res.json();
@@ -745,7 +712,6 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         onOpenChange={setIsCreateModalOpen}
         onSubmit={handleCreateTicket}
         vpsInstances={vpsInstances}
-        organizations={organizations}
       />
     </>
   );

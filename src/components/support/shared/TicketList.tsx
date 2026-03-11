@@ -47,7 +47,9 @@ export const TicketList: React.FC<TicketListProps> = ({
         ticket.category.toLowerCase().includes(searchLower) ||
         (isAdmin && (
           (ticket.creator?.displayName || "").toLowerCase().includes(searchLower) ||
-          (ticket.creator?.email || "").toLowerCase().includes(searchLower)
+          (ticket.creator?.email || "").toLowerCase().includes(searchLower) ||
+          (ticket.organization_name || "").toLowerCase().includes(searchLower) ||
+          (ticket.organization_slug || "").toLowerCase().includes(searchLower)
         ));
 
       return matchesStatus && matchesSearch;

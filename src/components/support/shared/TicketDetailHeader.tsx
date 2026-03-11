@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { SupportTicket } from "@/types/support";
 import { TICKET_STATUS_META, TICKET_PRIORITY_META } from "./constants";
-import { ArrowLeft, Clock, MapPin, User } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Shield, User } from "lucide-react";
 
 interface TicketDetailHeaderProps {
   ticket: SupportTicket;
@@ -61,6 +61,21 @@ export const TicketDetailHeader: React.FC<TicketDetailHeaderProps> = ({
               <span className="opacity-70">({ticket.creator.email})</span>
             )}
           </div>
+
+          {showCustomer && (ticket.organization_name || ticket.organization_slug) && (
+            <>
+              <div className="h-1 w-1 rounded-full bg-border" />
+              <div className="flex items-center gap-1.5">
+                <Shield className="h-3.5 w-3.5 opacity-70" />
+                <span className="font-medium text-foreground">
+                  {ticket.organization_name || ticket.organization_slug}
+                </span>
+                {ticket.organization_name && ticket.organization_slug && (
+                  <span className="opacity-70">@{ticket.organization_slug}</span>
+                )}
+              </div>
+            </>
+          )}
           
           <div className="h-1 w-1 rounded-full bg-border" />
           

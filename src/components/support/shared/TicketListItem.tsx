@@ -1,4 +1,5 @@
 import React from "react";
+import { Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { SupportTicket } from "@/types/support";
@@ -68,10 +69,23 @@ export const TicketListItem: React.FC<TicketListItemProps> = ({
       </p>
       
       {showCustomer && (
-        <p className="text-xs font-medium text-foreground/80 line-clamp-1">
-          {getCreatorDisplay(ticket)}
-          {ticket.creator?.email && <span className="text-muted-foreground font-normal ml-1">({ticket.creator.email})</span>}
-        </p>
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-foreground/80 line-clamp-1">
+            {getCreatorDisplay(ticket)}
+            {ticket.creator?.email && <span className="text-muted-foreground font-normal ml-1">({ticket.creator.email})</span>}
+          </p>
+          {(ticket.organization_name || ticket.organization_slug) && (
+            <p className="flex items-center gap-1 text-[11px] text-muted-foreground line-clamp-1">
+              <Shield className="h-3 w-3 shrink-0" />
+              <span>
+                {ticket.organization_name || ticket.organization_slug}
+                {ticket.organization_name && ticket.organization_slug && (
+                  <span className="opacity-70"> · @{ticket.organization_slug}</span>
+                )}
+              </span>
+            </p>
+          )}
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

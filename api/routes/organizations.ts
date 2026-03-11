@@ -952,9 +952,9 @@ router.post('/:id/roles', requireOrgAccess, async (req: AuthenticatedRequest, re
   try {
     const result = await query(
       `INSERT INTO organization_roles (organization_id, name, permissions, is_custom, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       VALUES ($1, $2, $3::jsonb, $4, NOW(), NOW())
        RETURNING *`,
-      [id, name.trim(), permissions, true]
+      [id, name.trim(), JSON.stringify(permissions), true]
     );
 
     res.status(201).json(result.rows[0]);
@@ -1021,8 +1021,8 @@ router.put('/:id/roles/:roleId', requireOrgAccess, async (req: AuthenticatedRequ
     }
 
     if (permissions !== undefined) {
-      updateFields.push(`permissions = $${paramIndex++}`);
-      updateValues.push(permissions);
+      updateFields.push(`permissions = $${paramIndex++}::jsonb`);
+      updateValues.push(JSON.stringify(permissions));
     }
 
     updateFields.push(`updated_at = NOW()`);
