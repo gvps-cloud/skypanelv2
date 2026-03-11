@@ -14,20 +14,45 @@ const Support: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const clearSearchParam = useCallback(
+    (paramName: string) => {
+      const searchParams = new URLSearchParams(location.search);
+      if (!searchParams.has(paramName)) {
+        return;
+      }
+
+      searchParams.delete(paramName);
+      const nextSearch = searchParams.toString();
+
+      navigate(
+        {
+          pathname: "/support",
+          search: nextSearch ? `?${nextSearch}` : "",
+        },
+        { replace: true },
+      );
+    },
+    [location.search, navigate],
+  );
+
   const pendingFocusTicketId = useMemo(() => {
     const searchParams = new URLSearchParams(location.search);
     const ticketId = searchParams.get("ticketId");
     return ticketId && ticketId.trim().length > 0 ? ticketId : null;
   }, [location.search]);
 
-  const handleFocusTicketHandled = useCallback(() => {
+  const pendingCreateTicket = useMemo(() => {
     const searchParams = new URLSearchParams(location.search);
-    if (!searchParams.has("ticketId")) {
-      return;
-    }
+    return searchParams.get("create") === "1";
+  }, [location.search]);
 
-    navigate({ pathname: "/support" }, { replace: true });
-  }, [location.search, navigate]);
+  const handleFocusTicketHandled = useCallback(() => {
+    clearSearchParam("ticketId");
+  }, [clearSearchParam]);
+
+  const handleCreateTicketHandled = useCallback(() => {
+    clearSearchParam("create");
+  }, [clearSearchParam]);
 
   if (!token) {
     return null;
@@ -46,6 +71,8 @@ const Support: React.FC = () => {
           token={token}
           pendingFocusTicketId={pendingFocusTicketId}
           onFocusTicketHandled={handleFocusTicketHandled}
+          pendingCreateTicket={pendingCreateTicket}
+          onCreateTicketHandled={handleCreateTicketHandled}
         />
       </div>
     </div>

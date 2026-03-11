@@ -46,13 +46,17 @@ import { useAuth } from "@/contexts/AuthContext";
 interface UserSupportViewProps {
   token: string;
   pendingFocusTicketId?: string | null;
+  pendingCreateTicket?: boolean;
   onFocusTicketHandled?: () => void;
+  onCreateTicketHandled?: () => void;
 }
 
 export const UserSupportView: React.FC<UserSupportViewProps> = ({
   token,
   pendingFocusTicketId,
+  pendingCreateTicket = false,
   onFocusTicketHandled,
+  onCreateTicketHandled,
 }) => {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -68,6 +72,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const ticketStatusRef = useRef<TicketStatus | undefined>(undefined);
+  const createTicketHandledRef = useRef(false);
 
   const [vpsInstances, setVpsInstances] = useState<
     Array<{ id: string; label: string }>
@@ -149,6 +154,21 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
       fetchOrganizations();
     }
   }, [isCreateModalOpen, fetchVpsInstances, fetchOrganizations]);
+
+  useEffect(() => {
+    if (!pendingCreateTicket) {
+      createTicketHandledRef.current = false;
+      return;
+    }
+
+    if (createTicketHandledRef.current) {
+      return;
+    }
+
+    createTicketHandledRef.current = true;
+    setIsCreateModalOpen(true);
+    onCreateTicketHandled?.();
+  }, [pendingCreateTicket, onCreateTicketHandled]);
 
   const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {

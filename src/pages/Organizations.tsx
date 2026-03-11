@@ -204,17 +204,37 @@ const Organizations: React.FC = () => {
     }
   };
 
-  const handleOpenOrganizationSSHKeys = async (orgId: string) => {
+  const handleOpenOrganizationResource = async (
+    orgId: string,
+    destination: string,
+    resourceName: string,
+  ) => {
     try {
       if (user?.organizationId !== orgId) {
         await switchOrganization(orgId);
         toast.success("Switched organization context");
       }
-      navigate("/ssh-keys");
+      navigate(destination);
     } catch (error: any) {
-      console.error("Failed to open organization SSH keys:", error);
-      toast.error(error.message || "Failed to open organization SSH keys");
+      console.error(`Failed to open organization ${resourceName}:`, error);
+      toast.error(error.message || `Failed to open organization ${resourceName}`);
     }
+  };
+
+  const handleOpenOrganizationSSHKeys = async (orgId: string) => {
+    await handleOpenOrganizationResource(orgId, "/ssh-keys", "SSH keys");
+  };
+
+  const handleCreateOrganizationVPS = async (orgId: string) => {
+    await handleOpenOrganizationResource(orgId, "/vps?create=1", "VPS creation");
+  };
+
+  const handleCreateOrganizationTicket = async (orgId: string) => {
+    await handleOpenOrganizationResource(
+      orgId,
+      "/support?create=1",
+      "support ticket creation",
+    );
   };
 
   const handlePageChange = (page: number) => {
@@ -957,11 +977,15 @@ const Organizations: React.FC = () => {
                           VPS Instances
                         </CardTitle>
                         {selectedOrganizationResources.permissions.vps_create && (
-                          <Link to="/vps?create=1">
-                            <Button variant="outline" size="sm">
-                              Create
-                            </Button>
-                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCreateOrganizationVPS(selectedOrganization.id)}
+                          >
+                            {user?.organizationId === selectedOrganization.id
+                              ? "Create"
+                              : "Switch & Create"}
+                          </Button>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -1112,11 +1136,17 @@ const Organizations: React.FC = () => {
                           Support Tickets
                         </CardTitle>
                         {selectedOrganizationResources.permissions.tickets_create && (
-                          <Link to="/support">
-                            <Button variant="outline" size="sm">
-                              Create
-                            </Button>
-                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleCreateOrganizationTicket(selectedOrganization.id)
+                            }
+                          >
+                            {user?.organizationId === selectedOrganization.id
+                              ? "Create"
+                              : "Switch & Create"}
+                          </Button>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">

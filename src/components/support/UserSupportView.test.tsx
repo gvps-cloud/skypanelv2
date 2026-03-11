@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { UserSupportView } from './UserSupportView';
 import { AuthProvider } from '@/contexts/AuthContext';
 import * as fc from 'fast-check';
@@ -431,6 +431,72 @@ describe('Bug Condition Exploration: Support Tickets Organization Filter', () =>
        */
       
       expect(true).toBe(true); // This test always passes - it's for documentation
+    });
+  });
+
+  describe('Create ticket deep-link behavior', () => {
+    it('opens the create ticket dialog when pendingCreateTicket is provided', async () => {
+      const onCreateTicketHandled = vi.fn();
+
+      (global.fetch as any).mockImplementation(async (url: string) => {
+        if (url.includes('/api/support/tickets')) {
+          return {
+            ok: true,
+            json: async () => ({ tickets: [] }),
+          };
+        }
+
+        if (url.includes('/api/payments/wallet/balance')) {
+          return {
+            ok: true,
+            json: async () => ({ success: true, balance: 100 }),
+          };
+        }
+
+        if (url.includes('/api/vps')) {
+          return {
+            ok: true,
+            json: async () => ({ instances: [] }),
+          };
+        }
+
+        if (url.includes('/api/organizations')) {
+          return {
+            ok: true,
+            json: async () => ({
+              organizations: [
+                {
+                  id: 'org-a',
+                  name: 'Organization A',
+                  member_role: 'owner',
+                  role_permissions: [],
+                },
+              ],
+            }),
+          };
+        }
+
+        return {
+          ok: true,
+          json: async () => ({}),
+        };
+      });
+
+      render(
+        <UserSupportView
+          token="mock-jwt-token"
+          pendingCreateTicket
+          onCreateTicketHandled={onCreateTicketHandled}
+        />
+      );
+
+      await waitFor(() => {
+        expect(onCreateTicketHandled).toHaveBeenCalledTimes(1);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('New Support Ticket')).toBeInTheDocument();
+      });
     });
   });
 });
