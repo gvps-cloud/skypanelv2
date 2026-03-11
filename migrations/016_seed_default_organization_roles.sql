@@ -14,6 +14,8 @@ INSERT INTO predefined_permissions (name, category, description) VALUES
 ('vps_create', 'VPS', 'Create new VPS instances'),
 ('vps_delete', 'VPS', 'Delete VPS instances'),
 ('vps_manage', 'VPS', 'Manage VPS instances (start, stop, reboot, resize)'),
+('ssh_keys_view', 'SSH Keys', 'View organization SSH keys'),
+('ssh_keys_manage', 'SSH Keys', 'Create and delete organization SSH keys'),
 ('tickets_view', 'Support', 'View support tickets'),
 ('tickets_create', 'Support', 'Create support tickets'),
 ('tickets_manage', 'Support', 'Manage support tickets (close, reply, escalate)'),
@@ -47,7 +49,7 @@ BEGIN
   VALUES (
     org_id,
     'owner',
-    '["vps_view","vps_create","vps_delete","vps_manage","tickets_view","tickets_create","tickets_manage","billing_view","billing_manage","members_manage","settings_manage"]'::jsonb,
+    '["vps_view","vps_create","vps_delete","vps_manage","ssh_keys_view","ssh_keys_manage","tickets_view","tickets_create","tickets_manage","billing_view","billing_manage","members_manage","settings_manage"]'::jsonb,
     false
   )
   ON CONFLICT (organization_id, name) DO NOTHING
@@ -58,7 +60,7 @@ BEGIN
   VALUES (
     org_id,
     'admin',
-    '["vps_view","vps_create","vps_delete","vps_manage","tickets_view","tickets_create","tickets_manage","billing_view","settings_manage"]'::jsonb,
+    '["vps_view","vps_create","vps_delete","vps_manage","ssh_keys_view","ssh_keys_manage","tickets_view","tickets_create","tickets_manage","billing_view","settings_manage"]'::jsonb,
     false
   )
   ON CONFLICT (organization_id, name) DO NOTHING
@@ -69,7 +71,7 @@ BEGIN
   VALUES (
     org_id,
     'vps_manager',
-    '["vps_view","vps_create","vps_manage"]'::jsonb,
+    '["vps_view","vps_create","vps_manage","ssh_keys_view","ssh_keys_manage"]'::jsonb,
     false
   )
   ON CONFLICT (organization_id, name) DO NOTHING

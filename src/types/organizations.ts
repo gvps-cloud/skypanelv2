@@ -36,6 +36,7 @@ export interface OrganizationStats {
   organization_id: string;
   vps_count: number;
   ticket_count: number;
+  ssh_key_count: number;
   member_count: number;
 }
 
@@ -68,15 +69,29 @@ export interface OrganizationTicket {
   updated_at: string;
 }
 
+export interface OrganizationSSHKey {
+  id: string;
+  name: string;
+  public_key?: string;
+  fingerprint: string;
+  linode_key_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface OrganizationResources {
   organization_id: string;
   organization_name: string;
   vps_instances: OrganizationVPS[];
+  ssh_keys: OrganizationSSHKey[];
   tickets: OrganizationTicket[];
   permissions: {
     vps_view: boolean;
     vps_create: boolean;
+    vps_delete: boolean;
     vps_manage: boolean;
+    ssh_keys_view: boolean;
+    ssh_keys_manage: boolean;
     tickets_view: boolean;
     tickets_create: boolean;
     tickets_manage: boolean;

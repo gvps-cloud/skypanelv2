@@ -10,6 +10,7 @@ import {
   Users,
   Server,
   Ticket,
+  Key,
   ChevronRight,
   Search,
   Filter,
@@ -168,6 +169,19 @@ const Organizations: React.FC = () => {
     }
   };
 
+  const handleOpenOrganizationSSHKeys = async (orgId: string) => {
+    try {
+      if (user?.organizationId !== orgId) {
+        await switchOrganization(orgId);
+        toast.success("Switched organization context");
+      }
+      navigate("/ssh-keys");
+    } catch (error: any) {
+      console.error("Failed to open organization SSH keys:", error);
+      toast.error(error.message || "Failed to open organization SSH keys");
+    }
+  };
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -242,6 +256,10 @@ const Organizations: React.FC = () => {
         (sum, org) => sum + org.stats.ticket_count,
         0,
       ),
+      sshKeys: organizations.reduce(
+        (sum, org) => sum + org.stats.ssh_key_count,
+        0,
+      ),
       members: organizations.reduce(
         (sum, org) => sum + org.stats.member_count,
         0,
@@ -254,8 +272,8 @@ const Organizations: React.FC = () => {
       <div className="space-y-6">
         <div className="space-y-4">
           <Skeleton className="h-12 w-64" />
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            {[1, 2, 3, 4, 5].map((i) => (
               <Card key={i}>
                 <CardContent className="p-6">
                   <Skeleton className="h-20" />
@@ -315,13 +333,19 @@ const Organizations: React.FC = () => {
                 icon: <Ticket className="h-6 w-6" />,
               },
               {
+                label: "SSH Keys",
+                value: totalStats.sshKeys,
+                description: "Shared across organizations",
+                icon: <Key className="h-6 w-6" />,
+              },
+              {
                 label: "Team Members",
                 value: totalStats.members,
                 description: "Total across organizations",
                 icon: <Users className="h-6 w-6" />,
               },
             ]}
-            columns={4}
+            columns={5}
           />
 
           <Card>
@@ -451,7 +475,7 @@ const Organizations: React.FC = () => {
                 <div>
                   <CardTitle>Cross-Organization Resources</CardTitle>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    View all VPS instances and tickets across your organizations
+                    View VPS instances, SSH keys, and tickets across your organizations
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -528,8 +552,8 @@ const Organizations: React.FC = () => {
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {selectedOrgFilter !== "all"
-                      ? "This organization has no resources yet"
-                      : "No resources across your organizations"}
+                      ? "This organization has no VPS instances, SSH keys, or tickets yet"
+                      : "No VPS instances, SSH keys, or tickets across your organizations"}
                   </p>
                 </div>
               ) : (
@@ -550,6 +574,10 @@ const Organizations: React.FC = () => {
                               <div className="flex items-center gap-1">
                                 <Ticket className="h-3 w-3" />
                                 {resourceGroup.tickets.length} tickets
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Key className="h-3 w-3" />
+                                {resourceGroup.ssh_keys.length} SSH keys
                               </div>
                             </div>
                           </div>
@@ -701,8 +729,77 @@ const Organizations: React.FC = () => {
                             </div>
                           )}
 
+                        {resourceGroup.permissions.ssh_keys_view &&
+                          resourceGroup.ssh_keys.length > 0 && (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-semibold">
+                                  Organization SSH Keys
+                                </h4>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleOpenOrganizationSSHKeys(
+                                      resourceGroup.organization_id,
+                                    )
+                                  }
+                                >
+                                  {user?.organizationId ===
+                                  resourceGroup.organization_id
+                                    ? "Open SSH Keys"
+                                    : "Switch & Open"}
+                                </Button>
+                              </div>
+                              <div
+                                className={`grid gap-3 ${
+                                  resourceViewMode === "grid"
+                                    ? "sm:grid-cols-2 lg:grid-cols-3"
+                                    : "grid-cols-1"
+                                }`}
+                              >
+                                {resourceGroup.ssh_keys.map((sshKey) => (
+                                  <Card
+                                    key={sshKey.id}
+                                    className="transition-all hover:border-primary/50 hover:shadow-md"
+                                  >
+                                    <CardContent className="p-4">
+                                      <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className="rounded-md bg-primary/10 p-2">
+                                            <Key className="h-4 w-4 text-primary" />
+                                          </div>
+                                          <h5 className="font-semibold text-sm truncate">
+                                            {sshKey.name}
+                                          </h5>
+                                        </div>
+                                        <p className="font-mono text-xs text-muted-foreground break-all rounded bg-muted px-2 py-1">
+                                          {sshKey.fingerprint}
+                                        </p>
+                                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                          <span>
+                                            Added {formatTimestamp(sshKey.created_at)}
+                                          </span>
+                                          {sshKey.linode_key_id && (
+                                            <Badge
+                                              variant="secondary"
+                                              className="text-xs"
+                                            >
+                                              Linode synced
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                         {resourceGroup.vps_instances.length === 0 &&
-                          resourceGroup.tickets.length === 0 && (
+                          resourceGroup.tickets.length === 0 &&
+                          resourceGroup.ssh_keys.length === 0 && (
                             <div className="text-center py-8 text-sm text-muted-foreground">
                               No resources available for this organization
                             </div>
@@ -740,7 +837,7 @@ const Organizations: React.FC = () => {
                 </h1>
                 <p className="mt-2 max-w-2xl text-muted-foreground">
                   {selectedOrganization.description ||
-                    "Manage this organization's resources and team members"}
+                    "Manage this organization's resources, SSH keys, and team members"}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Badge variant={getRoleBadgeVariant(selectedOrganization.member_role)}>
@@ -758,6 +855,10 @@ const Organizations: React.FC = () => {
                   <Badge variant="outline">
                     <Ticket className="mr-1 h-3 w-3" />
                     {selectedOrganization.stats.ticket_count} tickets
+                  </Badge>
+                  <Badge variant="outline">
+                    <Key className="mr-1 h-3 w-3" />
+                    {selectedOrganization.stats.ssh_key_count} SSH keys
                   </Badge>
                 </div>
               </div>
@@ -788,7 +889,7 @@ const Organizations: React.FC = () => {
             <TabsContent value="resources" className="space-y-6">
               {loadingResources ? (
                 <div className="space-y-4">
-                  {[1, 2].map((i) => (
+                  {[1, 2, 3].map((i) => (
                     <Card key={i}>
                       <CardContent className="p-6">
                         <Skeleton className="h-20" />
@@ -797,7 +898,7 @@ const Organizations: React.FC = () => {
                   ))}
                 </div>
               ) : selectedOrganizationResources ? (
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {/* VPS Instances Card */}
                   <Card>
                     <CardHeader className="pb-4">
@@ -871,6 +972,83 @@ const Organizations: React.FC = () => {
                       ) : (
                         <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg bg-muted/50">
                           You do not have permission to view VPS instances
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* SSH Keys Card */}
+                  <Card>
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Key className="h-5 w-5" />
+                          SSH Keys
+                        </CardTitle>
+                        {selectedOrganizationResources.permissions.ssh_keys_view && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleOpenOrganizationSSHKeys(selectedOrganization.id)
+                            }
+                          >
+                            {user?.organizationId === selectedOrganization.id
+                              ? "Open"
+                              : "Switch & Open"}
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrganizationResources.ssh_keys.length} keys
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      {selectedOrganizationResources.permissions.ssh_keys_view ? (
+                        selectedOrganizationResources.ssh_keys.length > 0 ? (
+                          <div className="space-y-3">
+                            {selectedOrganizationResources.ssh_keys.map((sshKey) => (
+                              <Card
+                                key={sshKey.id}
+                                className="transition-all hover:border-primary/50"
+                              >
+                                <CardContent className="p-4">
+                                  <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <Key className="h-4 w-4 text-primary" />
+                                      <h5 className="font-semibold text-sm truncate">
+                                        {sshKey.name}
+                                      </h5>
+                                    </div>
+                                    <p className="font-mono text-xs text-muted-foreground break-all rounded bg-muted px-2 py-1">
+                                      {sshKey.fingerprint}
+                                    </p>
+                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                      <span>
+                                        Added {formatTimestamp(sshKey.created_at)}
+                                      </span>
+                                      {sshKey.linode_key_id && (
+                                        <Badge
+                                          variant="secondary"
+                                          className="text-xs"
+                                        >
+                                          Linode synced
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg">
+                            No SSH keys found
+                          </div>
+                        )
+                      ) : (
+                        <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg bg-muted/50">
+                          You do not have permission to view SSH keys
                         </div>
                       )}
                     </CardContent>

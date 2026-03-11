@@ -1213,25 +1213,25 @@ ALTER TABLE service_providers
 
 CREATE INDEX IF NOT EXISTS idx_service_providers_display_order ON service_providers(display_order);
 
--- Migration 018: User SSH keys
+-- Migration 018: Organization SSH keys
 CREATE TABLE IF NOT EXISTS user_ssh_keys (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   public_key TEXT NOT NULL,
   fingerprint VARCHAR(255) NOT NULL,
   linode_key_id VARCHAR(50),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  CONSTRAINT unique_user_fingerprint UNIQUE(user_id, fingerprint)
+  CONSTRAINT unique_organization_fingerprint UNIQUE(organization_id, fingerprint)
 );
 
-CREATE INDEX idx_user_ssh_keys_user_id ON user_ssh_keys(user_id);
+CREATE INDEX idx_user_ssh_keys_organization_id ON user_ssh_keys(organization_id);
 CREATE INDEX idx_user_ssh_keys_fingerprint ON user_ssh_keys(fingerprint);
 
-COMMENT ON TABLE user_ssh_keys IS 'Stores SSH keys per user with provider-specific IDs for Linode.';
-COMMENT ON COLUMN user_ssh_keys.user_id IS 'Foreign key to users table';
-COMMENT ON COLUMN user_ssh_keys.name IS 'User-friendly name for the SSH key';
+COMMENT ON TABLE user_ssh_keys IS 'Stores SSH keys per organization with provider-specific IDs for Linode.';
+COMMENT ON COLUMN user_ssh_keys.organization_id IS 'Foreign key to organizations table';
+COMMENT ON COLUMN user_ssh_keys.name IS 'Organization-visible name for the SSH key';
 COMMENT ON COLUMN user_ssh_keys.public_key IS 'The SSH public key content';
 COMMENT ON COLUMN user_ssh_keys.fingerprint IS 'SSH key fingerprint for uniqueness validation';
 COMMENT ON COLUMN user_ssh_keys.linode_key_id IS 'Linode provider key ID (nullable if sync fails)';

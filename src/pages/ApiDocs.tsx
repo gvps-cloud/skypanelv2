@@ -1336,24 +1336,25 @@ export default function ApiDocs() {
         ],
       },
       {
-        title: "User SSH Keys",
+        title: "Organization SSH Keys",
         base: `${apiBase}/ssh-keys`,
         description:
-          "SSH key management for VPS access.",
+          "Organization-scoped SSH key management for VPS access.",
         icon: <Lock className="h-4 w-4" />,
         endpoints: [
           {
             method: "GET",
             path: "/",
-            description: "List SSH keys registered for the authenticated user.",
+            description: "List SSH keys registered for the authenticated organization.",
             auth: true,
             response: {
               keys: [
                 {
                   id: "ssh_001",
-                  label: "Work Laptop",
+                  name: "Work Laptop",
+                  public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...",
                   fingerprint: "SHA256:abcd...",
-                  createdAt: "2024-10-20T08:00:00Z",
+                  created_at: "2024-10-20T08:00:00Z",
                 },
               ],
             },
@@ -1361,22 +1362,25 @@ export default function ApiDocs() {
           {
             method: "POST",
             path: "/",
-            description: "Create a new SSH key entry.",
+            description: "Create a new SSH key entry for the authenticated organization.",
             auth: true,
             body: {
-              label: "Work Laptop",
+              name: "Work Laptop",
               publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...",
             },
             response: {
-              id: "ssh_002",
-              label: "Work Laptop",
-              fingerprint: "SHA256:abcd...",
+              success: true,
+              key: {
+                id: "ssh_002",
+                name: "Work Laptop",
+                fingerprint: "SHA256:abcd...",
+              },
             },
           },
           {
             method: "DELETE",
             path: "/:keyId",
-            description: "Remove an SSH key from the account.",
+            description: "Remove an SSH key from the authenticated organization.",
             auth: true,
             response: {
               success: true,

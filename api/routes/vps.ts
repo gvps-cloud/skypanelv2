@@ -1358,13 +1358,25 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
   }
 });
 
-// Get Linode SSH keys (filtered by user)
+// Get Linode SSH keys for the active organization
 router.get("/linode/ssh-keys", async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
+    const organizationId = (req as any).user?.organizationId;
 
-    if (!userId) {
+    if (!userId || !organizationId) {
       res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    const canViewKeys = await RoleService.checkPermission(
+      userId,
+      organizationId,
+      "ssh_keys_view",
+    );
+
+    if (!canViewKeys) {
+      res.status(403).json({ error: "You do not have permission to view SSH keys" });
       return;
     }
 
@@ -1376,22 +1388,22 @@ router.get("/linode/ssh-keys", async (req: Request, res: Response) => {
     // Fetch all SSH keys from Linode API
     const allLinodeKeys = await linodeService.getSSHKeys(apiToken);
 
-    // Get user's SSH keys from database to filter
-    const userKeysResult = await query(
+    // Get organization SSH keys from database to filter
+    const organizationKeysResult = await query(
       `SELECT linode_key_id
        FROM user_ssh_keys
-       WHERE user_id = $1 AND linode_key_id IS NOT NULL`,
-      [userId],
+       WHERE organization_id = $1 AND linode_key_id IS NOT NULL`,
+      [organizationId],
     );
 
-    // Create a set of user's Linode key IDs for efficient filtering
-    const userLinodeKeyIds = new Set(
-      userKeysResult.rows.map((row: any) => String(row.linode_key_id)),
+    // Create a set of organization Linode key IDs for efficient filtering
+    const organizationLinodeKeyIds = new Set(
+      organizationKeysResult.rows.map((row: any) => String(row.linode_key_id)),
     );
 
-    // Filter Linode keys to only include user's keys
+    // Filter Linode keys to only include organization keys
     const filteredKeys = allLinodeKeys.filter((key: any) =>
-      userLinodeKeyIds.has(String(key.id)),
+      organizationLinodeKeyIds.has(String(key.id)),
     );
 
     res.json({

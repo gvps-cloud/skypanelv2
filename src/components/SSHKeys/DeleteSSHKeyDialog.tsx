@@ -50,7 +50,7 @@ export const DeleteSSHKeyDialog: React.FC<DeleteSSHKeyDialogProps> = ({
               This action will:
             </p>
             <ul className="text-sm space-y-1 list-disc list-inside">
-              <li>Remove the key from your account</li>
+              <li>Remove the key from your organization</li>
               <li>Delete the key from all cloud providers</li>
               <li>Prevent using this key for new VPS instances</li>
             </ul>

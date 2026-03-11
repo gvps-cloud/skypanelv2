@@ -15,7 +15,7 @@ interface StatCardProps {
 
 interface StatsGridProps {
   stats: StatCardProps[];
-  columns?: 2 | 3 | 4;
+  columns?: 2 | 3 | 4 | 5;
   className?: string;
 }
 
@@ -66,7 +66,8 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
   const gridCols = {
     2: 'sm:grid-cols-2',
     3: 'sm:grid-cols-2 xl:grid-cols-3',
-    4: 'sm:grid-cols-2 xl:grid-cols-4'
+    4: 'sm:grid-cols-2 xl:grid-cols-4',
+    5: 'sm:grid-cols-2 xl:grid-cols-5'
   };
 
   return (

@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SSHKeyForm } from '@/components/SSHKeys/SSHKeyForm';
 import { DeleteSSHKeyDialog } from '@/components/SSHKeys/DeleteSSHKeyDialog';
 import { Badge } from '@/components/ui/badge';
+import type { OrganizationSSHKey } from '@/types/organizations';
 import {
   Dialog,
   DialogContent,
@@ -18,20 +19,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-interface UserSSHKey {
-  id: string;
-  name: string;
-  public_key: string;
-  fingerprint: string;
-  linode_key_id?: string;
-  created_at: string;
-  updated_at: string;
-}
-
 const SSHKeys: React.FC = () => {
   const { token } = useAuth();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [keyToDelete, setKeyToDelete] = useState<UserSSHKey | null>(null);
+  const [keyToDelete, setKeyToDelete] = useState<OrganizationSSHKey | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch SSH keys
@@ -39,7 +30,7 @@ const SSHKeys: React.FC = () => {
     data: sshKeys,
     isLoading,
     error,
-  } = useQuery<UserSSHKey[]>({
+  } = useQuery<OrganizationSSHKey[]>({
     queryKey: ['ssh-keys'],
     queryFn: async () => {
       const response = await fetch('/api/ssh-keys', {
@@ -150,7 +141,7 @@ const SSHKeys: React.FC = () => {
     });
   };
 
-  const getProviderStatus = (key: UserSSHKey) => {
+  const getProviderStatus = (key: OrganizationSSHKey) => {
     const providers: Array<'linode'> = [];
     if (key.linode_key_id) providers.push('linode');
     return providers;
@@ -210,7 +201,7 @@ const SSHKeys: React.FC = () => {
             SSH Keys
           </h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            Manage your SSH keys across all cloud providers
+            Manage SSH keys for the active organization across all cloud providers
           </p>
         </div>
         <Alert variant="destructive">
@@ -236,7 +227,7 @@ const SSHKeys: React.FC = () => {
             SSH Keys
           </h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            Manage your SSH keys across all cloud providers. Keys are automatically synchronized when you create VPS instances.
+            Manage SSH keys for the active organization across all cloud providers. Keys are automatically synchronized when you create VPS instances.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button size="lg" onClick={() => setIsAddDialogOpen(true)}>
@@ -260,7 +251,7 @@ const SSHKeys: React.FC = () => {
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Total Keys</p>
                 <p className="text-3xl font-bold tracking-tight">{sshKeys?.length || 0}</p>
-                <p className="text-xs text-muted-foreground">Configured SSH keys</p>
+                <p className="text-xs text-muted-foreground">Configured for the active organization</p>
               </div>
               <div className="rounded-lg bg-primary/10 p-3">
                 <Key className="h-6 w-6 text-primary" />
@@ -313,9 +304,9 @@ const SSHKeys: React.FC = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Your SSH Keys</CardTitle>
+              <CardTitle>Organization SSH Keys</CardTitle>
               <CardDescription className="mt-1">
-                SSH keys are automatically synchronized across all configured cloud providers
+                SSH keys are automatically synchronized across all configured cloud providers for the active organization
               </CardDescription>
             </div>
           </div>
@@ -328,7 +319,7 @@ const SSHKeys: React.FC = () => {
               </div>
               <h3 className="mt-4 text-sm font-semibold">No SSH keys yet</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Add your first SSH key to use it when creating VPS instances
+                Add your first organization SSH key to use it when creating VPS instances in this organization
               </p>
               <Button size="sm" className="mt-4" onClick={() => setIsAddDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -398,8 +389,7 @@ const SSHKeys: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Add SSH Key</DialogTitle>
             <DialogDescription>
-              Add a new SSH key that will be available when creating VPS instances across
-              all cloud providers.
+              Add a new SSH key for the active organization. It will be available when creating VPS instances across all cloud providers.
             </DialogDescription>
           </DialogHeader>
           <SSHKeyForm

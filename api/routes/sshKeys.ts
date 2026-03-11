@@ -1,15 +1,16 @@
 /**
  * SSH Key Management API routes
- * Handle user SSH key CRUD operations with cross-provider synchronization
+ * Handle organization SSH key CRUD operations with cross-provider synchronization
  */
 import { Router, type Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import crypto from 'crypto';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js';
+import { authenticateToken, AuthenticatedRequest, requireOrganization } from '../middleware/auth.js';
 import { query } from '../lib/database.js';
 import { decryptSecret } from '../lib/crypto.js';
 import { linodeService } from '../services/linodeService.js';
 import { logActivity } from '../services/activityLogger.js';
+import { RoleService } from '../services/roles.js';
 import { 
   withRetry, 
   handleProviderError, 
@@ -27,8 +28,8 @@ import {
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticateToken);
+// All routes require authentication and organization context
+router.use(authenticateToken, requireOrganization);
 
 /**
  * Build a provider-safe SSH key label using organization name, user identifier, and key name.
@@ -157,7 +158,7 @@ async function getProviderTokens(): Promise<{ linode?: string }> {
 
 /**
  * GET /api/ssh-keys
- * Get all SSH keys for the authenticated user
+ * Get all SSH keys for the active organization
  */
 router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -166,14 +167,26 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
       return;
     }
 
+    const organizationId = req.user.organizationId;
+    if (!organizationId) {
+      res.status(403).json({ error: 'Organization context is required' });
+      return;
+    }
+
+    const canViewKeys = await RoleService.checkPermission(req.user.id, organizationId, 'ssh_keys_view');
+    if (!canViewKeys) {
+      res.status(403).json({ error: 'You do not have permission to view SSH keys' });
+      return;
+    }
+
     const result = await query(
-      `SELECT id, user_id, name, public_key, fingerprint, 
+      `SELECT id, organization_id, name, public_key, fingerprint, 
               linode_key_id, 
               created_at, updated_at
        FROM user_ssh_keys
-       WHERE user_id = $1
+       WHERE organization_id = $1
        ORDER BY created_at DESC`,
-      [req.user.id]
+      [organizationId]
     );
 
     const keys = result.rows.map(row => ({
@@ -215,6 +228,18 @@ router.post('/', [
       return;
     }
 
+    const organizationId = req.user.organizationId;
+    if (!organizationId) {
+      res.status(403).json({ error: 'Organization context is required' });
+      return;
+    }
+
+    const canManageKeys = await RoleService.checkPermission(req.user.id, organizationId, 'ssh_keys_manage');
+    if (!canManageKeys) {
+      res.status(403).json({ error: 'You do not have permission to manage SSH keys' });
+      return;
+    }
+
     const { name, publicKey } = req.body;
 
     // Validate SSH key format
@@ -240,15 +265,15 @@ router.post('/', [
       return;
     }
 
-    // Check for duplicate fingerprint for this user
+    // Check for duplicate fingerprint for this organization
     const duplicateCheck = await query(
-      'SELECT id FROM user_ssh_keys WHERE user_id = $1 AND fingerprint = $2',
-      [req.user.id, fingerprint]
+      'SELECT id FROM user_ssh_keys WHERE organization_id = $1 AND fingerprint = $2',
+      [organizationId, fingerprint]
     );
 
     if (duplicateCheck.rows.length > 0) {
       res.status(400).json({ 
-        error: 'This SSH key already exists for your account',
+        error: 'This SSH key already exists for this organization',
         code: ErrorCodes.SSH_KEY_DUPLICATE
       });
       return;
@@ -262,7 +287,7 @@ router.post('/', [
     let linodeKeyId: string | null = null;
 
     // Build normalized provider label
-    const providerLabel = await buildProviderKeyLabel(req.user.organizationId, req.user.email, name);
+    const providerLabel = await buildProviderKeyLabel(organizationId, req.user.email, name);
 
     // Add to Linode with retry logic
     if (tokens.linode) {
@@ -332,10 +357,10 @@ router.post('/', [
     // Store in database
     const insertResult = await query(
       `INSERT INTO user_ssh_keys 
-       (user_id, name, public_key, fingerprint, linode_key_id, created_at, updated_at)
+       (organization_id, name, public_key, fingerprint, linode_key_id, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-       RETURNING id, user_id, name, public_key, fingerprint, linode_key_id, created_at, updated_at`,
-      [req.user.id, name, publicKey, fingerprint, linodeKeyId]
+       RETURNING id, organization_id, name, public_key, fingerprint, linode_key_id, created_at, updated_at`,
+      [organizationId, name, publicKey, fingerprint, linodeKeyId]
     );
 
     const newKey = insertResult.rows[0];
@@ -347,7 +372,7 @@ router.post('/', [
     try {
       await logActivity({
         userId: req.user.id,
-        organizationId: req.user.organizationId,
+        organizationId,
         eventType: 'ssh_key.create',
         entityType: 'ssh_key',
         entityId: String(newKey.id),
@@ -396,11 +421,23 @@ router.delete('/:keyId', async (req: AuthenticatedRequest, res: Response): Promi
       return;
     }
 
+    const organizationId = req.user.organizationId;
+    if (!organizationId) {
+      res.status(403).json({ error: 'Organization context is required' });
+      return;
+    }
+
+    const canManageKeys = await RoleService.checkPermission(req.user.id, organizationId, 'ssh_keys_manage');
+    if (!canManageKeys) {
+      res.status(403).json({ error: 'You do not have permission to manage SSH keys' });
+      return;
+    }
+
     const { keyId } = req.params;
 
-    // Verify key belongs to user
+    // Verify key belongs to active organization
     const keyResult = await query(
-      `SELECT id, user_id, name, fingerprint, linode_key_id
+      `SELECT id, organization_id, name, fingerprint, linode_key_id
        FROM user_ssh_keys
        WHERE id = $1`,
       [keyId]
@@ -413,7 +450,7 @@ router.delete('/:keyId', async (req: AuthenticatedRequest, res: Response): Promi
 
     const key = keyResult.rows[0];
 
-    if (key.user_id !== req.user.id) {
+    if (key.organization_id !== organizationId) {
       res.status(403).json({ error: 'You do not have permission to delete this SSH key' });
       return;
     }
@@ -492,7 +529,7 @@ router.delete('/:keyId', async (req: AuthenticatedRequest, res: Response): Promi
     try {
       await logActivity({
         userId: req.user.id,
-        organizationId: req.user.organizationId,
+        organizationId,
         eventType: 'ssh_key.delete',
         entityType: 'ssh_key',
         entityId: keyId,

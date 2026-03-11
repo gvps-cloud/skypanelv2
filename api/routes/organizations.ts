@@ -179,7 +179,10 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
       let permissions = {
         vps_view: false,
         vps_create: false,
+        vps_delete: false,
         vps_manage: false,
+        ssh_keys_view: false,
+        ssh_keys_manage: false,
         tickets_view: false,
         tickets_create: false,
         tickets_manage: false,
@@ -216,6 +219,7 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
           Object.keys(permissions).forEach(key => (permissions as any)[key] = true);
         } else if (member.legacy_role === 'admin') {
           ['vps_view', 'vps_create', 'vps_delete', 'vps_manage', 
+           'ssh_keys_view', 'ssh_keys_manage',
            'tickets_view', 'tickets_create', 'tickets_manage', 
            'billing_view', 'settings_manage'].forEach(p => {
              if (p in permissions) (permissions as any)[p] = true;
@@ -229,6 +233,7 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
 
       // Fetch resources if authorized
       let vpsInstances: any[] = [];
+      let sshKeys: any[] = [];
       let tickets: any[] = [];
 
       if (permissions.vps_view) {
@@ -260,11 +265,23 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
         tickets = ticketResult.rows;
       }
 
+      if (permissions.ssh_keys_view) {
+        const sshKeyResult = await query(
+          `SELECT id, name, fingerprint, linode_key_id, created_at, updated_at
+           FROM user_ssh_keys
+           WHERE organization_id = $1
+           ORDER BY created_at DESC LIMIT 5`,
+          [org.id]
+        );
+        sshKeys = sshKeyResult.rows;
+      }
+
       return {
         organization_id: org.id,
         organization_name: org.name,
         permissions,
         vps_instances: vpsInstances,
+        ssh_keys: sshKeys,
         tickets
       };
     }));
@@ -323,6 +340,11 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
         [org.id]
       );
 
+      const sshKeyCount = await query(
+        'SELECT COUNT(*) as count FROM user_ssh_keys WHERE organization_id = $1',
+        [org.id]
+      );
+
       const memberCount = await query(
         'SELECT COUNT(*) as count FROM organization_members WHERE organization_id = $1',
         [org.id]
@@ -333,6 +355,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
         stats: {
           vps_count: parseInt(vpsCount.rows[0].count),
           ticket_count: parseInt(ticketCount.rows[0].count),
+          ssh_key_count: parseInt(sshKeyCount.rows[0].count),
           member_count: parseInt(memberCount.rows[0].count)
         }
       };
@@ -913,6 +936,7 @@ router.post('/:id/roles', requireOrgAccess, async (req: AuthenticatedRequest, re
 
   const validPermissions = [
     'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
+    'ssh_keys_view', 'ssh_keys_manage',
     'tickets_view', 'tickets_create', 'tickets_manage',
     'billing_view', 'billing_manage',
     'members_manage', 'settings_manage'
@@ -973,6 +997,7 @@ router.put('/:id/roles/:roleId', requireOrgAccess, async (req: AuthenticatedRequ
     if (permissions) {
       const validPermissions = [
         'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
+        'ssh_keys_view', 'ssh_keys_manage',
         'tickets_view', 'tickets_create', 'tickets_manage',
         'billing_view', 'billing_manage',
         'members_manage', 'settings_manage'

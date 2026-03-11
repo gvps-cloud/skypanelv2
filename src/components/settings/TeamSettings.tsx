@@ -90,6 +90,8 @@ const PERMISSIONS = [
   { id: 'vps_create', label: 'VPS Create', description: 'Create new VPS instances' },
   { id: 'vps_delete', label: 'VPS Delete', description: 'Delete VPS instances' },
   { id: 'vps_manage', label: 'VPS Manage', description: 'Manage VPS instances (start, stop, restart)' },
+  { id: 'ssh_keys_view', label: 'SSH Keys View', description: 'View organization SSH keys' },
+  { id: 'ssh_keys_manage', label: 'SSH Keys Manage', description: 'Create and delete organization SSH keys' },
   { id: 'tickets_view', label: 'Tickets View', description: 'View support tickets' },
   { id: 'tickets_create', label: 'Tickets Create', description: 'Create support tickets' },
   { id: 'tickets_manage', label: 'Tickets Manage', description: 'Manage support tickets' },
