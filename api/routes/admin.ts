@@ -211,6 +211,7 @@ const buildAdminOrganizationQuery = (whereClause = "") => `
 
 const DEFAULT_ADMIN_ORGANIZATION_PAGE_SIZE = 10;
 const MAX_ADMIN_ORGANIZATION_PAGE_SIZE = 200;
+type QueryParamValue = Request["query"][string];
 
 const clampOrganizationPageSize = (value?: number) => {
   if (!Number.isFinite(value ?? NaN)) {
@@ -222,7 +223,7 @@ const clampOrganizationPageSize = (value?: number) => {
 };
 
 const parsePositivePageParam = (
-  rawValue: string | string[] | undefined,
+  rawValue: QueryParamValue,
   fallback: number,
 ) => {
   const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
