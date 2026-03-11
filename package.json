@@ -21,8 +21,6 @@
         "lint": "eslint .",
         "preview": "vite preview",
         "check": "tsc --noEmit",
-        "test": "vitest --run",
-        "test:watch": "vitest",
         "server:dev": "nodemon",
         "dev": "concurrently \"npm run client:dev\" \"npm run server:dev\"",
         "prestart": "npm run kill-ports",
