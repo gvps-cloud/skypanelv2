@@ -67,16 +67,34 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 
-type OrgRole = "owner" | "admin" | "member";
 type OrganizationDialogMode = "create" | "edit";
+
+const ORGANIZATION_ROLE_PRIORITY = [
+  "owner",
+  "admin",
+  "vps_manager",
+  "support_agent",
+  "viewer",
+];
 
 interface AdminOrganizationMember {
   userId: string;
   userName: string;
   userEmail: string;
-  role: OrgRole;
+  role: string;
+  roleId: string | null;
+  roleName: string;
   userRole: string;
   joinedAt: string;
+}
+
+interface AdminOrganizationRole {
+  id: string;
+  name: string;
+  permissions: string[];
+  isCustom: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AdminOrganization {
@@ -89,6 +107,7 @@ interface AdminOrganization {
   description: string | null;
   memberCount: number;
   members: AdminOrganizationMember[];
+  roles: AdminOrganizationRole[];
   createdAt: string;
   updatedAt: string;
 }
@@ -119,18 +138,71 @@ interface UserSearchResponse {
   users: AdminUserSearchResult[];
 }
 
-const roleOrder: Record<OrgRole, number> = {
-  owner: 0,
-  admin: 1,
-  member: 2,
-};
-
 const emptyOrganizationForm = {
   name: "",
   slug: "",
   description: "",
-  initialDescription: "",
   ownerId: "",
+};
+
+const normalizeRoleName = (value: unknown) => {
+  if (typeof value !== "string" || !value.trim()) return null;
+  return value === "member" ? "viewer" : value;
+};
+
+const formatRoleLabel = (roleName: string) =>
+  roleName
+    .split("_")
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+
+const getRolePriority = (roleName: string | null | undefined) => {
+  const normalizedRoleName = normalizeRoleName(roleName);
+  if (!normalizedRoleName) return ORGANIZATION_ROLE_PRIORITY.length;
+
+  const index = ORGANIZATION_ROLE_PRIORITY.indexOf(normalizedRoleName);
+  return index === -1 ? ORGANIZATION_ROLE_PRIORITY.length : index;
+};
+
+const normalizeOrganizationRole = (role: any): AdminOrganizationRole => ({
+  id: String(role?.id ?? ""),
+  name: normalizeRoleName(role?.name) ?? "viewer",
+  permissions: Array.isArray(role?.permissions)
+    ? role.permissions.map((permission: unknown) => String(permission))
+    : [],
+  isCustom: Boolean(role?.isCustom ?? role?.is_custom ?? false),
+  createdAt: String(role?.createdAt ?? role?.created_at ?? ""),
+  updatedAt: String(role?.updatedAt ?? role?.updated_at ?? ""),
+});
+
+const sortRoles = (roles: AdminOrganizationRole[]) =>
+  [...roles].sort((a, b) => {
+    const priorityDelta = getRolePriority(a.name) - getRolePriority(b.name);
+    if (priorityDelta !== 0) return priorityDelta;
+    return a.name.localeCompare(b.name);
+  });
+
+const deriveRolesFromMembers = (
+  members: AdminOrganizationMember[],
+): AdminOrganizationRole[] => {
+  const seen = new Set<string>();
+  return members.reduce<AdminOrganizationRole[]>((accumulator, member) => {
+    if (!member.roleId || seen.has(member.roleId)) {
+      return accumulator;
+    }
+
+    seen.add(member.roleId);
+    accumulator.push({
+      id: member.roleId,
+      name: member.roleName,
+      permissions: [],
+      isCustom: getRolePriority(member.roleName) === ORGANIZATION_ROLE_PRIORITY.length,
+      createdAt: "",
+      updatedAt: "",
+    });
+    return accumulator;
+  }, []);
 };
 
 const formatDate = (value: string | null | undefined) => {
@@ -158,14 +230,23 @@ const normalizeMember = (member: any): AdminOrganizationMember => ({
   userId: String(member?.userId ?? member?.user_id ?? ""),
   userName: String(member?.userName ?? member?.user_name ?? "Unknown user"),
   userEmail: String(member?.userEmail ?? member?.user_email ?? ""),
-  role: (member?.role ?? "member") as OrgRole,
+  role:
+    normalizeRoleName(member?.role ?? member?.roleName ?? member?.role_name) ??
+    "viewer",
+  roleId:
+    member?.roleId ?? member?.role_id
+      ? String(member?.roleId ?? member?.role_id)
+      : null,
+  roleName:
+    normalizeRoleName(member?.roleName ?? member?.role_name ?? member?.role) ??
+    "viewer",
   userRole: String(member?.userRole ?? member?.user_role ?? "user"),
   joinedAt: String(member?.joinedAt ?? member?.joined_at ?? ""),
 });
 
 const sortMembers = (members: AdminOrganizationMember[]) =>
   [...members].sort((a, b) => {
-    const orderDelta = roleOrder[a.role] - roleOrder[b.role];
+    const orderDelta = getRolePriority(a.roleName) - getRolePriority(b.roleName);
     if (orderDelta !== 0) return orderDelta;
     return a.userName.localeCompare(b.userName);
   });
@@ -175,6 +256,12 @@ const normalizeOrganization = (organization: any): AdminOrganization => {
     Array.isArray(organization?.members)
       ? organization.members.map(normalizeMember)
       : [],
+  );
+
+  const normalizedRoles = sortRoles(
+    Array.isArray(organization?.roles)
+      ? organization.roles.map(normalizeOrganizationRole)
+      : deriveRolesFromMembers(normalizedMembers),
   );
 
   return {
@@ -199,10 +286,48 @@ const normalizeOrganization = (organization: any): AdminOrganization => {
         0,
     ),
     members: normalizedMembers,
+    roles: normalizedRoles,
     createdAt: String(organization?.createdAt ?? organization?.created_at ?? ""),
     updatedAt: String(organization?.updatedAt ?? organization?.updated_at ?? ""),
   };
 };
+
+const getDefaultAssignableRoleId = (
+  organization: AdminOrganization | null | undefined,
+) => {
+  if (!organization) return "";
+
+  return (
+    organization.roles.find((role) => role.name === "viewer")?.id ??
+    organization.roles.find((role) => role.name !== "owner")?.id ??
+    organization.roles[0]?.id ??
+    ""
+  );
+};
+
+const getPreferredRoleIdForOrganization = (
+  organization: AdminOrganization | null | undefined,
+  preferredRoleName?: string | null,
+) => {
+  if (!organization) return "";
+
+  const normalizedPreferredRoleName = normalizeRoleName(preferredRoleName);
+  if (normalizedPreferredRoleName && normalizedPreferredRoleName !== "owner") {
+    const matchingRole = organization.roles.find(
+      (role) => role.name === normalizedPreferredRoleName,
+    );
+    if (matchingRole) {
+      return matchingRole.id;
+    }
+  }
+
+  return getDefaultAssignableRoleId(organization);
+};
+
+const getRoleNameFromOrganization = (
+  organization: AdminOrganization | null | undefined,
+  roleId: string,
+) => organization?.roles.find((role) => role.id === roleId)?.name ?? roleId;
 
 const buildUserSearchPath = (query: string, organizationId?: string) => {
   const params = new URLSearchParams();
@@ -260,7 +385,7 @@ export const OrganizationManagement: React.FC = () => {
   >([]);
   const [selectedMemberCandidate, setSelectedMemberCandidate] =
     useState<AdminUserSearchResult | null>(null);
-  const [memberRole, setMemberRole] = useState<OrgRole>("member");
+  const [memberRoleId, setMemberRoleId] = useState("");
   const [searchingMembers, setSearchingMembers] = useState(false);
   const [savingMember, setSavingMember] = useState(false);
 
@@ -277,7 +402,7 @@ export const OrganizationManagement: React.FC = () => {
     member: AdminOrganizationMember;
   } | null>(null);
   const [moveTargetOrganizationId, setMoveTargetOrganizationId] = useState("");
-  const [moveRole, setMoveRole] = useState<OrgRole>("member");
+  const [moveRoleId, setMoveRoleId] = useState("");
   const [movingMember, setMovingMember] = useState(false);
   const [updatingRoleKey, setUpdatingRoleKey] = useState<string | null>(null);
   const [deletingOrganization, setDeletingOrganization] = useState(false);
@@ -293,19 +418,7 @@ export const OrganizationManagement: React.FC = () => {
         "/admin/organizations",
       );
 
-      setOrganizations((previous) => {
-        const previousDescriptions = new Map(
-          previous.map((organization) => [organization.id, organization.description]),
-        );
-
-        return (response.organizations ?? []).map((organization) => {
-          const normalized = normalizeOrganization(organization);
-          if (!normalized.description && previousDescriptions.has(normalized.id)) {
-            normalized.description = previousDescriptions.get(normalized.id) ?? null;
-          }
-          return normalized;
-        });
-      });
+      setOrganizations((response.organizations ?? []).map(normalizeOrganization));
     } catch (error) {
       const errorMessage = getErrorMessage(
         error,
@@ -373,8 +486,7 @@ export const OrganizationManagement: React.FC = () => {
     setOrganizationForm({
       name: organization.name,
       slug: organization.slug,
-      description: organization.description ?? "",
-      initialDescription: organization.description ?? "",
+      description: "",
       ownerId: organization.ownerId,
     });
     setOwnerSearchTerm("");
@@ -460,10 +572,6 @@ export const OrganizationManagement: React.FC = () => {
           slug: organizationForm.slug.trim(),
         };
 
-        if (organizationForm.description !== organizationForm.initialDescription) {
-          payload.description = organizationForm.description.trim();
-        }
-
         const response = await apiClient.put<OrganizationMutationResponse>(
           `/admin/organizations/${editingOrganization.id}`,
           payload,
@@ -517,7 +625,7 @@ export const OrganizationManagement: React.FC = () => {
     setMemberSearchTerm("");
     setMemberSearchResults([]);
     setSelectedMemberCandidate(null);
-    setMemberRole("member");
+    setMemberRoleId(getDefaultAssignableRoleId(organization));
   };
 
   const closeMemberDialog = () => {
@@ -525,12 +633,17 @@ export const OrganizationManagement: React.FC = () => {
     setMemberSearchTerm("");
     setMemberSearchResults([]);
     setSelectedMemberCandidate(null);
-    setMemberRole("member");
+    setMemberRoleId("");
   };
 
   const handleAddMember = async () => {
     if (!memberDialogOrganization || !selectedMemberCandidate) {
       toast.error("Select a user to add");
+      return;
+    }
+
+    if (!memberRoleId) {
+      toast.error("Select a role before adding the member");
       return;
     }
 
@@ -541,7 +654,7 @@ export const OrganizationManagement: React.FC = () => {
         `/admin/organizations/${memberDialogOrganization.id}/members`,
         {
           userId: selectedMemberCandidate.id,
-          role: memberRole,
+          roleId: memberRoleId,
         },
       );
 
@@ -561,9 +674,9 @@ export const OrganizationManagement: React.FC = () => {
   const handleUpdateMemberRole = async (
     organization: AdminOrganization,
     member: AdminOrganizationMember,
-    role: OrgRole,
+    roleId: string,
   ) => {
-    if (member.role === role) return;
+    if (member.roleId === roleId) return;
 
     const actionKey = `${organization.id}:${member.userId}`;
     setUpdatingRoleKey(actionKey);
@@ -571,11 +684,15 @@ export const OrganizationManagement: React.FC = () => {
     try {
       await apiClient.put<MemberMutationResponse>(
         `/admin/organizations/${organization.id}/members/${member.userId}`,
-        { role },
+        { roleId },
       );
       await fetchOrganizations();
       setExpandedOrganizationId(organization.id);
-      toast.success(`Updated ${member.userName}'s role to ${role}`);
+      toast.success(
+        `Updated ${member.userName}'s role to ${formatRoleLabel(
+          getRoleNameFromOrganization(organization, roleId),
+        )}`,
+      );
     } catch (error) {
       toast.error(getErrorMessage(error, "Failed to update member role"));
     } finally {
@@ -608,7 +725,7 @@ export const OrganizationManagement: React.FC = () => {
   const closeMoveDialog = () => {
     setMovingMemberState(null);
     setMoveTargetOrganizationId("");
-    setMoveRole("member");
+    setMoveRoleId("");
   };
 
   const openMoveDialog = (organization: AdminOrganization, member: AdminOrganizationMember) => {
@@ -625,12 +742,22 @@ export const OrganizationManagement: React.FC = () => {
 
     setMovingMemberState({ organization, member });
     setMoveTargetOrganizationId(availableTargets[0]?.id ?? "");
-    setMoveRole(member.role === "owner" ? "member" : member.role);
+    setMoveRoleId(
+      getPreferredRoleIdForOrganization(
+        availableTargets[0],
+        member.roleName === "owner" ? null : member.roleName,
+      ),
+    );
   };
 
   const handleMoveMember = async () => {
     if (!movingMemberState || !moveTargetOrganizationId) {
       toast.error("Select a destination organization");
+      return;
+    }
+
+    if (!moveRoleId) {
+      toast.error("Select a destination role");
       return;
     }
 
@@ -641,7 +768,7 @@ export const OrganizationManagement: React.FC = () => {
         `/admin/organizations/${moveTargetOrganizationId}/members`,
         {
           userId: movingMemberState.member.userId,
-          role: moveRole,
+          roleId: moveRoleId,
         },
       );
 
@@ -672,11 +799,20 @@ export const OrganizationManagement: React.FC = () => {
     );
   }, [movingMemberState, organizations]);
 
+  const selectedMoveTarget = useMemo(
+    () =>
+      availableMoveTargets.find(
+        (organization) => organization.id === moveTargetOrganizationId,
+      ) ?? availableMoveTargets[0] ?? null,
+    [availableMoveTargets, moveTargetOrganizationId],
+  );
+
   useEffect(() => {
     if (!movingMemberState) return;
 
     if (availableMoveTargets.length === 0) {
       setMoveTargetOrganizationId("");
+      setMoveRoleId("");
       return;
     }
 
@@ -684,6 +820,28 @@ export const OrganizationManagement: React.FC = () => {
       setMoveTargetOrganizationId(availableMoveTargets[0]?.id ?? "");
     }
   }, [availableMoveTargets, moveTargetOrganizationId, movingMemberState]);
+
+  useEffect(() => {
+    if (!movingMemberState) return;
+
+    if (!selectedMoveTarget) {
+      setMoveRoleId("");
+      return;
+    }
+
+    if (selectedMoveTarget.roles.some((role) => role.id === moveRoleId)) {
+      return;
+    }
+
+    setMoveRoleId(
+      getPreferredRoleIdForOrganization(
+        selectedMoveTarget,
+        movingMemberState.member.roleName === "owner"
+          ? null
+          : movingMemberState.member.roleName,
+      ),
+    );
+  }, [moveRoleId, movingMemberState, selectedMoveTarget]);
 
   return (
     <div className="space-y-6">
@@ -870,7 +1028,7 @@ export const OrganizationManagement: React.FC = () => {
                           <TableBody>
                             {organization.members.map((member) => {
                               const roleKey = `${organization.id}:${member.userId}`;
-                              const isOwner = member.role === "owner";
+                              const isOwner = member.roleName === "owner";
                               const canMoveMember =
                                 getAvailableMoveTargetsForMember(
                                   organizations,
@@ -894,25 +1052,33 @@ export const OrganizationManagement: React.FC = () => {
                                   </TableCell>
                                   <TableCell className="min-w-[180px]">
                                     <Select
-                                      value={member.role}
+                                      value={member.roleId ?? undefined}
                                       onValueChange={(value) =>
                                         void handleUpdateMemberRole(
                                           organization,
                                           member,
-                                          value as OrgRole,
+                                          value,
                                         )
                                       }
-                                      disabled={updatingRoleKey === roleKey}
+                                      disabled={
+                                        updatingRoleKey === roleKey ||
+                                        organization.roles.length === 0
+                                      }
                                     >
                                       <SelectTrigger
                                         aria-label={`Role for ${member.userName} in ${organization.name}`}
                                       >
-                                        <SelectValue />
+                                        <SelectValue
+                                          placeholder={formatRoleLabel(member.roleName)}
+                                        />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="owner">Owner</SelectItem>
-                                        <SelectItem value="admin">Admin</SelectItem>
-                                        <SelectItem value="member">Member</SelectItem>
+                                        {organization.roles.map((role) => (
+                                          <SelectItem key={role.id} value={role.id}>
+                                            {formatRoleLabel(role.name)}
+                                            {role.isCustom ? " (Custom)" : ""}
+                                          </SelectItem>
+                                        ))}
                                       </SelectContent>
                                     </Select>
                                   </TableCell>
@@ -976,7 +1142,7 @@ export const OrganizationManagement: React.FC = () => {
             <DialogDescription>
               {organizationDialogMode === "create"
                 ? "Provision a new organization and assign its initial owner."
-                : "Update the organization name, slug, and optional description."}
+                : "Update the organization name and slug."}
             </DialogDescription>
           </DialogHeader>
 
@@ -1013,22 +1179,22 @@ export const OrganizationManagement: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="organization-description">
-                Description {organizationDialogMode === "edit" ? "(leave unchanged to keep current value)" : "(optional)"}
-              </Label>
-              <Textarea
-                id="organization-description"
-                value={organizationForm.description}
-                onChange={(event) =>
-                  setOrganizationForm((current) => ({
-                    ...current,
-                    description: event.target.value,
-                  }))
-                }
-                placeholder="Internal notes or team context"
-              />
-            </div>
+            {organizationDialogMode === "create" ? (
+              <div className="space-y-2">
+                <Label htmlFor="organization-description">Description (optional)</Label>
+                <Textarea
+                  id="organization-description"
+                  value={organizationForm.description}
+                  onChange={(event) =>
+                    setOrganizationForm((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
+                  }
+                  placeholder="Internal notes or team context"
+                />
+              </div>
+            ) : null}
 
             {organizationDialogMode === "create" ? (
               <div className="space-y-3 rounded-lg border p-4">
@@ -1157,14 +1323,17 @@ export const OrganizationManagement: React.FC = () => {
 
               <div className="space-y-2">
                 <Label>Role</Label>
-                <Select value={memberRole} onValueChange={(value) => setMemberRole(value as OrgRole)}>
+                <Select value={memberRoleId} onValueChange={setMemberRoleId}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="owner">Owner</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="member">Member</SelectItem>
+                    {(memberDialogOrganization?.roles ?? []).map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {formatRoleLabel(role.name)}
+                        {role.isCustom ? " (Custom)" : ""}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1253,14 +1422,17 @@ export const OrganizationManagement: React.FC = () => {
 
             <div className="space-y-2">
               <Label>Role in destination</Label>
-              <Select value={moveRole} onValueChange={(value) => setMoveRole(value as OrgRole)}>
+              <Select value={moveRoleId} onValueChange={setMoveRoleId}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="owner">Owner</SelectItem>
+                  {(selectedMoveTarget?.roles ?? []).map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {formatRoleLabel(role.name)}
+                      {role.isCustom ? " (Custom)" : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

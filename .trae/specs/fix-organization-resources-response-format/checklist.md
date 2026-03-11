@@ -1,2 +1,0 @@
-- [x] Verify that `GET /organizations/resources` returns a JSON object with a `resources` key.
-- [x] Verify that the frontend displays the resources in the "Cross-Organization Resources" section.

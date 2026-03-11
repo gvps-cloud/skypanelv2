@@ -109,8 +109,24 @@ export const MemberValidation = {
       .withMessage('User ID must be a valid UUID'),
     
     body('role')
-      .isIn(['owner', 'admin', 'member'])
-      .withMessage('Role must be owner, admin, or member'),
+      .optional()
+      .isString()
+      .withMessage('Role must be a string')
+      .trim()
+      .notEmpty()
+      .withMessage('Role cannot be empty'),
+
+    body('roleId')
+      .optional()
+      .isUUID()
+      .withMessage('Role ID must be a valid UUID'),
+
+    body().custom((value) => {
+      if (!value?.role && !value?.roleId) {
+        throw new Error('Either role or roleId is required');
+      }
+      return true;
+    }),
   ],
 
   update: [
@@ -123,8 +139,24 @@ export const MemberValidation = {
       .withMessage('User ID must be a valid UUID'),
     
     body('role')
-      .isIn(['owner', 'admin', 'member'])
-      .withMessage('Role must be owner, admin, or member'),
+      .optional()
+      .isString()
+      .withMessage('Role must be a string')
+      .trim()
+      .notEmpty()
+      .withMessage('Role cannot be empty'),
+
+    body('roleId')
+      .optional()
+      .isUUID()
+      .withMessage('Role ID must be a valid UUID'),
+
+    body().custom((value) => {
+      if (!value?.role && !value?.roleId) {
+        throw new Error('Either role or roleId is required');
+      }
+      return true;
+    }),
   ],
 
   remove: [

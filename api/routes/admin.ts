@@ -97,6 +97,167 @@ const mergeCustomPreset = (
   return existing ?? null;
 };
 
+const ORGANIZATION_ROLE_PRIORITY = [
+  "owner",
+  "admin",
+  "vps_manager",
+  "support_agent",
+  "viewer",
+];
+
+const normalizeOrganizationRoleName = (roleName?: string | null) => {
+  if (!roleName) return null;
+  return roleName === "member" ? "viewer" : roleName;
+};
+
+const getOrganizationRolePriority = (roleName?: string | null) => {
+  const normalizedRoleName = normalizeOrganizationRoleName(roleName);
+  if (!normalizedRoleName) return ORGANIZATION_ROLE_PRIORITY.length;
+
+  const index = ORGANIZATION_ROLE_PRIORITY.indexOf(normalizedRoleName);
+  return index === -1 ? ORGANIZATION_ROLE_PRIORITY.length : index;
+};
+
+const buildAdminOrganizationQuery = (whereClause = "") => `
+  SELECT
+    org.id,
+    org.name,
+    org.slug,
+    org.owner_id AS "ownerId",
+    org.settings->>'description' AS description,
+    org.created_at AS "createdAt",
+    org.updated_at AS "updatedAt",
+    owner.name AS "ownerName",
+    owner.email AS "ownerEmail",
+    COALESCE(
+      (
+        SELECT COUNT(*)::INTEGER
+        FROM organization_members om
+        WHERE om.organization_id = org.id
+      ),
+      0
+    ) AS "memberCount",
+    COALESCE(
+      (
+        SELECT jsonb_agg(
+          jsonb_build_object(
+            'userId', member_user.id,
+            'userName', member_user.name,
+            'userEmail', member_user.email,
+            'role', COALESCE(
+              role_by_id.name,
+              legacy_role.name,
+              CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END,
+              'viewer'
+            ),
+            'roleId', COALESCE(role_by_id.id, legacy_role.id),
+            'roleName', COALESCE(
+              role_by_id.name,
+              legacy_role.name,
+              CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END,
+              'viewer'
+            ),
+            'userRole', member_user.role,
+            'joinedAt', om.created_at
+          )
+          ORDER BY
+            CASE COALESCE(
+              role_by_id.name,
+              legacy_role.name,
+              CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END,
+              'viewer'
+            )
+              WHEN 'owner' THEN 0
+              WHEN 'admin' THEN 1
+              WHEN 'vps_manager' THEN 2
+              WHEN 'support_agent' THEN 3
+              WHEN 'viewer' THEN 4
+              ELSE 5
+            END,
+            LOWER(COALESCE(member_user.name, member_user.email, ''))
+        )
+        FROM organization_members om
+        JOIN users member_user ON member_user.id = om.user_id
+        LEFT JOIN organization_roles role_by_id ON role_by_id.id = om.role_id
+        LEFT JOIN organization_roles legacy_role
+          ON legacy_role.organization_id = om.organization_id
+         AND legacy_role.name = CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END
+        WHERE om.organization_id = org.id
+      ),
+      '[]'::jsonb
+    ) AS members,
+    COALESCE(
+      (
+        SELECT jsonb_agg(
+          jsonb_build_object(
+            'id', role.id,
+            'name', role.name,
+            'permissions', role.permissions,
+            'isCustom', role.is_custom,
+            'createdAt', role.created_at,
+            'updatedAt', role.updated_at
+          )
+          ORDER BY role.is_custom ASC, LOWER(role.name)
+        )
+        FROM organization_roles role
+        WHERE role.organization_id = org.id
+      ),
+      '[]'::jsonb
+    ) AS roles
+  FROM organizations org
+  LEFT JOIN users owner ON owner.id = org.owner_id
+  ${whereClause}
+  ORDER BY org.created_at DESC`;
+
+const fetchAdminOrganizations = async () => {
+  const result = await query(buildAdminOrganizationQuery());
+  return result.rows || [];
+};
+
+const fetchAdminOrganizationById = async (organizationId: string) => {
+  const result = await query(buildAdminOrganizationQuery("WHERE org.id = $1"), [
+    organizationId,
+  ]);
+  return result.rows[0] ?? null;
+};
+
+const getOrganizationRoleByName = async (
+  organizationId: string,
+  roleName: string,
+) => {
+  const result = await query(
+    `SELECT id, name
+     FROM organization_roles
+     WHERE organization_id = $1 AND name = $2`,
+    [organizationId, roleName],
+  );
+
+  return result.rows[0] ?? null;
+};
+
+const resolveOrganizationRoleSelection = async (
+  organizationId: string,
+  selection: { role?: string; roleId?: string },
+) => {
+  if (selection.roleId) {
+    const result = await query(
+      `SELECT id, name
+       FROM organization_roles
+       WHERE id = $1 AND organization_id = $2`,
+      [selection.roleId, organizationId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  const normalizedRoleName = normalizeOrganizationRoleName(selection.role);
+  if (!normalizedRoleName) {
+    return null;
+  }
+
+  return getOrganizationRoleByName(organizationId, normalizedRoleName);
+};
+
 type SupportTicketStatus = "open" | "in_progress" | "resolved" | "closed";
 
 const ALLOWED_TICKET_STATUS_TRANSITIONS: Record<
@@ -2354,38 +2515,8 @@ router.get(
   auditLogger("list_organizations"),
   async (_req: Request, res: Response) => {
     try {
-      const result = await query(
-        `SELECT
-          org.id,
-          org.name,
-          org.slug,
-          org.owner_id AS "ownerId",
-          org.created_at AS "createdAt",
-          org.updated_at AS "updatedAt",
-          owner.name AS "ownerName",
-          owner.email AS "ownerEmail",
-          COUNT(DISTINCT om.user_id) AS "memberCount",
-          COALESCE(
-            jsonb_agg(
-              DISTINCT jsonb_build_object(
-                'userId', mem.id,
-                'userName', mem.name,
-                'userEmail', mem.email,
-                'role', om.role,
-                'userRole', mem.role,
-                'joinedAt', om.created_at
-              )
-            ) FILTER (WHERE mem.id IS NOT NULL),
-            '[]'::jsonb
-          ) AS members
-        FROM organizations org
-        LEFT JOIN users owner ON owner.id = org.owner_id
-        LEFT JOIN organization_members om ON om.organization_id = org.id
-        LEFT JOIN users mem ON mem.id = om.user_id
-        GROUP BY org.id, owner.id
-        ORDER BY org.created_at DESC`,
-      );
-      res.json({ organizations: result.rows || [] });
+      const organizations = await fetchAdminOrganizations();
+      res.json({ organizations });
     } catch (err: any) {
       console.error("Admin organizations list error:", err);
       res
@@ -4032,13 +4163,6 @@ router.post(
 
       const now = new Date().toISOString();
 
-      // Get owner details for response
-      const ownerResult = await query(
-        "SELECT id, name, email, role FROM users WHERE id = $1",
-        [ownerId],
-      );
-      const owner = ownerResult.rows[0];
-
       // Begin transaction for atomic organization creation
       await query("BEGIN");
 
@@ -4053,11 +4177,16 @@ router.post(
 
         const organization = orgResult.rows[0];
 
+        const ownerRole = await getOrganizationRoleByName(organization.id, "owner");
+        if (!ownerRole) {
+          throw new Error("Failed to resolve organization owner role");
+        }
+
         // Add owner as organization member
         await query(
-          `INSERT INTO organization_members (organization_id, user_id, role, created_at)
-           VALUES ($1, $2, $3, $4)`,
-          [organization.id, ownerId, "owner", now],
+          `INSERT INTO organization_members (organization_id, user_id, role, role_id, created_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [organization.id, ownerId, "owner", ownerRole.id, now],
         );
 
         // Create wallet for organization
@@ -4090,24 +4219,10 @@ router.post(
           );
         }
 
-        // Return organization with owner details
+        const createdOrganization = await fetchAdminOrganizationById(organization.id);
+
         res.status(201).json({
-          organization: {
-            ...organization,
-            owner_name: owner.name,
-            owner_email: owner.email,
-            member_count: 1,
-            members: [
-              {
-                userId: owner.id,
-                userName: owner.name,
-                userEmail: owner.email,
-                role: "owner",
-                userRole: owner.role,
-                joinedAt: now,
-              },
-            ],
-          },
+          organization: createdOrganization,
         });
       } catch (transactionError) {
         await query("ROLLBACK");
@@ -4246,40 +4361,7 @@ router.put(
 
       const updatedOrg = updateResult.rows[0];
 
-      // Get organization with members for response
-      const orgWithMembersResult = await query(
-        `SELECT
-          org.id,
-          org.name,
-          org.slug,
-          org.owner_id,
-          org.settings,
-          org.created_at,
-          org.updated_at,
-          owner.name AS owner_name,
-          owner.email AS owner_email,
-          COUNT(DISTINCT om.user_id) AS member_count,
-          COALESCE(
-            jsonb_agg(
-              DISTINCT jsonb_build_object(
-                'userId', mem.id,
-                'userName', mem.name,
-                'userEmail', mem.email,
-                'role', om.role,
-                'userRole', mem.role,
-                'joinedAt', om.created_at
-              )
-            ) FILTER (WHERE mem.id IS NOT NULL),
-            '[]'::jsonb
-          ) AS members
-        FROM organizations org
-        LEFT JOIN users owner ON owner.id = org.owner_id
-        LEFT JOIN organization_members om ON om.organization_id = org.id
-        LEFT JOIN users mem ON mem.id = om.user_id
-        WHERE org.id = $1
-        GROUP BY org.id, owner.id`,
-        [id],
-      );
+      const organizationWithMembers = await fetchAdminOrganizationById(id);
 
       // Log activity
       if (req.user?.id) {
@@ -4302,7 +4384,7 @@ router.put(
         );
       }
 
-      res.json({ organization: orgWithMembersResult.rows[0] });
+      res.json({ organization: organizationWithMembers });
     } catch (err: any) {
       console.error("Admin organization update error:", err);
       res
@@ -4478,9 +4560,10 @@ router.post(
       }
 
       const { id: organizationId } = req.params;
-      const { userId, role } = req.body as {
+      const { userId, role, roleId } = req.body as {
         userId: string;
-        role: "owner" | "admin" | "member";
+        role?: string;
+        roleId?: string;
       };
 
       // Business logic validation
@@ -4530,6 +4613,17 @@ router.post(
       );
       const organization = orgResult.rows[0];
 
+      const selectedRole = await resolveOrganizationRoleSelection(organizationId, {
+        role,
+        roleId,
+      });
+      if (!selectedRole) {
+        res
+          .status(400)
+          .json(formatBusinessLogicError("Invalid role", "INVALID_ROLE"));
+        return;
+      }
+
       const userResult = await query(
         "SELECT id, name, email, role as user_role FROM users WHERE id = $1",
         [userId],
@@ -4537,13 +4631,20 @@ router.post(
       const user = userResult.rows[0];
 
       // If adding as owner, handle ownership transfer
-      if (role === "owner") {
+      if (selectedRole.name === "owner") {
+        const adminRole = await getOrganizationRoleByName(organizationId, "admin");
+        if (!adminRole) {
+          throw new Error("Failed to resolve admin role for ownership transfer");
+        }
+
         await query("BEGIN");
         try {
           // Update current owner to admin
           await query(
-            "UPDATE organization_members SET role = 'admin' WHERE organization_id = $1 AND role = 'owner'",
-            [organizationId],
+            `UPDATE organization_members
+             SET role = $1, role_id = $2
+             WHERE organization_id = $3 AND user_id = $4`,
+            ["admin", adminRole.id, organizationId, organization.owner_id],
           );
 
           // Update organization owner
@@ -4554,8 +4655,15 @@ router.post(
 
           // Add new member as owner
           await query(
-            "INSERT INTO organization_members (organization_id, user_id, role, created_at) VALUES ($1, $2, $3, $4)",
-            [organizationId, userId, role, new Date().toISOString()],
+            `INSERT INTO organization_members (organization_id, user_id, role, role_id, created_at)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [
+              organizationId,
+              userId,
+              selectedRole.name,
+              selectedRole.id,
+              new Date().toISOString(),
+            ],
           );
 
           await query("COMMIT");
@@ -4566,8 +4674,15 @@ router.post(
       } else {
         // Add member with specified role
         await query(
-          "INSERT INTO organization_members (organization_id, user_id, role, created_at) VALUES ($1, $2, $3, $4)",
-          [organizationId, userId, role, new Date().toISOString()],
+          `INSERT INTO organization_members (organization_id, user_id, role, role_id, created_at)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [
+            organizationId,
+            userId,
+            selectedRole.name,
+            selectedRole.id,
+            new Date().toISOString(),
+          ],
         );
       }
 
@@ -4580,13 +4695,13 @@ router.post(
             eventType: "organization_member.add",
             entityType: "organization_member",
             entityId: `${organizationId}-${userId}`,
-            message: `Added ${user.name} as ${role} to organization "${organization.name}"`,
+            message: `Added ${user.name} as ${selectedRole.name} to organization "${organization.name}"`,
             status: "success",
             metadata: {
               organizationName: organization.name,
               memberName: user.name,
               memberEmail: user.email,
-              memberRole: role,
+              memberRole: selectedRole.name,
             },
           },
           req,
@@ -4599,7 +4714,9 @@ router.post(
           userId: user.id,
           userName: user.name,
           userEmail: user.email,
-          role: role,
+          role: selectedRole.name,
+          roleId: selectedRole.id,
+          roleName: selectedRole.name,
           userRole: user.user_role,
           joinedAt: new Date().toISOString(),
         },
@@ -4634,7 +4751,7 @@ router.put(
       }
 
       const { id: organizationId, userId } = req.params;
-      const { role } = req.body as { role: "owner" | "admin" | "member" };
+      const { role, roleId } = req.body as { role?: string; roleId?: string };
 
       // Business logic validation
       const organizationExists =
@@ -4675,23 +4792,59 @@ router.put(
       const organization = orgResult.rows[0];
 
       const memberResult = await query(
-        `SELECT om.role as current_role, u.name, u.email, u.role as user_role, om.created_at
+        `SELECT
+           om.role as current_role,
+           COALESCE(role_by_id.id, legacy_role.id) as current_role_id,
+           COALESCE(
+             role_by_id.name,
+             legacy_role.name,
+             CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END,
+             'viewer'
+           ) as current_role_name,
+           u.name,
+           u.email,
+           u.role as user_role,
+           om.created_at
          FROM organization_members om
          JOIN users u ON u.id = om.user_id
+         LEFT JOIN organization_roles role_by_id ON role_by_id.id = om.role_id
+         LEFT JOIN organization_roles legacy_role
+           ON legacy_role.organization_id = om.organization_id
+          AND legacy_role.name = CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END
          WHERE om.organization_id = $1 AND om.user_id = $2`,
         [organizationId, userId],
       );
       const member = memberResult.rows[0];
 
+      const selectedRole = await resolveOrganizationRoleSelection(organizationId, {
+        role,
+        roleId,
+      });
+      if (!selectedRole) {
+        res
+          .status(400)
+          .json(formatBusinessLogicError("Invalid role", "INVALID_ROLE"));
+        return;
+      }
+
       // If changing to owner, handle ownership transfer
-      if (role === "owner") {
+      if (selectedRole.name === "owner") {
+        const adminRole = await getOrganizationRoleByName(organizationId, "admin");
+        if (!adminRole) {
+          throw new Error("Failed to resolve admin role for ownership transfer");
+        }
+
         await query("BEGIN");
         try {
           // Update current owner to admin
-          await query(
-            "UPDATE organization_members SET role = 'admin' WHERE organization_id = $1 AND role = 'owner'",
-            [organizationId],
-          );
+          if (organization.owner_id !== userId) {
+            await query(
+              `UPDATE organization_members
+               SET role = $1, role_id = $2
+               WHERE organization_id = $3 AND user_id = $4`,
+              ["admin", adminRole.id, organizationId, organization.owner_id],
+            );
+          }
 
           // Update organization owner
           await query(
@@ -4701,8 +4854,10 @@ router.put(
 
           // Update member role to owner
           await query(
-            "UPDATE organization_members SET role = $1 WHERE organization_id = $2 AND user_id = $3",
-            [role, organizationId, userId],
+            `UPDATE organization_members
+             SET role = $1, role_id = $2
+             WHERE organization_id = $3 AND user_id = $4`,
+            [selectedRole.name, selectedRole.id, organizationId, userId],
           );
 
           await query("COMMIT");
@@ -4711,10 +4866,24 @@ router.put(
           throw ownershipErr;
         }
       } else {
+        if (organization.owner_id === userId) {
+          res
+            .status(400)
+            .json(
+              formatBusinessLogicError(
+                "Cannot change the current owner to a non-owner role. Transfer ownership first.",
+                "CANNOT_DEMOTE_OWNER",
+              ),
+            );
+          return;
+        }
+
         // Regular role update
         await query(
-          "UPDATE organization_members SET role = $1 WHERE organization_id = $2 AND user_id = $3",
-          [role, organizationId, userId],
+          `UPDATE organization_members
+           SET role = $1, role_id = $2
+           WHERE organization_id = $3 AND user_id = $4`,
+          [selectedRole.name, selectedRole.id, organizationId, userId],
         );
       }
 
@@ -4727,14 +4896,14 @@ router.put(
             eventType: "organization_member.update",
             entityType: "organization_member",
             entityId: `${organizationId}-${userId}`,
-            message: `Changed ${member.name}'s role from ${member.current_role} to ${role} in organization "${organization.name}"`,
+            message: `Changed ${member.name}'s role from ${member.current_role_name} to ${selectedRole.name} in organization "${organization.name}"`,
             status: "success",
             metadata: {
               organizationName: organization.name,
               memberName: member.name,
               memberEmail: member.email,
-              oldRole: member.current_role,
-              newRole: role,
+              oldRole: member.current_role_name,
+              newRole: selectedRole.name,
             },
           },
           req,
@@ -4747,7 +4916,9 @@ router.put(
           userId: userId,
           userName: member.name,
           userEmail: member.email,
-          role: role,
+          role: selectedRole.name,
+          roleId: selectedRole.id,
+          roleName: selectedRole.name,
           userRole: member.user_role,
           joinedAt: member.created_at,
         },

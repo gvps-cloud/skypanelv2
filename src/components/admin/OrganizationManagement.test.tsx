@@ -17,6 +17,49 @@ const jsonResponse = (body: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+const buildRoles = (suffix = "") => [
+  {
+    id: `role-owner${suffix}`,
+    name: "owner",
+    permissions: [],
+    isCustom: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: `role-admin${suffix}`,
+    name: "admin",
+    permissions: [],
+    isCustom: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: `role-vps${suffix}`,
+    name: "vps_manager",
+    permissions: [],
+    isCustom: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: `role-support${suffix}`,
+    name: "support_agent",
+    permissions: [],
+    isCustom: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: `role-viewer${suffix}`,
+    name: "viewer",
+    permissions: [],
+    isCustom: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+];
+
 describe("OrganizationManagement", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -38,12 +81,15 @@ describe("OrganizationManagement", () => {
         ownerName: "Alice Owner",
         ownerEmail: "alice@example.com",
         memberCount: 1,
+        roles: buildRoles("-org-1"),
         members: [
           {
             userId: "user-1",
             userName: "Alice Owner",
             userEmail: "alice@example.com",
             role: "owner",
+            roleId: "role-owner-org-1",
+            roleName: "owner",
             userRole: "admin",
             joinedAt: "2026-01-01T00:00:00.000Z",
           },
@@ -98,12 +144,15 @@ describe("OrganizationManagement", () => {
           owner_email: "alice@example.com",
           member_count: 1,
           settings: { description: "Newly created org" },
+          roles: buildRoles("-org-2"),
           members: [
             {
               userId: "user-1",
               userName: "Alice Owner",
               userEmail: "alice@example.com",
               role: "owner",
+              roleId: "role-owner-org-2",
+              roleName: "owner",
               userRole: "admin",
               joinedAt: "2026-01-01T00:00:00.000Z",
             },
@@ -140,6 +189,9 @@ describe("OrganizationManagement", () => {
         url.endsWith("/api/admin/organizations/org-2/members") &&
         method === "POST"
       ) {
+        const body = JSON.parse(String(init?.body ?? "{}"));
+        expect(body).toEqual({ userId: "user-2", roleId: "role-viewer-org-2" });
+
         organizations[0] = {
           ...organizations[0],
           memberCount: 2,
@@ -150,7 +202,9 @@ describe("OrganizationManagement", () => {
               userId: "user-2",
               userName: "Bob Member",
               userEmail: "bob@example.com",
-              role: "member",
+              role: "viewer",
+              roleId: "role-viewer-org-2",
+              roleName: "viewer",
               userRole: "user",
               joinedAt: "2026-01-03T00:00:00.000Z",
             },
@@ -163,7 +217,9 @@ describe("OrganizationManagement", () => {
               userId: "user-2",
               userName: "Bob Member",
               userEmail: "bob@example.com",
-              role: "member",
+              role: "viewer",
+              roleId: "role-viewer-org-2",
+              roleName: "viewer",
               userRole: "user",
               joinedAt: "2026-01-03T00:00:00.000Z",
             },
@@ -221,12 +277,15 @@ describe("OrganizationManagement", () => {
         ownerName: "Alice Owner",
         ownerEmail: "alice@example.com",
         memberCount: 2,
+        roles: buildRoles("-org-1"),
         members: [
           {
             userId: "user-1",
             userName: "Alice Owner",
             userEmail: "alice@example.com",
             role: "owner",
+            roleId: "role-owner-org-1",
+            roleName: "owner",
             userRole: "admin",
             joinedAt: "2026-01-01T00:00:00.000Z",
           },
@@ -234,7 +293,9 @@ describe("OrganizationManagement", () => {
             userId: "user-2",
             userName: "Bob Member",
             userEmail: "bob@example.com",
-            role: "member",
+            role: "viewer",
+            roleId: "role-viewer-org-1",
+            roleName: "viewer",
             userRole: "user",
             joinedAt: "2026-01-02T00:00:00.000Z",
           },
@@ -250,12 +311,15 @@ describe("OrganizationManagement", () => {
         ownerName: "Betty Owner",
         ownerEmail: "betty@example.com",
         memberCount: 1,
+        roles: buildRoles("-org-2"),
         members: [
           {
             userId: "user-3",
             userName: "Betty Owner",
             userEmail: "betty@example.com",
             role: "owner",
+            roleId: "role-owner-org-2",
+            roleName: "owner",
             userRole: "admin",
             joinedAt: "2026-01-01T00:00:00.000Z",
           },
@@ -291,7 +355,9 @@ describe("OrganizationManagement", () => {
                     userId: "user-2",
                     userName: "Bob Member",
                     userEmail: "bob@example.com",
-                    role: body.role,
+                    role: body.roleId === "role-viewer-org-2" ? "viewer" : "admin",
+                    roleId: body.roleId,
+                    roleName: body.roleId === "role-viewer-org-2" ? "viewer" : "admin",
                     userRole: "user",
                     joinedAt: "2026-01-03T00:00:00.000Z",
                   },
@@ -327,19 +393,61 @@ describe("OrganizationManagement", () => {
     renderWithAuth(<OrganizationManagement />);
 
     fireEvent.click(await screen.findByRole("button", { name: /Acme Cloud/i }));
-    fireEvent.click(await screen.findByRole("button", { name: /Move Bob Member from Acme Cloud/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Move Bob Member from Acme Cloud$/i }));
     fireEvent.click(await screen.findByRole("button", { name: /^Move member$/i }));
 
     await waitFor(() => {
       expect(moveRequests).toEqual([
         {
           url: expect.stringContaining("/api/admin/organizations/org-2/members"),
-          body: { userId: "user-2", role: "member" },
+          body: { userId: "user-2", roleId: "role-viewer-org-2" },
         },
       ]);
       expect(deleteRequests).toEqual([
         expect.stringContaining("/api/admin/organizations/org-1/members/user-2"),
       ]);
     });
+  });
+
+  it("removes the description field from edit organization mode", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      jsonResponse({
+        organizations: [
+          {
+            id: "org-1",
+            name: "Acme Cloud",
+            slug: "acme-cloud",
+            ownerId: "user-1",
+            ownerName: "Alice Owner",
+            ownerEmail: "alice@example.com",
+            description: "Existing description",
+            memberCount: 1,
+            roles: buildRoles("-org-1"),
+            members: [
+              {
+                userId: "user-1",
+                userName: "Alice Owner",
+                userEmail: "alice@example.com",
+                role: "owner",
+                roleId: "role-owner-org-1",
+                roleName: "owner",
+                userRole: "admin",
+                joinedAt: "2026-01-01T00:00:00.000Z",
+              },
+            ],
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    );
+
+    renderWithAuth(<OrganizationManagement />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Acme Cloud/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Edit Acme Cloud/i }));
+
+    expect(screen.queryByLabelText(/Description/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Update the organization name and slug/i)).toBeInTheDocument();
   });
 });
