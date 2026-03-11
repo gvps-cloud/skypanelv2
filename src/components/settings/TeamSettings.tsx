@@ -367,7 +367,7 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
     }
   };
 
-  const handleRoleSave = async (roleData: { name: string; description?: string; permissions: string[] }) => {
+  const handleRoleSave = async (roleData: { name: string; permissions: string[] }) => {
     setRoleLoading(true);
     try {
       const url = editingRole
@@ -384,7 +384,6 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
         },
         body: JSON.stringify({
           name: roleData.name,
-          description: roleData.description,
           permissions: roleData.permissions,
         }),
       });
@@ -814,6 +813,7 @@ export default function TeamSettings({ organizationId: propOrganizationId }: Tea
         onClose={() => setIsRoleWizardOpen(false)}
         onSave={handleRoleSave}
         editingRole={editingRole || undefined}
+        loading={roleLoading}
       />
 
       <Dialog
