@@ -312,7 +312,7 @@ Request → Auth Middleware → Rate Limit → Validation → Route Handler → 
 - **React Hook Form + Zod** - Form handling and validation
 
 #### Backend
-- **Node.js 20+** - JavaScript runtime
+- **Node.js 22.22.0 (npm 9+)** - JavaScript runtime
 - **Express.js** - Fast, minimalist web framework
 - **TypeScript** - End-to-end type safety
 - **PostgreSQL** - Robust relational database
@@ -672,8 +672,8 @@ skypanelv2/
 ### Prerequisites
 
 Before you begin, ensure you have the following installed:
-- **Node.js 20+** - [Download](https://nodejs.org/)
-- **npm 9+** - Comes with Node.js
+- **Node.js 22.22.0 (includes npm 9+)** - [Download](https://nodejs.org/)
+- **npm 9+** - Bundled with Node.js 22.22.0
 - **PostgreSQL 12+** - [Download](https://www.postgresql.org/download/)
 - **Git** - [Download](https://git-scm.com/downloads)
 
@@ -1006,7 +1006,7 @@ Before deploying to production, ensure you've completed these steps:
 
 **Prerequisites:**
 - VPS with Ubuntu 20.04+ or similar
-- Node.js 20+ and PostgreSQL 12+
+- Node.js 22.22.0 and PostgreSQL 12+
 - Domain name with DNS configured
 
 **Steps:**
