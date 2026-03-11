@@ -2716,7 +2716,7 @@ const Admin: React.FC = () => {
                         <SelectItem value="all">All Providers</SelectItem>
                         {providers.map((provider) => (
                           <SelectItem key={provider.id} value={provider.id}>
-                            {provider.name} ({provider.type})
+                              {provider.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -2874,10 +2874,9 @@ const Admin: React.FC = () => {
                                       <h3 className="font-semibold text-sm">
                                         {plan.name}
                                       </h3>
-                                      {planProvider && (
+                                      {(planProvider?.name || plan.provider_name) && (
                                         <p className="text-xs text-muted-foreground mt-1">
-                                          {planProvider.name} (
-                                          {planProvider.type})
+                                          {planProvider?.name || plan.provider_name}
                                         </p>
                                       )}
                                     </div>
@@ -2897,57 +2896,14 @@ const Admin: React.FC = () => {
                                   <span className="text-xs text-muted-foreground">
                                     Category:
                                   </span>
-                                  {isEditing ? (
-                                    <Select
-                                      value={
-                                        (editPlan.type_class as
-                                          | string
-                                          | undefined) ??
-                                        plan.type_class ??
-                                        "standard"
-                                      }
-                                      onValueChange={(value) =>
-                                        setEditPlan((prev) => ({
-                                          ...prev,
-                                          type_class: value,
-                                        }))
-                                      }
-                                    >
-                                      <SelectTrigger className="h-8 flex-1">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="standard">
-                                          Standard
-                                        </SelectItem>
-                                        <SelectItem value="dedicated">
-                                          Dedicated
-                                        </SelectItem>
-                                        <SelectItem value="premium">
-                                          Premium
-                                        </SelectItem>
-                                        <SelectItem value="gpu">GPU</SelectItem>
-                                        <SelectItem value="accelerated">
-                                          Accelerated
-                                        </SelectItem>
-                                        <SelectItem value="highmem">
-                                          High Memory
-                                        </SelectItem>
-                                        <SelectItem value="nanode">
-                                          Nanode
-                                        </SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  ) : (
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-xs"
-                                    >
-                                      <CategoryLabel
-                                        category={plan.type_class || "standard"}
-                                      />
-                                    </Badge>
-                                  )}
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    <CategoryLabel
+                                      category={plan.type_class || "standard"}
+                                    />
+                                  </Badge>
                                 </div>
 
                                 {resourceSummary.length > 0 && (
@@ -3149,9 +3105,6 @@ const Admin: React.FC = () => {
                       <TableRow>
                         <TableHead className="min-w-[10rem]">Name</TableHead>
                         <TableHead className="min-w-[8rem]">Provider</TableHead>
-                        <TableHead className="min-w-[8rem]">
-                          Provider Plan ID
-                        </TableHead>
                         <TableHead className="min-w-[14rem]">
                           Resources
                         </TableHead>
@@ -3291,17 +3244,11 @@ const Admin: React.FC = () => {
                                       <TableCell>
                                         <div className="flex flex-col gap-1">
                                           <span className="text-sm text-foreground font-medium">
-                                            {planProvider?.name || "Unknown"}
-                                          </span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {planProvider?.type || "unknown"}
+                                            {planProvider?.name ||
+                                              plan.provider_name ||
+                                              "Unknown"}
                                           </span>
                                         </div>
-                                      </TableCell>
-                                      <TableCell>
-                                        <span className="text-sm text-muted-foreground">
-                                          {plan.provider_plan_id}
-                                        </span>
                                       </TableCell>
                                       <TableCell>
                                         {resourceSummary.length > 0 ? (
@@ -3323,58 +3270,13 @@ const Admin: React.FC = () => {
                                         )}
                                       </TableCell>
                                       <TableCell>
-                                        {isEditing ? (
-                                          <Select
-                                            value={
-                                              (editPlan.type_class as
-                                                | string
-                                                | undefined) ??
-                                              plan.type_class ??
-                                              "standard"
+                                        <Badge variant="secondary">
+                                          <CategoryLabel
+                                            category={
+                                              plan.type_class || "standard"
                                             }
-                                            onValueChange={(value) =>
-                                              setEditPlan((prev) => ({
-                                                ...prev,
-                                                type_class: value,
-                                              }))
-                                            }
-                                          >
-                                            <SelectTrigger className="max-w-[6rem]">
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="standard">
-                                                Standard
-                                              </SelectItem>
-                                              <SelectItem value="dedicated">
-                                                Dedicated
-                                              </SelectItem>
-                                              <SelectItem value="premium">
-                                                Premium
-                                              </SelectItem>
-                                              <SelectItem value="gpu">
-                                                GPU
-                                              </SelectItem>
-                                              <SelectItem value="accelerated">
-                                                Accelerated
-                                              </SelectItem>
-                                              <SelectItem value="highmem">
-                                                High Memory
-                                              </SelectItem>
-                                              <SelectItem value="nanode">
-                                                Nanode
-                                              </SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        ) : (
-                                          <Badge variant="secondary">
-                                            <CategoryLabel
-                                              category={
-                                                plan.type_class || "standard"
-                                              }
-                                            />
-                                          </Badge>
-                                        )}
+                                          />
+                                        </Badge>
                                       </TableCell>
                                       <TableCell>
                                         {isEditing ? (

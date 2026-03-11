@@ -149,7 +149,7 @@ const PricingPage: React.FC = () => {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-semibold mb-4">VPS Instances</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              High-performance virtual private servers with full root access and SSH console
+              High-performance virtual private servers powered by RYZEN EYPC CPUs with full root access and SSH console
             </p>
           </div>
 
