@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Key, Plus, Loader2 } from 'lucide-react';
+import { Key, Plus, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,12 +19,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 const SSHKeys: React.FC = () => {
   const { token } = useAuth();
+  const location = useLocation();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState<OrganizationSSHKey | null>(null);
   const queryClient = useQueryClient();
+  const highlightedKeyId = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const keyId = searchParams.get('keyId');
+    return keyId && keyId.trim().length > 0 ? keyId : null;
+  }, [location.search]);
 
   // Fetch SSH keys
   const {
@@ -145,6 +153,21 @@ const SSHKeys: React.FC = () => {
     const providers: Array<'linode'> = [];
     if (key.linode_key_id) providers.push('linode');
     return providers;
+  };
+
+  const getCreatorDisplayName = (key: OrganizationSSHKey) => {
+    const creatorName = key.creator?.name?.trim();
+    const creatorEmail = key.creator?.email?.trim();
+
+    if (creatorName) {
+      return creatorName;
+    }
+
+    if (creatorEmail) {
+      return creatorEmail;
+    }
+
+    return 'Unknown user';
   };
 
   if (isLoading) {
@@ -333,7 +356,12 @@ const SSHKeys: React.FC = () => {
                 return (
                   <div
                     key={key.id}
-                    className="group rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
+                    data-testid={`ssh-key-card-${key.id}`}
+                    data-selected={highlightedKeyId === key.id ? 'true' : 'false'}
+                    className={cn(
+                      'group rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md',
+                      highlightedKeyId === key.id && 'border-primary/60 ring-1 ring-primary/30',
+                    )}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -342,6 +370,11 @@ const SSHKeys: React.FC = () => {
                             <Key className="h-4 w-4 text-primary flex-shrink-0" />
                           </div>
                           <h3 className="font-semibold truncate">{key.name}</h3>
+                          {highlightedKeyId === key.id && (
+                            <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                              Selected
+                            </Badge>
+                          )}
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex items-center gap-2 text-muted-foreground">
@@ -349,7 +382,22 @@ const SSHKeys: React.FC = () => {
                               {key.fingerprint}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                            <span>
+                              Added by{' '}
+                              <span className="font-medium text-foreground">
+                                {getCreatorDisplayName(key)}
+                              </span>
+                            </span>
+                            {key.creator?.email &&
+                              key.creator.email !== getCreatorDisplayName(key) && (
+                                <>
+                                  <span>•</span>
+                                  <span>{key.creator.email}</span>
+                                </>
+                              )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
                             <span>Added {formatDate(key.created_at)}</span>
                             <span>•</span>
                             <div className="flex items-center gap-2">
@@ -361,17 +409,24 @@ const SSHKeys: React.FC = () => {
                         </div>
                       </div>
                       <Button
-                        variant="ghost"
+                        variant="destructive"
                         size="sm"
                         onClick={() => setKeyToDelete(key)}
                         disabled={deleteKeyMutation.isPending}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        className="gap-2 self-start"
+                        aria-label={`Delete ${key.name}`}
                       >
                         {deleteKeyMutation.isPending &&
                         keyToDelete?.id === key.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Deleting...
+                          </>
                         ) : (
-                          'Delete'
+                          <>
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </>
                         )}
                       </Button>
                     </div>

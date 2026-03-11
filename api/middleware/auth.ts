@@ -52,13 +52,6 @@ export const authenticateToken = async (
     }
 
     const user = userResult.rows[0];
-    console.log('🔍 User loaded from database:', {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      active_organization_id: user.active_organization_id,
-      hasActiveOrg: !!user.active_organization_id
-    });
 
     // Get user's organization (if organization_members table exists)
     let orgMember = null;
@@ -82,11 +75,6 @@ export const authenticateToken = async (
 
       // Use active_organization_id from database if no header override
       if (!organizationId && user.active_organization_id) {
-        console.log('Using active_organization_id from database:', {
-          userId: user.id,
-          activeOrgId: user.active_organization_id
-        });
-        
         // Verify user is still a member of the active organization
         const activeOrgResult = await query(
           'SELECT organization_id FROM organization_members WHERE user_id = $1 AND organization_id = $2',
@@ -96,7 +84,6 @@ export const authenticateToken = async (
         
         if (activeOrgMember) {
           organizationId = user.active_organization_id;
-          console.log('Active organization verified, setting organizationId:', organizationId);
         } else {
           console.warn('User is no longer a member of active organization, clearing it:', {
             userId: user.id,
@@ -187,15 +174,6 @@ export const authenticateToken = async (
     };
     (req as any).userId = user.id;
     (req as any).organizationId = organizationId;
-
-    console.log('✅ Authentication complete:', {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      finalOrganizationId: organizationId,
-      path: req.path,
-      method: req.method
-    });
 
     next();
   } catch (error) {

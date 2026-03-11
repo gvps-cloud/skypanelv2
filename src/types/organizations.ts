@@ -77,6 +77,11 @@ export interface OrganizationSSHKey {
   linode_key_id?: string | null;
   created_at: string;
   updated_at: string;
+  creator?: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
 }
 
 export interface OrganizationResources {

@@ -45,6 +45,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Pagination from "@/components/ui/Pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TeamSettings from "@/components/settings/TeamSettings";
+import { OrganizationResourceTables } from "@/components/organizations/OrganizationResourceTables";
 
 interface ViewMode {
   type: "all" | "organization";
@@ -130,7 +131,7 @@ const Organizations: React.FC = () => {
 
   useEffect(() => {
     loadOrganizations(currentPage, itemsPerPage);
-  }, [currentPage, itemsPerPage, token]);
+  }, [currentPage, itemsPerPage, loadOrganizations]);
 
   useEffect(() => {
     loadOrganizationResources();
@@ -221,8 +222,24 @@ const Organizations: React.FC = () => {
     }
   };
 
-  const handleOpenOrganizationSSHKeys = async (orgId: string) => {
-    await handleOpenOrganizationResource(orgId, "/ssh-keys", "SSH keys");
+  const handleOpenOrganizationSSHKeys = async (orgId: string, keyId?: string) => {
+    await handleOpenOrganizationResource(
+      orgId,
+      keyId ? `/ssh-keys?keyId=${keyId}` : "/ssh-keys",
+      keyId ? "SSH key" : "SSH keys",
+    );
+  };
+
+  const handleOpenOrganizationVPS = async (orgId: string, vpsId: string) => {
+    await handleOpenOrganizationResource(orgId, `/vps/${vpsId}`, "VPS instance");
+  };
+
+  const handleOpenOrganizationTicket = async (orgId: string, ticketId: string) => {
+    await handleOpenOrganizationResource(
+      orgId,
+      `/support?ticketId=${ticketId}`,
+      "support ticket",
+    );
   };
 
   const handleCreateOrganizationVPS = async (orgId: string) => {
@@ -782,7 +799,7 @@ const Organizations: React.FC = () => {
                                   <Card
                                     key={ticket.id}
                                     className="group cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
-                                    onClick={() => navigate(`/support?ticket=${ticket.id}`)}
+                                    onClick={() => navigate(`/support?ticketId=${ticket.id}`)}
                                   >
                                     <CardContent className="p-4">
                                       <div className="flex items-start justify-between gap-3">
@@ -992,246 +1009,27 @@ const Organizations: React.FC = () => {
                   ))}
                 </div>
               ) : selectedOrganizationResources ? (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {/* VPS Instances Card */}
-                  <Card>
-                    <CardHeader className="pb-4">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Server className="h-5 w-5" />
-                          VPS Instances
-                        </CardTitle>
-                        {selectedOrganizationResources.permissions.vps_create && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCreateOrganizationVPS(selectedOrganization.id)}
-                          >
-                            {user?.organizationId === selectedOrganization.id
-                              ? "Create"
-                              : "Switch & Create"}
-                          </Button>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedOrganizationResources.vps_instances.length} servers
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      {selectedOrganizationResources.permissions.vps_view ? (
-                        selectedOrganizationResources.vps_instances.length > 0 ? (
-                          <div className="space-y-3">
-                            {selectedOrganizationResources.vps_instances.map((vps) => (
-                              <Card
-                                key={vps.id}
-                                className="group cursor-pointer transition-all hover:border-primary/50"
-                              >
-                                <CardContent className="p-4">
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="flex-1 space-y-2">
-                                      <div className="flex items-center gap-2">
-                                        <h5 className="font-semibold text-sm">
-                                          {vps.label}
-                                        </h5>
-                                        <Badge
-                                          variant={getStatusBadgeVariant(vps.status)}
-                                          className="text-xs"
-                                        >
-                                          {vps.status}
-                                        </Badge>
-                                      </div>
-                                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                        <span>{vps.plan_name || vps.configuration.type}</span>
-                                        <span>•</span>
-                                        <span>{vps.configuration.region}</span>
-                                      </div>
-                                      {vps.ip_address && (
-                                        <div className="text-xs text-muted-foreground">
-                                          {vps.ip_address}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <Link
-                                      to={`/vps/${vps.id}`}
-                                      className="text-muted-foreground hover:text-primary"
-                                    >
-                                      <ChevronRight className="h-4 w-4" />
-                                    </Link>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg">
-                            No VPS instances found
-                          </div>
-                        )
-                      ) : (
-                        <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg bg-muted/50">
-                          You do not have permission to view VPS instances
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* SSH Keys Card */}
-                  <Card>
-                    <CardHeader className="pb-4">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Key className="h-5 w-5" />
-                          SSH Keys
-                        </CardTitle>
-                        {selectedOrganizationResources.permissions.ssh_keys_view && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleOpenOrganizationSSHKeys(selectedOrganization.id)
-                            }
-                          >
-                            {user?.organizationId === selectedOrganization.id
-                              ? "Open"
-                              : "Switch & Open"}
-                          </Button>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedOrganizationResources.ssh_keys.length} keys
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      {selectedOrganizationResources.permissions.ssh_keys_view ? (
-                        selectedOrganizationResources.ssh_keys.length > 0 ? (
-                          <div className="space-y-3">
-                            {selectedOrganizationResources.ssh_keys.map((sshKey) => (
-                              <Card
-                                key={sshKey.id}
-                                className="transition-all hover:border-primary/50"
-                              >
-                                <CardContent className="p-4">
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                      <Key className="h-4 w-4 text-primary" />
-                                      <h5 className="font-semibold text-sm truncate">
-                                        {sshKey.name}
-                                      </h5>
-                                    </div>
-                                    <p className="font-mono text-xs text-muted-foreground break-all rounded bg-muted px-2 py-1">
-                                      {sshKey.fingerprint}
-                                    </p>
-                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                      <span>
-                                        Added {formatTimestamp(sshKey.created_at)}
-                                      </span>
-                                        {sshKey.linode_key_id && (
-                                          <Badge
-                                            variant="secondary"
-                                            className="text-xs"
-                                          >
-                                            {getProviderSyncedLabel("linode")}
-                                          </Badge>
-                                        )}
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg">
-                            No SSH keys found
-                          </div>
-                        )
-                      ) : (
-                        <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg bg-muted/50">
-                          You do not have permission to view SSH keys
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Support Tickets Card */}
-                  <Card>
-                    <CardHeader className="pb-4">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Ticket className="h-5 w-5" />
-                          Support Tickets
-                        </CardTitle>
-                        {selectedOrganizationResources.permissions.tickets_create && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleCreateOrganizationTicket(selectedOrganization.id)
-                            }
-                          >
-                            {user?.organizationId === selectedOrganization.id
-                              ? "Create"
-                              : "Switch & Create"}
-                          </Button>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedOrganizationResources.tickets.length} tickets
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      {selectedOrganizationResources.permissions.tickets_view ? (
-                        selectedOrganizationResources.tickets.length > 0 ? (
-                          <div className="space-y-3">
-                            {selectedOrganizationResources.tickets.map((ticket) => (
-                              <Card
-                                key={ticket.id}
-                                className="group cursor-pointer transition-all hover:border-primary/50"
-                              >
-                                <CardContent className="p-4">
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="flex-1 space-y-2">
-                                      <div className="flex items-center gap-2">
-                                        <h5 className="font-semibold text-sm">
-                                          {ticket.subject}
-                                        </h5>
-                                        <Badge
-                                          variant={getStatusBadgeVariant(ticket.status)}
-                                          className="text-xs"
-                                        >
-                                          {ticket.status}
-                                        </Badge>
-                                        <Badge variant="outline" className="text-xs">
-                                          {ticket.priority}
-                                        </Badge>
-                                      </div>
-                                      <div className="text-xs text-muted-foreground">
-                                        {formatTimestamp(ticket.created_at)}
-                                      </div>
-                                    </div>
-                                    <Link
-                                      to={`/support?ticket=${ticket.id}`}
-                                      className="text-muted-foreground hover:text-primary"
-                                    >
-                                      <ChevronRight className="h-4 w-4" />
-                                    </Link>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg">
-                            No active tickets found
-                          </div>
-                        )
-                      ) : (
-                        <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg bg-muted/50">
-                          You do not have permission to view tickets
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
+                <OrganizationResourceTables
+                  organizationId={selectedOrganization.id}
+                  isActiveOrganization={user?.organizationId === selectedOrganization.id}
+                  resources={selectedOrganizationResources}
+                  formatTimestamp={formatTimestamp}
+                  getProviderSyncedLabel={getProviderSyncedLabel}
+                  getStatusBadgeVariant={getStatusBadgeVariant}
+                  onCreateVps={() => handleCreateOrganizationVPS(selectedOrganization.id)}
+                  onOpenSshKeys={(keyId) =>
+                    handleOpenOrganizationSSHKeys(selectedOrganization.id, keyId)
+                  }
+                  onCreateTicket={() =>
+                    handleCreateOrganizationTicket(selectedOrganization.id)
+                  }
+                  onOpenVps={(vpsId) =>
+                    handleOpenOrganizationVPS(selectedOrganization.id, vpsId)
+                  }
+                  onOpenTicket={(ticketId) =>
+                    handleOpenOrganizationTicket(selectedOrganization.id, ticketId)
+                  }
+                />
               ) : (
                 <div className="text-center py-8 text-sm text-muted-foreground">
                   No resources available for this organization

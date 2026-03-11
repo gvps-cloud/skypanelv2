@@ -72,10 +72,10 @@ export const DeleteSSHKeyDialog: React.FC<DeleteSSHKeyDialogProps> = ({
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
-              onConfirm();
+              void onConfirm();
             }}
             disabled={isLoading}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="gap-2"
           >
             {isLoading ? (
               <>

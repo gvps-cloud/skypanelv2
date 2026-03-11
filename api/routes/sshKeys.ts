@@ -61,6 +61,39 @@ async function getOrganizationName(organizationId?: string): Promise<string | nu
   }
 }
 
+async function hasCreatedByUserIdColumn(): Promise<boolean> {
+  const result = await query(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = 'user_ssh_keys'
+         AND column_name = 'created_by_user_id'
+     ) AS exists`
+  );
+
+  return Boolean(result.rows[0]?.exists);
+}
+
+function mapSSHKeyRow(row: any) {
+  return {
+    id: row.id,
+    name: row.name,
+    public_key: row.public_key,
+    fingerprint: row.fingerprint,
+    linode_key_id: row.linode_key_id,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    creator: row.creator_id
+      ? {
+          id: row.creator_id,
+          name: row.creator_name,
+          email: row.creator_email,
+        }
+      : null,
+  };
+}
+
 async function buildProviderKeyLabel(orgId: string | undefined, userEmail: string, userKeyName: string): Promise<string> {
   const orgName = await getOrganizationName(orgId);
   const orgPart = sanitizeLabelPart(orgName ?? (orgId ? `org-${orgId}` : 'org-unknown'));
@@ -179,25 +212,70 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
       return;
     }
 
+    const includeCreatedByUserId = await hasCreatedByUserIdColumn();
+
     const result = await query(
-      `SELECT id, organization_id, name, public_key, fingerprint, 
-              linode_key_id, 
-              created_at, updated_at
-       FROM user_ssh_keys
-       WHERE organization_id = $1
-       ORDER BY created_at DESC`,
+      includeCreatedByUserId
+        ? `SELECT usk.id,
+                  usk.organization_id,
+                  usk.name,
+                  usk.public_key,
+                  usk.fingerprint,
+                  usk.linode_key_id,
+                  usk.created_at,
+                  usk.updated_at,
+                  COALESCE(created_by_user.id, log_user.id) AS creator_id,
+                  COALESCE(NULLIF(created_by_user.name, ''), NULLIF(log_user.name, '')) AS creator_name,
+                  COALESCE(created_by_user.email, log_user.email) AS creator_email
+           FROM user_ssh_keys usk
+           LEFT JOIN users created_by_user
+             ON created_by_user.id = usk.created_by_user_id
+           LEFT JOIN LATERAL (
+             SELECT al.user_id
+             FROM activity_logs al
+             WHERE al.entity_type = 'ssh_key'
+               AND al.event_type = 'ssh_key.create'
+               AND al.entity_id = usk.id::text
+               AND (al.organization_id = usk.organization_id OR al.organization_id IS NULL)
+               AND al.user_id IS NOT NULL
+             ORDER BY al.created_at ASC
+             LIMIT 1
+           ) creation_log ON TRUE
+           LEFT JOIN users log_user
+             ON log_user.id = creation_log.user_id
+           WHERE usk.organization_id = $1
+           ORDER BY usk.created_at DESC`
+        : `SELECT usk.id,
+                  usk.organization_id,
+                  usk.name,
+                  usk.public_key,
+                  usk.fingerprint,
+                  usk.linode_key_id,
+                  usk.created_at,
+                  usk.updated_at,
+                  log_user.id AS creator_id,
+                  NULLIF(log_user.name, '') AS creator_name,
+                  log_user.email AS creator_email
+           FROM user_ssh_keys usk
+           LEFT JOIN LATERAL (
+             SELECT al.user_id
+             FROM activity_logs al
+             WHERE al.entity_type = 'ssh_key'
+               AND al.event_type = 'ssh_key.create'
+               AND al.entity_id = usk.id::text
+               AND (al.organization_id = usk.organization_id OR al.organization_id IS NULL)
+               AND al.user_id IS NOT NULL
+             ORDER BY al.created_at ASC
+             LIMIT 1
+           ) creation_log ON TRUE
+           LEFT JOIN users log_user
+             ON log_user.id = creation_log.user_id
+           WHERE usk.organization_id = $1
+           ORDER BY usk.created_at DESC`,
       [organizationId]
     );
 
-    const keys = result.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      public_key: row.public_key,
-      fingerprint: row.fingerprint,
-      linode_key_id: row.linode_key_id,
-      created_at: row.created_at,
-      updated_at: row.updated_at
-    }));
+    const keys = result.rows.map(mapSSHKeyRow);
 
     res.json({ keys });
   } catch (error: any) {
@@ -355,12 +433,20 @@ router.post('/', [
     });
 
     // Store in database
+    const includeCreatedByUserId = await hasCreatedByUserIdColumn();
     const insertResult = await query(
-      `INSERT INTO user_ssh_keys 
-       (organization_id, name, public_key, fingerprint, linode_key_id, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-       RETURNING id, organization_id, name, public_key, fingerprint, linode_key_id, created_at, updated_at`,
-      [organizationId, name, publicKey, fingerprint, linodeKeyId]
+      includeCreatedByUserId
+        ? `INSERT INTO user_ssh_keys 
+           (organization_id, name, public_key, fingerprint, linode_key_id, created_by_user_id, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+           RETURNING id, organization_id, name, public_key, fingerprint, linode_key_id, created_at, updated_at`
+        : `INSERT INTO user_ssh_keys 
+           (organization_id, name, public_key, fingerprint, linode_key_id, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+           RETURNING id, organization_id, name, public_key, fingerprint, linode_key_id, created_at, updated_at`,
+      includeCreatedByUserId
+        ? [organizationId, name, publicKey, fingerprint, linodeKeyId, req.user.id]
+        : [organizationId, name, publicKey, fingerprint, linodeKeyId]
     );
 
     const newKey = insertResult.rows[0];
