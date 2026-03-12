@@ -49,6 +49,10 @@ export interface VPSInstance {
     hourly: number;
     monthly: number;
   };
+  transferPricing?: {
+    providerRatePerGb: number;
+    customerRatePerGb: number;
+  };
   progress?: {
     percent: number | null;
     action: string | null;

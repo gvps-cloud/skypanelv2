@@ -261,6 +261,10 @@ interface TransferPayload {
   utilizationPercent: number;
   account: AccountTransferPayload | null;
   usedBytes: number;
+  providerRatePerGb: number;
+  customerRatePerGb: number;
+  projectedOverageGb: number;
+  projectedOverageCostUsd: number;
 }
 
 interface BackupsPayload {
@@ -303,7 +307,44 @@ interface PlanMeta {
   specs: PlanSpecs;
   pricing: PlanPricing;
   providerPlanId: string | null;
+  transferPricing: {
+    providerRatePerGb: number;
+    customerRatePerGb: number;
+  };
 }
+
+const roundTransferNumber = (value: number, precision = 4): number => {
+  if (!Number.isFinite(value)) return 0;
+  const factor = 10 ** precision;
+  return Math.round(value * factor) / factor;
+};
+
+const getProviderRatePerGb = (regionId: string | null | undefined): number => {
+  if (!regionId) return 0.005;
+  if (regionId === "id-cgk") return 0.015;
+  if (regionId === "br-gru") return 0.007;
+  if (regionId === "distributed") return 0.01;
+  return 0.005;
+};
+
+const getCustomerRatePerGb = (
+  providerRatePerGb: number,
+  markupType?: string | null,
+  markupValue?: number | null,
+): number => {
+  const numericMarkup = Number.isFinite(Number(markupValue))
+    ? Number(markupValue)
+    : 0;
+  const safeMarkupType = markupType === "multiplier" ? "multiplier" : "flat";
+
+  // If explicitly multiplier, or markup value looks like a multiplier, multiply; otherwise add.
+  if (safeMarkupType === "multiplier" || (numericMarkup > 0 && numericMarkup <= 10)) {
+    const multiplier = Math.max(numericMarkup || 1, 0);
+    return roundTransferNumber(providerRatePerGb * multiplier);
+  }
+
+  return roundTransferNumber(providerRatePerGb + Math.max(numericMarkup, 0));
+};
 
 const normalizeProviderStatus = (status: string | null | undefined): string => {
   if (!status) return "unknown";
@@ -413,6 +454,24 @@ const extractTransferUsedBytes = (value: unknown): number => {
     }
     if (total > 0) {
       return total;
+    }
+  }
+  return 0;
+};
+
+const extractTransferBillableBytes = (value: unknown): number => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (value && typeof value === "object") {
+    const source = value as Record<string, unknown>;
+    const directCandidate =
+      source.total ?? source.bytes ?? source.amount ?? source.billable;
+    if (
+      typeof directCandidate === "number" &&
+      Number.isFinite(directCandidate)
+    ) {
+      return directCandidate;
     }
   }
   return 0;
@@ -929,7 +988,67 @@ const resolvePlanMeta = async (
     specs.transfer = Number(providerDetail.specs.transfer ?? 0);
   }
 
-  return { planRow, specs, pricing, providerPlanId: providerPlanId ?? null };
+  const regionId =
+    typeof configuration?.region === "string"
+      ? configuration.region
+      : typeof providerDetail?.region === "string"
+        ? providerDetail.region
+        : null;
+  const providerRatePerGb = roundTransferNumber(getProviderRatePerGb(regionId));
+  const customerRatePerGb = planRow
+    ? getCustomerRatePerGb(
+        providerRatePerGb,
+        planRow.transfer_overage_markup_type,
+        planRow.transfer_overage_enabled === false
+          ? 0
+          : Number(planRow.transfer_overage_markup_value ?? 0),
+      )
+    : providerRatePerGb;
+
+  return {
+    planRow,
+    specs,
+    pricing,
+    providerPlanId: providerPlanId ?? null,
+    transferPricing: {
+      providerRatePerGb,
+      customerRatePerGb,
+    },
+  };
+};
+
+const resolveProjectedTransferCost = async (
+  instanceId: string,
+): Promise<{
+  projectedOverageGb: number;
+  projectedOverageCostUsd: number;
+} | null> => {
+  try {
+    const allocationRes = await query(
+      `SELECT allocated_overage_gb, customer_cost_usd
+       FROM transfer_overage_allocations
+       WHERE vps_instance_id = $1
+       ORDER BY period_month DESC
+       LIMIT 1`,
+      [instanceId],
+    );
+
+    if (allocationRes.rows.length === 0) {
+      return null;
+    }
+
+    return {
+      projectedOverageGb: roundTransferNumber(
+        Number(allocationRes.rows[0].allocated_overage_gb ?? 0),
+      ),
+      projectedOverageCostUsd: roundTransferNumber(
+        Number(allocationRes.rows[0].customer_cost_usd ?? 0),
+      ),
+    };
+  } catch (error) {
+    console.warn("Failed to resolve projected transfer cost:", error);
+    return null;
+  }
 };
 
 // Get available admin-configured apps / StackScripts
@@ -2000,6 +2119,9 @@ router.get("/:id", async (req: Request, res: Response) => {
     );
 
     const planMeta = await resolvePlanMeta(instanceRow, providerDetail);
+    const projectedTransferCost = await resolveProjectedTransferCost(
+      String(instanceRow.id),
+    );
 
     let metrics: {
       timeframe: { start: number | null; end: number | null };
@@ -2116,14 +2238,17 @@ router.get("/:id", async (req: Request, res: Response) => {
         const transferSource = (transferData ?? {}) as Record<string, unknown>;
         const usedBytes = extractTransferUsedBytes(transferSource.used);
         const usedGb = bytesToGigabytes(usedBytes);
-        const billableGb = safeNumber(transferSource.billable);
+        const billableBytes = extractTransferBillableBytes(
+          transferSource.billable,
+        );
+        const billableGb = bytesToGigabytes(billableBytes);
 
         // Use the plan's transfer allocation as the quota instead of the API's quota field
-        // The API's quota field appears to return account-level pooled transfer data
+        // The API's quota field appears to return account-level pooled transfer data (in bytes)
         const quotaGb =
           planMeta.specs.transfer > 0
             ? planMeta.specs.transfer
-            : safeNumber(transferSource.quota);
+            : bytesToGigabytes(Number(transferSource.quota ?? 0));
         const utilizationPercent =
           quotaGb > 0
             ? Math.min(100, Math.max(0, (usedGb / quotaGb) * 100))
@@ -2137,6 +2262,16 @@ router.get("/:id", async (req: Request, res: Response) => {
           utilizationPercent,
           account: null,
           usedBytes,
+          providerRatePerGb: planMeta.transferPricing.providerRatePerGb,
+          customerRatePerGb: planMeta.transferPricing.customerRatePerGb,
+          projectedOverageGb:
+            projectedTransferCost?.projectedOverageGb ??
+            roundTransferNumber(billableGb),
+          projectedOverageCostUsd:
+            projectedTransferCost?.projectedOverageCostUsd ??
+            roundTransferNumber(
+              billableGb * planMeta.transferPricing.customerRatePerGb,
+            ),
         };
       } catch (err) {
         console.warn("Failed to fetch transfer usage:", err);

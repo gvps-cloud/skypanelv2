@@ -267,13 +267,17 @@ export function VpsInstancesTable({
         id: "pricing",
         header: "Billing",
         cell: ({ row }) => {
-          const { pricing } = row.original;
+          const { pricing, transferPricing } = row.original;
           return (
             <div className="space-y-1 text-xs min-w-[100px]">
               <div className="text-muted-foreground text-xs">Hourly</div>
               <div className="font-medium text-foreground text-xs">{formatCurrency(pricing.hourly)}</div>
               <div className="text-muted-foreground text-xs">Monthly</div>
               <div className="font-medium text-foreground text-xs">{formatCurrency(pricing.monthly)}</div>
+              <div className="text-muted-foreground text-xs">Egress / GB</div>
+              <div className="font-medium text-foreground text-xs">
+                {formatCurrency(transferPricing?.customerRatePerGb ?? 0)}
+              </div>
             </div>
           );
         },
@@ -489,6 +493,12 @@ export function VpsInstancesTable({
               <div className="space-y-1">
                 <p className="text-muted-foreground">Monthly</p>
                 <p className="font-medium text-foreground">{formatCurrency(instance.pricing.monthly)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Egress / GB</p>
+                <p className="font-medium text-foreground">
+                  {formatCurrency(instance.transferPricing?.customerRatePerGb ?? 0)}
+                </p>
               </div>
             </div>
           </CardContent>

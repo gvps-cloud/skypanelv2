@@ -79,9 +79,15 @@ const getPeriodMonth = (date = new Date()): string => {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)).toISOString().slice(0, 10);
 };
 
+const bytesToGb = (value: number): number => {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return value / 1_000_000_000;
+};
+
 const normalizeTransferUsage = (usage: unknown): { inboundGb: number; outboundGb: number; totalGb: number } => {
   if (typeof usage === 'number') {
-    return { inboundGb: 0, outboundGb: roundNumber(usage), totalGb: roundNumber(usage) };
+    const gb = bytesToGb(usage);
+    return { inboundGb: 0, outboundGb: roundNumber(gb), totalGb: roundNumber(gb) };
   }
 
   if (!usage || typeof usage !== 'object') {
@@ -89,9 +95,9 @@ const normalizeTransferUsage = (usage: unknown): { inboundGb: number; outboundGb
   }
 
   const record = usage as Record<string, unknown>;
-  const inbound = Number(record.inbound ?? record.in ?? 0);
-  const outbound = Number(record.outbound ?? record.out ?? record.total ?? 0);
-  const total = Number(record.total ?? (inbound + outbound));
+  const inbound = bytesToGb(Number(record.inbound ?? record.in ?? 0));
+  const outbound = bytesToGb(Number(record.outbound ?? record.out ?? record.total ?? 0));
+  const total = bytesToGb(Number(record.total ?? (inbound * 1_000_000_000 + outbound * 1_000_000_000)));
 
   return {
     inboundGb: roundNumber(Number.isFinite(inbound) ? inbound : 0),
@@ -116,17 +122,23 @@ export class TransferBillingService {
   }
 
   private static computeCustomerRate(providerRatePerGb: number, markupType?: string | null, markupValue?: number | null): TransferPricingConfig {
+    const numericMarkup = Number.isFinite(Number(markupValue)) ? Number(markupValue) : 0;
     const safeMarkupType = markupType === 'multiplier' ? 'multiplier' : 'flat';
-    const safeMarkupValue = Number.isFinite(Number(markupValue)) ? Number(markupValue) : 0;
-    const customerRatePerGb = safeMarkupType === 'multiplier'
-      ? providerRatePerGb * Math.max(safeMarkupValue || 1, 0)
-      : providerRatePerGb + Math.max(safeMarkupValue, 0);
+
+    // If explicitly multiplier, or markup value looks like a multiplier, multiply; otherwise add.
+    let customerRatePerGb: number;
+    if (safeMarkupType === 'multiplier' || (numericMarkup > 0 && numericMarkup <= 10)) {
+      const multiplier = Math.max(numericMarkup || 1, 0);
+      customerRatePerGb = providerRatePerGb * multiplier;
+    } else {
+      customerRatePerGb = providerRatePerGb + Math.max(numericMarkup, 0);
+    }
 
     return {
       providerRatePerGb: roundCurrency(providerRatePerGb),
       customerRatePerGb: roundCurrency(customerRatePerGb),
       markupType: safeMarkupType,
-      markupValue: roundCurrency(safeMarkupValue),
+      markupValue: roundCurrency(numericMarkup),
     };
   }
 
@@ -157,6 +169,10 @@ export class TransferBillingService {
       linodeService.getAccountTransfer(),
     ]);
 
+    const accountQuotaGb = bytesToGb(Number(accountTransfer.quota ?? 0));
+    const accountUsedGb = bytesToGb(Number(accountTransfer.used ?? 0));
+    const accountBillableGb = bytesToGb(Number(accountTransfer.billable ?? 0));
+
     await query(
       `INSERT INTO account_transfer_pool_snapshots (
         period_month, provider_type, quota_gb, used_gb, billable_gb, region_transfers, source_payload, last_synced_at, updated_at
@@ -172,9 +188,9 @@ export class TransferBillingService {
         updated_at = NOW()`,
       [
         periodMonth,
-        roundNumber(Number(accountTransfer.quota ?? 0)),
-        roundNumber(Number(accountTransfer.used ?? 0)),
-        roundNumber(Number(accountTransfer.billable ?? 0)),
+        roundNumber(accountQuotaGb),
+        roundNumber(accountUsedGb),
+        roundNumber(accountBillableGb),
         JSON.stringify(accountTransfer.region_transfers ?? []),
         JSON.stringify(accountTransfer),
       ],
