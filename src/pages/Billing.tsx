@@ -747,33 +747,47 @@ const Billing: React.FC = () => {
           <CardDescription>Top up your wallet balance using PayPal</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-4">
-            <div className="flex-1 max-w-xs">
-              <label htmlFor="amount" className="sr-only">Amount</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <DollarSign className="h-5 w-5 text-muted-foreground " />
-                </div>
-                <input
-                  type="number"
-                  id="amount"
-                  value={addFundsAmount}
-                  onChange={(e) => setAddFundsAmount(e.target.value)}
-                  placeholder="0.00"
-                  min="1"
-                  step="0.01"
-                  className="block w-full pl-10 pr-3 py-2 border border rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                />
-              </div>
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {[10, 25, 50, 100, 250].map((amount) => (
+                <button
+                  key={amount}
+                  type="button"
+                  onClick={() => setAddFundsAmount(amount.toString())}
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md border bg-muted hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  ${amount}
+                </button>
+              ))}
             </div>
-            <button
-              type="button"
-              onClick={handleAddFunds}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Funds via PayPal
-            </button>
+            <div className="flex items-center space-x-4">
+              <div className="flex-1 max-w-xs">
+                <label htmlFor="amount" className="sr-only">Amount</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <DollarSign className="h-5 w-5 text-muted-foreground " />
+                  </div>
+                  <input
+                    type="number"
+                    id="amount"
+                    value={addFundsAmount}
+                    onChange={(e) => setAddFundsAmount(e.target.value)}
+                    placeholder="0.00"
+                    min="1"
+                    step="0.01"
+                    className="block w-full pl-10 pr-3 py-2 border border rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddFunds}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Funds via PayPal
+              </button>
+            </div>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
             Funds will be added to your wallet after successful PayPal payment

@@ -52,7 +52,7 @@ export const MonthlyResetIndicator: React.FC<MonthlyResetIndicatorProps> = ({
         <TooltipTrigger asChild>
           <div
             className={cn(
-              "flex flex-col items-start gap-3 sm:items-end sm:text-right",
+              "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start sm:gap-4 sm:text-left",
               className,
             )}
             role="status"
@@ -61,7 +61,7 @@ export const MonthlyResetIndicator: React.FC<MonthlyResetIndicatorProps> = ({
             <Badge
               variant="secondary"
               className={cn(
-                "inline-flex items-center gap-1 px-2 py-1 text-xs self-start sm:self-end",
+                "inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs whitespace-nowrap min-w-[120px] self-start sm:self-start",
                 "bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300",
                 "border-blue-200 dark:border-blue-800",
                 "transition-all duration-300 ease-in-out",
@@ -83,7 +83,7 @@ export const MonthlyResetIndicator: React.FC<MonthlyResetIndicatorProps> = ({
             </Badge>
 
             {/* Progress indicator showing days into month */}
-            <div className="flex w-full flex-col items-start gap-1 text-xs text-muted-foreground sm:items-end">
+            <div className="flex w-full flex-col items-start gap-1 text-xs text-muted-foreground sm:items-start">
               <span className="whitespace-nowrap font-medium">
                 Day {daysIntoMonth} of {daysInMonth}
               </span>

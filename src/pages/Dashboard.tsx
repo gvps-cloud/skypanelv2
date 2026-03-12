@@ -274,6 +274,7 @@ const Dashboard: React.FC = () => {
   const monthlySpend = billing?.monthlySpend ?? 0;
   const lastPayment = billing?.lastPayment;
 
+  
   if (loading) {
     return (
       <div className="space-y-6">
@@ -302,23 +303,31 @@ const Dashboard: React.FC = () => {
       {/* Main Content Area */}
       <div className="space-y-6">
         {/* Status Overview */}
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="gap-2 px-3 py-1.5">
-            <div className="h-2 w-2 rounded-full bg-primary" />
-            {heroStats.running} vps active
-          </Badge>
-          {heroStats.flagged > 0 && (
-            <Badge variant="secondary" className="gap-2 px-3 py-1.5">
-              <AlertTriangle className="h-3 w-3" />
-              {heroStats.flagged} attention
-            </Badge>
-          )}
-          {heroStats.averageCpu !== null && (
+        <div className="flex flex-wrap items-center gap-3 justify-between">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="gap-2 px-3 py-1.5">
-              <TrendingUp className="h-3 w-3" />
-              Avg CPU {heroStats.averageCpu.toFixed(1)}%
+              <div className="h-2 w-2 rounded-full bg-primary" />
+              {heroStats.running} vps active
             </Badge>
-          )}
+            {heroStats.flagged > 0 && (
+              <Badge variant="secondary" className="gap-2 px-3 py-1.5">
+                <AlertTriangle className="h-3 w-3" />
+                {heroStats.flagged} attention
+              </Badge>
+            )}
+            {heroStats.averageCpu !== null && (
+              <Badge variant="outline" className="gap-2 px-3 py-1.5">
+                <TrendingUp className="h-3 w-3" />
+                Avg CPU {heroStats.averageCpu.toFixed(1)}%
+              </Badge>
+            )}
+          </div>
+
+          <MonthlyResetIndicator
+            monthlySpend={monthlySpend}
+            showAnimation={false}
+            className="ml-auto sm:ml-auto sm:items-center sm:text-left"
+          />
         </div>
 
         {/* Quick Actions */}
@@ -356,10 +365,10 @@ const Dashboard: React.FC = () => {
         <div className="grid gap-6 lg:grid-cols-1">
           {/* VPS Fleet */}
           <Card className="h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <div>
+            <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+              <div className="space-y-1">
                 <CardTitle>VPS Fleet</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Live signal across your deployments
                 </p>
               </div>
@@ -372,66 +381,63 @@ const Dashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-lg border bg-muted/20 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Wallet Balance
-                        </p>
-                        <p className="text-2xl font-bold tracking-tight">
-                          {formatCurrency(walletBalance)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Ready to deploy infrastructure
-                        </p>
-                      </div>
-                      <div className="rounded-lg bg-muted/50 p-3">
-                        <Wallet className="h-5 w-5 text-foreground" />
-                      </div>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-0">
+                  <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Wallet className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        Wallet Balance
+                      </p>
+                      <p className="text-lg font-semibold leading-tight">
+                        {formatCurrency(walletBalance)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Ready to deploy infrastructure
+                      </p>
                     </div>
                   </div>
 
-                  <div className="rounded-lg border bg-muted/20 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Monthly Spend
-                        </p>
-                        <p className="text-2xl font-bold tracking-tight">
-                          {formatCurrency(monthlySpend)}
-                        </p>
-                        <MonthlyResetIndicator
-                          monthlySpend={monthlySpend}
-                          showAnimation={false}
-                        />
-                      </div>
-                      <div className="rounded-lg bg-muted/50 p-3">
-                        <TrendingUp className="h-5 w-5 text-foreground" />
-                      </div>
+                  <div className="hidden h-12 border-l border-border md:block" aria-hidden="true" />
+
+                  <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/30 text-primary">
+                      <TrendingUp className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        Monthly Spend
+                      </p>
+                      <p className="text-lg font-semibold leading-tight">
+                        {formatCurrency(monthlySpend)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Current month to date
+                      </p>
                     </div>
                   </div>
 
-                  <div className="rounded-lg border bg-muted/20 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Last Payment
-                        </p>
-                        <p className="text-2xl font-bold tracking-tight">
-                          {lastPayment?.amount
-                            ? formatCurrency(lastPayment.amount)
-                            : "—"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {lastPayment?.date
-                            ? formatTimestamp(lastPayment.date)
-                            : "No payments yet"}
-                        </p>
-                      </div>
-                      <div className="rounded-lg bg-muted/50 p-3">
-                        <ActivityIcon className="h-5 w-5 text-foreground" />
-                      </div>
+                  <div className="hidden h-12 border-l border-border md:block" aria-hidden="true" />
+
+                  <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/30 text-primary">
+                      <ActivityIcon className="h-4 w-4" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        Last Payment
+                      </p>
+                      <p className="text-lg font-semibold leading-tight">
+                        {lastPayment?.amount
+                          ? formatCurrency(lastPayment.amount)
+                          : "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {lastPayment?.date
+                          ? formatTimestamp(lastPayment.date)
+                          : "No payments yet"}
+                      </p>
                     </div>
                   </div>
                 </div>
