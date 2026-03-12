@@ -44,33 +44,47 @@ export interface StepConfigurationOptions {
 const ALL_STEPS = [
   {
     originalStepNumber: 1,
-    id: "plan",
-    title: "Plan & Label",
+    id: "plan-label",
+    title: "Label & Category",
     description:
-      "Configure the server label and pricing plan before provisioning.",
+      "Configure the server label and server category before provisioning.",
   },
   {
     originalStepNumber: 2,
+    id: "region",
+    title: "Choose Region",
+    description:
+      "Select the datacenter region where this VPS will be deployed.",
+  },
+  {
+    originalStepNumber: 3,
+    id: "plan",
+    title: "Choose Plan",
+    description:
+      "Pick the plan size for the selected category and region.",
+  },
+  {
+    originalStepNumber: 4,
     id: "deployments",
     title: "StackScript Deployment",
     description:
       "Optionally provision with an account StackScript or continue without one.",
   },
   {
-    originalStepNumber: 3,
+    originalStepNumber: 5,
     id: "deployment-config",
     title: "App Configuration",
     description:
       "Provide credentials and options required by the selected StackScript.",
   },
   {
-    originalStepNumber: 4,
+    originalStepNumber: 6,
     id: "os",
     title: "Operating System",
     description: "Pick the base operating system for this VPS.",
   },
   {
-    originalStepNumber: 5,
+    originalStepNumber: 7,
     id: "finalize",
     title: "Finalize & Review",
     description: "Set credentials and optional add-ons before provisioning.",

@@ -1,200 +1,331 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file documents the current state of the `skypanelv2` repository so coding agents can work against the app as it exists today rather than older assumptions.
+
+## What This Application Is
+
+SkyPanelV2 is a full-stack VPS hosting and billing panel with:
+
+- Public marketing, pricing, status, FAQ, contact, legal, and API docs pages
+- User authentication and account management
+- VPS management, detail screens, and SSH console access
+- Billing, invoices, transactions, and PayPal payment flows
+- Support, notifications, and activity history
+- Organizations, invitations, and membership workflows
+- Admin tools for users, billing, platform settings, FAQ/contact content, email templates, GitHub/update integrations, and impersonation
+
+## Current Stack
+
+### Frontend
+
+- React 18
+- TypeScript
+- Vite
+- React Router DOM 7
+- TanStack Query
+- Tailwind CSS
+- shadcn/ui and Radix UI primitives
+- React Hook Form + Zod
+- Framer Motion
+- Xterm.js for SSH console UI
+
+### Backend
+
+- Express 4
+- TypeScript with ESM modules
+- PostgreSQL via `pg`
+- JWT authentication
+- Helmet, CORS, express-validator, multer, and custom rate limiting middleware
+
+### Integrations
+
+- Linode API
+- PayPal server/client SDKs
+- Resend and SMTP email delivery
+- Optional GitHub token support
+- PM2-based production process management
+- Caddy deployment helpers
 
 ## Development Commands
 
-### Core Development
-- `npm run dev` - Start concurrent frontend (Vite) and backend (nodemon) development servers
-- `npm run dev-up` - Kill ports 3001/5173 and start development servers
-- `npm run client:dev` - Frontend only (Vite dev server on port 5173)
-- `npm run server:dev` - Backend only (Express API on port 3001)
-- `npm run build` - TypeScript check + Vite build for production
-- `npm run test` - Run complete test suite with Vitest
-- `npm run test:watch` - Run Vitest in watch mode for continuous testing
-- `npm run lint` - ESLint validation
-- `npm run check` - TypeScript type checking without emitting files
-- `npm run preview` - Preview production build locally
+### Core App
 
-### Database Management
-- `npm run db:fresh` - Reset database and run all migrations
-- `npm run db:reset` - Interactive database reset with confirmation
+- `npm run dev` - Start frontend and backend development servers concurrently
+- `npm run dev-up` - Kill ports `3001`, `5173`, and `8000`, then start dev
+- `npm run client:dev` - Start Vite dev server
+- `npm run server:dev` - Start backend dev server with `nodemon`
+- `npm run build` - Run TypeScript build and Vite production build
+- `npm run check` - Type-check without emitting
+- `npm run lint` - Run ESLint
+- `npm run preview` - Preview the built frontend
+- `npm run start` - Run the production API server and Vite preview together
+
+### API Docs / Metadata
+
+- `npm run docs:api:sync` - Refresh API docs manifest data
+- `npm run docs:api:audit` - Audit API docs coverage
+
+These sync automatically before `dev`, `client:dev`, and `build`.
+
+### Database / Reset
+
+- `npm run db:reset` - Interactive database reset
 - `npm run db:reset:confirm` - Reset database without prompt
-- `npm run seed:admin` - Create default admin user (admin@skypanelv2.com / admin123)
+- `npm run db:fresh` - Reset database and apply migrations
+- `npm run seed:admin` - Seed the default admin user
 
-### Production Deployment
-- `npm run start` - Launch production Express server + Vite preview
-- `npm run pm2:start` - Build and start with PM2 process manager
-- `npm run pm2:reload` - Reload PM2 processes gracefully
-- `npm run pm2:stop` - Stop PM2 processes
+### Runtime / Deployment Helpers
+
+- `npm run kill-ports` - Kill ports `3001`, `5173`, and `8000`
+- `npm run pm2:start` - Build and launch PM2 processes
+- `npm run pm2:reload` - Reload PM2 processes
+- `npm run pm2:stop` - Stop and delete PM2 processes
 - `npm run pm2:list` - List PM2 processes
-
-## Architecture Overview
-
-SkyPanelV2 is a full-stack cloud service reseller billing panel:
-
-### Frontend (`src/`)
-- **React 18** SPA with TypeScript and Vite
-- **shadcn/ui** component library with Tailwind CSS
-- **TanStack Query** for server state management with optimistic updates
-- **Zustand** for client state management
-- **React Router v7** for routing with protected routes
-- **React Hook Form + Zod** for form validation
-
-### Backend (`api/`)
-- **Express.js** REST API with ES modules
-- **PostgreSQL** database with UUID primary keys
-- **JWT authentication** with role-based access (admin/user)
-- **Rate limiting** with tiered configuration (anonymous/authenticated/admin)
-- **Comprehensive middleware** stack (CORS, helmet, validation)
+- `npm run ssl:caddy:help` - Show Caddy SSL setup helper usage
+- `npm run pwa:icons` - Generate PWA icons
 
 ## Environment Configuration
 
-Copy `.env.example` to `.env` and configure:
+Copy `.env.example` to `.env`.
 
-### Required for Development
+### Core Required Values
+
 ```bash
+NODE_ENV=development
+PORT=3001
+CLIENT_URL=http://localhost:5173
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/skypanelv2
 JWT_SECRET=your-super-secret-jwt-key-here
 SSH_CRED_SECRET=your-32-character-encryption-key
 ENCRYPTION_KEY=your-32-character-encryption-key
 ```
 
-### External Services
-```bash
-# Cloud Provider (Linode/Akamai)
-LINODE_API_TOKEN=your-linode-api-token
+### Branding
 
-# Payment Processing
+```bash
+COMPANY_NAME=SkyPanelV2
+VITE_COMPANY_NAME=SkyPanelV2
+COMPANY_BRAND_NAME=SkyPanelV2
+```
+
+### External Services
+
+```bash
+LINODE_API_TOKEN=your-linode-api-token
+LINODE_API_URL=https://api.linode.com/v4
 PAYPAL_CLIENT_ID=your-paypal-client-id
 PAYPAL_CLIENT_SECRET=your-paypal-client-secret
 PAYPAL_MODE=sandbox
-
-# Email Delivery
 EMAIL_PROVIDER_PRIORITY=resend,smtp
-
-# Resend (Primary)
 RESEND_API_KEY=
-
-# Generic SMTP (Fallback)
 SMTP_HOST=mail.example.com
 SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_REQUIRE_TLS=true
 SMTP_USERNAME=smtp-user@example.com
 SMTP_PASSWORD=super-secure-password
+FROM_EMAIL=noreply@example.com
+FROM_NAME=SkyPANELv2
+CONTACT_FORM_RECIPIENT=support@example.com
 ```
 
-### Rate Limiting Configuration
-- Anonymous users: 200 requests per 15 minutes
-- Authenticated users: 500 requests per 15 minutes
-- Admin users: 1000 requests per 15 minutes
+### Operational Settings
 
-## Database Schema
-
-### Core Tables
-- `users`, `organizations` - User management with role-based access
-- `vps_instances`, `vps_plans` - VPS hosting management
-- `payment_transactions` - PayPal billing integration
-- `support_tickets` - Customer support system
-
-## Key Service Patterns
-
-### Database Operations
-Use `api/lib/database.js` helper:
-```typescript
-import { query } from '../lib/database.js';
-const result = await query('SELECT * FROM users WHERE id = $1', [userId]);
+```bash
+TRUST_PROXY=true
+MAX_FILE_SIZE=10485760
+UPLOAD_PATH=./uploads
+BACKUP_STORAGE_PROVIDER=local
+BACKUP_RETENTION_DAYS=30
 ```
 
-### Authentication Middleware
-Protected routes use JWT authentication:
-```typescript
-import { authenticateToken } from '../../middleware/auth.js';
-router.use(authenticateToken); // Sets req.user
+### Rate Limiting
+
+The current environment file exposes configurable role-based limits:
+
+- `RATE_LIMIT_ANONYMOUS_WINDOW_MS`
+- `RATE_LIMIT_ANONYMOUS_MAX`
+- `RATE_LIMIT_AUTHENTICATED_WINDOW_MS`
+- `RATE_LIMIT_AUTHENTICATED_MAX`
+- `RATE_LIMIT_ADMIN_WINDOW_MS`
+- `RATE_LIMIT_ADMIN_MAX`
+
+The current defaults in `.env.example` are much higher than the older values previously documented.
+
+## Current Application Structure
+
+```text
+api/
+  app.ts                Express app wiring and route registration
+  server.ts             API server bootstrap
+  config/               Environment and runtime config
+  lib/                  Shared backend helpers
+  middleware/           Auth, permissions, rate limiting, validation
+  routes/               Public, authenticated, and admin API routes
+  services/             Business logic and background/process services
+
+src/
+  App.tsx               Main router and route guards
+  components/           Reusable UI and feature-specific components
+  contexts/             Auth, theme, breadcrumb, and impersonation state
+  hooks/                Reusable frontend hooks
+  lib/                  API client and utilities
+  pages/                Public, user, and admin route pages
+  services/             Frontend service wrappers
+  styles/               Page-specific styles
+  theme/                Theme preset/token definitions
+  types/                Shared frontend types
+
+migrations/             SQL migrations
+scripts/                Database, migration, admin, diagnostics, and maintenance scripts
+public/                 Static assets and icons
+repo-docs/              Internal docs and audit artifacts
+deploy/                 Deployment-related templates
 ```
 
-### Error Handling
-Structured error responses:
-```typescript
-res.status(500).json({ error: error.message });
-// or
-res.json({ success: true, data: result });
-```
+## Frontend Routing Overview
 
-## Security Architecture
+### Public Pages
 
-### Data Protection
-- SSH credentials and API tokens encrypted at rest
-- Environment variables stored with AES-256 encryption
-- JWT tokens with configurable expiration
-- Rate limiting with tiered access controls
+- `/` via `HomeRedesign`
+- `/pricing`
+- `/faq`
+- `/about`
+- `/contact`
+- `/status`
+- `/terms`
+- `/privacy`
+- `/login`
+- `/register`
+- `/forgot-password`
+- `/reset-password`
+- Organization invitation acceptance routes
 
-## Testing
+### Authenticated User Pages
 
-### Test Architecture
-- **Frontend**: Vitest + React Testing Library with jsdom environment
-- **Backend**: Supertest for API endpoint testing
-- **Test Setup**: Configuration in `src/test-setup.ts` with common mocks
-- **Mock Strategy**: Comprehensive browser API mocking for component tests
+- `/dashboard`
+- `/vps`
+- `/vps/:id`
+- `/vps/:id/ssh`
+- `/ssh-keys`
+- `/organizations`
+- `/organizations/:id`
+- `/billing`
+- `/billing/invoice/:id`
+- `/billing/transaction/:id`
+- `/billing/payment/success`
+- `/billing/payment/cancel`
+- `/support`
+- `/settings`
+- `/activity`
+- `/api-docs`
 
-### Running Tests
-- `npm run test` - Run complete test suite once
-- `npm run test:watch` - Continuous testing during development with file watching
-- Test files use `.test.ts` or `.test.tsx` extensions
+### Admin Pages
 
-### Manual Testing Checklist
-1. **Database Setup**: `npm run db:fresh && npm run seed:admin`
-2. **Admin Interface**: Admin dashboard management
-3. **VPS Management**: VPS provisioning and lifecycle management
+- `/admin`
+- `/admin/user/:id`
 
-### Default Credentials
-- **Email**: `admin@skypanelv2.com`
-- **Password**: `admin123`
+The app shell currently relies on:
 
-## Project Structure
+- `AuthProvider`
+- `ThemeProvider`
+- `ImpersonationProvider`
+- public/authenticated/admin route guards in `src/App.tsx`
 
-### Core Directories
-```
-├── api/                    # Express.js backend API
-│   ├── routes/            # API route definitions (client/admin separation)
-│   ├── services/          # Business logic and service layer
-│   ├── middleware/        # Express middleware (auth, rate limiting, validation)
-│   ├── config/           # Configuration management
-│   └── lib/              # Database helpers and utilities
-├── src/                   # React frontend SPA
-│   ├── components/       # Reusable UI components (shadcn/ui based)
-│   │   ├── ui/          # Base shadcn/ui components
-│   │   ├── admin/       # Admin-specific components
-│   │   └── layouts/     # Layout components
-│   ├── pages/           # Page components with routing
-│   ├── contexts/        # React contexts (Auth, Theme, Impersonation)
-│   ├── services/        # API client services and data fetching
-│   └── lib/            # Utility libraries and configurations
-├── migrations/           # Sequential SQL migrations
-├── scripts/             # Node utilities for database, billing, and diagnostics
-├── public/             # Static assets served by Vite
-└── tests/              # Test files and utilities
-```
+## Backend API Overview
 
-### Key Architectural Patterns
-- **Service Layer**: Business logic separated from route definitions in `api/services/`
-- **Database Helper**: Consistent query execution via `api/lib/database.js`
-- **React Context**: Global state management (Auth, Theme, Impersonation)
-- **TanStack Query**: Server state management with optimistic updates
-- **Protected Routes**: Role-based access control throughout the application
+The Express app currently registers these route groups:
 
-## Utility Scripts
+- `/api/auth`
+- `/api/payments`
+- `/api/admin`
+- `/api/admin/platform`
+- `/api/admin/email-templates`
+- `/api/admin/contact`
+- `/api/admin/billing`
+- `/api/vps`
+- `/api/support`
+- `/api/activity`
+- `/api/activities`
+- `/api/invoices`
+- `/api/notifications`
+- `/api/theme`
+- `/api/health`
+- `/api/contact`
+- `/api/faq`
+- `/api/admin/faq`
+- `/api/admin/github`
+- `/api/ssh-keys`
+- `/api/organizations`
+- `/api/pricing`
 
-### Database & Migration Scripts
-- `node scripts/generate-ssh-secret.js` - Generate SSH_CRED_SECRET for .env file
-- `node scripts/run-migration.js` - Apply pending database migrations
-- `node scripts/test-connection.js` - Verify PostgreSQL connectivity
-- `node scripts/reset-database.js` - Interactive database reset with confirmation
+Cross-cutting backend behavior includes:
 
-### Admin & System Scripts
-- `node scripts/create-test-admin.js` - Create admin user with custom credentials
-- `node scripts/promote-to-admin.js` - Elevate existing user to admin role
-- `node scripts/update-admin-password.js` - Rotate admin passwords
-- `node scripts/test-smtp.js` - Send test email using application configuration
+- Config validation at startup
+- Helmet and CORS middleware
+- JSON and URL-encoded body parsing
+- API-only smart rate limiting and response headers
+- Metrics collection and persistence startup
+- Billing cron startup
+- Production serving of the built frontend from `dist`
 
-### Development & Diagnostics
-- `node scripts/test-hourly-billing.js` - Dry-run hourly billing workflow
+## Key Architectural Patterns
+
+### Database Access
+
+Use shared database helpers from `api/lib/` rather than creating ad hoc connections inside route handlers.
+
+### Route / Service Split
+
+Keep HTTP request/response handling in route files and business logic in `api/services/` whenever possible.
+
+### Auth and Permissions
+
+- JWT auth is applied through backend middleware
+- Frontend route guards are convenience layers, not the source of truth
+- Admin impersonation is a core feature and affects access-sensitive work
+
+### Theming
+
+Theme behavior spans frontend context/state and backend theme APIs. Review `src/contexts/ThemeContext.tsx`, `src/theme/`, and `api/routes/theme.ts` before changing theme behavior.
+
+### Organizations and Billing Scope
+
+Organizations, invitations, and billing visibility are tightly related areas. Be careful when modifying resource queries, access control, or dashboard summaries so data does not leak across users or orgs.
+
+## Testing Notes
+
+The repo includes:
+
+- Vitest
+- React Testing Library
+- Supertest
+- Playwright
+
+There is currently no `npm run test` or `npm run test:watch` script in `package.json`, so do not assume those commands exist.
+
+## Useful Scripts
+
+Notable scripts currently present in `scripts/` include:
+
+- `run-migration.js`
+- `reset-database.js`
+- `create-test-admin.js`
+- `ensure-admin-user.js`
+- `promote-to-admin.js`
+- `update-admin-password.js`
+- `audit-api-docs.mjs`
+- `generate-ssh-secret.js`
+- `generate-pwa-icons.js`
+- `update-theme-to-mono.js`
+- provider/data migration helpers
+- verification/debug helpers for admins, settings, plans, migrations, and schema state
+
+## Practical Guidance for Agents
+
+- Check `package.json` before referencing scripts
+- Check `src/App.tsx` before documenting or changing routes
+- Check `api/app.ts` before documenting or changing API surface area
+- Prefer existing helpers/services instead of duplicating logic
+- Be careful with org-aware data access, billing visibility, and impersonation
+- Treat public marketing pages and authenticated panel flows as separate product surfaces when making changes

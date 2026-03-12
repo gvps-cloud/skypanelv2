@@ -11,6 +11,8 @@ import {
   Search,
   DollarSign,
   Layers3,
+  Check,
+  MapPin,
   Power,
   PowerOff,
   Copy,
@@ -53,8 +55,7 @@ import { BulkDeleteModal } from "@/components/VPS/BulkDeleteModal";
 import { generateUniqueVPSLabel } from "@/lib/vpsLabelGenerator";
 import { ProviderSelector } from "@/components/VPS/ProviderSelector";
 import { CreateVPSSteps } from "@/components/VPS/CreateVPSSteps";
-import { RegionSelector } from "@/components/VPS/RegionSelector";
-import { SearchableOptionSelect } from "@/components/VPS/SearchableOptionSelect";
+import { CountryIcon } from "@/components/VPS/RegionSelector";
 import {
   getActiveSteps,
   getCurrentStepDisplay,
@@ -91,6 +92,10 @@ interface RegionOption {
   id: string;
   label: string;
   country?: string;
+}
+
+interface CreateRegionOption extends RegionOption {
+  capabilities?: string[];
 }
 
 const DEFAULT_CATEGORY_LABELS: Record<OriginalCategory, string> = {
@@ -136,6 +141,16 @@ const getCategoryAvailabilityNote = (typeClass?: string): string => {
 
   return "";
 };
+
+const CATEGORY_DISPLAY_ORDER: OriginalCategory[] = [
+  "nanode",
+  "standard",
+  "dedicated",
+  "premium",
+  "highmem",
+  "gpu",
+  "accelerated",
+];
 
 const VPS: React.FC = () => {
   const [instances, setInstances] = useState<VPSInstance[]>([]);
@@ -241,6 +256,12 @@ const VPS: React.FC = () => {
   const [providerPlans, setProviderPlans] = useState<ProviderPlan[]>([]);
   const [providerImages, setProviderImages] = useState<any[]>([]);
   const [providerStackScripts, setProviderStackScripts] = useState<any[]>([]);
+  const [createRegionOptions, setCreateRegionOptions] = useState<CreateRegionOption[]>([]);
+  const [createRegionsLoading, setCreateRegionsLoading] = useState(false);
+  const [createRegionsError, setCreateRegionsError] = useState<string | null>(null);
+  const [categorySearch, setCategorySearch] = useState("");
+  const [regionSearch, setRegionSearch] = useState("");
+  const [planSearch, setPlanSearch] = useState("");
   const [selectedStackScript, setSelectedStackScript] = useState<any | null>(
     null,
   );
@@ -564,6 +585,63 @@ const VPS: React.FC = () => {
       setRegionFilter("all");
     }
   }, [regionOptions, regionFilter]);
+
+  useEffect(() => {
+    const fetchCreateRegions = async () => {
+      if (!createForm.provider_id || !token) {
+        setCreateRegionOptions([]);
+        setCreateRegionsError(null);
+        setCreateRegionsLoading(false);
+        return;
+      }
+
+      setCreateRegionsLoading(true);
+      setCreateRegionsError(null);
+
+      try {
+        const url = createForm.type_class
+          ? `/api/vps/providers/${createForm.provider_id}/regions?type_class=${encodeURIComponent(createForm.type_class)}`
+          : `/api/vps/providers/${createForm.provider_id}/regions`;
+
+        const response = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load regions");
+        }
+
+        const regions = Array.isArray(data.regions) ? data.regions : [];
+        const normalizedRegions: CreateRegionOption[] = regions
+          .map((region: any) => ({
+            id: String(region?.id ?? ""),
+            label:
+              typeof region?.label === "string" && region.label.trim().length > 0
+                ? region.label.trim()
+                : String(region?.id ?? ""),
+            country:
+              typeof region?.country === "string" && region.country.trim().length > 0
+                ? region.country.trim()
+                : undefined,
+            capabilities: Array.isArray(region?.capabilities)
+              ? region.capabilities.filter((capability: unknown) => typeof capability === "string")
+              : undefined,
+          }))
+          .filter((region) => region.id);
+
+        setCreateRegionOptions(normalizedRegions);
+      } catch (error: any) {
+        console.error("Failed to load create-step regions:", error);
+        setCreateRegionOptions([]);
+        setCreateRegionsError(error?.message || "Failed to load regions");
+      } finally {
+        setCreateRegionsLoading(false);
+      }
+    };
+
+    fetchCreateRegions();
+  }, [createForm.provider_id, createForm.type_class, token]);
 
   // Sync default selection to current form image when images load
   useEffect(() => {
@@ -1677,7 +1755,9 @@ const VPS: React.FC = () => {
 
   const categoryOptions = useMemo(
     () =>
-      VALID_ORIGINAL_CATEGORIES.map((category) => {
+      CATEGORY_DISPLAY_ORDER.filter((category) =>
+        VALID_ORIGINAL_CATEGORIES.includes(category),
+      ).map((category) => {
         const mapping = enabledCategoryMappings?.find(
           (item) => item.original_category === category,
         );
@@ -1704,6 +1784,28 @@ const VPS: React.FC = () => {
   const categoryHelperText = selectedCategoryOption
     ? `${selectedCategoryOption.description}${categoryAvailabilityNote ? ` ${categoryAvailabilityNote}` : ""}`
     : undefined;
+  const normalizedCategorySearch = categorySearch.trim().toLowerCase();
+  const filteredCategoryOptions = useMemo(
+    () =>
+      categoryOptions.filter((option) => {
+        if (!normalizedCategorySearch) {
+          return true;
+        }
+
+        const haystack = [
+          option.label,
+          option.description,
+          option.meta,
+          ...(option.keywords ?? []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return haystack.includes(normalizedCategorySearch);
+      }),
+    [categoryOptions, normalizedCategorySearch],
+  );
 
   const planOptions = useMemo(
     () =>
@@ -1730,6 +1832,52 @@ const VPS: React.FC = () => {
   const planHelperText = selectedType
     ? `Selected plan: ${selectedType.label} • ${formatCurrency(selectedType.price.monthly)} / mo`
     : "Search and choose a plan for the selected region.";
+  const normalizedRegionSearch = regionSearch.trim().toLowerCase();
+  const filteredCreateRegionOptions = useMemo(
+    () =>
+      createRegionOptions.filter((region) => {
+        if (!normalizedRegionSearch) {
+          return true;
+        }
+
+        const haystack = [
+          region.label,
+          region.country,
+          ...(region.capabilities ?? []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return haystack.includes(normalizedRegionSearch);
+      }),
+    [createRegionOptions, normalizedRegionSearch],
+  );
+  const selectedCreateRegion = createRegionOptions.find(
+    (region) => region.id === createForm.region,
+  );
+  const normalizedPlanSearch = planSearch.trim().toLowerCase();
+  const filteredPlanOptions = useMemo(
+    () =>
+      planOptions.filter((option) => {
+        if (!normalizedPlanSearch) {
+          return true;
+        }
+
+        const haystack = [
+          option.label,
+          option.description,
+          option.meta,
+          ...(option.keywords ?? []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return haystack.includes(normalizedPlanSearch);
+      }),
+    [planOptions, normalizedPlanSearch],
+  );
 
   // Multi-step modal helpers
   const { currentDisplayStep, totalDisplaySteps } = useMemo(() => {
@@ -1760,15 +1908,17 @@ const VPS: React.FC = () => {
       return Boolean(
         createForm.provider_id &&
         createForm.label &&
-        createForm.type &&
-        createForm.region, // Region is now required
+        createForm.type_class,
       );
-    if (createStep === 3) return Boolean(createForm.image);
+    if (createStep === 2) return Boolean(createForm.region);
+    if (createStep === 3) return Boolean(createForm.type);
+    if (createStep === 6) return Boolean(createForm.image);
     return true;
   }, [
     createStep,
     createForm.provider_id,
     createForm.label,
+    createForm.type_class,
     createForm.type,
     createForm.region,
     createForm.image,
@@ -1798,38 +1948,31 @@ const VPS: React.FC = () => {
 
   const creationSteps = [
     {
-      id: "plan",
-      title: getStepInfo(1)?.title || "Plan & Label",
+      id: "plan-label",
+      title: getStepInfo(1)?.title || "Label & Category",
       description:
         getStepInfo(1)?.description ||
-        "Configure the server label and pricing plan before provisioning.",
+        "Configure the server label and server category before provisioning.",
       content: (
         <div className="space-y-4">
           <div className="space-y-4">
-            {/* Only show provider selector if there are multiple providers */}
             {providerOptions.length > 1 && (
               <ProviderSelector
                 value={createForm.provider_id}
                 onChange={(providerId: string, providerType: ProviderType) => {
-                  // Reset plan, region, and type_class when provider changes
-                  const updates: Partial<CreateVPSForm> = {
+                  setCreateForm({
                     provider_id: providerId,
                     provider_type: providerType,
-                    type: "", // Reset plan selection when provider changes
-                    region: "", // Reset region when provider changes
-                    type_class: "standard", // Reset to default category
-                  };
-
-                  setCreateForm(updates);
-
-                  // Reset to step 1 when provider changes
+                    type: "",
+                    region: "",
+                    type_class: "standard",
+                  });
                   setCreateStep(1);
                 }}
                 disabled={false}
                 token={token || ""}
               />
             )}
-
             <div>
               <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Label *{" "}
@@ -1853,7 +1996,7 @@ const VPS: React.FC = () => {
                     const now = Date.now();
                     const fiveMinutesAgo = now - 5 * 60 * 1000;
                     const recentTimestamps = labelRegenerationTimestamps.filter(
-                      timestamp => timestamp > fiveMinutesAgo
+                      (timestamp) => timestamp > fiveMinutesAgo,
                     );
                     return recentTimestamps.length >= 3;
                   })()}
@@ -1870,15 +2013,15 @@ const VPS: React.FC = () => {
                   const now = Date.now();
                   const fiveMinutesAgo = now - 5 * 60 * 1000;
                   const recentTimestamps = labelRegenerationTimestamps.filter(
-                    timestamp => timestamp > fiveMinutesAgo
+                    (timestamp) => timestamp > fiveMinutesAgo,
                   );
                   const remainingAttempts = 3 - recentTimestamps.length;
-                  return remainingAttempts < 3 ? ` (${remainingAttempts} regeneration${remainingAttempts !== 1 ? 's' : ''} remaining)` : '';
+                  return remainingAttempts < 3
+                    ? ` (${remainingAttempts} regeneration${remainingAttempts !== 1 ? "s" : ""} remaining)`
+                    : "";
                 })()}
               </p>
             </div>
-
-            {/* Category Selection */}
             {createForm.provider_id && (
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-2">
@@ -1887,99 +2030,76 @@ const VPS: React.FC = () => {
                 <p className="text-sm text-muted-foreground mb-3">
                   Choose the type of server that best fits your workload
                 </p>
-                <SearchableOptionSelect
-                  value={createForm.type_class}
-                  options={categoryOptions}
-                  onChange={(newTypeClass) => {
-                    setCreateForm({
-                      type_class: newTypeClass,
-                      type: "",
-                      region: "",
-                    });
-                  }}
-                  placeholder="Choose a category"
-                  searchPlaceholder="Search categories by name or workload..."
-                  emptyMessage="No categories available."
-                  helperText={categoryHelperText}
-                  ariaLabel="Category selector"
-                  triggerIcon={<Layers3 className="h-4 w-4 text-muted-foreground" />}
-                  triggerClassName="rounded-xl"
-                />
-              </div>
-            )}
+                <div className="relative mb-3">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={categorySearch}
+                    onChange={(event) => setCategorySearch(event.target.value)}
+                    placeholder="Search categories by name or workload..."
+                    className="pl-10"
+                    aria-label="Search VPS categories"
+                  />
+                </div>
+                <div className="space-y-3">
+                  {filteredCategoryOptions.map((option) => {
+                    const isSelected = option.value === createForm.type_class;
 
-            {/* Region Selection */}
-            {createForm.provider_id && createForm.type_class && (
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                  Region *
-                </label>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Select the datacenter location for your VPS
-                  {createForm.type_class === "premium" && " • Premium plans only available in regions with Premium capability"}
-                  {createForm.type_class === "gpu" && " • GPU plans only available in regions with GPU capability"}
-                </p>
-                <RegionSelector
-                  providerId={createForm.provider_id}
-                  selectedRegion={createForm.region}
-                  onSelect={(regionId) => setCreateForm({ type: "", region: regionId })}
-                  token={token || ""}
-                  typeClass={createForm.type_class}
-                  filterByCapabilities={
-                    createForm.type_class === "premium" ? ["Premium Plans"] :
-                    createForm.type_class === "gpu" ? ["GPU Linodes"] :
-                    createForm.type_class === "accelerated" ? ["Accelerated"] :
-                    undefined
-                  }
-                />
-              </div>
-            )}
-
-            {/* Plan Selection */}
-            {createForm.provider_id && createForm.region && createForm.type_class && (
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                  Plan *
-                </label>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Available plans for your selected category and region
-                </p>
-                <SearchableOptionSelect
-                  value={createForm.type}
-                  options={planOptions}
-                  onChange={(newType) => setCreateForm({ type: newType })}
-                  placeholder="Choose a plan"
-                  searchPlaceholder="Search plans by name, specs, or price..."
-                  emptyMessage="No plans available for this category and region."
-                  helperText={planHelperText}
-                  ariaLabel="Plan selector"
-                  triggerIcon={<Server className="h-4 w-4 text-muted-foreground" />}
-                  triggerClassName="rounded-xl"
-                />
-
-                {selectedType && (
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="gap-1">
-                      <Cpu className="h-3.5 w-3.5 mr-1" />
-                      {selectedType.vcpus} vCPU
-                    </Badge>
-                    <Badge variant="outline" className="gap-1">
-                      <MemoryStick className="h-3.5 w-3.5 mr-1" />
-                      {formatSelectedPlanMemory(selectedType.memory)} RAM
-                    </Badge>
-                    <Badge variant="outline" className="gap-1">
-                      <HardDrive className="h-3.5 w-3.5 mr-1" />
-                      {Math.round(selectedType.disk / 1024)} GB Storage
-                    </Badge>
-                    <Badge variant="outline" className="gap-1">
-                      <Network className="h-3.5 w-3.5 mr-1" />
-                      {selectedType.transfer} GB Transfer
-                    </Badge>
-                    <Badge variant="secondary" className="gap-1">
-                      <DollarSign className="h-3.5 w-3.5 mr-1" />
-                      {formatCurrency(selectedType.price.monthly)} / mo
-                    </Badge>
-                  </div>
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setCreateForm({
+                            type_class: option.value,
+                            type: "",
+                            region: "",
+                          });
+                        }}
+                        className={`w-full rounded-xl border p-4 text-left transition-colors ${
+                          isSelected
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-card hover:border-primary/40 hover:bg-muted/40"
+                        }`}
+                        aria-pressed={isSelected}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/70">
+                            {option.icon ?? <Layers3 className="h-4 w-4 text-muted-foreground" />}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-start justify-between gap-3">
+                              <span className="truncate font-medium text-foreground">
+                                {option.label}
+                              </span>
+                              <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                                {option.meta}
+                              </span>
+                            </span>
+                            {option.description && (
+                              <span className="mt-1 block text-sm text-muted-foreground">
+                                {option.description}
+                              </span>
+                            )}
+                          </span>
+                          <Check
+                            className={`mt-1 h-4 w-4 shrink-0 ${
+                              isSelected ? "opacity-100 text-primary" : "opacity-0"
+                            }`}
+                          />
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {filteredCategoryOptions.length === 0 && (
+                    <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                      No categories match your search.
+                    </div>
+                  )}
+                </div>
+                {categoryHelperText && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {categoryHelperText}
+                  </p>
                 )}
               </div>
             )}
@@ -1988,10 +2108,239 @@ const VPS: React.FC = () => {
       ),
     },
     {
-      id: "deployments",
-      title: getStepInfo(2)?.title || "1-Click Deployments",
+      id: "region",
+      title: getStepInfo(2)?.title || "Choose Region",
       description:
         getStepInfo(2)?.description ||
+        "Select the datacenter location for your VPS.",
+      content: (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Select the datacenter location for your VPS
+              {createForm.type_class === "premium" && " • Premium plans only available in regions with Premium capability"}
+              {createForm.type_class === "gpu" && " • GPU plans only available in regions with GPU capability"}
+            </p>
+            {selectedCategoryOption && (
+              <div className="inline-flex items-center rounded-full border border-border/70 bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
+                Category: <span className="ml-1 font-medium text-foreground">{selectedCategoryOption.label}</span>
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={regionSearch}
+              onChange={(event) => setRegionSearch(event.target.value)}
+              placeholder="Search regions by city or country..."
+              className="pl-10"
+              aria-label="Search VPS regions"
+            />
+          </div>
+          <div className="space-y-3">
+            {createRegionsLoading && (
+              <div className="rounded-xl border p-4 text-sm text-muted-foreground">
+                Loading regions...
+              </div>
+            )}
+            {!createRegionsLoading && createRegionsError && (
+              <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+                {createRegionsError}
+              </div>
+            )}
+            {!createRegionsLoading &&
+              !createRegionsError &&
+              filteredCreateRegionOptions.map((region) => {
+                const isSelected = region.id === createForm.region;
+
+                return (
+                  <button
+                    key={region.id}
+                    type="button"
+                    onClick={() => setCreateForm({ type: "", region: region.id })}
+                    className={`w-full rounded-xl border p-4 text-left transition-colors ${
+                      isSelected
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-card hover:border-primary/40 hover:bg-muted/40"
+                    }`}
+                    aria-pressed={isSelected}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/70">
+                        <CountryIcon country={region.country} label={region.label} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-start justify-between gap-3">
+                          <span className="truncate font-medium text-foreground">
+                            {region.label}
+                          </span>
+                          <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                            {region.id}
+                          </span>
+                        </span>
+                        <span className="mt-1 block text-sm text-muted-foreground">
+                          {region.country || "Region"}
+                        </span>
+                        {region.capabilities && region.capabilities.length > 0 && (
+                          <span className="mt-2 block text-xs text-muted-foreground">
+                            {region.capabilities.join(" • ")}
+                          </span>
+                        )}
+                      </span>
+                      <Check
+                        className={`mt-1 h-4 w-4 shrink-0 ${
+                          isSelected ? "opacity-100 text-primary" : "opacity-0"
+                        }`}
+                      />
+                    </div>
+                  </button>
+                );
+              })}
+            {!createRegionsLoading && !createRegionsError && filteredCreateRegionOptions.length === 0 && (
+              <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                No regions available for the selected category.
+              </div>
+            )}
+          </div>
+          {selectedCreateRegion && (
+            <p className="text-xs text-muted-foreground">
+              Selected region: {selectedCreateRegion.label}
+            </p>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "plan",
+      title: getStepInfo(3)?.title || "Choose Plan",
+      description:
+        getStepInfo(3)?.description ||
+        "Pick the plan size for the selected category and region.",
+      content: (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Available plans for your selected category and region
+            </p>
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+              {selectedCategoryOption && (
+                <span className="rounded-full border border-border/70 bg-muted/40 px-3 py-1">
+                  Category: <span className="font-medium text-foreground">{selectedCategoryOption.label}</span>
+                </span>
+              )}
+              {selectedCreateRegion && (
+                <span className="rounded-full border border-border/70 bg-muted/40 px-3 py-1">
+                  Region: <span className="font-medium text-foreground">{selectedCreateRegion.label}</span>
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={planSearch}
+              onChange={(event) => setPlanSearch(event.target.value)}
+              placeholder="Search plans by name, specs, or price..."
+              className="pl-10"
+              aria-label="Search VPS plans"
+            />
+          </div>
+          <div className="space-y-3">
+            {filteredPlanOptions.map((option) => {
+              const matchingPlan = filteredProviderPlans.find((plan) => plan.id === option.value);
+              const isSelected = option.value === createForm.type;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setCreateForm({ type: option.value })}
+                  className={`w-full rounded-xl border p-4 text-left transition-colors ${
+                    isSelected
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card hover:border-primary/40 hover:bg-muted/40"
+                  }`}
+                  aria-pressed={isSelected}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/70">
+                      <Server className="h-4 w-4 text-muted-foreground" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-start justify-between gap-3">
+                        <span className="truncate font-medium text-foreground">
+                          {option.label}
+                        </span>
+                        <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                          {option.meta}
+                        </span>
+                      </span>
+                      {option.description && (
+                        <span className="mt-1 block text-sm text-muted-foreground">
+                          {option.description}
+                        </span>
+                      )}
+                      {matchingPlan && (
+                        <span className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <span className="rounded-full border border-border/70 px-2 py-1">{matchingPlan.vcpus} vCPU</span>
+                          <span className="rounded-full border border-border/70 px-2 py-1">{formatSelectedPlanMemory(matchingPlan.memory)} RAM</span>
+                          <span className="rounded-full border border-border/70 px-2 py-1">{Math.round(matchingPlan.disk / 1024)} GB Storage</span>
+                          <span className="rounded-full border border-border/70 px-2 py-1">{matchingPlan.transfer} GB Transfer</span>
+                        </span>
+                      )}
+                    </span>
+                    <Check
+                      className={`mt-1 h-4 w-4 shrink-0 ${
+                        isSelected ? "opacity-100 text-primary" : "opacity-0"
+                      }`}
+                    />
+                  </div>
+                </button>
+              );
+            })}
+            {filteredPlanOptions.length === 0 && (
+              <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                No plans available for this category and region.
+              </div>
+            )}
+          </div>
+          {planHelperText && (
+            <p className="text-xs text-muted-foreground">
+              {planHelperText}
+            </p>
+          )}
+          {selectedType && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="gap-1">
+                <Cpu className="h-3.5 w-3.5 mr-1" />
+                {selectedType.vcpus} vCPU
+              </Badge>
+              <Badge variant="outline" className="gap-1">
+                <MemoryStick className="h-3.5 w-3.5 mr-1" />
+                {formatSelectedPlanMemory(selectedType.memory)} RAM
+              </Badge>
+              <Badge variant="outline" className="gap-1">
+                <HardDrive className="h-3.5 w-3.5 mr-1" />
+                {Math.round(selectedType.disk / 1024)} GB Storage
+              </Badge>
+              <Badge variant="outline" className="gap-1">
+                <Network className="h-3.5 w-3.5 mr-1" />
+                {selectedType.transfer} GB Transfer
+              </Badge>
+              <Badge variant="secondary" className="gap-1">
+                <DollarSign className="h-3.5 w-3.5 mr-1" />
+                {formatCurrency(selectedType.price.monthly)} / mo
+              </Badge>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "deployments",
+      title: getStepInfo(4)?.title || "1-Click Deployments",
+      description:
+        getStepInfo(4)?.description ||
         "Optionally provision with a StackScript or continue without one.",
       content: (
         <CreateVPSSteps
@@ -2014,9 +2363,9 @@ const VPS: React.FC = () => {
   if (deploymentConfigRequired) {
     creationSteps.push({
       id: "deployment-config",
-      title: getStepInfo(3)?.title || "App Configuration",
+      title: getStepInfo(5)?.title || "App Configuration",
       description:
-        getStepInfo(3)?.description ||
+        getStepInfo(5)?.description ||
         "Provide required credentials for the selected StackScript.",
       content: (
         <CreateVPSSteps
@@ -2039,9 +2388,9 @@ const VPS: React.FC = () => {
   creationSteps.push(
     {
       id: "os",
-      title: getStepInfo(4)?.title || "Operating System",
+      title: getStepInfo(6)?.title || "Operating System",
       description:
-        getStepInfo(4)?.description ||
+        getStepInfo(6)?.description ||
         "Pick the base operating system for this VPS.",
       content: (
         <CreateVPSSteps
@@ -2064,9 +2413,9 @@ const VPS: React.FC = () => {
     },
     {
       id: "finalize",
-      title: getStepInfo(5)?.title || "Finalize & Review",
+      title: getStepInfo(7)?.title || "Finalize & Review",
       description:
-        getStepInfo(5)?.description ||
+        getStepInfo(7)?.description ||
         "Set credentials and optional add-ons before provisioning.",
       content: (
         <CreateVPSSteps
@@ -2373,18 +2722,9 @@ const VPS: React.FC = () => {
           setShowCreateModal(isOpen);
           if (!isOpen) setCreateStep(1);
         }}
-        steps={creationSteps.filter((step) => {
-          // Filter steps based on active steps configuration
-          const stepNumber =
-            step.id === "plan"
-              ? 1
-              : step.id === "deployments"
-                ? 2
-                : step.id === "os"
-                  ? 3
-                  : 4;
-          return activeSteps.some((s) => s.originalStepNumber === stepNumber);
-        })}
+        steps={creationSteps.filter((step) =>
+          activeSteps.some((activeStep) => activeStep.id === step.id),
+        )}
         activeStep={activeSteps.findIndex(
           (s) => s.originalStepNumber === createStep,
         )}

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface OSGroup {
@@ -16,6 +16,49 @@ interface LazyOSSelectionProps {
   onImageSelect: (imageId: string) => void;
 }
 
+const OS_LOGO_MAP: Record<string, string> = {
+  ubuntu: 'https://cdn.simpleicons.org/ubuntu/E95420',
+  debian: 'https://cdn.simpleicons.org/debian/A81D33',
+  centos: 'https://cdn.simpleicons.org/centos/262577',
+  rockylinux: 'https://cdn.simpleicons.org/rockylinux/10B981',
+  almalinux: 'https://cdn.simpleicons.org/almalinux/3D5AFE',
+  fedora: 'https://cdn.simpleicons.org/fedora/51A2DA',
+  alpine: 'https://cdn.simpleicons.org/alpinelinux/0D597F',
+  arch: 'https://cdn.simpleicons.org/archlinux/1793D1',
+  opensuse: 'https://cdn.simpleicons.org/opensuse/73BA25',
+  gentoo: 'https://cdn.simpleicons.org/gentoo/54487A',
+  slackware: 'https://cdn.simpleicons.org/slackware/000000',
+};
+
+function OSIcon({
+  osKey,
+  name,
+}: {
+  osKey: string;
+  name: string;
+}) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageUrl = OS_LOGO_MAP[osKey];
+
+  if (!imageUrl || imageFailed) {
+    return (
+      <span className="text-xs font-semibold uppercase text-foreground/80">
+        {name.slice(0, 2)}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={imageUrl}
+      alt={`${name} logo`}
+      className="h-5 w-5 object-contain"
+      loading="lazy"
+      onError={() => setImageFailed(true)}
+    />
+  );
+}
+
 export default function LazyOSSelection({
   osGroups,
   selectedOSGroup,
@@ -24,21 +67,6 @@ export default function LazyOSSelection({
   onOSVersionSelect,
   onImageSelect
 }: LazyOSSelectionProps) {
-  // Memoize the color mapping to avoid recalculation
-  const colorMap = useMemo(() => ({
-    ubuntu: 'from-orange-500 to-red-600',
-    debian: 'from-red-500 to-gray-600',
-    centos: 'from-emerald-500 to-emerald-600',
-    rockylinux: 'from-green-600 to-emerald-700',
-    almalinux: 'from-rose-500 to-pink-600',
-    fedora: 'from-blue-600 to-indigo-700',
-    alpine: 'from-cyan-500 to-sky-600',
-    arch: 'from-sky-500 to-blue-700',
-    opensuse: 'from-lime-500 to-green-600',
-    gentoo: 'from-purple-500 to-violet-600',
-    slackware: 'from-gray-500 to-gray-700'
-  }), []);
-
   // Memoize the filtered and sorted OS groups
   const sortedOSKeys = useMemo(() => {
     return ['ubuntu','debian','centos','rockylinux','almalinux','fedora','alpine','arch','opensuse','gentoo','slackware']
@@ -51,7 +79,6 @@ export default function LazyOSSelection({
         const group = osGroups[key];
         const selectedVersionId = selectedOSVersion[key] || group.versions[0]?.id;
         const isSelected = selectedOSGroup === key;
-        const colors = colorMap[key as keyof typeof colorMap] || 'from-blue-500 to-purple-600';
         
         return (
           <div
@@ -70,13 +97,8 @@ export default function LazyOSSelection({
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2 min-w-0 flex-1">
-                <div className={cn(
-                  "w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center shadow-md",
-                  colors
-                )}>
-                  <span className="text-white font-bold text-xs">
-                    {group.name.slice(0,2).toUpperCase()}
-                  </span>
+                <div className="w-10 h-10 rounded-lg border border-border/70 bg-muted/50 flex items-center justify-center shadow-sm">
+                  <OSIcon osKey={key} name={group.name} />
                 </div>
                 <h3 className="font-medium text-foreground text-sm lowercase truncate">
                   {group.name}

@@ -70,7 +70,7 @@ const getRegionMeta = (region?: ProviderRegion): string => {
   return parts.join(" • ") || "Available region";
 };
 
-const CountryIcon: React.FC<{ country?: string; label?: string }> = ({
+export const CountryIcon: React.FC<{ country?: string; label?: string }> = ({
   country,
   label,
 }) => {

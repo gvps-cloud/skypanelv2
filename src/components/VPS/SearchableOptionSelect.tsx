@@ -57,6 +57,7 @@ export function SearchableOptionSelect({
   triggerClassName,
 }: SearchableOptionSelectProps) {
   const [open, setOpen] = React.useState(false);
+  const listId = React.useId();
 
   const selectedOption = React.useMemo(
     () => options.find((option) => option.value === value),
@@ -75,6 +76,7 @@ export function SearchableOptionSelect({
   return (
     <div className="space-y-3">
       <Popover
+        modal={false}
         open={open && !isDisabled}
         onOpenChange={(nextOpen) => setOpen(nextOpen && !isDisabled)}
       >
@@ -85,6 +87,7 @@ export function SearchableOptionSelect({
             role="combobox"
             aria-label={ariaLabel ?? placeholder}
             aria-expanded={open}
+            aria-controls={open ? listId : undefined}
             disabled={isDisabled}
             className={cn(
               "h-auto w-full justify-between rounded-xl px-4 py-3 text-left font-normal",
@@ -111,10 +114,17 @@ export function SearchableOptionSelect({
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent align="start" className="w-[min(36rem,calc(100vw-2rem))] p-0">
-          <Command className="rounded-xl">
-            <CommandInput placeholder={searchPlaceholder} />
-            <CommandList className="max-h-[340px]">
+        <PopoverContent
+          align="start"
+          side="bottom"
+          sideOffset={8}
+          collisionPadding={16}
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          className="w-[min(36rem,calc(100vw-2rem))] overflow-hidden rounded-xl p-0"
+        >
+          <Command className="max-h-[min(24rem,calc(100vh-8rem))] rounded-xl">
+            <CommandInput className="h-12" placeholder={searchPlaceholder} />
+            <CommandList id={listId} className="max-h-[min(20rem,calc(100vh-12rem))] flex-1 min-h-0 overscroll-contain">
               <CommandEmpty>{emptyMessage}</CommandEmpty>
               <CommandGroup heading={`Options (${options.length})`}>
                 {options.map((option) => (

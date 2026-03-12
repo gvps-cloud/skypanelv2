@@ -277,15 +277,6 @@ const Dashboard: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-          <Skeleton className="h-6 w-32 mb-3" />
-          <Skeleton className="h-10 w-3/4 mb-2" />
-          <Skeleton className="h-5 w-2/3" />
-          <div className="mt-6 flex gap-3">
-            <Skeleton className="h-11 w-32" />
-            <Skeleton className="h-11 w-32" />
-          </div>
-        </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
@@ -308,130 +299,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-        <div className="relative z-10">
-          <div className="mb-2">
-            <Badge variant="secondary" className="mb-3">
-              Welcome back
-            </Badge>
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-            {user?.firstName
-              ? `Good to see you, ${user.firstName}.`
-              : "Welcome to SkyPanel"}
-          </h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            Deploy and manage resources across our servers with live
-            telemetry, unified billing, and proactive insights.
-          </p>
-        </div>
-
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <Server className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-          <Wallet className="absolute bottom-10 right-20 h-24 w-24 -rotate-6" />
-        </div>
-      </div>
-
-      {/* Key Metrics Grid */}
-      <div className="space-y-4">
-        {/* Top Row: VPS */}
-        <div className="grid gap-4 md:grid-cols-1">
-          <Card className="overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    VPS Instances
-                  </p>
-                  <p className="text-3xl font-bold tracking-tight">
-                    {vpsInstances.length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Across all providers
-                  </p>
-                </div>
-                <div className="rounded-lg bg-primary/10 p-3">
-                  <Server className="h-6 w-6 text-primary" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Bottom Row: Billing Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Wallet Balance
-                  </p>
-                  <p className="text-3xl font-bold tracking-tight">
-                    {formatCurrency(walletBalance)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Ready to deploy infrastructure
-                  </p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <Wallet className="h-6 w-6 text-foreground" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Monthly Spend
-                  </p>
-                  <p className="text-3xl font-bold tracking-tight">
-                    {formatCurrency(monthlySpend)}
-                  </p>
-                  <MonthlyResetIndicator
-                    monthlySpend={monthlySpend}
-                    showAnimation={false}
-                  />
-                </div>
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <TrendingUp className="h-6 w-6 text-foreground" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Last Payment
-                  </p>
-                  <p className="text-3xl font-bold tracking-tight">
-                    {lastPayment?.amount
-                      ? formatCurrency(lastPayment.amount)
-                      : "—"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {lastPayment?.date
-                      ? formatTimestamp(lastPayment.date)
-                      : "No payments yet"}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <ActivityIcon className="h-6 w-6 text-foreground" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
       {/* Main Content Area */}
       <div className="space-y-6">
         {/* Status Overview */}
@@ -504,7 +371,72 @@ const Dashboard: React.FC = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Wallet Balance
+                        </p>
+                        <p className="text-2xl font-bold tracking-tight">
+                          {formatCurrency(walletBalance)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Ready to deploy infrastructure
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-muted/50 p-3">
+                        <Wallet className="h-5 w-5 text-foreground" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Monthly Spend
+                        </p>
+                        <p className="text-2xl font-bold tracking-tight">
+                          {formatCurrency(monthlySpend)}
+                        </p>
+                        <MonthlyResetIndicator
+                          monthlySpend={monthlySpend}
+                          showAnimation={false}
+                        />
+                      </div>
+                      <div className="rounded-lg bg-muted/50 p-3">
+                        <TrendingUp className="h-5 w-5 text-foreground" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Last Payment
+                        </p>
+                        <p className="text-2xl font-bold tracking-tight">
+                          {lastPayment?.amount
+                            ? formatCurrency(lastPayment.amount)
+                            : "—"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {lastPayment?.date
+                            ? formatTimestamp(lastPayment.date)
+                            : "No payments yet"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-muted/50 p-3">
+                        <ActivityIcon className="h-5 w-5 text-foreground" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
                 {vpsInstances.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-16 text-center min-h-[250px]">
                     <div className="rounded-full bg-muted p-4">
@@ -588,6 +520,7 @@ const Dashboard: React.FC = () => {
                     );
                   })
                 )}
+                </div>
               </div>
             </CardContent>
           </Card>
