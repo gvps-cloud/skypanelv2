@@ -62,8 +62,7 @@ export const MonthlyResetIndicator: React.FC<MonthlyResetIndicatorProps> = ({
               variant="secondary"
               className={cn(
                 "inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs whitespace-nowrap min-w-[120px] self-start sm:self-start",
-                "bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300",
-                "border-blue-200 dark:border-blue-800",
+                "border border-primary/20 text-primary bg-primary/10 dark:border-primary/60 dark:text-primary dark:bg-primary/30",
                 "transition-all duration-300 ease-in-out",
                 showNewMonthAnimation && "animate-pulse",
               )}
@@ -90,7 +89,7 @@ export const MonthlyResetIndicator: React.FC<MonthlyResetIndicatorProps> = ({
               <div className="h-1 w-full max-w-[7rem] overflow-hidden rounded-full bg-muted">
                 <div
                   className={cn(
-                    "h-full rounded-full bg-blue-500 transition-all duration-500 ease-out",
+                    "h-full rounded-full bg-primary transition-all duration-500 ease-out",
                     isNewMonth && "bg-green-500",
                   )}
                   style={{
@@ -131,8 +130,7 @@ export const MonthlyResetIndicatorCompact: React.FC<
       variant="secondary"
       className={cn(
         "inline-flex items-center gap-1 px-2 py-1 text-xs",
-        "bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300",
-        "border-blue-200 dark:border-blue-800",
+        "border border-primary/20 text-primary bg-primary/10 dark:border-primary/60 dark:text-primary dark:bg-primary/30",
         className,
       )}
     >

@@ -2295,7 +2295,8 @@ export default function ApiDocs() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="relative">
+      <div className="space-y-6 pr-0 lg:pr-96">
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center gap-3">
@@ -2374,44 +2375,42 @@ export default function ApiDocs() {
 
       {/* Main Content */}
       <div className="flex gap-6">
-        {/* Sticky Sidebar */}
-        <aside className="hidden lg:block w-80 shrink-0">
-          <div className="sticky top-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">
-                  Navigation
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[calc(100vh-12rem)]">
-                  <nav className="space-y-1">
-                    {filteredSections.map((section) => (
-                      <button
-                        key={section.title}
-                        onClick={() => handleScrollToSection(section.title)}
-                        className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${activeSection === section.title
-                          ? "bg-primary/10 font-medium text-primary"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                          }`}
+        {/* Fixed Sidebar */}
+        <aside className="hidden lg:block fixed right-4 top-4 w-80 z-40">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">
+                Navigation
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[calc(100vh-12rem)]">
+                <nav className="space-y-1">
+                  {filteredSections.map((section) => (
+                    <button
+                      key={section.title}
+                      onClick={() => handleScrollToSection(section.title)}
+                      className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${activeSection === section.title
+                        ? "bg-primary/10 font-medium text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
+                    >
+                      {section.icon}
+                      <span className="flex-1 text-left leading-tight">
+                        {section.title}
+                      </span>
+                      <Badge
+                        variant="secondary"
+                        className="h-5 min-w-5 px-1.5 text-xs"
                       >
-                        {section.icon}
-                        <span className="flex-1 text-left leading-tight">
-                          {section.title}
-                        </span>
-                        <Badge
-                          variant="secondary"
-                          className="h-5 min-w-5 px-1.5 text-xs"
-                        >
-                          {section.endpoints.length}
-                        </Badge>
-                      </button>
-                    ))}
-                  </nav>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
+                        {section.endpoints.length}
+                      </Badge>
+                    </button>
+                  ))}
+                </nav>
+              </ScrollArea>
+            </CardContent>
+          </Card>
         </aside>
 
         {/* Content Area */}
@@ -2601,6 +2600,7 @@ export default function ApiDocs() {
             </Card>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );
