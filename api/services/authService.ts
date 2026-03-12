@@ -517,6 +517,47 @@ export class AuthService {
     }
   }
 
+  static async verifyTwoFactorCode(userId: string, token: string) {
+    try {
+      const result = await query(
+        "SELECT two_factor_enabled, two_factor_secret FROM users WHERE id = $1",
+        [userId],
+      );
+
+      if (result.rows.length === 0) {
+        throw new Error("User not found");
+      }
+
+      const user = result.rows[0];
+
+      if (!user.two_factor_enabled) {
+        return { success: true, required: false };
+      }
+
+      if (!token?.trim()) {
+        throw new Error("Two-factor authentication code is required");
+      }
+
+      if (!user.two_factor_secret) {
+        throw new Error("2FA configuration error");
+      }
+
+      const isValid = authenticator.verify({
+        token: token.trim(),
+        secret: user.two_factor_secret,
+      });
+
+      if (!isValid) {
+        throw new Error("Invalid authentication code");
+      }
+
+      return { success: true, required: true };
+    } catch (error) {
+      console.error("Verify 2FA code error:", error);
+      throw error;
+    }
+  }
+
   static async disable2FA(userId: string) {
     try {
       await query(

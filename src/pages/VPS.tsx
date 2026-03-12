@@ -77,6 +77,7 @@ interface ProviderPlan {
   transfer: number;
   region?: string;
   provider_id?: string;
+  type_class?: string;
   price: {
     hourly: number;
     monthly: number;
@@ -174,6 +175,7 @@ const VPS: React.FC = () => {
     label: string;
     input: string;
     password: string;
+    twoFactorCode: string;
     confirmCheckbox: boolean;
     loading: boolean;
     error: string;
@@ -183,6 +185,7 @@ const VPS: React.FC = () => {
     label: "",
     input: "",
     password: "",
+    twoFactorCode: "",
     confirmCheckbox: false,
     loading: false,
     error: "",
@@ -217,7 +220,7 @@ const VPS: React.FC = () => {
       clearOnSubmit: true,
     },
   );
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { data: enabledCategoryMappings } = useEnabledCategoryMappings();
   const location = useLocation();
   const navigate = useNavigate();
@@ -806,6 +809,12 @@ const VPS: React.FC = () => {
             0;
 
           const region = plan.region_id || specs.region || "";
+          const typeClass =
+            (typeof plan.type_class === "string" && plan.type_class.trim().length > 0
+              ? plan.type_class
+              : typeof specs.type_class === "string" && specs.type_class.trim().length > 0
+                ? specs.type_class
+                : "standard");
 
           return {
             id: String(plan.id),
@@ -816,6 +825,7 @@ const VPS: React.FC = () => {
             transfer: transferGb,
             region,
             provider_id: plan.provider_id,
+            type_class: typeClass,
             price: {
               hourly: totalPrice / 730,
               monthly: totalPrice,
@@ -1147,6 +1157,7 @@ const VPS: React.FC = () => {
           label: inst?.label || "",
           input: "",
           password: "",
+          twoFactorCode: "",
           confirmCheckbox: false,
           loading: false,
           error: "",
@@ -1284,7 +1295,10 @@ const VPS: React.FC = () => {
     }
   };
 
-  const handleBulkDelete = async (password: string) => {
+  const handleBulkDelete = async (
+    password: string,
+    twoFactorCode?: string,
+  ) => {
     if (selectedInstances.length === 0) return;
 
     setBulkDeleteLoading(true);
@@ -1305,7 +1319,7 @@ const VPS: React.FC = () => {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ password }),
+            body: JSON.stringify({ password, twoFactorCode }),
           });
 
           const data = await res.json().catch(() => ({}));
@@ -1423,6 +1437,14 @@ const VPS: React.FC = () => {
         return;
       }
 
+      if (user?.twoFactorEnabled && !deleteModal.twoFactorCode.trim()) {
+        setDeleteModal((m) => ({
+          ...m,
+          error: "Please enter your 2FA code.",
+        }));
+        return;
+      }
+
       if (!deleteModal.confirmCheckbox) {
         setDeleteModal((m) => ({
           ...m,
@@ -1439,7 +1461,10 @@ const VPS: React.FC = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ password: deleteModal.password }),
+        body: JSON.stringify({
+          password: deleteModal.password,
+          twoFactorCode: deleteModal.twoFactorCode,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to delete instance");
@@ -1449,6 +1474,7 @@ const VPS: React.FC = () => {
         label: "",
         input: "",
         password: "",
+        twoFactorCode: "",
         confirmCheckbox: false,
         loading: false,
         error: "",
@@ -1760,10 +1786,23 @@ const VPS: React.FC = () => {
     );
   }, [providerPlans, createForm.provider_id]);
 
+  const availableCategories = useMemo(() => {
+    const categories = new Set<OriginalCategory>();
+    filteredProviderPlans.forEach((plan: any) => {
+      const typeClass = plan?.type_class as OriginalCategory | undefined;
+      if (typeClass && VALID_ORIGINAL_CATEGORIES.includes(typeClass)) {
+        categories.add(typeClass);
+      }
+    });
+    return categories;
+  }, [filteredProviderPlans]);
+
   const categoryOptions = useMemo(
     () =>
-      CATEGORY_DISPLAY_ORDER.filter((category) =>
-        VALID_ORIGINAL_CATEGORIES.includes(category),
+      CATEGORY_DISPLAY_ORDER.filter(
+        (category) =>
+          VALID_ORIGINAL_CATEGORIES.includes(category) &&
+          availableCategories.has(category),
       ).map((category) => {
         const mapping = enabledCategoryMappings?.find(
           (item) => item.original_category === category,
@@ -1781,7 +1820,7 @@ const VPS: React.FC = () => {
           icon: <Layers3 className="h-4 w-4 text-muted-foreground" />,
         };
       }),
-    [enabledCategoryMappings],
+    [availableCategories, enabledCategoryMappings],
   );
 
   const selectedCategoryOption = categoryOptions.find(
@@ -2074,12 +2113,9 @@ const VPS: React.FC = () => {
                             {option.icon ?? <Layers3 className="h-4 w-4 text-muted-foreground" />}
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="flex items-start justify-between gap-3">
+                            <span className="block">
                               <span className="truncate font-medium text-foreground">
                                 {option.label}
-                              </span>
-                              <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                                {option.meta}
                               </span>
                             </span>
                             {option.description && (
@@ -2157,47 +2193,51 @@ const VPS: React.FC = () => {
             )}
             {!createRegionsLoading &&
               !createRegionsError &&
-              filteredCreateRegionOptions.map((region) => {
-                const isSelected = region.id === createForm.region;
+              filteredCreateRegionOptions.length > 0 && (
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {filteredCreateRegionOptions.map((region) => {
+                    const isSelected = region.id === createForm.region;
 
-                return (
-                  <button
-                    key={region.id}
-                    type="button"
-                    onClick={() => setCreateForm({ type: "", region: region.id })}
-                    className={`w-full rounded-xl border p-4 text-left transition-colors ${
-                      isSelected
-                        ? "border-primary bg-primary/10"
-                        : "border-border bg-card hover:border-primary/40 hover:bg-muted/40"
-                    }`}
-                    aria-pressed={isSelected}
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/70">
-                        <CountryIcon country={region.country} label={region.label} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-start justify-between gap-3">
-                          <span className="truncate font-medium text-foreground">
-                            {region.label}
-                          </span>
-                          <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                            {region.id}
-                          </span>
-                        </span>
-                        <span className="mt-1 block text-sm text-muted-foreground">
-                          {region.country || "Region"}
-                        </span>
-                      </span>
-                      <Check
-                        className={`mt-1 h-4 w-4 shrink-0 ${
-                          isSelected ? "opacity-100 text-primary" : "opacity-0"
+                    return (
+                      <button
+                        key={region.id}
+                        type="button"
+                        onClick={() => setCreateForm({ type: "", region: region.id })}
+                        className={`rounded-xl border p-4 text-left transition-colors ${
+                          isSelected
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-card hover:border-primary/40 hover:bg-muted/40"
                         }`}
-                      />
-                    </div>
-                  </button>
-                );
-              })}
+                        aria-pressed={isSelected}
+                      >
+                        <div className="flex h-full flex-col gap-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/70">
+                              <CountryIcon country={region.country} label={region.label} />
+                            </span>
+                            <Check
+                              className={`mt-1 h-4 w-4 shrink-0 ${
+                                isSelected ? "opacity-100 text-primary" : "opacity-0"
+                              }`}
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate font-medium text-foreground">
+                              {region.label}
+                            </div>
+                            <div className="mt-1 text-sm text-muted-foreground">
+                              {region.country || "Region"}
+                            </div>
+                          </div>
+                          <div className="mt-auto text-xs font-medium text-muted-foreground">
+                            {region.id}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             {!createRegionsLoading && !createRegionsError && filteredCreateRegionOptions.length === 0 && (
               <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
                 No regions available for the selected category.
@@ -2817,6 +2857,30 @@ const VPS: React.FC = () => {
                     aria-label="Enter account password to confirm deletion"
                   />
                 </div>
+
+                {user?.twoFactorEnabled && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      2FA Code
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={deleteModal.twoFactorCode}
+                      onChange={(e) =>
+                        setDeleteModal((m) => ({
+                          ...m,
+                          twoFactorCode: e.target.value,
+                          error: "",
+                        }))
+                      }
+                      placeholder="Enter your 2FA code"
+                      className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-red-500 text-base touch-manipulation"
+                      autoComplete="one-time-code"
+                      aria-label="Enter 2FA code to confirm deletion"
+                    />
+                  </div>
+                )}
               </form>
 
               <div className="mt-4">
@@ -2853,6 +2917,7 @@ const VPS: React.FC = () => {
                       label: "",
                       input: "",
                       password: "",
+                      twoFactorCode: "",
                       confirmCheckbox: false,
                       loading: false,
                       error: "",
@@ -2870,11 +2935,15 @@ const VPS: React.FC = () => {
                     deleteModal.loading ||
                     deleteModal.input.trim() !== deleteModal.label.trim() ||
                     !deleteModal.password.trim() ||
+                    (Boolean(user?.twoFactorEnabled) &&
+                      !deleteModal.twoFactorCode.trim()) ||
                     !deleteModal.confirmCheckbox
                   }
                   className={`px-6 py-3 min-h-[48px] border border-transparent rounded-md shadow-sm text-sm font-medium text-white touch-manipulation transition-colors duration-200 ${
                     deleteModal.input.trim() === deleteModal.label.trim() &&
                     deleteModal.password.trim() &&
+                    (!user?.twoFactorEnabled ||
+                      Boolean(deleteModal.twoFactorCode.trim())) &&
                     deleteModal.confirmCheckbox
                       ? "bg-red-600 hover:bg-red-700 active:bg-red-800"
                       : "bg-red-400 cursor-not-allowed"
@@ -2896,6 +2965,7 @@ const VPS: React.FC = () => {
         onConfirm={handleBulkDelete}
         selectedInstances={selectedInstances}
         isLoading={bulkDeleteLoading}
+        requiresTwoFactor={Boolean(user?.twoFactorEnabled)}
       />
     </div>
   );

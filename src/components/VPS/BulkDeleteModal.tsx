@@ -17,9 +17,10 @@ import { VPSInstance } from '@/types/vps';
 interface BulkDeleteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (password: string) => Promise<void>;
+  onConfirm: (password: string, twoFactorCode?: string) => Promise<void>;
   selectedInstances: VPSInstance[];
   isLoading?: boolean;
+  requiresTwoFactor?: boolean;
 }
 
 export const BulkDeleteModal: React.FC<BulkDeleteModalProps> = ({
@@ -28,8 +29,10 @@ export const BulkDeleteModal: React.FC<BulkDeleteModalProps> = ({
   onConfirm,
   selectedInstances,
   isLoading = false,
+  requiresTwoFactor = false,
 }) => {
   const [password, setPassword] = useState('');
+  const [twoFactorCode, setTwoFactorCode] = useState('');
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
@@ -45,16 +48,22 @@ export const BulkDeleteModal: React.FC<BulkDeleteModalProps> = ({
       return;
     }
 
+    if (requiresTwoFactor && !twoFactorCode.trim()) {
+      setPasswordError('2FA code is required');
+      return;
+    }
+
     try {
-      await onConfirm(password);
+      await onConfirm(password, twoFactorCode.trim() || undefined);
       handleClose();
-    } catch {
-      setPasswordError('Invalid password');
+    } catch (error: any) {
+      setPasswordError(error.message || 'Deletion verification failed');
     }
   };
 
   const handleClose = () => {
     setPassword('');
+    setTwoFactorCode('');
     setIsConfirmed(false);
     setPasswordError('');
     onClose();
@@ -110,6 +119,26 @@ export const BulkDeleteModal: React.FC<BulkDeleteModalProps> = ({
               )}
             </div>
 
+            {requiresTwoFactor && (
+              <div className="space-y-2">
+                <Label htmlFor="twoFactorCode">
+                  Enter your 2FA code to confirm deletion
+                </Label>
+                <Input
+                  id="twoFactorCode"
+                  inputMode="numeric"
+                  value={twoFactorCode}
+                  onChange={(e) => {
+                    setTwoFactorCode(e.target.value);
+                    setPasswordError('');
+                  }}
+                  placeholder="123456"
+                  className={passwordError ? 'border-destructive' : ''}
+                  disabled={isLoading}
+                />
+              </div>
+            )}
+
             {/* Confirmation Checkbox */}
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -138,7 +167,12 @@ export const BulkDeleteModal: React.FC<BulkDeleteModalProps> = ({
               <Button
                 type="submit"
                 variant="destructive"
-                disabled={!password.trim() || !isConfirmed || isLoading}
+                disabled={
+                  !password.trim() ||
+                  (requiresTwoFactor && !twoFactorCode.trim()) ||
+                  !isConfirmed ||
+                  isLoading
+                }
               >
                 {isLoading ? 'Deleting...' : `Delete ${serverCount} Server${serverCount > 1 ? 's' : ''}`}
               </Button>

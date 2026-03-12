@@ -111,6 +111,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { buildApiUrl } from "@/lib/api";
@@ -314,6 +320,9 @@ interface VPSPlan {
   provider_plan_id: string;
   base_price: number;
   markup_price: number;
+  transfer_overage_markup_type?: 'flat' | 'multiplier';
+  transfer_overage_markup_value?: number;
+  transfer_overage_enabled?: boolean;
   backup_price_monthly?: number;
   backup_price_hourly?: number;
   backup_upcharge_monthly?: number;
@@ -431,6 +440,9 @@ interface NewVPSPlanState {
   selectedProviderId: string;
   selectedType: string;
   markupPrice: number;
+  transferOverageMarkupType: 'flat' | 'multiplier';
+  transferOverageMarkupValue: number | string;
+  transferOverageEnabled: boolean;
   backupPriceMonthly: number | string;
   backupPriceHourly: number | string;
   backupUpchargeMonthly: number | string;
@@ -567,6 +579,9 @@ const getPlanResourceSummary = (
     typeof transfer === "number" ? formatPlanTransfer(transfer) : null,
   ].filter((value): value is string => Boolean(value));
 };
+
+const transferMarkupHelp =
+  "Flat adds a fixed USD amount per GB on top of the provider rate. Multiplier scales the provider rate, so 1.5 means charge 50% more than provider cost.";
 
 // Sortable Provider Row Component
 interface SortableProviderRowProps {
@@ -793,7 +808,10 @@ const Admin: React.FC = () => {
     selectedProviderId: "",
     selectedType: "",
     markupPrice: 0,
-    backupPriceMonthly: "",
+    transferOverageMarkupType: 'flat',
+    transferOverageMarkupValue: '',
+    transferOverageEnabled: true,
+    backupPriceMonthly: '',
     backupPriceHourly: "",
     backupUpchargeMonthly: "",
     backupUpchargeHourly: "",
@@ -1626,6 +1644,9 @@ const Admin: React.FC = () => {
           name: editPlan.name,
           base_price: editPlan.base_price,
           markup_price: editPlan.markup_price,
+          transfer_overage_markup_type: editPlan.transfer_overage_markup_type || 'flat',
+          transfer_overage_markup_value: editPlan.transfer_overage_markup_value || 0,
+          transfer_overage_enabled: editPlan.transfer_overage_enabled ?? true,
           backup_price_monthly: editPlan.backup_price_monthly || 0,
           backup_price_hourly: editPlan.backup_price_hourly || 0,
           backup_upcharge_monthly: editPlan.backup_upcharge_monthly || 0,
@@ -1688,6 +1709,10 @@ const Admin: React.FC = () => {
           provider_plan_id: selectedType.id,
           base_price: selectedType.price.monthly,
           markup_price: newVPSPlan.markupPrice,
+          transfer_overage_markup_type: newVPSPlan.transferOverageMarkupType,
+          transfer_overage_markup_value:
+            parseFloat(String(newVPSPlan.transferOverageMarkupValue)) || 0,
+          transfer_overage_enabled: newVPSPlan.transferOverageEnabled,
           backup_price_monthly:
             parseFloat(String(newVPSPlan.backupPriceMonthly)) ||
             selectedType.backup_price_monthly ||
@@ -1723,6 +1748,9 @@ const Admin: React.FC = () => {
         selectedProviderId: "",
         selectedType: "",
         markupPrice: 0,
+        transferOverageMarkupType: 'flat',
+        transferOverageMarkupValue: 0,
+        transferOverageEnabled: true,
         backupPriceMonthly: 0,
         backupPriceHourly: 0,
         backupUpchargeMonthly: 0,
@@ -2982,6 +3010,150 @@ const Admin: React.FC = () => {
                                   </div>
                                 </div>
 
+                                <div className="pt-2 border-t space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs text-muted-foreground">
+                                      Transfer Overage
+                                    </p>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            type="button"
+                                            className="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px] text-muted-foreground transition-colors hover:bg-background"
+                                          >
+                                            ?
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs text-xs">
+                                          {transferMarkupHelp}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  </div>
+                                  {isEditing ? (
+                                    <div className="space-y-3">
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                          <p className="text-xs text-muted-foreground mb-1">
+                                            Type
+                                          </p>
+                                          <Select
+                                            value={
+                                              ((editPlan.transfer_overage_markup_type as
+                                                | "flat"
+                                                | "multiplier"
+                                                | undefined) ??
+                                                plan.transfer_overage_markup_type ??
+                                                "flat")
+                                            }
+                                            onValueChange={(
+                                              value: "flat" | "multiplier",
+                                            ) =>
+                                              setEditPlan((prev) => ({
+                                                ...prev,
+                                                transfer_overage_markup_type:
+                                                  value,
+                                              }))
+                                            }
+                                          >
+                                            <SelectTrigger className="h-8">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="flat">
+                                                Flat
+                                              </SelectItem>
+                                              <SelectItem value="multiplier">
+                                                Multiplier
+                                              </SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                          <p className="mt-1 text-[11px] text-muted-foreground">
+                                            `flat` adds USD/GB. `multiplier`
+                                            scales the provider rate.
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-xs text-muted-foreground mb-1">
+                                            Value
+                                          </p>
+                                          <Input
+                                            type="number"
+                                            step="0.0001"
+                                            min="0"
+                                            value={
+                                              (editPlan.transfer_overage_markup_value as
+                                                | number
+                                                | undefined) ??
+                                              plan.transfer_overage_markup_value ??
+                                              0
+                                            }
+                                            onChange={(e) =>
+                                              setEditPlan((prev) => ({
+                                                ...prev,
+                                                transfer_overage_markup_value:
+                                                  parseFloat(e.target.value) ||
+                                                  0,
+                                              }))
+                                            }
+                                            className="h-8"
+                                          />
+                                          <p className="mt-1 text-[11px] text-muted-foreground">
+                                            Example: `1.5` multiplier = 50%
+                                            above provider cost.
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                                        <span className="text-xs text-muted-foreground">
+                                          Enabled
+                                        </span>
+                                        <Switch
+                                          checked={
+                                            ((editPlan.transfer_overage_enabled as
+                                              | boolean
+                                              | undefined) ??
+                                              plan.transfer_overage_enabled ??
+                                              true)
+                                          }
+                                          onCheckedChange={(checked) =>
+                                            setEditPlan((prev) => ({
+                                              ...prev,
+                                              transfer_overage_enabled: checked,
+                                            }))
+                                          }
+                                        />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="text-sm space-y-1">
+                                      <p className="font-medium">
+                                        {plan.transfer_overage_enabled ?? true
+                                          ? `${
+                                              plan.transfer_overage_markup_type ===
+                                              "multiplier"
+                                                ? `${Number(
+                                                    plan.transfer_overage_markup_value ??
+                                                      0,
+                                                  ).toFixed(2)}x provider rate`
+                                                : `$${Number(
+                                                    plan.transfer_overage_markup_value ??
+                                                      0,
+                                                  ).toFixed(4)} / GB`
+                                            }`
+                                          : "Disabled"}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {plan.transfer_overage_markup_type ===
+                                        "multiplier"
+                                          ? "Scales with provider egress rate"
+                                          : "Fixed markup added per GB"}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+
                                 {/* Additional Info */}
                                 {planProvider && (
                                   <div className="pt-2 border-t">
@@ -3044,6 +3216,14 @@ const Admin: React.FC = () => {
                                             name: plan.name,
                                             base_price: plan.base_price,
                                             markup_price: plan.markup_price,
+                                            transfer_overage_markup_type:
+                                              plan.transfer_overage_markup_type ||
+                                              'flat',
+                                            transfer_overage_markup_value:
+                                              plan.transfer_overage_markup_value ||
+                                              0,
+                                            transfer_overage_enabled:
+                                              plan.transfer_overage_enabled ?? true,
                                             backup_price_monthly:
                                               plan.backup_price_monthly || 0,
                                             backup_price_hourly:
@@ -3337,8 +3517,117 @@ const Admin: React.FC = () => {
                                       </TableCell>
                                       <TableCell>
                                         {isEditing ? (
-                                          <div className="space-y-2">
-                                            <div className="text-xs text-muted-foreground mb-1">
+                                          <div className="space-y-3">
+                                            <div className="flex items-center gap-2">
+                                              <div className="text-xs text-muted-foreground mb-1">
+                                                Transfer Overage
+                                              </div>
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <button
+                                                      type="button"
+                                                      className="mb-1 inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px] text-muted-foreground transition-colors hover:bg-background"
+                                                    >
+                                                      ?
+                                                    </button>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent className="max-w-xs text-xs">
+                                                    {transferMarkupHelp}
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            </div>
+                                            <Select
+                                              value={
+                                                ((editPlan.transfer_overage_markup_type as
+                                                  | "flat"
+                                                  | "multiplier"
+                                                  | undefined) ??
+                                                  plan.transfer_overage_markup_type ??
+                                                  "flat")
+                                              }
+                                              onValueChange={(
+                                                value: "flat" | "multiplier",
+                                              ) =>
+                                                setEditPlan((prev) => ({
+                                                  ...prev,
+                                                  transfer_overage_markup_type:
+                                                    value,
+                                                }))
+                                              }
+                                            >
+                                              <SelectTrigger className="max-w-[8rem]">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="flat">
+                                                  Flat
+                                                </SelectItem>
+                                                <SelectItem value="multiplier">
+                                                  Multiplier
+                                                </SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                            <div className="text-[11px] text-muted-foreground">
+                                              `flat` adds USD/GB. `multiplier`
+                                              scales the provider rate.
+                                            </div>
+                                            <Input
+                                              type="number"
+                                              step="0.0001"
+                                              min="0"
+                                              placeholder="Markup value"
+                                              value={
+                                                (editPlan.transfer_overage_markup_value as
+                                                  | number
+                                                  | undefined) ??
+                                                plan.transfer_overage_markup_value ??
+                                                0
+                                              }
+                                              onChange={(e) =>
+                                                setEditPlan((prev) => ({
+                                                  ...prev,
+                                                  transfer_overage_markup_value:
+                                                    parseFloat(
+                                                      e.target.value,
+                                                    ) || 0,
+                                                }))
+                                              }
+                                              className="max-w-[8rem]"
+                                            />
+                                            <div className="text-[11px] text-muted-foreground">
+                                              Example: `1.5` multiplier = 50%
+                                              above provider cost.
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <Switch
+                                                checked={
+                                                  ((editPlan.transfer_overage_enabled as
+                                                    | boolean
+                                                    | undefined) ??
+                                                    plan.transfer_overage_enabled ??
+                                                    true)
+                                                }
+                                                onCheckedChange={(checked) =>
+                                                  setEditPlan((prev) => ({
+                                                    ...prev,
+                                                    transfer_overage_enabled:
+                                                      checked,
+                                                  }))
+                                                }
+                                              />
+                                              <span className="text-xs text-muted-foreground">
+                                                {((editPlan.transfer_overage_enabled as
+                                                  | boolean
+                                                  | undefined) ??
+                                                  plan.transfer_overage_enabled ??
+                                                  true)
+                                                  ? "Enabled"
+                                                  : "Disabled"}
+                                              </span>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mt-2 mb-1">
                                               Base Price
                                             </div>
                                             <Input
@@ -3416,6 +3705,26 @@ const Admin: React.FC = () => {
                                           </div>
                                         ) : (
                                           <div className="text-sm">
+                                            <div className="mb-2">
+                                              <div className="text-muted-foreground">
+                                                {(plan.transfer_overage_enabled ??
+                                                  true)
+                                                  ? plan.transfer_overage_markup_type ===
+                                                    "multiplier"
+                                                    ? `${Number(
+                                                        plan.transfer_overage_markup_value ??
+                                                          0,
+                                                      ).toFixed(2)}x provider rate`
+                                                    : `$${Number(
+                                                        plan.transfer_overage_markup_value ??
+                                                          0,
+                                                      ).toFixed(4)}/GB`
+                                                  : "Transfer disabled"}
+                                              </div>
+                                              <div className="text-xs text-muted-foreground">
+                                                Transfer overage
+                                              </div>
+                                            </div>
                                             {(Number(
                                               plan.backup_price_monthly,
                                             ) || 0) > 0 ||
@@ -3537,6 +3846,15 @@ const Admin: React.FC = () => {
                                                   base_price: plan.base_price,
                                                   markup_price:
                                                     plan.markup_price,
+                                                  transfer_overage_markup_type:
+                                                    plan.transfer_overage_markup_type ||
+                                                    'flat',
+                                                  transfer_overage_markup_value:
+                                                    plan.transfer_overage_markup_value ||
+                                                    0,
+                                                  transfer_overage_enabled:
+                                                    plan.transfer_overage_enabled ??
+                                                    true,
                                                   backup_price_monthly:
                                                     plan.backup_price_monthly ||
                                                     0,

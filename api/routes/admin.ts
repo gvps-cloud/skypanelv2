@@ -31,6 +31,7 @@ import {
 } from "../lib/providerRegions.js";
 import { invalidateRegionsCache } from "./pricing.js";
 import { PlatformStatsService } from "../services/platformStatsService.js";
+import { TransferBillingService } from "../services/transferBillingService.js";
 import {
   listActiveRateLimitOverrides,
   upsertRateLimitOverride,
@@ -959,6 +960,7 @@ router.get(
         `SELECT
           p.id, p.name, p.provider_id, p.provider_plan_id,
           p.base_price, p.markup_price,
+          p.transfer_overage_markup_type, p.transfer_overage_markup_value, p.transfer_overage_enabled,
           p.backup_price_monthly, p.backup_price_hourly,
           p.backup_upcharge_monthly, p.backup_upcharge_hourly,
           p.daily_backups_enabled, p.weekly_backups_enabled,
@@ -1018,6 +1020,9 @@ router.put(
     body("provider_id").optional().isUUID().withMessage("Invalid provider_id"),
     body("base_price").optional().isFloat({ min: 0 }),
     body("markup_price").optional().isFloat({ min: 0 }),
+    body("transfer_overage_markup_type").optional().isIn(["flat", "multiplier"]),
+    body("transfer_overage_markup_value").optional().isFloat({ min: 0 }),
+    body("transfer_overage_enabled").optional().isBoolean(),
     body("active").optional().isBoolean(),
     body("backup_price_monthly").optional().isFloat({ min: 0 }),
     body("backup_price_hourly").optional().isFloat({ min: 0 }),
@@ -1054,6 +1059,9 @@ router.put(
         provider_id,
         base_price,
         markup_price,
+        transfer_overage_markup_type,
+        transfer_overage_markup_value,
+        transfer_overage_enabled,
         active,
         backup_price_monthly,
         backup_price_hourly,
@@ -1129,6 +1137,12 @@ router.put(
         updateFields.base_price = base_price;
       if (typeof markup_price !== "undefined")
         updateFields.markup_price = markup_price;
+      if (typeof transfer_overage_markup_type !== "undefined")
+        updateFields.transfer_overage_markup_type = transfer_overage_markup_type;
+      if (typeof transfer_overage_markup_value !== "undefined")
+        updateFields.transfer_overage_markup_value = transfer_overage_markup_value;
+      if (typeof transfer_overage_enabled !== "undefined")
+        updateFields.transfer_overage_enabled = transfer_overage_enabled;
       if (typeof active !== "undefined") updateFields.active = active;
       if (typeof backup_price_monthly !== "undefined")
         updateFields.backup_price_monthly = backup_price_monthly;
@@ -1259,6 +1273,9 @@ router.post(
     body("provider_plan_id").isString().trim().notEmpty(),
     body("base_price").isFloat({ min: 0 }),
     body("markup_price").isFloat({ min: 0 }),
+    body("transfer_overage_markup_type").optional().isIn(["flat", "multiplier"]),
+    body("transfer_overage_markup_value").optional().isFloat({ min: 0 }),
+    body("transfer_overage_enabled").optional().isBoolean(),
     body("active").optional().isBoolean(),
     body("specifications").optional().isObject(),
     body("type_class")
@@ -1288,6 +1305,9 @@ router.post(
         provider_plan_id,
         base_price,
         markup_price,
+        transfer_overage_markup_type = "flat",
+        transfer_overage_markup_value = 0,
+        transfer_overage_enabled = true,
         active = true,
         specifications = {},
         backup_price_monthly = 0,
@@ -1323,12 +1343,13 @@ router.post(
       const insertResult = await query(
         `INSERT INTO vps_plans (
           name, provider_id, provider_plan_id, base_price, markup_price,
+          transfer_overage_markup_type, transfer_overage_markup_value, transfer_overage_enabled,
           backup_price_monthly, backup_price_hourly,
           backup_upcharge_monthly, backup_upcharge_hourly,
           daily_backups_enabled, weekly_backups_enabled,
           specifications, active, type_class, created_at, updated_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
          RETURNING *`,
         [
           name,
@@ -1336,6 +1357,9 @@ router.post(
           provider_plan_id,
           base_price,
           markup_price,
+          transfer_overage_markup_type,
+          transfer_overage_markup_value,
+          transfer_overage_enabled,
           backup_price_monthly,
           backup_price_hourly,
           backup_upcharge_monthly,
@@ -1368,6 +1392,24 @@ router.post(
     } catch (err: any) {
       console.error("Admin plan create error:", err);
       res.status(500).json({ error: err.message || "Failed to create plan" });
+    }
+  },
+);
+
+
+router.get(
+  "/transfer-overview",
+  authenticateToken,
+  requireAdmin,
+  async (_req: Request, res: Response) => {
+    try {
+      const overview = await TransferBillingService.getAdminTransferOverview();
+      res.json({ success: true, overview });
+    } catch (err: any) {
+      console.error("Admin transfer overview error:", err);
+      res
+        .status(500)
+        .json({ success: false, error: err.message || "Failed to load transfer overview" });
     }
   },
 );

@@ -21,7 +21,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { paymentService, type WalletTransaction, type PaymentHistory, type VPSUptimeSummary, type BillingSummary } from '../services/paymentService';
+import { paymentService, type WalletTransaction, type PaymentHistory, type VPSUptimeSummary, type BillingSummary, type TransferUsageSummary } from '../services/paymentService';
 import Pagination from '../components/ui/Pagination';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +67,7 @@ const Billing: React.FC = () => {
 
   // Billing summary state
   const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
+  const [transferSummary, setTransferSummary] = useState<TransferUsageSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
   // Monthly spend calculation states
@@ -196,14 +197,20 @@ const Billing: React.FC = () => {
   const loadBillingSummary = React.useCallback(async () => {
     setSummaryLoading(true);
     try {
-      const result = await paymentService.getBillingSummary();
+      const [result, transferResult] = await Promise.all([
+        paymentService.getBillingSummary(),
+        paymentService.getTransferSummary(),
+      ]);
       if (result.success && result.summary) {
         setBillingSummary(result.summary);
+      }
+      if (transferResult.success && transferResult.summary) {
+        setTransferSummary(transferResult.summary);
       } else {
-        console.error('Failed to load billing summary:', result.error);
-        if (result.error) {
+        console.error('Failed to load transfer summary:', transferResult.error);
+        if (transferResult.error) {
           // notify user if there was a permission issue or other problem
-          toast.error(result.error);
+          toast.error(transferResult.error);
         }
       }
     } catch (error) {
@@ -739,6 +746,99 @@ const Billing: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Included Transfer</CardTitle>
+            <CardDescription>Total pooled transfer across your VPS portfolio</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{summaryLoading ? 'Loading...' : `${(billingSummary?.transferIncludedGb || 0).toFixed(1)} GB`}</p>
+            <p className="text-xs text-muted-foreground mt-1">Account pool quota: {(billingSummary?.accountTransferQuotaGb || 0).toFixed(1)} GB</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Transfer Used</CardTitle>
+            <CardDescription>Current month outbound transfer</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{summaryLoading ? 'Loading...' : `${(billingSummary?.transferUsedGb || 0).toFixed(1)} GB`}</p>
+            <p className="text-xs text-muted-foreground mt-1">Remaining included: {(billingSummary?.transferRemainingGb || 0).toFixed(1)} GB</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Projected Overage</CardTitle>
+            <CardDescription>Estimated end-of-month transfer overage</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{summaryLoading ? 'Loading...' : formatCurrencyValue(billingSummary?.transferProjectedOverageCostUsd || 0)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Billable overage: {(billingSummary?.transferProjectedOverageGb || 0).toFixed(1)} GB</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Network Transfer Usage</CardTitle>
+          <CardDescription>Monthly pooled transfer and per-VPS usage, similar to provider billing visibility.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!transferSummary || transferSummary.vps.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No transfer usage data available yet.</p>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">Pool used</p>
+                  <p className="text-xl font-semibold">{transferSummary.poolUsedGb.toFixed(1)} GB</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">Pool quota</p>
+                  <p className="text-xl font-semibold">{transferSummary.poolQuotaGb.toFixed(1)} GB</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">Provider billable</p>
+                  <p className="text-xl font-semibold">{transferSummary.poolBillableGb.toFixed(1)} GB</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">Inbound transfer</p>
+                  <p className="text-xl font-semibold">{transferSummary.inboundTransferGb.toFixed(1)} GB</p>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">VPS</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Included</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Outbound</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Projected Overage</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Est. Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {transferSummary.vps.map((item) => (
+                      <tr key={item.vpsInstanceId}>
+                        <td className="px-4 py-3 text-sm font-medium">
+                          <div>{item.label}</div>
+                          <div className="text-xs text-muted-foreground">{item.regionId || 'standard region'}</div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">{item.includedTransferGb.toFixed(1)} GB</td>
+                        <td className="px-4 py-3 text-sm text-right">{item.outboundTransferGb.toFixed(1)} GB</td>
+                        <td className="px-4 py-3 text-sm text-right">{item.projectedOverageGb.toFixed(1)} GB</td>
+                        <td className="px-4 py-3 text-sm text-right">{formatCurrencyValue(item.projectedOverageCostUsd)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Add Funds Section */}
       <Card>

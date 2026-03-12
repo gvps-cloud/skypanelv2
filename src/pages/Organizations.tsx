@@ -46,6 +46,7 @@ import Pagination from "@/components/ui/Pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TeamSettings from "@/components/settings/TeamSettings";
 import { OrganizationResourceTables } from "@/components/organizations/OrganizationResourceTables";
+import { paymentService, TransferUsageSummary } from "@/services/paymentService";
 
 interface ViewMode {
   type: "all" | "organization";
@@ -83,6 +84,9 @@ const Organizations: React.FC = () => {
   const [providerNames, setProviderNames] = useState<Record<string, string>>({
     linode: "Linode",
   });
+  const [transferSummary, setTransferSummary] = useState<TransferUsageSummary | null>(null);
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
   const { token, user, switchOrganization } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -270,6 +274,34 @@ const Organizations: React.FC = () => {
     }
     return null;
   }, [viewMode, organizations]);
+
+  const fetchTransferSummary = useCallback(async () => {
+    if (!selectedOrganization || user?.organizationId !== selectedOrganization.id) {
+      setTransferSummary(null);
+      return;
+    }
+    setTransferLoading(true);
+    setTransferError(null);
+    try {
+      const result = await paymentService.getTransferSummary();
+      if (result.success && result.summary) {
+        setTransferSummary(result.summary);
+      } else {
+        setTransferSummary(null);
+        if (result.error) setTransferError(result.error);
+      }
+    } catch (err: any) {
+      console.error("Failed to load organization transfer summary:", err);
+      setTransferSummary(null);
+      setTransferError(err?.message || "Failed to load transfer data");
+    } finally {
+      setTransferLoading(false);
+    }
+  }, [selectedOrganization, user?.organizationId]);
+
+  useEffect(() => {
+    fetchTransferSummary();
+  }, [fetchTransferSummary]);
 
   const handleOrganizationUpdated = useCallback(async () => {
     await Promise.all([
@@ -990,6 +1022,52 @@ const Organizations: React.FC = () => {
               </div>
             </div>
           </div>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Network Transfer (Org)</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {transferSummary ? `Period: ${transferSummary.periodMonth}` : "Current month transfer usage"}
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={fetchTransferSummary} disabled={transferLoading}>
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {transferLoading ? (
+                <p className="text-sm text-muted-foreground">Loading transfer data...</p>
+              ) : transferError ? (
+                <p className="text-sm text-destructive">{transferError}</p>
+              ) : !transferSummary ? (
+                <p className="text-sm text-muted-foreground">No transfer data available for this organization.</p>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-4">
+                  <div className="rounded-lg border p-4">
+                    <p className="text-xs text-muted-foreground">Included transfer</p>
+                    <p className="text-xl font-semibold">{transferSummary.includedTransferGb.toFixed(1)} GB</p>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <p className="text-xs text-muted-foreground">Outbound used</p>
+                    <p className="text-xl font-semibold">{transferSummary.outboundTransferGb.toFixed(1)} GB</p>
+                    <p className="text-xs text-muted-foreground">Remaining: {transferSummary.remainingIncludedGb.toFixed(1)} GB</p>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <p className="text-xs text-muted-foreground">Projected overage</p>
+                    <p className="text-xl font-semibold">{transferSummary.projectedOverageGb.toFixed(1)} GB</p>
+                    <p className="text-xs text-muted-foreground">Est. cost: ${transferSummary.projectedOverageCostUsd.toFixed(2)}</p>
+                  </div>
+                  <div className="rounded-lg border p-4">
+                    <p className="text-xs text-muted-foreground">Inbound transfer</p>
+                    <p className="text-xl font-semibold">{transferSummary.inboundTransferGb.toFixed(1)} GB</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <Tabs defaultValue="resources" className="w-full">
             <TabsList className="mb-4">

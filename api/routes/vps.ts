@@ -4179,7 +4179,7 @@ router.put("/:id/hostname", async (req: Request, res: Response) => {
 router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { password } = req.body;
+    const { password, twoFactorCode } = req.body;
     const user = (req as any).user;
     const userId = user.id;
     const userRole = user.role;
@@ -4196,6 +4196,16 @@ router.delete("/:id", async (req: Request, res: Response) => {
       await AuthService.login({ email: user.email, password });
     } catch {
       return res.status(400).json({ error: "Invalid password" });
+    }
+
+    try {
+      await AuthService.verifyTwoFactorCode(userId, twoFactorCode);
+    } catch (error: any) {
+      return res.status(400).json({
+        error:
+          error.message ||
+          "Two-factor authentication verification failed",
+      });
     }
 
     // Check vps_delete permission for non-admin users

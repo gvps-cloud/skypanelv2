@@ -477,6 +477,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/admin/transfer-overview",
+    "protected": true
+  },
+  {
+    "method": "GET",
     "path": "/api/admin/upstream/plans",
     "protected": true
   },
@@ -833,6 +838,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "GET",
     "path": "/api/payments/billing/summary",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/payments/billing/transfer-summary",
     "protected": true
   },
   {
