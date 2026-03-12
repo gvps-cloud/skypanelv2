@@ -142,7 +142,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
         value: region.id,
         label: region.label,
         description: getRegionMeta(region),
-        keywords: [region.country, ...(region.capabilities || [])].filter(Boolean),
+        keywords: [region.country].filter(Boolean) as string[],
         icon: <CountryIcon country={region.country} label={region.label} />,
       })),
     [filteredRegions],

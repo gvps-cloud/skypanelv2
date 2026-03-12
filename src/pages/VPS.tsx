@@ -23,6 +23,7 @@ import {
   HardDrive,
   Network,
   MemoryStick,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ProviderType } from "@/types/provider";
@@ -112,7 +113,7 @@ const CATEGORY_VARIANT_LABELS: Record<OriginalCategory, string> = {
   standard: "Shared CPU",
   nanode: "Basic VPS",
   dedicated: "Dedicated CPU",
-  premium: "G7 Dedicated CPU",
+  premium: "Premium Performance",
   highmem: "High Memory",
   gpu: "GPU",
   accelerated: "Accelerated",
@@ -1575,9 +1576,7 @@ const VPS: React.FC = () => {
         const missing = (selectedStackScript.user_defined_fields || []).filter(
           (f: any) => {
             const val = stackscriptData[f.name];
-            return (
-              val === undefined || val === null || String(val).trim() === ""
-            );
+            return val === undefined || val === null || String(val).trim() === "";
           },
         );
         if (missing.length > 0) {
@@ -1719,6 +1718,14 @@ const VPS: React.FC = () => {
       mobileToast.error("Failed to create VPS instance");
     }
   };
+
+  const activeMonthlySpend = useMemo(
+    () =>
+      instances
+        .filter((instance) => instance.status === "running")
+        .reduce((sum, instance) => sum + (instance.pricing?.monthly ?? 0), 0),
+    [instances],
+  );
 
   const filteredInstances = instances.filter((instance) => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -2181,11 +2188,6 @@ const VPS: React.FC = () => {
                         <span className="mt-1 block text-sm text-muted-foreground">
                           {region.country || "Region"}
                         </span>
-                        {region.capabilities && region.capabilities.length > 0 && (
-                          <span className="mt-2 block text-xs text-muted-foreground">
-                            {region.capabilities.join(" • ")}
-                          </span>
-                        )}
                       </span>
                       <Check
                         className={`mt-1 h-4 w-4 shrink-0 ${
@@ -2526,84 +2528,8 @@ const VPS: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch xl:justify-end">
-          <Card className="min-w-[220px] overflow-hidden">
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="rounded-lg bg-primary/10 p-3">
-                <DollarSign className="h-5 w-5 text-primary" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Monthly Spend
-                </p>
-                <p className="text-2xl font-bold tracking-tight">
-                  {formatCurrency(
-                    instances.reduce((sum, instance) => sum + instance.pricing.monthly, 0),
-                  )}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Estimated current monthly cost
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch xl:justify-end" />
       </div>
-
-      {/* Filters and Search */}
-      <Card>
-        <CardContent className="space-y-4 p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative w-full lg:max-w-xl">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by label, IP, or region"
-                className="pl-10"
-                aria-label="Search VPS instances"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="vps-status-filter">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger id="vps-status-filter">
-                  <SelectValue placeholder="All status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All status</SelectItem>
-                  <SelectItem value="running">Running</SelectItem>
-                  <SelectItem value="stopped">Stopped</SelectItem>
-                  <SelectItem value="provisioning">Provisioning</SelectItem>
-                  <SelectItem value="rebooting">Rebooting</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="vps-region-filter">Region</Label>
-              <Select value={regionFilter} onValueChange={setRegionFilter}>
-                <SelectTrigger id="vps-region-filter">
-                  <SelectValue placeholder="All regions" />
-                </SelectTrigger>
-                <SelectContent className="max-h-64">
-                  <SelectItem value="all">All regions</SelectItem>
-                  {regionOptions.map((region) => (
-                    <SelectItem key={region.id} value={region.id}>
-                      {region.country
-                        ? `${region.label} · ${region.country}`
-                        : region.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Bulk Actions Toolbar */}
       {selectedInstances.length > 0 && (
@@ -2677,14 +2603,91 @@ const VPS: React.FC = () => {
       {/* VPS Instances Table */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>VPS Instances</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {filteredInstances.length}{" "}
-                {filteredInstances.length === 1 ? "instance" : "instances"}{" "}
-                found
-              </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-3">
+              <div>
+                <CardTitle>VPS Instances</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {filteredInstances.length}{" "}
+                  {filteredInstances.length === 1 ? "instance" : "instances"}{" "}
+                  found
+                </p>
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  ensureCreateLabel();
+                  setShowCreateModal(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Launch VPS
+              </Button>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+              <Card className="min-w-[220px] overflow-hidden sm:w-auto border-0">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="rounded-lg bg-primary/10 p-3">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Monthly Spend
+                    </p>
+                    <p className="text-2xl font-bold tracking-tight">
+                      {formatCurrency(activeMonthlySpend)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Active instance monthly cost</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+          <div className="flex flex-col gap-4 pt-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative w-full lg:max-w-xl">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search by label, IP, or region"
+                className="pl-10"
+                aria-label="Search VPS instances"
+              />
+            </div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center w-full lg:w-auto">
+              <div className="w-full sm:w-[180px]">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger id="vps-status-filter" aria-label="Status filter">
+                    <SelectValue placeholder="All status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All status</SelectItem>
+                    <SelectItem value="running">Running</SelectItem>
+                    <SelectItem value="stopped">Stopped</SelectItem>
+                    <SelectItem value="provisioning">Provisioning</SelectItem>
+                    <SelectItem value="rebooting">Rebooting</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-full sm:w-[180px]">
+                <Select value={regionFilter} onValueChange={setRegionFilter}>
+                  <SelectTrigger id="vps-region-filter" aria-label="Region filter">
+                    <SelectValue placeholder="All regions" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    <SelectItem value="all">All regions</SelectItem>
+                    {regionOptions.map((region) => (
+                      <SelectItem key={region.id} value={region.id}>
+                        {region.country
+                          ? `${region.label} · ${region.country}`
+                          : region.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </CardHeader>
