@@ -3,9 +3,10 @@
  * 
  * Public-facing pricing page that displays available VPS plans with transparent pricing
  * information. Includes plan specifications, hourly/monthly rates, and feature comparisons.
+ * Plans are grouped by category tabs derived from type_class.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,20 +19,43 @@ import {
   HardDrive, 
   MemoryStick, 
   Server,
-  Network,
   Shield,
   AlertCircle,
   ArrowRight,
+  ArrowDownUp,
+  ArrowDown,
+  ArrowUp,
 } from 'lucide-react';
 import type { VPSPlan } from '@/types/vps';
+import { useEnabledCategoryMappings } from '@/hooks/useCategoryMappings';
 import { BRAND_NAME } from '@/lib/brand';
 import MarketingNavbar from '@/components/MarketingNavbar';
 import MarketingFooter from '@/components/MarketingFooter';
+
+const DEFAULT_CATEGORY_META: Record<string, { label: string; order: number }> = {
+  nanode:      { label: 'Nanode',         order: 0 },
+  standard:    { label: 'Standard',       order: 1 },
+  dedicated:   { label: 'Dedicated CPU',  order: 2 },
+  premium:     { label: 'Premium',        order: 3 },
+  highmem:     { label: 'High Memory',    order: 4 },
+  gpu:         { label: 'GPU',            order: 5 },
+  accelerated: { label: 'Accelerated',    order: 6 },
+};
+
+const formatNetworkSpeed = (mbits: number): string => {
+  if (mbits >= 1000) {
+    const gbps = mbits / 1000;
+    return `${Number.isInteger(gbps) ? gbps : gbps.toFixed(1)} Gbps`;
+  }
+  return `${mbits} Mbps`;
+};
 
 const PricingPage: React.FC = () => {
   const [vpsPlans, setVpsPlans] = useState<VPSPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const { data: enabledCategoryMappings = [] } = useEnabledCategoryMappings();
 
   useEffect(() => {
     loadPricingData();
@@ -60,6 +84,46 @@ const PricingPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const getCategoryLabel = (category: string): string => {
+    const mapping = enabledCategoryMappings.find(
+      (item) => item.original_category === category,
+    );
+
+    if (mapping?.custom_name) {
+      return mapping.custom_name;
+    }
+
+    return (
+      DEFAULT_CATEGORY_META[category]?.label ??
+      category.charAt(0).toUpperCase() + category.slice(1)
+    );
+  };
+
+  // Derive active categories from available plans (only show tabs for categories that have plans)
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    for (const plan of vpsPlans) {
+      seen.add(plan.type_class || 'standard');
+    }
+
+    return Array.from(seen)
+      .sort((a, b) => {
+        const mappingA = enabledCategoryMappings.find((item) => item.original_category === a);
+        const mappingB = enabledCategoryMappings.find((item) => item.original_category === b);
+
+        const orderA = mappingA?.display_order ?? DEFAULT_CATEGORY_META[a]?.order ?? 99;
+        const orderB = mappingB?.display_order ?? DEFAULT_CATEGORY_META[b]?.order ?? 99;
+
+        return orderA - orderB;
+      });
+  }, [enabledCategoryMappings, vpsPlans]);
+
+  // Filter plans by active category
+  const filteredPlans = useMemo(() => {
+    if (activeCategory === 'all') return vpsPlans;
+    return vpsPlans.filter((p) => (p.type_class || 'standard') === activeCategory);
+  }, [vpsPlans, activeCategory]);
 
   const formatCurrency = (amount: number | string | null | undefined): string => {
     if (amount == null) {
@@ -145,164 +209,204 @@ const PricingPage: React.FC = () => {
 
         {/* VPS Plans */}
         <div className="space-y-8">
-        <div className="space-y-8">
-          <div className="text-center mb-12">
+          <div className="text-center mb-8">
             <h2 className="text-3xl font-semibold mb-4">VPS Instances</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              High-performance virtual private servers powered by RYZEN EYPC CPUs with full root access and SSH console
+              High-performance virtual private servers powered by AMD EPYC CPUs with full root access and SSH console
             </p>
           </div>
 
-            {vpsPlans.length === 0 ? (
-              <Card>
-                <CardContent className="py-12">
-                  <div className="text-center">
-                    <Server className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-medium mb-2">No VPS Plans Available</h3>
-                    <p className="text-muted-foreground mb-4">
-                      VPS plans are not currently configured. Please check back later.
-                    </p>
-                    <Button asChild variant="outline">
-                      <Link to="/contact">Contact Support</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {vpsPlans.map((plan) => {
-                  // Safely calculate prices with fallbacks
-                  const basePrice = Number(plan.base_price) || 0;
-                  const markupPrice = Number(plan.markup_price) || 0;
-                  const totalMonthly = basePrice + markupPrice;
-                  const totalHourly = totalMonthly / 730; // Approximate hours per month
-                  const specs = plan.specifications || {};
-                  
-                  // Debug logging
-                  if (totalMonthly === 0) {
-                    console.log('VPS Plan with zero price:', {
-                      name: plan.name,
-                      base_price: plan.base_price,
-                      markup_price: plan.markup_price,
-                      basePrice,
-                      markupPrice,
-                      totalMonthly
-                    });
-                  }
+          {/* Category Tabs */}
+          {categories.length > 1 && (
+            <div className="flex flex-wrap justify-center gap-2 mb-8">
+              <button
+                onClick={() => setActiveCategory('all')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  activeCategory === 'all'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                All Plans
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    activeCategory === cat
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  {getCategoryLabel(cat)}
+                </button>
+              ))}
+            </div>
+          )}
 
-                  return (
-                    <Card key={plan.id} className="relative border border-border/60 bg-card hover:border-primary/50 transition-colors">
-                      <CardHeader>
-                        <CardTitle className="text-xl">{plan.name}</CardTitle>
-                        {plan.description && (
-                          <CardDescription>{plan.description}</CardDescription>
-                        )}
-                        <div className="pt-2">
-                          <span className="text-3xl font-bold">{formatCurrency(totalMonthly)}</span>
-                          <span className="text-muted-foreground">/month</span>
-                          <div className="text-sm text-muted-foreground">
-                            {formatCurrency(totalHourly)} per hour
-                          </div>
-                        </div>
-                      </CardHeader>
-
-                      <CardContent className="space-y-4">
-                        <div className="space-y-3">
-                          {specs.vcpus && (
-                            <div className="flex items-center gap-3">
-                              <Cpu className="h-4 w-4 text-blue-600" />
-                              <span className="text-sm">
-                                {formatResource(specs.vcpus, 'vCPU')}
-                              </span>
-                            </div>
-                          )}
-                          
-                          {(specs.memory || specs.memory_gb) && (
-                            <div className="flex items-center gap-3">
-                              <MemoryStick className="h-4 w-4 text-green-600" />
-                              <span className="text-sm">
-                                {specs.memory_gb ? `${specs.memory_gb}GB` : `${Math.round(specs.memory / 1024)}GB`} Memory
-                              </span>
-                            </div>
-                          )}
-                          
-                          {(specs.disk || specs.storage_gb) && (
-                            <div className="flex items-center gap-3">
-                              <HardDrive className="h-4 w-4 text-purple-600" />
-                              <span className="text-sm">
-                                {specs.storage_gb ? `${specs.storage_gb}GB` : `${Math.round(specs.disk / 1024)}GB`} SSD Storage
-                              </span>
-                            </div>
-                          )}
-                          
-                          {(specs.transfer || specs.transfer_gb || specs.bandwidth_gb) && (
-                            <div className="flex items-center gap-3">
-                              <Network className="h-4 w-4 text-orange-600" />
-                              <span className="text-sm">
-                                {specs.transfer_gb || specs.bandwidth_gb ? 
-                                  `${specs.transfer_gb || specs.bandwidth_gb}GB` : 
-                                  `${Math.round(specs.transfer / 1024)}GB`
-                                } Transfer
-                              </span>
-                            </div>
-                          )}
-
-                          <div className="flex items-center gap-3">
-                            <Shield className="h-4 w-4 text-red-600" />
-                            <span className="text-sm">
-                              {plan.daily_backups_enabled || plan.weekly_backups_enabled ? 'Backups Available' : 'No Backups'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {((Number(plan.backup_price_monthly) || 0) > 0 || (Number(plan.backup_upcharge_monthly) || 0) > 0) && (
-                          <div className="pt-2 border-t border-border/60">
-                            <p className="text-xs text-muted-foreground mb-1">Backup Pricing:</p>
-                            <p className="text-sm">
-                              +{formatCurrency((Number(plan.backup_price_monthly) || 0) + (Number(plan.backup_upcharge_monthly) || 0))}/month
-                            </p>
-                          </div>
-                        )}
-                      </CardContent>
-
-                      <CardFooter>
-                        <Button asChild className="w-full">
-                          <Link to="/register">
-                            Get Started
-                            <ArrowRight className="h-4 w-4 ml-2" />
-                          </Link>
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* VPS Features */}
-            <Card className="bg-muted/20">
-              <CardContent className="pt-6">
-                <h3 className="font-semibold mb-4">VPS Features Include:</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {[
-                    'Full root access',
-                    'Web-based SSH console',
-                    'Multiple Linux distributions',
-                    'Instant deployment (45 seconds)',
-                    'High-performance SSD storage',
-                    'DDoS protection',
-                    'IPv4 and IPv6 support',
-                    '99.9% uptime SLA'
-                  ].map((feature) => (
-                    <div key={feature} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-primary" />
-                      <span className="text-sm">{feature}</span>
-                    </div>
-                  ))}
+          {filteredPlans.length === 0 ? (
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center">
+                  <Server className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">No VPS Plans Available</h3>
+                  <p className="text-muted-foreground mb-4">
+                    VPS plans are not currently configured. Please check back later.
+                  </p>
+                  <Button asChild variant="outline">
+                    <Link to="/contact">Contact Support</Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-        </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredPlans.map((plan) => {
+                // Safely calculate prices with fallbacks
+                const basePrice = Number(plan.base_price) || 0;
+                const markupPrice = Number(plan.markup_price) || 0;
+                const totalMonthly = basePrice + markupPrice;
+                const totalHourly = totalMonthly / 730; // Approximate hours per month
+                const specs = plan.specifications || {};
+                const networkOutMbits = plan.network_out || 0;
+
+                return (
+                  <Card key={plan.id} className="relative border border-border/60 bg-card hover:border-primary/50 transition-colors flex flex-col">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-xl">{plan.name}</CardTitle>
+                        {plan.type_class && (
+                          <Badge variant="secondary" className="text-xs capitalize">
+                            {getCategoryLabel(plan.type_class)}
+                          </Badge>
+                        )}
+                      </div>
+                      {plan.description && (
+                        <CardDescription>{plan.description}</CardDescription>
+                      )}
+                      <div className="pt-2">
+                        <span className="text-3xl font-bold">{formatCurrency(totalMonthly)}</span>
+                        <span className="text-muted-foreground">/month</span>
+                        <div className="text-sm text-muted-foreground">
+                          {formatCurrency(totalHourly)} per hour
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4 flex-1">
+                      <div className="space-y-3">
+                        {specs.vcpus && (
+                          <div className="flex items-center gap-3">
+                            <Cpu className="h-4 w-4 text-primary" />
+                            <span className="text-sm">
+                              {formatResource(specs.vcpus, 'vCPU')}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {(specs.memory || specs.memory_gb) && (
+                          <div className="flex items-center gap-3">
+                            <MemoryStick className="h-4 w-4 text-primary" />
+                            <span className="text-sm">
+                              {specs.memory_gb ? `${specs.memory_gb}GB` : `${Math.round(specs.memory / 1024)}GB`} Memory
+                            </span>
+                          </div>
+                        )}
+                        
+                        {(specs.disk || specs.storage_gb) && (
+                          <div className="flex items-center gap-3">
+                            <HardDrive className="h-4 w-4 text-primary" />
+                            <span className="text-sm">
+                              {specs.storage_gb ? `${specs.storage_gb}GB` : `${Math.round(specs.disk / 1024)}GB`} SSD Storage
+                            </span>
+                          </div>
+                        )}
+                        
+                        {(specs.transfer || specs.transfer_gb || specs.bandwidth_gb) && (
+                          <div className="flex items-center gap-3">
+                            <ArrowDownUp className="h-4 w-4 text-primary" />
+                            <span className="text-sm">
+                              {specs.transfer_gb || specs.bandwidth_gb ? 
+                                `${specs.transfer_gb || specs.bandwidth_gb}GB` : 
+                                `${Math.round(specs.transfer / 1024)}GB`
+                              } Transfer
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Network Speeds */}
+                        <div className="flex items-center gap-3">
+                          <ArrowDown className="h-4 w-4 text-primary" />
+                          <span className="text-sm">
+                            40 Gbps Network In
+                          </span>
+                        </div>
+                        {networkOutMbits > 0 && (
+                          <div className="flex items-center gap-3">
+                            <ArrowUp className="h-4 w-4 text-primary" />
+                            <span className="text-sm">
+                              {formatNetworkSpeed(networkOutMbits)} Network Out
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-3">
+                          <Shield className="h-4 w-4 text-primary" />
+                          <span className="text-sm">
+                            {plan.daily_backups_enabled || plan.weekly_backups_enabled ? 'Backups Available' : 'No Backups'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {((Number(plan.backup_price_monthly) || 0) > 0 || (Number(plan.backup_upcharge_monthly) || 0) > 0) && (
+                        <div className="pt-2 border-t border-border/60">
+                          <p className="text-xs text-muted-foreground mb-1">Backup Pricing:</p>
+                          <p className="text-sm">
+                            +{formatCurrency((Number(plan.backup_price_monthly) || 0) + (Number(plan.backup_upcharge_monthly) || 0))}/month
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+
+                    <CardFooter>
+                      <Button asChild className="w-full">
+                        <Link to="/register">
+                          Get Started
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </Link>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {/* VPS Features */}
+          <Card className="bg-muted/20">
+            <CardContent className="pt-6">
+              <h3 className="font-semibold mb-4">All Plans Include:</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[
+                  'Full root access',
+                  'Web-based SSH console',
+                  'Multiple Linux distributions',
+                  'Instant deployment (45 seconds)',
+                  'High-performance SSD storage',
+                  'DDoS protection',
+                  'IPv4 and IPv6 support',
+                  '99.9% uptime SLA',
+                  '40 Gbps inbound network',
+                ].map((feature) => (
+                  <div key={feature} className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-primary" />
+                    <span className="text-sm">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Call to Action */}

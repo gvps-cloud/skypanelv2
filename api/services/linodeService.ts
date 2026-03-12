@@ -24,6 +24,7 @@ export interface LinodeType {
       };
     };
   };
+  network_out: number;
   type_class: string;
   successor?: string;
 }
@@ -744,6 +745,7 @@ class LinodeService {
           transfer: type.transfer,
           price: type.price,
           addons: type.addons, // Include addons for backup pricing
+          network_out: type.network_out || 0,
           type_class: mappedTypeClass,
           successor: type.successor,
         };

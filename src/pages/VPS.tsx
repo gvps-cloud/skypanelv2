@@ -1837,7 +1837,7 @@ const VPS: React.FC = () => {
 
   const selectedType = providerPlans.find((type) => type.id === createForm.type);
   const planHelperText = selectedType
-    ? `Selected plan: ${selectedType.label} • ${formatCurrency(selectedType.price.monthly)} / mo`
+    ? `Selected plan: ${selectedType.label.replace(/\s+-\s+\$[\d,.]+\/mo$/i, "")}`
     : "Search and choose a plan for the selected region.";
   const normalizedRegionSearch = regionSearch.trim().toLowerCase();
   const filteredCreateRegionOptions = useMemo(

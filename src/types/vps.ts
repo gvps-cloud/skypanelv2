@@ -91,6 +91,8 @@ export interface VPSPlan {
   daily_backups_enabled: boolean;
   weekly_backups_enabled: boolean;
   region_id?: string;
+  type_class?: string;
+  network_out?: number;
   specifications: {
     vcpus?: number;
     memory?: number;

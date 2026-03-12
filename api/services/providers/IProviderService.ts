@@ -92,6 +92,7 @@ export interface ProviderPlan {
     monthly: number;
   };
   regions: string[];
+  network_out?: number;
   type_class?: string;
 }
 

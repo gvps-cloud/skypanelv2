@@ -252,6 +252,7 @@ export class LinodeProviderService extends BaseProviderService {
         monthly: type.price.monthly,
       },
       regions: [], // Linode types are available in all regions
+      network_out: type.network_out || 0,
       type_class: type.type_class,
     };
   }

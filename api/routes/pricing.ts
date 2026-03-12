@@ -166,11 +166,23 @@ router.get("/vps", async (_req: Request, res: Response) => {
          daily_backups_enabled,
          weekly_backups_enabled,
          COALESCE(specifications->>'region_id', specifications->>'region') AS region_id,
-         specifications
+         specifications,
+         type_class
        FROM vps_plans
        WHERE active = true
        ORDER BY base_price + markup_price ASC`
     );
+
+    // Build a network_out lookup from Linode types keyed by provider_plan_id
+    let networkOutMap: Record<string, number> = {};
+    try {
+      const linodeTypes = await linodeService.getLinodeTypes();
+      for (const lt of linodeTypes) {
+        networkOutMap[lt.id] = lt.network_out || 0;
+      }
+    } catch (err) {
+      console.warn("Could not fetch Linode types for network_out enrichment:", err);
+    }
 
     const plans = (result.rows || []).map((row: any) => ({
       id: row.id,
@@ -188,6 +200,8 @@ router.get("/vps", async (_req: Request, res: Response) => {
       weekly_backups_enabled: row.weekly_backups_enabled !== false,
       region_id: row.region_id,
       specifications: row.specifications,
+      type_class: row.type_class || 'standard',
+      network_out: networkOutMap[row.provider_plan_id] || 0,
     }));
 
     res.json({ plans });

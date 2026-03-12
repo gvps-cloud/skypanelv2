@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ActiveHoursDisplay } from "./ActiveHoursDisplay";
 import type { VPSInstance } from "@/types/vps";
 import type { Dispatch, SetStateAction } from "react";
 import { formatCurrency, formatGigabytes } from "@/lib/formatters";
@@ -283,26 +282,6 @@ export function VpsInstancesTable({
         }
       },
       {
-        id: "activeHours",
-        header: "Active Hours",
-        cell: ({ row }) => {
-          const instance = row.original;
-          return (
-            <div className="flex justify-end min-w-[120px]">
-              <ActiveHoursDisplay 
-                createdAt={instance.created}
-                hourlyRate={instance.pricing?.hourly}
-                context="table"
-                className="text-xs"
-              />
-            </div>
-          );
-        },
-        meta: {
-          className: "min-w-[120px] hidden sm:table-cell"
-        }
-      },
-      {
         accessorKey: "created",
         header: "Created",
         cell: ({ row }) => (
@@ -510,19 +489,6 @@ export function VpsInstancesTable({
               <div className="space-y-1">
                 <p className="text-muted-foreground">Monthly</p>
                 <p className="font-medium text-foreground">{formatCurrency(instance.pricing.monthly)}</p>
-              </div>
-            </div>
-
-            {/* Active Hours for mobile cards */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-muted-foreground text-xs">Active Hours</p>
-                <ActiveHoursDisplay 
-                  createdAt={instance.created}
-                  hourlyRate={instance.pricing?.hourly}
-                  context="mobile"
-                  className="text-sm"
-                />
               </div>
             </div>
           </CardContent>

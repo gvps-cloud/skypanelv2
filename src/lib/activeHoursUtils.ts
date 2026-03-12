@@ -52,13 +52,13 @@ export const calculateActiveHoursEnhanced = (
 
   if (hours < 24) {
     urgencyLevel = 'low';
-    colorClass = 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20';
+    colorClass = 'text-primary bg-primary/10 dark:bg-primary/20';
   } else if (hours < 168) { // 1 week
     urgencyLevel = 'medium';
-    colorClass = 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20';
+    colorClass = 'text-primary bg-primary/10 dark:bg-primary/20';
   } else {
     urgencyLevel = 'high';
-    colorClass = 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20';
+    colorClass = 'text-primary bg-primary/10 dark:bg-primary/20';
   }
 
   // Calculate estimated cost if hourly rate is provided
