@@ -10,29 +10,50 @@ import { SearchableOptionSelect } from "@/components/VPS/SearchableOptionSelect"
 import type { ProviderRegion } from "@/types/vps";
 
 const COUNTRY_CODES: Record<string, string> = {
-  australia: "au",
-  canada: "ca",
-  france: "fr",
-  germany: "de",
-  india: "in",
-  italy: "it",
-  japan: "jp",
-  netherlands: "nl",
-  singapore: "sg",
-  spain: "es",
-  sweden: "se",
-  "united kingdom": "gb",
-  uk: "gb",
-  britain: "gb",
+  // North America
   "united states": "us",
   "united states of america": "us",
   usa: "us",
   us: "us",
+  canada: "ca",
+  // South America
+  brazil: "br",
+  brasil: "br",
+  // Europe
+  "united kingdom": "gb",
+  uk: "gb",
+  britain: "gb",
+  "great britain": "gb",
+  netherlands: "nl",
+  "the netherlands": "nl",
+  germany: "de",
+  deutschland: "de",
+  france: "fr",
+  spain: "es",
+  españa: "es",
+  italy: "it",
+  italia: "it",
+  sweden: "se",
+  sverige: "se",
+  // Asia
+  india: "in",
+  japan: "jp",
+  singapore: "sg",
+  indonesia: "id",
+  // Oceania
+  australia: "au",
 };
 
 const getCountryCode = (country?: string): string | null => {
   const normalizedCountry = country?.trim().toLowerCase();
   if (!normalizedCountry) return null;
+  
+  // If it's already a 2-letter ISO code, return it directly
+  if (normalizedCountry.length === 2 && /^[a-z]{2}$/.test(normalizedCountry)) {
+    return normalizedCountry;
+  }
+  
+  // Otherwise, look it up in the COUNTRY_CODES dictionary
   return COUNTRY_CODES[normalizedCountry] ?? null;
 };
 
