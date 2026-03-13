@@ -5,7 +5,6 @@
 
 import { query, transaction } from '../lib/database.js';
 import { PayPalService } from './paypalService.js';
-import { TransferBillingService } from './transferBillingService.js';
 
 export interface VPSBillingInfo {
   id: string;
@@ -479,14 +478,6 @@ export class BillingService {
     totalSpentAllTime: number;
     activeVPSCount: number;
     monthlyEstimate: number;
-    transferIncludedGb: number;
-    transferUsedGb: number;
-    transferRemainingGb: number;
-    transferProjectedOverageGb: number;
-    transferProjectedOverageCostUsd: number;
-    accountTransferQuotaGb: number;
-    accountTransferUsedGb: number;
-    accountTransferBillableGb: number;
   }> {
     try {
       const hasBackupColumn = await this.ensureBackupFrequencyColumnExists();
@@ -496,15 +487,7 @@ export class BillingService {
           totalSpentThisMonth: 0,
           totalSpentAllTime: 0,
           activeVPSCount: 0,
-          monthlyEstimate: 0,
-          transferIncludedGb: 0,
-          transferUsedGb: 0,
-          transferRemainingGb: 0,
-          transferProjectedOverageGb: 0,
-          transferProjectedOverageCostUsd: 0,
-          accountTransferQuotaGb: 0,
-          accountTransferUsedGb: 0,
-          accountTransferBillableGb: 0
+          monthlyEstimate: 0
         };
       }
 
@@ -551,21 +534,11 @@ export class BillingService {
         WHERE vi.organization_id = $1
       `, [organizationId]);
 
-      const transferSummary = await TransferBillingService.getOrganizationTransferSummary(organizationId);
-
       return {
         totalSpentThisMonth: parseFloat(monthlyResult.rows[0].total),
         totalSpentAllTime: parseFloat(allTimeResult.rows[0].total),
         activeVPSCount: parseInt(activeVPSResult.rows[0].count),
-        monthlyEstimate: parseFloat(activeVPSResult.rows[0].monthly_estimate || '0'),
-        transferIncludedGb: transferSummary.includedTransferGb,
-        transferUsedGb: transferSummary.outboundTransferGb,
-        transferRemainingGb: transferSummary.remainingIncludedGb,
-        transferProjectedOverageGb: transferSummary.projectedOverageGb,
-        transferProjectedOverageCostUsd: transferSummary.projectedOverageCostUsd,
-        accountTransferQuotaGb: transferSummary.poolQuotaGb,
-        accountTransferUsedGb: transferSummary.poolUsedGb,
-        accountTransferBillableGb: transferSummary.poolBillableGb
+        monthlyEstimate: parseFloat(activeVPSResult.rows[0].monthly_estimate || '0')
       };
     } catch (error) {
       console.error('Error getting billing summary:', error);
@@ -573,15 +546,7 @@ export class BillingService {
         totalSpentThisMonth: 0,
         totalSpentAllTime: 0,
         activeVPSCount: 0,
-        monthlyEstimate: 0,
-        transferIncludedGb: 0,
-        transferUsedGb: 0,
-        transferRemainingGb: 0,
-        transferProjectedOverageGb: 0,
-        transferProjectedOverageCostUsd: 0,
-        accountTransferQuotaGb: 0,
-        accountTransferUsedGb: 0,
-        accountTransferBillableGb: 0
+        monthlyEstimate: 0
       };
     }
   }

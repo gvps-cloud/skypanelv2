@@ -973,20 +973,6 @@ const VPS: React.FC = () => {
                 monthly: planForType.price.monthly,
               }
             : { hourly: 0, monthly: 0 };
-        const transferPricing = i.transfer_pricing
-          ? {
-              providerRatePerGb: Number(
-                i.transfer_pricing.providerRatePerGb ??
-                  i.transfer_pricing.provider_rate_per_gb ??
-                  0,
-              ),
-              customerRatePerGb: Number(
-                i.transfer_pricing.customerRatePerGb ??
-                  i.transfer_pricing.customer_rate_per_gb ??
-                  0,
-              ),
-            }
-          : undefined;
         const rawProgress =
           i &&
           typeof i.provider_progress === "object" &&
@@ -1035,7 +1021,6 @@ const VPS: React.FC = () => {
             uptime: "",
           },
           pricing,
-          transferPricing,
           progress: progress ?? undefined,
           planName: i.plan_name || null,
         };

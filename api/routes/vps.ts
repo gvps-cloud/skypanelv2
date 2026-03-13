@@ -261,10 +261,6 @@ interface TransferPayload {
   utilizationPercent: number;
   account: AccountTransferPayload | null;
   usedBytes: number;
-  providerRatePerGb: number;
-  customerRatePerGb: number;
-  projectedOverageGb: number;
-  projectedOverageCostUsd: number;
 }
 
 interface BackupsPayload {
@@ -307,31 +303,7 @@ interface PlanMeta {
   specs: PlanSpecs;
   pricing: PlanPricing;
   providerPlanId: string | null;
-  transferPricing: {
-    providerRatePerGb: number;
-    customerRatePerGb: number;
-  };
 }
-
-const roundTransferNumber = (value: number, precision = 4): number => {
-  if (!Number.isFinite(value)) return 0;
-  const factor = 10 ** precision;
-  return Math.round(value * factor) / factor;
-};
-
-/**
- * Compute the customer egress rate using flat markup only.
- * customer_rate = provider_rate + flat_markup
- */
-const getCustomerRatePerGb = (
-  providerRatePerGb: number,
-  markupValue?: number | null,
-): number => {
-  const numericMarkup = Number.isFinite(Number(markupValue))
-    ? Number(markupValue)
-    : 0;
-  return roundTransferNumber(providerRatePerGb + Math.max(numericMarkup, 0));
-};
 
 const normalizeProviderStatus = (status: string | null | undefined): string => {
   if (!status) return "unknown";
@@ -975,68 +947,12 @@ const resolvePlanMeta = async (
     specs.transfer = Number(providerDetail.specs.transfer ?? 0);
   }
 
-  const regionId =
-    typeof configuration?.region === "string"
-      ? configuration.region
-      : typeof providerDetail?.region === "string"
-        ? providerDetail.region
-        : null;
-  const providerRatePerGb = roundTransferNumber(
-    await linodeService.getProviderEgressRatePerGb(regionId),
-  );
-  const customerRatePerGb = planRow
-    ? getCustomerRatePerGb(
-        providerRatePerGb,
-        planRow.transfer_overage_enabled === false
-          ? 0
-          : Number(planRow.transfer_overage_markup_value ?? 0),
-      )
-    : providerRatePerGb;
-
   return {
     planRow,
     specs,
     pricing,
     providerPlanId: providerPlanId ?? null,
-    transferPricing: {
-      providerRatePerGb,
-      customerRatePerGb,
-    },
   };
-};
-
-const resolveProjectedTransferCost = async (
-  instanceId: string,
-): Promise<{
-  projectedOverageGb: number;
-  projectedOverageCostUsd: number;
-} | null> => {
-  try {
-    const allocationRes = await query(
-      `SELECT allocated_overage_gb, customer_cost_usd
-       FROM transfer_overage_allocations
-       WHERE vps_instance_id = $1
-       ORDER BY period_month DESC
-       LIMIT 1`,
-      [instanceId],
-    );
-
-    if (allocationRes.rows.length === 0) {
-      return null;
-    }
-
-    return {
-      projectedOverageGb: roundTransferNumber(
-        Number(allocationRes.rows[0].allocated_overage_gb ?? 0),
-      ),
-      projectedOverageCostUsd: roundTransferNumber(
-        Number(allocationRes.rows[0].customer_cost_usd ?? 0),
-      ),
-    };
-  } catch (error) {
-    console.warn("Failed to resolve projected transfer cost:", error);
-    return null;
-  }
 };
 
 // Get available admin-configured apps / StackScripts
@@ -2107,9 +2023,6 @@ router.get("/:id", async (req: Request, res: Response) => {
     );
 
     const planMeta = await resolvePlanMeta(instanceRow, providerDetail);
-    const projectedTransferCost = await resolveProjectedTransferCost(
-      String(instanceRow.id),
-    );
 
     let metrics: {
       timeframe: { start: number | null; end: number | null };
@@ -2250,16 +2163,6 @@ router.get("/:id", async (req: Request, res: Response) => {
           utilizationPercent,
           account: null,
           usedBytes,
-          providerRatePerGb: planMeta.transferPricing.providerRatePerGb,
-          customerRatePerGb: planMeta.transferPricing.customerRatePerGb,
-          projectedOverageGb:
-            projectedTransferCost?.projectedOverageGb ??
-            roundTransferNumber(billableGb),
-          projectedOverageCostUsd:
-            projectedTransferCost?.projectedOverageCostUsd ??
-            roundTransferNumber(
-              billableGb * planMeta.transferPricing.customerRatePerGb,
-            ),
         };
       } catch (err) {
         console.warn("Failed to fetch transfer usage:", err);

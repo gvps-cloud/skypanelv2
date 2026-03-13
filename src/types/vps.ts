@@ -49,10 +49,6 @@ export interface VPSInstance {
     hourly: number;
     monthly: number;
   };
-  transferPricing?: {
-    providerRatePerGb: number;
-    customerRatePerGb: number;
-  };
   progress?: {
     percent: number | null;
     action: string | null;
@@ -88,9 +84,6 @@ export interface VPSPlan {
   provider_plan_id: string;
   base_price: number;
   markup_price: number;
-  transfer_overage_markup_type?: 'flat' | 'multiplier';
-  transfer_overage_markup_value?: number;
-  transfer_overage_enabled?: boolean;
   backup_price_monthly: number;
   backup_price_hourly: number;
   backup_upcharge_monthly: number;

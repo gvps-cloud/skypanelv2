@@ -1,5 +1,4 @@
 import { query } from '../lib/database.js';
-import { TransferBillingService } from './transferBillingService.js';
 // import { emailService } from './emailService.js';
 
 export class BillingCronService {
@@ -25,7 +24,6 @@ export class BillingCronService {
   static async processBillingReminders() {
     try {
       console.log('Processing billing reminders...');
-      await TransferBillingService.syncCurrentMonthUsage();
       
       // Find users with low balance (< $5) and active services
       // We check wallets linked to organizations, and find the owner

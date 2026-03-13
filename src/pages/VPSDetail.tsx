@@ -109,10 +109,6 @@ interface TransferInfo {
   utilizationPercent: number;
   account: AccountTransferInfo | null;
   usedBytes?: number;
-  providerRatePerGb: number;
-  customerRatePerGb: number;
-  projectedOverageGb: number;
-  projectedOverageCostUsd: number;
 }
 
 interface BackupSummary {
@@ -920,9 +916,6 @@ const VPSDetail: React.FC = () => {
   const accountQuotaGb = accountTransferInfo?.quotaGb ?? null;
   const accountUsedGb = accountTransferInfo?.usedGb ?? null;
   const accountBillableGb = accountTransferInfo?.billableGb ?? null;
-  const transferCustomerRatePerGb = transferInfo?.customerRatePerGb ?? 0;
-  const projectedTransferCostUsd = transferInfo?.projectedOverageCostUsd ?? 0;
-  const projectedTransferOverageGb = transferInfo?.projectedOverageGb ?? 0;
   const usageQuotaGb = accountQuotaGb ?? undefined ?? transferQuotaGb;
   const usageUsedGb = accountUsedGb ?? undefined ?? transferUsedGb;
   const transferUsagePercent =
@@ -2743,27 +2736,6 @@ const VPSDetail: React.FC = () => {
                                   </div>
                                 </>
                               )}
-                            </dl>
-                            <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
-                              <div className="rounded-xl border border-border bg-muted/50 p-4 border bg-background">
-                                <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  Egress rate
-                                </dt>
-                                <dd className="mt-1 text-base font-semibold text-foreground">
-                                  {formatCurrency(transferCustomerRatePerGb)} / GB
-                                </dd>
-                              </div>
-                              <div className="rounded-xl border border-border bg-muted/50 p-4 border bg-background">
-                                <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  Billable cost
-                                </dt>
-                                <dd className="mt-1 text-base font-semibold text-foreground">
-                                  {formatCurrency(projectedTransferCostUsd)}
-                                </dd>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {projectedTransferOverageGb.toFixed(2)} GB billable
-                                </p>
-                              </div>
                             </dl>
                             {transferUsagePercent >= 90 && (
                               <div className="mt-2 inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/30 dark:text-amber-200">

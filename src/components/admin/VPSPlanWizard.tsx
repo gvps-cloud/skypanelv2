@@ -71,9 +71,6 @@ interface NewVPSPlanState {
   selectedProviderId: string;
   selectedType: string;
   markupPrice: number;
-  transferOverageMarkupType: 'flat' | 'multiplier';
-  transferOverageMarkupValue: number | string;
-  transferOverageEnabled: boolean;
   backupPriceMonthly: number | string;
   backupPriceHourly: number | string;
   backupUpchargeMonthly: number | string;
@@ -121,9 +118,6 @@ const PLAN_CATEGORIES = [
   { value: "gpu", label: "GPU" },
   { value: "accelerated", label: "Accelerated" },
 ];
-
-const transferMarkupHelp =
-  "Flat adds a fixed USD amount per GB on top of the provider rate. Multiplier scales the provider rate, so 1.5 means charge 50% more than provider cost.";
 
 export function VPSPlanWizard({
   open,
@@ -226,9 +220,6 @@ export function VPSPlanWizard({
       selectedProviderId: "",
       selectedType: "",
       markupPrice: 0,
-      transferOverageMarkupType: 'flat',
-      transferOverageMarkupValue: 0,
-      transferOverageEnabled: true,
       backupPriceMonthly: 0,
       backupPriceHourly: 0,
       backupUpchargeMonthly: 0,
@@ -552,7 +543,6 @@ export function VPSPlanWizard({
 
   const renderStep3 = () => (
     <div className="space-y-5">
-      {/* Display Name */}
       <div className="space-y-2">
         <Label htmlFor="plan-name" className="text-sm font-medium">
           Display Name <span className="text-muted-foreground">(optional)</span>
@@ -571,7 +561,6 @@ export function VPSPlanWizard({
         </p>
       </div>
 
-      {/* Markup Price */}
       <div className="space-y-2">
         <Label htmlFor="plan-markup" className="text-sm font-medium">
           Markup (USD)
@@ -593,92 +582,8 @@ export function VPSPlanWizard({
             className="h-11 pl-9"
           />
         </div>
-        <p className="text-xs text-muted-foreground">
-          Additional amount added on top of base price (${selectedType?.price.monthly || 0})
-        </p>
       </div>
 
-      <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h4 className="font-medium text-sm">Network Transfer Overage</h4>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex h-5 w-5 items-center justify-center rounded-full border text-xs text-muted-foreground transition-colors hover:bg-background"
-                  >
-                    ?
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs text-xs">
-                  {transferMarkupHelp}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <span className="text-xs text-muted-foreground">Provider base rate depends on region</span>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">
-              Markup Type
-            </Label>
-            <Select
-              value={newVPSPlan.transferOverageMarkupType}
-              onValueChange={(value: 'flat' | 'multiplier') =>
-                setNewVPSPlan((prev) => ({ ...prev, transferOverageMarkupType: value }))
-              }
-            >
-              <SelectTrigger className="h-10">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="flat">Flat USD / GB</SelectItem>
-                <SelectItem value="multiplier">Multiplier</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              `flat` = add fixed USD/GB. `multiplier` = multiply provider rate.
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Markup Value</Label>
-            <Input
-              type="number"
-              step="0.0001"
-              min={0}
-              value={newVPSPlan.transferOverageMarkupValue}
-              onChange={(e) =>
-                setNewVPSPlan((prev) => ({
-                  ...prev,
-                  transferOverageMarkupValue: e.target.value,
-                }))
-              }
-              className="h-10"
-            />
-            <p className="text-xs text-muted-foreground">
-              Example: `flat` `0.0025` adds $0.0025/GB. `multiplier` `1.5`
-              charges 50% above provider cost.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2">
-          <div>
-            <p className="text-sm font-medium">Enable transfer overage billing</p>
-            <p className="text-xs text-muted-foreground">Charge this plan for pooled account overage using the selected markup.</p>
-          </div>
-          <Switch
-            checked={newVPSPlan.transferOverageEnabled}
-            onCheckedChange={(checked) =>
-              setNewVPSPlan((prev) => ({ ...prev, transferOverageEnabled: checked }))
-            }
-          />
-        </div>
-      </div>
-
-      {/* Backup Pricing Section */}
       <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
         <div className="flex items-center justify-between">
           <h4 className="font-medium text-sm">Backup Pricing</h4>
@@ -688,7 +593,7 @@ export function VPSPlanWizard({
             </span>
           )}
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">Base Monthly (USD)</Label>
@@ -698,7 +603,7 @@ export function VPSPlanWizard({
                 type="number"
                 step="0.01"
                 min={0}
-                placeholder={selectedType?.backup_price_monthly 
+                placeholder={selectedType?.backup_price_monthly
                   ? `Default: $${(Number(selectedType.backup_price_monthly) || 0).toFixed(2)}`
                   : "0.00"}
                 value={newVPSPlan.backupPriceMonthly}
@@ -799,7 +704,6 @@ export function VPSPlanWizard({
         </div>
       </div>
 
-      {/* Enable Toggle */}
       <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-4 py-3">
         <div>
           <p className="text-sm font-medium">Enable for customers</p>
@@ -874,10 +778,6 @@ export function VPSPlanWizard({
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Your Markup</span>
                 <span className="text-primary">+${newVPSPlan.markupPrice.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Transfer Overage</span>
-                <span>{newVPSPlan.transferOverageEnabled ? `${newVPSPlan.transferOverageMarkupType === 'multiplier' ? `${newVPSPlan.transferOverageMarkupValue || 0}x provider rate` : `$${Number(newVPSPlan.transferOverageMarkupValue || 0).toFixed(4)}/GB markup`}` : 'Disabled'}</span>
               </div>
               <div className="flex justify-between font-medium pt-2 border-t">
                 <span>Final Price</span>
@@ -989,3 +889,4 @@ export function VPSPlanWizard({
     </Dialog>
   );
 }
+

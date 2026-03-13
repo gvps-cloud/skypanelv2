@@ -12,7 +12,6 @@ import {
 } from "express-validator";
 import { PayPalService } from "../services/paypalService.js";
 import { BillingService } from "../services/billingService.js";
-import { TransferBillingService } from "../services/transferBillingService.js";
 import { authenticateToken, requireOrganization } from "../middleware/auth.js";
 import { query as dbQuery } from "../lib/database.js";
 import { config } from "../config/index.js";
@@ -727,44 +726,6 @@ router.get(
       res.status(500).json({
         success: false,
         error: "Failed to load billing summary",
-      });
-    }
-  },
-);
-
-
-router.get(
-  "/billing/transfer-summary",
-  requireOrganization,
-  async (req: Request, res: Response) => {
-    try {
-      const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
-
-      const hasBilling = await RoleService.checkPermission(
-        userId,
-        organizationId,
-        "billing_view",
-      );
-      if (!hasBilling) {
-        return res
-          .status(403)
-          .json({ success: false, error: "Insufficient permissions" });
-      }
-
-      const summary =
-        await TransferBillingService.getOrganizationTransferSummary(
-          organizationId,
-        );
-
-      res.json({
-        success: true,
-        summary,
-      });
-    } catch (error) {
-      console.error("Get transfer billing summary error:", error);
-      res.status(500).json({
-        success: false,
-        error: "Failed to load transfer billing summary",
       });
     }
   },
