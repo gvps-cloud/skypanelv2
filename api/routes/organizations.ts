@@ -305,16 +305,6 @@ router.get('/:id/egress', checkOrganizationMembership, async (req: Authenticated
   }
 
   try {
-    const hasBillingPermission = await RoleService.checkPermission(
-      user.id,
-      id,
-      'billing_view',
-    );
-
-    if (!hasBillingPermission) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-
     const month =
       typeof req.query.month === 'string' ? req.query.month : undefined;
     const overview = await EgressBillingService.getOrganizationOverview(id, month);

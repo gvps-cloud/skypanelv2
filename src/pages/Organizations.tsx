@@ -294,6 +294,12 @@ const Organizations: React.FC = () => {
     return null;
   }, [viewMode, organizations]);
 
+  useEffect(() => {
+    if (selectedOrganization?.id) {
+      loadEgressOverview(selectedOrganization.id);
+    }
+  }, [selectedOrganization?.id, loadEgressOverview]);
+
   const handleOrganizationUpdated = useCallback(async () => {
     await Promise.all([
       loadOrganizations(currentPage, itemsPerPage),
@@ -994,6 +1000,16 @@ const Organizations: React.FC = () => {
                     <Key className="mr-1 h-3 w-3" />
                     {selectedOrganization.stats.ssh_key_count} SSH keys
                   </Badge>
+                  {egressOverview && (
+                    <>
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                        Pool: {egressOverview.projectedTotals.totalBillableGb.toFixed(2)} GB
+                      </Badge>
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                        Cost: ${egressOverview.projectedTotals.totalAmount.toFixed(2)}
+                      </Badge>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
