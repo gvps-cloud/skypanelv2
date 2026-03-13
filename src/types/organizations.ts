@@ -106,3 +106,54 @@ export interface OrganizationResources {
     settings_manage: boolean;
   };
 }
+
+export interface OrganizationEgressServerCharge {
+  billingMonth: string;
+  poolId: string;
+  poolScope: "global" | "region";
+  regionId: string | null;
+  vpsInstanceId: string | null;
+  providerInstanceId: string | null;
+  label: string;
+  measuredUsageGb: number;
+  allocatedBillableGb: number;
+  unitPricePerGb: number;
+  amount: number;
+  status: "projected" | "pending" | "billed" | "failed" | "void";
+  updatedAt: string;
+}
+
+export interface OrganizationEgressOverview {
+  organizationId: string;
+  billingMonth: string;
+  projectedTotals: {
+    totalMeasuredUsageGb: number;
+    totalBillableGb: number;
+    totalAmount: number;
+    activePoolCount: number;
+    billingEnabledPoolCount: number;
+    updatedAt: string | null;
+  };
+  servers: OrganizationEgressServerCharge[];
+  recentCycles: EgressBillingHistoryRecord[];
+}
+
+export interface EgressBillingHistoryRecord {
+  id: string;
+  billingMonth: string;
+  poolId: string;
+  poolScope: "global" | "region";
+  regionId: string | null;
+  organizationId: string;
+  organizationName: string | null;
+  totalMeasuredUsageGb: number;
+  allocatedPoolQuotaGb: number;
+  allocatedBillableGb: number;
+  unitPricePerGb: number;
+  totalAmount: number;
+  status: "projected" | "pending" | "billed" | "failed" | "void";
+  billedTransactionId: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}

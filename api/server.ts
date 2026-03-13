@@ -5,12 +5,14 @@
 import app from "./app.js";
 import { initSSHBridge } from "./services/sshBridge.js";
 import { BillingService } from "./services/billingService.js";
+import { EgressBillingService } from "./services/egressBillingService.js";
 import { notificationService } from "./services/notificationService.js";
 
 /**
  * start server with port
  */
 const PORT = process.env.PORT || 3001;
+let lastScheduledEgressMonth: string | null = null;
 
 const server = app.listen(PORT, () => {
   console.log(`Server ready on port ${PORT}`);
@@ -33,13 +35,19 @@ function startBillingScheduler() {
 
   // Run billing immediately on startup (for any missed billing)
   setTimeout(async () => {
-    await runHourlyBilling("initial");
+    await Promise.all([
+      runHourlyBilling("initial"),
+      runMonthlyEgressBillingIfDue("initial"),
+    ]);
   }, 5000); // Wait 5 seconds after server start
 
   // Schedule hourly billing (every hour)
   setInterval(
     async () => {
-      await runHourlyBilling("scheduled");
+      await Promise.all([
+        runHourlyBilling("scheduled"),
+        runMonthlyEgressBillingIfDue("scheduled"),
+      ]);
     },
     60 * 60 * 1000,
   ); // Run every hour (3600000 ms)
@@ -55,7 +63,7 @@ async function runHourlyBilling(runType: "initial" | "scheduled") {
     console.log(
       `✅ Billing completed: ${
         result.billedInstances
-      } instances billed, $${result.totalAmount.toFixed(2)} total`,
+      } instances billed, $${result.totalAmount.toFixed(4)} total`,
     );
 
     if (result.failedInstances.length > 0) {
@@ -66,6 +74,52 @@ async function runHourlyBilling(runType: "initial" | "scheduled") {
     }
   } catch (error) {
     console.error(`❌ Error in ${runType} billing:`, error);
+  }
+}
+
+function getPreviousBillingMonth(referenceDate = new Date()): string {
+  const year = referenceDate.getUTCFullYear();
+  const month = referenceDate.getUTCMonth();
+  const previousMonthDate = new Date(Date.UTC(year, month - 1, 1));
+  return previousMonthDate.toISOString().slice(0, 7);
+}
+
+function shouldRunMonthlyEgressBilling(now = new Date()): boolean {
+  return now.getUTCDate() === 1;
+}
+
+async function runMonthlyEgressBillingIfDue(runType: "initial" | "scheduled") {
+  const now = new Date();
+  if (!shouldRunMonthlyEgressBilling(now)) {
+    return;
+  }
+
+  const billingMonth = getPreviousBillingMonth(now);
+  if (lastScheduledEgressMonth === billingMonth) {
+    return;
+  }
+
+  try {
+    console.log(
+      `🌐 Starting ${runType} monthly egress billing finalization for ${billingMonth}...`,
+    );
+    await EgressBillingService.getLiveUsage(billingMonth);
+    const result = await EgressBillingService.executeLiveBilling(billingMonth);
+    console.log(
+      `✅ Egress billing completed for ${billingMonth}: ${result.billedCount} billed, ${result.failedCount} failed, ${result.invoiceCount} invoices`,
+    );
+    if (result.errors.length > 0) {
+      console.warn(
+        `⚠️ Egress billing completed with ${result.errors.length} errors for ${billingMonth}:`,
+        result.errors,
+      );
+    }
+    lastScheduledEgressMonth = billingMonth;
+  } catch (error) {
+    console.error(
+      `❌ Error in ${runType} monthly egress billing for ${billingMonth}:`,
+      error,
+    );
   }
 }
 

@@ -122,6 +122,14 @@ const isOrderAlreadyCapturedError = (error: unknown): boolean => {
 };
 
 export class PayPalService {
+  private static roundCurrencyAmount(amount: number): number {
+    if (!Number.isFinite(amount)) {
+      return 0;
+    }
+
+    return Number(amount.toFixed(4));
+  }
+
   /**
    * Create a PayPal payment order
    */
@@ -361,7 +369,7 @@ export class PayPalService {
         }
 
         const currentBalance = parseFloat(walletResult.rows[0].balance);
-        const newBalance = Number((currentBalance + amount).toFixed(2));
+        const newBalance = this.roundCurrencyAmount(currentBalance + amount);
 
         // Update wallet balance
         await client.query(
@@ -432,7 +440,7 @@ export class PayPalService {
           return false;
         }
 
-        const newBalance = Number((currentBalance - amount).toFixed(2));
+        const newBalance = this.roundCurrencyAmount(currentBalance - amount);
 
         // Update wallet balance
         await client.query(

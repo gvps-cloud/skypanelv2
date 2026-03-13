@@ -6,6 +6,7 @@
 import express, { Request, Response } from 'express';
 import { param, query as queryValidator, validationResult } from 'express-validator';
 import { authenticateToken, requireOrganization } from '../middleware/auth.js';
+import { EgressBillingService } from '../services/egressBillingService.js';
 import { InvoiceService } from '../services/invoiceService.js';
 import { PayPalService, type WalletTransaction } from '../services/paypalService.js';
 import { query } from '../lib/database.js';
@@ -431,46 +432,46 @@ router.post(
 
       const organizationId = (req as AuthenticatedRequest).user.organizationId;
       const userId = (req as AuthenticatedRequest).user.id;
-      const invoiceNumber = `INV-VPS-${Date.now()}`;
+      const invoiceNumber = `INV-SVC-${Date.now()}`;
 
-      // Get date range from query params or default to last 30 days
-      const endDate = req.query.endDate 
-        ? new Date(req.query.endDate as string) 
+      const endDate = req.query.endDate
+        ? new Date(req.query.endDate as string)
         : new Date();
-      const startDate = req.query.startDate 
-        ? new Date(req.query.startDate as string) 
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate as string)
         : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-      // Get billing cycles for the period
-      const result = await query(`
-        SELECT 
-          bc.id,
-          bc.vps_instance_id,
-          bc.billing_period_start,
-          bc.billing_period_end,
-          bc.total_amount,
-          bc.metadata,
-          vi.label as vps_label
-        FROM vps_billing_cycles bc
-        JOIN vps_instances vi ON vi.id = bc.vps_instance_id
-        WHERE bc.organization_id = $1
-          AND bc.status = 'billed'
-          AND bc.created_at >= $2
-          AND bc.created_at <= $3
-        ORDER BY bc.created_at DESC
-      `, [organizationId, startDate, endDate]);
+      const [result, egressInvoiceItems] = await Promise.all([
+        query(`
+          SELECT
+            bc.id,
+            bc.vps_instance_id,
+            bc.billing_period_start,
+            bc.billing_period_end,
+            bc.total_amount,
+            bc.metadata,
+            vi.label as vps_label
+          FROM vps_billing_cycles bc
+          JOIN vps_instances vi ON vi.id = bc.vps_instance_id
+          WHERE bc.organization_id = $1
+            AND bc.status = 'billed'
+            AND bc.created_at >= $2
+            AND bc.created_at <= $3
+          ORDER BY bc.created_at DESC
+        `, [organizationId, startDate, endDate]),
+        EgressBillingService.listInvoiceItemsForPeriod(organizationId, startDate, endDate),
+      ]);
 
-      if (result.rows.length === 0) {
+      if (result.rows.length === 0 && egressInvoiceItems.length === 0) {
         return res.status(400).json({
           success: false,
-          error: 'No billing cycles found for the specified period',
+          error: 'No VPS billing cycles or billed egress charges found for the specified period',
         });
       }
 
-      // Parse billing cycles with backup information
-      const billingCycles = result.rows.map(row => {
-        const metadata = typeof row.metadata === 'string' 
-          ? JSON.parse(row.metadata) 
+      const billingCycles = result.rows.map((row) => {
+        const metadata = typeof row.metadata === 'string'
+          ? JSON.parse(row.metadata)
           : row.metadata;
 
         return {
@@ -485,7 +486,6 @@ router.post(
         };
       });
 
-      // Fetch user data for invoice display
       let userName: string | undefined;
       let userEmail: string | undefined;
       try {
@@ -499,10 +499,8 @@ router.post(
         }
       } catch (error) {
         console.error('Failed to fetch user data for invoice:', error);
-        // Continue with invoice generation without user data
       }
 
-      // Fetch organization data for invoice display
       let organizationName: string | undefined;
       try {
         const orgResult = await query(
@@ -514,10 +512,8 @@ router.post(
         }
       } catch (error) {
         console.error('Failed to fetch organization data for invoice:', error);
-        // Continue with invoice generation without organization data
       }
 
-      // Generate invoice data with itemized backup costs
       const invoiceData = InvoiceService.generateInvoiceFromBillingCycles(
         organizationId,
         billingCycles,
@@ -529,7 +525,25 @@ router.post(
         organizationName
       );
 
-      // Generate HTML with organization theme
+      if (egressInvoiceItems.length > 0) {
+        const egressTotal = egressInvoiceItems.reduce(
+          (sum, item) => sum + Number(item.amount || 0),
+          0,
+        );
+
+        invoiceData.items.push(...egressInvoiceItems);
+        invoiceData.subtotal = Number((invoiceData.subtotal + egressTotal).toFixed(4));
+        invoiceData.total = Number((invoiceData.subtotal + invoiceData.tax).toFixed(4));
+        invoiceData.title =
+          billingCycles.length > 0
+            ? 'VPS & Egress Billing Statement'
+            : 'Egress Billing Statement';
+        invoiceData.description =
+          billingCycles.length > 0
+            ? `${invoiceData.description}. Includes billed egress overage charges posted in the selected period.`
+            : `Billed egress overage charges from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`;
+      }
+
       const themeConfig = await themeService.getThemeConfig();
       const themePalette = resolveThemePalette(themeConfig);
 
@@ -540,12 +554,16 @@ router.post(
         themePalette
       );
 
-      // Store invoice
       const invoiceId = await InvoiceService.createInvoice(
         organizationId,
         invoiceNumber,
         htmlContent,
-        invoiceData as unknown as Record<string, unknown>,
+        {
+          ...invoiceData,
+          sourceType: 'service_billing',
+          includesEgress: egressInvoiceItems.length > 0,
+          egressItemCount: egressInvoiceItems.length,
+        } as Record<string, unknown>,
         invoiceData.total,
         invoiceData.currency || 'USD'
       );

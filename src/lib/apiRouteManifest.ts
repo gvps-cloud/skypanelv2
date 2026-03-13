@@ -176,6 +176,36 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "protected": true
   },
   {
+    "method": "POST",
+    "path": "/api/admin/egress/execute",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/egress/history",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/egress/live-usage",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/egress/pricing",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/egress/pricing/:regionId",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/egress/pricing/sync",
+    "protected": true
+  },
+  {
     "method": "GET",
     "path": "/api/admin/email-templates",
     "protected": true
@@ -753,6 +783,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "PUT",
     "path": "/api/organizations/:id",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/organizations/:id/egress",
     "protected": true
   },
   {

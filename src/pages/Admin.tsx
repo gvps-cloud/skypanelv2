@@ -414,6 +414,75 @@ interface LinodeRegion {
   status: string;
 }
 
+interface RegionEgressPricing {
+  id: string;
+  provider_type: string;
+  region_id: string;
+  region_label?: string | null;
+  pricing_scope: "global" | "region";
+  pricing_category: "core" | "special" | "distributed";
+  base_price_per_gb: number;
+  upcharge_price_per_gb: number;
+  final_price_per_gb: number;
+  billing_enabled: boolean;
+  source: string;
+  sync_status: "pending" | "synced" | "manual" | "error";
+  synced_at?: string | null;
+}
+
+interface EgressAllocationItem {
+  organizationId: string;
+  organizationName: string;
+  vpsInstanceId: string;
+  providerInstanceId: string;
+  label: string;
+  regionId: string;
+  measuredUsageGb: number;
+  usageShare: number;
+  allocatedPoolQuotaGb: number;
+  allocatedBillableGb: number;
+  unitPricePerGb: number;
+  amount: number;
+}
+
+interface EgressAllocationPool {
+  poolId: string;
+  poolScope: "global" | "region";
+  regionId?: string | null;
+  regionLabel?: string | null;
+  pricingCategory: "core" | "special" | "distributed";
+  billingEnabled: boolean;
+  basePricePerGb: number;
+  upchargePricePerGb: number;
+  finalPricePerGb: number;
+  accountUsageGb: number;
+  accountQuotaGb: number;
+  accountBillableGb: number;
+  totalMeasuredUsageGb: number;
+  totalAllocatedQuotaGb: number;
+  totalAllocatedBillableGb: number;
+  items: EgressAllocationItem[];
+}
+
+interface EgressBillingHistoryRecord {
+  id: string;
+  billingMonth: string;
+  poolId: string;
+  poolScope: "global" | "region";
+  regionId?: string | null;
+  organizationId: string;
+  organizationName?: string | null;
+  totalMeasuredUsageGb: number;
+  allocatedPoolQuotaGb: number;
+  allocatedBillableGb: number;
+  unitPricePerGb: number;
+  totalAmount: number;
+  status: "projected" | "pending" | "billed" | "failed" | "void";
+  billedTransactionId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 type ProviderValidationStatus = "valid" | "invalid" | "pending" | "unknown";
 
 interface AdminProvider extends Provider {
@@ -882,9 +951,23 @@ const Admin: React.FC = () => {
 
   // Networking rDNS state
   const [networkingTab, setNetworkingTab] = useState<"rdns" | "ipam">("rdns");
+  const [billingTab, setBillingTab] = useState<"finance" | "egress">("finance");
   const [rdnsBaseDomain, setRdnsBaseDomain] = useState<string>("");
   const [rdnsLoading, setRdnsLoading] = useState<boolean>(false);
   const [rdnsSaving, setRdnsSaving] = useState<boolean>(false);
+  const [egressPricing, setEgressPricing] = useState<RegionEgressPricing[]>([]);
+  const [egressPricingLoading, setEgressPricingLoading] = useState(false);
+  const [egressPricingSyncing, setEgressPricingSyncing] = useState(false);
+  const [savingEgressRegionId, setSavingEgressRegionId] = useState<string | null>(null);
+  const [liveEgressUsage, setLiveEgressUsage] = useState<EgressAllocationPool[]>([]);
+  const [liveEgressUsageLoading, setLiveEgressUsageLoading] = useState(false);
+  const [egressHistory, setEgressHistory] = useState<EgressBillingHistoryRecord[]>([]);
+  const [egressHistoryLoading, setEgressHistoryLoading] = useState(false);
+  const [egressExecuting, setEgressExecuting] = useState(false);
+  const [egressHistoryMonth, setEgressHistoryMonth] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
 
   const authHeader = useMemo(
     () => ({ Authorization: `Bearer ${token}` }),
@@ -997,6 +1080,36 @@ const Admin: React.FC = () => {
     const set = new Set(allowedRegionIds);
     return linodeRegions.filter((r) => set.has(r.id));
   }, [linodeRegions, allowedRegionIds]);
+
+  const allowedRegionSet = useMemo(() => {
+    if (!allowedRegionIds || allowedRegionIds.length === 0) return null;
+    return new Set(allowedRegionIds.map((id) => id.toLowerCase()));
+  }, [allowedRegionIds]);
+
+  const filteredEgressPricing = useMemo(() => {
+    if (!allowedRegionSet) return egressPricing;
+    return egressPricing.filter((region) =>
+      allowedRegionSet.has((region.region_id || "").toLowerCase()),
+    );
+  }, [egressPricing, allowedRegionSet]);
+
+  const filteredLiveEgressUsage = useMemo(() => {
+    if (!allowedRegionSet) return liveEgressUsage;
+    return liveEgressUsage.filter(
+      (pool) =>
+        pool.poolScope === "global" ||
+        (pool.regionId && allowedRegionSet.has(pool.regionId.toLowerCase())),
+    );
+  }, [liveEgressUsage, allowedRegionSet]);
+
+  const filteredEgressHistory = useMemo(() => {
+    if (!allowedRegionSet) return egressHistory;
+    return egressHistory.filter(
+      (cycle) =>
+        cycle.poolScope === "global" ||
+        (cycle.regionId && allowedRegionSet.has(cycle.regionId.toLowerCase())),
+    );
+  }, [egressHistory, allowedRegionSet]);
 
   // Filter plan types by category - REMOVED unused filteredPlanTypes
   // const filteredPlanTypes = useMemo(...)
@@ -1295,6 +1408,9 @@ const Admin: React.FC = () => {
         break;
       case "networking":
         fetchNetworkingRdns();
+        fetchEgressPricing();
+        fetchLiveEgressUsage();
+        fetchEgressHistory();
         break;
       case "theme":
         break;
@@ -1408,6 +1524,139 @@ const Admin: React.FC = () => {
       toast.error(e.message);
     } finally {
       setRdnsSaving(false);
+    }
+  };
+
+  const fetchEgressPricing = async () => {
+    if (!token) return;
+    setEgressPricingLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/egress/pricing`, {
+        headers: authHeader,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load egress pricing");
+      }
+      setEgressPricing(Array.isArray(data.pricing) ? data.pricing : []);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load egress pricing");
+    } finally {
+      setEgressPricingLoading(false);
+    }
+  };
+
+  const syncEgressPricing = async () => {
+    if (!token) return;
+    setEgressPricingSyncing(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/egress/pricing/sync`, {
+        method: "POST",
+        headers: authHeader,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to sync egress pricing");
+      }
+      setEgressPricing(Array.isArray(data.pricing) ? data.pricing : []);
+      toast.success("Egress pricing synced");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to sync egress pricing");
+    } finally {
+      setEgressPricingSyncing(false);
+    }
+  };
+
+  const fetchLiveEgressUsage = async () => {
+    if (!token) return;
+    setLiveEgressUsageLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/egress/live-usage`, {
+        headers: authHeader,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load live egress usage");
+      }
+      setLiveEgressUsage(Array.isArray(data.pools) ? data.pools : []);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load live egress usage");
+    } finally {
+      setLiveEgressUsageLoading(false);
+    }
+  };
+
+  const fetchEgressHistory = async () => {
+    if (!token) return;
+    setEgressHistoryLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/egress/history?month=${egressHistoryMonth}`, {
+        headers: authHeader,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load egress billing history");
+      }
+      setEgressHistory(Array.isArray(data.cycles) ? data.cycles : []);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load egress billing history");
+    } finally {
+      setEgressHistoryLoading(false);
+    }
+  };
+
+  const executeEgressBilling = async () => {
+    if (!token) return;
+    setEgressExecuting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/egress/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to execute egress billing");
+      }
+      const result = data.result;
+      toast.success(
+        `Egress billing executed: ${result?.billedCount ?? 0} billed, ${result?.failedCount ?? 0} failed`,
+      );
+      await Promise.all([fetchLiveEgressUsage(), fetchEgressHistory()]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to execute egress billing");
+    } finally {
+      setEgressExecuting(false);
+    }
+  };
+
+  const updateEgressPricingRegion = async (
+    regionId: string,
+    payload: Partial<
+      Pick<RegionEgressPricing, "upcharge_price_per_gb" | "billing_enabled">
+    >,
+  ) => {
+    if (!token) return;
+    setSavingEgressRegionId(regionId);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/egress/pricing/${regionId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeader },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update egress pricing");
+      }
+      setEgressPricing((prev) =>
+        prev.map((item) => (item.region_id === regionId ? data.pricing : item)),
+      );
+      await fetchLiveEgressUsage();
+      toast.success(`Updated egress pricing for ${regionId}`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update egress pricing");
+    } finally {
+      setSavingEgressRegionId(null);
     }
   };
 
@@ -3934,7 +4183,511 @@ const Admin: React.FC = () => {
         </SectionPanel>
 
         <SectionPanel section="billing" activeSection={activeTab}>
-          <BillingDashboard />
+          <Tabs
+            value={billingTab}
+            onValueChange={(value) => setBillingTab(value as typeof billingTab)}
+          >
+            <TabsList>
+              <TabsTrigger value="finance">Billing & Finance</TabsTrigger>
+              <TabsTrigger value="egress">Egress Billing</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="finance" className="pt-6">
+              <BillingDashboard />
+            </TabsContent>
+
+            <TabsContent value="egress" className="space-y-6 pt-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-2">
+                  <h3 className="text-base font-semibold text-foreground">
+                    Pool-aware Egress Billing
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-3xl">
+                    Sync Linode regional overage pricing, apply your upcharge,
+                    and view live current-month pooled transfer usage with
+                    projected allocation back to each organization and VPS/server.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={fetchLiveEgressUsage}
+                    disabled={liveEgressUsageLoading}
+                    className="gap-2"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        "h-4 w-4",
+                        liveEgressUsageLoading && "animate-spin",
+                      )}
+                    />
+                    Refresh Live Usage
+                  </Button>
+                  <Button
+                    onClick={syncEgressPricing}
+                    disabled={egressPricingSyncing}
+                    className="gap-2"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        "h-4 w-4",
+                        egressPricingSyncing && "animate-spin",
+                      )}
+                    />
+                    {egressPricingSyncing ? "Syncing…" : "Sync Linode Pricing"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={executeEgressBilling}
+                    disabled={egressExecuting}
+                    className="gap-2"
+                  >
+                    <Play
+                      className={cn("h-4 w-4", egressExecuting && "animate-pulse")}
+                    />
+                    {egressExecuting ? "Running Billing…" : "Run Billing"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">
+                      Configured Regions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {filteredEgressPricing.length}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Regions with stored pricing records
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">
+                      Billing Enabled
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {filteredEgressPricing.filter((item) => item.billing_enabled).length}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Regions currently allowed to bill overage
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">
+                      Active Pools
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {filteredLiveEgressUsage.length}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Global/region pools with current live usage
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">
+                      Billable Overage
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {formatCurrency(
+                        filteredLiveEgressUsage.reduce(
+                          (sum, pool) =>
+                            sum +
+                            pool.items.reduce(
+                              (inner, item) => inner + item.amount,
+                              0,
+                            ),
+                          0,
+                        ),
+                      ) || "$0.00"}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Current projected total across all active pools
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    Region Pricing Controls
+                  </CardTitle>
+                  <CardDescription>
+                    Base price comes from Linode pricing sync. Enter only your
+                    markup and enable billing for the regions you want to charge.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Region</TableHead>
+                          <TableHead>Pool</TableHead>
+                          <TableHead>Base / GB</TableHead>
+                          <TableHead>Upcharge / GB</TableHead>
+                          <TableHead>Final / GB</TableHead>
+                          <TableHead>Billing</TableHead>
+                          <TableHead>Sync Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {egressPricingLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                              Loading egress pricing…
+                            </TableCell>
+                          </TableRow>
+                        ) : filteredEgressPricing.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                              No egress pricing has been synced yet.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredEgressPricing.map((region) => (
+                            <TableRow key={region.region_id}>
+                              <TableCell>
+                                <div className="font-medium">
+                                  {region.region_label || region.region_id}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {region.region_id}
+                                </div>
+                              </TableCell>
+                              <TableCell className="capitalize">
+                                {region.pricing_scope}
+                              </TableCell>
+                              <TableCell>
+                                ${(Number(region.base_price_per_gb) || 0).toFixed(6)}
+                              </TableCell>
+                              <TableCell className="w-[180px]">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="0.000001"
+                                  defaultValue={region.upcharge_price_per_gb}
+                                  onBlur={(e) => {
+                                    const nextValue = Number(e.target.value || 0);
+                                    if (
+                                      Math.abs(nextValue - region.upcharge_price_per_gb) > 0.0000005
+                                    ) {
+                                      void updateEgressPricingRegion(region.region_id, {
+                                        upcharge_price_per_gb: nextValue,
+                                      });
+                                    }
+                                  }}
+                                  disabled={savingEgressRegionId === region.region_id}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                ${(Number(region.final_price_per_gb) || 0).toFixed(6)}
+                              </TableCell>
+                              <TableCell>
+                                <Switch
+                                  checked={region.billing_enabled}
+                                  onCheckedChange={(checked) => {
+                                    void updateEgressPricingRegion(region.region_id, {
+                                      billing_enabled: checked,
+                                    });
+                                  }}
+                                  disabled={savingEgressRegionId === region.region_id}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-col gap-1">
+                                  <Badge variant="secondary" className="w-fit">
+                                    {region.sync_status}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatDateTime(region.synced_at)}
+                                  </span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-4">
+                {liveEgressUsageLoading ? (
+                  <Card>
+                    <CardContent className="py-10 text-center text-muted-foreground">
+                      Loading live pooled egress usage…
+                    </CardContent>
+                  </Card>
+                ) : filteredLiveEgressUsage.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-10 text-center text-muted-foreground">
+                      No live pooled egress usage is available yet. Sync pricing and
+                      refresh once current transfer data is available.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  filteredLiveEgressUsage.map((pool) => (
+                    <Card key={pool.poolId}>
+                      <CardHeader>
+                        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                          <div>
+                            <CardTitle className="text-base">
+                              {pool.regionLabel || pool.poolId}
+                            </CardTitle>
+                            <CardDescription>
+                              {pool.poolScope === "global"
+                                ? "Global transfer pool"
+                                : `Region pool for ${pool.regionId}`}
+                            </CardDescription>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary" className="capitalize">
+                              {pool.pricingCategory}
+                            </Badge>
+                            <Badge variant={pool.billingEnabled ? "default" : "secondary"}>
+                              {pool.billingEnabled ? "Billing Enabled" : "Billing Disabled"}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                          <div className="rounded-lg border p-4">
+                            <div className="text-xs uppercase text-muted-foreground">
+                              Pool Usage
+                            </div>
+                            <div className="mt-1 text-xl font-semibold">
+                              {pool.accountUsageGb.toFixed(2)} GB
+                            </div>
+                          </div>
+                          <div className="rounded-lg border p-4">
+                            <div className="text-xs uppercase text-muted-foreground">
+                              Pool Quota
+                            </div>
+                            <div className="mt-1 text-xl font-semibold">
+                              {pool.accountQuotaGb.toFixed(2)} GB
+                            </div>
+                          </div>
+                          <div className="rounded-lg border p-4">
+                            <div className="text-xs uppercase text-muted-foreground">
+                              Billable Pool Overage
+                            </div>
+                            <div className="mt-1 text-xl font-semibold">
+                              {pool.accountBillableGb.toFixed(2)} GB
+                            </div>
+                          </div>
+                          <div className="rounded-lg border p-4">
+                            <div className="text-xs uppercase text-muted-foreground">
+                              Final Customer Price
+                            </div>
+                            <div className="mt-1 text-xl font-semibold">
+                              ${(pool.finalPricePerGb || 0).toFixed(6)}/GB
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-md border">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Organization</TableHead>
+                                <TableHead>Server</TableHead>
+                                <TableHead>Usage</TableHead>
+                                <TableHead>Pool Share</TableHead>
+                                <TableHead>Allocated Quota</TableHead>
+                                <TableHead>Billable GB</TableHead>
+                                <TableHead>Amount</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {pool.items.length === 0 ? (
+                                <TableRow>
+                                  <TableCell
+                                    colSpan={7}
+                                    className="py-8 text-center text-muted-foreground"
+                                  >
+                                    No VPS usage rows were available for this pool.
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                pool.items.map((item) => (
+                                  <TableRow key={`${pool.poolId}-${item.vpsInstanceId}`}>
+                                    <TableCell>
+                                      <div className="font-medium">{item.organizationName}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {item.organizationId}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="font-medium">{item.label}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        VPS: {item.providerInstanceId}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>{item.measuredUsageGb.toFixed(2)} GB</TableCell>
+                                    <TableCell>{(item.usageShare * 100).toFixed(2)}%</TableCell>
+                                    <TableCell>
+                                      {item.allocatedPoolQuotaGb.toFixed(2)} GB
+                                    </TableCell>
+                                    <TableCell>
+                                      {item.allocatedBillableGb.toFixed(2)} GB
+                                    </TableCell>
+                                    <TableCell>
+                                      {formatCurrency(item.amount) || "$0.00"}
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-base">
+                        Egress Billing History
+                      </CardTitle>
+                      <CardDescription>
+                        Review projected, billed, failed, and void egress cycles by
+                        organization and transfer pool.
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="month"
+                        value={egressHistoryMonth}
+                        onChange={(e) => setEgressHistoryMonth(e.target.value)}
+                        className="w-40"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={fetchEgressHistory}
+                        disabled={egressHistoryLoading}
+                        className="gap-2"
+                      >
+                        <RefreshCw
+                          className={cn(
+                            "h-4 w-4",
+                            egressHistoryLoading && "animate-spin",
+                          )}
+                        />
+                        Refresh
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Month</TableHead>
+                          <TableHead>Organization</TableHead>
+                          <TableHead>Pool</TableHead>
+                          <TableHead>Billable GB</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Updated</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {egressHistoryLoading ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={7}
+                              className="py-8 text-center text-muted-foreground"
+                            >
+                              Loading egress billing history…
+                            </TableCell>
+                          </TableRow>
+                        ) : filteredEgressHistory.length === 0 ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={7}
+                              className="py-8 text-center text-muted-foreground"
+                            >
+                              No egress billing cycles have been recorded yet.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredEgressHistory.map((cycle) => (
+                            <TableRow key={cycle.id}>
+                              <TableCell className="font-mono text-xs">
+                                {cycle.billingMonth.slice(0, 7)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium">
+                                  {cycle.organizationName || cycle.organizationId}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {cycle.organizationId}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium">
+                                  {cycle.poolId}
+                                </div>
+                                <div className="text-xs text-muted-foreground capitalize">
+                                  {cycle.poolScope}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {cycle.allocatedBillableGb.toFixed(2)} GB
+                              </TableCell>
+                              <TableCell>
+                                {formatCurrency(cycle.totalAmount) || "$0.00"}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    cycle.status === "billed"
+                                      ? "default"
+                                      : cycle.status === "failed"
+                                        ? "destructive"
+                                        : "secondary"
+                                  }
+                                >
+                                  {cycle.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {formatDateTime(cycle.updatedAt)}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </SectionPanel>
 
         <SectionPanel section="email-templates" activeSection={activeTab}>

@@ -38,6 +38,7 @@ import {
 import {
   OrganizationWithStats,
   OrganizationResources,
+  OrganizationEgressOverview,
 } from "@/types/organizations";
 import type { Provider } from "@/types/provider";
 import { StatsGrid } from "@/components/layouts/StatsGrid";
@@ -82,6 +83,12 @@ const Organizations: React.FC = () => {
   });
   const [providerNames, setProviderNames] = useState<Record<string, string>>({
     linode: "Linode",
+  });
+  const [egressOverview, setEgressOverview] = useState<OrganizationEgressOverview | null>(null);
+  const [egressLoading, setEgressLoading] = useState(false);
+  const [egressMonth, setEgressMonth] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
   const { token, user, switchOrganization } = useAuth();
   const navigate = useNavigate();
@@ -128,6 +135,22 @@ const Organizations: React.FC = () => {
       setLoadingResources(false);
     }
   }, [token]);
+
+  const loadEgressOverview = useCallback(async (organizationId: string) => {
+    if (!token) return;
+    setEgressLoading(true);
+    try {
+      const data = await apiClient.get<{ overview: OrganizationEgressOverview }>(
+        `/organizations/${organizationId}/egress?month=${egressMonth}`
+      );
+      setEgressOverview(data.overview || null);
+    } catch (error: any) {
+      console.error("Failed to load egress overview:", error);
+      toast.error(error.message || "Failed to load egress overview");
+    } finally {
+      setEgressLoading(false);
+    }
+  }, [token, egressMonth]);
 
   useEffect(() => {
     loadOrganizations(currentPage, itemsPerPage);
@@ -994,6 +1017,7 @@ const Organizations: React.FC = () => {
           <Tabs defaultValue="resources" className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="resources">Resources</TabsTrigger>
+              <TabsTrigger value="egress">Egress</TabsTrigger>
               <TabsTrigger value="settings">Team Settings</TabsTrigger>
             </TabsList>
 
@@ -1035,6 +1059,178 @@ const Organizations: React.FC = () => {
                   No resources available for this organization
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="egress" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <CardTitle>Egress Billing Overview</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Monthly egress usage and overage charges for {selectedOrganization.name}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="month"
+                        value={egressMonth}
+                        onChange={(e) => setEgressMonth(e.target.value)}
+                        className="w-40"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadEgressOverview(selectedOrganization.id)}
+                        disabled={egressLoading}
+                      >
+                        {egressLoading ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {egressLoading ? (
+                    <div className="space-y-4">
+                      <Skeleton className="h-20" />
+                      <Skeleton className="h-40" />
+                    </div>
+                  ) : egressOverview ? (
+                    <div className="space-y-6">
+                      <div className="grid gap-4 md:grid-cols-4">
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="text-sm text-muted-foreground">Total Usage</div>
+                            <div className="text-2xl font-bold">
+                              {egressOverview.projectedTotals.totalMeasuredUsageGb.toFixed(4)} GB
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="text-sm text-muted-foreground">Billable</div>
+                            <div className="text-2xl font-bold">
+                              {egressOverview.projectedTotals.totalBillableGb.toFixed(4)} GB
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="text-sm text-muted-foreground">Projected Cost</div>
+                            <div className="text-2xl font-bold">
+                              ${egressOverview.projectedTotals.totalAmount.toFixed(4)}
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="text-sm text-muted-foreground">Active Pools</div>
+                            <div className="text-2xl font-bold">
+                              {egressOverview.projectedTotals.activePoolCount}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {egressOverview.servers.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-semibold">Server Breakdown</h4>
+                          <div className="rounded-md border">
+                            <table className="w-full text-sm">
+                              <thead className="bg-muted/50">
+                                <tr>
+                                  <th className="p-2 text-left">Server</th>
+                                  <th className="p-2 text-right">Usage (GB)</th>
+                                  <th className="p-2 text-right">Billable (GB)</th>
+                                  <th className="p-2 text-right">Rate</th>
+                                  <th className="p-2 text-right">Amount</th>
+                                  <th className="p-2 text-left">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {egressOverview.servers.map((server, idx) => (
+                                  <tr key={idx} className="border-t">
+                                    <td className="p-2">{server.label}</td>
+                                    <td className="p-2 text-right font-mono">
+                                      {server.measuredUsageGb.toFixed(4)}
+                                    </td>
+                                    <td className="p-2 text-right font-mono">
+                                      {server.allocatedBillableGb.toFixed(4)}
+                                    </td>
+                                    <td className="p-2 text-right font-mono">
+                                      ${server.unitPricePerGb.toFixed(4)}/GB
+                                    </td>
+                                    <td className="p-2 text-right font-mono">
+                                      ${server.amount.toFixed(4)}
+                                    </td>
+                                    <td className="p-2">
+                                      <Badge variant={server.status === "billed" ? "default" : "secondary"}>
+                                        {server.status}
+                                      </Badge>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+
+                      {egressOverview.recentCycles.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-semibold">Recent Billing Cycles</h4>
+                          <div className="rounded-md border">
+                            <table className="w-full text-sm">
+                              <thead className="bg-muted/50">
+                                <tr>
+                                  <th className="p-2 text-left">Month</th>
+                                  <th className="p-2 text-left">Pool</th>
+                                  <th className="p-2 text-right">Usage (GB)</th>
+                                  <th className="p-2 text-right">Billable (GB)</th>
+                                  <th className="p-2 text-right">Amount</th>
+                                  <th className="p-2 text-left">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {egressOverview.recentCycles.slice(0, 6).map((cycle) => (
+                                  <tr key={cycle.id} className="border-t">
+                                    <td className="p-2 font-mono">{cycle.billingMonth.slice(0, 7)}</td>
+                                    <td className="p-2">
+                                      {cycle.poolScope === "global" ? "Global" : cycle.regionId || "Region"}
+                                    </td>
+                                    <td className="p-2 text-right font-mono">
+                                      {cycle.totalMeasuredUsageGb.toFixed(4)}
+                                    </td>
+                                    <td className="p-2 text-right font-mono">
+                                      {cycle.allocatedBillableGb.toFixed(4)}
+                                    </td>
+                                    <td className="p-2 text-right font-mono">
+                                      ${cycle.totalAmount.toFixed(4)}
+                                    </td>
+                                    <td className="p-2">
+                                      <Badge variant={cycle.status === "billed" ? "default" : "secondary"}>
+                                        {cycle.status}
+                                      </Badge>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-sm text-muted-foreground">
+                      No egress data available for the selected month.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="settings">

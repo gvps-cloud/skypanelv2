@@ -434,7 +434,7 @@ describe('Preservation Property Tests: Existing Invoice Functionality', () => {
           // Verify totals section
           expect(htmlContent).toContain('Subtotal:');
           expect(htmlContent).toContain('Total:');
-          expect(htmlContent).toContain(invoiceData.total.toFixed(2));
+          expect(htmlContent).toContain(invoiceData.total.toFixed(4));
 
           // Verify status badge
           expect(htmlContent).toContain('class="status-badge');
@@ -490,7 +490,7 @@ describe('Preservation Property Tests: Existing Invoice Functionality', () => {
           // Verify each item is displayed in HTML
           items.forEach(item => {
             expect(htmlContent).toContain(item.description);
-            expect(htmlContent).toContain(item.amount.toFixed(2));
+            expect(htmlContent).toContain(item.amount.toFixed(4));
           });
 
           // Verify item count matches

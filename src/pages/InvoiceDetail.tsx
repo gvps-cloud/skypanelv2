@@ -188,7 +188,7 @@ const InvoiceDetail: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-lg font-semibold">
-                  {invoice.currency} ${invoice.totalAmount.toFixed(2)}
+                  {invoice.currency} ${invoice.totalAmount.toFixed(4)}
                 </p>
               </CardContent>
             </Card>

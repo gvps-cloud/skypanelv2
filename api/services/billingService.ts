@@ -187,7 +187,7 @@ export class BillingService {
       }
 
       console.log(
-        `🏁 Billing completed: ${result.billedInstances} billed, ${result.failedInstances.length} failed, ${result.totalHours}h charged, $${result.totalAmount.toFixed(2)} total`
+        `🏁 Billing completed: ${result.billedInstances} billed, ${result.failedInstances.length} failed, ${result.totalHours}h charged, $${result.totalAmount.toFixed(4)} total`
       );
       return result;
 
@@ -315,7 +315,7 @@ export class BillingService {
         const currentBalance = parseFloat(walletResult.rows[0].balance);
         if (currentBalance < totalAmount) {
           console.warn(
-            `Insufficient balance for VPS ${instance.label}: required $${totalAmount.toFixed(4)}, available $${currentBalance.toFixed(2)}`
+            `Insufficient balance for VPS ${instance.label}: required $${totalAmount.toFixed(4)}, available $${currentBalance.toFixed(4)}`
           );
 
           await client.query(`

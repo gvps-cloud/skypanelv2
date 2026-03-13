@@ -52,6 +52,14 @@ const defaultInvoicePalette: ThemePalette = {
   ring: '#007bff',
 };
 
+const formatInvoiceAmount = (amount: number): string => {
+  if (!Number.isFinite(amount)) {
+    return '0.0000';
+  }
+
+  return amount.toFixed(4);
+};
+
 export class InvoiceService {
   private static invoiceTableEnsured = false;
 
@@ -71,7 +79,7 @@ export class InvoiceService {
           invoice_number TEXT NOT NULL,
           html_content TEXT NOT NULL,
           data JSONB NOT NULL DEFAULT '{}',
-          total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+          total_amount DECIMAL(12,4) NOT NULL DEFAULT 0.0000,
           currency TEXT NOT NULL DEFAULT 'USD',
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -145,8 +153,8 @@ export class InvoiceService {
       <tr>
         <td style="padding: 12px; border-bottom: ${borderStyle}; color: ${colors.cardForeground};">${item.description}</td>
         <td style="padding: 12px; border-bottom: ${borderStyle}; text-align: center; color: ${colors.cardForeground};">${item.quantity}</td>
-        <td style="padding: 12px; border-bottom: ${borderStyle}; text-align: right; color: ${colors.cardForeground};">$${item.unitPrice.toFixed(2)}</td>
-        <td style="padding: 12px; border-bottom: ${borderStyle}; text-align: right; color: ${colors.cardForeground};">$${item.amount.toFixed(2)}</td>
+        <td style="padding: 12px; border-bottom: ${borderStyle}; text-align: right; color: ${colors.cardForeground};">$${formatInvoiceAmount(item.unitPrice)}</td>
+        <td style="padding: 12px; border-bottom: ${borderStyle}; text-align: right; color: ${colors.cardForeground};">$${formatInvoiceAmount(item.amount)}</td>
       </tr>
     `
       )
@@ -418,17 +426,17 @@ export class InvoiceService {
           <div class="totals-section">
             <div class="totals-row">
               <span>Subtotal:</span>
-              <span>$${invoiceData.subtotal.toFixed(2)}</span>
+              <span>$${formatInvoiceAmount(invoiceData.subtotal)}</span>
             </div>
             ${invoiceData.tax > 0 ? `
             <div class="totals-row">
               <span>Tax:</span>
-              <span>$${invoiceData.tax.toFixed(2)}</span>
+              <span>$${formatInvoiceAmount(invoiceData.tax)}</span>
             </div>
             ` : ''}
             <div class="totals-row total">
               <span>Total:</span>
-              <span>${invoiceData.currency} $${invoiceData.total.toFixed(2)}</span>
+              <span>${invoiceData.currency} $${formatInvoiceAmount(invoiceData.total)}</span>
             </div>
           </div>
         </div>

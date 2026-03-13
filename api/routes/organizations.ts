@@ -4,6 +4,8 @@ import { requirePermission } from '../middleware/permissions.js';
 import { query } from '../lib/database.js';
 import { InvitationService } from '../services/invitations.js';
 import { ActivityFeedService } from '../services/activityFeed.js';
+import { EgressBillingService } from '../services/egressBillingService.js';
+import { RoleService } from '../services/roles.js';
 
 const router = express.Router();
 
@@ -291,6 +293,36 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
   } catch (error) {
     console.error('Failed to fetch organization resources:', error);
     res.status(500).json({ error: 'Failed to fetch organization resources' });
+  }
+});
+
+router.get('/:id/egress', checkOrganizationMembership, async (req: AuthenticatedRequest, res: Response) => {
+  const user = req.user;
+  const { id } = req.params;
+
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  try {
+    const hasBillingPermission = await RoleService.checkPermission(
+      user.id,
+      id,
+      'billing_view',
+    );
+
+    if (!hasBillingPermission) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
+    const month =
+      typeof req.query.month === 'string' ? req.query.month : undefined;
+    const overview = await EgressBillingService.getOrganizationOverview(id, month);
+
+    res.json({ overview });
+  } catch (error) {
+    console.error('Failed to fetch organization egress overview:', error);
+    res.status(500).json({ error: 'Failed to fetch organization egress overview' });
   }
 });
 
