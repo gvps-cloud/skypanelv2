@@ -319,30 +319,17 @@ const roundTransferNumber = (value: number, precision = 4): number => {
   return Math.round(value * factor) / factor;
 };
 
-const getProviderRatePerGb = (regionId: string | null | undefined): number => {
-  if (!regionId) return 0.005;
-  if (regionId === "id-cgk") return 0.015;
-  if (regionId === "br-gru") return 0.007;
-  if (regionId === "distributed") return 0.01;
-  return 0.005;
-};
-
+/**
+ * Compute the customer egress rate using flat markup only.
+ * customer_rate = provider_rate + flat_markup
+ */
 const getCustomerRatePerGb = (
   providerRatePerGb: number,
-  markupType?: string | null,
   markupValue?: number | null,
 ): number => {
   const numericMarkup = Number.isFinite(Number(markupValue))
     ? Number(markupValue)
     : 0;
-  const safeMarkupType = markupType === "multiplier" ? "multiplier" : "flat";
-
-  // If explicitly multiplier, or markup value looks like a multiplier, multiply; otherwise add.
-  if (safeMarkupType === "multiplier" || (numericMarkup > 0 && numericMarkup <= 10)) {
-    const multiplier = Math.max(numericMarkup || 1, 0);
-    return roundTransferNumber(providerRatePerGb * multiplier);
-  }
-
   return roundTransferNumber(providerRatePerGb + Math.max(numericMarkup, 0));
 };
 
@@ -994,11 +981,12 @@ const resolvePlanMeta = async (
       : typeof providerDetail?.region === "string"
         ? providerDetail.region
         : null;
-  const providerRatePerGb = roundTransferNumber(getProviderRatePerGb(regionId));
+  const providerRatePerGb = roundTransferNumber(
+    await linodeService.getProviderEgressRatePerGb(regionId),
+  );
   const customerRatePerGb = planRow
     ? getCustomerRatePerGb(
         providerRatePerGb,
-        planRow.transfer_overage_markup_type,
         planRow.transfer_overage_enabled === false
           ? 0
           : Number(planRow.transfer_overage_markup_value ?? 0),

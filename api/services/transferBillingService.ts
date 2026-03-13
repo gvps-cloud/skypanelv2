@@ -5,7 +5,7 @@ import { PayPalService } from './paypalService.js';
 interface TransferPricingConfig {
   providerRatePerGb: number;
   customerRatePerGb: number;
-  markupType: 'flat' | 'multiplier';
+  markupType: 'flat';
   markupValue: number;
 }
 
@@ -60,12 +60,6 @@ export interface AdminTransferOverview {
   }>;
 }
 
-const DEFAULT_PROVIDER_RATE = 0.005;
-const SPECIAL_REGION_PROVIDER_RATES: Record<string, number> = {
-  'id-cgk': 0.015,
-  'br-gru': 0.007,
-  'distributed': 0.01,
-};
 
 const roundNumber = (value: number, precision = 3): number => {
   if (!Number.isFinite(value)) return 0;
@@ -107,9 +101,12 @@ const normalizeTransferUsage = (usage: unknown): { inboundGb: number; outboundGb
 };
 
 export class TransferBillingService {
-  static getProviderRatePerGb(regionId: string | null | undefined): number {
-    if (!regionId) return DEFAULT_PROVIDER_RATE;
-    return SPECIAL_REGION_PROVIDER_RATES[regionId] ?? DEFAULT_PROVIDER_RATE;
+  /**
+   * Resolve the provider egress rate per GB for a region.
+   * Uses the Linode network-transfer/prices API via linodeService (cached 24h).
+   */
+  static async getProviderRatePerGb(regionId: string | null | undefined): Promise<number> {
+    return linodeService.getProviderEgressRatePerGb(regionId);
   }
 
   private static async ensureWalletExists(organizationId: string): Promise<void> {
@@ -121,23 +118,18 @@ export class TransferBillingService {
     );
   }
 
-  private static computeCustomerRate(providerRatePerGb: number, markupType?: string | null, markupValue?: number | null): TransferPricingConfig {
+  /**
+   * Compute the customer egress rate using flat markup only.
+   * customer_rate = provider_rate + flat_markup
+   */
+  private static computeCustomerRate(providerRatePerGb: number, markupValue?: number | null): TransferPricingConfig {
     const numericMarkup = Number.isFinite(Number(markupValue)) ? Number(markupValue) : 0;
-    const safeMarkupType = markupType === 'multiplier' ? 'multiplier' : 'flat';
-
-    // If explicitly multiplier, or markup value looks like a multiplier, multiply; otherwise add.
-    let customerRatePerGb: number;
-    if (safeMarkupType === 'multiplier' || (numericMarkup > 0 && numericMarkup <= 10)) {
-      const multiplier = Math.max(numericMarkup || 1, 0);
-      customerRatePerGb = providerRatePerGb * multiplier;
-    } else {
-      customerRatePerGb = providerRatePerGb + Math.max(numericMarkup, 0);
-    }
+    const customerRatePerGb = providerRatePerGb + Math.max(numericMarkup, 0);
 
     return {
       providerRatePerGb: roundCurrency(providerRatePerGb),
       customerRatePerGb: roundCurrency(customerRatePerGb),
-      markupType: safeMarkupType,
+      markupType: 'flat',
       markupValue: roundCurrency(numericMarkup),
     };
   }
@@ -298,10 +290,9 @@ export class TransferBillingService {
       const included = Number(row.included_transfer_gb ?? 0);
       const usageFraction = totalOutbound > 0 ? outbound / totalOutbound : 0;
       const allocatedOverageGb = accountOverageGb > 0 ? usageFraction * accountOverageGb : 0;
-      const providerRatePerGb = this.getProviderRatePerGb(row.region_id);
+      const providerRatePerGb = await this.getProviderRatePerGb(row.region_id);
       const pricing = this.computeCustomerRate(
         providerRatePerGb,
-        row.transfer_overage_enabled === false ? 'flat' : row.transfer_overage_markup_type,
         row.transfer_overage_enabled === false ? 0 : Number(row.transfer_overage_markup_value ?? 0),
       );
       const providerCostUsd = allocatedOverageGb * pricing.providerRatePerGb;

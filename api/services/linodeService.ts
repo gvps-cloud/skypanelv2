@@ -216,6 +216,13 @@ const MARKETPLACE_CATEGORY_PATTERNS: Array<{ regex: RegExp; category: string }> 
 const DEPRECATED_APP_REGEX = /\[\s*deprecated\s*\]/i;
 const SECRET_FIELD_MATCHERS = [/linode api token/i];
 
+export interface NetworkTransferPrice {
+  id: string;
+  label: string;
+  price: { hourly: number; monthly: number | null };
+  region_prices: Array<{ id: string; hourly: number; monthly: number | null }>;
+}
+
 export interface AccountTransferResponse {
   used: number;
   quota: number;
@@ -1900,6 +1907,78 @@ class LinodeService {
     } catch (error) {
       console.error('Error deleting Linode SSH key:', error);
       throw error;
+    }
+  }
+
+  // ── Network Transfer Pricing ──────────────────────────────────────────
+
+  private transferPriceCache: { data: NetworkTransferPrice[]; fetchedAt: number } | null = null;
+  private static TRANSFER_PRICE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+  /**
+   * Fetch network transfer overage prices from Linode API.
+   * The `price.hourly` field represents the per-GB overage cost (not a time-based rate).
+   * `region_prices` contains region-specific overrides.
+   */
+  async getNetworkTransferPrices(): Promise<NetworkTransferPrice[]> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/network-transfer/prices`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      const data = await response.json();
+      return Array.isArray(data?.data) ? data.data : [];
+    } catch (error) {
+      console.error('Error fetching Linode network transfer prices:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch network transfer prices with a 24-hour in-memory cache.
+   */
+  async getNetworkTransferPricesWithCache(): Promise<NetworkTransferPrice[]> {
+    const now = Date.now();
+    if (
+      this.transferPriceCache &&
+      now - this.transferPriceCache.fetchedAt < LinodeService.TRANSFER_PRICE_CACHE_TTL
+    ) {
+      return this.transferPriceCache.data;
+    }
+    const data = await this.getNetworkTransferPrices();
+    this.transferPriceCache = { data, fetchedAt: now };
+    return data;
+  }
+
+  /**
+   * Resolve the provider egress overage rate ($/GB) for a given region.
+   * Uses the Linode network-transfer/prices API with caching.
+   * Falls back to $0.005/GB on error.
+   */
+  async getProviderEgressRatePerGb(regionId: string | null | undefined): Promise<number> {
+    try {
+      const prices = await this.getNetworkTransferPricesWithCache();
+      const transferPrice = prices.find((p) => p.id === 'network_transfer');
+      if (!transferPrice) return 0.005; // fallback
+
+      if (regionId) {
+        const regionRate = transferPrice.region_prices.find((r) => r.id === regionId);
+        if (regionRate) return regionRate.hourly;
+      }
+
+      return transferPrice.price.hourly;
+    } catch (err) {
+      console.warn('Failed to fetch Linode transfer prices, using fallback $0.005/GB:', err);
+      return 0.005;
     }
   }
 
