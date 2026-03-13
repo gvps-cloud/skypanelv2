@@ -138,7 +138,19 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             title: "Billing & Finance",
             icon: CreditCard,
             url: `/admin#billing`,
-            isActive: activeAnchor === "billing",
+            isActive: ["billing", "egress-billing"].includes(activeAnchor),
+            items: [
+              {
+                title: "Finance",
+                url: `/admin#billing`,
+                isActive: activeAnchor === "billing",
+              },
+              {
+                title: "Egress Billing",
+                url: `/admin#egress-billing`,
+                isActive: activeAnchor === "egress-billing",
+              },
+            ],
           },
         ];
 

@@ -161,6 +161,7 @@ type AdminSection =
   | "platform"
   | "contact-management"
   | "billing"
+  | "egress-billing"
   | "email-templates";
 
 const ADMIN_SECTIONS: AdminSection[] = [
@@ -181,6 +182,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "platform",
   "contact-management",
   "billing",
+  "egress-billing",
   "email-templates",
 ];
 
@@ -1408,6 +1410,9 @@ const Admin: React.FC = () => {
         break;
       case "networking":
         fetchNetworkingRdns();
+        break;
+      case "egress-billing":
+        fetchProviders();
         fetchEgressPricing();
         fetchLiveEgressUsage();
         fetchEgressHistory();
@@ -4183,20 +4188,11 @@ const Admin: React.FC = () => {
         </SectionPanel>
 
         <SectionPanel section="billing" activeSection={activeTab}>
-          <Tabs
-            value={billingTab}
-            onValueChange={(value) => setBillingTab(value as typeof billingTab)}
-          >
-            <TabsList>
-              <TabsTrigger value="finance">Billing & Finance</TabsTrigger>
-              <TabsTrigger value="egress">Egress Billing</TabsTrigger>
-            </TabsList>
+          <BillingDashboard />
+        </SectionPanel>
 
-            <TabsContent value="finance" className="pt-6">
-              <BillingDashboard />
-            </TabsContent>
-
-            <TabsContent value="egress" className="space-y-6 pt-6">
+        <SectionPanel section="egress-billing" activeSection={activeTab}>
+          <div className="space-y-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="space-y-2">
                   <h3 className="text-base font-semibold text-foreground">
@@ -4686,8 +4682,7 @@ const Admin: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+            </div>
         </SectionPanel>
 
         <SectionPanel section="email-templates" activeSection={activeTab}>
