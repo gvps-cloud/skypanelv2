@@ -19,7 +19,7 @@ const router = Router();
 router.post(
   "/register",
   [
-    body("email").isEmail().normalizeEmail(),
+    body("email").isEmail().normalizeEmail({ gmail_remove_dots: false }),
     body("password")
       .isLength({ min: 8 })
       .withMessage("Password must be at least 8 characters"),
@@ -68,7 +68,7 @@ router.post(
 router.post(
   "/login",
   [
-    body("email").isEmail().normalizeEmail(),
+    body("email").isEmail().normalizeEmail({ gmail_remove_dots: false }),
     body("password").notEmpty().withMessage("Password is required"),
     body("code").optional().isString().trim(),
   ],
@@ -223,7 +223,7 @@ router.post(
  */
 router.post(
   "/forgot-password",
-  [body("email").isEmail().normalizeEmail()],
+  [body("email").isEmail().normalizeEmail({ gmail_remove_dots: false })],
   async (req: Request, res: Response): Promise<void> => {
     try {
       const errors = validationResult(req);
@@ -254,7 +254,7 @@ router.post(
   [
     body("email")
       .isEmail()
-      .normalizeEmail()
+      .normalizeEmail({ gmail_remove_dots: false })
       .withMessage("Valid email is required"),
     body("token").notEmpty().withMessage("Reset token is required"),
     body("password")

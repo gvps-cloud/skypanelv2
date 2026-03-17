@@ -193,7 +193,7 @@ export const UserValidation = {
       .optional()
       .isEmail()
       .withMessage('Please enter a valid email address')
-      .normalizeEmail()
+      .normalizeEmail({ gmail_remove_dots: false })
       .isLength({ max: 255 })
       .withMessage('Email must be less than 255 characters'),
     

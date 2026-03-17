@@ -108,7 +108,7 @@ router.post(
       .isLength({ max: 120 }).withMessage('Name must be 120 characters or fewer'),
     body('email')
       .isEmail().withMessage('Valid email is required')
-      .normalizeEmail(),
+      .normalizeEmail({ gmail_remove_dots: false }),
     body('subject')
       .isString()
       .trim()

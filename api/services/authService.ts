@@ -160,9 +160,9 @@ export class AuthService {
 
   static async login(data: LoginData) {
     try {
-      // Get user by email
+      // Get user by email (case-insensitive to handle legacy mixed-case emails)
       const userResult = await query(
-        'SELECT * FROM users WHERE email = $1',
+        'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
         [data.email]
       );
 

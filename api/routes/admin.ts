@@ -2117,7 +2117,7 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const result = await query(
-        `SELECT id, email, name, role, created_at, updated_at
+        `SELECT id, email, name, role, phone, timezone, created_at, updated_at
          FROM users
          ORDER BY created_at DESC`,
       );
@@ -2666,6 +2666,8 @@ router.get(
         u.email,
         u.name,
         u.role,
+        u.phone,
+        u.timezone,
         u.created_at,
         u.updated_at,
         COALESCE(
@@ -5487,7 +5489,12 @@ router.put(
 
       if (email !== undefined) {
         updateFields.push(`email = $${paramCount}`);
-        values.push(email.trim().toLowerCase());
+        // IMPORTANT: Use email as-is from validation middleware
+        // The normalizeEmail() middleware in UserValidation.update handles all normalization
+        // This ensures consistent email normalization with the login endpoint
+        // Bug fix: Previously used email.trim().toLowerCase() which caused login failures
+        // because normalizeEmail() applies additional transformations (Gmail dot removal, etc.)
+        values.push(email);
         paramCount++;
       }
 

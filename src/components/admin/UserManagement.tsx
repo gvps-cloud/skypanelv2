@@ -71,6 +71,8 @@ interface AdminUser {
     email: string;
     name: string;
     role: string;
+    phone?: string;
+    timezone?: string;
     created_at: string;
     updated_at: string;
 }
