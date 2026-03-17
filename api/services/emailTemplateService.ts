@@ -184,12 +184,45 @@ const normalizeTemplateData = async (
 ): Promise<Record<string, any>> => {
   const data = { ...(input || {}) };
 
-  const companyName = resolveCompanyName();
-  data.companyName ??= data.company_name ?? companyName;
-  data.company_name ??= data.companyName;
+  const aliasValue = (keys: string[]): string | undefined => {
+    for (const key of keys) {
+      const value = data[key];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value;
+      }
+    }
+    return undefined;
+  };
 
-  data.displayName ??= data.name ?? data.userName ?? 'there';
-  data.name ??= data.displayName;
+  const resolvedCompanyName =
+    aliasValue(['companyName', 'company_name', 'company', 'organizationName']) ??
+    resolveCompanyName();
+  data.companyName = resolvedCompanyName;
+  data.company_name ??= resolvedCompanyName;
+
+  const resolvedDisplayName =
+    aliasValue([
+      'displayName',
+      'name',
+      'userName',
+      'username',
+      'user_name',
+      'fullName',
+    ]) ?? 'there';
+  data.displayName = resolvedDisplayName;
+  data.name ??= resolvedDisplayName;
+  data.userName ??= resolvedDisplayName;
+  data.username ??= resolvedDisplayName;
+  data.user_name ??= resolvedDisplayName;
+  data.fullName ??= resolvedDisplayName;
+
+  const resolvedOrganizationName =
+    aliasValue(['organizationName', 'organization', 'orgName', 'org_name']) ??
+    '';
+  if (resolvedOrganizationName) {
+    data.organizationName = resolvedOrganizationName;
+    data.organization ??= resolvedOrganizationName;
+  }
 
   const palette = await getCachedEmailPalette();
   data.emailTheme ??= {
