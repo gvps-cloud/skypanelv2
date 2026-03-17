@@ -11,6 +11,80 @@ const router = express.Router();
 router.use(authenticateToken);
 router.use(requireAdmin);
 
+const extractHandlebarsVariables = (sources: Array<string | undefined | null>): string[] => {
+  const vars = new Set<string>();
+
+  const collectFromParam = (param: any) => {
+    if (!param) return;
+    if (param.type === 'PathExpression' && typeof param.original === 'string') {
+      vars.add(param.original);
+      return;
+    }
+    if (param.type === 'SubExpression') {
+      for (const p of param.params || []) collectFromParam(p);
+      return;
+    }
+  };
+
+  const visit = (node: any) => {
+    if (!node) return;
+
+    if (Array.isArray(node)) {
+      for (const child of node) visit(child);
+      return;
+    }
+
+    if (node.type === 'Program') {
+      visit(node.body);
+      return;
+    }
+
+    if (node.type === 'MustacheStatement') {
+      const isPlainVariable =
+        node.path?.type === 'PathExpression' &&
+        (node.params?.length ?? 0) === 0 &&
+        (node.hash?.pairs?.length ?? 0) === 0;
+      if (isPlainVariable && typeof node.path.original === 'string') {
+        vars.add(node.path.original);
+      }
+      for (const p of node.params || []) collectFromParam(p);
+      for (const pair of node.hash?.pairs || []) collectFromParam(pair?.value);
+      return;
+    }
+
+    if (node.type === 'BlockStatement') {
+      for (const p of node.params || []) collectFromParam(p);
+      visit(node.program);
+      visit(node.inverse);
+      return;
+    }
+
+    if (node.type === 'PartialStatement') {
+      return;
+    }
+
+    if (node.type === 'ContentStatement') {
+      return;
+    }
+
+    if (node.type === 'CommentStatement') {
+      return;
+    }
+  };
+
+  for (const source of sources) {
+    if (!source || typeof source !== 'string') continue;
+    try {
+      const ast = Handlebars.parse(source);
+      visit(ast as any);
+    } catch {
+      // Ignore parse errors; admins may be mid-edit.
+    }
+  }
+
+  return Array.from(vars).sort((a, b) => a.localeCompare(b));
+};
+
 /**
  * GET /api/admin/email-templates
  * List all email templates
@@ -20,7 +94,11 @@ router.get('/', async (req, res) => {
     const result = await query(
       'SELECT * FROM email_templates ORDER BY name ASC'
     );
-    res.json(result.rows);
+    const templates = (result.rows || []).map((row) => ({
+      ...row,
+      variables: extractHandlebarsVariables([row.subject, row.html_body, row.text_body])
+    }));
+    res.json(templates);
   } catch (error) {
     console.error('Error fetching email templates:', error);
     res.status(500).json({ error: 'Failed to fetch email templates' });
@@ -40,7 +118,10 @@ router.get('/:name', async (req, res) => {
       return res.status(404).json({ error: 'Email template not found' });
     }
     
-    res.json(template);
+    res.json({
+      ...template,
+      variables: extractHandlebarsVariables([template.subject, template.html_body, template.text_body])
+    });
   } catch (error) {
     console.error(`Error fetching email template ${name}:`, error);
     res.status(500).json({ error: 'Failed to fetch email template' });
@@ -53,7 +134,7 @@ router.get('/:name', async (req, res) => {
  */
 router.put('/:name', async (req: AuthenticatedRequest, res) => {
   const { name } = req.params;
-  const { subject, html_body, text_body } = req.body;
+  const { subject, html_body, text_body, use_default_theme } = req.body;
   
   if (!subject || !html_body || !text_body) {
     return res.status(400).json({ error: 'Missing required fields: subject, html_body, text_body' });
@@ -65,15 +146,36 @@ router.put('/:name', async (req: AuthenticatedRequest, res) => {
     if (!existingTemplate) {
       return res.status(404).json({ error: 'Email template not found' });
     }
+
+    const resolvedUseDefaultTheme =
+      typeof use_default_theme === 'boolean'
+        ? use_default_theme
+        : existingTemplate.use_default_theme !== false;
     
-    // Update template
-    const result = await query(
-      `UPDATE email_templates 
-       SET subject = $1, html_body = $2, text_body = $3, updated_at = NOW() 
-       WHERE name = $4 
-       RETURNING *`,
-      [subject, html_body, text_body, name]
-    );
+    // Update template (tolerate older DBs missing the column)
+    let result;
+    try {
+      result = await query(
+        `UPDATE email_templates 
+         SET subject = $1, html_body = $2, text_body = $3, use_default_theme = $4, updated_at = NOW() 
+         WHERE name = $5 
+         RETURNING *`,
+        [subject, html_body, text_body, resolvedUseDefaultTheme, name]
+      );
+    } catch (err: any) {
+      const message = (err?.message as string | undefined) || '';
+      if (message.toLowerCase().includes('use_default_theme') && message.toLowerCase().includes('does not exist')) {
+        result = await query(
+          `UPDATE email_templates 
+           SET subject = $1, html_body = $2, text_body = $3, updated_at = NOW() 
+           WHERE name = $4 
+           RETURNING *`,
+          [subject, html_body, text_body, name]
+        );
+      } else {
+        throw err;
+      }
+    }
     
     const updatedTemplate = result.rows[0];
     
@@ -104,21 +206,32 @@ router.put('/:name', async (req: AuthenticatedRequest, res) => {
  * Can preview existing template by name OR preview provided content
  */
 router.post('/preview', async (req, res) => {
-  const { name, data, subject, html, text } = req.body;
+  const { name, data, subject, html, text, use_default_theme } = req.body;
   const templateData = data || {};
   
   try {
-    // If explicit content is provided, use it
+    // If explicit content is provided, use it (optionally themed)
     if (subject !== undefined && html !== undefined && text !== undefined) {
-      const subjectTemplate = Handlebars.compile(subject);
-      const htmlTemplate = Handlebars.compile(html);
-      const textTemplate = Handlebars.compile(text);
-      
-      return res.json({
-        subject: subjectTemplate(templateData),
-        html: htmlTemplate(templateData),
-        text: textTemplate(templateData)
+      let resolvedUseDefaultTheme = typeof use_default_theme === 'boolean'
+        ? use_default_theme
+        : true;
+
+      if (typeof use_default_theme !== 'boolean' && name) {
+        const existingTemplate = await EmailTemplateService.getTemplate(name);
+        if (existingTemplate) {
+          resolvedUseDefaultTheme = existingTemplate.use_default_theme !== false;
+        }
+      }
+
+      const rendered = await EmailTemplateService.renderAdHocTemplate({
+        subject,
+        html,
+        text,
+        data: templateData,
+        useDefaultTheme: resolvedUseDefaultTheme,
       });
+
+      return res.json(rendered);
     }
     
     // Otherwise, look up by name

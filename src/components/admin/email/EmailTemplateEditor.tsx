@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
@@ -43,6 +44,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
     subject: template.subject,
     html_body: template.html_body,
     text_body: template.text_body,
+    use_default_theme: template.use_default_theme ?? true,
   });
 
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -58,6 +60,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
       subject: template.subject,
       html_body: template.html_body,
       text_body: template.text_body,
+      use_default_theme: template.use_default_theme ?? true,
     });
   }, [template]);
 
@@ -76,6 +79,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
         subject: formData.subject,
         html: formData.html_body,
         text: formData.text_body,
+        use_default_theme: formData.use_default_theme,
         // We could add a way to provide sample data here
       });
       setPreviewContent(result);
@@ -136,6 +140,25 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
                   value={formData.subject}
                   onChange={handleChange}
                   placeholder="Email subject line..."
+                />
+              </div>
+
+              <div className="flex items-start justify-between gap-4 rounded-lg border bg-muted/30 px-4 py-3">
+                <div className="space-y-1">
+                  <Label className="text-sm">Use default email theme</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Wraps the HTML body with the platform theme from{" "}
+                    <span className="font-medium">Admin → Theme</span>.
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.use_default_theme ?? true}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      use_default_theme: Boolean(checked),
+                    }))
+                  }
                 />
               </div>
 
@@ -254,7 +277,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
                 </TabsList>
                 <TabsContent
                   value="preview-html"
-                  className="mt-4 border rounded-md p-4 bg-white min-h-[300px]"
+                  className="mt-4 border rounded-md p-0 bg-background min-h-[300px]"
                 >
                   <div
                     dangerouslySetInnerHTML={{ __html: previewContent.html }}

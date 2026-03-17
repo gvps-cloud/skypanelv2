@@ -176,10 +176,15 @@ export async function sendWelcomeEmail(
   name?: string,
 ): Promise<void> {
   const displayName = name || "there";
+  const companyName =
+    config.COMPANY_BRAND_NAME ||
+    process.env.COMPANY_NAME ||
+    process.env.VITE_COMPANY_NAME ||
+    "SkyPanelV2";
   
-  const { subject, html, text } = await renderTemplate("welcome_email", {
-    name: displayName,
-    company_name: config.COMPANY_BRAND_NAME,
+  const { subject, html, text } = await renderTemplate("welcome", {
+    displayName,
+    companyName,
   });
 
   await sendEmail({ to, subject, html, text });
@@ -203,14 +208,19 @@ export async function sendInvitationEmail(
   const acceptLink = `${baseUrl}/organizations/invitations/${invitationData.token}`;
   const declineLink = `${baseUrl}/organizations/invitations/${invitationData.token}?action=decline`;
   const formattedExpiresAt = new Date(invitationData.expiresAt).toLocaleDateString();
+  const companyName =
+    config.COMPANY_BRAND_NAME ||
+    process.env.COMPANY_NAME ||
+    process.env.VITE_COMPANY_NAME ||
+    "SkyPanelV2";
 
   const { subject, html, text } = await renderTemplate("invitation", {
     ...invitationData,
     invitationLink,
     acceptLink,
     declineLink,
-    formattedExpiresAt,
-    company_name: config.COMPANY_BRAND_NAME,
+    expiresAt: formattedExpiresAt,
+    companyName,
   });
 
   await sendEmail({ 
@@ -226,10 +236,15 @@ export async function sendLoginNotificationEmail(
   name?: string,
 ): Promise<void> {
   const displayName = name || "there";
+  const companyName =
+    config.COMPANY_BRAND_NAME ||
+    process.env.COMPANY_NAME ||
+    process.env.VITE_COMPANY_NAME ||
+    "SkyPanelV2";
   
   const { subject, html, text } = await renderTemplate("login_notification", {
-    name: displayName,
-    company_name: config.COMPANY_BRAND_NAME,
+    displayName,
+    companyName,
   });
 
   await sendEmail({ to, subject, html, text });
@@ -246,13 +261,18 @@ export async function sendPasswordResetEmail(
   );
   const resetPageUrl = `${baseUrl}/reset-password`;
   const displayName = name || "there";
+  const companyName =
+    config.COMPANY_BRAND_NAME ||
+    process.env.COMPANY_NAME ||
+    process.env.VITE_COMPANY_NAME ||
+    "SkyPanelV2";
   
   const { subject, html, text } = await renderTemplate("password_reset", {
-    name: displayName,
+    displayName,
     token,
     resetPageUrl,
     email: to,
-    company_name: config.COMPANY_BRAND_NAME,
+    companyName,
   });
 
   await sendEmail({ to, subject, html, text });
@@ -294,9 +314,15 @@ export async function sendContactFormEmail(
   data: ContactFormEmailData,
   replyTo?: string,
 ): Promise<void> {
+  const companyName =
+    config.COMPANY_BRAND_NAME ||
+    process.env.COMPANY_NAME ||
+    process.env.VITE_COMPANY_NAME ||
+    "SkyPanelV2";
   const { subject, html, text } = await renderTemplate("contact_form", {
     ...data,
-    company_name: config.COMPANY_BRAND_NAME,
+    submittedAt: data.sentAt,
+    companyName,
   });
 
   const senderEmail = config.FROM_EMAIL || config.CONTACT_FORM_RECIPIENT;
@@ -333,15 +359,20 @@ export async function sendAccountNotificationEmail({
   occurredAt,
 }: AccountNotificationEmailOptions): Promise<void> {
   const displayName = name || "there";
+  const companyName =
+    config.COMPANY_BRAND_NAME ||
+    process.env.COMPANY_NAME ||
+    process.env.VITE_COMPANY_NAME ||
+    "SkyPanelV2";
   
   const { subject, html, text } = await renderTemplate("account_notification", {
-    name: displayName,
+    displayName,
     category,
     title,
     message,
     eventType,
     occurredAt: occurredAt || new Date().toISOString(),
-    company_name: config.COMPANY_BRAND_NAME,
+    companyName,
   });
 
   await sendEmail({ to, subject, html, text });

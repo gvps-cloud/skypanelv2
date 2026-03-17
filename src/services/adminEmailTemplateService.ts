@@ -6,7 +6,8 @@ export interface EmailTemplate {
   subject: string;
   html_body: string;
   text_body: string;
-  variables: string[];
+  use_default_theme?: boolean;
+  variables?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -15,6 +16,7 @@ export interface UpdateEmailTemplateData {
   subject: string;
   html_body: string;
   text_body: string;
+  use_default_theme?: boolean;
 }
 
 export interface PreviewEmailTemplateData {
@@ -23,6 +25,7 @@ export interface PreviewEmailTemplateData {
   html?: string;
   text?: string;
   data?: Record<string, any>;
+  use_default_theme?: boolean;
 }
 
 export const adminEmailTemplateService = {
