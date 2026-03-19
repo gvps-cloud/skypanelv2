@@ -27,6 +27,7 @@ import {
   shouldFilterByAllowedRegions,
 } from "../lib/providerRegions.js";
 import { RoleService } from "../services/roles.js";
+import { EgressBillingService } from "../services/egressBillingService.js";
 const router = express.Router();
 
 router.use(authenticateToken, requireOrganization);
@@ -4266,6 +4267,10 @@ router.delete("/:id", async (req: Request, res: Response) => {
     const row = rowRes.rows[0];
     const providerType = row.provider_type || "linode";
     const providerInstanceId = Number(row.provider_instance_id);
+
+    if (providerType === "linode") {
+      await EgressBillingService.captureDeletionSnapshot(String(id));
+    }
 
     await linodeService.deleteLinodeInstance(providerInstanceId);
 

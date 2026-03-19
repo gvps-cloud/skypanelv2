@@ -412,7 +412,7 @@ export class EgressBillingService {
     const billingMonth = getBillingMonthDate(month);
     const [pricingRows, usageRows, accountTransfer, regions] = await Promise.all([
       this.listRegionPricing('linode'),
-      this.collectUsageRows(),
+      this.collectUsageRows(billingMonth),
       linodeService.getAccountTransfer(),
       linodeService.getLinodeRegions(),
     ]);
@@ -426,6 +426,93 @@ export class EgressBillingService {
     const pools = this.buildPools({ usageRows, accountTransfer, pricingByRegion, regionLabelMap });
     await this.persistProjection(billingMonth, pools);
     return pools;
+  }
+
+  static async captureDeletionSnapshot(vpsInstanceId: string): Promise<void> {
+    const billingMonth = getBillingMonthDate();
+    const result = await query(
+      `SELECT
+         vi.id AS vps_instance_id,
+         vi.organization_id,
+         vi.provider_instance_id,
+         vi.label,
+         COALESCE(vi.configuration->>'region', vp_region.region_id, 'unknown') AS region_id,
+         up_regions.region_label AS region_label,
+         COALESCE(
+           NULLIF(vp.specifications->>'transfer', '')::numeric,
+           NULLIF(vp.specifications->>'bandwidth', '')::numeric,
+           NULLIF(vp.specifications->>'transfer_gb', '')::numeric,
+           0
+         ) AS transfer_included_gb
+       FROM vps_instances vi
+       LEFT JOIN vps_plans vp ON (vp.id::text = vi.plan_id OR vp.provider_plan_id = vi.plan_id)
+       LEFT JOIN LATERAL (
+         SELECT region_id
+         FROM vps_plan_regions
+         WHERE vps_plan_id = vp.id
+         ORDER BY region_id ASC
+         LIMIT 1
+       ) vp_region ON true
+       LEFT JOIN region_egress_pricing up_regions ON up_regions.region_id = COALESCE(vi.configuration->>'region', vp_region.region_id)
+       WHERE vi.id = $1
+         AND COALESCE(vi.provider_type, 'linode') = 'linode'
+       LIMIT 1`,
+      [vpsInstanceId],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      return;
+    }
+
+    const regionId = String(row.region_id || 'unknown');
+    if (regionId === 'unknown') {
+      throw new Error(`Unable to determine region for VPS ${vpsInstanceId}`);
+    }
+
+    const providerInstanceId = Number(row.provider_instance_id);
+    if (!Number.isFinite(providerInstanceId)) {
+      throw new Error(`Invalid provider_instance_id for VPS ${vpsInstanceId}`);
+    }
+
+    const transfer = await linodeService.getLinodeInstanceTransfer(providerInstanceId);
+    const measuredUsageGb = normalizeTransferUsageGb(transfer.used);
+
+    await query(
+      `INSERT INTO vps_egress_usage_snapshots (
+         vps_instance_id,
+         organization_id,
+         provider_instance_id,
+         label,
+         region_id,
+         region_label,
+         transfer_included_gb,
+         measured_usage_gb,
+         billing_month,
+         created_at,
+         updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+       ON CONFLICT (vps_instance_id, billing_month)
+       DO UPDATE SET
+         provider_instance_id = EXCLUDED.provider_instance_id,
+         label = EXCLUDED.label,
+         region_id = EXCLUDED.region_id,
+         region_label = EXCLUDED.region_label,
+         transfer_included_gb = EXCLUDED.transfer_included_gb,
+         measured_usage_gb = EXCLUDED.measured_usage_gb,
+         updated_at = NOW()`,
+      [
+        vpsInstanceId,
+        String(row.organization_id),
+        String(row.provider_instance_id),
+        String(row.label || row.provider_instance_id || 'Unnamed VPS'),
+        regionId,
+        row.region_label ? String(row.region_label) : null,
+        Number(row.transfer_included_gb || 0),
+        measuredUsageGb,
+        billingMonth,
+      ],
+    );
   }
 
   static async executeLiveBilling(month?: string): Promise<{
@@ -830,7 +917,7 @@ export class EgressBillingService {
     };
   }
 
-  private static async collectUsageRows(): Promise<UsageRow[]> {
+  private static async collectUsageRows(billingMonth: string): Promise<UsageRow[]> {
     const result = await query(
       `SELECT
          vi.id AS vps_instance_id,
@@ -861,7 +948,7 @@ export class EgressBillingService {
     );
 
     const rows = result.rows || [];
-    const resolvedRows = await Promise.all(
+    const activeRows = await Promise.all(
       rows.map(async (row): Promise<UsageRow> => {
         const providerInstanceId = Number(row.provider_instance_id);
         let measuredUsageGb = 0;
@@ -889,7 +976,38 @@ export class EgressBillingService {
       }),
     );
 
-    return resolvedRows.filter((row) => row.region_id !== 'unknown');
+    const snapshotResult = await query(
+      `SELECT
+         s.organization_id,
+         o.name AS organization_name,
+         s.vps_instance_id,
+         s.provider_instance_id,
+         s.label,
+         s.region_id,
+         s.region_label,
+         s.transfer_included_gb,
+         s.measured_usage_gb
+       FROM vps_egress_usage_snapshots s
+       JOIN organizations o ON o.id = s.organization_id
+       LEFT JOIN vps_instances vi ON vi.id = s.vps_instance_id
+       WHERE s.billing_month = $1
+         AND vi.id IS NULL`,
+      [billingMonth],
+    );
+
+    const snapshotRows = (snapshotResult.rows || []).map((row): UsageRow => ({
+      organization_id: String(row.organization_id),
+      organization_name: String(row.organization_name || 'Unknown Organization'),
+      vps_instance_id: String(row.vps_instance_id),
+      provider_instance_id: String(row.provider_instance_id || ''),
+      label: String(row.label || row.provider_instance_id || 'Unnamed VPS'),
+      region_id: String(row.region_id || 'unknown'),
+      region_label: row.region_label ? String(row.region_label) : null,
+      transfer_included_gb: Number(row.transfer_included_gb || 0),
+      measured_usage_gb: Number(row.measured_usage_gb || 0),
+    }));
+
+    return [...activeRows, ...snapshotRows].filter((row) => row.region_id !== 'unknown');
   }
 
   private static buildPools(args: {
