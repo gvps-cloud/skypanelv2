@@ -31,6 +31,7 @@ import {
   FileText,
   Save,
   Loader2,
+  ShoppingCart,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
@@ -62,6 +63,8 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Area, AreaChart, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ActiveHoursDisplay } from "@/components/VPS/ActiveHoursDisplay";
+import { egressService } from "@/services/egressService";
+import { Database } from "lucide-react";
 
 interface MetricPoint {
   timestamp: number;
@@ -660,6 +663,11 @@ const VPSDetail: React.FC = () => {
   const [rdnsBaseDomain, setRdnsBaseDomain] =
     useState<string>("ip.rev.gvps.cloud");
 
+  // Egress credits state
+  const [egressBalance, setEgressBalance] = useState<number | null>(null);
+  const [egressLoading, setEgressLoading] = useState<boolean>(false);
+  const [egressMonthlyUsed, setEgressMonthlyUsed] = useState<number>(0);
+
   const tabDefinitions = useMemo<TabDefinition[]>(() => {
     const tabs: TabDefinition[] = [
       { id: "overview", label: "Overview", icon: Server },
@@ -1216,6 +1224,34 @@ const VPSDetail: React.FC = () => {
       !currentWindow || currentWindow === "Scheduling" ? "" : currentWindow,
     );
   }, [detail?.backups?.schedule?.day, detail?.backups?.schedule?.window]);
+
+  // Load egress credit balance
+  useEffect(() => {
+    const loadEgressData = async () => {
+      if (!detail?.id) return;
+
+      setEgressLoading(true);
+      try {
+        // Get organization's credit balance
+        const balanceResult = await egressService.getBalance();
+        if (balanceResult.success && balanceResult.data) {
+          setEgressBalance(balanceResult.data.creditsGb);
+        }
+
+        // Get monthly credits used by this VPS
+        const summaryResult = await egressService.getVPSUsageSummary(detail.id);
+        if (summaryResult.success && summaryResult.data) {
+          setEgressMonthlyUsed(summaryResult.data.monthlyCreditsUsed);
+        }
+      } catch (err) {
+        console.error("Failed to load egress data:", err);
+      } finally {
+        setEgressLoading(false);
+      }
+    };
+
+    loadEgressData();
+  }, [detail?.id]);
 
   const performAction = useCallback(
     async (action: "boot" | "shutdown" | "reboot") => {
@@ -2748,6 +2784,54 @@ const VPSDetail: React.FC = () => {
                           <p className="text-xs text-muted-foreground">
                             Usage data unavailable.
                           </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Egress Credits Section */}
+                    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm border bg-background/60">
+                      <div className="flex flex-col gap-6">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 dark:bg-blue-500/20">
+                              <Database className="h-5 w-5 text-blue-500" />
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Pre-paid egress credits
+                              </p>
+                              <h3 className="mt-1 text-base font-semibold text-foreground truncate">
+                                {egressLoading ? "Loading..." : egressBalance !== null ? `${egressBalance.toFixed(2)} GB available` : "No credits"}
+                              </h3>
+                            </div>
+                          </div>
+                          <Link
+                            to="/egress-credits"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                          >
+                            <ShoppingCart className="h-3.5 w-3.5" />
+                            Purchase Credits
+                          </Link>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Credits are deducted hourly when this VPS exceeds its included transfer quota.{" "}
+                          {egressMonthlyUsed > 0 && (
+                            <>
+                              This VPS has used <span className="font-semibold text-foreground">{egressMonthlyUsed.toFixed(2)} GB</span> of credits this month.
+                            </>
+                          )}
+                        </p>
+                        {egressBalance !== null && egressBalance < 200 && (
+                          <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/30 dark:text-amber-200">
+                            <AlertTriangle className="h-4 w-4" />
+                            Low egress credits - VPS may be suspended
+                          </div>
+                        )}
+                        {egressBalance === 0 && (
+                          <div className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-900/40 dark:bg-red-900/30 dark:text-red-200">
+                            <AlertTriangle className="h-4 w-4" />
+                            No egress credits - Add funds to prevent suspension
+                          </div>
                         )}
                       </div>
                     </div>

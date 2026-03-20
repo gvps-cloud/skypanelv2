@@ -6,6 +6,15 @@ import { InvitationService } from '../services/invitations.js';
 import { ActivityFeedService } from '../services/activityFeed.js';
 import { EgressBillingService } from '../services/egressBillingService.js';
 import { RoleService } from '../services/roles.js';
+import {
+  getEgressCreditBalanceDetails,
+  getEgressCreditPurchaseHistory,
+  getAvailableCreditPacks,
+  purchaseEgressCredits,
+  addEgressCredits,
+} from '../services/egressCreditService.js';
+import { PayPalService } from '../services/paypalService.js';
+import { logActivity } from '../services/activityLogger.js';
 
 const router = express.Router();
 
@@ -191,6 +200,8 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
         tickets_manage: false,
         billing_view: false,
         billing_manage: false,
+        egress_view: false,
+        egress_manage: false,
         members_manage: false,
         settings_manage: false
       };
@@ -221,10 +232,10 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
         if (member.legacy_role === 'owner') {
           Object.keys(permissions).forEach(key => (permissions as any)[key] = true);
         } else if (member.legacy_role === 'admin') {
-          ['vps_view', 'vps_create', 'vps_delete', 'vps_manage', 
+          ['vps_view', 'vps_create', 'vps_delete', 'vps_manage',
            'ssh_keys_view', 'ssh_keys_manage',
-           'tickets_view', 'tickets_create', 'tickets_manage', 
-           'billing_view', 'settings_manage'].forEach(p => {
+           'tickets_view', 'tickets_create', 'tickets_manage',
+           'billing_view', 'egress_view', 'settings_manage'].forEach(p => {
              if (p in permissions) (permissions as any)[p] = true;
            });
         } else if (member.legacy_role === 'member') {
@@ -313,6 +324,268 @@ router.get('/:id/egress', checkOrganizationMembership, async (req: Authenticated
   } catch (error) {
     console.error('Failed to fetch organization egress overview:', error);
     res.status(500).json({ error: 'Failed to fetch organization egress overview' });
+  }
+});
+
+// Middleware to check egress_view permission
+const checkEgressViewPermission = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  const user = req.user;
+
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  // Platform admins can view everything
+  if (user.role === 'admin') {
+    return next();
+  }
+
+  try {
+    const hasPermission = await RoleService.checkPermission(user.id, id, 'egress_view');
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+    next();
+  } catch (error) {
+    console.error('Permission check failed:', error);
+    return res.status(500).json({ error: 'Permission check failed' });
+  }
+};
+
+// Middleware to check egress_manage permission
+const checkEgressManagePermission = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  const user = req.user;
+
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  // Platform admins can manage everything
+  if (user.role === 'admin') {
+    return next();
+  }
+
+  try {
+    const hasPermission = await RoleService.checkPermission(user.id, id, 'egress_manage');
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+    next();
+  } catch (error) {
+    console.error('Permission check failed:', error);
+    return res.status(500).json({ error: 'Permission check failed' });
+  }
+};
+
+// GET /:id/egress/credits - Get organization's egress credit balance and purchase history
+router.get('/:id/egress/credits', checkEgressViewPermission, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const limit = parseInt(req.query.limit as string) || 20;
+
+  try {
+    const balanceDetails = await getEgressCreditBalanceDetails(id);
+    const history = await getEgressCreditPurchaseHistory(id, limit);
+
+    res.json({
+      success: true,
+      data: {
+        organizationId: id,
+        creditsGb: balanceDetails.creditsGb,
+        warning: balanceDetails.warning,
+        purchaseHistory: history,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to get egress credits:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to get egress credits' });
+  }
+});
+
+// GET /:id/egress/credits/packs - Get available credit packs
+router.get('/:id/egress/credits/packs', checkEgressViewPermission, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const packs = await getAvailableCreditPacks();
+
+    res.json({
+      success: true,
+      data: packs,
+    });
+  } catch (error) {
+    console.error('Failed to get credit packs:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to get credit packs' });
+  }
+});
+
+// POST /:id/egress/credits/purchase - Initiate egress credit purchase
+router.post('/:id/egress/credits/purchase', checkEgressManagePermission, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const user = req.user;
+  const { packId } = req.body;
+
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  if (!packId || typeof packId !== 'string') {
+    return res.status(400).json({ error: 'Pack ID is required' });
+  }
+
+  try {
+    // Get available packs and find the requested one
+    const packs = await getAvailableCreditPacks();
+    const pack = packs.find((p) => p.id === packId);
+
+    if (!pack) {
+      return res.status(404).json({ error: 'Credit pack not found' });
+    }
+
+    // Determine client base URL for return URLs
+    const originHeader = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
+    const forwardedProto = typeof req.headers['x-forwarded-proto'] === 'string' ? req.headers['x-forwarded-proto'] : undefined;
+    const forwardedHost = typeof req.headers['x-forwarded-host'] === 'string' ? req.headers['x-forwarded-host'] : undefined;
+    const host = req.get('host');
+
+    let clientBaseUrl = process.env.CLIENT_URL;
+    if (!clientBaseUrl) {
+      if (originHeader) {
+        clientBaseUrl = originHeader;
+      } else if (forwardedHost) {
+        const proto = forwardedProto || req.protocol;
+        clientBaseUrl = `${proto}://${forwardedHost}`;
+      } else if (host) {
+        clientBaseUrl = `${req.protocol}://${host}`;
+      } else {
+        clientBaseUrl = 'http://localhost:5173';
+      }
+    }
+
+    // Create PayPal payment
+    const result = await PayPalService.createPayment({
+      amount: pack.price,
+      currency: 'USD',
+      description: `Egress Credit Pack: ${pack.id} (${pack.gb}GB)`,
+      organizationId: id,
+      userId: user.id,
+      clientBaseUrl,
+    });
+
+    if (result.success) {
+      // Log the purchase initiation
+      await logActivity({
+        userId: user.id,
+        organizationId: id,
+        eventType: 'egress.credits.purchase_initiated',
+        entityType: 'egress_credits',
+        message: `Initiated purchase of ${pack.gb}GB egress credit pack`,
+        status: 'pending',
+        metadata: {
+          packId,
+          amount: pack.price,
+          paymentId: result.paymentId,
+        },
+      });
+
+      res.json({
+        success: true,
+        paymentId: result.paymentId,
+        approvalUrl: result.approvalUrl,
+        packId,
+        amount: pack.price,
+        creditsGb: pack.gb,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to create payment',
+      });
+    }
+  } catch (error) {
+    console.error('Failed to create egress credit purchase:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to create purchase' });
+  }
+});
+
+// POST /:id/egress/credits/purchase/complete - Complete egress credit purchase
+router.post('/:id/egress/credits/purchase/complete', checkEgressManagePermission, async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const user = req.user;
+  const { paymentId, packId } = req.body;
+
+  if (!user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  if (!paymentId || !packId) {
+    return res.status(400).json({ error: 'Payment ID and Pack ID are required' });
+  }
+
+  try {
+    // Verify the payment was captured
+    const transactionResult = await query(
+      `SELECT id, amount, currency, status
+       FROM payment_transactions
+       WHERE paypal_order_id = $1 AND organization_id = $2`,
+      [paymentId, id],
+    );
+
+    if (transactionResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    const transaction = transactionResult.rows[0];
+
+    if (transaction.status !== 'completed') {
+      return res.status(400).json({ error: 'Payment not completed' });
+    }
+
+    // Check if credits were already applied for this transaction
+    const existingPurchaseResult = await query(
+      `SELECT id FROM egress_credit_packs WHERE payment_transaction_id = $1`,
+      [transaction.id],
+    );
+
+    if (existingPurchaseResult.rows.length > 0) {
+      return res.json({
+        success: true,
+        message: 'Credits already applied',
+        data: { purchaseId: existingPurchaseResult.rows[0].id },
+      });
+    }
+
+    // Apply the credits
+    await purchaseEgressCredits(id, packId, transaction.id, user.id);
+
+    const balanceDetails = await getEgressCreditBalanceDetails(id);
+
+    // Log the successful purchase
+    await logActivity({
+      userId: user.id,
+      organizationId: id,
+      eventType: 'egress.credits.purchased',
+      entityType: 'egress_credits',
+      message: `Purchased egress credit pack`,
+      status: 'success',
+      metadata: {
+        packId,
+        transactionId: transaction.id,
+        newBalance: balanceDetails.creditsGb,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Egress credits purchased successfully',
+      data: {
+        organizationId: id,
+        newBalance: balanceDetails.creditsGb,
+        warning: balanceDetails.warning,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to complete egress credit purchase:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to complete purchase' });
   }
 });
 

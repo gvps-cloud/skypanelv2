@@ -666,6 +666,66 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "protected": false
   },
   {
+    "method": "POST",
+    "path": "/api/egress/admin/billing/run",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/egress/admin/credits/:orgId",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/egress/admin/credits/:orgId/balance",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/egress/admin/settings/packs",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/egress/admin/settings/packs",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/egress/credits",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/egress/credits/history",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/egress/credits/packs",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/egress/credits/purchase",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/egress/credits/purchase/complete",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/egress/usage/:vpsId",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/egress/usage/:vpsId/summary",
+    "protected": true
+  },
+  {
     "method": "GET",
     "path": "/api/faq/categories",
     "protected": false
@@ -788,6 +848,26 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "GET",
     "path": "/api/organizations/:id/egress",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/organizations/:id/egress/credits",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/organizations/:id/egress/credits/packs",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/organizations/:id/egress/credits/purchase",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/organizations/:id/egress/credits/purchase/complete",
     "protected": true
   },
   {

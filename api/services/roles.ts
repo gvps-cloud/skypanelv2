@@ -1,7 +1,7 @@
 import { query, transaction } from '../lib/database.js';
 import { v4 as uuidv4 } from 'uuid';
 
-export type Permission = 
+export type Permission =
   | 'vps_view'
   | 'vps_create'
   | 'vps_delete'
@@ -13,6 +13,8 @@ export type Permission =
   | 'tickets_manage'
   | 'billing_view'
   | 'billing_manage'
+  | 'egress_view'
+  | 'egress_manage'
   | 'members_manage'
   | 'settings_manage';
 
@@ -43,6 +45,7 @@ const PREDEFINED_ROLES: Record<string, Permission[]> = {
     'ssh_keys_view', 'ssh_keys_manage',
     'tickets_view', 'tickets_create', 'tickets_manage',
     'billing_view', 'billing_manage',
+    'egress_view', 'egress_manage',
     'members_manage',
     'settings_manage'
   ],
@@ -51,6 +54,7 @@ const PREDEFINED_ROLES: Record<string, Permission[]> = {
     'ssh_keys_view', 'ssh_keys_manage',
     'tickets_view', 'tickets_create', 'tickets_manage',
     'billing_view',
+    'egress_view',
     'settings_manage'
   ],
   vps_manager: [

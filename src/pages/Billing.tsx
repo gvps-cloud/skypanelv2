@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Wallet,
   Plus,
@@ -18,7 +18,7 @@ import {
   RefreshCw,
   AlertTriangle,
   FileText,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { paymentService, type WalletTransaction, type PaymentHistory, type VPSUptimeSummary, type BillingSummary } from '../services/paymentService';

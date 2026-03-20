@@ -35,6 +35,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import VPS from "./pages/VPS";
 import Billing from "./pages/Billing";
+import EgressCredits from "./pages/EgressCredits";
 import InvoiceDetail from "./pages/InvoiceDetail";
 import TransactionDetail from "./pages/TransactionDetail";
 import BillingPaymentSuccess from "./pages/BillingPaymentSuccess";
@@ -332,6 +333,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <BillingPaymentCancel />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/egress-credits"
+          element={
+            <ProtectedRoute>
+              <EgressCredits />
             </ProtectedRoute>
           }
         />

@@ -20,10 +20,14 @@ import {
   Clock,
   CheckCircle2,
   RefreshCw,
+  Database,
+  ShoppingCart,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/api";
+import { egressService } from "@/services/egressService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +94,14 @@ const Organizations: React.FC = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
+  const [egressCredits, setEgressCredits] = useState<{
+    creditsGb: number;
+    warning: boolean;
+    purchaseHistory: any[];
+  } | null>(null);
+  const [creditsLoading, setCreditsLoading] = useState(false);
+  const [creditPacks, setCreditPacks] = useState<any[]>([]);
+  const [packsLoading, setPacksLoading] = useState(false);
   const { token, user, switchOrganization } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -151,6 +163,43 @@ const Organizations: React.FC = () => {
       setEgressLoading(false);
     }
   }, [token, egressMonth]);
+
+  const loadEgressCredits = useCallback(async (organizationId: string) => {
+    setCreditsLoading(true);
+    try {
+      const result = await egressService.getOrganizationEgressCredits(organizationId, 20);
+      if (result.success && result.data) {
+        setEgressCredits({
+          creditsGb: result.data.creditsGb,
+          warning: result.data.warning,
+          purchaseHistory: result.data.purchaseHistory,
+        });
+      }
+    } catch (error: any) {
+      console.error("Failed to load egress credits:", error);
+      toast.error(error.message || "Failed to load egress credits");
+    } finally {
+      setCreditsLoading(false);
+    }
+  }, []);
+
+  const loadCreditPacks = useCallback(async () => {
+    setPacksLoading(true);
+    try {
+      const result = await egressService.getBalance(); // Reuse existing endpoint for packs
+      if (result.success) {
+        // Load packs from the standalone endpoint
+        const packsResult = await egressService.getCreditPacks();
+        if (packsResult.success && packsResult.data) {
+          setCreditPacks(packsResult.data);
+        }
+      }
+    } catch (error: any) {
+      console.error("Failed to load credit packs:", error);
+    } finally {
+      setPacksLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadOrganizations(currentPage, itemsPerPage);
@@ -297,8 +346,10 @@ const Organizations: React.FC = () => {
   useEffect(() => {
     if (selectedOrganization?.id) {
       loadEgressOverview(selectedOrganization.id);
+      loadEgressCredits(selectedOrganization.id);
+      loadCreditPacks();
     }
-  }, [selectedOrganization?.id, loadEgressOverview]);
+  }, [selectedOrganization?.id, loadEgressOverview, loadEgressCredits, loadCreditPacks]);
 
   const handleOrganizationUpdated = useCallback(async () => {
     await Promise.all([
@@ -1247,6 +1298,114 @@ const Organizations: React.FC = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Egress Credits Management Card */}
+              {selectedOrganizationResources?.permissions.egress_view && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Database className="h-5 w-5 text-primary" />
+                          Egress Credits
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Pre-paid credits for network transfer overages
+                        </p>
+                      </div>
+                      {selectedOrganizationResources?.permissions.egress_manage && (
+                        <Button
+                          onClick={() => {
+                            if (user?.organizationId !== selectedOrganization.id) {
+                              handleSwitchOrganization(selectedOrganization.id).then(() => {
+                                navigate("/egress-credits");
+                              });
+                            } else {
+                              navigate("/egress-credits");
+                            }
+                          }}
+                          disabled={creditsLoading}
+                        >
+                          <ShoppingCart className="mr-2 h-4 w-4" />
+                          Purchase Credits
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {creditsLoading ? (
+                      <Skeleton className="h-20" />
+                    ) : egressCredits ? (
+                      <>
+                        {/* Credit Balance Display */}
+                        <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Available Credits for {selectedOrganization.name}
+                            </p>
+                            <p className="text-2xl font-bold mt-1">
+                              {egressCredits.creditsGb.toFixed(2)} GB
+                            </p>
+                          </div>
+                          {egressCredits.warning && (
+                            <Badge variant="outline" className="border-amber-500 text-amber-700">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Low Balance
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Info about shared pool */}
+                        <div className="rounded-lg bg-muted/50 border border-border p-4">
+                          <p className="text-sm text-muted-foreground">
+                            <strong className="text-foreground">Shared Pool:</strong> Credits are shared across all {selectedOrganization.stats.member_count} members of {selectedOrganization.name}.
+                            Any member can view credit usage, and members with appropriate permissions can purchase additional credits.
+                          </p>
+                        </div>
+
+                        {/* Purchase History */}
+                        {egressCredits.purchaseHistory.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="text-sm font-semibold">Recent Purchases</h4>
+                            <div className="rounded-md border">
+                              <table className="w-full text-sm">
+                                <thead className="bg-muted/50">
+                                  <tr>
+                                    <th className="p-2 text-left">Date</th>
+                                    <th className="p-2 text-left">Pack</th>
+                                    <th className="p-2 text-right">Credits</th>
+                                    <th className="p-2 text-right">Amount</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {egressCredits.purchaseHistory.slice(0, 5).map((purchase) => (
+                                    <tr key={purchase.id} className="border-t">
+                                      <td className="p-2">
+                                        {new Date(purchase.createdAt).toLocaleDateString()}
+                                      </td>
+                                      <td className="p-2">{purchase.packId}</td>
+                                      <td className="p-2 text-right font-mono">
+                                        {purchase.creditsGb.toFixed(2)} GB
+                                      </td>
+                                      <td className="p-2 text-right font-mono">
+                                        ${purchase.amountPaid.toFixed(2)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-8 text-sm text-muted-foreground">
+                        No credit data available. Purchase credits to get started.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             <TabsContent value="settings">

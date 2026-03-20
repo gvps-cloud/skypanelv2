@@ -1,38 +1,373 @@
-# Local Uncommitted Changes: Egress Billing System Implementation
+# Egress Billing System Documentation
 
-This document summarizes the uncommitted local changes currently in the repository, which introduce a new and comprehensive server egress billing system.
+## Overview
 
-## 1. New Egress Billing Services and Logic
-- **`api/services/egressBillingService.ts`** (New File): Contains the core logic for the new egress billing system, replacing the old system that was removed. It handles getting live usage, executing monthly billing, syncing region pricing, and calculating egress quotas and overage charges.
-- **`api/services/egressBillingService.test.ts`** (New File): Test suite for the new egress billing logic.
+The SkyPanelV2 egress billing system implements a **pre-paid credit model with hourly enforcement** to prevent abuse and ensure the reseller never incurs unpayable debt for consumed network transfer.
 
-## 2. API Routes Additions
-- **Admin Egress Routes (`api/routes/admin.ts`)**: Added comprehensive new endpoints for managing the egress billing subsystem:
-  - `GET /egress/pricing` & `POST /egress/pricing/sync`: View and synchronize base egress pricing per region (e.g., from Linode).
-  - `PUT /egress/pricing/:regionId`: Configure upcharge/markup for specific regions.
-  - `GET /egress/live-usage`: View current, live pooled egress usage calculation per region across all active users.
-  - `GET /egress/history`: View past egress billing execution cycles.
-  - `POST /egress/execute`: Manually trigger or finalize a monthly egress billing cycle.
-- **Organization Routes (`api/routes/organizations.ts`)**:
-  - `GET /:id/egress`: Created to provide customers an overview of their own measured egress usage versus available quota pool.
+**IMPORTANT: Egress credits are organization-scoped, not user-scoped. All members of an organization share the same credit pool.**
 
-## 3. Invoice Generation and Precision Improvements
-- **`api/routes/invoices.ts`**: Modified invoice generator to collect egress invoice items using `EgressBillingService.listInvoiceItemsForPeriod` and merge them into standard VPS monthly billing invoices.
-- **Database Precision (`api/services/invoiceService.ts`)**: Increased invoice table precision for currency (`DECIMAL(10,2)` to `DECIMAL(12,4)`) to account for sub-cent billing typical in gigabyte egress calculations.
-- **`api/services/paypalService.ts` & `api/services/billingService.ts`**: Added deeper fractional number rounding (`amount.toFixed(4)`) for PayPal wallet deductions and balance logic.
+### Problem Statement
 
-## 4. Scheduled Background Jobs
-- **`api/server.ts`**: Implemented `runMonthlyEgressBillingIfDue()`. Validates time constraints (1st of the month) and triggers egress billing finalization, acting as a background daemon alongside hourly active VPS billing.
+Previous monthly-only billing had a critical vulnerability:
+- Users could create VPS instances, consume excess transfer (e.g., 500GB+ overage), and delete the VPS before the monthly billing cycle (1st of month)
+- When billing ran, if the user's wallet was empty, billing failed
+- The reseller remained liable to Linode for the consumed transfer
+- No real-time enforcement prevented accumulation of unpayable debt
 
-## 5. UI Enhancements
-- **Admin Panel (`src/pages/Admin.tsx`)**:
-  - Integrated full billing tabs (`finance` vs `egress`).
-  - Added new React state hooks and interfaces (`RegionEgressPricing`, `EgressAllocationPool`, `EgressBillingHistoryRecord`).
-  - Introduced admin UI controls to toggle region billing configurations, manage upcharges, and monitor global bandwidth usage manually.
-- **Additional Pages**: Modified `src/pages/InvoiceDetail.tsx` and `src/pages/Organizations.tsx` to display egress usage lines and invoice totals appropriately.
+### Solution
 
-## 6. Database Migrations
-Created migrations to establish the solid data layer for egress:
-- `migrations/026_create_egress_billing_tables.sql`
-- `migrations/027_reconcile_egress_pricing_schema.sql`
-- `migrations/028_expand_billing_precision.sql`
+**Hourly polling with pre-paid credits**:
+- Poll Linode transfer API every 60 minutes
+- Calculate delta from previous reading
+- Deduct credits **immediately** when transfer is consumed
+- Auto-shutdown VPS when organization's credit balance is insufficient
+- Pre-payment model prevents debt accumulation
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              HOURLY BILLING LOOP                             │
+│                    (runs every 60 minutes in server.ts)                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                  EgressHourlyBillingService.runHourlyBilling()              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │ 1. Get all active VPS instances (status='running' or 'provisioning')   │ │
+│  │ 2. For each VPS:                                                       │ │
+│  │    a. Fetch current transfer from Linode API                           │ │
+│  │    b. Get last hourly reading from database                            │ │
+│  │    c. Calculate delta = current - last                                 │ │
+│  │    d. If delta > included quota, deduct credits                        │ │
+│  │    e. If insufficient credits, suspend VPS                             │ │
+│  │    f. Record hourly reading                                            │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Database Schema
+
+### Migration 030: `migrations/030_add_egress_credits_system.sql`
+
+#### Table: `organization_egress_credits`
+Stores pre-paid egress credit balance per organization.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `organization_id` | UUID | FK to organizations (unique) |
+| `credits_gb` | DECIMAL(18,6) | Available credits (CHECK >= 0) |
+| `created_at` | TIMESTAMPTZ | Creation timestamp |
+| `updated_at` | TIMESTAMPTZ | Last update timestamp |
+
+#### Table: `egress_credit_packs`
+Records credit pack purchases.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `organization_id` | UUID | FK to organizations |
+| `pack_id` | VARCHAR(50) | Pack identifier (100GB, 1TB, 5TB, 10TB) |
+| `credits_gb` | DECIMAL(18,6) | Credits purchased |
+| `amount_paid` | DECIMAL(12,6) | Price paid (USD) |
+| `payment_transaction_id` | UUID | FK to payment_transactions |
+| `created_at` | TIMESTAMPTZ | Purchase timestamp |
+
+#### Table: `vps_egress_hourly_readings`
+Stores hourly transfer readings for delta calculation.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID | Primary key |
+| `vps_instance_id` | UUID | FK to vps_instances |
+| `organization_id` | UUID | FK to organizations |
+| `provider_instance_id` | INT | Linode instance ID |
+| `transfer_used_gb` | DECIMAL(18,6) | Total transfer used (from provider) |
+| `delta_gb` | DECIMAL(18,6) | New transfer since last reading |
+| `credits_deducted_gb` | DECIMAL(18,6) | Credits deducted for delta |
+| `reading_at` | TIMESTAMPTZ | When reading was taken |
+
+---
+
+## Credit Pack Configuration
+
+Credit packs are stored in `platform_settings` under key `egress_credit_packs`:
+
+```json
+[
+  {"id": "100GB", "gb": 100, "price": 0.50},
+  {"id": "1TB", "gb": 1000, "price": 5.00},
+  {"id": "5TB", "gb": 5000, "price": 25.00},
+  {"id": "10TB", "gb": 10000, "price": 50.00}
+]
+```
+
+**Pricing Formula**: $0.005 per GB (5 GB per cent)
+
+### Configurable Settings
+
+| Setting Key | Type | Default | Description |
+|-------------|------|---------|-------------|
+| `egress_credit_packs` | JSON array | `[...]` | Available credit packs with pricing |
+| `egress_warning_threshold_gb` | Number | `200` | Warning threshold in GB - shows warning when balance below this |
+
+---
+
+## Organization-Scoped Architecture
+
+**Egress credits are organization-scoped, not user-scoped.**
+
+### Key Points
+
+1. **Shared Pool**: All members of an organization share the same credit balance
+2. **Organization Context**: All credit operations use `organization_id` as the primary key
+3. **Permission-Based Access**: Fine-grained permissions control who can view and manage credits
+4. **Multi-Org Support**: Users can belong to multiple organizations with separate credit pools
+
+### Role Permissions
+
+| Permission | Description | Owner | Admin | Member |
+|------------|-------------|:-------:|:-----:|:------|
+| `egress_view` | View egress credits and usage | ✓ | ✓ | - |
+| `egress_manage` | Purchase/add egress credits | ✓ | - | - |
+
+---
+
+## API Routes
+
+### Organization Routes (`/api/organizations/:id/egress/*`)
+
+| Method | Route | Permission | Description |
+|--------|-------|-----------|-------------|
+| `GET` | `/credits` | `egress_view` | Get organization's credit balance and purchase history |
+| `GET` | `/credits/packs` | `egress_view` | Get available credit packs |
+| `POST` | `/credits/purchase` | `egress_manage` | Initialize PayPal purchase |
+| `POST` | `/credits/purchase/complete` | `egress_manage` | Complete purchase after PayPal |
+
+### VPS Usage Routes (`/api/egress/usage/:vpsId`)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/usage/:vpsId` | Get hourly usage readings for specific VPS |
+| `GET` | `/usage/:vpsId/summary` | Get VPS monthly usage summary |
+
+### Admin Routes (`/api/egress/admin/*`)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/credits/:orgId` | Admin: Manually add credits to organization |
+| `GET` | `/credits/:orgId/balance` | Admin: View organization's balance and history |
+| `POST` | `/billing/run` | Admin: Manually trigger hourly billing |
+| `GET` | `/settings/packs` | Admin: Get credit pack configuration |
+| `PUT` | `/settings/packs` | Admin: Update credit pack pricing |
+
+---
+
+## Backend Services
+
+### `api/services/egressCreditService.ts`
+
+Core service for credit management operations.
+
+#### Key Functions
+
+| Function | Description |
+|----------|-------------|
+| `getEgressCreditBalance(organizationId)` | Get current balance in GB |
+| `getEgressCreditBalanceDetails(organizationId)` | Get balance with warning flag (<200GB) |
+| `purchaseEgressCredits(orgId, packId, paymentTxnId, userId)` | Add credits from payment |
+| `deductEgressCredits(orgId, gb, vpsInstanceId?)` | Deduct credits, throws InsufficientCreditsError if low |
+| `addEgressCredits(orgId, gb, adminUserId, reason?)` | Admin manual credit addition |
+| `suspendVPSForInsufficientCredits(vpsId, orgId)` | Shutdown VPS and mark as suspended |
+
+### `api/services/egressHourlyBillingService.ts`
+
+Hourly billing orchestrator.
+
+#### Main Function
+
+```typescript
+export async function runHourlyEgressBilling(): Promise<{
+  successCount: number;
+  suspendedCount: number;
+  skippedCount: number;
+  errors: string[];
+}>
+```
+
+---
+
+## Frontend Components
+
+### Organization Egress Tab (`src/pages/Organizations.tsx`)
+
+**Primary location for egress credit management.**
+
+**Route**: `/organizations/:id` → "Egress" tab
+
+**Features**:
+- **Egress Billing Overview** - Monthly egress usage and overage charges
+- **Egress Credits Section** - Shows organization's credit balance
+- **"Shared Pool" Banner** - Clearly indicates credits are shared across all org members
+- **Purchase Credits Button** - Only shown if user has `egress_manage` permission
+- **Purchase History** - Recent credit pack purchases
+- **Permission-Based Access** - Members can view but not purchase (without permission)
+
+### VPS Detail Page (`src/pages/VPSDetail.tsx`)
+
+Enhanced with egress usage section in Networking tab.
+
+**Features**:
+- Display organization's remaining credit balance
+- Show current month's credits used by this VPS
+- Warning when balance is low
+- Link to purchase credits (redirects to organization's Egress tab)
+
+### Admin Component
+
+#### `src/components/admin/EgressCreditManager.tsx`
+
+Admin interface for managing organization credits.
+
+**Features**:
+- Search organizations by name or ID
+- View organization's credit balance and purchase history
+- Manually add credits with optional reason
+- View detailed purchase history in dialog
+
+**Access**: Admin Dashboard → Egress Credits section
+
+---
+
+## Purchase Flow
+
+### Organization Credit Purchase Flow
+
+```
+1. User navigates to /organizations/:id and clicks "Egress" tab
+2. User clicks "Purchase Credits" button (requires egress_manage permission)
+3. System checks if viewing active organization:
+   - If yes: Proceed with purchase
+   - If no: Switch organization context first, then redirect
+4. POST /api/organizations/:id/egress/credits/purchase
+   → Creates PayPal order
+   → Returns approval URL
+5. User approves payment on PayPal
+6. PayPal redirects back with success
+7. POST /api/organizations/:id/egress/credits/purchase/complete
+   → Verifies payment completed
+   → Checks not already applied
+   → Calls purchaseEgressCredits()
+   → Adds credits to organization
+8. Balance updates, purchase recorded, activity logged
+```
+
+---
+
+## Abuse Prevention Mechanism
+
+### How Abuse Is Prevented
+
+1. **Pre-payment Required**
+   - Organizations must purchase credits before consuming overage
+   - No credit = no overage usage possible
+
+2. **Hourly Enforcement**
+   - Billing runs every 60 minutes, not monthly
+   - Maximum exposure window: 1 hour of usage
+
+3. **Auto-Shutoff**
+   - VPS instances automatically suspended when credits exhausted
+   - Prevents continued consumption without payment
+
+4. **No Debt Accumulation**
+   - System throws InsufficientCreditsError if balance insufficient
+   - Database CHECK constraint prevents negative balances
+   - Transaction safety with row-level locking (`FOR UPDATE`)
+
+---
+
+## Activity Logging
+
+All credit operations are logged to `activity_logs`:
+
+| Event Type | Description |
+|------------|-------------|
+| `egress.credits.purchased` | Organization purchased credit pack |
+| `egress.credits.admin_added` | Admin manually added credits to organization |
+| `egress.credits.purchase_initiated` | Credit purchase initiated (before PayPal) |
+| `vps.suspended` | VPS suspended due to insufficient credits |
+| `egress.billing.admin_run` | Admin manually triggered billing |
+
+---
+
+## Migration Notes
+
+### Database Migration
+
+```bash
+# Apply the egress credits system migration
+node scripts/apply-single-migration.js 030_add_egress_credits_system.sql
+
+# Or reset and run all migrations
+npm run db:fresh
+```
+
+### Default Configuration
+
+After migration, credit packs are automatically seeded into `platform_settings`.
+
+### Role Permissions Migration
+
+Existing organizations will need to have their roles updated to include the new egress permissions. The `RoleService.initializeDefaultRoles()` function handles this automatically when first accessed.
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| VPS suspended despite credits | Credits exhausted during hourly billing | Admin adds credits, user restarts VPS |
+| Can't see egress credits | Missing `egress_view` permission | Admin updates organization role |
+| Can't purchase credits | Missing `egress_manage` permission | Admin updates organization role |
+| Credits not showing for org | No credit row exists | Admin adds credits or user purchases pack |
+| "Not a member of this organization" | Trying to access other org's credits | Navigate to correct organization |
+
+### Log Locations
+
+- Server logs: Console output from `server.ts`
+- Activity logs: `activity_logs` table
+- Billing results: Check console for `EgressHourlyBillingService` output
+
+---
+
+## Testing Checklist
+
+### Manual Testing
+
+- [ ] Organization owner purchases 100GB credit pack via Organizations → Egress tab
+- [ ] Credits appear in balance after purchase
+- [ ] Hourly billing deducts credits when overage consumed
+- [ ] VPS suspends when credits exhausted
+- ] [ ] Admin can add credits manually via admin interface
+- [ ] Suspended VPS can be restarted after adding credits
+- [ ] Purchase history displays correctly in organization Egress tab
+- [ ] Warning banner shows when balance < 200GB
+- [ ] Organization members with `egress_view` can see credits but not purchase
+- [ ] Organization members with `egress_manage` can purchase credits
+- [ ] Different organizations have separate credit pools
+
+### Permission Testing
+
+- [ ] Create user with no egress permissions - should not see credits section
+- [ ] Grant `egress_view` only - can see balance, no purchase button
+- [ ] Grant `egress_manage` - can see balance and purchase button
+- [ ] Owner has both permissions by default

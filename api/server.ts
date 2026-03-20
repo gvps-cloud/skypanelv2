@@ -6,6 +6,7 @@ import app from "./app.js";
 import { initSSHBridge } from "./services/sshBridge.js";
 import { BillingService } from "./services/billingService.js";
 import { EgressBillingService } from "./services/egressBillingService.js";
+import { EgressHourlyBillingService } from "./services/egressHourlyBillingService.js";
 import { notificationService } from "./services/notificationService.js";
 
 /**
@@ -38,6 +39,7 @@ function startBillingScheduler() {
     await Promise.all([
       runHourlyBilling("initial"),
       runMonthlyEgressBillingIfDue("initial"),
+      runHourlyEgressBilling("initial"),
     ]);
   }, 5000); // Wait 5 seconds after server start
 
@@ -47,6 +49,7 @@ function startBillingScheduler() {
       await Promise.all([
         runHourlyBilling("scheduled"),
         runMonthlyEgressBillingIfDue("scheduled"),
+        runHourlyEgressBilling("scheduled"),
       ]);
     },
     60 * 60 * 1000,
@@ -120,6 +123,31 @@ async function runMonthlyEgressBillingIfDue(runType: "initial" | "scheduled") {
       `❌ Error in ${runType} monthly egress billing for ${billingMonth}:`,
       error,
     );
+  }
+}
+
+/**
+ * Run hourly egress billing for all active VPS instances
+ * Polls Linode for transfer usage and deducts pre-paid credits
+ */
+async function runHourlyEgressBilling(runType: "initial" | "scheduled") {
+  try {
+    console.log(`🌐 Starting ${runType} hourly egress billing process...`);
+    const result = await EgressHourlyBillingService.runHourlyBilling();
+    console.log(
+      `✅ Hourly egress billing completed: ` +
+      `${result.billedCount} billed, ${result.suspendedCount} suspended, ` +
+      `${result.skippedCount} skipped, ${result.errorCount} errors`,
+    );
+
+    if (result.errors.length > 0) {
+      console.warn(
+        `⚠️ Hourly egress billing completed with ${result.errors.length} errors:`,
+        result.errors,
+      );
+    }
+  } catch (error) {
+    console.error(`❌ Error in ${runType} hourly egress billing:`, error);
   }
 }
 

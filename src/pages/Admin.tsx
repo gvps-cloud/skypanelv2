@@ -38,6 +38,7 @@ import {
   Users,
   Tags,
   Mail,
+  Database,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -59,6 +60,7 @@ import { CategoryMappingManager } from "@/components/admin/CategoryMappingManage
 import { RegionAccessManager } from "@/components/admin/RegionAccessManager";
 import { AdminSupportView } from "@/components/admin/AdminSupportView";
 import { VPSPlanWizard } from "@/components/admin/VPSPlanWizard";
+import EgressCreditManager from "@/components/admin/EgressCreditManager";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { SSHTerminal } from "@/components/VPS/SSHTerminal";
 import { useCategoryDisplayName } from "@/hooks/useCategoryMappings";
@@ -159,6 +161,7 @@ type AdminSection =
   | "rate-limiting"
   | "faq-management"
   | "platform"
+  | "egress-credits"
   | "contact-management"
   | "billing"
   | "egress-billing"
@@ -2379,6 +2382,18 @@ const Admin: React.FC = () => {
         actionLabel: "Manage access",
       },
       {
+        id: "egress-credits",
+        title: "Egress Credits",
+        description: "Manage pre-paid egress credits for customer organizations.",
+        icon: Database,
+        accent: "text-blue-600",
+        summary: [
+          { label: "Pre-paid", value: "Credits" },
+          { label: "Transfer", value: "Billing" },
+        ],
+        actionLabel: "Manage credits",
+      },
+      {
         id: "category-mappings",
         title: "Category Mappings",
         description:
@@ -3906,6 +3921,10 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="user-management" activeSection={activeTab}>
           <UserManagement />
+        </SectionPanel>
+
+        <SectionPanel section="egress-credits" activeSection={activeTab}>
+          <EgressCreditManager />
         </SectionPanel>
 
         <SectionPanel section="organizations" activeSection={activeTab}>

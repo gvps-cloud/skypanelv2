@@ -102,6 +102,8 @@ export interface OrganizationResources {
     tickets_manage: boolean;
     billing_view: boolean;
     billing_manage: boolean;
+    egress_view: boolean;
+    egress_manage: boolean;
     members_manage: boolean;
     settings_manage: boolean;
   };
@@ -156,4 +158,21 @@ export interface EgressBillingHistoryRecord {
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface OrganizationEgressCredits {
+  organizationId: string;
+  creditsGb: number;
+  warning: boolean;
+  purchaseHistory: OrganizationEgressCreditPurchase[];
+}
+
+export interface OrganizationEgressCreditPurchase {
+  id: string;
+  organizationId: string;
+  packId: string;
+  creditsGb: number;
+  amountPaid: number;
+  paymentTransactionId: string | null;
+  createdAt: string;
 }

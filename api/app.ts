@@ -46,6 +46,7 @@ import adminFaqRoutes from "./routes/adminFaq.js";
 import adminContactRoutes from "./routes/admin/contact.js";
 import adminBillingRoutes from "./routes/admin/billing.js";
 import githubRoutes from "./routes/github.js";
+import egressRoutes from "./routes/egress.js";
 import {
   initializeMetricsCollection,
   startMetricsPersistence,
@@ -111,6 +112,7 @@ app.use("/api/ssh-keys", sshKeysRoutes);
 app.use("/api/organizations", organizationRoutes);
 app.use("/api/activities", activitiesRoutes);
 app.use("/api/pricing", pricingRoutes);
+app.use("/api/egress", egressRoutes);
 
 // Health check routes are now handled by the dedicated health router
 
