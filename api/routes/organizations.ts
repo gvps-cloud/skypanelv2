@@ -479,7 +479,7 @@ router.post('/:id/egress/credits/purchase', checkEgressManagePermission, async (
         eventType: 'egress.credits.purchase_initiated',
         entityType: 'egress_credits',
         message: `Initiated purchase of ${pack.gb}GB egress credit pack`,
-        status: 'pending',
+        status: 'info',
         metadata: {
           packId,
           amount: pack.price,

@@ -51,6 +51,8 @@ const createResources = (): OrganizationResources => ({
     billing_manage: false,
     members_manage: false,
     settings_manage: false,
+    egress_view: false,
+    egress_manage: false,
   },
 });
 

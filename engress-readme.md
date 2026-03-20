@@ -37,7 +37,8 @@ Previous monthly-only billing had a critical vulnerability:
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                  EgressHourlyBillingService.runHourlyBilling()              │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │ 1. Get all active VPS instances (status='running' or 'provisioning')   │ │
+│  │ 1. Get all active VPS instances (status IN ('running', 'provisioning',  │ │
+│  │    'rebooting', 'migrating'))                                          │ │
 │  │ 2. For each VPS:                                                       │ │
 │  │    a. Fetch current transfer from Linode API                           │ │
 │  │    b. Get last hourly reading from database                            │ │
@@ -141,31 +142,32 @@ Credit packs are stored in `platform_settings` under key `egress_credit_packs`:
 
 ## API Routes
 
-### Organization Routes (`/api/organizations/:id/egress/*`)
+### Egress Routes (`/api/egress/*`)
 
 | Method | Route | Permission | Description |
 |--------|-------|-----------|-------------|
-| `GET` | `/credits` | `egress_view` | Get organization's credit balance and purchase history |
+| `GET` | `/credits` | `egress_view` | Get organization's credit balance |
+| `GET` | `/credits/history` | `egress_view` | Get organization's credit purchase history |
 | `GET` | `/credits/packs` | `egress_view` | Get available credit packs |
 | `POST` | `/credits/purchase` | `egress_manage` | Initialize PayPal purchase |
 | `POST` | `/credits/purchase/complete` | `egress_manage` | Complete purchase after PayPal |
 
 ### VPS Usage Routes (`/api/egress/usage/:vpsId`)
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| `GET` | `/usage/:vpsId` | Get hourly usage readings for specific VPS |
-| `GET` | `/usage/:vpsId/summary` | Get VPS monthly usage summary |
+| Method | Route | Permission | Description |
+|--------|-------|-----------|-------------|
+| `GET` | `/usage/:vpsId` | `egress_view` | Get hourly usage readings for specific VPS |
+| `GET` | `/usage/:vpsId/summary` | `egress_view` | Get VPS monthly usage summary |
 
 ### Admin Routes (`/api/egress/admin/*`)
 
 | Method | Route | Description |
 |--------|-------|-------------|
-| `POST` | `/credits/:orgId` | Admin: Manually add credits to organization |
-| `GET` | `/credits/:orgId/balance` | Admin: View organization's balance and history |
-| `POST` | `/billing/run` | Admin: Manually trigger hourly billing |
-| `GET` | `/settings/packs` | Admin: Get credit pack configuration |
-| `PUT` | `/settings/packs` | Admin: Update credit pack pricing |
+| `POST` | `/admin/credits/:orgId` | Admin: Manually add credits to organization |
+| `GET` | `/admin/credits/:orgId/balance` | Admin: View organization's balance and history |
+| `POST` | `/admin/billing/run` | Admin: Manually trigger hourly billing |
+| `GET` | `/admin/settings/packs` | Admin: Get credit pack configuration |
+| `PUT` | `/admin/settings/packs` | Admin: Update credit pack pricing |
 
 ---
 
@@ -190,13 +192,33 @@ Core service for credit management operations.
 
 Hourly billing orchestrator.
 
-#### Main Function
+#### Exported Service
 
 ```typescript
-export async function runHourlyEgressBilling(): Promise<{
-  successCount: number;
+export const EgressHourlyBillingService = {
+  runHourlyBilling,        // Run billing for all organizations
+  runForOrg,               // Run billing for a specific organization
+};
+```
+
+#### Main Functions
+
+```typescript
+export async function runHourlyBilling(): Promise<{
+  success: boolean;
+  billedCount: number;
   suspendedCount: number;
   skippedCount: number;
+  errorCount: number;
+  errors: string[];
+}>
+
+export async function runHourlyBillingForOrg(organizationId: string): Promise<{
+  success: boolean;
+  billedCount: number;
+  suspendedCount: number;
+  skippedCount: number;
+  errorCount: number;
   errors: string[];
 }>
 ```
@@ -255,12 +277,12 @@ Admin interface for managing organization credits.
 3. System checks if viewing active organization:
    - If yes: Proceed with purchase
    - If no: Switch organization context first, then redirect
-4. POST /api/organizations/:id/egress/credits/purchase
+4. POST /api/egress/credits/purchase
    → Creates PayPal order
    → Returns approval URL
 5. User approves payment on PayPal
 6. PayPal redirects back with success
-7. POST /api/organizations/:id/egress/credits/purchase/complete
+7. POST /api/egress/credits/purchase/complete
    → Verifies payment completed
    → Checks not already applied
    → Calls purchaseEgressCredits()
@@ -302,6 +324,7 @@ All credit operations are logged to `activity_logs`:
 | `egress.credits.purchased` | Organization purchased credit pack |
 | `egress.credits.admin_added` | Admin manually added credits to organization |
 | `egress.credits.purchase_initiated` | Credit purchase initiated (before PayPal) |
+| `egress.settings.packs_updated` | Admin updated credit pack configuration |
 | `vps.suspended` | VPS suspended due to insufficient credits |
 | `egress.billing.admin_run` | Admin manually triggered billing |
 
@@ -357,7 +380,7 @@ Existing organizations will need to have their roles updated to include the new 
 - [ ] Credits appear in balance after purchase
 - [ ] Hourly billing deducts credits when overage consumed
 - [ ] VPS suspends when credits exhausted
-- ] [ ] Admin can add credits manually via admin interface
+- [ ] Admin can add credits manually via admin interface
 - [ ] Suspended VPS can be restarted after adding credits
 - [ ] Purchase history displays correctly in organization Egress tab
 - [ ] Warning banner shows when balance < 200GB
