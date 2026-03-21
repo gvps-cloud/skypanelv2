@@ -211,10 +211,10 @@ const EgressCredits: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-gray-900 dark:text-white">
+            <span className="text-4xl font-bold text-foreground">
               {balance ? formatGb(balance.creditsGb) : '0 GB'}
             </span>
-            <span className="text-gray-500 dark:text-gray-400">available</span>
+            <span className="text-muted-foreground">available</span>
           </div>
 
           {balance && balance.creditsGb > 0 && (
@@ -234,9 +234,9 @@ const EgressCredits: React.FC = () => {
             </div>
           )}
 
-          <div className="mt-4 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-100 dark:border-blue-900">
-            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-blue-900 dark:text-blue-100">
+          <div className="mt-4 flex items-start gap-2 p-3 rounded-lg border border-border bg-muted/60">
+            <Info className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-muted-foreground">
               <strong>How it works:</strong> Each VPS instance has a monthly transfer quota (e.g., 1TB included).
               Overage usage beyond the quota deducts from your egress credits. Credits are billed hourly
               to prevent unexpected charges. VPS instances are automatically suspended when credits run out.
