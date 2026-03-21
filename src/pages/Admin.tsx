@@ -180,6 +180,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "theme",
   "organizations",
   "user-management",
+  "egress-credits",
   "rate-limiting",
   "faq-management",
   "platform",

@@ -17,6 +17,7 @@ import {
   getAvailableCreditPacks,
   purchaseEgressCredits,
   addEgressCredits,
+  removeEgressCredits,
   getVPSHourlyUsage,
   getVPSMonthlyCreditsUsed,
 } from "../services/egressCreditService.js";
@@ -291,18 +292,25 @@ router.post(
 
 /**
  * GET /api/egress/credits/history
- * Get purchase history for the organization
+ * Get purchase history for the organization with pagination
  */
 router.get("/credits/history", requireOrganization, async (req: Request, res: Response) => {
   try {
     const { organizationId } = (req as AuthenticatedRequest).user;
-    const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 50;
+    const page = typeof req.query.page === "string" ? parseInt(req.query.page, 10) : 1;
+    const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 5;
 
-    const history = await getEgressCreditPurchaseHistory(organizationId, limit);
+    const historyResult = await getEgressCreditPurchaseHistory(organizationId, page, limit);
 
     res.json({
       success: true,
-      data: history,
+      data: historyResult.purchases,
+      pagination: {
+        total: historyResult.total,
+        page: historyResult.page,
+        limit: historyResult.limit,
+        totalPages: historyResult.totalPages,
+      },
     });
   } catch (error) {
     console.error("Error getting egress credit purchase history:", error);
@@ -515,8 +523,93 @@ router.post(
 );
 
 /**
+ * DELETE /api/egress/admin/credits/:orgId
+ * Admin: Remove credits from an organization
+ */
+router.delete(
+  "/admin/credits/:orgId",
+  requireAdmin,
+  [
+    param("orgId").isUUID().withMessage("Invalid organization ID"),
+    body("creditsGb")
+      .isFloat({ min: 0.01 })
+      .withMessage("Credits must be greater than 0"),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: "Validation failed",
+          details: errors.array(),
+        });
+      }
+
+      const { orgId } = req.params;
+      const { creditsGb, reason } = req.body;
+      const { id: adminUserId } = (req as AuthenticatedRequest).user;
+
+      const parsedCredits = safeParseNumber(creditsGb);
+      if (parsedCredits === null) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid credits value",
+        });
+      }
+
+      // Verify organization exists
+      const orgResult = await dbQuery(
+        "SELECT id, name FROM organizations WHERE id = $1",
+        [orgId],
+      );
+
+      if (orgResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: "Organization not found",
+        });
+      }
+
+      const newBalance = await removeEgressCredits(orgId, parsedCredits, adminUserId, reason);
+
+      // Log admin action
+      await logActivity({
+        userId: adminUserId,
+        organizationId: orgId,
+        eventType: "egress.credits.admin_removed",
+        entityType: "egress_credits",
+        message: `Admin removed ${parsedCredits}GB egress credits from organization "${orgResult.rows[0].name}"`,
+        status: "success",
+        metadata: {
+          removedCredits: parsedCredits,
+          newBalance,
+          reason,
+        },
+      });
+
+      res.json({
+        success: true,
+        message: `Removed ${parsedCredits}GB credits from organization`,
+        data: {
+          organizationId: orgId,
+          organizationName: orgResult.rows[0].name,
+          newBalance,
+        },
+      });
+    } catch (error) {
+      console.error("Error removing egress credits as admin:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to remove credits",
+      });
+    }
+  }
+);
+
+/**
  * GET /api/egress/admin/credits/:orgId/balance
- * Admin: View organization credit balance
+ * Admin: View organization credit balance with paginated history
  */
 router.get(
   "/admin/credits/:orgId/balance",
@@ -534,6 +627,8 @@ router.get(
       }
 
       const { orgId } = req.params;
+      const page = typeof req.query.page === "string" ? parseInt(req.query.page, 10) : 1;
+      const limit = typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 5;
 
       // Get organization info
       const orgResult = await dbQuery(
@@ -549,7 +644,7 @@ router.get(
       }
 
       const balanceDetails = await getEgressCreditBalanceDetails(orgId);
-      const history = await getEgressCreditPurchaseHistory(orgId, 20);
+      const historyResult = await getEgressCreditPurchaseHistory(orgId, page, limit);
 
       res.json({
         success: true,
@@ -559,7 +654,13 @@ router.get(
           ownerId: orgResult.rows[0].owner_id,
           creditsGb: balanceDetails.creditsGb,
           warning: balanceDetails.warning,
-          purchaseHistory: history,
+          purchaseHistory: historyResult.purchases,
+          pagination: {
+            total: historyResult.total,
+            page: historyResult.page,
+            limit: historyResult.limit,
+            totalPages: historyResult.totalPages,
+          },
         },
       });
     } catch (error) {
@@ -623,21 +724,21 @@ router.post("/admin/billing/run", requireAdmin, async (req: Request, res: Respon
  */
 router.get("/admin/settings/packs", requireAdmin, async (req: Request, res: Response) => {
   try {
-    const result = await dbQuery(
+    const packsResult = await dbQuery(
       "SELECT value FROM platform_settings WHERE key = 'egress_credit_packs'",
     );
 
-    if (result.rows.length === 0) {
-      return res.json({
-        success: true,
-        data: { packs: [] },
-      });
-    }
+    const thresholdResult = await dbQuery(
+      "SELECT value FROM platform_settings WHERE key = 'egress_warning_threshold_gb'",
+    );
 
     res.json({
       success: true,
       data: {
-        packs: result.rows[0].value,
+        packs: packsResult.rows.length > 0 ? packsResult.rows[0].value : [],
+        warningThresholdGb: thresholdResult.rows.length > 0 
+          ? parseInt(thresholdResult.rows[0].value, 10) 
+          : 200,
       },
     });
   } catch (error) {
@@ -669,6 +770,18 @@ router.put(
     body("packs.*.price")
       .isFloat({ min: 0.01 })
       .withMessage("Pack price must be positive"),
+    body("packs.*.isPopular")
+      .optional()
+      .isBoolean()
+      .withMessage("isPopular must be a boolean"),
+    body("packs.*.isRecommended")
+      .optional()
+      .isBoolean()
+      .withMessage("isRecommended must be a boolean"),
+    body("warningThresholdGb")
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage("Warning threshold must be a positive integer"),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -681,15 +794,26 @@ router.put(
         });
       }
 
-      const { packs } = req.body;
+      const { packs, warningThresholdGb } = req.body;
       const { id: adminUserId } = (req as AuthenticatedRequest).user;
 
+      // Update packs
       await dbQuery(
         `UPDATE platform_settings
          SET value = $1, updated_at = NOW()
          WHERE key = 'egress_credit_packs'`,
         [JSON.stringify(packs)],
       );
+
+      // Update warning threshold if provided
+      if (warningThresholdGb !== undefined) {
+        await dbQuery(
+          `UPDATE platform_settings
+           SET value = $1, updated_at = NOW()
+           WHERE key = 'egress_warning_threshold_gb'`,
+          [JSON.stringify(warningThresholdGb)],
+        );
+      }
 
       // Log admin action
       await logActivity({
@@ -699,13 +823,13 @@ router.put(
         entityType: "egress_settings",
         message: "Admin updated egress credit pack configuration",
         status: "success",
-        metadata: { packs },
+        metadata: { packs, warningThresholdGb },
       });
 
       res.json({
         success: true,
         message: "Credit pack configuration updated",
-        data: { packs },
+        data: { packs, warningThresholdGb },
       });
     } catch (error) {
       console.error("Error updating credit pack settings:", error);

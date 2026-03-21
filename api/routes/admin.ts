@@ -2703,12 +2703,36 @@ router.get(
   auditLogger("list_organizations"),
   async (req: Request, res: Response) => {
     try {
+      const search = req.query.search as string | undefined;
       const requestedPage = parsePositivePageParam(req.query.page, 1);
       const requestedLimit = parsePositivePageParam(
         req.query.limit,
         DEFAULT_ADMIN_ORGANIZATION_PAGE_SIZE,
       );
       const pageSize = clampOrganizationPageSize(requestedLimit);
+
+      // If search query provided, filter organizations
+      if (search && search.trim()) {
+        const searchPattern = `%${search.trim()}%`;
+        const result = await query(
+          `SELECT id, name, slug, owner_id
+           FROM organizations
+           WHERE name ILIKE $1 OR slug ILIKE $1
+           ORDER BY name
+           LIMIT 20`,
+          [searchPattern]
+        );
+
+        return res.json({
+          success: true,
+          organizations: result.rows.map((org: any) => ({
+            id: org.id,
+            name: org.name,
+            slug: org.slug,
+            owner_id: org.owner_id,
+          })),
+        });
+      }
 
       const [organizationCountResult, memberCountResult] = await Promise.all([
         query("SELECT COUNT(*)::INTEGER AS total FROM organizations"),
@@ -2723,7 +2747,7 @@ router.get(
           ? 1
           : Math.max(1, Math.ceil(totalOrganizations / pageSize));
       const safePage =
-        totalOrganizations === 0
+        totalOrganizations === 1
           ? 1
           : Math.min(Math.max(requestedPage, 1), totalPages);
       const offset = (safePage - 1) * pageSize;

@@ -17,6 +17,8 @@ import {
   Loader2,
   CheckCircle2,
   CreditCard,
+  Star,
+  ThumbsUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { egressService, type EgressCreditBalance, type CreditPack, type CreditPurchase } from '../services/egressService';
@@ -255,9 +257,28 @@ const EgressCredits: React.FC = () => {
           {packs.map((pack) => (
             <Card
               key={pack.id}
-              className="hover:shadow-lg transition-shadow cursor-pointer relative overflow-hidden group"
+              className={`hover:shadow-lg transition-shadow cursor-pointer relative overflow-hidden group ${
+                pack.isRecommended ? 'ring-2 ring-green-500 dark:ring-green-400' : ''
+              }`}
               onClick={() => handlePurchaseClick(pack)}
             >
+              {/* Badges */}
+              {(pack.isPopular || pack.isRecommended) && (
+                <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+                  {pack.isPopular && (
+                    <Badge className="bg-yellow-500 hover:bg-yellow-600 text-yellow-950">
+                      <Star className="h-3 w-3 mr-1" />
+                      Popular
+                    </Badge>
+                  )}
+                  {pack.isRecommended && (
+                    <Badge className="bg-green-500 hover:bg-green-600 text-green-950">
+                      <ThumbsUp className="h-3 w-3 mr-1" />
+                      Recommended
+                    </Badge>
+                  )}
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardHeader className="relative">
                 <CardTitle className="text-lg">{pack.id}</CardTitle>

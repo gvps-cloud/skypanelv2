@@ -821,11 +821,12 @@ class ApiClient {
     return this.handleResponse<T>(response);
   }
 
-  async delete<T = any>(path: string): Promise<T> {
+  async delete<T = any>(path: string, body?: any): Promise<T> {
     const url = buildApiUrl(path);
     const response = await fetch(url, {
       method: "DELETE",
       headers: this.getAuthHeaders(),
+      body: body ? JSON.stringify(body) : undefined,
     });
     return this.handleResponse<T>(response);
   }

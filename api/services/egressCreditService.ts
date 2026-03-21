@@ -36,6 +36,8 @@ export interface CreditPurchase {
   amountPaid: number;
   paymentTransactionId: string | null;
   createdAt: Date;
+  reason?: string;
+  adjustmentType: 'purchase' | 'admin_add' | 'admin_remove';
 }
 
 // Hourly reading interface
@@ -293,17 +295,28 @@ export async function addEgressCredits(
       throw new Error('Credits to add must be greater than 0');
     }
 
-    const result = await query(
-      `INSERT INTO organization_egress_credits (organization_id, credits_gb)
-       VALUES ($1, $2)
-       ON CONFLICT (organization_id)
-       DO UPDATE SET credits_gb = organization_egress_credits.credits_gb + EXCLUDED.credits_gb,
-                    updated_at = NOW()
-       RETURNING credits_gb`,
-      [organizationId, gbToAdd],
-    );
+    const newBalance = await transaction(async (client) => {
+      // Update balance
+      const result = await client.query(
+        `INSERT INTO organization_egress_credits (organization_id, credits_gb)
+         VALUES ($1, $2)
+         ON CONFLICT (organization_id)
+         DO UPDATE SET credits_gb = organization_egress_credits.credits_gb + EXCLUDED.credits_gb,
+                      updated_at = NOW()
+         RETURNING credits_gb`,
+        [organizationId, gbToAdd],
+      );
 
-    const newBalance = Number(result.rows[0].credits_gb);
+      // Record the adjustment in egress_credit_packs
+      await client.query(
+        `INSERT INTO egress_credit_packs 
+         (organization_id, pack_id, credits_gb, amount_paid, adjustment_type, reason)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [organizationId, 'admin_adjustment', gbToAdd, 0, 'admin_add', reason || 'Admin credit addition'],
+      );
+
+      return Number(result.rows[0].credits_gb);
+    });
 
     // Log activity for audit trail
     await logActivity({
@@ -328,31 +341,129 @@ export async function addEgressCredits(
 }
 
 /**
- * Get purchase history for an organization
+ * Admin function to manually remove credits
+ */
+export async function removeEgressCredits(
+  organizationId: string,
+  gb: number,
+  adminUserId: string,
+  reason?: string,
+): Promise<number> {
+  try {
+    const gbToRemove = round(gb, 6);
+
+    if (gbToRemove <= 0) {
+      throw new Error('Credits to remove must be greater than 0');
+    }
+
+    const newBalance = await transaction(async (client) => {
+      // Get current balance with lock
+      const balanceResult = await client.query(
+        'SELECT credits_gb FROM organization_egress_credits WHERE organization_id = $1 FOR UPDATE',
+        [organizationId],
+      );
+
+      if (balanceResult.rows.length === 0) {
+        throw new Error('Organization has no egress credits record');
+      }
+
+      const currentBalance = Number(balanceResult.rows[0].credits_gb || 0);
+
+      if (currentBalance < gbToRemove) {
+        throw new Error(`Cannot remove ${gbToRemove}GB: organization only has ${currentBalance}GB`);
+      }
+
+      // Update balance
+      const result = await client.query(
+        `UPDATE organization_egress_credits 
+         SET credits_gb = credits_gb - $1, updated_at = NOW()
+         WHERE organization_id = $2
+         RETURNING credits_gb`,
+        [gbToRemove, organizationId],
+      );
+
+      // Record the adjustment in egress_credit_packs
+      await client.query(
+        `INSERT INTO egress_credit_packs 
+         (organization_id, pack_id, credits_gb, amount_paid, adjustment_type, reason)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [organizationId, 'admin_adjustment', gbToRemove, 0, 'admin_remove', reason || 'Admin credit removal'],
+      );
+
+      return Number(result.rows[0].credits_gb);
+    });
+
+    // Log activity for audit trail
+    await logActivity({
+      userId: adminUserId,
+      organizationId,
+      eventType: 'egress.credits.removed',
+      entityType: 'egress_credits',
+      message: `Admin removed ${gbToRemove}GB egress credits${reason ? `: ${reason}` : ''}`,
+      status: 'success',
+      metadata: {
+        removedGb: gbToRemove,
+        newBalance,
+        reason,
+      },
+    });
+
+    return newBalance;
+  } catch (error) {
+    console.error('Error removing egress credits:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get purchase history for an organization with pagination
  */
 export async function getEgressCreditPurchaseHistory(
   organizationId: string,
-  limit = 50,
-): Promise<CreditPurchase[]> {
+  page = 1,
+  limit = 10,
+): Promise<{ purchases: CreditPurchase[]; total: number; page: number; limit: number; totalPages: number }> {
   try {
+    const offset = (page - 1) * limit;
+
+    // Get total count
+    const countResult = await query(
+      'SELECT COUNT(*) as total FROM egress_credit_packs WHERE organization_id = $1',
+      [organizationId],
+    );
+    const total = parseInt(countResult.rows[0].total, 10);
+    const totalPages = Math.ceil(total / limit);
+
+    // Get paginated results
     const result = await query(
-      `SELECT id, organization_id, pack_id, credits_gb, amount_paid, payment_transaction_id, created_at
+      `SELECT id, organization_id, pack_id, credits_gb, amount_paid, payment_transaction_id, 
+              adjustment_type, reason, created_at
        FROM egress_credit_packs
        WHERE organization_id = $1
        ORDER BY created_at DESC
-       LIMIT $2`,
-      [organizationId, limit],
+       LIMIT $2 OFFSET $3`,
+      [organizationId, limit, offset],
     );
 
-    return result.rows.map((row) => ({
+    const purchases = result.rows.map((row) => ({
       id: row.id,
       organizationId: row.organization_id,
       packId: row.pack_id,
       creditsGb: Number(row.credits_gb),
       amountPaid: Number(row.amount_paid),
       paymentTransactionId: row.payment_transaction_id,
+      adjustmentType: row.adjustment_type,
+      reason: row.reason,
       createdAt: row.created_at,
     }));
+
+    return {
+      purchases,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
   } catch (error) {
     console.error('Error getting egress credit purchase history:', error);
     throw error;

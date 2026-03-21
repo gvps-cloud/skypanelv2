@@ -9,6 +9,8 @@ export interface CreditPack {
   id: string;
   gb: number;
   price: number;
+  isPopular?: boolean;
+  isRecommended?: boolean;
 }
 
 export interface EgressCreditBalance {
@@ -502,6 +504,90 @@ class EgressService {
       };
     } catch (error) {
       console.error("Complete purchase error:", error);
+      return {
+        success: false,
+        error: "Network error occurred",
+      };
+    }
+  }
+
+  /**
+   * Admin: Get credit pack settings and warning threshold
+   */
+  async getAdminPackSettings(): Promise<{
+    success: boolean;
+    data?: {
+      packs: CreditPack[];
+      warningThresholdGb: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/egress/admin/settings/packs`, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || "Failed to get pack settings",
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Get admin pack settings error:", error);
+      return {
+        success: false,
+        error: "Network error occurred",
+      };
+    }
+  }
+
+  /**
+   * Admin: Update credit pack settings and warning threshold
+   */
+  async updateAdminPackSettings(
+    packs: CreditPack[],
+    warningThresholdGb?: number
+  ): Promise<{
+    success: boolean;
+    message?: string;
+    data?: {
+      packs: CreditPack[];
+      warningThresholdGb?: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/egress/admin/settings/packs`, {
+        method: "PUT",
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ packs, warningThresholdGb }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || "Failed to update pack settings",
+        };
+      }
+
+      return {
+        success: true,
+        message: data.message,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Update admin pack settings error:", error);
       return {
         success: false,
         error: "Network error occurred",

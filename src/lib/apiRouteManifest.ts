@@ -671,6 +671,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "protected": true
   },
   {
+    "method": "DELETE",
+    "path": "/api/egress/admin/credits/:orgId",
+    "protected": true
+  },
+  {
     "method": "POST",
     "path": "/api/egress/admin/credits/:orgId",
     "protected": true
