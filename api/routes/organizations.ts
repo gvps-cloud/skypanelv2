@@ -386,7 +386,7 @@ router.get('/:id/egress/credits', checkEgressViewPermission, async (req: Authent
 
   try {
     const balanceDetails = await getEgressCreditBalanceDetails(id);
-    const history = await getEgressCreditPurchaseHistory(id, limit);
+    const history = await getEgressCreditPurchaseHistory(id, 1, limit);
 
     res.json({
       success: true,
@@ -394,12 +394,21 @@ router.get('/:id/egress/credits', checkEgressViewPermission, async (req: Authent
         organizationId: id,
         creditsGb: balanceDetails.creditsGb,
         warning: balanceDetails.warning,
-        purchaseHistory: history,
+        purchaseHistory: history.purchases,
+        pagination: {
+          total: history.total,
+          page: history.page,
+          limit: history.limit,
+          totalPages: history.totalPages,
+        },
       },
     });
   } catch (error) {
     console.error('Failed to get egress credits:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to get egress credits' });
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get egress credits',
+    });
   }
 });
 

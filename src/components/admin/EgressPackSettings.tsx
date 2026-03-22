@@ -1,10 +1,11 @@
 /**
  * Egress Pack Settings Component
  * Admin interface for managing egress credit pack definitions
+ * Auto-saves all changes immediately
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Trash2, Star, ThumbsUp, AlertTriangle, Save, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, Star, ThumbsUp, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { egressService, type CreditPack } from '@/services/egressService';
 import { Button } from '@/components/ui/button';
@@ -67,7 +68,7 @@ const EgressPackSettings: React.FC = () => {
   const [selectedPack, setSelectedPack] = useState<CreditPack | null>(null);
   const [formData, setFormData] = useState<PackFormData>(defaultFormData);
   const [thresholdInput, setThresholdInput] = useState('200');
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [savingThreshold, setSavingThreshold] = useState(false);
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
@@ -92,27 +93,29 @@ const EgressPackSettings: React.FC = () => {
     fetchSettings();
   }, [fetchSettings]);
 
-  const handleSaveAll = async () => {
+  // Auto-save function that saves current packs to server
+  const autoSave = async (packsToSave: CreditPack[]) => {
     setSaving(true);
     try {
       const threshold = parseInt(thresholdInput, 10);
       if (isNaN(threshold) || threshold < 1) {
         toast.error('Warning threshold must be a positive number');
         setSaving(false);
-        return;
+        return false;
       }
 
-      const result = await egressService.updateAdminPackSettings(packs, threshold);
+      const result = await egressService.updateAdminPackSettings(packsToSave, threshold);
       if (result.success) {
-        toast.success('Pack settings saved successfully');
-        setWarningThreshold(threshold);
-        setHasUnsavedChanges(false);
+        await fetchSettings();
+        return true;
       } else {
         toast.error(result.error || 'Failed to save pack settings');
+        return false;
       }
     } catch (error) {
       console.error('Error saving pack settings:', error);
       toast.error('Failed to save pack settings');
+      return false;
     } finally {
       setSaving(false);
     }
@@ -140,7 +143,7 @@ const EgressPackSettings: React.FC = () => {
     setShowDeleteDialog(true);
   };
 
-  const confirmAddPack = () => {
+  const confirmAddPack = async () => {
     if (!formData.id.trim()) {
       toast.error('Pack ID is required');
       return;
@@ -168,13 +171,15 @@ const EgressPackSettings: React.FC = () => {
       isRecommended: formData.isRecommended,
     };
 
-    setPacks([...packs, newPack]);
-    setHasUnsavedChanges(true);
-    setShowAddDialog(false);
-    toast.success('Pack added. Click "Save Changes" to persist.');
+    const updatedPacks = [...packs, newPack];
+    const success = await autoSave(updatedPacks);
+    if (success) {
+      setShowAddDialog(false);
+      toast.success('Pack added successfully');
+    }
   };
 
-  const confirmEditPack = () => {
+  const confirmEditPack = async () => {
     if (!selectedPack) return;
     if (!formData.id.trim()) {
       toast.error('Pack ID is required');
@@ -207,19 +212,62 @@ const EgressPackSettings: React.FC = () => {
         : p
     );
 
-    setPacks(updatedPacks);
-    setHasUnsavedChanges(true);
-    setShowEditDialog(false);
-    toast.success('Pack updated. Click "Save Changes" to persist.');
+    const success = await autoSave(updatedPacks);
+    if (success) {
+      setShowEditDialog(false);
+      setSelectedPack(null);
+      toast.success('Pack updated successfully');
+    }
   };
 
-  const confirmDeletePack = () => {
+  const confirmDeletePack = async () => {
     if (!selectedPack) return;
 
-    setPacks(packs.filter(p => p.id !== selectedPack.id));
-    setHasUnsavedChanges(true);
-    setShowDeleteDialog(false);
-    toast.success('Pack removed. Click "Save Changes" to persist.');
+    const updatedPacks = packs.filter(p => p.id !== selectedPack.id);
+    const success = await autoSave(updatedPacks);
+    if (success) {
+      setShowDeleteDialog(false);
+      setSelectedPack(null);
+      toast.success(`Pack "${selectedPack.id}" deleted successfully`);
+    }
+  };
+
+  // Auto-save threshold when input loses focus or Enter key is pressed
+  const handleThresholdBlur = async () => {
+    const threshold = parseInt(thresholdInput, 10);
+    if (isNaN(threshold) || threshold < 1) {
+      toast.error('Warning threshold must be a positive number');
+      setThresholdInput(warningThreshold.toString());
+      return;
+    }
+
+    if (threshold === warningThreshold) {
+      return; // No change
+    }
+
+    setSavingThreshold(true);
+    try {
+      const result = await egressService.updateAdminPackSettings(packs, threshold);
+      if (result.success) {
+        await fetchSettings();
+        toast.success('Warning threshold updated successfully');
+      } else {
+        toast.error(result.error || 'Failed to update warning threshold');
+        setThresholdInput(warningThreshold.toString());
+      }
+    } catch (error) {
+      console.error('Error updating threshold:', error);
+      toast.error('Failed to update warning threshold');
+      setThresholdInput(warningThreshold.toString());
+    } finally {
+      setSavingThreshold(false);
+    }
+  };
+
+  const handleThresholdKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleThresholdBlur();
+    }
   };
 
   const formatGb = (gb: number): string => {
@@ -245,7 +293,7 @@ const EgressPackSettings: React.FC = () => {
                 Credit Pack Definitions
               </CardTitle>
               <CardDescription>
-                Define the credit packs available for purchase. Changes are saved when you click "Save Changes".
+                Define the credit packs available for purchase. Changes are saved automatically.
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -253,12 +301,12 @@ const EgressPackSettings: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={fetchSettings}
-                disabled={loading}
+                disabled={loading || saving}
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading || saving ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button size="sm" onClick={handleAddPack}>
+              <Button size="sm" onClick={handleAddPack} disabled={saving}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Pack
               </Button>
@@ -270,6 +318,11 @@ const EgressPackSettings: React.FC = () => {
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
               <span className="ml-2 text-muted-foreground">Loading settings...</span>
+            </div>
+          ) : saving ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">Saving changes...</span>
             </div>
           ) : packs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -317,6 +370,7 @@ const EgressPackSettings: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditPack(pack)}
+                          disabled={saving}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -325,6 +379,7 @@ const EgressPackSettings: React.FC = () => {
                           size="sm"
                           onClick={() => handleDeletePack(pack)}
                           className="text-destructive hover:text-destructive"
+                          disabled={saving}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -346,24 +401,30 @@ const EgressPackSettings: React.FC = () => {
             Warning Threshold
           </CardTitle>
           <CardDescription>
-            Set the credit balance threshold (in GB) below which users will see a low balance warning.
+            Set the credit balance threshold (in GB) below which users will see a low balance warning. Changes auto-save on blur.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="flex-1 max-w-xs">
               <Label htmlFor="threshold">Warning Threshold (GB)</Label>
-              <Input
-                id="threshold"
-                type="number"
-                min="1"
-                value={thresholdInput}
-                onChange={(e) => {
-                  setThresholdInput(e.target.value);
-                  setHasUnsavedChanges(true);
-                }}
-                className="mt-1"
-              />
+              <div className="relative mt-1">
+                <Input
+                  id="threshold"
+                  type="number"
+                  min="1"
+                  value={thresholdInput}
+                  onChange={(e) => setThresholdInput(e.target.value)}
+                  onBlur={handleThresholdBlur}
+                  onKeyDown={handleThresholdKeyDown}
+                  disabled={savingThreshold}
+                />
+                {savingThreshold && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
             </div>
             <div className="text-sm text-muted-foreground pt-5">
               Current: {warningThreshold} GB
@@ -372,30 +433,13 @@ const EgressPackSettings: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Save Button */}
-      <div className="flex items-center justify-between">
-        {hasUnsavedChanges && (
-          <p className="text-sm text-yellow-600 dark:text-yellow-500">
-            You have unsaved changes
-          </p>
-        )}
-        <Button
-          onClick={handleSaveAll}
-          disabled={saving || loading}
-          className="ml-auto"
-        >
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Saving...' : 'Save Changes'}
-        </Button>
-      </div>
-
       {/* Add Pack Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Credit Pack</DialogTitle>
             <DialogDescription>
-              Create a new credit pack for purchase.
+              Create a new credit pack for purchase. The pack will be saved immediately.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -455,10 +499,13 @@ const EgressPackSettings: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={confirmAddPack}>Add Pack</Button>
+            <Button onClick={confirmAddPack} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Add Pack
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -469,7 +516,7 @@ const EgressPackSettings: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Edit Credit Pack</DialogTitle>
             <DialogDescription>
-              Update the credit pack details.
+              Update the credit pack details. Changes will be saved immediately.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -529,10 +576,13 @@ const EgressPackSettings: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={confirmEditPack}>Save Changes</Button>
+            <Button onClick={confirmEditPack} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -543,15 +593,17 @@ const EgressPackSettings: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Credit Pack</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the "{selectedPack?.id}" pack? This action cannot be undone until you save.
+              Are you sure you want to delete the "{selectedPack?.id}" pack? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeletePack}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={saving}
             >
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

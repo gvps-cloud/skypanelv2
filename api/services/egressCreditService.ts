@@ -25,6 +25,8 @@ export interface CreditPack {
   id: string;
   gb: number;
   price: number;
+  isPopular?: boolean;
+  isRecommended?: boolean;
 }
 
 // Credit purchase record interface
@@ -58,6 +60,55 @@ interface EgressConfig {
   creditPacks: CreditPack[];
 }
 
+const normalizeCreditPacks = (rawValue: unknown): CreditPack[] => {
+  let parsed = rawValue;
+
+  if (typeof rawValue === 'string') {
+    try {
+      parsed = JSON.parse(rawValue);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const maybePack = item as Record<string, unknown>;
+      const id = typeof maybePack.id === 'string' ? maybePack.id.trim() : '';
+      const gb = Number(maybePack.gb);
+      const price = Number(maybePack.price);
+
+      if (!id || !Number.isFinite(gb) || gb <= 0 || !Number.isFinite(price) || price < 0) {
+        return null;
+      }
+
+      return {
+        id,
+        gb,
+        price,
+        isPopular: Boolean(maybePack.isPopular),
+        isRecommended: Boolean(maybePack.isRecommended),
+      };
+    })
+    .filter((pack) => pack !== null) as CreditPack[];
+};
+
+const normalizeWarningThreshold = (rawValue: unknown): number => {
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return 200;
+  }
+  return Math.floor(parsed);
+};
+
 /**
  * Get egress configuration from platform_settings
  * Returns default values if not configured
@@ -77,9 +128,9 @@ export async function getEgressConfig(): Promise<EgressConfig> {
 
     for (const row of result.rows) {
       if (row.key === 'egress_warning_threshold_gb') {
-        config.warningThresholdGb = Number(row.value) || 200;
+        config.warningThresholdGb = normalizeWarningThreshold(row.value);
       } else if (row.key === 'egress_credit_packs') {
-        config.creditPacks = row.value || [];
+        config.creditPacks = normalizeCreditPacks(row.value);
       }
     }
 
@@ -158,7 +209,7 @@ export async function purchaseEgressCredits(
       throw new Error('Egress credit packs not configured');
     }
 
-    const packs = settingsResult.rows[0].value as CreditPack[];
+    const packs = normalizeCreditPacks(settingsResult.rows[0].value);
     const pack = packs.find((p) => p.id === packId);
 
     if (!pack) {
@@ -483,7 +534,7 @@ export async function getAvailableCreditPacks(): Promise<CreditPack[]> {
       return [];
     }
 
-    return result.rows[0].value as CreditPack[];
+    return normalizeCreditPacks(result.rows[0].value);
   } catch (error) {
     console.error('Error getting available credit packs:', error);
     throw error;

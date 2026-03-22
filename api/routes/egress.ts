@@ -49,6 +49,19 @@ const safeParseNumber = (value: unknown): number | null => {
   return null;
 };
 
+const parsePackSettingsValue = (value: unknown): unknown[] => {
+  let parsed = value;
+  if (typeof value === "string") {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+
+  return Array.isArray(parsed) ? parsed : [];
+};
+
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
 
@@ -732,13 +745,14 @@ router.get("/admin/settings/packs", requireAdmin, async (req: Request, res: Resp
       "SELECT value FROM platform_settings WHERE key = 'egress_warning_threshold_gb'",
     );
 
+    const packsRaw = packsResult.rows.length > 0 ? packsResult.rows[0].value : [];
+    const thresholdRaw = thresholdResult.rows.length > 0 ? thresholdResult.rows[0].value : 200;
+
     res.json({
       success: true,
       data: {
-        packs: packsResult.rows.length > 0 ? packsResult.rows[0].value : [],
-        warningThresholdGb: thresholdResult.rows.length > 0 
-          ? parseInt(thresholdResult.rows[0].value, 10) 
-          : 200,
+        packs: parsePackSettingsValue(packsRaw),
+        warningThresholdGb: safeParseNumber(thresholdRaw) ?? 200,
       },
     });
   } catch (error) {
@@ -794,24 +808,59 @@ router.put(
         });
       }
 
-      const { packs, warningThresholdGb } = req.body;
+      const { packs, warningThresholdGb } = req.body as {
+        packs: Array<{
+          id: string;
+          gb: number;
+          price: number;
+          isPopular?: boolean;
+          isRecommended?: boolean;
+        }>;
+        warningThresholdGb?: number;
+      };
       const { id: adminUserId } = (req as AuthenticatedRequest).user;
+      const normalizedPacks = packs.map((pack) => ({
+        id: pack.id.trim(),
+        gb: Number(pack.gb),
+        price: Number(pack.price),
+        isPopular: Boolean(pack.isPopular),
+        isRecommended: Boolean(pack.isRecommended),
+      }));
 
-      // Update packs
+      const packIds = new Set<string>();
+      for (const pack of normalizedPacks) {
+        if (!pack.id) {
+          return res.status(400).json({
+            success: false,
+            error: "Pack ID is required",
+          });
+        }
+        if (packIds.has(pack.id)) {
+          return res.status(400).json({
+            success: false,
+            error: `Duplicate pack ID: ${pack.id}`,
+          });
+        }
+        packIds.add(pack.id);
+      }
+
+      // Upsert packs so settings persist even if key is missing.
       await dbQuery(
-        `UPDATE platform_settings
-         SET value = $1, updated_at = NOW()
-         WHERE key = 'egress_credit_packs'`,
-        [JSON.stringify(packs)],
+        `INSERT INTO platform_settings (key, value, updated_at)
+         VALUES ('egress_credit_packs', $1::jsonb, NOW())
+         ON CONFLICT (key)
+         DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [JSON.stringify(normalizedPacks)],
       );
 
-      // Update warning threshold if provided
+      // Upsert warning threshold if provided.
       if (warningThresholdGb !== undefined) {
         await dbQuery(
-          `UPDATE platform_settings
-           SET value = $1, updated_at = NOW()
-           WHERE key = 'egress_warning_threshold_gb'`,
-          [JSON.stringify(warningThresholdGb)],
+          `INSERT INTO platform_settings (key, value, updated_at)
+           VALUES ('egress_warning_threshold_gb', $1::jsonb, NOW())
+           ON CONFLICT (key)
+           DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+          [JSON.stringify(Math.floor(Number(warningThresholdGb)))],
         );
       }
 
@@ -823,13 +872,13 @@ router.put(
         entityType: "egress_settings",
         message: "Admin updated egress credit pack configuration",
         status: "success",
-        metadata: { packs, warningThresholdGb },
+        metadata: { packs: normalizedPacks, warningThresholdGb },
       });
 
       res.json({
         success: true,
         message: "Credit pack configuration updated",
-        data: { packs, warningThresholdGb },
+        data: { packs: normalizedPacks, warningThresholdGb },
       });
     } catch (error) {
       console.error("Error updating credit pack settings:", error);

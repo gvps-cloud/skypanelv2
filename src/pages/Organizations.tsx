@@ -183,16 +183,12 @@ const Organizations: React.FC = () => {
     }
   }, []);
 
-  const loadCreditPacks = useCallback(async () => {
+  const loadCreditPacks = useCallback(async (organizationId: string) => {
     setPacksLoading(true);
     try {
-      const result = await egressService.getBalance(); // Reuse existing endpoint for packs
-      if (result.success) {
-        // Load packs from the standalone endpoint
-        const packsResult = await egressService.getCreditPacks();
-        if (packsResult.success && packsResult.data) {
-          setCreditPacks(packsResult.data);
-        }
+      const packsResult = await egressService.getOrganizationCreditPacks(organizationId);
+      if (packsResult.success && packsResult.data) {
+        setCreditPacks(packsResult.data);
       }
     } catch (error: any) {
       console.error("Failed to load credit packs:", error);
@@ -347,7 +343,7 @@ const Organizations: React.FC = () => {
     if (selectedOrganization?.id) {
       loadEgressOverview(selectedOrganization.id);
       loadEgressCredits(selectedOrganization.id);
-      loadCreditPacks();
+      loadCreditPacks(selectedOrganization.id);
     }
   }, [selectedOrganization?.id, loadEgressOverview, loadEgressCredits, loadCreditPacks]);
 
