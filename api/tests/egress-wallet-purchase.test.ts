@@ -2,7 +2,7 @@
  * Tests for egress wallet purchase functionality
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { Pool } from 'pg';
 import request from 'supertest';
 import app from '../app';

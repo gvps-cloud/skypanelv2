@@ -2,7 +2,7 @@
  * Tests for EgressBillingService live organization overview
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { Pool, PoolClient } from 'pg';
 import { EgressBillingService } from './egressBillingService';
 
