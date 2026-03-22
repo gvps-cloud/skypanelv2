@@ -238,6 +238,7 @@ These are configurable via `RATE_LIMIT_ANONYMOUS_MAX`, `RATE_LIMIT_AUTHENTICATED
 - `/api/theme` - Theme preset management
 - `/api/pricing` - Public pricing data
 - `/api/health` - Health check endpoint
+- `/api/egress` - Egress credit management, purchase flow, usage readings
 
 ### Agent Routes (`api/routes/agent/`)
 
@@ -250,7 +251,9 @@ These are configurable via `RATE_LIMIT_ANONYMOUS_MAX`, `RATE_LIMIT_AUTHENTICATED
 - `authService` - JWT token management and authentication logic
 - `linodeService` - Linode/Akamai REST API wrapper with caching
 - `billingService` - Hourly billing engine (runHourlyBilling, billVPSCreation, getBillingSummary)
-- `transferBillingService` - Network transfer billing with pool quota tracking
+- `egressBillingService` - Network transfer pool quota tracking and overage projection
+- `egressCreditService` - Egress credit balance, purchase, deduction, manual add
+- `egressHourlyBillingService` - Hourly billing orchestrator (polls Linode transfer API, deducts credits, auto-shutoff)
 - `paypalService` - PayPal order creation, capture, wallet deduction
 - `emailService` - Email sending with provider fallback (Resend → SMTP)
 - `emailTemplateService` - Handlebars-based email template rendering
@@ -263,6 +266,10 @@ These are configurable via `RATE_LIMIT_ANONYMOUS_MAX`, `RATE_LIMIT_AUTHENTICATED
 - `LinodeProviderService` - Linode-specific implementation
 - `ProviderFactory` - Provider instantiation from type + token
 - `errorNormalizer` - Standardized provider error handling
+
+### Egress Services (`api/services/egress/`)
+
+- `egressUtils` - Linode transfer API helpers and quota calculations
 
 ### Activity & Notification Services
 
@@ -377,6 +384,7 @@ res.json({ success: true, data: result });
 - `Activity` - Activity history
 - `ApiDocs` - API documentation viewer
 - `AcceptInvitation` - Organization invitation acceptance
+- `EgressCredits` - Egress credit balance, purchase, and usage history
 
 **Admin Pages:**
 - `Admin` - Admin dashboard with tabbed management panels
@@ -392,6 +400,8 @@ res.json({ success: true, data: result });
   - `FAQItemManager`, `UpdatesManager`, `RegionAccessManager`
   - `ImpersonationBanner`, `ImpersonationLoadingOverlay`
   - `AdminSupportView`, `OrganizationManagement`
+  - `EgressCreditManager` - Admin egress credit management UI
+  - `EgressPackSettings` - Admin credit pack pricing configuration
   - `email/` - Email template management components
   - `billing/` - Admin billing components
 - `VPS/` - VPS creation wizard steps, SSH terminal, provider/region selectors
@@ -439,6 +449,7 @@ res.json({ success: true, data: result });
 - `paymentService.ts` - Payment API client
 - `adminEmailTemplateService.ts` - Admin email template API client
 - `categoryMappingService.ts` - Category mapping API client
+- `egressService.ts` - Egress credit and usage API client
 
 ### Frontend Libraries (`src/lib/`)
 
@@ -500,7 +511,7 @@ res.json({ success: true, data: result });
 │   ├── types/                 # TypeScript type definitions
 │   ├── styles/                # Page-specific CSS
 │   └── assets/                # Static assets
-├── migrations/                 # 27 sequential SQL migrations (001–027)
+├── migrations/                 # 33 sequential SQL migrations (001–033)
 ├── scripts/                    # Node.js utility scripts
 ├── deploy/                     # Deployment configurations
 │   └── caddy/                 # Caddy web server configuration
@@ -592,7 +603,7 @@ Configuration in [vercel.json](vercel.json).
 
 ### Migration System
 
-- 27 sequential SQL migrations (001–027, with 006 skipped)
+- 33 sequential SQL migrations (001–033, with 006 skipped)
 - Naming convention: `NNN_description.sql`
 - Located in `migrations/` directory
 - Initial migration (001) is a consolidated schema containing multiple historical migrations

@@ -12,6 +12,7 @@ SkyPanelV2 is a full-stack VPS hosting and billing panel with:
 - Billing, invoices, transactions, and PayPal payment flows
 - Support, notifications, and activity history
 - Organizations, invitations, and membership workflows
+- Egress (network transfer) billing with prepaid credit packs and hourly enforcement
 - Admin tools for users, billing, platform settings, FAQ/contact content, email templates, GitHub/update integrations, and impersonation
 
 ## Current Stack
@@ -219,6 +220,7 @@ deploy/                 Deployment-related templates
 - `/settings`
 - `/activity`
 - `/api-docs`
+- `/egress-credits`
 
 ### Admin Pages
 
@@ -258,6 +260,7 @@ The Express app currently registers these route groups:
 - `/api/ssh-keys`
 - `/api/organizations`
 - `/api/pricing`
+- `/api/egress`
 
 Cross-cutting backend behavior includes:
 
@@ -292,6 +295,40 @@ Theme behavior spans frontend context/state and backend theme APIs. Review `src/
 ### Organizations and Billing Scope
 
 Organizations, invitations, and billing visibility are tightly related areas. Be careful when modifying resource queries, access control, or dashboard summaries so data does not leak across users or orgs.
+
+### Egress Billing System
+
+SkyPanelV2 implements a **prepaid egress credit model with hourly enforcement** to prevent network transfer abuse:
+
+- **Credit packs** (100GB, 1TB, 5TB, 10TB) are purchased via PayPal and stored per-organization
+- **Hourly billing** polls Linode transfer API every 60 minutes, calculating delta from the last reading
+- **Auto-shutoff** suspends VPS instances when an organization's credit balance hits zero
+- **Organization-scoped**: all members share the same credit pool; permissions control who can view vs. purchase
+
+Key services:
+- `api/services/egressCreditService.ts` — credit balance, purchase, deduction, manual add
+- `api/services/egressHourlyBillingService.ts` — hourly billing orchestrator
+- `api/services/egressBillingService.ts` — transfer pool tracking and overage projection
+- `api/services/egress/egressUtils.ts` — Linode transfer API helpers
+
+Key routes:
+- `GET /api/egress/credits` — org credit balance
+- `GET /api/egress/credits/history` — purchase history
+- `GET /api/egress/credits/packs` — available packs
+- `POST /api/egress/credits/purchase` — initiate PayPal purchase
+- `POST /api/egress/credits/purchase/complete` — complete purchase
+- `GET /api/egress/usage/:vpsId` — per-VPS hourly readings
+- Admin routes under `/api/egress/admin/*` for manual credit management and billing triggers
+
+Key frontend files:
+- `src/pages/EgressCredits.tsx` — dedicated egress credits page
+- `src/pages/Organizations.tsx` — org Egress tab with credit management
+- `src/pages/VPSDetail.tsx` — egress usage section in Networking tab
+- `src/components/admin/EgressCreditManager.tsx` — admin credit management UI
+- `src/components/admin/EgressPackSettings.tsx` — admin pack pricing config
+- `src/services/egressService.ts` — frontend API client
+
+Database migrations 026–033 implement the egress system (tables: `organization_egress_credits`, `egress_credit_packs`, `vps_egress_hourly_readings`, etc.).
 
 ## Testing Notes
 

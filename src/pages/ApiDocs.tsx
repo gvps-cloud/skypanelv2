@@ -1389,6 +1389,427 @@ export default function ApiDocs() {
         ],
       },
       {
+        title: "Egress & Network Billing",
+        base: `${apiBase}/egress`,
+        description:
+          "Prepaid network transfer credits, usage tracking, and hourly billing enforcement.",
+        icon: <Server className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/credits",
+            description: "Get current egress credit balance for the user's organization.",
+            auth: true,
+            response: {
+              credits: {
+                balance: 500,
+                used: 125.5,
+                remaining: 374.5,
+                unit: "GB",
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/credits/history",
+            description: "Get purchase history for egress credits.",
+            auth: true,
+            response: {
+              history: [
+                {
+                  id: "purchase_001",
+                  amount: 1000,
+                  price: 80,
+                  purchasedAt: "2024-10-01T00:00:00Z",
+                },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/credits/packs",
+            description: "Get available egress credit packs for purchase.",
+            auth: true,
+            response: {
+              packs: [
+                { id: "pack_100gb", name: "100GB", amount: 100, price: 10 },
+                { id: "pack_1tb", name: "1TB", amount: 1000, price: 80 },
+                { id: "pack_5tb", name: "5TB", amount: 5000, price: 350 },
+                { id: "pack_10tb", name: "10TB", amount: 10000, price: 600 },
+              ],
+            },
+          },
+          {
+            method: "POST",
+            path: "/credits/purchase",
+            description: "Initiate purchase of egress credit packs via PayPal.",
+            auth: true,
+            body: {
+              packId: "pack_1tb",
+            },
+            response: {
+              success: true,
+              paymentId: "PAYID-MOCK123",
+              approvalUrl: "https://paypal.com/checkout?token=PAYID-MOCK123",
+            },
+          },
+          {
+            method: "POST",
+            path: "/credits/purchase/complete",
+            description: "Complete egress credit purchase after PayPal approval.",
+            auth: true,
+            body: {
+              paymentId: "PAYID-MOCK123",
+            },
+            response: {
+              success: true,
+              credits: {
+                balance: 1374.5,
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/usage/:vpsId",
+            description: "Get hourly egress usage readings for a specific VPS.",
+            auth: true,
+            response: {
+              readings: [
+                {
+                  vpsId: "vps_001",
+                  timestamp: "2024-10-26T14:00:00Z",
+                  inboundBytes: 1024000,
+                  outboundBytes: 512000,
+                },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/usage/:vpsId/summary",
+            description: "Get summarized egress usage for a VPS (totals, averages).",
+            auth: true,
+            response: {
+              summary: {
+                vpsId: "vps_001",
+                totalInbound: 102400000,
+                totalOutbound: 51200000,
+                periodStart: "2024-10-01T00:00:00Z",
+                periodEnd: "2024-10-26T23:59:59Z",
+              },
+            },
+          },
+        ],
+      },
+      {
+        title: "Organizations",
+        base: `${apiBase}/organizations`,
+        description:
+          "Organization management, members, roles, invitations, and egress credits.",
+        icon: <Server className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/",
+            description:
+              "List organizations the authenticated user belongs to.",
+            auth: true,
+            response: {
+              organizations: [
+                {
+                  id: "org_001",
+                  name: "Acme Corp",
+                  role: "owner",
+                  createdAt: "2024-01-01T00:00:00Z",
+                },
+              ],
+            },
+          },
+          {
+            method: "PUT",
+            path: "/:id",
+            description: "Update organization details (name, settings).",
+            auth: true,
+            body: {
+              name: "Acme Corp Updated",
+            },
+            response: {
+              success: true,
+              organization: {
+                id: "org_001",
+                name: "Acme Corp Updated",
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/:id/members",
+            description: "List members of an organization.",
+            auth: true,
+            response: {
+              members: [
+                {
+                  userId: "user_123",
+                  email: "admin@example.com",
+                  role: "owner",
+                  joinedAt: "2024-01-01T00:00:00Z",
+                },
+              ],
+            },
+          },
+          {
+            method: "POST",
+            path: "/:id/members",
+            description: "Add a user directly to an organization.",
+            auth: true,
+            body: {
+              userId: "user_456",
+              role: "member",
+            },
+            response: {
+              success: true,
+              member: {
+                userId: "user_456",
+                role: "member",
+              },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/:id/members/:userId",
+            description: "Remove a member from an organization.",
+            auth: true,
+            response: {
+              success: true,
+            },
+          },
+          {
+            method: "PUT",
+            path: "/:id/members/:userId",
+            description: "Update a member's role in an organization.",
+            auth: true,
+            body: {
+              role: "admin",
+            },
+            response: {
+              success: true,
+            },
+          },
+          {
+            method: "POST",
+            path: "/:id/members/invite",
+            description: "Invite a user to join an organization via email.",
+            auth: true,
+            body: {
+              email: "newuser@example.com",
+              role: "member",
+            },
+            response: {
+              success: true,
+              invitation: {
+                id: "inv_001",
+                email: "newuser@example.com",
+                role: "member",
+                token: "inv_token_abc123",
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/:id/invitations",
+            description: "List pending invitations for an organization.",
+            auth: true,
+            response: {
+              invitations: [
+                {
+                  id: "inv_001",
+                  email: "pending@example.com",
+                  role: "member",
+                  expiresAt: "2024-10-30T00:00:00Z",
+                },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/:id/roles",
+            description: "List available roles for an organization.",
+            auth: true,
+            response: {
+              roles: [
+                { id: "owner", name: "Owner", permissions: ["*"] },
+                { id: "admin", name: "Admin", permissions: ["vps.*", "billing.view"] },
+                { id: "member", name: "Member", permissions: ["vps.view", "vps.create"] },
+              ],
+            },
+          },
+          {
+            method: "POST",
+            path: "/:id/roles",
+            description: "Create a custom role for an organization.",
+            auth: true,
+            body: {
+              name: "Billing Manager",
+              permissions: ["billing.view", "billing.manage"],
+            },
+            response: {
+              success: true,
+              role: {
+                id: "role_custom_001",
+                name: "Billing Manager",
+                permissions: ["billing.view", "billing.manage"],
+              },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/:id/roles/:roleId",
+            description: "Update a custom organization's role.",
+            auth: true,
+            body: {
+              name: "Billing Manager",
+              permissions: ["billing.view", "billing.manage", "billing.refund"],
+            },
+            response: {
+              success: true,
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/:id/roles/:roleId",
+            description: "Delete a custom organization role.",
+            auth: true,
+            response: {
+              success: true,
+            },
+          },
+          {
+            method: "GET",
+            path: "/resources",
+            description: "Get aggregated resource usage across all organizations the user has access to.",
+            auth: true,
+            response: {
+              resources: {
+                vpsCount: 10,
+                totalCpu: 20,
+                totalMemory: 40960,
+                totalStorage: 819200,
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/invitations/:token",
+            description: "Get details of a pending invitation by token.",
+            auth: true,
+            response: {
+              invitation: {
+                id: "inv_001",
+                organizationName: "Acme Corp",
+                role: "member",
+                expiresAt: "2024-10-30T00:00:00Z",
+              },
+            },
+          },
+          {
+            method: "POST",
+            path: "/invitations/:token/accept",
+            description: "Accept an organization invitation.",
+            auth: true,
+            response: {
+              success: true,
+              message: "Invitation accepted",
+            },
+          },
+          {
+            method: "POST",
+            path: "/invitations/:token/decline",
+            description: "Decline an organization invitation.",
+            auth: true,
+            response: {
+              success: true,
+              message: "Invitation declined",
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/invitations/:id",
+            description: "Cancel a pending invitation.",
+            auth: true,
+            response: {
+              success: true,
+            },
+          },
+          {
+            method: "GET",
+            path: "/:id/egress",
+            description: "Get egress data for an organization.",
+            auth: true,
+            response: {
+              egress: {
+                totalUsed: 125.5,
+                unit: "GB",
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/:id/egress/credits",
+            description: "Get egress credit balance for an organization.",
+            auth: true,
+            response: {
+              credits: {
+                balance: 500,
+                used: 125.5,
+                remaining: 374.5,
+                unit: "GB",
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/:id/egress/credits/packs",
+            description: "Get available egress credit packs for purchase.",
+            auth: true,
+            response: {
+              packs: [
+                { id: "pack_100gb", name: "100GB", amount: 100, price: 10 },
+                { id: "pack_1tb", name: "1TB", amount: 1000, price: 80 },
+              ],
+            },
+          },
+          {
+            method: "POST",
+            path: "/:id/egress/credits/purchase",
+            description: "Initiate purchase of egress credit packs via PayPal.",
+            auth: true,
+            body: {
+              packId: "pack_1tb",
+            },
+            response: {
+              success: true,
+              paymentId: "PAYID-MOCK123",
+              approvalUrl: "https://paypal.com/checkout?token=PAYID-MOCK123",
+            },
+          },
+          {
+            method: "POST",
+            path: "/:id/egress/credits/purchase/complete",
+            description: "Complete egress credit purchase after PayPal approval.",
+            auth: true,
+            body: {
+              paymentId: "PAYID-MOCK123",
+            },
+            response: {
+              success: true,
+              credits: {
+                balance: 1374.5,
+              },
+            },
+          },
+        ],
+      },
+      {
         title: "Activity & Audit Log",
         base: `${apiBase}/activity`,
         description:
@@ -1457,6 +1878,64 @@ export default function ApiDocs() {
                 byType: { vps: 80, billing: 40, support: 30 },
                 byStatus: { success: 140, error: 10 },
               },
+            },
+          },
+          {
+            method: "GET",
+            path: "/unread-count",
+            description: "Get the count of unread activity items for the authenticated user.",
+            auth: true,
+            response: {
+              count: 5
+            },
+          },
+          {
+            method: "PUT",
+            path: "/read-all",
+            description: "Mark all activity items as read for the authenticated user.",
+            auth: true,
+            response: {
+              success: true,
+              message: "All activities marked as read"
+            },
+          },
+          {
+            method: "GET",
+            path: "/organization/:organizationId",
+            description: "Fetch activities filtered by a specific organization.",
+            auth: true,
+            params: { organizationId: "org_123" },
+            response: {
+              activities: [
+                {
+                  id: "act_001",
+                  type: "vps",
+                  message: "VPS created",
+                  organizationId: "org_123",
+                  status: "success",
+                  timestamp: "2024-10-25T08:00:00Z",
+                },
+              ],
+            },
+          },
+          {
+            method: "PUT",
+            path: "/:id/read",
+            description: "Mark a specific activity item as read.",
+            auth: true,
+            response: {
+              success: true,
+              message: "Activity marked as read"
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/:id",
+            description: "Delete a specific activity item.",
+            auth: true,
+            response: {
+              success: true,
+              message: "Activity deleted"
             },
           },
         ],
