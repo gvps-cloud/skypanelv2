@@ -3,29 +3,38 @@
  * Handles pre-paid egress credit management for VPS network transfer
  */
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Database,
   Plus,
   ShoppingCart,
   AlertTriangle,
   Info,
-  TrendingUp,
   Calendar,
-  DollarSign,
   Loader2,
   CheckCircle2,
   CreditCard,
   Star,
   ThumbsUp,
+  Building2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { type OrganizationResources } from '@/types/organizations';
 import { egressService, type EgressCreditBalance, type CreditPack, type CreditPurchase } from '../services/egressService';
-import PayPalCheckoutDialog from '@/components/billing/PayPalCheckoutDialog';
+import PurchaseEgressCreditsDialog from '@/components/billing/PurchaseEgressCreditsDialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -37,26 +46,81 @@ import {
 
 const EgressCredits: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+
+  const routerOrgId = (location.state as { organizationId?: string })?.organizationId;
+
+  // Accessible orgs with egress_view permission
+  const [accessibleOrgs, setAccessibleOrgs] = useState<OrganizationResources[]>([]);
+  const [orgsLoading, setOrgsLoading] = useState(true);
+
+  // Selected org — defaults to router state org, then user's current org, then first accessible org
+  const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(undefined);
+  const selectedOrgName = accessibleOrgs.find(o => o.organization_id === selectedOrgId)?.organization_name;
+
   const [balance, setBalance] = useState<EgressCreditBalance | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [packs, setPacks] = useState<CreditPack[]>([]);
   const [purchaseHistory, setPurchaseHistory] = useState<CreditPurchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [isPayPalDialogOpen, setIsPayPalDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPack, setSelectedPack] = useState<CreditPack | null>(null);
 
-  // Load balance and packs
+  // Load accessible organizations
+  const loadAccessibleOrgs = useCallback(async () => {
+    setOrgsLoading(true);
+    try {
+      const data = await apiClient.get<{ resources: OrganizationResources[] }>('/organizations/resources');
+      const orgsWithEgress = (data.resources || []).filter(
+        (org: OrganizationResources) => org.permissions?.egress_view === true
+      );
+      setAccessibleOrgs(orgsWithEgress);
+
+      // Set initial selected org: router state > user's current org > first accessible org
+      if (!selectedOrgId) {
+        const defaultOrg =
+          routerOrgId && orgsWithEgress.some(o => o.organization_id === routerOrgId)
+            ? routerOrgId
+            : user?.organizationId && orgsWithEgress.some(o => o.organization_id === user.organizationId)
+            ? user.organizationId
+            : orgsWithEgress[0]?.organization_id;
+        setSelectedOrgId(defaultOrg);
+      }
+    } catch (error) {
+      console.error('Failed to load organizations:', error);
+      toast.error('Failed to load organizations');
+    } finally {
+      setOrgsLoading(false);
+    }
+  }, [routerOrgId, user?.organizationId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
-    loadBalance();
-    loadPacks();
-    loadPurchaseHistory();
-  }, []);
+    void loadAccessibleOrgs();
+  }, [loadAccessibleOrgs]);
+
+  // Load balance, packs, purchase history, and wallet balance for selected org
+  useEffect(() => {
+    if (!selectedOrgId) return;
+    void loadBalance();
+    void loadPacks();
+    void loadPurchaseHistory();
+    void loadWalletBalance();
+  }, [selectedOrgId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadBalance = async () => {
+    if (!selectedOrgId) return;
+    setLoading(true);
     try {
-      const result = await egressService.getBalance();
+      const result = await egressService.getOrganizationEgressCredits(selectedOrgId, 20);
       if (result.success && result.data) {
-        setBalance(result.data);
+        if ('creditsGb' in result.data) {
+          setBalance(result.data as EgressCreditBalance);
+        } else {
+          const orgData = result.data as { creditsGb: number; warning: boolean };
+          setBalance({ creditsGb: orgData.creditsGb, warning: orgData.warning });
+        }
       } else {
         toast.error(result.error || 'Failed to load credit balance');
       }
@@ -69,8 +133,9 @@ const EgressCredits: React.FC = () => {
   };
 
   const loadPacks = async () => {
+    if (!selectedOrgId) return;
     try {
-      const result = await egressService.getCreditPacks();
+      const result = await egressService.getOrganizationCreditPacks(selectedOrgId);
       if (result.success && result.data) {
         setPacks(result.data);
       }
@@ -80,11 +145,16 @@ const EgressCredits: React.FC = () => {
   };
 
   const loadPurchaseHistory = async () => {
+    if (!selectedOrgId) return;
     setHistoryLoading(true);
     try {
-      const result = await egressService.getPurchaseHistory(20);
+      const result = await egressService.getOrganizationEgressCredits(selectedOrgId, 20);
       if (result.success && result.data) {
-        setPurchaseHistory(result.data);
+        if ('purchaseHistory' in result.data) {
+          setPurchaseHistory(result.data.purchaseHistory || []);
+        } else {
+          setPurchaseHistory([]);
+        }
       }
     } catch (error) {
       console.error('Failed to load purchase history:', error);
@@ -93,56 +163,36 @@ const EgressCredits: React.FC = () => {
     }
   };
 
-  const handlePurchaseClick = (pack: CreditPack) => {
-    setSelectedPack(pack);
-    setIsPayPalDialogOpen(true);
+  const loadWalletBalance = async () => {
+    if (!selectedOrgId) return;
+    try {
+      const result = await egressService.getWalletBalance(selectedOrgId);
+      if (result.success && result.data) {
+        setWalletBalance(result.data.balance);
+      }
+    } catch (error) {
+      console.error('Failed to load wallet balance:', error);
+    }
   };
 
-  const handlePayPalSuccess = async () => {
-    if (!selectedPack) return;
+  const handleOrgChange = (newOrgId: string) => {
+    setSelectedOrgId(newOrgId);
+    setPurchaseHistory([]);
+    setBalance(null);
+    setWalletBalance(0);
+  };
 
-    try {
-      // Find the most recent payment transaction that doesn't have a corresponding egress credit purchase
-      // This is a bit of a workaround since the PayPal dialog doesn't expose the transaction ID
-      const historyResult = await egressService.getPurchaseHistory(5);
+  const handlePurchaseClick = (pack: CreditPack) => {
+    setSelectedPack(pack);
+    setIsDialogOpen(true);
+  };
 
-      // Get PayPal payment transactions to find the most recent one
-      const response = await fetch('/api/payments/history?limit=1', {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
-
-      const data = await response.json();
-      if (data.success && data.payments && data.payments.length > 0) {
-        const recentPayment = data.payments[0];
-
-        // Check if this payment already has a corresponding egress credit purchase
-        const hasExistingPurchase = historyResult.data?.some(
-          p => p.paymentTransactionId === recentPayment.id
-        );
-
-        if (!hasExistingPurchase && recentPayment.status === 'completed') {
-          const result = await egressService.completePurchase(recentPayment.id, selectedPack.id);
-          if (result.success) {
-            toast.success(result.message || 'Credits purchased successfully!');
-            await loadBalance();
-            await loadPurchaseHistory();
-          } else {
-            toast.error(result.error || 'Failed to complete purchase');
-          }
-          return;
-        }
-      }
-
-      // Fallback: just reload balance in case credits were auto-applied
-      await loadBalance();
-      toast.success('Payment completed! If credits were not applied, please contact support.');
-    } catch (error) {
-      console.error('Failed to complete purchase:', error);
-      toast.error('Payment completed, but credits may need to be applied manually');
-    }
+  const handlePurchaseSuccess = async () => {
+    await loadBalance();
+    await loadPurchaseHistory();
+    await loadWalletBalance();
+    setIsDialogOpen(false);
+    setSelectedPack(null);
   };
 
   const formatDate = (dateString: string) => {
@@ -163,7 +213,30 @@ const EgressCredits: React.FC = () => {
     return `${gb.toFixed(2)} GB`;
   };
 
-  if (loading) {
+  // Access denied if no orgs with egress_view
+  if (!orgsLoading && accessibleOrgs.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+            <Database className="h-8 w-8 text-primary" />
+            Egress Credits
+          </h1>
+        </div>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-amber-500" />
+            <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
+            <p className="text-muted-foreground">
+              You do not have permission to view egress credits for any organization.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading && !selectedOrgId) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -175,13 +248,39 @@ const EgressCredits: React.FC = () => {
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-          <Database className="h-8 w-8 text-primary" />
-          Egress Credits
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Manage pre-paid credits for VPS network transfer. Credits are deducted hourly based on usage.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+              <Database className="h-8 w-8 text-primary" />
+              Egress Credits
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              Manage pre-paid credits for VPS network transfer. Credits are deducted hourly based on usage.
+            </p>
+          </div>
+
+          {/* Organization Selector */}
+          {accessibleOrgs.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <Select
+                value={selectedOrgId}
+                onValueChange={handleOrgChange}
+              >
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accessibleOrgs.map((org) => (
+                    <SelectItem key={org.organization_id} value={org.organization_id}>
+                      {org.organization_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Warning Banner */}
@@ -209,12 +308,14 @@ const EgressCredits: React.FC = () => {
             <CreditCard className="h-5 w-5" />
             Current Balance
           </CardTitle>
-          <CardDescription>Your available egress credits for network transfer</CardDescription>
+          <CardDescription>
+            {selectedOrgName ? `Egress credits for ${selectedOrgName}` : 'Your available egress credits for network transfer'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-bold text-foreground">
-              {balance ? formatGb(balance.creditsGb) : '0 GB'}
+              {balance ? formatGb(balance.creditsGb) : '—'}
             </span>
             <span className="text-muted-foreground">available</span>
           </div>
@@ -224,9 +325,7 @@ const EgressCredits: React.FC = () => {
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full ${
-                    balance.warning
-                      ? 'bg-amber-500'
-                      : 'bg-green-500'
+                    balance.warning ? 'bg-amber-500' : 'bg-green-500'
                   }`}
                   style={{
                     width: `${Math.min(100, (balance.creditsGb / 1000) * 100)}%`,
@@ -253,50 +352,58 @@ const EgressCredits: React.FC = () => {
           <ShoppingCart className="h-5 w-5" />
           Purchase Credits
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {packs.map((pack) => (
-            <Card
-              key={pack.id}
-              className={`hover:shadow-lg transition-shadow cursor-pointer relative overflow-hidden group ${
-                pack.isRecommended ? 'ring-2 ring-green-500 dark:ring-green-400' : ''
-              }`}
-              onClick={() => handlePurchaseClick(pack)}
-            >
-              {/* Badges */}
-              {(pack.isPopular || pack.isRecommended) && (
-                <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-                  {pack.isPopular && (
-                    <Badge className="bg-yellow-500 hover:bg-yellow-600 text-yellow-950">
-                      <Star className="h-3 w-3 mr-1" />
-                      Popular
-                    </Badge>
-                  )}
-                  {pack.isRecommended && (
-                    <Badge className="bg-green-500 hover:bg-green-600 text-green-950">
-                      <ThumbsUp className="h-3 w-3 mr-1" />
-                      Recommended
-                    </Badge>
-                  )}
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardHeader className="relative">
-                <CardTitle className="text-lg">{pack.id}</CardTitle>
-                <CardDescription>{formatGb(pack.gb)} of credits</CardDescription>
-              </CardHeader>
-              <CardContent className="relative">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold">${pack.price.toFixed(2)}</span>
-                  <span className="text-gray-500 dark:text-gray-400">USD</span>
-                </div>
-                <Button className="w-full mt-4" size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Purchase
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {packs.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              <p>No credit packs available.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {packs.map((pack) => (
+              <Card
+                key={pack.id}
+                className={`hover:shadow-lg transition-shadow cursor-pointer relative overflow-hidden group ${
+                  pack.isRecommended ? 'ring-2 ring-green-500 dark:ring-green-400' : ''
+                }`}
+                onClick={() => handlePurchaseClick(pack)}
+              >
+                {/* Badges */}
+                {(pack.isPopular || pack.isRecommended) && (
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+                    {pack.isPopular && (
+                      <Badge className="bg-yellow-500 hover:bg-yellow-600 text-yellow-950">
+                        <Star className="h-3 w-3 mr-1" />
+                        Popular
+                      </Badge>
+                    )}
+                    {pack.isRecommended && (
+                      <Badge className="bg-green-500 hover:bg-green-600 text-green-950">
+                        <ThumbsUp className="h-3 w-3 mr-1" />
+                        Recommended
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <CardHeader className="relative">
+                  <CardTitle className="text-lg">{pack.id}</CardTitle>
+                  <CardDescription>{formatGb(pack.gb)} of credits</CardDescription>
+                </CardHeader>
+                <CardContent className="relative">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-bold">${pack.price.toFixed(2)}</span>
+                    <span className="text-gray-500 dark:text-gray-400">USD</span>
+                  </div>
+                  <Button className="w-full mt-4" size="sm">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Purchase
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Purchase History */}
@@ -306,7 +413,7 @@ const EgressCredits: React.FC = () => {
             <Calendar className="h-5 w-5" />
             Purchase History
           </CardTitle>
-          <CardDescription>Your recent egress credit purchases</CardDescription>
+          <CardDescription>Recent egress credit purchases for {selectedOrgName || 'this organization'}</CardDescription>
         </CardHeader>
         <CardContent>
           {historyLoading ? (
@@ -357,17 +464,19 @@ const EgressCredits: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* PayPal Dialog */}
-      {selectedPack && (
-        <PayPalCheckoutDialog
-          open={isPayPalDialogOpen}
+      {/* Purchase Dialog */}
+      {selectedPack && selectedOrgId && (
+        <PurchaseEgressCreditsDialog
+          open={isDialogOpen}
           onOpenChange={(open) => {
-            setIsPayPalDialogOpen(open);
+            setIsDialogOpen(open);
             if (!open) setSelectedPack(null);
           }}
-          amount={selectedPack.price}
-          description={`Egress Credit Pack: ${selectedPack.id} (${formatGb(selectedPack.gb)})`}
-          onPaymentSuccess={handlePayPalSuccess}
+          pack={selectedPack}
+          organizationId={selectedOrgId}
+          organizationName={selectedOrgName}
+          walletBalance={walletBalance}
+          onPurchaseSuccess={handlePurchaseSuccess}
         />
       )}
     </div>

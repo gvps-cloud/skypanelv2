@@ -23,7 +23,7 @@ import {
 } from "../services/egressCreditService.js";
 import { EgressHourlyBillingService } from "../services/egressHourlyBillingService.js";
 import { logActivity } from "../services/activityLogger.js";
-import { query as dbQuery } from "../lib/database.js";
+import { query as dbQuery, transaction } from "../lib/database.js";
 
 const router = express.Router();
 
@@ -227,6 +227,9 @@ router.post(
     body("packId")
       .isString()
       .withMessage("Pack ID is required"),
+    body("organizationId")
+      .isUUID()
+      .withMessage("Organization ID is required"),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -239,8 +242,21 @@ router.post(
         });
       }
 
-      const { paymentId, packId } = req.body;
-      const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+      const { paymentId, packId, organizationId } = req.body;
+      const { id: userId } = (req as AuthenticatedRequest).user;
+
+      // Verify user is a member of this organization
+      const memberCheck = await dbQuery(
+        `SELECT 1 FROM organization_members WHERE user_id = $1 AND organization_id = $2`,
+        [userId, organizationId],
+      );
+
+      if (memberCheck.rows.length === 0) {
+        return res.status(403).json({
+          success: false,
+          error: "You are not a member of this organization",
+        });
+      }
 
       // Verify the payment was captured
       const transactionResult = await dbQuery(
@@ -298,6 +314,174 @@ router.post(
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Failed to complete purchase",
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/egress/credits/wallet-balance
+ * Get current wallet balance for the organization (for purchase dialog)
+ */
+router.get("/credits/wallet-balance", requireOrganization, async (req: Request, res: Response) => {
+  try {
+    const { organizationId } = (req as AuthenticatedRequest).user;
+
+    const walletResult = await dbQuery(
+      'SELECT balance FROM wallets WHERE organization_id = $1',
+      [organizationId],
+    );
+
+    if (walletResult.rows.length === 0) {
+      return res.json({
+        success: true,
+        data: { balance: 0 },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { balance: Number(walletResult.rows[0].balance) },
+    });
+  } catch (error) {
+    console.error("Error getting wallet balance:", error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get wallet balance",
+    });
+  }
+});
+
+/**
+ * POST /api/egress/credits/purchase/wallet
+ * Purchase egress credits using existing wallet balance
+ */
+router.post(
+  "/credits/purchase/wallet",
+  requireOrganization,
+  [
+    body("organizationId").isUUID().withMessage("Organization ID is required"),
+    body("packId").isString().trim().notEmpty().withMessage("Pack ID is required"),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: "Validation failed",
+          details: errors.array(),
+        });
+      }
+
+      const { organizationId, packId } = req.body;
+      const { id: userId } = (req as AuthenticatedRequest).user;
+
+      // Verify the user belongs to this organization
+      const { organizationId: userOrgId } = (req as AuthenticatedRequest).user;
+      if (userOrgId !== organizationId) {
+        return res.status(403).json({
+          success: false,
+          error: "You do not have permission to purchase credits for this organization",
+        });
+      }
+
+      // Get credit pack configuration
+      const packs = await getAvailableCreditPacks();
+      const pack = packs.find((p) => p.id === packId);
+
+      if (!pack) {
+        return res.status(404).json({
+          success: false,
+          error: "Credit pack not found",
+        });
+      }
+
+      // Check wallet balance
+      const walletResult = await dbQuery(
+        'SELECT balance FROM wallets WHERE organization_id = $1',
+        [organizationId],
+      );
+
+      if (walletResult.rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Wallet not found for organization",
+        });
+      }
+
+      const currentBalance = Number(walletResult.rows[0].balance);
+
+      if (currentBalance < pack.price) {
+        return res.status(400).json({
+          success: false,
+          error: `Insufficient wallet balance. Required: $${pack.price.toFixed(2)}, Available: $${currentBalance.toFixed(2)}`,
+        });
+      }
+
+      // Perform wallet deduction + egress credit addition in a transaction
+      await transaction(async (client) => {
+        // Deduct from wallet
+        await client.query(
+          'UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE organization_id = $2',
+          [pack.price, organizationId],
+        );
+
+        // Record wallet deduction as a transaction
+        await client.query(
+          `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, status, description, metadata)
+           VALUES ($1, $2, 'USD', 'wallet_debit', 'internal', 'completed', $3, $4)`,
+          [organizationId, -pack.price, `Egress credit pack purchase: ${pack.id} (${pack.gb}GB)`, JSON.stringify({ packId: pack.id, creditsGb: pack.gb })],
+        );
+
+        // Add egress credits
+        await client.query(
+          `INSERT INTO organization_egress_credits (organization_id, credits_gb)
+           VALUES ($1, $2)
+           ON CONFLICT (organization_id)
+           DO UPDATE SET credits_gb = organization_egress_credits.credits_gb + EXCLUDED.credits_gb,
+                        updated_at = NOW()`,
+          [organizationId, pack.gb],
+        );
+
+        // Record the purchase
+        await client.query(
+          `INSERT INTO egress_credit_packs (organization_id, pack_id, credits_gb, amount_paid, adjustment_type)
+           VALUES ($1, $2, $3, $4, 'purchase')`,
+          [organizationId, packId, pack.gb, pack.price],
+        );
+      });
+
+      // Log activity
+      await logActivity({
+        userId,
+        organizationId,
+        eventType: "egress.credits.wallet_purchased",
+        entityType: "egress_credits",
+        message: `Purchased ${pack.gb}GB egress credit pack via wallet`,
+        status: "success",
+        metadata: {
+          packId,
+          creditsGb: pack.gb,
+          amountPaid: pack.price,
+        },
+      });
+
+      const balanceDetails = await getEgressCreditBalanceDetails(organizationId);
+
+      res.json({
+        success: true,
+        message: "Egress credits purchased successfully",
+        data: {
+          newBalance: balanceDetails.creditsGb,
+          walletDeducted: pack.price,
+        },
+      });
+    } catch (error) {
+      console.error("Error purchasing egress credits via wallet:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to purchase credits",
       });
     }
   }

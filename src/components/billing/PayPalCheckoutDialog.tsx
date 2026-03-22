@@ -23,7 +23,7 @@ interface PayPalCheckoutDialogProps {
   amount: number | null;
   description: string;
   onOpenChange: (open: boolean) => void;
-  onPaymentSuccess: () => Promise<void> | void;
+  onPaymentSuccess: (data?: Record<string, unknown>) => Promise<void> | void;
   onPaymentCancel?: () => void;
   onError?: (message: string) => void;
 }
@@ -164,7 +164,7 @@ export const PayPalCheckoutDialog: React.FC<PayPalCheckoutDialogProps> = ({
         if (result.success) {
           paymentCompletedRef.current = true;
           createdOrderIdRef.current = null;
-          await onPaymentSuccess();
+          await onPaymentSuccess({ orderId });
           handleDialogOpenChange(false);
           return;
         }

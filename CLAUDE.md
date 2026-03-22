@@ -28,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Database Management
 
-- `npm run db:fresh` - Reset database and run all 27 migrations
+- `npm run db:fresh` - Reset database and run all 33 migrations
 - `npm run db:reset` - Interactive database reset with confirmation
 - `npm run db:reset:confirm` - Reset database without prompt
 - `npm run seed:admin` - Create default admin user (admin@skypanelv2.com / admin123)
@@ -85,13 +85,47 @@ SkyPanelV2 is a full-stack cloud service reseller billing panel with multi-tenan
 - **Multi-tenant organizations** with role-based access control and custom roles
 - **Linode VPS provisioning** via `IProviderService` abstraction layer
 - **Automated hourly billing** with wallet-based prepaid system
-- **Network transfer billing** with pool quota tracking and overage projection
+- **Egress (network transfer) billing** with prepaid credit packs and hourly enforcement
 - **Email service** with provider priority/fallback (Resend, generic SMTP)
 - **Activity logging and feed** system for audit trails with real-time notifications
 - **2FA (Two-Factor Authentication)** support via TOTP
 - **Admin impersonation** for customer support
 - **Command palette** navigation
 - **API documentation auto-sync** on build
+
+### Egress Billing System
+
+SkyPanelV2 implements a **prepaid egress credit model with hourly enforcement** to prevent network transfer abuse:
+
+- **Credit packs** (100GB, 1TB, 5TB, 10TB) are purchased via PayPal and stored per-organization
+- **Hourly billing** polls Linode transfer API every 60 minutes, calculating delta from the last reading
+- **Auto-shutoff** suspends VPS instances when an organization's credit balance hits zero
+- **Organization-scoped**: all members share the same credit pool; permissions control who can view vs. purchase
+
+**Key services:**
+- `egressCreditService` - Credit balance, purchase, deduction, manual add
+- `egressHourlyBillingService` - Hourly billing orchestrator
+- `egressBillingService` - Transfer pool tracking and overage projection
+- `egressUtils` - Linode transfer API helpers
+
+**Key routes:**
+- `GET /api/egress/credits` - Org credit balance
+- `GET /api/egress/credits/history` - Purchase history
+- `GET /api/egress/credits/packs` - Available packs
+- `POST /api/egress/credits/purchase` - Initiate PayPal purchase
+- `POST /api/egress/credits/purchase/complete` - Complete purchase
+- `GET /api/egress/usage/:vpsId` - Per-VPS hourly readings
+- Admin routes under `/api/egress/admin/*` for manual credit management
+
+**Key frontend files:**
+- `src/pages/EgressCredits.tsx` - Dedicated egress credits page
+- `src/pages/Organizations.tsx` - Org Egress tab with credit management
+- `src/pages/VPSDetail.tsx` - Egress usage section in Networking tab
+- `src/components/admin/EgressCreditManager.tsx` - Admin credit management UI
+- `src/components/admin/EgressPackSettings.tsx` - Admin pack pricing config
+- `src/services/egressService.ts` - Frontend API client
+
+**Database migrations 026–033** implement the egress system (tables: `organization_egress_credits`, `egress_credit_packs`, `vps_egress_hourly_readings`, etc.).
 
 ## Environment Configuration
 
@@ -252,12 +286,14 @@ These are configurable via `RATE_LIMIT_ANONYMOUS_MAX`, `RATE_LIMIT_AUTHENTICATED
 - `linodeService` - Linode/Akamai REST API wrapper with caching
 - `billingService` - Hourly billing engine (runHourlyBilling, billVPSCreation, getBillingSummary)
 - `egressBillingService` - Network transfer pool quota tracking and overage projection
+- `egressBillingService.test.ts` - Egress billing service tests
 - `egressCreditService` - Egress credit balance, purchase, deduction, manual add
 - `egressHourlyBillingService` - Hourly billing orchestrator (polls Linode transfer API, deducts credits, auto-shutoff)
 - `paypalService` - PayPal order creation, capture, wallet deduction
 - `emailService` - Email sending with provider fallback (Resend → SMTP)
 - `emailTemplateService` - Handlebars-based email template rendering
 - `invoiceService` - Invoice generation and management
+- `invoiceService.test.ts` - Invoice service tests
 
 ### Provider Services (`api/services/providers/`)
 
@@ -365,9 +401,10 @@ res.json({ success: true, data: result });
 ### Pages (`src/pages/`)
 
 **Public Pages:**
-- `HomeRedesign` - Landing page (route: `/`)
+- `Home`, `HomeRedesign` - Landing pages (route: `/`)
 - `Pricing`, `FAQ`, `AboutUs`, `Contact`, `Status`, `TermsOfService`, `PrivacyPolicy`
 - `Login`, `Register`, `ForgotPassword`, `ResetPassword`
+- Organization invitation acceptance routes (`/organizations/invitations/:token/*`)
 
 **Authenticated Pages:**
 - `Dashboard` - User dashboard with stats and activity
@@ -381,7 +418,7 @@ res.json({ success: true, data: result });
 - `Organizations` - Organization management and detail
 - `Support` - Support ticket management
 - `Settings` - User profile, 2FA, preferences
-- `Activity` - Activity history
+- `ActivityPage` - Activity history
 - `ApiDocs` - API documentation viewer
 - `AcceptInvitation` - Organization invitation acceptance
 - `EgressCredits` - Egress credit balance, purchase, and usage history
@@ -404,14 +441,16 @@ res.json({ success: true, data: result });
   - `EgressPackSettings` - Admin credit pack pricing configuration
   - `email/` - Email template management components
   - `billing/` - Admin billing components
+  - `shared/` - Shared admin utility components
+- `home/` - Home page specific components
 - `VPS/` - VPS creation wizard steps, SSH terminal, provider/region selectors
-- `billing/` - Payment forms, transaction history, invoice views
+- `billing/` - Payment forms, transaction history, invoice views, PurchaseEgressCreditsDialog
 - `support/` - Ticket creation, conversation threads
 - `organizations/` - Org management, member lists, invitation flows
 - `settings/` - User profile, 2FA setup, API key management
 - `Dashboard/` - Dashboard widgets and stats cards
 - `SSHKeys/` - SSH key management components
-- `layouts/` - Layout wrappers
+- `layouts/` - Layout wrappers and navigation components
 - `data-table/` - Reusable data table component
 - `hooks/` - Component-level hooks
 
@@ -423,6 +462,10 @@ res.json({ success: true, data: result });
 - `NotificationDropdown.tsx` - Notification bell with real-time updates
 - `ActivityFeed.tsx` - Activity feed component
 - `ErrorBoundary.tsx` - Error boundary wrapper
+- `Empty.tsx` - Empty state component
+- `Navigation.tsx` - Navigation component
+- `VPSInfrastructureCard.tsx` - VPS infrastructure display card
+- `nav-main.tsx`, `nav-projects.tsx`, `nav-secondary.tsx`, `nav-user.tsx` - Sidebar navigation components
 
 ### Contexts (`src/contexts/`)
 
@@ -490,6 +533,7 @@ res.json({ success: true, data: result });
 │   ├── components/            # Reusable UI and feature components
 │   │   ├── ui/                # shadcn/ui base components
 │   │   ├── admin/             # Admin dashboard components
+│   │   ├── home/              # Home page components
 │   │   ├── VPS/               # VPS management components
 │   │   ├── billing/           # Billing components
 │   │   ├── support/           # Support components
@@ -498,7 +542,7 @@ res.json({ success: true, data: result });
 │   │   ├── Dashboard/         # Dashboard widgets
 │   │   ├── SSHKeys/           # SSH key components
 │   │   ├── data-table/        # Reusable data table
-│   │   ├── layouts/           # Layout wrappers
+│   │   ├── layouts/           # Layout wrappers and navigation
 │   │   └── hooks/             # Component-level hooks
 │   ├── pages/                 # Page components with routing
 │   │   ├── admin/             # Admin pages

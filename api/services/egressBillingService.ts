@@ -779,7 +779,14 @@ export class EgressBillingService {
     month?: string,
   ): Promise<OrganizationEgressOverview> {
     const billingMonth = getBillingMonthDate(month);
+    const currentMonth = getBillingMonthDate();
 
+    // For current month, use live data; for historical, use persisted tables
+    if (billingMonth === currentMonth) {
+      return this.getOrganizationOverviewLive(organizationId, billingMonth);
+    }
+
+    // Historical months: read from persisted tables
     const [cycleResult, allocationResult, recentCyclesResult] = await Promise.all([
       query(
         `SELECT
@@ -914,6 +921,71 @@ export class EgressBillingService {
         };
       }),
       recentCycles,
+    };
+  }
+
+  private static async getOrganizationOverviewLive(
+    organizationId: string,
+    billingMonth: string,
+  ): Promise<OrganizationEgressOverview> {
+    // Get live usage for the current month
+    const pools = await this.getLiveUsage(billingMonth);
+
+    // Filter pools to only include items for this organization
+    const orgPools = pools.filter(pool =>
+      pool.items.some(item => item.organizationId === organizationId)
+    );
+
+    // Aggregate totals across all pools for this organization
+    let totalMeasuredUsageGb = 0;
+    let totalBillableGb = 0;
+    let totalAmount = 0;
+    const servers: OrganizationEgressServerCharge[] = [];
+    const updatedAt = new Date().toISOString();
+
+    for (const pool of orgPools) {
+      // Get only the items for this organization from this pool
+      const orgItems = pool.items.filter(item => item.organizationId === organizationId);
+
+      for (const item of orgItems) {
+        totalMeasuredUsageGb += item.measuredUsageGb;
+        totalBillableGb += item.allocatedBillableGb;
+        totalAmount += item.amount;
+
+        // Add server-level breakdown for VPS instances
+        if (item.vpsInstanceId) {
+          servers.push({
+            billingMonth,
+            poolId: pool.poolId,
+            poolScope: pool.poolScope,
+            regionId: pool.regionId || null,
+            vpsInstanceId: item.vpsInstanceId,
+            providerInstanceId: item.providerInstanceId || null,
+            label: item.label || item.providerInstanceId || `VPS ${item.providerInstanceId || 'Unknown'}`,
+            measuredUsageGb: item.measuredUsageGb,
+            allocatedBillableGb: item.allocatedBillableGb,
+            unitPricePerGb: item.unitPricePerGb,
+            amount: item.amount,
+            status: 'projected', // Live data is always "projected"
+            updatedAt,
+          });
+        }
+      }
+    }
+
+    return {
+      organizationId,
+      billingMonth,
+      projectedTotals: {
+        totalMeasuredUsageGb: round(totalMeasuredUsageGb, 6),
+        totalBillableGb: round(totalBillableGb, 6),
+        totalAmount: round(totalAmount, 6),
+        activePoolCount: orgPools.length,
+        billingEnabledPoolCount: orgPools.filter(p => p.billingEnabled).length,
+        updatedAt,
+      },
+      servers,
+      recentCycles: [], // Empty for live view (historical cycles require persisted data)
     };
   }
 

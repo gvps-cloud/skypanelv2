@@ -338,7 +338,7 @@ QueryClientProvider (TanStack Query)
 | `src/components/ui/` | Base shadcn/ui primitives (Button, Dialog, Input, Table, etc.) |
 | `src/components/admin/` | Admin dashboard panels (UserManagement, VPSPlanWizard, CategoryManager, RateLimitMonitoring, etc.) |
 | `src/components/VPS/` | VPS creation wizard steps, SSH terminal, provider/region selectors, backup config |
-| `src/components/billing/` | Payment forms, transaction history, invoice views |
+| `src/components/billing/` | Payment forms, transaction history, invoice views, PurchaseEgressCreditsDialog |
 | `src/components/support/` | Ticket creation, conversation threads, status management |
 | `src/components/organizations/` | Org management, member lists, invitation flows |
 | `src/components/settings/` | User profile, 2FA setup, API key management |
@@ -1037,7 +1037,7 @@ skypanelv2/
 │   │   ├── ui/                       # shadcn/ui base components
 │   │   ├── admin/                    # Admin dashboard components
 │   │   ├── VPS/                      # VPS creation wizard, SSH terminal
-│   │   ├── billing/                  # Payment and billing components
+│   │   ├── billing/                  # Payment and billing components (PurchaseEgressCreditsDialog)
 │   │   ├── support/                  # Ticket management components
 │   │   ├── organizations/            # Org management components
 │   │   ├── settings/                 # User settings components

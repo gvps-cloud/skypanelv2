@@ -721,6 +721,16 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "protected": true
   },
   {
+    "method": "POST",
+    "path": "/api/egress/credits/purchase/wallet",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/egress/credits/wallet-balance",
+    "protected": true
+  },
+  {
     "method": "GET",
     "path": "/api/egress/usage/:vpsId",
     "protected": true

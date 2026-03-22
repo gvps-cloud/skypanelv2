@@ -343,6 +343,84 @@ class EgressService {
   }
 
   /**
+   * Get current wallet balance for an organization
+   */
+  async getWalletBalance(organizationId: string): Promise<{
+    success: boolean;
+    data?: { balance: number };
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/egress/credits/wallet-balance`, {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || "Failed to get wallet balance",
+        };
+      }
+
+      return {
+        success: true,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Get wallet balance error:", error);
+      return {
+        success: false,
+        error: "Network error occurred",
+      };
+    }
+  }
+
+  /**
+   * Purchase egress credits using wallet balance
+   */
+  async purchaseWithWallet(organizationId: string, packId: string): Promise<{
+    success: boolean;
+    message?: string;
+    data?: {
+      newBalance: number;
+      walletDeducted: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/egress/credits/purchase/wallet`, {
+        method: "POST",
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ organizationId, packId }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || "Failed to purchase credits",
+        };
+      }
+
+      return {
+        success: true,
+        message: data.message,
+        data: data.data,
+      };
+    } catch (error) {
+      console.error("Purchase with wallet error:", error);
+      return {
+        success: false,
+        error: "Network error occurred",
+      };
+    }
+  }
+
+  /**
    * Get organization's egress credit balance and purchase history
    */
   async getOrganizationEgressCredits(organizationId: string, limit = 20): Promise<{

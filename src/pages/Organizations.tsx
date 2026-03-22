@@ -1312,13 +1312,9 @@ const Organizations: React.FC = () => {
                       {selectedOrganizationResources?.permissions.egress_manage && (
                         <Button
                           onClick={() => {
-                            if (user?.organizationId !== selectedOrganization.id) {
-                              handleSwitchOrganization(selectedOrganization.id).then(() => {
-                                navigate("/egress-credits");
-                              });
-                            } else {
-                              navigate("/egress-credits");
-                            }
+                            navigate("/egress-credits", {
+                              state: { organizationId: selectedOrganization.id },
+                            });
                           }}
                           disabled={creditsLoading}
                         >
