@@ -192,6 +192,21 @@ const findObjectProp = (obj, propName) =>
         (ts.isStringLiteral(prop.name) && prop.name.text === propName)),
   );
 
+const isPlaceholderResponse = (node) => {
+  if (!node) return false;
+  if (!ts.isObjectLiteralExpression(node)) return false;
+  const props = node.properties;
+  if (props.length !== 1) return false;
+  const onlyProp = props[0];
+  if (!ts.isPropertyAssignment(onlyProp)) return false;
+  const name = onlyProp.name;
+  if (ts.isIdentifier(name) && name.text === "success") {
+    const value = onlyProp.initializer;
+    if (value.kind === ts.SyntaxKind.TrueKeyword) return true;
+  }
+  return false;
+};
+
 const parseApiDocsSections = () => {
   const { source } = readSource(apiDocsFile, ts.ScriptKind.TSX);
   let sectionsArray = null;
@@ -250,6 +265,9 @@ const parseApiDocsSections = () => {
       const methodProp = findObjectProp(endpointNode, "method");
       const pathProp = findObjectProp(endpointNode, "path");
       const authProp = findObjectProp(endpointNode, "auth");
+      const bodyProp = findObjectProp(endpointNode, "body");
+      const paramsProp = findObjectProp(endpointNode, "params");
+      const responseProp = findObjectProp(endpointNode, "response");
 
       if (!methodProp || !pathProp) continue;
       if (
@@ -273,6 +291,11 @@ const parseApiDocsSections = () => {
         }
       }
 
+      const hasBody = bodyProp && ts.isPropertyAssignment(bodyProp);
+      const hasParams = paramsProp && ts.isPropertyAssignment(paramsProp);
+      const hasResponse = responseProp && ts.isPropertyAssignment(responseProp);
+      const isPlaceholderResponseFlag = hasResponse && isPlaceholderResponse(responseProp.initializer);
+
       endpoints.push({
         sectionTitle: title,
         sectionBase: base,
@@ -280,6 +303,10 @@ const parseApiDocsSections = () => {
         relativePath: routePath,
         path: normalizePath(`${base}${routePath}`),
         auth,
+        hasBody,
+        hasParams,
+        hasResponse,
+        isPlaceholderResponse: isPlaceholderResponseFlag,
       });
     }
 
@@ -335,6 +362,33 @@ for (const [key, route] of actualMap.entries()) {
   }
 }
 
+// Check for incomplete documentation (missing body/params/response)
+const incompleteDocs = [];
+const needsBodyMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const needsParamsMethods = new Set(["GET"]);
+for (const endpoint of docEndpoints) {
+  const issues = [];
+  // Only flag missing_body for POST/PUT/PATCH/DELETE that don't have body defined
+  if (needsBodyMethods.has(endpoint.method) && !endpoint.hasBody) {
+    issues.push("missing_body");
+  }
+  // Only flag missing_params for GET endpoints that don't have params defined
+  // (POST/PUT/PATCH typically use body, not query params)
+  if (needsParamsMethods.has(endpoint.method) && !endpoint.hasParams) {
+    issues.push("missing_params");
+  }
+  if (!endpoint.hasResponse || endpoint.isPlaceholderResponse) {
+    issues.push("missing_response");
+  }
+  if (issues.length > 0) {
+    incompleteDocs.push({
+      key: `${endpoint.method} ${endpoint.path}`,
+      section: endpoint.sectionTitle,
+      issues,
+    });
+  }
+}
+
 if (!manifestOnly) {
   console.log("=== API Docs Audit ===");
   console.log(`Actual endpoints: ${actualRoutes.length}`);
@@ -349,6 +403,7 @@ if (!manifestOnly) {
   console.log(`Missing in docs: ${missingInDocs.length}`);
   console.log(`Stale in docs: ${staleInDocs.length}`);
   console.log(`Auth mismatches: ${authMismatches.length}`);
+  console.log(`Incomplete docs (missing body/params/response): ${incompleteDocs.length}`);
 
   if (missingInDocs.length > 0) {
     console.log("\n-- Missing in docs (first 50) --");
@@ -377,6 +432,24 @@ if (!manifestOnly) {
     }
   }
 
+  if (incompleteDocs.length > 0) {
+    console.log("\n-- Incomplete docs (missing body/params/response) --");
+    // Group by section
+    const bySection = new Map();
+    for (const doc of incompleteDocs) {
+      if (!bySection.has(doc.section)) {
+        bySection.set(doc.section, []);
+      }
+      bySection.get(doc.section).push(doc);
+    }
+    for (const [section, docs] of bySection) {
+      console.log(`\n[${section}]`);
+      for (const doc of docs) {
+        console.log(`  ${doc.key} - ${doc.issues.join(", ")}`);
+      }
+    }
+  }
+
   const reportPath = path.join(repoRoot, "data", "api-docs-audit-report.json");
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(
@@ -391,6 +464,7 @@ if (!manifestOnly) {
         missingInDocs,
         staleInDocs,
         authMismatches,
+        incompleteDocs,
         actualRoutes,
         docEndpoints,
       },
@@ -403,6 +477,25 @@ if (!manifestOnly) {
   console.log(
     `\nDetailed report written to ${path.relative(repoRoot, reportPath)}`,
   );
+
+  // Write incomplete docs to separate file for easier review
+  if (incompleteDocs.length > 0) {
+    const incompleteReportPath = path.join(repoRoot, "data", "api-docs-incomplete.json");
+    fs.writeFileSync(
+      incompleteReportPath,
+      JSON.stringify(
+        {
+          generatedAt: new Date().toISOString(),
+          totalIncomplete: incompleteDocs.length,
+          endpoints: incompleteDocs,
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    console.log(`Incomplete docs report written to ${path.relative(repoRoot, incompleteReportPath)}`);
+  }
 }
 
 

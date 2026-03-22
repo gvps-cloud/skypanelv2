@@ -11,6 +11,7 @@ import {
   HelpCircle,
   Mail,
   Palette,
+  Activity,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -475,6 +476,7 @@ export default function ApiDocs() {
             },
             response: {
               success: true,
+              message: "Password verified",
             },
           },
           {
@@ -583,7 +585,7 @@ export default function ApiDocs() {
             description: "Revoke an API key immediately.",
             auth: true,
             response: {
-              success: true,
+              message: "API key revoked successfully",
             },
           },
           {
@@ -627,6 +629,75 @@ export default function ApiDocs() {
               message: "Email verified successfully",
             },
           },
+          {
+            method: "POST",
+            path: "/2fa/setup",
+            description: "Initialize 2FA setup and return QR code URI for authenticator apps.",
+            auth: true,
+            response: {
+              success: true,
+              qrCodeUri: "otpauth://totp/SkyPanel:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=SkyPanel",
+              backupCodes: ["code1", "code2", "code3", "code4"],
+            },
+          },
+          {
+            method: "POST",
+            path: "/2fa/verify",
+            description: "Verify a 2FA code to enable or validate two-factor authentication.",
+            auth: true,
+            body: {
+              code: "123456",
+            },
+            response: {
+              success: true,
+              verified: true,
+            },
+          },
+          {
+            method: "POST",
+            path: "/2fa/disable",
+            description: "Disable 2FA for the authenticated user (requires password confirmation).",
+            auth: true,
+            body: {
+              password: "Sup3rSecure!",
+            },
+            response: {
+              success: true,
+              message: "2FA has been disabled",
+            },
+          },
+          {
+            method: "GET",
+            path: "/debug/user",
+            description: "Debug endpoint returning current user session details (development only).",
+            auth: true,
+            response: {
+              user: { id: "user_123", email: "admin@example.com" },
+              session: { createdAt: "2024-10-26T10:00:00Z" },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/api-keys/:id",
+            description: "Revoke a specific API key by its ID.",
+            auth: true,
+            response: {
+              message: "API key revoked successfully",
+            },
+          },
+          {
+            method: "POST",
+            path: "/switch-organization",
+            description: "Switch the active organization context for the authenticated session.",
+            auth: true,
+            body: {
+              organizationId: "org_456",
+            },
+            response: {
+              success: true,
+              organization: { id: "org_456", name: "Acme Corp" },
+            },
+          },
         ],
       },
       {
@@ -665,19 +736,6 @@ export default function ApiDocs() {
             },
           },
           {
-            method: "POST",
-            path: "/cancel-payment/:orderId",
-            description:
-              "Cancel a pending PayPal order and optionally record the reason.",
-            auth: true,
-            body: {
-              reason: "Customer changed plan tier",
-            },
-            response: {
-              success: true,
-            },
-          },
-          {
             method: "GET",
             path: "/config",
             description:
@@ -705,6 +763,21 @@ export default function ApiDocs() {
               balance: 245.67,
               currency: "USD",
               updatedAt: "2024-10-26T15:00:00Z",
+            },
+          },
+          {
+            method: "POST",
+            path: "/wallet/deduct",
+            description: "Manually deduct credits from the wallet (admin or internal use).",
+            auth: true,
+            body: {
+              amount: 10.00,
+              description: "VPS hourly billing",
+              referenceId: "vps_001",
+            },
+            response: {
+              success: true,
+              newBalance: 235.67,
             },
           },
           {
@@ -1086,6 +1159,8 @@ export default function ApiDocs() {
             },
             response: {
               success: true,
+              notes: "Updated server description",
+              message: "Notes updated successfully",
             },
           },
           {
@@ -1297,6 +1372,29 @@ export default function ApiDocs() {
               ],
             },
           },
+          {
+            method: "GET",
+            path: "/apps",
+            description: "Get available One-Click Apps for VPS deployment.",
+            auth: true,
+            response: {
+              apps: [
+                { id: "wordpress", name: "WordPress", description: "Popular CMS" },
+                { id: "lamp", name: "LAMP", description: "Linux Apache MySQL PHP" },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/providers/:providerId/plans/:regionId",
+            description: "Get available VPS plans for a specific provider and region combination.",
+            auth: true,
+            response: {
+              plans: [
+                { id: "g6-standard-1", label: "Nanode 1GB", available: true },
+              ],
+            },
+          },
         ],
       },
       {
@@ -1384,6 +1482,9 @@ export default function ApiDocs() {
             auth: true,
             response: {
               success: true,
+              message: "SSH key 'Work Laptop' deleted successfully",
+              description: "Key removed from local database and all connected providers",
+              partialSuccess: false,
             },
           },
         ],
@@ -1671,7 +1772,13 @@ export default function ApiDocs() {
               permissions: ["billing.view", "billing.manage", "billing.refund"],
             },
             response: {
-              success: true,
+              id: "role_001",
+              organization_id: "org_001",
+              name: "Billing Manager",
+              permissions: ["billing.view", "billing.manage", "billing.refund"],
+              is_system: false,
+              created_at: "2024-01-01T00:00:00Z",
+              updated_at: "2024-10-25T10:00:00Z",
             },
           },
           {
@@ -1680,7 +1787,7 @@ export default function ApiDocs() {
             description: "Delete a custom organization role.",
             auth: true,
             response: {
-              success: true,
+              message: "Role deleted successfully",
             },
           },
           {
@@ -1737,7 +1844,7 @@ export default function ApiDocs() {
             description: "Cancel a pending invitation.",
             auth: true,
             response: {
-              success: true,
+              message: "Invitation cancelled successfully",
             },
           },
           {
@@ -1880,23 +1987,54 @@ export default function ApiDocs() {
               },
             },
           },
+        ],
+      },
+      {
+        title: "Activities Feed",
+        base: `${apiBase}/activities`,
+        description:
+          "User activity feed management with organization-scoped queries and bulk read operations.",
+        icon: <Activity className="h-4 w-4" />,
+        endpoints: [
           {
             method: "GET",
-            path: "/unread-count",
-            description: "Get the count of unread activity items for the authenticated user.",
+            path: "/",
+            description:
+              "Fetch paginated activity events filtered by organization membership.",
+            auth: true,
+            params: { limit: 50, offset: 0 },
+            response: {
+              activities: [
+                {
+                  id: "act_001",
+                  type: "vps",
+                  message: "VPS created",
+                  organizationId: "org_001",
+                  userId: "user_123",
+                  status: "success",
+                  createdAt: "2024-10-25T08:00:00Z",
+                  isRead: false,
+                },
+              ],
+              pagination: { hasMore: false },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/:id",
+            description: "Delete a specific activity item.",
             auth: true,
             response: {
-              count: 5
+              message: "Activity deleted",
             },
           },
           {
             method: "PUT",
-            path: "/read-all",
-            description: "Mark all activity items as read for the authenticated user.",
+            path: "/:id/read",
+            description: "Mark a specific activity item as read.",
             auth: true,
             response: {
-              success: true,
-              message: "All activities marked as read"
+              message: "Activity marked as read",
             },
           },
           {
@@ -1913,29 +2051,27 @@ export default function ApiDocs() {
                   message: "VPS created",
                   organizationId: "org_123",
                   status: "success",
-                  timestamp: "2024-10-25T08:00:00Z",
+                  createdAt: "2024-10-25T08:00:00Z",
                 },
               ],
             },
           },
           {
             method: "PUT",
-            path: "/:id/read",
-            description: "Mark a specific activity item as read.",
+            path: "/read-all",
+            description: "Mark all activity items as read for the authenticated user.",
             auth: true,
             response: {
-              success: true,
-              message: "Activity marked as read"
+              message: "All activities marked as read",
             },
           },
           {
-            method: "DELETE",
-            path: "/:id",
-            description: "Delete a specific activity item.",
+            method: "GET",
+            path: "/unread-count",
+            description: "Get the count of unread activity items for the authenticated user.",
             auth: true,
             response: {
-              success: true,
-              message: "Activity deleted"
+              count: 5,
             },
           },
         ],
@@ -2027,7 +2163,7 @@ export default function ApiDocs() {
             path: "/tickets/:id/stream",
             description:
               "Server-sent event stream for live ticket updates; token is passed via query string.",
-            auth: true,
+            auth: false,
             params: { token: "JWT_TOKEN" },
             response: {
               eventStream: true,
@@ -2035,6 +2171,101 @@ export default function ApiDocs() {
                 'data: {"type":"ticket_message","ticket_id":"ticket_001","message_id":"reply_002","message":"New reply","is_staff_reply":true}',
                 'data: {"type":"ticket_status_change","ticket_id":"ticket_001","new_status":"resolved"}',
               ],
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/tickets/:id",
+            description: "Delete a support ticket (admin or owner only).",
+            auth: true,
+            response: {
+              message: "Ticket deleted successfully",
+              ticket_id: "ticket_001",
+            },
+          },
+          {
+            method: "PUT",
+            path: "/tickets/:id/assign",
+            description: "Assign a support ticket to a staff member.",
+            auth: true,
+            body: { assignedTo: "admin@company.com" },
+            response: {
+              ticket: {
+                id: "ticket_001",
+                subject: "Unable to reach SSH",
+                status: "open",
+                priority: "high",
+                assigned_to: "user_123",
+                updated_at: "2024-10-24T12:00:00Z",
+              },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/tickets/:id/priority",
+            description: "Update the priority level of a support ticket.",
+            auth: true,
+            body: { priority: "high" },
+            response: {
+              ticket: {
+                id: "ticket_001",
+                subject: "Unable to reach SSH",
+                status: "open",
+                priority: "high",
+                updated_at: "2024-10-24T12:00:00Z",
+              },
+            },
+          },
+          {
+            method: "POST",
+            path: "/tickets/:id/reopen-request",
+            description: "Request to reopen a closed support ticket.",
+            auth: true,
+            body: { reason: "Issue has returned" },
+            response: {
+              success: true,
+              message: "Reopen request submitted",
+            },
+          },
+          {
+            method: "PUT",
+            path: "/tickets/:id/status",
+            description: "Update the status of a support ticket.",
+            auth: true,
+            body: { status: "resolved" },
+            response: {
+              ticket: {
+                id: "ticket_001",
+                subject: "Unable to reach SSH",
+                status: "resolved",
+                priority: "high",
+                updated_at: "2024-10-24T12:00:00Z",
+              },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/tickets/:id/replies/:replyId",
+            description: "Edit an existing reply on a ticket.",
+            auth: true,
+            body: { message: "Updated reply content" },
+            response: {
+              reply: {
+                id: "reply_001",
+                ticket_id: "ticket_001",
+                message: "Updated reply content",
+                created_at: "2024-10-24T11:00:00Z",
+              },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/tickets/:id/replies/:replyId",
+            description: "Delete a reply from a ticket.",
+            auth: true,
+            response: {
+              message: "Reply deleted successfully",
+              reply_id: "reply_001",
             },
           },
         ],
@@ -2046,6 +2277,25 @@ export default function ApiDocs() {
           "Real-time notifications via SSE with read status management.",
         icon: <Zap className="h-4 w-4" />,
         endpoints: [
+          {
+            method: "GET",
+            path: "/",
+            description: "List all notifications for the authenticated user.",
+            auth: true,
+            params: { limit: 50, offset: 0 },
+            response: {
+              notifications: [
+                {
+                  id: "notif_001",
+                  event_type: "vps.created",
+                  message: "VPS production-web-1 provisioned successfully",
+                  is_read: false,
+                  created_at: "2024-10-26T14:55:00Z",
+                },
+              ],
+              pagination: { hasMore: false },
+            },
+          },
           {
             method: "GET",
             path: "/unread",
@@ -2085,6 +2335,7 @@ export default function ApiDocs() {
             auth: true,
             response: {
               success: true,
+              message: "Notification marked as read",
             },
           },
           {
@@ -2094,6 +2345,8 @@ export default function ApiDocs() {
             auth: true,
             response: {
               success: true,
+              message: "3 notification(s) marked as read",
+              count: 3,
             },
           },
           {
@@ -2171,7 +2424,21 @@ export default function ApiDocs() {
               "End an active impersonation session and restore the admin's identity.",
             auth: true,
             response: {
-              success: true,
+              adminToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+              admin: {
+                id: "user_123",
+                email: "admin@skypanelv2.com",
+                name: "Admin User",
+                firstName: "Admin",
+                lastName: "User",
+                role: "admin",
+                phone: "+1-555-555-0100",
+                timezone: "America/New_York",
+                preferences: {},
+                twoFactorEnabled: true,
+                organizationId: "org_001",
+              },
+              message: "Impersonation session ended successfully",
             },
           },
           {
@@ -2216,7 +2483,22 @@ export default function ApiDocs() {
             auth: true,
             body: { status: "resolved" },
             response: {
-              success: true,
+              ticket: {
+                id: "ticket_001",
+                organization_id: "org_001",
+                created_by: "user_123",
+                subject: "Unable to reach SSH",
+                message: "Port 22 is timing out",
+                priority: "high",
+                category: "vps",
+                status: "resolved",
+                vps_id: "vps_001",
+                vps_label_snapshot: "web-server-01",
+                vps_ip_snapshot: "192.168.1.100",
+                created_at: "2024-10-24T10:00:00Z",
+                updated_at: "2024-10-24T12:00:00Z",
+                has_staff_reply: true,
+              },
             },
           },
           {
@@ -2224,9 +2506,7 @@ export default function ApiDocs() {
             path: "/tickets/:id",
             description: "Delete a ticket (used for spam/cleanup).",
             auth: true,
-            response: {
-              success: true,
-            },
+            response: null,
           },
           {
             method: "GET",
@@ -2283,9 +2563,7 @@ export default function ApiDocs() {
             path: "/faq/categories/:id",
             description: "Remove a category (questions must be moved first).",
             auth: true,
-            response: {
-              success: true,
-            },
+            response: null,
           },
           {
             method: "POST",
@@ -2294,7 +2572,7 @@ export default function ApiDocs() {
             auth: true,
             body: { order: ["cat_general", "cat_billing"] },
             response: {
-              success: true,
+              message: "Categories reordered successfully",
             },
           },
           {
@@ -2346,9 +2624,7 @@ export default function ApiDocs() {
             path: "/faq/items/:id",
             description: "Delete an FAQ item.",
             auth: true,
-            response: {
-              success: true,
-            },
+            response: null,
           },
           {
             method: "POST",
@@ -2357,7 +2633,7 @@ export default function ApiDocs() {
             auth: true,
             body: { order: ["faq_001", "faq_002"] },
             response: {
-              success: true,
+              message: "Items reordered successfully",
             },
           },
           {
@@ -2408,9 +2684,7 @@ export default function ApiDocs() {
             path: "/faq/updates/:id",
             description: "Delete a changelog entry.",
             auth: true,
-            response: {
-              success: true,
-            },
+            response: null,
           },
           {
             method: "POST",
@@ -2419,7 +2693,7 @@ export default function ApiDocs() {
             auth: true,
             body: { order: ["update_001", "update_002"] },
             response: {
-              success: true,
+              message: "Updates reordered successfully",
             },
           },
           {
@@ -2465,9 +2739,7 @@ export default function ApiDocs() {
             path: "/contact/categories/:id",
             description: "Delete a contact category.",
             auth: true,
-            response: {
-              success: true,
-            },
+            response: null,
           },
           {
             method: "POST",
@@ -2476,7 +2748,17 @@ export default function ApiDocs() {
             auth: true,
             body: { order: ["sales", "support"] },
             response: {
-              success: true,
+              categories: [
+                {
+                  id: "sales",
+                  label: "Sales",
+                  value: "sales",
+                  display_order: 1,
+                  is_active: true,
+                  created_at: "2024-01-01T00:00:00Z",
+                  updated_at: "2024-10-01T00:00:00Z",
+                },
+              ],
             },
           },
           {
@@ -2501,6 +2783,15 @@ export default function ApiDocs() {
             body: { is_enabled: true, address: "support@example.com" },
             response: {
               method: { type: "email", is_enabled: true },
+            },
+          },
+          {
+            method: "GET",
+            path: "/contact/methods/:method_type",
+            description: "Get a specific contact method configuration.",
+            auth: true,
+            response: {
+              method: { type: "email", is_enabled: true, address: "support@example.com" },
             },
           },
           {
@@ -2540,6 +2831,17 @@ export default function ApiDocs() {
             body: { userId: "user_123", window: 60, maxRequests: 120 },
             response: {
               success: true,
+              override: {
+                id: "override_001",
+                user_id: "user_123",
+                max_requests: 120,
+                window_ms: 60000,
+                reason: "Customer support case",
+                created_by: "admin_001",
+                expires_at: null,
+                created_at: "2024-10-25T10:00:00Z",
+                updated_at: "2024-10-25T10:00:00Z",
+              },
             },
           },
           {
@@ -2549,6 +2851,7 @@ export default function ApiDocs() {
             auth: true,
             response: {
               success: true,
+              message: "Rate limit override deleted",
             },
           },
           {
@@ -2576,7 +2879,18 @@ export default function ApiDocs() {
               message: "Scheduled maintenance at 22:00 UTC",
             },
             response: {
-              success: true,
+              availability: [
+                {
+                  id: "avail_001",
+                  day_of_week: "monday",
+                  is_open: true,
+                  hours_text: "9:00 AM - 6:00 PM EST",
+                  display_order: 1,
+                  created_at: "2024-01-01T00:00:00Z",
+                  updated_at: "2024-10-25T10:00:00Z",
+                },
+              ],
+              emergency_support_text: "support@example.com",
             },
           },
           {
@@ -2604,7 +2918,724 @@ export default function ApiDocs() {
               logoUrl: "https://cdn.example.com/logo.svg",
             },
             response: {
+              theme: {
+                presetId: "custom",
+                customPreset: {
+                  primary: "#2563eb",
+                  accent: "#9333ea",
+                  logoUrl: "https://cdn.example.com/logo.svg",
+                },
+                updatedAt: "2024-10-25T10:00:00Z",
+                updatedBy: "admin_001",
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/billing/stats",
+            description: "Get billing statistics across all organizations.",
+            auth: true,
+            response: {
+              stats: {
+                totalRevenue: 45230.5,
+                totalTransactions: 1234,
+                averageTransaction: 36.65,
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/billing/transactions",
+            description: "List all billing transactions across the platform.",
+            auth: true,
+            params: {
+              limit: 50,
+              offset: 0,
+              status: "completed",
+              type: "credit",
+              userId: "uuid",
+            },
+            response: {
+              transactions: [
+                {
+                  id: "txn_001",
+                  organizationId: "org_001",
+                  amount: 100,
+                  type: "credit",
+                  description: "Wallet top-up",
+                  createdAt: "2024-10-26T14:55:00Z",
+                },
+              ],
+              pagination: { total: 1234, limit: 50, offset: 0 },
+            },
+          },
+          {
+            method: "POST",
+            path: "/billing/transactions",
+            description: "Create a manual billing transaction for an organization.",
+            auth: true,
+            body: {
+              organizationId: "org_001",
+              amount: 50,
+              type: "credit",
+              description: "Manual credit",
+            },
+            response: {
               success: true,
+              transaction: { id: "txn_002" },
+            },
+          },
+          {
+            method: "POST",
+            path: "/billing/transactions/:transactionId/invoice",
+            description: "Generate an invoice from a billing transaction.",
+            auth: true,
+            response: {
+              success: true,
+              invoiceId: "inv_001",
+            },
+          },
+          {
+            method: "GET",
+            path: "/billing/users",
+            description: "Get billing summary for all users.",
+            auth: true,
+            params: {
+              limit: 20,
+              offset: 0,
+              search: "example",
+              sort: "balance_desc",
+            },
+            response: {
+              success: true,
+              users: [
+                {
+                  id: "user_123",
+                  name: "John Doe",
+                  email: "john@example.com",
+                  created_at: "2024-01-05T00:00:00Z",
+                  organization_id: "org_001",
+                  organization_name: "Acme Corp",
+                  balance: 125.50,
+                  currency: "USD",
+                  active_services: 3,
+                },
+              ],
+              pagination: { total: 150, limit: 20, offset: 0 },
+            },
+          },
+          {
+            method: "GET",
+            path: "/billing/invoices",
+            description: "List all invoices across the platform.",
+            auth: true,
+            params: {
+              limit: 20,
+              offset: 0,
+              userId: "uuid",
+            },
+            response: {
+              success: true,
+              invoices: [
+                {
+                  id: "inv_001",
+                  invoiceNumber: "INV-2024-001",
+                  organizationId: "org_001",
+                  totalAmount: 120.5,
+                  currency: "USD",
+                  status: "paid",
+                  createdAt: "2024-10-01T00:00:00Z",
+                },
+              ],
+              pagination: { total: 45, limit: 20, offset: 0 },
+            },
+          },
+          {
+            method: "GET",
+            path: "/billing/invoices/:id",
+            description: "Get details of a specific invoice.",
+            auth: true,
+            response: {
+              invoice: {
+                id: "inv_001",
+                invoiceNumber: "INV-2024-001",
+                totalAmount: 120.5,
+                lineItems: [{ description: "VPS usage", amount: 120.5 }],
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/billing/invoices/:id/download",
+            description: "Download invoice PDF.",
+            auth: true,
+            response: {
+              contentType: "application/pdf",
+              body: "<binary stream>",
+            },
+          },
+          {
+            method: "GET",
+            path: "/category-mappings",
+            description: "List all VPS category mappings for white-labeling.",
+            auth: true,
+            response: {
+              categoryMappings: [
+                { id: "cat_001", providerCategory: "Nanode 1GB", displayName: "Starter VPS", displayOrder: 1, isEnabled: true },
+              ],
+            },
+          },
+          {
+            method: "POST",
+            path: "/category-mappings",
+            description: "Create a new category mapping.",
+            auth: true,
+            body: { providerCategory: "Nanode 1GB", displayName: "Starter VPS", displayOrder: 1 },
+            response: { success: true, categoryMapping: { id: "cat_002" } },
+          },
+          {
+            method: "GET",
+            path: "/category-mappings/:id",
+            description: "Get a specific category mapping.",
+            auth: true,
+            response: { categoryMapping: { id: "cat_001", providerCategory: "Nanode 1GB", displayName: "Starter VPS" } },
+          },
+          {
+            method: "PUT",
+            path: "/category-mappings/:id",
+            description: "Update a category mapping.",
+            auth: true,
+            body: { displayName: "Budget VPS", displayOrder: 2 },
+            response: {
+              mapping: {
+                id: "cat_001",
+                provider_id: "provider_001",
+                original_category: "Nanode 1GB",
+                custom_name: "Budget VPS",
+                custom_description: "Affordable starter option",
+                display_order: 2,
+                enabled: true,
+                created_at: "2024-01-01T00:00:00Z",
+                updated_at: "2024-10-25T10:00:00Z",
+              },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/category-mappings/:id",
+            description: "Delete a category mapping.",
+            auth: true,
+            response: null,
+          },
+          {
+            method: "GET",
+            path: "/category-mappings/enabled",
+            description: "List only enabled category mappings.",
+            auth: true,
+            response: { categoryMappings: [{ id: "cat_001", displayName: "Starter VPS" }] },
+          },
+          {
+            method: "POST",
+            path: "/category-mappings/reorder",
+            description: "Reorder category mappings.",
+            auth: true,
+            body: { order: ["cat_002", "cat_001"] },
+            response: {
+              mappings: [
+                {
+                  id: "cat_002",
+                  provider_id: "provider_001",
+                  original_category: "Nanode 1GB",
+                  custom_name: "Budget VPS",
+                  custom_description: null,
+                  display_order: 1,
+                  enabled: true,
+                  created_at: "2024-01-01T00:00:00Z",
+                  updated_at: "2024-10-25T10:00:00Z",
+                },
+              ],
+            },
+          },
+          {
+            method: "POST",
+            path: "/category-mappings/sync",
+            description: "Sync category mappings from provider.",
+            auth: true,
+            response: { success: true, synced: 15 },
+          },
+          {
+            method: "GET",
+            path: "/email-templates",
+            description: "List all email templates.",
+            auth: true,
+            response: {
+              templates: [{ name: "welcome", subject: "Welcome to SkyPanel" }],
+            },
+          },
+          {
+            method: "GET",
+            path: "/email-templates/:name",
+            description: "Get a specific email template content.",
+            auth: true,
+            response: {
+              template: { name: "welcome", subject: "Welcome to SkyPanel", body: "<html>...</html>" },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/email-templates/:name",
+            description: "Update an email template.",
+            auth: true,
+            body: { subject: "Welcome to SkyPanel!", body: "<html>updated...</html>" },
+            response: {
+              id: 1,
+              name: "welcome",
+              subject: "Welcome to SkyPanel!",
+              html_body: "<html>updated...</html>",
+              text_body: "Welcome to SkyPanel!",
+              use_default_theme: false,
+              created_at: "2024-01-01T00:00:00Z",
+              updated_at: "2024-10-25T10:00:00Z",
+            },
+          },
+          {
+            method: "POST",
+            path: "/email-templates/preview",
+            description: "Preview an email template with variables substituted.",
+            auth: true,
+            body: { name: "welcome", variables: { userName: "John" } },
+            response: { html: "<html>Hi John...</html>" },
+          },
+          {
+            method: "GET",
+            path: "/github/commits",
+            description: "Get recent commits from the platform GitHub repository.",
+            auth: true,
+            response: {
+              commits: [{ sha: "abc123", message: "Fix bug", author: "dev", date: "2024-10-26T10:00:00Z" }],
+            },
+          },
+          {
+            method: "GET",
+            path: "/networking/rdns",
+            description: "Get platform-wide reverse DNS configuration.",
+            auth: true,
+            response: {
+              rdns: { baseDomain: "example.sky.network", enabled: true },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/networking/rdns",
+            description: "Update reverse DNS configuration.",
+            auth: true,
+            body: { baseDomain: "newexample.sky.network" },
+            response: {
+              config: {
+                id: "net_001",
+                rdns_base_domain: "newexample.sky.network",
+                created_at: "2024-01-01T00:00:00Z",
+                updated_at: "2024-10-25T10:00:00Z",
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/organizations",
+            description: "List all organizations on the platform.",
+            auth: true,
+            response: {
+              organizations: [{ id: "org_001", name: "Acme Corp", memberCount: 5 }],
+            },
+          },
+          {
+            method: "POST",
+            path: "/organizations",
+            description: "Create a new organization.",
+            auth: true,
+            body: { name: "New Corp" },
+            response: { success: true, organization: { id: "org_002", name: "New Corp" } },
+          },
+          {
+            method: "PUT",
+            path: "/organizations/:id",
+            description: "Update an organization.",
+            auth: true,
+            body: { name: "Updated Corp" },
+            response: {
+              message: "Organization updated",
+              organization: {
+                id: "org_001",
+                name: "Updated Corp",
+                owner_id: "user_001",
+                created_at: "2024-01-01T00:00:00Z",
+                updated_at: "2024-10-25T10:00:00Z",
+              },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/organizations/:id",
+            description: "Delete an organization.",
+            auth: true,
+            response: null,
+          },
+          {
+            method: "POST",
+            path: "/organizations/:id/members",
+            description: "Add a user to an organization.",
+            auth: true,
+            body: { userId: "user_456", role: "member" },
+            response: {
+              success: true,
+              member: {
+                user_id: "user_456",
+                organization_id: "org_001",
+                role_id: "role_member",
+                joined_at: "2024-10-25T10:00:00Z",
+              },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/organizations/:id/members/:userId",
+            description: "Update a member's role in an organization.",
+            auth: true,
+            body: { role: "admin" },
+            response: {
+              message: "Member role updated",
+              memberId: "user_456",
+              newRole: "admin",
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/organizations/:id/members/:userId",
+            description: "Remove a member from an organization.",
+            auth: true,
+            response: {
+              message: "Member removed",
+              memberId: "user_456",
+            },
+          },
+          {
+            method: "GET",
+            path: "/plans",
+            description: "List all VPS plans available on the platform.",
+            auth: true,
+            response: {
+              plans: [{ id: "g6-standard-2", label: "Shared 2GB", price: { hourly: 0.027, monthly: 20 } }],
+            },
+          },
+          {
+            method: "POST",
+            path: "/plans",
+            description: "Create a new VPS plan.",
+            auth: true,
+            body: { label: "Custom Plan", price: { hourly: 0.05, monthly: 40 } },
+            response: { success: true, plan: { id: "plan_001" } },
+          },
+          {
+            method: "PUT",
+            path: "/plans/:id",
+            description: "Update a VPS plan.",
+            auth: true,
+            body: { label: "Updated Plan", price: { hourly: 0.06, monthly: 45 } },
+            response: {
+              success: true,
+              plan: {
+                id: "g6-standard-2",
+                label: "Updated Plan",
+                provider: "linode",
+                type_class: "standard",
+                price: { hourly: 0.06, monthly: 45 },
+                updated_at: "2024-10-25T10:00:00Z",
+              },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/plans/:id",
+            description: "Delete a VPS plan.",
+            auth: true,
+            response: null,
+          },
+          {
+            method: "GET",
+            path: "/providers",
+            description: "List all configured infrastructure providers.",
+            auth: true,
+            response: {
+              providers: [{ id: "linode", name: "Linode", type: "linode", status: "active" }],
+            },
+          },
+          {
+            method: "POST",
+            path: "/providers",
+            description: "Add a new infrastructure provider.",
+            auth: true,
+            body: { name: "New Provider", type: "linode", apiToken: "token" },
+            response: { success: true, provider: { id: "prov_001" } },
+          },
+          {
+            method: "PUT",
+            path: "/providers/:id",
+            description: "Update a provider configuration.",
+            auth: true,
+            body: { name: "Updated Provider", apiToken: "newtoken" },
+            response: {
+              success: true,
+              provider: {
+                id: "linode",
+                name: "Updated Provider",
+                type: "linode",
+                status: "active",
+                metadata: { regions_enabled: 10 },
+                created_at: "2024-01-01T00:00:00Z",
+                updated_at: "2024-10-25T10:00:00Z",
+              },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/providers/:id",
+            description: "Remove a provider.",
+            auth: true,
+            response: null,
+          },
+          {
+            method: "GET",
+            path: "/providers/:id/regions",
+            description: "Get available regions for a provider.",
+            auth: true,
+            response: {
+              regions: [{ id: "us-east", label: "Newark, NJ", country: "US", enabled: true }],
+            },
+          },
+          {
+            method: "PUT",
+            path: "/providers/:id/regions",
+            description: "Update provider region configuration.",
+            auth: true,
+            body: { mode: "custom", regions: ["us-east", "us-west"] },
+            response: {
+              success: true,
+              mode: "custom",
+              allowedRegions: ["us-east", "us-west"],
+              message: "Configured 2 allowed regions",
+            },
+          },
+          {
+            method: "POST",
+            path: "/providers/:id/validate",
+            description: "Validate provider credentials.",
+            auth: true,
+            response: { valid: true, message: "Credentials are valid" },
+          },
+          {
+            method: "PUT",
+            path: "/providers/reorder",
+            description: "Reorder providers for display priority.",
+            auth: true,
+            body: { order: ["linode", "aws"] },
+            response: {
+              success: true,
+              providers: [
+                { id: "linode", name: "Linode", type: "linode", display_order: 1 },
+                { id: "aws", name: "AWS", type: "aws", display_order: 2 },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/servers",
+            description: "Get list of infrastructure servers.",
+            auth: true,
+            response: {
+              servers: [{ id: "srv_001", hostname: "node1", status: "online", provider: "linode" }],
+            },
+          },
+          {
+            method: "GET",
+            path: "/stackscripts/configs",
+            description: "List curated StackScript configurations.",
+            auth: true,
+            response: {
+              configs: [{ id: 12345, label: "LAMP Stack", description: "Linux Apache MySQL PHP" }],
+            },
+          },
+          {
+            method: "POST",
+            path: "/stackscripts/configs",
+            description: "Create a new StackScript configuration.",
+            auth: true,
+            body: { label: "MEAN Stack", scriptId: 12346 },
+            response: { success: true, config: { id: 12347 } },
+          },
+          {
+            method: "PUT",
+            path: "/stackscripts/configs/:id",
+            description: "Update a StackScript configuration.",
+            auth: true,
+            body: { label: "Updated MEAN Stack" },
+            response: {
+              success: true,
+              config: {
+                id: 12345,
+                label: "Updated MEAN Stack",
+                description: "MongoDB Express Angular Node.js",
+                script_id: 12346,
+                updated_at: "2024-10-25T10:00:00Z",
+              },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/stackscripts/configs/:id",
+            description: "Delete a StackScript configuration.",
+            auth: true,
+            response: null,
+          },
+          {
+            method: "GET",
+            path: "/tickets/:id/replies",
+            description: "Get all replies for an admin ticket view.",
+            auth: true,
+            response: {
+              replies: [{ id: "reply_001", message: "Customer reply", createdAt: "2024-10-24T10:00:00Z" }],
+            },
+          },
+          {
+            method: "GET",
+            path: "/tickets/:id/stream",
+            description: "SSE stream for admin ticket updates.",
+            auth: false,
+            params: { token: "ADMIN_TOKEN" },
+            response: { eventStream: true },
+          },
+          {
+            method: "GET",
+            path: "/upstream/plans",
+            description: "Fetch available plans from upstream provider.",
+            auth: true,
+            response: {
+              plans: [{ id: "g6-standard-1", label: "Nanode 1GB", price: { hourly: 0.0075 } }],
+            },
+          },
+          {
+            method: "GET",
+            path: "/upstream/regions",
+            description: "Fetch available regions from upstream provider.",
+            auth: true,
+            response: {
+              regions: [{ id: "us-east", label: "Newark, NJ" }],
+            },
+          },
+          {
+            method: "GET",
+            path: "/upstream/stackscripts",
+            description: "Fetch available StackScripts from upstream provider.",
+            auth: true,
+            response: {
+              stackscripts: [{ id: 12345, label: "My Script" }],
+            },
+          },
+          {
+            method: "GET",
+            path: "/users/:id",
+            description: "Get a specific user by ID.",
+            auth: true,
+            response: {
+              user: { id: "user_123", email: "user@example.com", role: "user", status: "active" },
+            },
+          },
+          {
+            method: "GET",
+            path: "/users/:id/detail",
+            description: "Get detailed user information including billing and VPS summary.",
+            auth: true,
+            response: {
+              user: {
+                id: "user_123",
+                email: "user@example.com",
+                billing: { totalSpent: 450.75 },
+                vpsCount: 3,
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/users/search",
+            description: "Search users by email or name.",
+            auth: true,
+            params: { q: "user@example.com" },
+            response: {
+              users: [{ id: "user_123", email: "user@example.com" }],
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/users/:id",
+            description: "Delete a user account.",
+            auth: true,
+            response: null,
+          },
+          {
+            method: "GET",
+            path: "/egress/pricing",
+            description: "Get current egress pricing configuration.",
+            auth: true,
+            response: {
+              pricing: { basePricePerGB: 0.01, regions: [{ id: "us-east", pricePerGB: 0.008 }] },
+            },
+          },
+          {
+            method: "POST",
+            path: "/egress/pricing/sync",
+            description: "Sync egress pricing from upstream provider.",
+            auth: true,
+            response: { success: true, synced: true },
+          },
+          {
+            method: "PUT",
+            path: "/egress/pricing/:regionId",
+            description: "Update egress pricing for a specific region.",
+            auth: true,
+            body: { pricePerGB: 0.009 },
+            response: {
+              success: true,
+              region: {
+                id: "us-east",
+                price_per_gb: 0.009,
+                updated_at: "2024-10-25T10:00:00Z",
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/egress/live-usage",
+            description: "Get live egress usage across all organizations.",
+            auth: true,
+            response: {
+              usage: [{ organizationId: "org_001", currentUsageGB: 125.5, poolQuotaGB: 1000 }],
+            },
+          },
+          {
+            method: "POST",
+            path: "/egress/execute",
+            description: "Execute egress billing operations (charge organizations).",
+            auth: true,
+            body: { operation: "charge" },
+            response: { success: true, charged: 15 },
+          },
+          {
+            method: "GET",
+            path: "/egress/history",
+            description: "Get egress billing history.",
+            auth: true,
+            params: { limit: 50 },
+            response: {
+              history: [{ id: "egress_001", amount: 100, chargedAt: "2024-10-26T10:00:00Z" }],
             },
           },
         ],
@@ -2688,6 +3719,218 @@ export default function ApiDocs() {
               activeRules: [
                 { route: "/api/vps", limit: 60, window: 60, current: 15 },
               ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/config-validation",
+            description: "Validate platform configuration and environment variables.",
+            auth: false,
+            response: {
+              valid: true,
+              checks: [{ name: "database", status: "ok" }, { name: "redis", status: "ok" }],
+            },
+          },
+        ],
+      },
+      {
+        title: "Theme",
+        base: `${apiBase}/theme`,
+        description: "Platform theme and branding configuration.",
+        icon: <Palette className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/",
+            description: "Get current theme configuration.",
+            response: {
+              theme: {
+                id: "default",
+                name: "Default",
+                colors: { primary: "#2563eb", accent: "#9333ea" },
+              },
+            },
+          },
+        ],
+      },
+      {
+        title: "Contact",
+        base: `${apiBase}/contact`,
+        description: "Contact form submission and configuration.",
+        icon: <Mail className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/config",
+            description: "Get contact page configuration including available categories and methods.",
+            response: {
+              config: {
+                categories: [{ id: "sales", label: "Sales", enabled: true }],
+                methods: { email: { enabled: true, address: "sales@example.com" } },
+              },
+            },
+          },
+          {
+            method: "POST",
+            path: "/",
+            description: "Submit a contact form message.",
+            body: {
+              name: "John Doe",
+              email: "john@example.com",
+              category: "sales",
+              message: "I have a question about VPS hosting.",
+            },
+            response: {
+              success: true,
+              message: "Your message has been sent.",
+            },
+          },
+        ],
+      },
+      {
+        title: "FAQ & Updates",
+        base: `${apiBase}/faq`,
+        description: "Frequently asked questions and platform update announcements.",
+        icon: <HelpCircle className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/categories",
+            description: "Get FAQ categories for the public marketing site.",
+            response: {
+              categories: [
+                { id: "cat_001", name: "General", displayOrder: 1, itemCount: 10 },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/updates",
+            description: "Get platform update changelog entries.",
+            response: {
+              updates: [
+                { id: "update_001", title: "New VPS Features", content: "Added backup scheduling", displayOrder: 1 },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        title: "Pricing",
+        base: `${apiBase}/pricing`,
+        description: "Public pricing information for VPS plans and regions.",
+        icon: <DollarSign className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/",
+            description: "Get public pricing overview.",
+            response: {
+              pricing: {
+                startingAt: 4.99,
+                currency: "USD",
+                period: "monthly",
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/public-regions",
+            description: "Get available public regions with pricing.",
+            response: {
+              regions: [
+                { id: "us-east", label: "Newark, NJ", country: "US", available: true },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/vps",
+            description: "Get public VPS pricing information.",
+            response: {
+              plans: [
+                { id: "g6-standard-1", label: "Nanode 1GB", price: { monthly: 4.99 } },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        title: "Admin Egress Management",
+        base: `${apiBase}/egress/admin`,
+        description: "Admin egress billing management, credit overrides, and billing run operations.",
+        icon: <Server className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "POST",
+            path: "/billing/run",
+            description: "Manually trigger hourly egress billing run for all organizations.",
+            auth: true,
+            response: {
+              success: true,
+              processed: 45,
+              totalCharged: 125.50,
+            },
+          },
+          {
+            method: "GET",
+            path: "/credits/:orgId/balance",
+            description: "Get egress credit balance for a specific organization.",
+            auth: true,
+            response: {
+              organizationId: "org_001",
+              balance: 500,
+              used: 125.5,
+              remaining: 374.5,
+              unit: "GB",
+            },
+          },
+          {
+            method: "POST",
+            path: "/credits/:orgId",
+            description: "Add egress credits to an organization (admin adjustment).",
+            auth: true,
+            body: { amount: 100, reason: "Compensation" },
+            response: {
+              success: true,
+              newBalance: 600,
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/credits/:orgId",
+            description: "Remove egress credits from an organization.",
+            auth: true,
+            body: { amount: 50, reason: "Correction" },
+            response: {
+              success: true,
+              newBalance: 550,
+            },
+          },
+          {
+            method: "GET",
+            path: "/settings/packs",
+            description: "Get configured egress credit packs for purchase.",
+            auth: true,
+            response: {
+              packs: [
+                { id: "pack_100gb", name: "100GB", amount: 100, price: 10, pricePerGB: 0.10 },
+              ],
+            },
+          },
+          {
+            method: "PUT",
+            path: "/settings/packs",
+            description: "Update egress credit pack configuration.",
+            auth: true,
+            body: { packs: [{ id: "pack_100gb", gb: 100, price: 9.50, isPopular: true }] },
+            response: {
+              success: true,
+              message: "Credit pack configuration updated",
+              data: {
+                packs: [{ id: "pack_100gb", gb: 100, price: 9.50, isPopular: true }],
+                warningThresholdGb: 10,
+              },
             },
           },
         ],

@@ -45,9 +45,14 @@ export default defineConfig(({ mode }) => {
   const companyName = process.env.VITE_COMPANY_NAME || process.env.COMPANY_NAME || process.env.COMPANY_BRAND_NAME || 'GVPSCloud';
   
   return {
+    resolve: {
+      alias: {
+        '@': '/src',
+      },
+    },
     plugins: [
-      react(), 
-      tsconfigPaths(), 
+      react(),
+      tsconfigPaths(),
       removeMockData(),
       VitePWA({
         registerType: 'autoUpdate',

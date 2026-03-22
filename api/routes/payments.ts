@@ -75,8 +75,8 @@ router.post(
   "/create-payment",
   [
     body("amount")
-      .isFloat({ min: 1 })
-      .withMessage("Amount must be a positive number"),
+      .isFloat({ min: 0.01 })
+      .withMessage("Amount must be at least 0.01"),
     body("currency")
       .isIn(["USD", "EUR", "GBP"])
       .withMessage("Currency must be USD, EUR, or GBP"),
