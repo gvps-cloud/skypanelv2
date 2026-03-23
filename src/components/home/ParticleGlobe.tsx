@@ -758,7 +758,7 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full min-h-[500px] lg:min-h-[600px]"
+      className="relative w-full h-full min-h-[280px] md:min-h-[400px] lg:min-h-[600px]"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}

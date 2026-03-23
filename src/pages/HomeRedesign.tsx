@@ -469,7 +469,7 @@ export default function HomeRedesign() {
           <div className="home-aurora absolute inset-0" aria-hidden />
           <div className="home-grid-mask absolute inset-0" aria-hidden />
 
-          <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-16 pt-20 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:px-8 lg:pb-20 lg:pt-24">
+          <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-16 pt-20 sm:px-6 md:grid-cols-2 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:px-8 lg:pb-20 lg:pt-24">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
@@ -485,7 +485,7 @@ export default function HomeRedesign() {
                   Next-Gen Cloud Infrastructure Platform
                 </Badge>
 
-                <h1 className="text-balance text-4xl font-semibold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+                <h1 className="text-balance text-3xl md:text-4xl sm:text-5xl lg:text-6xl font-semibold leading-tight tracking-tight">
                   Cloud Infrastructure Management,
                   <span className="bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
                     {" "}
@@ -622,7 +622,7 @@ export default function HomeRedesign() {
 
         {/* CAPABILITIES TABS */}
         <section id="capabilities" className="border-y border-border/60 bg-muted/25 py-20 sm:py-24">
-          <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[0.95fr_1.05fr] lg:gap-14 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}

@@ -48,7 +48,7 @@ export default function GlobeRegionPanel({ region, onClose }: GlobeRegionPanelPr
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 40, scale: 0.95 }}
           transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute right-0 top-1/2 -translate-y-1/2 w-[340px] max-h-[80vh] overflow-auto home-glass-panel border-primary/20"
+          className="absolute right-0 top-1/2 -translate-y-1/2 w-[280px] md:w-[340px] max-h-[80vh] overflow-auto home-glass-panel border-primary/20"
         >
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
