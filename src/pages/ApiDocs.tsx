@@ -3845,6 +3845,28 @@ export default function ApiDocs() {
           },
           {
             method: "GET",
+            path: "/category-mappings",
+            description: "Get enabled category mappings for white-label display on public pages.",
+            response: {
+              success: true,
+              mappings: [
+                {
+                  original_category: "nanode",
+                  custom_name: "Basic VPS",
+                  custom_description: "Entry-level plans perfect for testing and development",
+                  display_order: 1,
+                },
+                {
+                  original_category: "standard",
+                  custom_name: "Standard VPS",
+                  custom_description: "Balanced performance and value for most workloads",
+                  display_order: 2,
+                },
+              ],
+            },
+          },
+          {
+            method: "GET",
             path: "/vps",
             description: "Get public VPS pricing information.",
             response: {

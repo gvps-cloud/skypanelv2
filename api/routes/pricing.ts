@@ -245,8 +245,46 @@ router.get("/vps", async (_req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/pricing/category-mappings
+ *
+ * Public endpoint to retrieve enabled category mappings for white-label display.
+ * No authentication required - this is for public pricing pages.
+ */
+router.get("/category-mappings", async (_req: Request, res: Response) => {
+  try {
+    const result = await query(
+      `SELECT
+         original_category,
+         custom_name,
+         custom_description,
+         display_order
+       FROM vps_category_mappings
+       WHERE enabled = true
+       ORDER BY display_order ASC, original_category ASC`
+    );
+
+    const mappings = result.rows.map((row: any) => ({
+      original_category: row.original_category,
+      custom_name: row.custom_name,
+      custom_description: row.custom_description,
+      display_order: row.display_order,
+    }));
+
+    res.json({
+      success: true,
+      mappings,
+    });
+  } catch (error) {
+    console.error("Public category mappings fetch error:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch category mappings";
+    res.status(500).json({ error: message });
+  }
+});
+
+/**
  * GET /api/pricing
- * 
+ *
  * Public endpoint to retrieve all pricing information (VPS).
  * No authentication required - this is for public pricing pages.
  */

@@ -1042,6 +1042,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/pricing/category-mappings",
+    "protected": false
+  },
+  {
+    "method": "GET",
     "path": "/api/pricing/public-regions",
     "protected": false
   },

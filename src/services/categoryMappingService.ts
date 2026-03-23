@@ -59,6 +59,7 @@ class CategoryMappingService {
 
   /**
    * Get enabled category mappings (for public display)
+   * Uses public endpoint - no authentication required
    */
   async getEnabledCategoryMappings(): Promise<{
     success: boolean;
@@ -66,9 +67,11 @@ class CategoryMappingService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/category-mappings/enabled`, {
+      const response = await fetch(`${API_BASE_URL}/pricing/category-mappings`, {
         method: 'GET',
-        headers: this.getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       const data = await response.json();

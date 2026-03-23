@@ -1,10 +1,53 @@
 {
-  "generatedAt": "2026-03-22T10:16:55.809Z",
-  "actualCount": 246,
-  "actualProtectedCount": 223,
-  "docsCount": 249,
+  "generatedAt": "2026-03-23T04:01:13.652Z",
+  "actualCount": 254,
+  "actualProtectedCount": 230,
+  "docsCount": 250,
   "docsProtectedCount": 226,
-  "missingInDocs": [],
+  "missingInDocs": [
+    {
+      "method": "GET",
+      "path": "/api/admin/platform/region-labels",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/platform/region-labels/:regionId",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/platform/region-labels/:regionId",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/platform/region-labels/:regionId",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/platform/region-labels/bulk",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/egress/credits/purchase/wallet",
+      "protected": true,
+      "source": "api\\routes\\egress.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/egress/credits/wallet-balance",
+      "protected": true,
+      "source": "api\\routes\\egress.ts"
+    }
+  ],
   "staleInDocs": [],
   "authMismatches": [],
   "incompleteDocs": [
@@ -969,6 +1012,13 @@
       ]
     },
     {
+      "key": "GET /api/pricing/category-mappings",
+      "section": "Pricing",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
       "key": "GET /api/pricing/vps",
       "section": "Pricing",
       "issues": [
@@ -1456,6 +1506,36 @@
     },
     {
       "method": "GET",
+      "path": "/api/admin/platform/region-labels",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/platform/region-labels/:regionId",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/platform/region-labels/:regionId",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/platform/region-labels/:regionId",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/platform/region-labels/bulk",
+      "protected": true,
+      "source": "api\\routes\\admin\\platform.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/admin/providers",
       "protected": true,
       "source": "api\\routes\\admin.ts"
@@ -1857,6 +1937,18 @@
       "source": "api\\routes\\egress.ts"
     },
     {
+      "method": "POST",
+      "path": "/api/egress/credits/purchase/wallet",
+      "protected": true,
+      "source": "api\\routes\\egress.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/egress/credits/wallet-balance",
+      "protected": true,
+      "source": "api\\routes\\egress.ts"
+    },
+    {
       "method": "GET",
       "path": "/api/egress/usage/:vpsId",
       "protected": true,
@@ -2195,6 +2287,12 @@
     {
       "method": "GET",
       "path": "/api/pricing",
+      "protected": false,
+      "source": "api\\routes\\pricing.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/pricing/category-mappings",
       "protected": false,
       "source": "api\\routes\\pricing.ts"
     },
@@ -4999,6 +5097,16 @@
       "method": "GET",
       "relativePath": "/public-regions",
       "path": "/api/pricing/public-regions",
+      "auth": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Pricing",
+      "sectionBase": "/api/pricing",
+      "method": "GET",
+      "relativePath": "/category-mappings",
+      "path": "/api/pricing/category-mappings",
       "auth": false,
       "hasResponse": true,
       "isPlaceholderResponse": false

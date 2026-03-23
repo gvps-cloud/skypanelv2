@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-22T10:16:55.811Z",
-  "totalIncomplete": 141,
+  "generatedAt": "2026-03-23T04:01:13.655Z",
+  "totalIncomplete": 142,
   "endpoints": [
     {
       "key": "POST /api/auth/refresh",
@@ -957,6 +957,13 @@
     },
     {
       "key": "GET /api/pricing/public-regions",
+      "section": "Pricing",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/pricing/category-mappings",
       "section": "Pricing",
       "issues": [
         "missing_params"
