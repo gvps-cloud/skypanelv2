@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/api";
 import { egressService } from "@/services/egressService";
+import { paymentService, BillingSummary } from "@/services/paymentService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -102,6 +103,8 @@ const Organizations: React.FC = () => {
   const [creditsLoading, setCreditsLoading] = useState(false);
   const [creditPacks, setCreditPacks] = useState<any[]>([]);
   const [packsLoading, setPacksLoading] = useState(false);
+  const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
   const { token, user, switchOrganization } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -196,6 +199,21 @@ const Organizations: React.FC = () => {
       setPacksLoading(false);
     }
   }, []);
+
+  const loadBillingSummary = useCallback(async () => {
+    if (!token) return;
+    setBillingLoading(true);
+    try {
+      const result = await paymentService.getBillingSummary();
+      if (result.success && result.summary) {
+        setBillingSummary(result.summary);
+      }
+    } catch (error: any) {
+      console.error("Failed to load billing summary:", error);
+    } finally {
+      setBillingLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
     loadOrganizations(currentPage, itemsPerPage);
@@ -344,8 +362,9 @@ const Organizations: React.FC = () => {
       loadEgressOverview(selectedOrganization.id);
       loadEgressCredits(selectedOrganization.id);
       loadCreditPacks(selectedOrganization.id);
+      loadBillingSummary();
     }
-  }, [selectedOrganization?.id, loadEgressOverview, loadEgressCredits, loadCreditPacks]);
+  }, [selectedOrganization?.id, loadEgressOverview, loadEgressCredits, loadCreditPacks, loadBillingSummary]);
 
   const handleOrganizationUpdated = useCallback(async () => {
     await Promise.all([
@@ -1050,10 +1069,16 @@ const Organizations: React.FC = () => {
                   {egressOverview && (
                     <>
                       <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                        Pool: {egressOverview.projectedTotals.totalBillableGb.toFixed(2)} GB
+                        Egress: {egressCredits?.creditsGb.toFixed(2) ?? '0.00'} GB
                       </Badge>
                       <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                        Cost: ${egressOverview.projectedTotals.totalAmount.toFixed(2)}
+                        Used: {egressOverview.projectedTotals.totalMeasuredUsageGb.toFixed(2) ?? '0.00'} GB
+                      </Badge>
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                        Pool: {egressOverview.projectedTotals.activePoolCount ?? 0}
+                      </Badge>
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                        Cost: ${billingSummary?.monthlyEstimate?.toFixed(2) ?? '0.00'}
                       </Badge>
                     </>
                   )}

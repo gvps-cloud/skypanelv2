@@ -76,19 +76,19 @@ const getActivityIcon = (type: string) => {
 const getActivityIconColor = (type: string) => {
   switch (type) {
     case 'invitation_received':
-      return 'text-blue-500';
+      return 'text-info';
     case 'invitation_accepted':
-      return 'text-green-500';
+      return 'text-success';
     case 'invitation_declined':
-      return 'text-red-500';
+      return 'text-destructive';
     case 'member_added':
-      return 'text-emerald-500';
+      return 'text-success';
     case 'member_removed':
-      return 'text-orange-500';
+      return 'text-accent-orange';
     case 'role_updated':
-      return 'text-purple-500';
+      return 'text-accent-purple';
     default:
-      return 'text-gray-500';
+      return 'text-muted-foreground';
   }
 };
 

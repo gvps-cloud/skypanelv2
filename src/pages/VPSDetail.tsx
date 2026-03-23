@@ -3721,8 +3721,8 @@ const VPSDetail: React.FC = () => {
                                   <Area
                                     type="monotone"
                                     dataKey="cpu"
-                                    stroke="hsl(180, 100%, 50%)"
-                                    fill="hsl(180, 100%, 50%)"
+                                    stroke="hsl(var(--chart-1))"
+                                    fill="hsl(var(--chart-1))"
                                     fillOpacity={0.2}
                                     strokeWidth={2}
                                   />
@@ -3818,14 +3818,14 @@ const VPSDetail: React.FC = () => {
                                   <Line
                                     type="monotone"
                                     dataKey="inbound"
-                                    stroke="hsl(160, 100%, 50%)"
+                                    stroke="hsl(var(--chart-2))"
                                     strokeWidth={2}
                                     dot={false}
                                   />
                                   <Line
                                     type="monotone"
                                     dataKey="outbound"
-                                    stroke="hsl(25, 100%, 50%)"
+                                    stroke="hsl(var(--chart-3))"
                                     strokeWidth={2}
                                     dot={false}
                                   />
@@ -3901,8 +3901,8 @@ const VPSDetail: React.FC = () => {
                                   <Area
                                     type="monotone"
                                     dataKey="io"
-                                    stroke="hsl(240, 100%, 50%)"
-                                    fill="hsl(240, 100%, 50%)"
+                                    stroke="hsl(var(--chart-4))"
+                                    fill="hsl(var(--chart-4))"
                                     fillOpacity={0.2}
                                     strokeWidth={2}
                                   />
@@ -3978,8 +3978,8 @@ const VPSDetail: React.FC = () => {
                                   <Area
                                     type="monotone"
                                     dataKey="swap"
-                                    stroke="hsl(330, 100%, 50%)"
-                                    fill="hsl(330, 100%, 50%)"
+                                    stroke="hsl(var(--chart-5))"
+                                    fill="hsl(var(--chart-5))"
                                     fillOpacity={0.2}
                                     strokeWidth={2}
                                   />
