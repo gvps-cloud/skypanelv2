@@ -199,13 +199,219 @@ router.put(
         ? emergencyTextResult.rows[0].value?.text 
         : null;
 
-      res.json({ 
+      res.json({
         availability: availabilityResult.rows || [],
         emergency_support_text: updatedEmergencySupportText
       });
     } catch (err: any) {
       console.error('Admin platform availability update error:', err);
       res.status(500).json({ error: err.message || 'Failed to update platform availability' });
+    }
+  }
+);
+
+// ============================================================================
+// REGION DISPLAY LABELS ROUTES
+// ============================================================================
+
+/**
+ * GET /api/admin/platform/region-labels
+ *
+ * Get all region display labels for whitelabeling
+ */
+router.get('/region-labels', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    // Fetch all region display labels
+    const result = await query(
+      `SELECT id, region_id, provider, display_label, display_country, created_at, updated_at
+       FROM region_display_labels
+       ORDER BY display_country ASC, display_label ASC`
+    );
+
+    res.json({
+      success: true,
+      labels: result.rows || []
+    });
+  } catch (err: any) {
+    console.error('Admin region labels fetch error:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch region labels' });
+  }
+});
+
+/**
+ * GET /api/admin/platform/region-labels/:regionId
+ *
+ * Get display label for a specific region
+ */
+router.get('/region-labels/:regionId', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { regionId } = req.params;
+
+    const result = await query(
+      `SELECT id, region_id, provider, display_label, display_country, created_at, updated_at
+       FROM region_display_labels
+       WHERE region_id = $1 AND provider = 'linode'`,
+      [regionId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Region label not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      label: result.rows[0]
+    });
+  } catch (err: any) {
+    console.error('Admin region label fetch error:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch region label' });
+  }
+});
+
+/**
+ * PUT /api/admin/platform/region-labels/:regionId
+ *
+ * Update display label for a specific region
+ */
+router.put(
+  '/region-labels/:regionId',
+  authenticateToken,
+  requireAdmin,
+  [
+    body('display_label').isString().trim().notEmpty().withMessage('Display label is required'),
+    body('display_country').isString().trim().notEmpty().withMessage('Display country is required'),
+  ],
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { regionId } = req.params;
+      const { display_label, display_country } = req.body as {
+        display_label: string;
+        display_country: string;
+      };
+
+      // Upsert the region label
+      const result = await query(
+        `INSERT INTO region_display_labels (region_id, provider, display_label, display_country, updated_at)
+         VALUES ($1, 'linode', $2, $3, NOW())
+         ON CONFLICT (region_id, provider)
+         DO UPDATE SET display_label = $2, display_country = $3, updated_at = NOW()
+         RETURNING id, region_id, provider, display_label, display_country, created_at, updated_at`,
+        [regionId, display_label, display_country]
+      );
+
+      // Invalidate the regions cache so the new labels take effect immediately
+      const { invalidateRegionsCache } = await import('../../routes/pricing.js');
+      invalidateRegionsCache();
+
+      // Log activity
+      if (req.user?.id) {
+        await logActivity({
+          userId: req.user.id,
+          organizationId: req.user.organizationId ?? null,
+          eventType: 'region_label.update',
+          entityType: 'region_display_labels',
+          entityId: regionId,
+          message: `Updated region label for ${regionId}`,
+          status: 'success',
+          metadata: { region_id: regionId, display_label, display_country }
+        }, req);
+      }
+
+      res.json({
+        success: true,
+        label: result.rows[0]
+      });
+    } catch (err: any) {
+      console.error('Admin region label update error:', err);
+      res.status(500).json({ error: err.message || 'Failed to update region label' });
+    }
+  }
+);
+
+/**
+ * DELETE /api/admin/platform/region-labels/:regionId
+ *
+ * Delete (reset) display label for a specific region to default
+ */
+router.delete('/region-labels/:regionId', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { regionId } = req.params;
+
+    await query(
+      `DELETE FROM region_display_labels WHERE region_id = $1 AND provider = 'linode'`,
+      [regionId]
+    );
+
+    // Invalidate the regions cache
+    const { invalidateRegionsCache } = await import('../../routes/pricing.js');
+    invalidateRegionsCache();
+
+    res.json({
+      success: true,
+      message: 'Region label deleted'
+    });
+  } catch (err: any) {
+    console.error('Admin region label delete error:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete region label' });
+  }
+});
+
+/**
+ * POST /api/admin/platform/region-labels/bulk
+ *
+ * Bulk update region labels
+ */
+router.post(
+  '/region-labels/bulk',
+  authenticateToken,
+  requireAdmin,
+  [
+    body('labels').isArray().withMessage('Labels must be an array'),
+    body('labels.*.region_id').isString().trim().notEmpty().withMessage('Region ID is required'),
+    body('labels.*.display_label').isString().trim().notEmpty().withMessage('Display label is required'),
+    body('labels.*.display_country').isString().trim().notEmpty().withMessage('Display country is required'),
+  ],
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { labels } = req.body as {
+        labels: Array<{ region_id: string; display_label: string; display_country: string }>;
+      };
+
+      // Upsert each label
+      for (const label of labels) {
+        await query(
+          `INSERT INTO region_display_labels (region_id, provider, display_label, display_country, updated_at)
+           VALUES ($1, 'linode', $2, $3, NOW())
+           ON CONFLICT (region_id, provider)
+           DO UPDATE SET display_label = $2, display_country = $3, updated_at = NOW()`,
+          [label.region_id, label.display_label, label.display_country]
+        );
+      }
+
+      // Invalidate the regions cache
+      const { invalidateRegionsCache } = await import('../../routes/pricing.js');
+      invalidateRegionsCache();
+
+      res.json({
+        success: true,
+        message: `Updated ${labels.length} region labels`
+      });
+    } catch (err: any) {
+      console.error('Admin region labels bulk update error:', err);
+      res.status(500).json({ error: err.message || 'Failed to bulk update region labels' });
     }
   }
 );

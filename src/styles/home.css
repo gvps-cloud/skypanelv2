@@ -1,3 +1,7 @@
+/* Globe theme colors - derived from --primary in ParticleGlobe.tsx.
+   These CSS vars are kept for potential future use but are no longer
+   the primary way the globe gets its colors. */
+
 .bg-grid-pattern {
   background-image:
     linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
@@ -156,4 +160,24 @@
   max-width: 100%;
   height: auto;
   object-fit: cover;
+}
+
+/* ================================================================================
+   PARTICLE GLOBE STYLES
+   ================================================================================ */
+
+/* Note: Markers are now rendered as Three.js sprites for performance.
+   Globe colors are derived from --primary CSS variable dynamically. */
+
+/* Hero section globe container */
+.hero-globe-container {
+  position: relative;
+  width: 100%;
+  height: 500px;
+}
+
+@media (min-width: 1024px) {
+  .hero-globe-container {
+    height: 600px;
+  }
 }

@@ -387,6 +387,31 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/admin/platform/region-labels",
+    "protected": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/platform/region-labels/:regionId",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/platform/region-labels/:regionId",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/platform/region-labels/:regionId",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/platform/region-labels/bulk",
+    "protected": true
+  },
+  {
+    "method": "GET",
     "path": "/api/admin/providers",
     "protected": true
   },

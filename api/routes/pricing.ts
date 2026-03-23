@@ -15,6 +15,28 @@ interface PublicRegion {
   status: string;
   site_type: string;
   speedTestUrl?: string;
+  displayLabel?: string;
+  displayCountry?: string;
+}
+
+// Fetch region display labels from database
+async function getRegionDisplayLabels(): Promise<Record<string, { displayLabel: string; displayCountry: string }>> {
+  try {
+    const result = await query(
+      `SELECT region_id, display_label, display_country FROM region_display_labels WHERE provider = 'linode'`
+    );
+    const labels: Record<string, { displayLabel: string; displayCountry: string }> = {};
+    for (const row of result.rows) {
+      labels[row.region_id] = {
+        displayLabel: row.display_label,
+        displayCountry: row.display_country,
+      };
+    }
+    return labels;
+  } catch (err) {
+    console.warn("Could not fetch region display labels:", err);
+    return {};
+  }
 }
 
 interface CachedRegions {
@@ -103,7 +125,10 @@ router.get("/public-regions", async (_req: Request, res: Response) => {
     // Fetch all Linode regions for details
     const linodeRegions = await linodeService.getLinodeRegions();
 
-    // Filter to only allowed regions and map with speed test URLs
+    // Fetch display labels for whitelabeling
+    const displayLabels = await getRegionDisplayLabels();
+
+    // Filter to only allowed regions and map with speed test URLs and display labels
     const allowedRegions: PublicRegion[] = linodeRegions
       .filter((region) => {
         const slug = region.id?.toLowerCase() || "";
@@ -111,14 +136,20 @@ router.get("/public-regions", async (_req: Request, res: Response) => {
         if (allowedRegionSet.size === 0) return true;
         return allowedRegionSet.has(slug);
       })
-      .map((region) => ({
-        id: region.id,
-        label: region.label || region.id,
-        country: region.country || "",
-        status: region.status || "unknown",
-        site_type: region.site_type || "core",
-        speedTestUrl: getSpeedTestUrl(region.id),
-      }));
+      .map((region) => {
+        const slug = region.id?.toLowerCase() || "";
+        const labelInfo = displayLabels[slug] || displayLabels[region.id];
+        return {
+          id: region.id,
+          label: region.label || region.id,
+          country: region.country || "",
+          status: region.status || "unknown",
+          site_type: region.site_type || "core",
+          speedTestUrl: getSpeedTestUrl(region.id),
+          displayLabel: labelInfo?.displayLabel || undefined,
+          displayCountry: labelInfo?.displayCountry || undefined,
+        };
+      });
 
     // Update cache
     regionsCache = {

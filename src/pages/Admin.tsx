@@ -58,6 +58,7 @@ import { ContactMethodManager } from "@/components/admin/ContactMethodManager";
 import PlatformAvailabilityManager from "@/components/admin/PlatformAvailabilityManager";
 import { CategoryMappingManager } from "@/components/admin/CategoryMappingManager";
 import { RegionAccessManager } from "@/components/admin/RegionAccessManager";
+import RegionLabelManager from "@/components/admin/RegionLabelManager";
 import { AdminSupportView } from "@/components/admin/AdminSupportView";
 import { VPSPlanWizard } from "@/components/admin/VPSPlanWizard";
 import EgressCreditManager from "@/components/admin/EgressCreditManager";
@@ -4028,11 +4029,14 @@ const Admin: React.FC = () => {
             </div>
 
             <Tabs defaultValue="availability" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 lg:w-auto lg:inline-grid">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:w-auto lg:inline-grid">
                 <TabsTrigger value="availability">Availability</TabsTrigger>
                 <TabsTrigger value="theme">Theme</TabsTrigger>
                 <TabsTrigger value="category-mappings">
                   Category Mappings
+                </TabsTrigger>
+                <TabsTrigger value="region-labels">
+                  Region Labels
                 </TabsTrigger>
               </TabsList>
 
@@ -4042,6 +4046,10 @@ const Admin: React.FC = () => {
 
               <TabsContent value="category-mappings">
                 <CategoryMappingManager />
+              </TabsContent>
+
+              <TabsContent value="region-labels">
+                <RegionLabelManager />
               </TabsContent>
 
               <TabsContent value="theme">

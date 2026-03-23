@@ -29,6 +29,8 @@ import { BRAND_NAME } from "@/lib/brand";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import ParticleGlobe from "@/components/home/ParticleGlobe";
+import GlobeRegionPanel from "@/components/home/GlobeRegionPanel";
 import {
   Accordion,
   AccordionContent,
@@ -342,12 +344,26 @@ const testimonials = [
   },
 ];
 
+interface RegionData {
+  id: string;
+  label: string;
+  country: string;
+  status: string;
+  site_type: string;
+  displayLabel?: string;
+  displayCountry?: string;
+  speedTestUrl?: string;
+  capabilities?: string[];
+}
+
 export default function HomeRedesign() {
   const [regionCount, setRegionCount] = useState(10);
   const [lowestPrice, setLowestPrice] = useState<number | null>(null);
   const [pricingLoading, setPricingLoading] = useState(true);
   const [activeCapability, setActiveCapability] =
     useState<CapabilityKey>("deploy");
+  const [regionsData, setRegionsData] = useState<RegionData[]>([]);
+  const [selectedRegion, setSelectedRegion] = useState<RegionData | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -379,6 +395,7 @@ export default function HomeRedesign() {
         const regions = regionsData.regions;
         if (Array.isArray(regions) && regions.length > 0) {
           setRegionCount(regions.length);
+          setRegionsData(regions as RegionData[]);
         } else {
           const count = parseNumber(regionsData.count);
           if (count !== null && count > 0) {
@@ -516,65 +533,17 @@ export default function HomeRedesign() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
-              className="home-panel-glow relative"
+              className="relative hero-globe-container"
             >
-              <Card className="overflow-hidden border-border/70 bg-card/95 shadow-2xl">
-                <CardContent className="space-y-5 p-0">
-                  <div className="flex items-center justify-between border-b border-border/70 px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-1.5">
-                        <div className="h-3 w-3 rounded-full bg-destructive/80" />
-                        <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-                        <div className="h-3 w-3 rounded-full bg-green-500/80" />
-                      </div>
-                      <div className="ml-2 h-4 w-32 rounded bg-muted" />
-                    </div>
-                    <Badge variant="outline" className="rounded-full bg-green-500/10 text-green-500 border-green-500/20">
-                      System Operational
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-4 px-5 pb-5">
-                    {/* Mock server list */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active Instances</p>
-                      {[
-                        { name: "web-production-01", status: "Running", ip: "192.168.1.10", load: "24%" },
-                        { name: "database-primary", status: "Running", ip: "192.168.1.11", load: "68%" },
-                        { name: "staging-env", status: "Stopped", ip: "192.168.1.12", load: "0%" },
-                      ].map((server) => (
-                        <div key={server.name} className="flex items-center justify-between rounded-lg border border-border/50 bg-background/50 p-3">
-                          <div className="flex items-center gap-3">
-                            <Server className={`h-4 w-4 ${server.status === 'Running' ? 'text-green-500' : 'text-muted-foreground'}`} />
-                            <div>
-                              <p className="text-sm font-medium">{server.name}</p>
-                              <p className="text-xs text-muted-foreground">{server.ip}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              <p className="text-xs font-medium">{server.load} CPU</p>
-                            </div>
-                            <div className="h-2 w-12 overflow-hidden rounded-full bg-muted">
-                              <div className="h-full bg-primary" style={{ width: server.load }} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-4 rounded-xl border border-border/70 bg-primary/5 p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <TerminalSquare className="h-4 w-4 text-primary" />
-                          <span>Quick Action</span>
-                        </div>
-                        <Button size="sm" variant="secondary" className="h-7 text-xs">Open Console</Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <ParticleGlobe
+                regions={regionsData}
+                onRegionSelect={setSelectedRegion}
+                selectedRegion={selectedRegion}
+              />
+              <GlobeRegionPanel
+                region={selectedRegion}
+                onClose={() => setSelectedRegion(null)}
+              />
             </motion.div>
           </div>
         </section>
