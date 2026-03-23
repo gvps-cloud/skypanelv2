@@ -71,7 +71,6 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid hsl(var(--border) / 0.65);
-  box-shadow: 0 8px 24px hsl(var(--foreground) / 0.06);
 }
 
 .dark .home-glass-panel {
@@ -81,7 +80,6 @@
     hsl(var(--background) / 0.65) 100%
   );
   border: 1px solid hsl(var(--border) / 0.55);
-  box-shadow: 0 10px 28px hsl(var(--foreground) / 0.3);
 }
 
 .home-animated-border {
