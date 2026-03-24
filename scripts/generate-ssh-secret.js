@@ -43,7 +43,7 @@ try {
   if (!envContent.endsWith('\n')) {
     envContent += '\n';
   }
-  envContent += `\n# Encryption Key for Provider API Tokens\nSSH_CRED_SECRET=${secret}\n`;
+  envContent += `\n# Encryption Key for SSH Credentials\nSSH_CRED_SECRET=${secret}\n`;
 
   fs.writeFileSync(envPath, envContent);
   console.log('✅ Added SSH_CRED_SECRET to .env file');
