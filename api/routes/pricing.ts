@@ -205,7 +205,7 @@ router.get("/vps", async (_req: Request, res: Response) => {
     );
 
     // Build a network_out lookup from Linode types keyed by provider_plan_id
-    let networkOutMap: Record<string, number> = {};
+    const networkOutMap: Record<string, number> = {};
     try {
       const linodeTypes = await linodeService.getLinodeTypes();
       for (const lt of linodeTypes) {

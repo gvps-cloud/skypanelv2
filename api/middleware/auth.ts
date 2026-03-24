@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { query } from '../lib/database.js';
+import { tokenBlacklistService } from '../services/tokenBlacklistService.js';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -27,11 +28,38 @@ export const authenticateToken = async (
   next: NextFunction
 ) => {
   try {
+    // Extract token from Authorization header or cookies
+    let token: string | null = null;
+
+    // Try Authorization header first
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    if (authHeader) {
+      const parts = authHeader.split(' ');
+      if (parts.length === 2 && parts[0] === 'Bearer') {
+        token = parts[1];
+      }
+    }
+
+    // Fallback to HttpOnly cookie
+    if (!token && req.cookies && req.cookies.auth_token) {
+      token = req.cookies.auth_token;
+    }
 
     if (!token) {
       return res.status(401).json({ error: 'Access token required' });
+    }
+
+    // Check if token has been blacklisted (revoked)
+    const isRevoked = await tokenBlacklistService.isRevoked(token);
+    if (isRevoked) {
+      console.warn('Authentication attempt with revoked token:', {
+        hasToken: !!token,
+        tokenPrefix: token.substring(0, 10) + '...'
+      });
+      return res.status(401).json({
+        error: 'Token has been revoked',
+        code: 'TOKEN_REVOKED'
+      });
     }
 
     // Verify JWT token

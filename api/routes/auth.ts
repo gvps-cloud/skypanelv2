@@ -9,6 +9,11 @@ import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { logActivity } from "../services/activityLogger.js";
 import { query } from "../lib/database.js";
 import { mergeNotificationPreferences } from "../services/userNotificationPreferences.js";
+import { bruteForceProtectionService } from "../services/bruteForceProtectionService.js";
+import { tokenBlacklistService } from "../services/tokenBlacklistService.js";
+import { getClientIP } from "../lib/ipDetection.js";
+import { loginRateLimiter, passwordResetRateLimiter } from "../middleware/rateLimiting.js";
+import { generateApiKey, hashApiKey } from "../lib/secureRandom.js";
 
 const router = Router();
 
@@ -67,6 +72,7 @@ router.post(
  */
 router.post(
   "/login",
+  loginRateLimiter, // Apply stricter rate limiting
   [
     body("email").isEmail().normalizeEmail({ gmail_remove_dots: false }),
     body("password").notEmpty().withMessage("Password is required"),
@@ -82,44 +88,89 @@ router.post(
 
       const { email, password, code } = req.body;
 
-      const result = await AuthService.login({ email, password, code });
+      // Get client IP for brute force tracking
+      const ipResult = getClientIP(req, {
+        trustProxy: true, // Always trust proxy for security middleware
+        enableLogging: false,
+      });
+      const clientIP = ipResult.ip;
 
-      if ("require2fa" in result && result.require2fa) {
-        res.json({ require2fa: true });
+      // Check if IP or email is locked out due to failed attempts
+      const lockoutCheck = await bruteForceProtectionService.isLockedOut(clientIP, email);
+      if (lockoutCheck.locked) {
+        console.warn('Login blocked due to brute force lockout:', {
+          ip: clientIP,
+          email: email.toLowerCase(),
+          reason: lockoutCheck.reason,
+          retryAfter: lockoutCheck.retryAfter
+        });
+
+        res.status(429).json({
+          error: 'Account temporarily locked',
+          message: lockoutCheck.reason,
+          retryAfter: lockoutCheck.retryAfter
+        });
         return;
       }
 
-      // unexpected case or type narrowing
-      if (!("user" in result) || !("token" in result)) {
-        throw new Error("Unexpected login response");
-      }
-
-      const loginResult = result as { user: any; token: string };
-
-      // Log successful login
       try {
-        await logActivity(
-          {
-            userId: loginResult.user.id,
-            eventType: "auth.login",
-            entityType: "user",
-            entityId: loginResult.user.id,
-            message: `User ${loginResult.user.email} logged in`,
-            status: "success",
-            metadata: { email },
-          },
-          req,
-        );
-      } catch {}
+        const result = await AuthService.login({ email, password, code });
 
-      res.json({
-        message: "Login successful",
-        user: loginResult.user,
-        token: loginResult.token,
-      });
+        if ("require2fa" in result && result.require2fa) {
+          res.json({ require2fa: true });
+          return;
+        }
+
+        // unexpected case or type narrowing
+        if (!("user" in result) || !("token" in result)) {
+          throw new Error("Unexpected login response");
+        }
+
+        const loginResult = result as { user: any; token: string };
+
+        // Reset failed attempts on successful login
+        await bruteForceProtectionService.resetAttempts(clientIP, email);
+
+        // Log successful login
+        try {
+          await logActivity(
+            {
+              userId: loginResult.user.id,
+              eventType: "auth.login",
+              entityType: "user",
+              entityId: loginResult.user.id,
+              message: `User ${loginResult.user.email} logged in`,
+              status: "success",
+              metadata: {
+                email,
+                ip: clientIP
+              },
+            },
+            req,
+          );
+        } catch (logError) {
+          console.error('Failed to log login activity:', logError);
+        }
+
+        res.json({
+          message: "Login successful",
+          user: loginResult.user,
+          token: loginResult.token,
+        });
+      } catch (loginError: any) {
+        // Track failed attempt for brute force protection
+        await bruteForceProtectionService.trackFailedAttempt(clientIP, email);
+
+        // Don't reveal whether email exists (security best practice)
+        const errorMessage = loginError.message.includes('Invalid email or password')
+          ? 'Invalid email or password'
+          : loginError.message;
+
+        res.status(401).json({ error: errorMessage });
+      }
     } catch (error: any) {
       console.error("Login error:", error);
-      res.status(401).json({ error: error.message });
+      res.status(500).json({ error: "An unexpected error occurred during login" });
     }
   },
 );
@@ -166,9 +217,38 @@ router.post(
   authenticateToken,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      // In a stateless JWT system, logout is handled client-side by removing the token
-      // For enhanced security, you could maintain a blacklist of tokens
       if (req.user) {
+        // Extract token from Authorization header or cookie
+        let token: string | null = null;
+
+        const authHeader = req.headers['authorization'];
+        if (authHeader) {
+          const parts = authHeader.split(' ');
+          if (parts.length === 2 && parts[0] === 'Bearer') {
+            token = parts[1];
+          }
+        }
+
+        // Fallback to cookie
+        if (!token && req.cookies && req.cookies.auth_token) {
+          token = req.cookies.auth_token;
+        }
+
+        // Blacklist the token to prevent reuse
+        if (token) {
+          try {
+            await tokenBlacklistService.add(token, req.user.id);
+            console.log('Token blacklisted on logout:', {
+              userId: req.user.id,
+              email: req.user.email
+            });
+          } catch (blacklistError) {
+            console.error('Failed to blacklist token:', blacklistError);
+            // Continue with logout even if blacklisting fails
+          }
+        }
+
+        // Log logout activity
         try {
           await logActivity(
             {
@@ -181,7 +261,9 @@ router.post(
             },
             req as any,
           );
-        } catch {}
+        } catch (logError) {
+          console.error('Failed to log logout activity:', logError);
+        }
       }
       res.json({ message: "Logout successful" });
     } catch (error: any) {
@@ -223,6 +305,7 @@ router.post(
  */
 router.post(
   "/forgot-password",
+  passwordResetRateLimiter, // Apply stricter rate limiting
   [body("email").isEmail().normalizeEmail({ gmail_remove_dots: false })],
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -233,14 +316,36 @@ router.post(
       }
 
       const { email } = req.body;
+
+      // Get client IP for security logging
+      const ipResult = getClientIP(req, {
+        trustProxy: true,
+        enableLogging: false,
+      });
+      const clientIP = ipResult.ip;
+
+      // Log password reset request for security monitoring
+      console.info('Password reset requested:', {
+        email: email.toLowerCase(),
+        ip: clientIP,
+        userAgent: req.headers['user-agent'],
+        timestamp: new Date().toISOString()
+      });
+
       const result = await AuthService.requestPasswordReset(email);
 
-      res.json(result);
+      // Always return the same message regardless of whether email exists
+      // This prevents email enumeration attacks
+      res.json({
+        message: "If an account exists with this email address, a password reset link has been sent."
+      });
     } catch (error: any) {
       console.error("Password reset request error:", error);
-      res
-        .status(500)
-        .json({ error: "Failed to process password reset request" });
+      // Don't reveal specific errors to prevent enumeration
+      res.status(500).json({
+        error: "Failed to process password reset request",
+        message: "An error occurred while processing your request. Please try again later."
+      });
     }
   },
 );
@@ -679,12 +784,12 @@ router.post(
 
       const { name } = req.body;
 
-      // Generate API key
-      const apiKey = `sk_live_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      // Generate API key using cryptographically secure random generation
+      const apiKey = generateApiKey();
       const keyPrefix = apiKey.substring(0, 12) + "...";
 
-      // Hash the key for storage (in production, use proper hashing)
-      const keyHash = Buffer.from(apiKey).toString("base64");
+      // Hash the key for secure storage
+      const keyHash = hashApiKey(apiKey);
 
       // Introspect schema to handle legacy 'name' column vs new 'key_name'
       const columnsCheck = await query(

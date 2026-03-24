@@ -188,7 +188,7 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
 
     const resources = await Promise.all(orgs.map(async (org) => {
       // Get user's permissions for this org
-      let permissions = {
+      const permissions = {
         vps_view: false,
         vps_create: false,
         vps_delete: false,
@@ -608,9 +608,6 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 12;
     const offset = (page - 1) * limit;
 
-    let orgs;
-    let totalCount;
-    
     const countResult = await query(
       `SELECT COUNT(*) as count
        FROM organizations o
@@ -618,7 +615,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
        WHERE om.user_id = $1`,
       [user.id]
     );
-    totalCount = parseInt(countResult.rows[0].count);
+    const totalCount = parseInt(countResult.rows[0].count);
 
     const result = await query(
       `SELECT o.id, o.name, o.slug, o.created_at, om.role as member_role, 
@@ -632,7 +629,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
        LIMIT $2 OFFSET $3`,
       [user.id, limit, offset]
     );
-    orgs = result.rows;
+    const orgs = result.rows;
 
     const enrichedOrgs = await Promise.all(orgs.map(async (org) => {
       const vpsCount = await query(

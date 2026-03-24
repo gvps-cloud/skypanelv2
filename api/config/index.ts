@@ -48,6 +48,7 @@ export interface Config {
   FROM_NAME?: string;
   LINODE_API_TOKEN?: string;
   SSH_CRED_SECRET?: string;
+  PROVIDER_TOKEN_SECRET?: string;
   CONTACT_FORM_RECIPIENT?: string;
   COMPANY_BRAND_NAME: string;
   corsOrigins: string[];
@@ -216,6 +217,7 @@ function getConfig(): Config {
 
     LINODE_API_TOKEN: process.env.LINODE_API_TOKEN,
     SSH_CRED_SECRET: process.env.SSH_CRED_SECRET,
+    PROVIDER_TOKEN_SECRET: process.env.PROVIDER_TOKEN_SECRET,
     CONTACT_FORM_RECIPIENT: process.env.CONTACT_FORM_RECIPIENT,
     COMPANY_BRAND_NAME:
       process.env.VITE_COMPANY_NAME?.trim() ||
@@ -314,35 +316,144 @@ export function validateRateLimitConfig(rateLimitConfig: RateLimitConfig): { isV
   };
 }
 
-export function validateConfig(): void {
-  const requiredEnvVars = [
-    'DATABASE_URL',
+/**
+ * Validate secret key length
+ *
+ * @param secretName - Name of the secret for error messages
+ * @param secret - The secret value to validate
+ * @param minLength - Minimum required length (default: 32)
+ * @returns Object with isValid flag and error message if invalid
+ */
+function validateSecretLength(secretName: string, secret: string | undefined, minLength: number = 32): { isValid: boolean; error?: string } {
+  if (!secret) {
+    return {
+      isValid: false,
+      error: `${secretName} is not set`,
+    };
+  }
+
+  if (secret.length < minLength) {
+    return {
+      isValid: false,
+      error: `${secretName} must be at least ${minLength} characters (current: ${secret.length})`,
+    };
+  }
+
+  // Check for obvious placeholder values
+  const placeholders = [
+    'your-super-secret-jwt-key',
+    'your-32-character-encryption-key',
+    'change-in-production',
+    'your-linode-api-token',
+    'your-paypal-client-id',
+    'your-paypal-client-secret',
   ];
 
-  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+  for (const placeholder of placeholders) {
+    if (secret.toLowerCase().includes(placeholder)) {
+      return {
+        isValid: false,
+        error: `${secretName} appears to be a placeholder value. Set a strong, unique secret.`,
+      };
+    }
+  }
 
-  if (missingVars.length > 0) {
-    console.error('Missing required environment variables:', missingVars);
-    console.error('Please check your .env file and ensure all required variables are set.');
-    // Don't exit in development, just warn
-    if (process.env.NODE_ENV === 'production') {
+  return { isValid: true };
+}
+
+export function validateConfig(): void {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  // ========== CRITICAL SECRETS (Required in Production) ==========
+  const productionSecrets = [
+    { name: 'DATABASE_URL', value: process.env.DATABASE_URL, minLength: 10 },
+    { name: 'JWT_SECRET', value: process.env.JWT_SECRET, minLength: 32 },
+    { name: 'SSH_CRED_SECRET', value: process.env.SSH_CRED_SECRET, minLength: 32 },
+    { name: 'LINODE_API_TOKEN', value: process.env.LINODE_API_TOKEN, minLength: 40 },
+    { name: 'PAYPAL_CLIENT_SECRET', value: process.env.PAYPAL_CLIENT_SECRET, minLength: 20 },
+  ];
+
+  for (const secret of productionSecrets) {
+    if (isProduction) {
+      const validation = validateSecretLength(secret.name, secret.value, secret.minLength);
+      if (!validation.isValid) {
+        errors.push(validation.error!);
+      }
+    } else {
+      // In development, just warn if missing
+      if (!secret.value) {
+        warnings.push(`${secret.name} is not set (recommended for development)`);
+      }
+    }
+  }
+
+  // Validate NODE_ENV consistency
+  if (isProduction && process.env.NODE_ENV !== 'production') {
+    errors.push('NODE_ENV is set to production but configuration validation failed');
+  }
+
+  if (isDevelopment && process.env.NODE_ENV === 'production') {
+    errors.push('NODE_ENV=production but environment appears to be development. Check your configuration.');
+  }
+
+  // Validate PAYPAL_CLIENT_ID in production
+  if (isProduction) {
+    const paypalClientId = process.env.PAYPAL_CLIENT_ID;
+    if (!paypalClientId || paypalClientId.length < 10) {
+      errors.push('PAYPAL_CLIENT_ID must be set and valid in production');
+    }
+  }
+
+  // Validate PROVIDER_TOKEN_SECRET if set (should be at least 32 chars)
+  const providerTokenSecret = process.env.PROVIDER_TOKEN_SECRET;
+  if (providerTokenSecret && providerTokenSecret.length < 32) {
+    warnings.push('PROVIDER_TOKEN_SECRET should be at least 32 characters for security');
+  }
+
+  // Check for legacy JWT secret placeholder in production
+  if (isProduction && config.JWT_SECRET === 'your-super-secret-jwt-key-change-in-production') {
+    errors.push('JWT_SECRET must be changed from the default placeholder value in production');
+  }
+
+  // ========== RATE LIMITING VALIDATION ==========
+  const rateLimitValidation = validateRateLimitConfig(config.rateLimiting);
+  if (!rateLimitValidation.isValid) {
+    warnings.push('Rate limiting configuration issues detected:');
+    rateLimitValidation.errors.forEach(error => warnings.push(`  - ${error}`));
+  }
+
+  // ========== REPORT VALIDATION RESULTS ==========
+  if (errors.length > 0) {
+    console.error('========================================');
+    console.error('CONFIGURATION VALIDATION FAILED');
+    console.error('========================================');
+    errors.forEach(error => console.error(`✗ ${error}`));
+    console.error('========================================');
+    console.error('Please fix these errors before starting the server.');
+    console.error('Check your .env file and environment variables.');
+    console.error('========================================');
+
+    // In production, exit on critical errors
+    if (isProduction) {
       process.exit(1);
     }
   }
 
-  // Validate JWT secret in production
-  if (process.env.NODE_ENV === 'production' && config.JWT_SECRET === 'your-super-secret-jwt-key-change-in-production') {
-    console.error('JWT_SECRET must be changed in production!');
-    process.exit(1);
+  if (warnings.length > 0) {
+    console.warn('========================================');
+    console.warn('Configuration Warnings');
+    console.warn('========================================');
+    warnings.forEach(warning => console.warn(`⚠ ${warning}`));
+    console.warn('========================================');
+    console.warn('These warnings should be addressed for optimal security and functionality.');
+    console.warn('========================================');
   }
 
-  // Validate rate limiting configuration
-  const rateLimitValidation = validateRateLimitConfig(config.rateLimiting);
-  if (!rateLimitValidation.isValid) {
-    console.warn('Rate limiting configuration issues detected:');
-    rateLimitValidation.errors.forEach(error => console.warn(`  - ${error}`));
-    console.warn('Please review your rate limiting environment variables.');
+  if (errors.length === 0 && warnings.length === 0) {
+    console.log('✓ Configuration validated successfully');
   }
-
-  console.log('Configuration validated successfully');
 }

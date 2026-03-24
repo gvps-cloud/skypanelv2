@@ -1,11 +1,15 @@
 /**
  * Invoice Detail Page
  * Displays and allows downloading of invoices
+ *
+ * SECURITY: Uses DOMPurify to sanitize HTML content before rendering
+ * to prevent XSS attacks via malicious invoice content.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Download, ChevronLeft, Loader } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
@@ -161,7 +165,11 @@ const InvoiceDetail: React.FC = () => {
             <CardContent className="p-4 sm:p-8">
               <div
                 className="prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: invoice.htmlContent }}
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(invoice.htmlContent, {
+                    USE_PROFILES: { html: true },
+                  })
+                }}
               />
             </CardContent>
           </Card>

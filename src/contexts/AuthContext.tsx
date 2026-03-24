@@ -90,6 +90,38 @@ const isTokenExpired = (token: string): boolean => {
   }
 };
 
+/**
+ * Get authentication token from multiple sources
+ * Priority: localStorage > cookies
+ * This supports both traditional localStorage auth and HttpOnly cookie auth
+ */
+const getAuthToken = (): string | null => {
+  // First, try localStorage (existing implementation)
+  const localToken = localStorage.getItem("auth_token");
+  if (localToken && !isTokenExpired(localToken)) {
+    return localToken;
+  }
+
+  // Fallback: try to read from document.cookie
+  // Note: This only works for non-HttpOnly cookies
+  // HttpOnly cookies are sent automatically with requests
+  const cookies = document.cookie.split(";");
+  const authCookie = cookies.find((cookie) =>
+    cookie.trim().startsWith("auth_token=")
+  );
+
+  if (authCookie) {
+    const tokenValue = authCookie.split("=")[1]?.trim();
+    if (tokenValue && !isTokenExpired(tokenValue)) {
+      // Store in localStorage for consistency
+      localStorage.setItem("auth_token", tokenValue);
+      return tokenValue;
+    }
+  }
+
+  return null;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -167,8 +199,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
-    // Check for existing token in localStorage
-    const storedToken = localStorage.getItem("auth_token");
+    // Check for existing token using multi-source token retrieval
+    const storedToken = getAuthToken();
     const storedUser = localStorage.getItem("auth_user");
 
     if (storedToken && storedUser) {
@@ -211,7 +243,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Set up periodic token expiration check (every minute)
     const tokenCheckInterval = setInterval(() => {
-      const currentToken = localStorage.getItem("auth_token");
+      const currentToken = getAuthToken();
       if (currentToken && isTokenExpired(currentToken)) {
         logout();
         window.location.href = "/";

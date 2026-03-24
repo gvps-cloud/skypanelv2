@@ -1,4 +1,12 @@
+/**
+ * Email Template Editor Component
+ *
+ * SECURITY: Uses DOMPurify to sanitize HTML preview content before rendering
+ * to prevent XSS attacks via malicious email template content.
+ */
+
 import React, { useState, useEffect } from "react";
+import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -280,7 +288,11 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
                   className="mt-4 border rounded-md p-0 bg-background min-h-[300px]"
                 >
                   <div
-                    dangerouslySetInnerHTML={{ __html: previewContent.html }}
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(previewContent.html, {
+                        USE_PROFILES: { html: true },
+                      }),
+                    }}
                   />
                 </TabsContent>
                 <TabsContent

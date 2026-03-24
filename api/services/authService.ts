@@ -25,11 +25,51 @@ export interface LoginData {
   code?: string; // 2FA code
 }
 
-const RESET_TOKEN_LENGTH = 8;
+const RESET_TOKEN_LENGTH = 32;
+
+/**
+ * Validate password strength requirements
+ *
+ * Requirements:
+ * - Minimum 8 characters
+ * - At least one lowercase letter
+ * - At least one uppercase letter
+ * - At least one number
+ * - At least one special character
+ *
+ * @param password - Password to validate
+ * @throws Error if password doesn't meet requirements
+ */
+function validatePasswordStrength(password: string): void {
+  if (!password || password.length < 8) {
+    throw new Error('Password must be at least 8 characters long');
+  }
+
+  const hasLowercase = /[a-z]/.test(password);
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+
+  if (!hasLowercase) {
+    throw new Error('Password must contain at least one lowercase letter');
+  }
+  if (!hasUppercase) {
+    throw new Error('Password must contain at least one uppercase letter');
+  }
+  if (!hasNumber) {
+    throw new Error('Password must contain at least one number');
+  }
+  if (!hasSpecial) {
+    throw new Error('Password must contain at least one special character');
+  }
+}
 
 export class AuthService {
   static async register(data: RegisterData) {
     try {
+      // Validate password strength
+      validatePasswordStrength(data.password);
+
       // Check if user already exists
       const existingUserResult = await query(
         'SELECT id FROM users WHERE email = $1',
@@ -225,10 +265,10 @@ export class AuthService {
       }
 
       // Determine the active organization ID and role
-      let activeOrgId = user.active_organization_id && activeOrgMember 
+      const activeOrgId = user.active_organization_id && activeOrgMember 
         ? user.active_organization_id 
         : orgMember?.organization_id;
-      let activeOrgRole = user.active_organization_id && activeOrgMember
+      const activeOrgRole = user.active_organization_id && activeOrgMember
         ? activeOrgMember.role
         : orgMember?.role;
 
@@ -286,6 +326,13 @@ export class AuthService {
 
   static async requestPasswordReset(email: string) {
     try {
+      // Log password reset request for security monitoring
+      console.info('Password reset requested for email:', {
+        email: email.toLowerCase(),
+        timestamp: new Date().toISOString(),
+        tokenLength: RESET_TOKEN_LENGTH
+      });
+
       const result = await query(
         'SELECT id, name FROM users WHERE email = $1',
         [email]
@@ -293,17 +340,26 @@ export class AuthService {
 
       if (result.rows.length === 0) {
         // Don't reveal if email exists (security best practice)
+        console.info('Password reset requested for non-existent email:', {
+          email: email.toLowerCase(),
+          timestamp: new Date().toISOString()
+        });
         return { message: 'If the email exists, a reset link has been sent' };
       }
 
       const user = result.rows[0];
 
-      // Generate a secure, short reset token suitable for OTP entry
-      const resetToken = randomBytes(RESET_TOKEN_LENGTH)
-        .toString('hex')
-        .slice(0, RESET_TOKEN_LENGTH)
-        .toUpperCase();
+      // Generate a cryptographically secure reset token
+      // Use full length for maximum security (32 bytes = 64 hex chars)
+      const resetToken = randomBytes(RESET_TOKEN_LENGTH).toString('hex').toUpperCase();
       const resetExpires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour from now
+
+      console.info('Generated password reset token for user:', {
+        userId: user.id,
+        tokenLength: resetToken.length,
+        expiresAt: resetExpires.toISOString(),
+        timestamp: new Date().toISOString()
+      });
 
       // Store reset token in database
       await query(
@@ -317,8 +373,18 @@ export class AuthService {
           resetToken,
           user.name || undefined
         );
+        console.info('Password reset email sent successfully:', {
+          userId: user.id,
+          email: email.toLowerCase(),
+          timestamp: new Date().toISOString()
+        });
       } catch (emailError) {
-        console.error('Password reset email send failed:', emailError);
+        console.error('Password reset email send failed:', {
+          userId: user.id,
+          email: email.toLowerCase(),
+          error: emailError,
+          timestamp: new Date().toISOString()
+        });
         // Still return success to avoid leaking email existence
       }
 
@@ -328,7 +394,11 @@ export class AuthService {
         message: 'If the email exists, a reset link has been sent'
       };
     } catch (error) {
-      console.error('Password reset request error:', error);
+      console.error('Password reset request error:', {
+        email: email.toLowerCase(),
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }
@@ -338,6 +408,13 @@ export class AuthService {
       const normalizedToken = token.toUpperCase();
       const normalizedEmail = email.toLowerCase().trim();
 
+      // Log password reset attempt for security monitoring
+      console.info('Password reset attempt:', {
+        email: normalizedEmail,
+        tokenLength: normalizedToken.length,
+        timestamp: new Date().toISOString()
+      });
+
       // Find user with valid reset token AND matching email
       const userResult = await query(
         'SELECT id, email FROM users WHERE reset_token = $1 AND reset_expires > NOW() AND LOWER(email) = $2',
@@ -345,6 +422,10 @@ export class AuthService {
       );
 
       if (userResult.rows.length === 0) {
+        console.warn('Password reset failed: Invalid or expired token', {
+          email: normalizedEmail,
+          timestamp: new Date().toISOString()
+        });
         throw new Error('Invalid or expired reset token, or email does not match');
       }
 
@@ -360,9 +441,19 @@ export class AuthService {
         [hashedPassword, new Date().toISOString(), user.id]
       );
 
+      console.info('Password reset successful:', {
+        userId: user.id,
+        email: user.email,
+        timestamp: new Date().toISOString()
+      });
+
       return { message: 'Password reset successfully' };
     } catch (error) {
-      console.error('Password reset error:', error);
+      console.error('Password reset error:', {
+        email: email.toLowerCase(),
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }

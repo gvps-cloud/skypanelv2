@@ -743,3 +743,99 @@ export async function checkRateLimit(req: Request): Promise<{
     resetTime: Date.now() + windowMs,
   };
 }
+
+/**
+ * Strict rate limiter for authentication endpoints
+ * Provides much stricter limits for login and password reset endpoints
+ * to prevent brute force attacks and credential stuffing
+ */
+
+/**
+ * Login endpoint rate limiter
+ * Limits: 5 attempts per IP address per 15 minutes
+ * This works in conjunction with the brute force protection service
+ */
+export const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  message: {
+    error: 'Too many login attempts',
+    message: 'You have made too many login attempts. Please try again later or reset your password if you have forgotten it.',
+    retryAfter: 900 // 15 minutes in seconds
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false,
+  keyGenerator: (req: Request) => {
+    // Use IP address as the key for login attempts
+    const ipResult = getClientIP(req, {
+      trustProxy: Boolean(config.rateLimiting.trustProxy),
+      enableLogging: false,
+    });
+    return `login:${ipResult.ip}`;
+  },
+  handler: async (req: Request, res: Response) => {
+    const ipResult = getClientIP(req, {
+      trustProxy: Boolean(config.rateLimiting.trustProxy),
+      enableLogging: true,
+    });
+
+    console.warn('Login rate limit exceeded:', {
+      ip: ipResult.ip,
+      userAgent: req.headers['user-agent'],
+      path: req.path,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(429).json({
+      error: 'Too many login attempts',
+      message: 'You have made too many login attempts. Please try again later or reset your password if you have forgotten it.',
+      retryAfter: 900
+    });
+  }
+});
+
+/**
+ * Password reset rate limiter
+ * Limits: 3 attempts per IP address per hour
+ * This prevents email flooding and enumeration attacks
+ */
+export const passwordResetRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 attempts per window
+  message: {
+    error: 'Too many password reset attempts',
+    message: 'You have made too many password reset requests. Please try again later.',
+    retryAfter: 3600 // 1 hour in seconds
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false,
+  keyGenerator: (req: Request) => {
+    // Use IP address as the key for password reset attempts
+    const ipResult = getClientIP(req, {
+      trustProxy: Boolean(config.rateLimiting.trustProxy),
+      enableLogging: false,
+    });
+    return `password-reset:${ipResult.ip}`;
+  },
+  handler: async (req: Request, res: Response) => {
+    const ipResult = getClientIP(req, {
+      trustProxy: Boolean(config.rateLimiting.trustProxy),
+      enableLogging: true,
+    });
+
+    console.warn('Password reset rate limit exceeded:', {
+      ip: ipResult.ip,
+      userAgent: req.headers['user-agent'],
+      path: req.path,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(429).json({
+      error: 'Too many password reset attempts',
+      message: 'You have made too many password reset requests. Please try again later.',
+      retryAfter: 3600
+    });
+  }
+});

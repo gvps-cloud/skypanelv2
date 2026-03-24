@@ -18,6 +18,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import helmet from "helmet";
+import { enhancedHelmet } from "./middleware/security.js";
 import {
   smartRateLimit,
   addRateLimitHeaders,
@@ -47,6 +48,7 @@ import adminContactRoutes from "./routes/admin/contact.js";
 import adminBillingRoutes from "./routes/admin/billing.js";
 import githubRoutes from "./routes/github.js";
 import egressRoutes from "./routes/egress.js";
+import apiKeysRoutes from "./routes/apiKeys/index.js";
 import {
   initializeMetricsCollection,
   startMetricsPersistence,
@@ -66,8 +68,8 @@ const __dirname = path.dirname(__filename);
 const clientBuildPath = path.resolve(__dirname, "../dist");
 const clientIndexFile = path.join(clientBuildPath, "index.html");
 
-// Security middleware
-app.use(helmet());
+// Security middleware - use enhanced Helmet configuration with XSS protection
+app.use(enhancedHelmet);
 app.use(
   cors({
     origin: config.corsOrigins,
@@ -113,6 +115,7 @@ app.use("/api/organizations", organizationRoutes);
 app.use("/api/activities", activitiesRoutes);
 app.use("/api/pricing", pricingRoutes);
 app.use("/api/egress", egressRoutes);
+app.use("/api/api-keys", apiKeysRoutes);
 
 // Health check routes are now handled by the dedicated health router
 
