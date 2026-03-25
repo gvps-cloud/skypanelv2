@@ -7,7 +7,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Core Development
-
 - `npm run dev` - Start concurrent frontend (Vite) and backend (nodemon) development servers
 - `npm run dev-up` - Kill ports 3001/5173/8000 and start development servers (preferred for clean startup)
 - `npm run client:dev` - Frontend only (Vite dev server on port 5173)
@@ -16,32 +15,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run lint` - ESLint validation
 - `npm run check` - TypeScript type checking without emitting files
 - `npm run preview` - Preview production build locally
+- `npm run test` - vitest run (equivalent to `npm run test:security` but for all tests)
+- `npm run test:ui` - vitest run src/ (frontend unit tests)
+- `npm run test:api` - vitest run api/ (backend unit tests)
 
 ### API Documentation
-
 - `npm run docs:api:sync` - Sync API documentation (auto-runs via pre* hooks on `dev`, `client:dev`, and `build`)
 - `npm run docs:api:audit` - Audit and validate API documentation coverage
 
 ### Security
-
 - `npm run audit:security` - Run npm audit with high severity filter
 - `npm run scan:code` - Run semgrep static analysis
 - `npm run test:security` - Run security tests with Vitest
 - `npm run verify:security` - Run all security checks (audit + scan + test)
 
 ### Testing
-
 > **Note**: Check `package.json` before assuming test scripts exist. The repo includes Vitest, React Testing Library, Supertest, and Playwright but test scripts may not always be present.
 
 ### Database Management
-
-- `npm run db:fresh` - Reset database and run all migrations
+- `npm run db:fresh` - Reset database and run all migrations (WARNING: destroys all data - use only in development)
 - `npm run db:reset` - Interactive database reset with confirmation
 - `npm run db:reset:confirm` - Reset database without prompt
 - `npm run seed:admin` - Create default admin user (admin@skypanelv2.com / admin123)
 
 ### Production Deployment
-
 - `npm run start` - Launch production Express server + Vite preview
 - `npm run pm2:start` - Build and start with PM2 process manager
 - `npm run pm2:reload` - Reload PM2 processes gracefully
@@ -49,7 +46,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run pm2:list` - List PM2 processes
 
 ### Utilities
-
 - `npm run kill-ports` - Kill processes on ports 3001, 5173, and 8000
 - `npm run pwa:icons` - Generate PWA icons
 
@@ -62,49 +58,55 @@ SkyPanelV2 is a full-stack cloud service reseller billing panel with multi-tenan
 3. **Admin dashboard** — User management, billing ops, platform settings, provider config, impersonation
 
 ### Frontend (`src/`)
-
 - **React 18** SPA with TypeScript and Vite
 - **shadcn/ui** component library with Tailwind CSS (Radix UI primitives)
-- **TanStack Query** for server state management with optimistic updates
-- **Zustand** for client state management
-- **React Router v7** for routing with protected route guards (`ProtectedRoute`, `AdminRoute`, `PublicRoute`)
-- **React Hook Form + Zod** for form validation
-- **Framer Motion** for animations
-- **Recharts** for data visualization
-- **xterm.js** for browser-based SSH terminal emulation
-- **cmdk** for command palette (Ctrl/Cmd + K)
-- **qrcode** for 2FA QR code generation
+- **TanStack Query** for server state management with optimistic updates (30s staleTime, 1 retry, refetchOnWindowFocus)
+- **Zustand** for client state management (selected stores for UI state)
+- **React Router v7** for routing with protected route guards:
+  - `ProtectedRoute`: Auth required → AppLayout with sidebar
+  - `StandaloneProtectedRoute`: Auth required → AppLayout without sidebar (SSH console)
+  - `AdminRoute`: Auth + `user.role === 'admin'` → AppLayout (admin dashboard)
+  - `PublicRoute`: Redirects to `/dashboard` if already logged in
+- **React Hook Form + Zod** for form validation with schema-based validation
+- **Framer Motion** for animations with accessibility considerations
+- **Recharts** for data visualization with responsive containers
+- **xterm.js** for browser-based SSH terminal emulation with fit/addon packages
+- **cmdk** for command palette (Ctrl/Cmd + K) with persistent state
+- **qrcode** for 2FA QR code generation using otplib
 
 ### Backend (`api/`)
-
 - **Express 4** REST API with TypeScript ESM modules
 - **PostgreSQL** database with UUID primary keys, JSONB columns, triggers, and `LISTEN/NOTIFY`
-- **JWT authentication** with role-based access (admin/user)
-- **Rate limiting** with tiered configuration (anonymous/authenticated/admin) and per-user overrides
-- **Comprehensive middleware** stack (CORS, Helmet, validation, permissions, impersonation)
-- **WebSocket server** for SSH bridge (ws + ssh2)
-- **Hourly billing scheduler** running on 60-minute intervals
-- **Notification service** using PostgreSQL `LISTEN/NOTIFY` → EventEmitter → SSE
+- **JWT authentication** with role-based access (admin/user) and HttpOnly cookie storage
+- **Rate limiting** with tiered configuration (anonymous/authenticated/admin) and per-user overrides stored in database
+- **Comprehensive middleware** stack:
+  - `security.ts`: Helmet, CORS, referrer policy, XSS protection
+  - `auth.ts`: JWT verification, token blacklist, organization validation
+  - `permissions.ts`: Role-based and organization membership checking
+  - `rateLimiting.ts`: Tiered limits with X-RateLimit headers and metrics
+- **WebSocket server** for SSH bridge (ws + ssh2) providing browser-based terminal access
+- **Hourly billing scheduler** running on 60-minute intervals from `server.ts`
+- **Notification service** using PostgreSQL `LISTEN/NOTIFY` → EventEmitter → SSE for real-time updates
+- **Provider abstraction layer** (`IProviderService`) enabling multiple cloud providers
+- **Row-level security** on `user_api_keys` table for API key protection
 
 ### Key Features
-
-- **Multi-tenant organizations** with role-based access control and custom roles
-- **Linode VPS provisioning** via `IProviderService` abstraction layer
-- **Automated hourly billing** with wallet-based prepaid system
-- **Egress (network transfer) billing** with prepaid credit packs and hourly enforcement
-- **Email service** with provider priority/fallback (Resend, generic SMTP)
-- **Activity logging and feed** system for audit trails with real-time notifications
-- **2FA (Two-Factor Authentication)** support via TOTP
-- **Admin impersonation** for customer support
-- **Command palette** navigation
-- **API documentation auto-sync** on build
+- **Multi-tenant organizations** with role-based access control and custom roles stored in JSONB permissions
+- **Linode VPS provisioning** via `IProviderService` abstraction layer with region filtering
+- **Automated hourly billing** with wallet-based prepaid system and insufficient balance handling
+- **Egress (network transfer) billing** with prepaid credit packs, hourly enforcement, and auto-suspend when credits reach zero
+- **Email service** with provider priority/fallback (Resend → SMTP) and template management
+- **Activity logging and feed** system for audit trails with real-time notifications via PostgreSQL LISTEN/NOTIFY
+- **2FA (Two-Factor Authentication)** support via TOTP with QR code generation
+- **Admin impersonation** for customer support with visual banner and audit logging
+- **Command palette** navigation with persistent state and frequent updates
+- **API documentation auto-sync** on build with validation
 
 ## Environment Configuration
 
 Copy `.env.example` to `.env` and configure.
 
 ### Required for Development
-
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/skypanelv2
 JWT_SECRET=your-super-secret-jwt-key-here
@@ -113,7 +115,6 @@ ENCRYPTION_KEY=your-32-character-encryption-key
 ```
 
 ### External Services
-
 ```bash
 # Cloud Provider (Linode/Akamai)
 LINODE_API_TOKEN=your-linode-api-token
@@ -151,13 +152,11 @@ UPLOAD_PATH=./uploads
 ```
 
 ### Rate Limiting Configuration
-
 Rate limits are configurable via environment variables. Default values are set in `.env.example` and include tiered limits for anonymous, authenticated, and admin users. Per-user overrides are stored in the `user_rate_limit_overrides` table.
 
 ## Database Schema
 
 ### Core Tables
-
 - `users` - User accounts with authentication, 2FA, preferences, active_organization_id
 - `organizations` - Multi-tenant organization management
 - `organization_members` - Organization membership with role_id FK
@@ -183,13 +182,11 @@ Rate limits are configurable via environment variables. Default values are set i
 - `vps_egress_hourly_readings` - Hourly transfer usage readings
 
 ### Database Migrations
-
 SQL migrations are in the `migrations/` directory with naming convention `NNN_description.sql`. Apply pending migrations with `node scripts/run-migration.js`.
 
 ## API Routes
 
 ### Core Routes (`/api/`)
-
 - `/api/auth` - Authentication (login, register, 2FA, password reset)
 - `/api/vps` - VPS instance management, providers, plans, images, actions
 - `/api/organizations` - Organization CRUD, members, invitations, roles
@@ -200,7 +197,6 @@ SQL migrations are in the `migrations/` directory with naming convention `NNN_de
 - `/api/egress` - Egress credit management, purchase flow, usage readings
 
 ### Admin Routes (`/api/admin/`)
-
 - `/api/admin` - User management, stats, impersonation
 - `/api/admin/platform` - Platform settings CRUD
 - `/api/admin/billing` - Billing management and oversight
@@ -211,7 +207,6 @@ SQL migrations are in the `migrations/` directory with naming convention `NNN_de
 - `/api/admin/category-mappings` - VPS category white-labeling
 
 ### Content & Feed Routes
-
 - `/api/activity` - User activity feed (SSE endpoint for real-time)
 - `/api/activities` - Activity logging
 - `/api/notifications` - Notification management (SSE stream, mark read)
@@ -224,21 +219,19 @@ SQL migrations are in the `migrations/` directory with naming convention `NNN_de
 ## Services
 
 ### Core Services (`api/services/`)
-
 - `authService` - JWT token management and authentication logic
 - `linodeService` - Linode/Akamai REST API wrapper with caching
-- `billingService` - Hourly billing engine
-- `egressCreditService` - Egress credit balance, purchase, deduction
-- `egressHourlyBillingService` - Hourly billing orchestrator
-- `egressBillingService` - Transfer pool tracking and overage projection
+- `billingService` - Hourly VPS billing engine (wallet deductions)
+- `egressCreditService` - Pre-paid egress credit management (balance tracking)
+- `egressHourlyBillingService` - Hourly transfer usage polling and credit deduction
+- `egressBillingService` - Transfer pool tracking and overage projection (monthly billing)
 - `paypalService` - PayPal order creation, capture, wallet deduction
 - `emailService` - Email sending with provider fallback (Resend → SMTP)
 - `emailTemplateService` - Handlebars-based email template rendering
 - `invoiceService` - Invoice generation and management
-- `notificationService` - PG LISTEN/NOTIFY → EventEmitter singleton for real-time push
+- `notificationService` - PostgreSQL LISTEN/NOTIFY → EventEmitter singleton for real-time push
 
 ### Provider Services (`api/services/providers/`)
-
 - `IProviderService` - Interface contract for all provider implementations
 - `BaseProviderService` - Shared provider logic and caching
 - `LinodeProviderService` - Linode-specific implementation
@@ -247,9 +240,7 @@ SQL migrations are in the `migrations/` directory with naming convention `NNN_de
 ## Key Service Patterns
 
 ### Database Operations
-
 Use `api/lib/database.ts` helpers:
-
 ```typescript
 import { query, transaction } from '../lib/database.js';
 
@@ -263,99 +254,80 @@ const result = await transaction(async (client) => {
 ```
 
 ### Authentication Middleware
-
 Protected routes use JWT authentication middleware that sets `req.user` with `{ userId, role, email }`.
 
 ### Provider Token Resolution
-
 ```typescript
 import { normalizeProviderToken } from '../lib/providerTokens.js';
 const token = await normalizeProviderToken(providerId);
 const provider = ProviderFactory.create('linode', token);
 ```
 
-## Frontend Structure
+### Multi-Tenant Data Isolation
+**Critical**: All resource queries MUST be scoped to `organization_id` to prevent cross-organization data leakage. This includes:
+- Direct queries in services
+- Query builder usage
+- Raw SQL queries (avoid when possible)
+- Aggregation queries
+- Join operations
 
-### Pages (`src/pages/`)
+### Real-Time Architecture
+PostgreSQL `LISTEN/NOTIFY` → `notificationService` EventEmitter → SSE endpoint (`/api/notifications`) for real-time updates including:
+- Activity feed notifications
+- Billing alerts
+- System announcements
 
-- `HomeRedesign` - Landing page (route: `/`)
-- `Pricing`, `FAQ`, `AboutUs`, `Contact`, `Status`, `TermsOfService`, `PrivacyPolicy`
-- `Login`, `Register`, `ForgotPassword`, `ResetPassword`
-- `Dashboard`, `VPS`, `VPSDetail`, `VpsSshConsole` - Core authenticated pages
-- `Billing`, `InvoiceDetail`, `TransactionDetail` - Financial pages
-- `Organizations`, `AcceptInvitation` - Organization management
-- `Support`, `Settings`, `ActivityPage`, `ApiDocs`, `EgressCredits`
-- `Admin`, `admin/AdminUserDetail` - Admin pages
-
-### Contexts (`src/contexts/`)
-
-- `AuthContext` - Authentication state, JWT token, user object, logout
-- `ThemeContext` - Theme preset management, dark/light mode
-- `ImpersonationContext` - Admin impersonation state, start/exit flows
-- `BreadcrumbContext` - Navigation breadcrumb state
+### Background Services
+1. **Hourly Billing**: Runs every 60 minutes from `server.ts` (not `billingCronService`)
+2. **Billing Reminders**: Runs every 24 hours from `services/billingCronService.ts` for low-balance notifications
+3. **Egress Monitoring**: Runs hourly from server scheduler to track transfer usage and deduct credits
 
 ## Security Architecture
 
 ### Data Protection
-
-- **Passwords**: bcrypt hashing
-- **SSH credentials**: AES-256 encryption via `SSH_CRED_SECRET`
-- **Provider API tokens**: AES-256 encryption via `ENCRYPTION_KEY`
+- **Passwords**: bcrypt hashing with salt
+- **SSH credentials**: AES-256-GCM encryption via `SSH_CRED_SECRET`
+- **Provider API tokens**: AES-256-GCM encryption via `ENCRYPTION_KEY` with key versioning support
 - **JWT tokens**: HMAC-SHA256 signed with configurable expiration (default: 7 days)
-- **Row-level security**: PostgreSQL RLS on `user_api_keys` table
+- **Row-level security**: PostgreSQL RLS on `user_api_keys` table preventing unauthorized API key access
+- **Secrets Management**: Separate encryption keys for different data types (credentials vs tokens)
 
 ### Access Control
+- **Role-based access control**: Admin vs user roles with organization-scoped data access
+- **Organization-based data isolation**: All resource queries scoped to `organization_id` (enforced via middleware and service layer)
+- **Custom organization roles**: Granular JSONB permissions stored in `organization_roles` table
+- **Admin impersonation**: `X-Impersonating` header swaps request context with visual banner and audit logging
+- **2FA Support**: TOTP-based two-factor authentication with QR code generation
+- **API Keys**: Row-level security on `user_api_keys` table with encryption and usage tracking
 
-- Role-based access control — admin and user roles
-- Organization-based data isolation — all resource queries scoped to org
-- Custom organization roles with granular JSONB permissions
-- Admin impersonation for customer support (with visual banner)
+### Rate Limiting
+- **Tiered limits by user type**:
+  - Anonymous: 1000 requests/15min
+  - Authenticated: 5000 requests/15min
+  - Admin: 10000 requests/15min
+- **Development multipliers**: 100x higher limits in development mode
+- **Per-user override system**: Stored in `user_rate_limit_overrides` table with database persistence
+- **Specialized limiters**: Authentication endpoints (login: 5 attempts/15min, password reset: 3 attempts/hour)
+- **Logging and metrics**: Comprehensive tracking for debugging and observability
 
 ## Important Notes for Agents
 
 - **Always check `package.json`** before referencing npm scripts
 - **Always check `src/App.tsx`** before documenting or changing frontend routes
 - **Always check `api/app.ts`** before documenting or changing API surface area
+- **Always check `api/lib/database.ts`** before writing database queries (use helpers)
 - **Email providers** are Resend and generic SMTP — see `api/config/index.ts`
 - **Billing runs hourly** from `server.ts`, not from `billingCronService` (which handles 24h reminder checks)
-- **Organization isolation** is critical — be careful with queries that could leak data across orgs
+- **Organization isolation** is critical — be careful with queries that could leak data across orgs (always verify `organization_id` scoping)
 - **Theme behavior** spans frontend context/state and backend APIs — review both before changes
-
-## Default Credentials
-
-- **Admin**: `admin@skypanelv2.com` / `admin123` -> Not used anymore you will need to generate them from the `scripts` directory.
-
-## Content strategy
-- Document just enough for user success - not too much, not too little
-- Prioritize accuracy and usability of information
-- Make content evergreen when possible
-- Search for existing information before adding new content. Avoid duplication unless it is done for a strategic reason
-- Check existing patterns for consistency
-- Start by making the smallest reasonable changes
-
-## Frontmatter requirements for pages
-- title: Clear, descriptive page title
-- description: Concise summary for SEO/navigation
-
-## Writing standards
-- Second-person voice ("you")
-- Prerequisites at start of procedural content
-- Test all code examples before publishing
-- Match style and formatting of existing pages
-- Include both basic and advanced use cases
-- Language tags on all code blocks
-- Alt text on all images
-- Relative paths for internal links
-
-## Git workflow
-- NEVER use --no-verify when committing
-- Ask how to handle uncommitted changes before starting
-- Create a new branch when no clear branch exists for changes
-- Commit frequently throughout development
-- NEVER skip or disable pre-commit hooks
-
-## Do not
-- Skip frontmatter on any MDX file
-- Use absolute URLs for internal links
-- Include untested code examples
-- Make assumptions - always ask for clarification
+- **Default admin credentials**: Generated via `scripts/seed-admin.js` (not hardcoded)
+- **Pre-commit hooks**: NEVER skip or disable — they protect against bad commits
+- **Database reset commands**: NEVER run — they destroy production data (`db:fresh`, `db:reset`, `db:reset:confirm`)
+- **Migration scripts**: Apply with `node scripts/run-migration.js` — never run destructive migrations manually
+- **TypeScript pathing**: Uses `vite-tsconfig-paths` plugin — check `tsconfig.json` for path mappings
+- **Environment validation**: Critical secrets validated at startup in `config/index.ts`
+- **Provider token normalization**: Always use `normalizeProviderToken()` before creating providers
+- **Organization role checking**: Use `RoleService` for granular permission validation
+- **Admin impersonation audit**: All impersonation actions are logged for compliance
+- **Egress credit zero handling**: Automatic VPS suspension when credits reach zero (handled in egress services)
+- **Wallet-based billing**: Prepaid system requires sufficient balance before billing cycle processing
