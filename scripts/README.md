@@ -98,14 +98,6 @@ node scripts/test-hourly-billing.js
 node scripts/test-smtp.js
 ```
 
-### Setup SSL (Caddy + Let's Encrypt)
-
-```bash
-sudo bash scripts/setup-caddy-ssl.sh --domain panel.example.com --email ops@example.com --install-caddy
-```
-
-For full HTTPS deployment instructions, see `repo-docs/SSL_SETUP.md`.
-
 ## Common Development Workflows
 
 ### Fresh Database Setup

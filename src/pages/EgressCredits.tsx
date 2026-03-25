@@ -56,7 +56,9 @@ const EgressCredits: React.FC = () => {
 
   // Selected org — defaults to router state org, then user's current org, then first accessible org
   const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(undefined);
-  const selectedOrgName = accessibleOrgs.find(o => o.organization_id === selectedOrgId)?.organization_name;
+  const selectedOrg = accessibleOrgs.find(o => o.organization_id === selectedOrgId);
+  const selectedOrgName = selectedOrg?.organization_name;
+  const canManageEgress = selectedOrg?.permissions?.egress_manage === true;
 
   const [balance, setBalance] = useState<EgressCreditBalance | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -182,6 +184,10 @@ const EgressCredits: React.FC = () => {
   };
 
   const handlePurchaseClick = (pack: CreditPack) => {
+    if (!canManageEgress) {
+      toast.error('You do not have permission to purchase credits for this organization.');
+      return;
+    }
     setSelectedPack(pack);
     setIsDialogOpen(true);
   };
@@ -207,9 +213,10 @@ const EgressCredits: React.FC = () => {
 
   const formatGb = (gb: number) => {
     if (gb >= 1000) {
-      return `${(gb / 1000).toFixed(2)} TB`;
+      const tb = gb / 1000;
+      return `${parseFloat(tb.toFixed(6))} TB`;
     }
-    return `${gb.toFixed(2)} GB`;
+    return `${parseFloat(gb.toFixed(6))} GB`;
   };
 
   // Access denied if no orgs with egress_view
@@ -351,6 +358,15 @@ const EgressCredits: React.FC = () => {
           <ShoppingCart className="h-5 w-5" />
           Purchase Credits
         </h2>
+        {!canManageEgress && (
+          <div className="mb-4">
+            <Card>
+              <CardContent className="p-4 text-sm text-muted-foreground">
+                You need egress purchase permissions to buy credits for this organization.
+              </CardContent>
+            </Card>
+          </div>
+        )}
         {packs.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
@@ -362,10 +378,12 @@ const EgressCredits: React.FC = () => {
             {packs.map((pack) => (
               <Card
                 key={pack.id}
-                className={`hover:shadow-lg transition-shadow cursor-pointer relative overflow-hidden group ${
+                className={`hover:shadow-lg transition-shadow relative overflow-hidden group ${
                   pack.isRecommended ? 'ring-2 ring-green-500 dark:ring-green-400' : ''
-                }`}
-                onClick={() => handlePurchaseClick(pack)}
+                } ${canManageEgress ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}
+                onClick={() => {
+                  if (canManageEgress) handlePurchaseClick(pack);
+                }}
               >
                 {/* Badges */}
                 {(pack.isPopular || pack.isRecommended) && (
@@ -394,7 +412,11 @@ const EgressCredits: React.FC = () => {
                     <span className="text-2xl font-bold">${pack.price.toFixed(2)}</span>
                     <span className="text-gray-500 dark:text-gray-400">USD</span>
                   </div>
-                  <Button className="w-full mt-4" size="sm">
+                  <Button
+                    className="w-full mt-4"
+                    size="sm"
+                    disabled={!canManageEgress}
+                  >
                     <Plus className="h-4 w-4 mr-1" />
                     Purchase
                   </Button>

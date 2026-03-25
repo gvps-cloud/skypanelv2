@@ -542,7 +542,7 @@ router.post(
   [
     param("orgId").isUUID().withMessage("Invalid organization ID"),
     body("creditsGb")
-      .isFloat({ min: 0.01 })
+      .isFloat({ min: 0.000001 })
       .withMessage("Credits must be greater than 0"),
   ],
   async (req: Request, res: Response) => {
@@ -627,7 +627,7 @@ router.delete(
   [
     param("orgId").isUUID().withMessage("Invalid organization ID"),
     body("creditsGb")
-      .isFloat({ min: 0.01 })
+      .isFloat({ min: 0.000001 })
       .withMessage("Credits must be greater than 0"),
   ],
   async (req: Request, res: Response) => {

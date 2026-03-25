@@ -116,8 +116,9 @@ const AdjustCreditsDialog: React.FC<AdjustCreditsDialogProps> = ({
     }
 
     // Check if trying to remove more than available
+    // Use actual balance value since we display it precisely (not rounded)
     if (isRemove && balance !== null && parsedCredits > balance) {
-      toast.error(`Cannot remove ${parsedCredits}GB: organization only has ${balance.toFixed(2)}GB`);
+      toast.error(`Cannot remove ${parsedCredits}GB: organization only has ${balance}GB`);
       return;
     }
 
@@ -165,8 +166,8 @@ const AdjustCreditsDialog: React.FC<AdjustCreditsDialogProps> = ({
               <Input
                 id="credits"
                 type="number"
-                step="0.01"
-                min="0.01"
+                step="any"
+                min="0.000001"
                 max={isRemove && balance ? balance : undefined}
                 placeholder="Enter amount in GB"
                 value={creditsGb}
@@ -175,7 +176,7 @@ const AdjustCreditsDialog: React.FC<AdjustCreditsDialogProps> = ({
               />
               {balance !== null && (
                 <p className="text-xs text-muted-foreground">
-                  Current balance: {balance.toFixed(2)} GB
+                  Current balance: {balance} GB
                 </p>
               )}
             </div>
@@ -282,12 +283,14 @@ const EgressCreditManager: React.FC = () => {
     });
   };
 
-  // Format GB
+  // Format GB - show full precision (up to 6 decimals) to match database
+  // Remove trailing zeros after 2nd decimal for cleaner display
   const formatGb = (gb: number) => {
     if (gb >= 1000) {
-      return `${(gb / 1000).toFixed(2)} TB`;
+      const tb = gb / 1000;
+      return `${parseFloat(tb.toFixed(6))} TB`;
     }
-    return `${gb.toFixed(2)} GB`;
+    return `${parseFloat(gb.toFixed(6))} GB`;
   };
 
   return (

@@ -82,7 +82,6 @@ These sync automatically before `dev`, `client:dev`, and `build`.
 - `npm run pm2:reload` - Reload PM2 processes
 - `npm run pm2:stop` - Stop and delete PM2 processes
 - `npm run pm2:list` - List PM2 processes
-- `npm run ssl:caddy:help` - Show Caddy SSL setup helper usage
 - `npm run pwa:icons` - Generate PWA icons
 
 ## Environment Configuration

@@ -58,12 +58,15 @@ export interface EgressPurchaseResult {
 }
 
 class EgressService {
-  private getAuthHeaders(): HeadersInit {
+  private getAuthHeaders(organizationIdOverride?: string): HeadersInit {
     const token = localStorage.getItem("auth_token");
     const userStr = localStorage.getItem("auth_user");
     let organizationId: string | undefined;
 
-    if (userStr) {
+    // Prefer explicit override from caller
+    if (organizationIdOverride) {
+      organizationId = organizationIdOverride;
+    } else if (userStr) {
       try {
         const user = JSON.parse(userStr);
         organizationId = user.organizationId;
@@ -309,10 +312,13 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/egress/credits/wallet-balance`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/egress/credits/wallet-balance`,
+        {
+          method: "GET",
+          headers: this.getAuthHeaders(_organizationId),
+        },
+      );
 
       const data = await response.json();
 
@@ -339,7 +345,10 @@ class EgressService {
   /**
    * Purchase egress credits using wallet balance
    */
-  async purchaseWithWallet(organizationId: string, packId: string): Promise<{
+  async purchaseWithWallet(
+    organizationId: string,
+    packId: string,
+  ): Promise<{
     success: boolean;
     message?: string;
     data?: {
@@ -349,11 +358,14 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/egress/credits/purchase/wallet`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ organizationId, packId }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/egress/credits/purchase/wallet`,
+        {
+          method: "POST",
+          headers: this.getAuthHeaders(organizationId),
+          body: JSON.stringify({ organizationId, packId }),
+        },
+      );
 
       const data = await response.json();
 
@@ -458,7 +470,10 @@ class EgressService {
   /**
    * Initiate organization egress credit purchase
    */
-  async initiateOrganizationPurchase(organizationId: string, packId: string): Promise<{
+  async initiateOrganizationPurchase(
+    organizationId: string,
+    packId: string,
+  ): Promise<{
     success: boolean;
     paymentId?: string;
     approvalUrl?: string;
@@ -468,11 +483,14 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/organizations/${organizationId}/egress/credits/purchase`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ packId }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/organizations/${organizationId}/egress/credits/purchase`,
+        {
+          method: "POST",
+          headers: this.getAuthHeaders(organizationId),
+          body: JSON.stringify({ packId }),
+        },
+      );
 
       const data = await response.json();
 
@@ -525,11 +543,14 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/organizations/${organizationId}/egress/credits/purchase/complete`, {
+    const response = await fetch(
+      `${API_BASE_URL}/organizations/${organizationId}/egress/credits/purchase/complete`,
+      {
         method: "POST",
-        headers: this.getAuthHeaders(),
+        headers: this.getAuthHeaders(organizationId),
         body: JSON.stringify({ paymentId, packId }),
-      });
+      },
+    );
 
       const data = await response.json();
 

@@ -788,7 +788,6 @@ npm run pm2:list         # List PM2 processes
 
 # ─── Utilities ─────────────────────────────────────
 npm run kill-ports       # Kill processes on 3001, 5173, 8000
-npm run ssl:caddy:help   # Caddy SSL setup instructions
 npm run pwa:icons        # Generate PWA icons
 ```
 
@@ -855,18 +854,6 @@ pm2 monit
 pm2 logs skypanelv2-api
 pm2 logs skypanelv2-ui
 ```
-
-### SSL with Caddy
-
-```bash
-# Automated SSL setup
-sudo bash scripts/setup-caddy-ssl.sh \
-  --domain panel.gvps.cloud \
-  --email admin@gvps.cloud \
-  --install-caddy
-```
-
-Caddy configuration template is in `deploy/caddy/Caddyfile.template`. See [`repo-docs/SSL_SETUP.md`](./repo-docs/SSL_SETUP.md) for detailed instructions.
 
 ### Health Check
 
@@ -1091,18 +1078,13 @@ skypanelv2/
 │   ├── seed-admin.js                 # Create default admin
 │   ├── generate-ssh-secret.js        # Generate encryption key
 │   ├── audit-api-docs.mjs            # API docs audit
-│   ├── setup-caddy-ssl.sh            # Caddy SSL setup
 │   └── ...                           # Admin, diagnostic, migration helpers
-├── deploy/
-│   └── caddy/
-│       └── Caddyfile.template        # Caddy reverse proxy config
 ├── public/                           # Static assets (icons, logos)
 ├── data/                             # Static data files
 ├── repo-docs/                        # Internal documentation
 │   ├── ADMIN_COMPONENTS.md           # Admin component reference
 │   ├── ADMIN_TROUBLESHOOTING.md      # Admin troubleshooting guide
 │   ├── ENVIRONMENT_VARIABLES.md      # Complete env var reference
-│   └── SSL_SETUP.md                  # SSL configuration guide
 │
 ├── AGENTS.md                         # AI agent coding guidelines
 ├── CLAUDE.md                         # Claude Code development reference
@@ -1127,7 +1109,6 @@ skypanelv2/
 | [`AGENTS.md`](./AGENTS.md) | Coding agent guidelines — current app state, structure, patterns, and practical guidance |
 | [`CLAUDE.md`](./CLAUDE.md) | Claude Code reference — commands, architecture, schema, services, middleware, patterns |
 | [`repo-docs/ENVIRONMENT_VARIABLES.md`](./repo-docs/ENVIRONMENT_VARIABLES.md) | Complete environment variable reference |
-| [`repo-docs/SSL_SETUP.md`](./repo-docs/SSL_SETUP.md) | HTTPS/SSL configuration with Caddy |
 | [`repo-docs/ADMIN_COMPONENTS.md`](./repo-docs/ADMIN_COMPONENTS.md) | Admin dashboard component reference |
 | [`repo-docs/ADMIN_TROUBLESHOOTING.md`](./repo-docs/ADMIN_TROUBLESHOOTING.md) | Admin troubleshooting guide |
 | [`api/services/providers/ARCHITECTURE.md`](./api/services/providers/ARCHITECTURE.md) | Provider service architecture (Linode) |

@@ -7,6 +7,7 @@ import { query, transaction } from '../lib/database.js';
 import { logActivity } from './activityLogger.js';
 import { linodeService } from './linodeService.js';
 import { round } from './egress/egressUtils.js';
+import { InvoiceService } from './invoiceService.js';
 
 // Custom error for insufficient credits
 export class InsufficientCreditsError extends Error {
@@ -384,6 +385,62 @@ export async function addEgressCredits(
       },
     });
 
+    // Create payment transaction record for the adjustment
+    await transaction(async (client) => {
+      await client.query(
+        `INSERT INTO payment_transactions (
+           organization_id, amount, currency, payment_method, payment_provider,
+           status, description, metadata
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          organizationId,
+          0, // Admin adjustments are free
+          'USD',
+          'admin_adjustment',
+          'admin',
+          'completed',
+          `Admin added ${gbToAdd}GB egress credits`,
+          JSON.stringify({ adjustment_type: 'admin_add', credits_gb: gbToAdd, reason, admin_id: adminUserId })
+        ]
+      );
+    });
+
+    // Generate invoice for the adjustment
+    const invoiceNumber = `INV-EGRESS-ADD-${Date.now()}-${organizationId.slice(0, 8)}`;
+    const invoiceMetadata = {
+      sourceType: 'egress_admin_add',
+      credits_gb: gbToAdd,
+      reason,
+      admin_id: adminUserId
+    };
+    const invoiceData = {
+      id: `inv-${Date.now()}`,
+      invoiceNumber,
+      organizationId,
+      items: [{
+        description: `Egress Credits Added (${gbToAdd}GB)`,
+        quantity: 1,
+        unitPrice: 0,
+        amount: 0
+      }],
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+      currency: 'USD' as const,
+      createdAt: new Date(),
+      status: 'paid' as const,
+    };
+
+    const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData);
+    await InvoiceService.createInvoice(
+      organizationId,
+      invoiceNumber,
+      htmlContent,
+      invoiceMetadata,
+      invoiceData.total,
+      invoiceData.currency
+    );
+
     return newBalance;
   } catch (error) {
     console.error('Error adding egress credits:', error);
@@ -420,15 +477,16 @@ export async function removeEgressCredits(
 
       const currentBalance = Number(balanceResult.rows[0].credits_gb || 0);
 
-      // Allow removal that exactly clears the balance
+      // Validate removal amount - use actual balance (UI now shows full precision)
       if (currentBalance < gbToRemove) {
         throw new Error(`Cannot remove ${gbToRemove}GB: organization only has ${currentBalance}GB`);
       }
 
-      // Update balance
+      // Update balance - use GREATEST to prevent negative values due to precision
+      // If balance is 0.009968 and user removes 0.01, result caps at 0 (not -0.000032)
       const result = await client.query(
-        `UPDATE organization_egress_credits 
-         SET credits_gb = credits_gb - $1, updated_at = NOW()
+        `UPDATE organization_egress_credits
+         SET credits_gb = GREATEST(0, credits_gb - $1), updated_at = NOW()
          WHERE organization_id = $2
          RETURNING credits_gb`,
         [gbToRemove, organizationId],
@@ -459,6 +517,62 @@ export async function removeEgressCredits(
         reason,
       },
     });
+
+    // Create payment transaction record for the adjustment
+    await transaction(async (client) => {
+      await client.query(
+        `INSERT INTO payment_transactions (
+           organization_id, amount, currency, payment_method, payment_provider,
+           status, description, metadata
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          organizationId,
+          0, // Admin adjustments are free
+          'USD',
+          'admin_adjustment',
+          'admin',
+          'completed',
+          `Admin removed ${gbToRemove}GB egress credits`,
+          JSON.stringify({ adjustment_type: 'admin_remove', credits_gb: gbToRemove, reason, admin_id: adminUserId })
+        ]
+      );
+    });
+
+    // Generate invoice for the adjustment
+    const invoiceNumber = `INV-EGRESS-REM-${Date.now()}-${organizationId.slice(0, 8)}`;
+    const invoiceMetadata = {
+      sourceType: 'egress_admin_remove',
+      credits_gb: gbToRemove,
+      reason,
+      admin_id: adminUserId
+    };
+    const invoiceData = {
+      id: `inv-${Date.now()}`,
+      invoiceNumber,
+      organizationId,
+      items: [{
+        description: `Egress Credits Removed (${gbToRemove}GB)`,
+        quantity: 1,
+        unitPrice: 0,
+        amount: 0
+      }],
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+      currency: 'USD' as const,
+      createdAt: new Date(),
+      status: 'paid' as const,
+    };
+
+    const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData);
+    await InvoiceService.createInvoice(
+      organizationId,
+      invoiceNumber,
+      htmlContent,
+      invoiceMetadata,
+      invoiceData.total,
+      invoiceData.currency
+    );
 
     return newBalance;
   } catch (error) {

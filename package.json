@@ -29,7 +29,6 @@
         "pm2:reload": "pm2 reload ecosystem.config.cjs --env production",
         "pm2:stop": "pm2 stop skypanelv2-api skypanelv2-ui && pm2 delete skypanelv2-api skypanelv2-ui",
         "pm2:list": "pm2 ls",
-        "ssl:caddy:help": "bash scripts/setup-caddy-ssl.sh --help",
         "seed:admin": "node scripts/seed-admin.js",
         "db:reset": "node scripts/reset-database.js",
         "db:reset:confirm": "node scripts/reset-database.js --confirm",

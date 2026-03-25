@@ -102,9 +102,6 @@ const Organizations: React.FC = () => {
   } | null>(null);
   const [creditsLoading, setCreditsLoading] = useState(false);
   const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
-  const [creditPacks, setCreditPacks] = useState<any[]>([]);
-  const [packsLoading, setPacksLoading] = useState(false);
-  const [billingLoading, setBillingLoading] = useState(false);
   const { token, user, switchOrganization } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
