@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Core Development
 
 - `npm run dev` - Start concurrent frontend (Vite) and backend (nodemon) development servers
-- `npm run dev-up` - Kill ports 3001/5173/8000 and start development servers
+- `npm run dev-up` - Kill ports 3001/5173/8000 and start development servers (preferred for clean startup)
 - `npm run client:dev` - Frontend only (Vite dev server on port 5173)
 - `npm run server:dev` - Backend only (Express API on port 3001)
 - `npm run build` - TypeScript check + Vite build for production
@@ -22,13 +22,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run docs:api:sync` - Sync API documentation (auto-runs via pre* hooks on `dev`, `client:dev`, and `build`)
 - `npm run docs:api:audit` - Audit and validate API documentation coverage
 
+### Security
+
+- `npm run audit:security` - Run npm audit with high severity filter
+- `npm run scan:code` - Run semgrep static analysis
+- `npm run test:security` - Run security tests with Vitest
+- `npm run verify:security` - Run all security checks (audit + scan + test)
+
 ### Testing
 
-> **Note**: Check `package.json` before assuming test scripts exist. As noted in [`AGENTS.md`](./AGENTS.md), test scripts may not be present. The repo includes Vitest, React Testing Library, Supertest, and Playwright configurations but script availability should be verified.
+> **Note**: Check `package.json` before assuming test scripts exist. The repo includes Vitest, React Testing Library, Supertest, and Playwright but test scripts may not always be present.
 
 ### Database Management
 
-- `npm run db:fresh` - Reset database and run all 33 migrations
+- `npm run db:fresh` - Reset database and run all migrations
 - `npm run db:reset` - Interactive database reset with confirmation
 - `npm run db:reset:confirm` - Reset database without prompt
 - `npm run seed:admin` - Create default admin user (admin@skypanelv2.com / admin123)
@@ -93,45 +100,9 @@ SkyPanelV2 is a full-stack cloud service reseller billing panel with multi-tenan
 - **Command palette** navigation
 - **API documentation auto-sync** on build
 
-### Egress Billing System
-
-SkyPanelV2 implements a **prepaid egress credit model with hourly enforcement** to prevent network transfer abuse:
-
-- **Credit packs** (100GB, 1TB, 5TB, 10TB) are purchased via PayPal and stored per-organization
-- **Hourly billing** polls Linode transfer API every 60 minutes, calculating delta from the last reading
-- **Auto-shutoff** suspends VPS instances when an organization's credit balance hits zero
-- **Organization-scoped**: all members share the same credit pool; permissions control who can view vs. purchase
-
-**Key services:**
-- `egressCreditService` - Credit balance, purchase, deduction, manual add
-- `egressHourlyBillingService` - Hourly billing orchestrator
-- `egressBillingService` - Transfer pool tracking and overage projection
-- `egressUtils` - Linode transfer API helpers
-
-**Key routes:**
-- `GET /api/egress/credits` - Org credit balance
-- `GET /api/egress/credits/history` - Purchase history
-- `GET /api/egress/credits/packs` - Available packs
-- `POST /api/egress/credits/purchase` - Initiate PayPal purchase
-- `POST /api/egress/credits/purchase/complete` - Complete purchase
-- `GET /api/egress/usage/:vpsId` - Per-VPS hourly readings
-- Admin routes under `/api/egress/admin/*` for manual credit management
-
-**Key frontend files:**
-- `src/pages/EgressCredits.tsx` - Dedicated egress credits page
-- `src/pages/Organizations.tsx` - Org Egress tab with credit management
-- `src/pages/VPSDetail.tsx` - Egress usage section in Networking tab
-- `src/components/admin/EgressCreditManager.tsx` - Admin credit management UI
-- `src/components/admin/EgressPackSettings.tsx` - Admin pack pricing config
-- `src/services/egressService.ts` - Frontend API client
-
-**Database migrations 026–033** implement the egress system (tables: `organization_egress_credits`, `egress_credit_packs`, `vps_egress_hourly_readings`, etc.).
-
 ## Environment Configuration
 
 Copy `.env.example` to `.env` and configure.
-
-For complete environment variable reference, see [repo-docs/ENVIRONMENT_VARIABLES.md](repo-docs/ENVIRONMENT_VARIABLES.md).
 
 ### Required for Development
 
@@ -180,68 +151,45 @@ MAX_FILE_SIZE=10485760
 UPLOAD_PATH=./uploads
 ```
 
-### Rate Limiting Configuration (Current Defaults)
+### Rate Limiting Configuration
 
-- Anonymous users: **1,000** requests per 15 minutes
-- Authenticated users: **5,000** requests per 15 minutes
-- Admin users: **10,000** requests per 15 minutes
-
-These are configurable via `RATE_LIMIT_ANONYMOUS_MAX`, `RATE_LIMIT_AUTHENTICATED_MAX`, `RATE_LIMIT_ADMIN_MAX` and their corresponding `_WINDOW_MS` variables. Per-user overrides are stored in the `user_rate_limit_overrides` table.
+Rate limits are configurable via environment variables. Default values are set in `.env.example` and include tiered limits for anonymous, authenticated, and admin users. Per-user overrides are stored in the `user_rate_limit_overrides` table.
 
 ## Database Schema
 
-### Core User & Organization Tables
+### Core Tables
 
 - `users` - User accounts with authentication, 2FA, preferences, active_organization_id
 - `organizations` - Multi-tenant organization management
 - `organization_members` - Organization membership with role_id FK
 - `organization_roles` - Custom roles with granular JSONB permissions
 - `organization_invitations` - Email-based organization invitations with token
-
-### VPS & Hosting Tables
-
-- `vps_instances` - VPS hosting instances (org-scoped, with provider_id, backup_frequency, created_by)
-- `vps_plans` - VPS plans with base_price, markup_price, backup pricing fields
-- `vps_billing_cycles` - Hourly billing tracking with metadata
-- `vps_category_mappings` - White-label category mappings
-- `vps_stackscript_configs` - Curated StackScript deployment configurations
-- `service_providers` - Cloud provider configuration (type constrained to 'linode')
-- `provider_metadata` - Provider-specific metadata key-value store
-- `provider_region_overrides` - Admin-defined region allowlists per provider
-
-### Financial Tables
-
-- `payment_transactions` - PayPal billing integration (wallet debits and credits)
 - `wallets` - Organization wallet balances (one per org)
+- `payment_transactions` - PayPal billing integration (wallet debits and credits)
 - `invoices` - Billing invoices
-
-### Support Tables
-
+- `vps_instances` - VPS hosting instances (org-scoped)
+- `vps_plans` - VPS plans with base_price, markup_price, backup pricing
+- `vps_billing_cycles` - Hourly billing tracking with metadata
+- `service_providers` - Cloud provider configuration (type constrained to 'linode')
+- `user_ssh_keys` - SSH keys (organization-scoped)
+- `user_api_keys` - API key management with row-level security (RLS enabled)
 - `support_tickets` - Customer support tickets with has_staff_reply flag
 - `support_ticket_replies` - Support ticket conversation threads with PG notify triggers
-
-### Security & Access Tables
-
-- `user_api_keys` - API key management with row-level security (RLS enabled)
-- `user_ssh_keys` - SSH keys (organization-scoped, with linode_key_id and created_by)
-- `user_rate_limit_overrides` - Per-user rate limit overrides set by admins
-
-### Activity & Notification Tables
-
-- `activity_logs` - Detailed system activity logging with is_read/read_at, PG notify trigger
+- `activity_logs` - Detailed system activity logging with is_read/read_at
 - `activity_feed` - User notification feed
-
-### Configuration Tables
-
 - `platform_settings` - Global platform configuration (key-value JSONB)
-- `networking_config` - Network configuration (rDNS base domain)
 - `email_templates` - Email template management
-- `faq_categories` / `faq_items` / `faq_updates` - FAQ content management
-- `contact_categories` / `contact_methods` / `platform_availability` - Contact page configuration
+- `organization_egress_credits` - Egress credit balances per organization
+- `egress_credit_packs` - Available credit packs with pricing
+- `vps_egress_hourly_readings` - Hourly transfer usage readings
+
+### Database Migrations
+
+SQL migrations are in the `migrations/` directory with naming convention `NNN_description.sql`. Apply pending migrations with `node scripts/run-migration.js`.
 
 ## API Routes
 
-### Core Routes (registered in `api/app.ts`)
+### Core Routes (`/api/`)
 
 - `/api/auth` - Authentication (login, register, 2FA, password reset)
 - `/api/vps` - VPS instance management, providers, plans, images, actions
@@ -250,8 +198,9 @@ These are configurable via `RATE_LIMIT_ANONYMOUS_MAX`, `RATE_LIMIT_AUTHENTICATED
 - `/api/support` - Support ticket management and replies
 - `/api/ssh-keys` - SSH key CRUD with Linode sync
 - `/api/invoices` - Invoice listing and detail
+- `/api/egress` - Egress credit management, purchase flow, usage readings
 
-### Admin Routes (`/api/admin/*`)
+### Admin Routes (`/api/admin/`)
 
 - `/api/admin` - User management, stats, impersonation
 - `/api/admin/platform` - Platform settings CRUD
@@ -260,7 +209,7 @@ These are configurable via `RATE_LIMIT_ANONYMOUS_MAX`, `RATE_LIMIT_AUTHENTICATED
 - `/api/admin/contact` - Contact form message management
 - `/api/admin/faq` - FAQ category/item/update management
 - `/api/admin/github` - GitHub integration and update checking
-- `/api/admin` (categoryMappings) - VPS category white-labeling
+- `/api/admin/category-mappings` - VPS category white-labeling
 
 ### Content & Feed Routes
 
@@ -272,11 +221,6 @@ These are configurable via `RATE_LIMIT_ANONYMOUS_MAX`, `RATE_LIMIT_AUTHENTICATED
 - `/api/theme` - Theme preset management
 - `/api/pricing` - Public pricing data
 - `/api/health` - Health check endpoint
-- `/api/egress` - Egress credit management, purchase flow, usage readings
-
-### Agent Routes (`api/routes/agent/`)
-
-- Reserved directory for automation/agent functionality (currently empty)
 
 ## Services
 
@@ -284,16 +228,15 @@ These are configurable via `RATE_LIMIT_ANONYMOUS_MAX`, `RATE_LIMIT_AUTHENTICATED
 
 - `authService` - JWT token management and authentication logic
 - `linodeService` - Linode/Akamai REST API wrapper with caching
-- `billingService` - Hourly billing engine (runHourlyBilling, billVPSCreation, getBillingSummary)
-- `egressBillingService` - Network transfer pool quota tracking and overage projection
-- `egressBillingService.test.ts` - Egress billing service tests
-- `egressCreditService` - Egress credit balance, purchase, deduction, manual add
-- `egressHourlyBillingService` - Hourly billing orchestrator (polls Linode transfer API, deducts credits, auto-shutoff)
+- `billingService` - Hourly billing engine
+- `egressCreditService` - Egress credit balance, purchase, deduction
+- `egressHourlyBillingService` - Hourly billing orchestrator
+- `egressBillingService` - Transfer pool tracking and overage projection
 - `paypalService` - PayPal order creation, capture, wallet deduction
 - `emailService` - Email sending with provider fallback (Resend → SMTP)
 - `emailTemplateService` - Handlebars-based email template rendering
 - `invoiceService` - Invoice generation and management
-- `invoiceService.test.ts` - Invoice service tests
+- `notificationService` - PG LISTEN/NOTIFY → EventEmitter singleton for real-time push
 
 ### Provider Services (`api/services/providers/`)
 
@@ -301,51 +244,6 @@ These are configurable via `RATE_LIMIT_ANONYMOUS_MAX`, `RATE_LIMIT_AUTHENTICATED
 - `BaseProviderService` - Shared provider logic and caching
 - `LinodeProviderService` - Linode-specific implementation
 - `ProviderFactory` - Provider instantiation from type + token
-- `errorNormalizer` - Standardized provider error handling
-
-### Egress Services (`api/services/egress/`)
-
-- `egressUtils` - Linode transfer API helpers and quota calculations
-
-### Activity & Notification Services
-
-- `activityLogger` - Activity log recording to database
-- `activityFeed` - Activity feed query service
-- `activityEmailService` - Activity-triggered email notifications
-- `notificationService` - PG LISTEN/NOTIFY → EventEmitter singleton for real-time push
-- `userNotificationPreferences` - User notification settings
-
-### Configuration Services
-
-- `providerService` - Provider CRUD and configuration management
-- `providerResourceCache` - Cached provider data (plans, images, regions)
-- `categoryMappingService` - White-label category mapping logic
-- `themeService` - Theme preset configuration
-- `platformStatsService` - Admin dashboard statistics
-- `roles` - Role and permission management
-- `invitations` - Organization invitation logic
-
-### Background Services
-
-- `billingCronService` - 24-hour billing reminder cron (low balance alerts)
-- Hourly billing scheduler - Runs every 60 minutes from `server.ts` (calls `BillingService.runHourlyBilling()`)
-
-### Infrastructure Services
-
-- `sshBridge` - WebSocket SSH terminal bridge (ws + ssh2)
-- `rateLimitMetrics` - Rate limit metrics collection and persistence
-- `rateLimitConfigValidator` - Rate limit configuration validation
-- `rateLimitOverrideService` - Per-user rate limit override management
-- `githubService` - GitHub API integration for update checking
-
-## Middleware (`api/middleware/`)
-
-- `auth.ts` - JWT authentication (sets `req.user` with userId, role, email)
-- `permissions.ts` - Organization-based permission checking
-- `rateLimiting.ts` - Smart rate limiting with tiered access + response headers
-- `security.ts` - Helmet security headers and CORS configuration
-
-> **Note**: Impersonation is handled within the auth middleware and route handlers, not as a separate middleware file.
 
 ## Key Service Patterns
 
@@ -356,10 +254,8 @@ Use `api/lib/database.ts` helpers:
 ```typescript
 import { query, transaction } from '../lib/database.js';
 
-// Simple query
 const result = await query('SELECT * FROM users WHERE id = $1', [userId]);
 
-// Transaction
 const result = await transaction(async (client) => {
   await client.query('UPDATE wallets SET balance = balance - $1 WHERE organization_id = $2', [amount, orgId]);
   await client.query('INSERT INTO payment_transactions (...) VALUES (...)', [...]);
@@ -369,12 +265,7 @@ const result = await transaction(async (client) => {
 
 ### Authentication Middleware
 
-Protected routes use JWT authentication:
-
-```typescript
-import { authenticateToken } from '../../middleware/auth.js';
-router.use(authenticateToken); // Sets req.user with { userId, role, email }
-```
+Protected routes use JWT authentication middleware that sets `req.user` with `{ userId, role, email }`.
 
 ### Provider Token Resolution
 
@@ -384,88 +275,18 @@ const token = await normalizeProviderToken(providerId);
 const provider = ProviderFactory.create('linode', token);
 ```
 
-### Error Handling
-
-Structured error responses:
-
-```typescript
-// Error
-res.status(500).json({ success: false, error: error.message });
-
-// Success
-res.json({ success: true, data: result });
-```
-
 ## Frontend Structure
 
 ### Pages (`src/pages/`)
 
-**Public Pages:**
-- `Home`, `HomeRedesign` - Landing pages (route: `/`)
+- `HomeRedesign` - Landing page (route: `/`)
 - `Pricing`, `FAQ`, `AboutUs`, `Contact`, `Status`, `TermsOfService`, `PrivacyPolicy`
 - `Login`, `Register`, `ForgotPassword`, `ResetPassword`
-- Organization invitation acceptance routes (`/organizations/invitations/:token/*`)
-
-**Authenticated Pages:**
-- `Dashboard` - User dashboard with stats and activity
-- `VPS` - VPS instance list
-- `VPSDetail` - VPS detail view with actions
-- `VpsSshConsole` - Full-screen SSH terminal (standalone layout)
-- `SSHKeys` - SSH key management
-- `Billing` - Billing overview, wallet, payment history
-- `InvoiceDetail`, `TransactionDetail` - Financial detail views
-- `BillingPaymentSuccess`, `BillingPaymentCancel` - PayPal return pages
-- `Organizations` - Organization management and detail
-- `Support` - Support ticket management
-- `Settings` - User profile, 2FA, preferences
-- `ActivityPage` - Activity history
-- `ApiDocs` - API documentation viewer
-- `AcceptInvitation` - Organization invitation acceptance
-- `EgressCredits` - Egress credit balance, purchase, and usage history
-
-**Admin Pages:**
-- `Admin` - Admin dashboard with tabbed management panels
-- `admin/AdminUserDetail` - Detailed user view with billing, VPS, and profile info
-
-### Components (`src/components/`)
-
-**Feature Directories:**
-- `ui/` - Base shadcn/ui components (Button, Dialog, Input, Table, etc.)
-- `admin/` - Admin-specific components (see [repo-docs/ADMIN_COMPONENTS.md](repo-docs/ADMIN_COMPONENTS.md))
-  - `UserManagement`, `VPSPlanWizard`, `CategoryMappingManager`, `RateLimitMonitoring`
-  - `ContactCategoryManager`, `ContactMethodManager`, `PlatformAvailabilityManager`
-  - `FAQItemManager`, `UpdatesManager`, `RegionAccessManager`
-  - `ImpersonationBanner`, `ImpersonationLoadingOverlay`
-  - `AdminSupportView`, `OrganizationManagement`
-  - `EgressCreditManager` - Admin egress credit management UI
-  - `EgressPackSettings` - Admin credit pack pricing configuration
-  - `email/` - Email template management components
-  - `billing/` - Admin billing components
-  - `shared/` - Shared admin utility components
-- `home/` - Home page specific components
-- `VPS/` - VPS creation wizard steps, SSH terminal, provider/region selectors
-- `billing/` - Payment forms, transaction history, invoice views, PurchaseEgressCreditsDialog
-- `support/` - Ticket creation, conversation threads
-- `organizations/` - Org management, member lists, invitation flows
-- `settings/` - User profile, 2FA setup, API key management
-- `Dashboard/` - Dashboard widgets and stats cards
-- `SSHKeys/` - SSH key management components
-- `layouts/` - Layout wrappers and navigation components
-- `data-table/` - Reusable data table component
-- `hooks/` - Component-level hooks
-
-**Standalone Components:**
-- `AppLayout.tsx` - Main app shell with sidebar navigation
-- `AppSidebar.tsx` - Navigation sidebar
-- `PublicLayout.tsx` - Public page layout wrapper
-- `MarketingNavbar.tsx` / `MarketingFooter.tsx` - Public page navigation
-- `NotificationDropdown.tsx` - Notification bell with real-time updates
-- `ActivityFeed.tsx` - Activity feed component
-- `ErrorBoundary.tsx` - Error boundary wrapper
-- `Empty.tsx` - Empty state component
-- `Navigation.tsx` - Navigation component
-- `VPSInfrastructureCard.tsx` - VPS infrastructure display card
-- `nav-main.tsx`, `nav-projects.tsx`, `nav-secondary.tsx`, `nav-user.tsx` - Sidebar navigation components
+- `Dashboard`, `VPS`, `VPSDetail`, `VpsSshConsole` - Core authenticated pages
+- `Billing`, `InvoiceDetail`, `TransactionDetail` - Financial pages
+- `Organizations`, `AcceptInvitation` - Organization management
+- `Support`, `Settings`, `ActivityPage`, `ApiDocs`, `EgressCredits`
+- `Admin`, `admin/AdminUserDetail` - Admin pages
 
 ### Contexts (`src/contexts/`)
 
@@ -473,151 +294,6 @@ res.json({ success: true, data: result });
 - `ThemeContext` - Theme preset management, dark/light mode
 - `ImpersonationContext` - Admin impersonation state, start/exit flows
 - `BreadcrumbContext` - Navigation breadcrumb state
-
-### Hooks (`src/hooks/`)
-
-- `use-mobile.tsx` - Mobile device detection
-- `use-orientation.tsx` - Screen orientation detection
-- `use-virtual-keyboard.tsx` - Virtual keyboard handling
-- `use-mobile-animations.tsx` - Mobile-optimized animations
-- `use-mobile-navigation.tsx` - Mobile navigation patterns
-- `use-mobile-performance.tsx` - Mobile performance optimizations
-- `use-form-persistence.tsx` - Form state persistence
-- `use-lazy-loading.tsx` - Lazy loading utilities
-- `useCategoryMappings.ts` - Category mapping data hook
-- `useTheme.ts` - Theme hook
-
-### Frontend Services (`src/services/`)
-
-- `paymentService.ts` - Payment API client
-- `adminEmailTemplateService.ts` - Admin email template API client
-- `categoryMappingService.ts` - Category mapping API client
-- `egressService.ts` - Egress credit and usage API client
-
-### Frontend Libraries (`src/lib/`)
-
-- `api.ts` - Axios API client with auto-logout on 401
-- `apiRouteManifest.ts` - API route manifest for docs
-- `utils.ts` - General utilities (cn, etc.)
-- `billingUtils.ts` - Billing calculation helpers
-- `brand.ts` - Branding utilities
-- `formatters.ts` - Data formatting helpers
-- `validation.ts` - Client-side validation
-- `errorHandling.ts` - Error handling utilities
-- `vpsLabelGenerator.ts` - VPS label generation
-- `vpsStepConfiguration.ts` - VPS creation wizard step config
-- `activeHoursUtils.ts` - Active hours calculation
-- `breadcrumbs.ts` - Breadcrumb configuration
-- `color.ts` - Color utilities
-- `providerErrors.ts` - Provider error display helpers
-- `timezones.ts` - Timezone data
-
-## Project Structure
-
-```
-├── api/                        # Express.js backend API
-│   ├── app.ts                  # Express app wiring and route registration
-│   ├── server.ts               # HTTP server, SSH bridge init, billing scheduler
-│   ├── index.ts                # Entry point
-│   ├── config/                 # Environment and runtime config
-│   ├── lib/                    # Shared backend helpers (database, crypto, validation)
-│   ├── middleware/             # Auth, permissions, rate limiting, security
-│   ├── routes/                 # API route definitions
-│   │   ├── admin/             # Admin-specific routes
-│   │   └── agent/             # Agent/automation routes (reserved)
-│   └── services/              # Business logic and service layer
-│       └── providers/         # Cloud provider abstraction (Linode)
-├── src/                        # React frontend SPA
-│   ├── App.tsx                 # Root component, route definitions, context providers
-│   ├── main.tsx                # React DOM entry point
-│   ├── components/            # Reusable UI and feature components
-│   │   ├── ui/                # shadcn/ui base components
-│   │   ├── admin/             # Admin dashboard components
-│   │   ├── home/              # Home page components
-│   │   ├── VPS/               # VPS management components
-│   │   ├── billing/           # Billing components
-│   │   ├── support/           # Support components
-│   │   ├── organizations/     # Organization components
-│   │   ├── settings/          # Settings components
-│   │   ├── Dashboard/         # Dashboard widgets
-│   │   ├── SSHKeys/           # SSH key components
-│   │   ├── data-table/        # Reusable data table
-│   │   ├── layouts/           # Layout wrappers and navigation
-│   │   └── hooks/             # Component-level hooks
-│   ├── pages/                 # Page components with routing
-│   │   ├── admin/             # Admin pages
-│   │   └── user/              # User-specific pages
-│   ├── contexts/              # React contexts (Auth, Theme, Impersonation, Breadcrumb)
-│   ├── hooks/                 # Reusable React hooks
-│   ├── services/              # Frontend API client services
-│   ├── lib/                   # Utility libraries (API client, formatters, validation)
-│   ├── theme/                 # Theme preset definitions
-│   ├── types/                 # TypeScript type definitions
-│   ├── styles/                # Page-specific CSS
-│   └── assets/                # Static assets
-├── migrations/                 # 33 sequential SQL migrations (001–033)
-├── scripts/                    # Node.js utility scripts
-├── deploy/                     # Deployment configurations
-│   └── caddy/                 # Caddy web server configuration
-├── public/                     # Static assets (icons, logos)
-├── data/                       # Static data files
-├── repo-docs/                  # Internal documentation
-├── ecosystem.config.cjs        # PM2 configuration (2 processes: api + ui)
-├── vite.config.ts              # Vite configuration
-├── vitest.config.ts            # Vitest configuration
-├── playwright.config.ts        # Playwright E2E configuration
-├── tailwind.config.js          # Tailwind CSS configuration
-├── tsconfig.json               # TypeScript configuration
-├── AGENTS.md                   # AI agent coding guidelines
-└── README.md                   # Project documentation with Mermaid diagrams
-```
-
-## Testing
-
-### Test Architecture
-
-- **Frontend**: Vitest + React Testing Library with jsdom environment
-- **Backend**: Supertest for API endpoint testing
-- **E2E**: Playwright for end-to-end testing
-- **Property-based**: fast-check for property-based testing
-- **Test Setup**: Configuration in `src/test-setup.ts` with common mocks
-- **Mock Strategy**: Comprehensive browser API mocking for component tests
-
-### Test Locations
-
-- Frontend tests: Co-located with components (`.test.tsx`)
-- Backend tests: `api/services/*.test.ts` and `api/tests/`
-- E2E tests: `tests/e2e/`
-
-### Running Tests
-
-> **Important**: Always check `package.json` for current test script availability before running test commands. See [`AGENTS.md`](./AGENTS.md) testing notes.
-
-- Test files use `.test.ts` or `.test.tsx` extensions
-
-## Production Deployment
-
-### PM2 Process Management
-
-Configuration in [ecosystem.config.cjs](ecosystem.config.cjs). Runs two processes:
-- `skypanelv2-api` - Express server with SSH bridge (port 3001)
-- `skypanelv2-ui` - Vite preview server (port 5173)
-
-- `npm run pm2:start` - Build and start with PM2
-- `npm run pm2:reload` - Reload PM2 processes gracefully
-- `npm run pm2:stop` - Stop PM2 processes
-- `npm run pm2:list` - List PM2 processes
-
-### SSL Setup with Caddy
-
-For HTTPS setup with Caddy and Let's Encrypt, see [repo-docs/SSL_SETUP.md](repo-docs/SSL_SETUP.md).
-
-- `npm run ssl:caddy:help` - Display Caddy SSL setup instructions
-- Configuration template in `deploy/caddy/Caddyfile.template`
-
-### Vercel Deployment
-
-Configuration in [vercel.json](vercel.json).
 
 ## Security Architecture
 
@@ -627,133 +303,25 @@ Configuration in [vercel.json](vercel.json).
 - **SSH credentials**: AES-256 encryption via `SSH_CRED_SECRET`
 - **Provider API tokens**: AES-256 encryption via `ENCRYPTION_KEY`
 - **JWT tokens**: HMAC-SHA256 signed with configurable expiration (default: 7 days)
-- **Rate limiting**: Tiered access controls with per-user overrides
 - **Row-level security**: PostgreSQL RLS on `user_api_keys` table
 
 ### Access Control
 
-- Role-based access control (RBAC) — admin and user roles
+- Role-based access control — admin and user roles
 - Organization-based data isolation — all resource queries scoped to org
 - Custom organization roles with granular JSONB permissions
 - Admin impersonation for customer support (with visual banner)
 
-### Real-Time Security
+## Important Notes for Agents
 
-- WebSocket SSH connections authenticated via JWT token in query string
-- VPS instance access verified against organization membership
-- SSH credentials decrypted only at connection time, never exposed to client
-
-## Database Migrations
-
-### Migration System
-
-- 33 sequential SQL migrations (001–033, with 006 skipped)
-- Naming convention: `NNN_description.sql`
-- Located in `migrations/` directory
-- Initial migration (001) is a consolidated schema containing multiple historical migrations
-
-### Applying Migrations
-
-```bash
-# Apply all pending migrations
-node scripts/run-migration.js
-
-# Reset database and run all migrations
-npm run db:fresh
-
-# Apply a single migration
-node scripts/apply-single-migration.js <filename>
-
-# Apply StackScript migrations
-node scripts/apply-stackscript-migration.js
-```
-
-## Utility Scripts
-
-### Database & Migration Scripts
-
-- `reset-database.js` - Interactive database reset with confirmation
-- `run-migration.js` - Apply pending database migrations
-- `apply-single-migration.js` - Apply a specific migration
-- `apply-stackscript-migration.js` - Apply StackScript migrations
-- `check-migration.js` - Check if column exists
-- `verify-active-org-column.js` - Verify active organization column
-- `clean-migration.js` - Clean migration artifacts
-- `check-users-schema.js` - Check users schema
-- `check-vps-plans.js` - Check VPS plans
-
-### Admin & User Management Scripts
-
-- `seed-admin.js` - Create default admin user
-- `create-test-admin.js` - Create admin user with custom credentials
-- `promote-to-admin.js` - Elevate existing user to admin role
-- `update-admin-password.js` - Rotate admin passwords
-- `debug-admin-login.js` - Debug admin login issues
-- `ensure-admin-user.js` - Ensure admin user exists
-- `verify-admin-status.js` - Verify admin status via API
-- `check-admin-users.js` - Check admin users in database
-
-### Platform Management Scripts
-
-- `check-contact-methods-status.js` - Check contact methods status
-- `check-platform-settings.js` - Check platform settings
-- `update-theme-to-mono.js` - Update theme to monochrome
-- `migrate-backup-pricing-data.js` - Migrate backup pricing data
-- `migrate-vps-plan-type-class.js` - Migrate VPS plan type/class
-- `migrate-vps-provider-data.js` - Migrate VPS provider data
-
-### Security & Configuration Scripts
-
-- `generate-ssh-secret.js` - Generate SSH_CRED_SECRET for .env file
-- `fix-provider-encryption.js` - Fix provider API token encryption
-
-### Documentation Scripts
-
-- `audit-api-docs.mjs` - Audit and sync API documentation
-
-### Deployment Scripts
-
-- `setup-caddy-ssl.sh` - Setup HTTPS using Caddy + Let's Encrypt
-
-## Manual Testing Checklist
-
-1. **Database Setup**: `npm run db:fresh && npm run seed:admin`
-2. **Auth Flow**: Login, register, 2FA setup, password reset
-3. **Admin Interface**: Admin dashboard, user management, platform settings
-4. **VPS Management**: VPS provisioning, actions, SSH console, deletion
-5. **Billing**: Add funds via PayPal, verify wallet, check hourly deductions
-6. **Multi-tenant**: Organization creation, member invitation, role assignment
-7. **Permissions**: Custom roles and granular permissions
-8. **Support**: Ticket creation, staff reply, ticket closure
-9. **Activity Feed**: Activity logging and real-time notification system
+- **Always check `package.json`** before referencing npm scripts
+- **Always check `src/App.tsx`** before documenting or changing frontend routes
+- **Always check `api/app.ts`** before documenting or changing API surface area
+- **Email providers** are Resend and generic SMTP — see `api/config/index.ts`
+- **Billing runs hourly** from `server.ts`, not from `billingCronService` (which handles 24h reminder checks)
+- **Organization isolation** is critical — be careful with queries that could leak data across orgs
+- **Theme behavior** spans frontend context/state and backend APIs — review both before changes
 
 ## Default Credentials
 
-- **Email**: `admin@skypanelv2.com`
-- **Password**: `admin123`
-
-## Key Architectural Patterns
-
-- **Service Layer**: Business logic separated from route definitions in `api/services/`
-- **Database Helper**: Consistent query execution via `api/lib/database.ts` (`query()` and `transaction()`)
-- **Provider Abstraction**: `IProviderService` interface → `ProviderFactory` → `LinodeProviderService`
-- **React Context**: Global state management (Auth, Theme, Impersonation, Breadcrumb)
-- **TanStack Query**: Server state management with caching and optimistic updates
-- **Protected Routes**: Frontend route guards backed by JWT middleware on the backend
-- **Multi-tenant Design**: Organization-based data isolation with custom roles
-- **Real-Time Events**: PG triggers → `LISTEN/NOTIFY` → `NotificationService` EventEmitter → SSE
-- **Hourly Billing**: Server-side scheduler in `server.ts` calling `BillingService.runHourlyBilling()` every 60 minutes
-
-## Important Notes for Agents
-
-> These notes supplement the guidance in [`AGENTS.md`](./AGENTS.md).
-
-- **Always check `package.json`** before referencing npm scripts — some documented scripts may not exist
-- **Always check `src/App.tsx`** before documenting or changing frontend routes
-- **Always check `api/app.ts`** before documenting or changing API surface area
-- **Email providers** are Resend and generic SMTP (not SMTP2GO) — see `api/config/index.ts`
-- **The `agent/` routes directory** is currently empty/reserved
-- **Billing runs hourly** from `server.ts`, not from `billingCronService` (which handles 24h reminder checks)
-- **Organization isolation** is critical — be careful with queries that could leak data across orgs
-- **Impersonation** affects access-sensitive work — admin can act as any user
-- **Theme behavior** spans frontend context/state and backend APIs — review both before changes
+- **Admin**: `admin@skypanelv2.com` / `admin123`
