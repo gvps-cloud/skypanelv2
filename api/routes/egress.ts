@@ -431,7 +431,7 @@ router.post(
         await client.query(
           `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, status, description, metadata)
            VALUES ($1, $2, 'USD', 'wallet_debit', 'internal', 'completed', $3, $4)`,
-          [organizationId, -pack.price, `Egress credit pack purchase: ${pack.id} (${pack.gb}GB)`, JSON.stringify({ packId: pack.id, creditsGb: pack.gb })],
+          [organizationId, -pack.price, `Egress credit pack purchase: ${pack.id} (${pack.gb}GB)`, JSON.stringify({ packId: pack.id, creditsGb: pack.gb, balance_before: currentBalance, balance_after: currentBalance - pack.price })],
         );
 
         // Add egress credits
