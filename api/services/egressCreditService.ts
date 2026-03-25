@@ -420,6 +420,7 @@ export async function removeEgressCredits(
 
       const currentBalance = Number(balanceResult.rows[0].credits_gb || 0);
 
+      // Allow removal that exactly clears the balance
       if (currentBalance < gbToRemove) {
         throw new Error(`Cannot remove ${gbToRemove}GB: organization only has ${currentBalance}GB`);
       }
