@@ -171,7 +171,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
     if (selectedTicket) {
       fetchClientBalance();
     }
-  }, [selectedTicket?.creator?.id, authHeader]);
+  }, [selectedTicket, authHeader]);
 
   // Set up real-time updates for selected ticket
   useEffect(() => {
@@ -258,6 +258,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
       es.close();
       eventSourceRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTicket?.id, token, scrollToBottom]);
 
   const openTicket = useCallback(
@@ -351,7 +352,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
     } catch (error: any) {
       toast.error(error.message || "Failed to send reply");
     }
-  }, [selectedTicket, replyMessage, authHeader, openTicket]);
+  }, [selectedTicket, replyMessage, authHeader, openTicket, scrollToBottom]);
 
   const updateTicketStatus = useCallback(
     async (ticketId: string, status: TicketStatus) => {

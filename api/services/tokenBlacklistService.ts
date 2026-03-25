@@ -11,8 +11,6 @@
  * token reuse after logout. Entries auto-expire based on the token's TTL.
  */
 
-import { randomBytes } from 'crypto';
-import { config } from '../config/index.js';
 import Redis from 'ioredis';
 
 /**
@@ -39,14 +37,6 @@ const CLEANUP_INTERVAL = 5 * 60 * 1000;
 /**
  * Redis client interface (lazy-loaded to avoid dependency issues)
  */
-interface RedisClient {
-  set(key: string, value: string, mode?: string, duration?: number): Promise<'OK' | null>;
-  get(key: string): Promise<string | null>;
-  del(key: string): Promise<number>;
-  quit?(): Promise<void>;
-  disconnect?(): Promise<void>;
-}
-
 let redisClient: Redis | null = null;
 let redisAvailable = false;
 

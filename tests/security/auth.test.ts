@@ -14,7 +14,7 @@
  * 4. Password requirements enforce minimum strength standards
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomBytes } from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -418,7 +418,7 @@ describe('Authentication Security Tests', () => {
      */
     it('should expire password reset tokens after 1 hour', async () => {
       // Request password reset
-      const resetResult = await AuthService.requestPasswordReset(testUserEmail);
+      await AuthService.requestPasswordReset(testUserEmail);
 
       // Retrieve the token from database (for testing only)
       const userWithToken = await query(

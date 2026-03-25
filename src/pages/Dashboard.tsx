@@ -87,7 +87,7 @@ const Dashboard: React.FC = () => {
   const [billing, setBilling] = useState<BillingStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const navigate = useNavigate();
 
   const loadDashboardData = useCallback(async () => {

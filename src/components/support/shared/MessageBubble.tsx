@@ -1,8 +1,8 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import { TicketMessage, isReopenRequestMessage, formatTicketMessage } from "@/types/support";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, ShieldCheck } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ShieldCheck } from "lucide-react";
 
 interface MessageBubbleProps {
   message: TicketMessage;

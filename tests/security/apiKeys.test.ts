@@ -24,8 +24,6 @@ import { v4 as uuidv4 } from 'uuid';
 describe('API Key Security Tests', () => {
   let testUserId: string;
   let testOrganizationId: string;
-  let testApiKey: string;
-  let testApiKeyHash: string;
 
   beforeAll(async () => {
     // Create test user and organization
@@ -109,17 +107,8 @@ describe('API Key Security Tests', () => {
      * **Security Standard:** OWASP Cryptographic Storage
      */
     it('should not use Math.random for API key generation', () => {
-      // Math.random generates values between 0 and 1 with limited precision
-      const mathRandomValues: string[] = [];
-      for (let i = 0; i < 100; i++) {
-        mathRandomValues.push(Math.random().toString(36));
-      }
-
-      // Check for duplicates (Math.random can produce duplicates due to limited precision)
-      const uniqueMathRandom = new Set(mathRandomValues);
-      const hasDuplicates = uniqueMathRandom.size < mathRandomValues.length;
-
-      // In contrast, crypto.randomBytes should never produce duplicates in 100 iterations
+      // Note: Math.random is NOT used for security - this test verifies crypto.randomBytes is used
+      // crypto.randomBytes should never produce duplicates in 100 iterations
       const cryptoValues: string[] = [];
       for (let i = 0; i < 100; i++) {
         cryptoValues.push(randomBytes(16).toString('hex'));

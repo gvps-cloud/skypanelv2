@@ -7,7 +7,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   AlertTriangle,
-  ArrowRight,
   Building2,
   Calendar,
   CheckCircle,
@@ -192,39 +191,6 @@ const ADMIN_SECTIONS: AdminSection[] = [
 ];
 
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
-
-const TICKET_PRIORITY_META: Record<
-  TicketPriority,
-  { label: string; className: string }
-> = {
-  low: {
-    label: "Low",
-    className:
-      "border border-muted-foreground/15 bg-muted text-muted-foreground",
-  },
-  medium: {
-    label: "Medium",
-    className:
-      "border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  },
-  high: {
-    label: "High",
-    className:
-      "border border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400",
-  },
-  urgent: {
-    label: "Urgent",
-    className:
-      "border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400",
-  },
-};
-
-const TICKET_PRIORITY_ORDER: Record<TicketPriority, number> = {
-  urgent: 0,
-  high: 1,
-  medium: 2,
-  low: 3,
-};
 
 interface StrategicPanel {
   id: AdminSection;
@@ -958,7 +924,6 @@ const Admin: React.FC = () => {
 
   // Networking rDNS state
   const [networkingTab, setNetworkingTab] = useState<"rdns" | "ipam">("rdns");
-  const [billingTab, setBillingTab] = useState<"finance" | "egress">("finance");
   const [rdnsBaseDomain, setRdnsBaseDomain] = useState<string>("");
   const [rdnsLoading, setRdnsLoading] = useState<boolean>(false);
   const [rdnsSaving, setRdnsSaving] = useState<boolean>(false);
@@ -2462,43 +2427,6 @@ const Admin: React.FC = () => {
   ]);
 
   const liveProvisioningCount = provisioningServers;
-
-  const dashboardTicketHighlights = useMemo(() => {
-    const sorted = [...tickets]
-      .filter(
-        (ticket) => ticket.status !== "resolved" && ticket.status !== "closed",
-      )
-      .sort((a, b) => {
-        const priorityA =
-          TICKET_PRIORITY_ORDER[a.priority as TicketPriority] ?? 99;
-        const priorityB =
-          TICKET_PRIORITY_ORDER[b.priority as TicketPriority] ?? 99;
-        if (priorityA !== priorityB) {
-          return priorityA - priorityB;
-        }
-        const updatedA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-        const updatedB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-        return updatedB - updatedA;
-      });
-
-    return sorted.slice(0, 4);
-  }, [tickets]);
-
-  const dashboardServerAlerts = useMemo(() => {
-    return servers
-      .filter((server) => {
-        const status = (server.status || "").toLowerCase();
-        if (!status) {
-          return true;
-        }
-        return !(
-          status.includes("running") ||
-          status.includes("active") ||
-          status.includes("provisioned")
-        );
-      })
-      .slice(0, 4);
-  }, [servers]);
 
   return (
     <div className={isDashboardView ? "space-y-6" : "min-h-full"}>

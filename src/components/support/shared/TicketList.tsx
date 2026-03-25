@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/select";
 import { SupportTicket, TicketStatus } from "@/types/support";
 import { TicketListItem } from "./TicketListItem";
-import { cn } from "@/lib/utils";
 import { TICKET_STATUS_META } from "./constants";
 
 interface TicketListProps {

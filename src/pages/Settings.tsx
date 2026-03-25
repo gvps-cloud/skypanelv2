@@ -15,11 +15,9 @@ import {
   Trash2,
   AlertTriangle,
   Mail,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
-import TeamSettings from "@/components/settings/TeamSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

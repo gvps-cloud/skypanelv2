@@ -33,7 +33,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
@@ -85,22 +84,6 @@ interface OrganizationRole {
   created_at: string;
   updated_at: string;
 }
-
-const PERMISSIONS = [
-  { id: 'vps_view', label: 'VPS View', description: 'View VPS instances' },
-  { id: 'vps_create', label: 'VPS Create', description: 'Create new VPS instances' },
-  { id: 'vps_delete', label: 'VPS Delete', description: 'Delete VPS instances' },
-  { id: 'vps_manage', label: 'VPS Manage', description: 'Manage VPS instances (start, stop, restart)' },
-  { id: 'ssh_keys_view', label: 'SSH Keys View', description: 'View organization SSH keys' },
-  { id: 'ssh_keys_manage', label: 'SSH Keys Manage', description: 'Create and delete organization SSH keys' },
-  { id: 'tickets_view', label: 'Tickets View', description: 'View support tickets' },
-  { id: 'tickets_create', label: 'Tickets Create', description: 'Create support tickets' },
-  { id: 'tickets_manage', label: 'Tickets Manage', description: 'Manage support tickets' },
-  { id: 'billing_view', label: 'Billing View', description: 'View billing information' },
-  { id: 'billing_manage', label: 'Billing Manage', description: 'Manage billing and invoices' },
-  { id: 'members_manage', label: 'Members Manage', description: 'Manage team members' },
-  { id: 'settings_manage', label: 'Settings Manage', description: 'Manage organization settings' },
-];
 
 interface TeamSettingsProps {
   organizationId?: string;
@@ -230,6 +213,7 @@ export default function TeamSettings({
       fetchInvitations();
       fetchRoles();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, orgId]);
 
   useEffect(() => {

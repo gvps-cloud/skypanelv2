@@ -19,8 +19,8 @@
  * - Cannot be undone - a deleted key must be recreated
  */
 
-import { Router, Request, Response } from 'express';
-import { query, transaction } from '../../lib/database.js';
+import { Router, Response } from 'express';
+import { query } from '../../lib/database.js';
 import { authenticateToken, type AuthenticatedRequest } from '../../middleware/auth.js';
 
 const router = Router();

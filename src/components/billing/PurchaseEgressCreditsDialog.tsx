@@ -14,7 +14,6 @@ import { Loader2, Building2, Wallet, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { type CreditPack, egressService } from '@/services/egressService';
 import PayPalCheckoutDialog from './PayPalCheckoutDialog';
-import { paymentService } from '@/services/paymentService';
 
 type PaymentMethod = 'paypal' | 'wallet';
 

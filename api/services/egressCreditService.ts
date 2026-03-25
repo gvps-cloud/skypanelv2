@@ -281,7 +281,7 @@ export async function purchaseEgressCredits(
 export async function deductEgressCredits(
   organizationId: string,
   gb: number,
-  vpsInstanceId?: string,
+  _vpsInstanceId?: string,
 ): Promise<number> {
   try {
     const gbToDeduct = round(gb, 6);

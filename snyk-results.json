@@ -1,0 +1,3654 @@
+{
+  "vulnerabilities": [
+    {
+      "id": "SNYK-JS-AXIOS-15252993",
+      "title": "Prototype Pollution",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+      "credit": [
+        "Bartłomiej Dmitruk"
+      ],
+      "semver": {
+        "vulnerable": [
+          "<0.30.3",
+          ">=1.0.0-alpha.1 <1.13.5"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "0.30.3",
+        "1.13.5"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.7,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "axios",
+      "references": [
+        {
+          "url": "https://github.com/axios/axios/commit/28c721588c7a77e7503d0a434e016f852c597b57",
+          "title": "GitHub Commit"
+        },
+        {
+          "url": "https://github.com/axios/axios/pull/7369",
+          "title": "GitHub PR"
+        },
+        {
+          "url": "https://github.com/axios/axios/releases/tag/v1.13.5",
+          "title": "GitHub Release"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-02-12T05:42:15.361218Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.7,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-02-19T18:14:16.688453Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-19T18:14:16.688453Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-12T05:42:15.361218Z"
+        }
+      ],
+      "description": "## Overview\n[axios](https://www.npmjs.com/package/axios) is a promise-based HTTP client for the browser and Node.js.\n\nAffected versions of this package are vulnerable to Prototype Pollution via the `mergeConfig` function. An attacker can cause the application to crash by supplying a malicious configuration object containing a `__proto__` property, typically by leveraging `JSON.parse()`.\n## PoC\n```js\r\nimport axios from \"axios\";\r\n\r\nconst maliciousConfig = JSON.parse('{\"__proto__\": {\"x\": 1}}');\r\nawait axios.get(\"https://domain/get\", maliciousConfig);\r\n```\n\n## Details\n\nPrototype Pollution is a vulnerability affecting JavaScript. Prototype Pollution refers to the ability to inject properties into existing JavaScript language construct prototypes, such as objects. JavaScript allows all Object attributes to be altered, including their magical attributes such as `__proto__`, `constructor` and `prototype`. An attacker manipulates these attributes to overwrite, or pollute, a JavaScript application object prototype of the base object by injecting other values.  Properties on the `Object.prototype` are then inherited by all the JavaScript objects through the prototype chain. When that happens, this leads to either denial of service by triggering JavaScript exceptions, or it tampers with the application source code to force the code path that the attacker injects, thereby leading to remote code execution.\n\nThere are two main ways in which the pollution of prototypes occurs:\n\n-   Unsafe `Object` recursive merge\n    \n-   Property definition by path\n    \n\n### Unsafe Object recursive merge\n\nThe logic of a vulnerable recursive merge function follows the following high-level model:\n```\nmerge (target, source)\n\n  foreach property of source\n\n    if property exists and is an object on both the target and the source\n\n      merge(target[property], source[property])\n\n    else\n\n      target[property] = source[property]\n```\n<br>  \n\nWhen the source object contains a property named `__proto__` defined with `Object.defineProperty()` , the condition that checks if the property exists and is an object on both the target and the source passes and the merge recurses with the target, being the prototype of `Object` and the source of `Object` as defined by the attacker. Properties are then copied on the `Object` prototype.\n\nClone operations are a special sub-class of unsafe recursive merges, which occur when a recursive merge is conducted on an empty object: `merge({},source)`.\n\n`lodash` and `Hoek` are examples of libraries susceptible to recursive merge attacks.\n\n### Property definition by path\n\nThere are a few JavaScript libraries that use an API to define property values on an object based on a given path. The function that is generally affected contains this signature: `theFunction(object, path, value)`\n\nIf the attacker can control the value of “path”, they can set this value to `__proto__.myValue`. `myValue` is then assigned to the prototype of the class of the object.\n\n## Types of attacks\n\nThere are a few methods by which Prototype Pollution can be manipulated:\n\n| Type |Origin  |Short description |\n|--|--|--|\n| **Denial of service (DoS)**|Client  |This is the most likely attack. <br>DoS occurs when `Object` holds generic functions that are implicitly called for various operations (for example, `toString` and `valueOf`). <br> The attacker pollutes `Object.prototype.someattr` and alters its state to an unexpected value such as `Int` or `Object`. In this case, the code fails and is likely to cause a denial of service.  <br>**For example:** if an attacker pollutes `Object.prototype.toString` by defining it as an integer, if the codebase at any point was reliant on `someobject.toString()` it would fail. |\n |**Remote Code Execution**|Client|Remote code execution is generally only possible in cases where the codebase evaluates a specific attribute of an object, and then executes that evaluation.<br>**For example:** `eval(someobject.someattr)`. In this case, if the attacker pollutes `Object.prototype.someattr` they are likely to be able to leverage this in order to execute code.|\n|**Property Injection**|Client|The attacker pollutes properties that the codebase relies on for their informative value, including security properties such as cookies or tokens.<br>  **For example:** if a codebase checks privileges for `someuser.isAdmin`, then when the attacker pollutes `Object.prototype.isAdmin` and sets it to equal `true`, they can then achieve admin privileges.|\n\n## Affected environments\n\nThe following environments are susceptible to a Prototype Pollution attack:\n\n-   Application server\n    \n-   Web server\n\n-   Web browser\n    \n\n## How to prevent\n\n1.  Freeze the prototype— use `Object.freeze (Object.prototype)`.\n    \n2.  Require schema validation of JSON input.\n    \n3.  Avoid using unsafe recursive merge functions.\n    \n4.  Consider using objects without prototypes (for example, `Object.create(null)`), breaking the prototype chain and preventing pollution.\n    \n5.  As a best practice use `Map` instead of `Object`.\n\n### For more information on this vulnerability type:\n\n[Arteau, Olivier. “JavaScript prototype pollution attack in NodeJS application.” GitHub, 26 May 2018](https://github.com/HoLyVieR/prototype-pollution-nsec18/blob/master/paper/JavaScript_prototype_pollution_attack_in_NodeJS.pdf)\n\n## Remediation\nUpgrade `axios` to version 0.30.3, 1.13.5 or higher.\n## References\n- [GitHub Commit](https://github.com/axios/axios/commit/28c721588c7a77e7503d0a434e016f852c597b57)\n- [GitHub PR](https://github.com/axios/axios/pull/7369)\n- [GitHub Release](https://github.com/axios/axios/releases/tag/v1.13.5)\n",
+      "epssDetails": {
+        "percentile": "0.10504",
+        "probability": "0.00036",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-25639"
+        ],
+        "CWE": [
+          "CWE-1321"
+        ],
+        "GHSA": [
+          "GHSA-43fc-jf86-j433"
+        ]
+      },
+      "packageName": "axios",
+      "proprietary": false,
+      "creationTime": "2026-02-10T09:21:34.642158Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-02-09T20:53:59Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-02-10T10:00:52.149660Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-02-19T18:14:16.688453Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "axios@1.13.1"
+      ],
+      "upgradePath": [
+        false,
+        "axios@1.13.5"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "axios",
+      "version": "1.13.1"
+    },
+    {
+      "id": "SNYK-JS-AXIOS-15252993",
+      "title": "Prototype Pollution",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+      "credit": [
+        "Bartłomiej Dmitruk"
+      ],
+      "semver": {
+        "vulnerable": [
+          "<0.30.3",
+          ">=1.0.0-alpha.1 <1.13.5"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "0.30.3",
+        "1.13.5"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.7,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "axios",
+      "references": [
+        {
+          "url": "https://github.com/axios/axios/commit/28c721588c7a77e7503d0a434e016f852c597b57",
+          "title": "GitHub Commit"
+        },
+        {
+          "url": "https://github.com/axios/axios/pull/7369",
+          "title": "GitHub PR"
+        },
+        {
+          "url": "https://github.com/axios/axios/releases/tag/v1.13.5",
+          "title": "GitHub Release"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-02-12T05:42:15.361218Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.7,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-02-19T18:14:16.688453Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-19T18:14:16.688453Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-12T05:42:15.361218Z"
+        }
+      ],
+      "description": "## Overview\n[axios](https://www.npmjs.com/package/axios) is a promise-based HTTP client for the browser and Node.js.\n\nAffected versions of this package are vulnerable to Prototype Pollution via the `mergeConfig` function. An attacker can cause the application to crash by supplying a malicious configuration object containing a `__proto__` property, typically by leveraging `JSON.parse()`.\n## PoC\n```js\r\nimport axios from \"axios\";\r\n\r\nconst maliciousConfig = JSON.parse('{\"__proto__\": {\"x\": 1}}');\r\nawait axios.get(\"https://domain/get\", maliciousConfig);\r\n```\n\n## Details\n\nPrototype Pollution is a vulnerability affecting JavaScript. Prototype Pollution refers to the ability to inject properties into existing JavaScript language construct prototypes, such as objects. JavaScript allows all Object attributes to be altered, including their magical attributes such as `__proto__`, `constructor` and `prototype`. An attacker manipulates these attributes to overwrite, or pollute, a JavaScript application object prototype of the base object by injecting other values.  Properties on the `Object.prototype` are then inherited by all the JavaScript objects through the prototype chain. When that happens, this leads to either denial of service by triggering JavaScript exceptions, or it tampers with the application source code to force the code path that the attacker injects, thereby leading to remote code execution.\n\nThere are two main ways in which the pollution of prototypes occurs:\n\n-   Unsafe `Object` recursive merge\n    \n-   Property definition by path\n    \n\n### Unsafe Object recursive merge\n\nThe logic of a vulnerable recursive merge function follows the following high-level model:\n```\nmerge (target, source)\n\n  foreach property of source\n\n    if property exists and is an object on both the target and the source\n\n      merge(target[property], source[property])\n\n    else\n\n      target[property] = source[property]\n```\n<br>  \n\nWhen the source object contains a property named `__proto__` defined with `Object.defineProperty()` , the condition that checks if the property exists and is an object on both the target and the source passes and the merge recurses with the target, being the prototype of `Object` and the source of `Object` as defined by the attacker. Properties are then copied on the `Object` prototype.\n\nClone operations are a special sub-class of unsafe recursive merges, which occur when a recursive merge is conducted on an empty object: `merge({},source)`.\n\n`lodash` and `Hoek` are examples of libraries susceptible to recursive merge attacks.\n\n### Property definition by path\n\nThere are a few JavaScript libraries that use an API to define property values on an object based on a given path. The function that is generally affected contains this signature: `theFunction(object, path, value)`\n\nIf the attacker can control the value of “path”, they can set this value to `__proto__.myValue`. `myValue` is then assigned to the prototype of the class of the object.\n\n## Types of attacks\n\nThere are a few methods by which Prototype Pollution can be manipulated:\n\n| Type |Origin  |Short description |\n|--|--|--|\n| **Denial of service (DoS)**|Client  |This is the most likely attack. <br>DoS occurs when `Object` holds generic functions that are implicitly called for various operations (for example, `toString` and `valueOf`). <br> The attacker pollutes `Object.prototype.someattr` and alters its state to an unexpected value such as `Int` or `Object`. In this case, the code fails and is likely to cause a denial of service.  <br>**For example:** if an attacker pollutes `Object.prototype.toString` by defining it as an integer, if the codebase at any point was reliant on `someobject.toString()` it would fail. |\n |**Remote Code Execution**|Client|Remote code execution is generally only possible in cases where the codebase evaluates a specific attribute of an object, and then executes that evaluation.<br>**For example:** `eval(someobject.someattr)`. In this case, if the attacker pollutes `Object.prototype.someattr` they are likely to be able to leverage this in order to execute code.|\n|**Property Injection**|Client|The attacker pollutes properties that the codebase relies on for their informative value, including security properties such as cookies or tokens.<br>  **For example:** if a codebase checks privileges for `someuser.isAdmin`, then when the attacker pollutes `Object.prototype.isAdmin` and sets it to equal `true`, they can then achieve admin privileges.|\n\n## Affected environments\n\nThe following environments are susceptible to a Prototype Pollution attack:\n\n-   Application server\n    \n-   Web server\n\n-   Web browser\n    \n\n## How to prevent\n\n1.  Freeze the prototype— use `Object.freeze (Object.prototype)`.\n    \n2.  Require schema validation of JSON input.\n    \n3.  Avoid using unsafe recursive merge functions.\n    \n4.  Consider using objects without prototypes (for example, `Object.create(null)`), breaking the prototype chain and preventing pollution.\n    \n5.  As a best practice use `Map` instead of `Object`.\n\n### For more information on this vulnerability type:\n\n[Arteau, Olivier. “JavaScript prototype pollution attack in NodeJS application.” GitHub, 26 May 2018](https://github.com/HoLyVieR/prototype-pollution-nsec18/blob/master/paper/JavaScript_prototype_pollution_attack_in_NodeJS.pdf)\n\n## Remediation\nUpgrade `axios` to version 0.30.3, 1.13.5 or higher.\n## References\n- [GitHub Commit](https://github.com/axios/axios/commit/28c721588c7a77e7503d0a434e016f852c597b57)\n- [GitHub PR](https://github.com/axios/axios/pull/7369)\n- [GitHub Release](https://github.com/axios/axios/releases/tag/v1.13.5)\n",
+      "epssDetails": {
+        "percentile": "0.10504",
+        "probability": "0.00036",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-25639"
+        ],
+        "CWE": [
+          "CWE-1321"
+        ],
+        "GHSA": [
+          "GHSA-43fc-jf86-j433"
+        ]
+      },
+      "packageName": "axios",
+      "proprietary": false,
+      "creationTime": "2026-02-10T09:21:34.642158Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-02-09T20:53:59Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-02-10T10:00:52.149660Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-02-19T18:14:16.688453Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "@paypal/paypal-server-sdk@0.5.2",
+        "@apimatic/axios-client-adapter@0.3.19",
+        "axios@1.13.1"
+      ],
+      "upgradePath": [
+        false,
+        "@paypal/paypal-server-sdk@0.5.2",
+        "@apimatic/axios-client-adapter@0.3.21",
+        "axios@1.13.6"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "axios",
+      "version": "1.13.1"
+    },
+    {
+      "id": "SNYK-JS-D3COLOR-1076592",
+      "title": "Regular Expression Denial of Service (ReDoS)",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:P",
+      "credit": [
+        "Yeting Li"
+      ],
+      "semver": {
+        "vulnerable": [
+          "<3.1.0"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "3.1.0"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "medium",
+      "cvssScore": 5.3,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "d3-color",
+      "references": [
+        {
+          "url": "https://github.com/d3/d3-color/pull/100",
+          "title": "Github PR"
+        },
+        {
+          "url": "https://github.com/d3/d3-color/pull/99",
+          "title": "Github PR"
+        },
+        {
+          "url": "https://github.com/d3/d3-color/pull/89",
+          "title": "GitHub PR"
+        },
+        {
+          "url": "https://github.com/d3/d3-color/releases/tag/v3.1.0",
+          "title": "Github Releases"
+        }
+      ],
+      "cvssDetails": [],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:P",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 5.3,
+          "cvssVersion": "3.1",
+          "modificationTime": "2024-03-06T14:04:38.134700Z"
+        }
+      ],
+      "description": "## Overview\n[d3-color](https://www.npmjs.org/package/d3-color) is a Color spaces! RGB, HSL, Cubehelix, Lab and HCL (Lch).\n\nAffected versions of this package are vulnerable to Regular Expression Denial of Service (ReDoS) via the `rgb()` and `hrc()` functions. \r\n\r\nPoC by Yeting Li: \r\n```\r\nvar d3Color = require(\"d3-color\")\r\n// d3Color.rgb(\"rgb(255,255,255)\")\r\n\r\nfunction build_blank(n) {\r\n    var ret = \"rgb(\"\r\n    for (var i = 0; i < n; i++) {\r\n        ret += \"1\"\r\n    }\r\n    return ret + \"!\";\r\n}\r\n\r\nfor(var i = 1; i <= 5000000; i++) {\r\n    if (i % 1000 == 0) {\r\n        var time = Date.now();\r\n        var attack_str = build_blank(i)\r\n        d3Color.rgb(attack_str)\r\n        var time_cost = Date.now() - time;\r\n        console.log(\"attack_str.length: \" + attack_str.length + \": \" + time_cost+\" ms\")\r\n    }\r\n}\r\n```\n\n## Details\n\nDenial of Service (DoS) describes a family of attacks, all aimed at making a system inaccessible to its original and legitimate users. There are many types of DoS attacks, ranging from trying to clog the network pipes to the system by generating a large volume of traffic from many machines (a Distributed Denial of Service - DDoS - attack) to sending crafted requests that cause a system to crash or take a disproportional amount of time to process.\n\nThe Regular expression Denial of Service (ReDoS) is a type of Denial of Service attack. Regular expressions are incredibly powerful, but they aren't very intuitive and can ultimately end up making it easy for attackers to take your site down.\n\nLet’s take the following regular expression as an example:\n```js\nregex = /A(B|C+)+D/\n```\n\nThis regular expression accomplishes the following:\n- `A` The string must start with the letter 'A'\n- `(B|C+)+` The string must then follow the letter A with either the letter 'B' or some number of occurrences of the letter 'C' (the `+` matches one or more times). The `+` at the end of this section states that we can look for one or more matches of this section.\n- `D` Finally, we ensure this section of the string ends with a 'D'\n\nThe expression would match inputs such as `ABBD`, `ABCCCCD`, `ABCBCCCD` and `ACCCCCD`\n\nIt most cases, it doesn't take very long for a regex engine to find a match:\n\n```bash\n$ time node -e '/A(B|C+)+D/.test(\"ACCCCCCCCCCCCCCCCCCCCCCCCCCCCD\")'\n0.04s user 0.01s system 95% cpu 0.052 total\n\n$ time node -e '/A(B|C+)+D/.test(\"ACCCCCCCCCCCCCCCCCCCCCCCCCCCCX\")'\n1.79s user 0.02s system 99% cpu 1.812 total\n```\n\nThe entire process of testing it against a 30 characters long string takes around ~52ms. But when given an invalid string, it takes nearly two seconds to complete the test, over ten times as long as it took to test a valid string. The dramatic difference is due to the way regular expressions get evaluated.\n\nMost Regex engines will work very similarly (with minor differences). The engine will match the first possible way to accept the current character and proceed to the next one. If it then fails to match the next one, it will backtrack and see if there was another way to digest the previous character. If it goes too far down the rabbit hole only to find out the string doesn’t match in the end, and if many characters have multiple valid regex paths, the number of backtracking steps can become very large, resulting in what is known as _catastrophic backtracking_.\n\nLet's look at how our expression runs into this problem, using a shorter string: \"ACCCX\". While it seems fairly straightforward, there are still four different ways that the engine could match those three C's:\n1. CCC\n2. CC+C\n3. C+CC\n4. C+C+C.\n\nThe engine has to try each of those combinations to see if any of them potentially match against the expression. When you combine that with the other steps the engine must take, we can use [RegEx 101 debugger](https://regex101.com/debugger) to see the engine has to take a total of 38 steps before it can determine the string doesn't match.\n\nFrom there, the number of steps the engine must use to validate a string just continues to grow.\n\n| String | Number of C's | Number of steps |\n| -------|-------------:| -----:|\n| ACCCX | 3 | 38\n| ACCCCX | 4 | 71\n| ACCCCCX | 5 | 136\n| ACCCCCCCCCCCCCCX | 14 | 65,553\n\n\nBy the time the string includes 14 C's, the engine has to take over 65,000 steps just to see if the string is valid. These extreme situations can cause them to work very slowly (exponentially related to input size, as shown above), allowing an attacker to exploit this and can cause the service to excessively consume CPU, resulting in a Denial of Service.\n\n## Remediation\nUpgrade `d3-color` to version 3.1.0 or higher.\n## References\n- [Github PR](https://github.com/d3/d3-color/pull/100)\n- [Github PR](https://github.com/d3/d3-color/pull/99)\n- [GitHub PR](https://github.com/d3/d3-color/pull/89)\n- [Github Releases](https://github.com/d3/d3-color/releases/tag/v3.1.0)\n",
+      "epssDetails": null,
+      "identifiers": {
+        "CVE": [],
+        "CWE": [
+          "CWE-400"
+        ]
+      },
+      "packageName": "d3-color",
+      "proprietary": true,
+      "creationTime": "2021-02-18T13:32:47.195986Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2021-02-18T13:30:50Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2021-07-05T14:17:56Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2024-03-06T14:04:38.134700Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "medium",
+      "from": [
+        "skypanelv2@1.0.0",
+        "react-simple-maps@3.0.0",
+        "d3-zoom@2.0.0",
+        "d3-interpolate@2.0.1",
+        "d3-color@2.0.0"
+      ],
+      "upgradePath": [],
+      "isUpgradable": false,
+      "isPatchable": false,
+      "name": "d3-color",
+      "version": "2.0.0"
+    },
+    {
+      "id": "SNYK-JS-D3COLOR-1076592",
+      "title": "Regular Expression Denial of Service (ReDoS)",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:P",
+      "credit": [
+        "Yeting Li"
+      ],
+      "semver": {
+        "vulnerable": [
+          "<3.1.0"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "3.1.0"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "medium",
+      "cvssScore": 5.3,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "d3-color",
+      "references": [
+        {
+          "url": "https://github.com/d3/d3-color/pull/100",
+          "title": "Github PR"
+        },
+        {
+          "url": "https://github.com/d3/d3-color/pull/99",
+          "title": "Github PR"
+        },
+        {
+          "url": "https://github.com/d3/d3-color/pull/89",
+          "title": "GitHub PR"
+        },
+        {
+          "url": "https://github.com/d3/d3-color/releases/tag/v3.1.0",
+          "title": "Github Releases"
+        }
+      ],
+      "cvssDetails": [],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:P",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 5.3,
+          "cvssVersion": "3.1",
+          "modificationTime": "2024-03-06T14:04:38.134700Z"
+        }
+      ],
+      "description": "## Overview\n[d3-color](https://www.npmjs.org/package/d3-color) is a Color spaces! RGB, HSL, Cubehelix, Lab and HCL (Lch).\n\nAffected versions of this package are vulnerable to Regular Expression Denial of Service (ReDoS) via the `rgb()` and `hrc()` functions. \r\n\r\nPoC by Yeting Li: \r\n```\r\nvar d3Color = require(\"d3-color\")\r\n// d3Color.rgb(\"rgb(255,255,255)\")\r\n\r\nfunction build_blank(n) {\r\n    var ret = \"rgb(\"\r\n    for (var i = 0; i < n; i++) {\r\n        ret += \"1\"\r\n    }\r\n    return ret + \"!\";\r\n}\r\n\r\nfor(var i = 1; i <= 5000000; i++) {\r\n    if (i % 1000 == 0) {\r\n        var time = Date.now();\r\n        var attack_str = build_blank(i)\r\n        d3Color.rgb(attack_str)\r\n        var time_cost = Date.now() - time;\r\n        console.log(\"attack_str.length: \" + attack_str.length + \": \" + time_cost+\" ms\")\r\n    }\r\n}\r\n```\n\n## Details\n\nDenial of Service (DoS) describes a family of attacks, all aimed at making a system inaccessible to its original and legitimate users. There are many types of DoS attacks, ranging from trying to clog the network pipes to the system by generating a large volume of traffic from many machines (a Distributed Denial of Service - DDoS - attack) to sending crafted requests that cause a system to crash or take a disproportional amount of time to process.\n\nThe Regular expression Denial of Service (ReDoS) is a type of Denial of Service attack. Regular expressions are incredibly powerful, but they aren't very intuitive and can ultimately end up making it easy for attackers to take your site down.\n\nLet’s take the following regular expression as an example:\n```js\nregex = /A(B|C+)+D/\n```\n\nThis regular expression accomplishes the following:\n- `A` The string must start with the letter 'A'\n- `(B|C+)+` The string must then follow the letter A with either the letter 'B' or some number of occurrences of the letter 'C' (the `+` matches one or more times). The `+` at the end of this section states that we can look for one or more matches of this section.\n- `D` Finally, we ensure this section of the string ends with a 'D'\n\nThe expression would match inputs such as `ABBD`, `ABCCCCD`, `ABCBCCCD` and `ACCCCCD`\n\nIt most cases, it doesn't take very long for a regex engine to find a match:\n\n```bash\n$ time node -e '/A(B|C+)+D/.test(\"ACCCCCCCCCCCCCCCCCCCCCCCCCCCCD\")'\n0.04s user 0.01s system 95% cpu 0.052 total\n\n$ time node -e '/A(B|C+)+D/.test(\"ACCCCCCCCCCCCCCCCCCCCCCCCCCCCX\")'\n1.79s user 0.02s system 99% cpu 1.812 total\n```\n\nThe entire process of testing it against a 30 characters long string takes around ~52ms. But when given an invalid string, it takes nearly two seconds to complete the test, over ten times as long as it took to test a valid string. The dramatic difference is due to the way regular expressions get evaluated.\n\nMost Regex engines will work very similarly (with minor differences). The engine will match the first possible way to accept the current character and proceed to the next one. If it then fails to match the next one, it will backtrack and see if there was another way to digest the previous character. If it goes too far down the rabbit hole only to find out the string doesn’t match in the end, and if many characters have multiple valid regex paths, the number of backtracking steps can become very large, resulting in what is known as _catastrophic backtracking_.\n\nLet's look at how our expression runs into this problem, using a shorter string: \"ACCCX\". While it seems fairly straightforward, there are still four different ways that the engine could match those three C's:\n1. CCC\n2. CC+C\n3. C+CC\n4. C+C+C.\n\nThe engine has to try each of those combinations to see if any of them potentially match against the expression. When you combine that with the other steps the engine must take, we can use [RegEx 101 debugger](https://regex101.com/debugger) to see the engine has to take a total of 38 steps before it can determine the string doesn't match.\n\nFrom there, the number of steps the engine must use to validate a string just continues to grow.\n\n| String | Number of C's | Number of steps |\n| -------|-------------:| -----:|\n| ACCCX | 3 | 38\n| ACCCCX | 4 | 71\n| ACCCCCX | 5 | 136\n| ACCCCCCCCCCCCCCX | 14 | 65,553\n\n\nBy the time the string includes 14 C's, the engine has to take over 65,000 steps just to see if the string is valid. These extreme situations can cause them to work very slowly (exponentially related to input size, as shown above), allowing an attacker to exploit this and can cause the service to excessively consume CPU, resulting in a Denial of Service.\n\n## Remediation\nUpgrade `d3-color` to version 3.1.0 or higher.\n## References\n- [Github PR](https://github.com/d3/d3-color/pull/100)\n- [Github PR](https://github.com/d3/d3-color/pull/99)\n- [GitHub PR](https://github.com/d3/d3-color/pull/89)\n- [Github Releases](https://github.com/d3/d3-color/releases/tag/v3.1.0)\n",
+      "epssDetails": null,
+      "identifiers": {
+        "CVE": [],
+        "CWE": [
+          "CWE-400"
+        ]
+      },
+      "packageName": "d3-color",
+      "proprietary": true,
+      "creationTime": "2021-02-18T13:32:47.195986Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2021-02-18T13:30:50Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2021-07-05T14:17:56Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2024-03-06T14:04:38.134700Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "medium",
+      "from": [
+        "skypanelv2@1.0.0",
+        "react-simple-maps@3.0.0",
+        "d3-zoom@2.0.0",
+        "d3-transition@2.0.0",
+        "d3-color@2.0.0"
+      ],
+      "upgradePath": [],
+      "isUpgradable": false,
+      "isPatchable": false,
+      "name": "d3-color",
+      "version": "2.0.0"
+    },
+    {
+      "id": "SNYK-JS-FASTXMLPARSER-15155603",
+      "title": "Uncaught Exception",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+      "credit": [
+        "mistersiddd"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=5.0.9 <5.3.4"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "5.3.4"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.7,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "fast-xml-parser",
+      "references": [
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/commit/4e387f61c4a5cef792f6a2f42467013290bf95dc",
+          "title": "GitHub Commit"
+        },
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/releases/tag/v5.3.4",
+          "title": "GitHub Release"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "medium",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+          "cvssV3BaseScore": 5.3,
+          "modificationTime": "2026-01-31T19:41:32.355966Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.7,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-02-27T10:12:53.997583Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-27T10:12:53.997583Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+          "assigner": "Red Hat",
+          "severity": "medium",
+          "baseScore": 5.3,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-31T19:41:32.355966Z"
+        }
+      ],
+      "description": "## Overview\n[fast-xml-parser](https://www.npmjs.org/package/fast-xml-parser) is a Validate XML, Parse XML, Build XML without C/C++ based libraries\n\nAffected versions of this package are vulnerable to Uncaught Exception in the numeric entity processing when parsing XML containing out-of-range entity code points. An attacker can cause the application to crash by submitting specially crafted XML input that triggers an uncaught exception.\n## Remediation\nUpgrade `fast-xml-parser` to version 5.3.4 or higher.\n## References\n- [GitHub Commit](https://github.com/NaturalIntelligence/fast-xml-parser/commit/4e387f61c4a5cef792f6a2f42467013290bf95dc)\n- [GitHub Release](https://github.com/NaturalIntelligence/fast-xml-parser/releases/tag/v5.3.4)\n",
+      "epssDetails": {
+        "percentile": "0.22203",
+        "probability": "0.00074",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-25128"
+        ],
+        "CWE": [
+          "CWE-248"
+        ],
+        "GHSA": [
+          "GHSA-37qj-frw5-hhjh"
+        ]
+      },
+      "packageName": "fast-xml-parser",
+      "proprietary": false,
+      "creationTime": "2026-01-30T16:22:52.546910Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-01-30T15:54:07Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-01-30T16:22:52.765753Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-02-27T10:12:53.997583Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "@aws-sdk/client-s3@3.927.0",
+        "@aws-sdk/core@3.927.0",
+        "@aws-sdk/xml-builder@3.921.0",
+        "fast-xml-parser@5.2.5"
+      ],
+      "upgradePath": [
+        false,
+        "@aws-sdk/client-s3@3.974.0",
+        "@aws-sdk/core@3.973.24",
+        "@aws-sdk/xml-builder@3.972.15",
+        "fast-xml-parser@5.5.8"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "fast-xml-parser",
+      "version": "5.2.5"
+    },
+    {
+      "id": "SNYK-JS-FASTXMLPARSER-15307668",
+      "title": "XML Entity Expansion",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+      "credit": [
+        "Byambadalai Sumiya"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=4.1.3 <4.5.4",
+          ">=5.0.0 <5.3.6"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "4.5.4",
+        "5.3.6"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.7,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "fast-xml-parser",
+      "references": [
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/commit/910dae5be2de2955e968558fadf6e8f74f117a77",
+          "title": "GitHub Commit"
+        },
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/releases/tag/v5.3.6",
+          "title": "GitHub Release"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-03-13T20:15:17.270402Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.7,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-02-27T10:07:01.274816Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-27T10:07:01.274816Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-13T20:15:17.270402Z"
+        }
+      ],
+      "description": "## Overview\n[fast-xml-parser](https://www.npmjs.org/package/fast-xml-parser) is a Validate XML, Parse XML, Build XML without C/C++ based libraries\n\nAffected versions of this package are vulnerable to XML Entity Expansion in `replaceEntitiesValue()` when handling excessive `DOCTYPE` input. An attacker can cause excessive resource consumption and make the application unresponsive by submitting malicious XML input with large text entities referenced multiple times. This is a bypass for Billion Laughs protection in `DocTypeReader.js`, which prevents excessive referencing within and entity, but doesn't prevent repeated expansion of large entities.\r\n\r\n## Workaround \r\nThis vulnerability can be mitigated by disabling `DOCTYPE` parsing using the `processEntities: false` option.\n## PoC\n```js\r\nconst { XMLParser } = require('fast-xml-parser');\r\n\r\nconst entity = 'A'.repeat(1000);\r\nconst refs = '&big;'.repeat(100);\r\nconst xml = `<!DOCTYPE foo [<!ENTITY big \"${entity}\">]><root>${refs}</root>`;\r\n\r\nconsole.time('parse');\r\nnew XMLParser().parse(xml);\r\nconsole.timeEnd('parse');\r\n```\n\n## Details\n\nDenial of Service (DoS) describes a family of attacks, all aimed at making a system inaccessible to its intended and legitimate users.\n\nUnlike other vulnerabilities, DoS attacks usually do not aim at breaching security. Rather, they are focused on making websites and services unavailable to genuine users resulting in downtime.\n\nOne popular Denial of Service vulnerability is DDoS (a Distributed Denial of Service), an attack that attempts to clog network pipes to the system by generating a large volume of traffic from many machines.\n\nWhen it comes to open source libraries, DoS vulnerabilities allow attackers to trigger such a crash or crippling of the service by using a flaw either in the application code or from the use of open source libraries.\n\nTwo common types of DoS vulnerabilities:\n\n* High CPU/Memory Consumption- An attacker sending crafted requests that could cause the system to take a disproportionate amount of time to process. For example, [commons-fileupload:commons-fileupload](https://security.snyk.io/vuln/SNYK-JAVA-COMMONSFILEUPLOAD-30082).\n\n* Crash - An attacker sending crafted requests that could cause the system to crash. For Example,  [npm `ws` package](https://snyk.io/vuln/npm:ws:20171108)\n\n## Remediation\nUpgrade `fast-xml-parser` to version 4.5.4, 5.3.6 or higher.\n## References\n- [GitHub Commit](https://github.com/NaturalIntelligence/fast-xml-parser/commit/910dae5be2de2955e968558fadf6e8f74f117a77)\n- [GitHub Release](https://github.com/NaturalIntelligence/fast-xml-parser/releases/tag/v5.3.6)\n",
+      "epssDetails": {
+        "percentile": "0.05399",
+        "probability": "0.00021",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-26278"
+        ],
+        "CWE": [
+          "CWE-776"
+        ],
+        "GHSA": [
+          "GHSA-jmr7-xgp7-cmfj"
+        ]
+      },
+      "packageName": "fast-xml-parser",
+      "proprietary": false,
+      "creationTime": "2026-02-18T07:37:33.687628Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-02-17T21:30:10Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-02-18T07:37:45.343890Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-03-13T20:15:17.270402Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "@aws-sdk/client-s3@3.927.0",
+        "@aws-sdk/core@3.927.0",
+        "@aws-sdk/xml-builder@3.921.0",
+        "fast-xml-parser@5.2.5"
+      ],
+      "upgradePath": [
+        false,
+        "@aws-sdk/client-s3@3.974.0",
+        "@aws-sdk/core@3.973.24",
+        "@aws-sdk/xml-builder@3.972.15",
+        "fast-xml-parser@5.5.8"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "fast-xml-parser",
+      "version": "5.2.5"
+    },
+    {
+      "id": "SNYK-JS-FASTXMLPARSER-15324289",
+      "title": "Incorrect Regular Expression",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:H/A:N/E:P",
+      "credit": [
+        "ochko"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=4.1.3 <4.5.4",
+          ">=5.0.0 <5.3.5"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "4.5.4",
+        "5.3.5"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 7.8,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "fast-xml-parser",
+      "references": [
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/commit/943ef0eb1b2d3284e72dd74f44a042ee9f07026e",
+          "title": "GitHub Commit"
+        },
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/commit/ddcd0acf26ddd682cb0dc15a2bd6aa3b96bb1e69",
+          "title": "GitHub Commit"
+        },
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/releases/tag/v5.3.5",
+          "title": "GitHub Release"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:L",
+          "cvssV3BaseScore": 7.1,
+          "modificationTime": "2026-03-13T20:15:25.282361Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:N/SC:L/SI:H/SA:N/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.8,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-02-27T10:06:26.699309Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:H/A:N/E:P",
+          "assigner": "Snyk",
+          "severity": "critical",
+          "baseScore": 9.3,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-27T10:06:26.699309Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:L",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 7.1,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-13T20:15:25.282361Z"
+        }
+      ],
+      "description": "## Overview\n[fast-xml-parser](https://www.npmjs.org/package/fast-xml-parser) is a Validate XML, Parse XML, Build XML without C/C++ based libraries\n\nAffected versions of this package are vulnerable to Incorrect Regular Expression in the entity parsing RegEx in DOCTYPE declarations. An attacker can inject arbitrary values that override built-in XML entities by crafting entity names containing `.`, which is interpreted as a regex wildcard, allowing malicious content to be substituted in place of standard entities when the XML is parsed and subsequently rendered or used in sensitive contexts.\n## Remediation\nUpgrade `fast-xml-parser` to version 4.5.4, 5.3.5 or higher.\n## References\n- [GitHub Commit](https://github.com/NaturalIntelligence/fast-xml-parser/commit/943ef0eb1b2d3284e72dd74f44a042ee9f07026e)\n- [GitHub Commit](https://github.com/NaturalIntelligence/fast-xml-parser/commit/ddcd0acf26ddd682cb0dc15a2bd6aa3b96bb1e69)\n- [GitHub Release](https://github.com/NaturalIntelligence/fast-xml-parser/releases/tag/v5.3.5)\n",
+      "epssDetails": {
+        "percentile": "0.02053",
+        "probability": "0.00013",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-25896"
+        ],
+        "CWE": [
+          "CWE-185"
+        ],
+        "GHSA": [
+          "GHSA-m7jm-9gc2-mpf2"
+        ]
+      },
+      "packageName": "fast-xml-parser",
+      "proprietary": false,
+      "creationTime": "2026-02-20T19:42:29.893187Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-02-20T18:23:54Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-02-20T19:42:30.175287Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-03-13T20:15:25.282361Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "@aws-sdk/client-s3@3.927.0",
+        "@aws-sdk/core@3.927.0",
+        "@aws-sdk/xml-builder@3.921.0",
+        "fast-xml-parser@5.2.5"
+      ],
+      "upgradePath": [
+        false,
+        "@aws-sdk/client-s3@3.974.0",
+        "@aws-sdk/core@3.973.24",
+        "@aws-sdk/xml-builder@3.972.15",
+        "fast-xml-parser@5.5.8"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "fast-xml-parser",
+      "version": "5.2.5"
+    },
+    {
+      "id": "SNYK-JS-FASTXMLPARSER-15353391",
+      "title": "Buffer Overflow",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+      "credit": [
+        "Unknown"
+      ],
+      "semver": {
+        "vulnerable": [
+          "<4.5.4",
+          ">=5.0.0 <5.3.8"
+        ]
+      },
+      "exploit": "Not Defined",
+      "fixedIn": [
+        "4.5.4",
+        "5.3.8"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "medium",
+      "cvssScore": 6.9,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "fast-xml-parser",
+      "references": [
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/commit/c13a961910f14986295dd28484eee830fa1a0e8a",
+          "title": "GitHub Commit"
+        },
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/pull/791",
+          "title": "GitHub PR"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "NVD",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-02-28T01:19:40.655542Z"
+        },
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-03-13T20:09:24.997326Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 6.9,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-02-26T14:00:41.593503Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 5.3,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-26T14:00:41.593503Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "NVD",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-28T01:19:40.655542Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-13T20:09:24.997326Z"
+        }
+      ],
+      "description": "## Overview\n[fast-xml-parser](https://www.npmjs.org/package/fast-xml-parser) is a Validate XML, Parse XML, Build XML without C/C++ based libraries\n\nAffected versions of this package are vulnerable to Buffer Overflow via the `XMLBuilder` when `preserveOrder:true` is set. An attacker can cause the application to crash by providing specially crafted input data. \r\n\r\n## Workaround\r\n\r\nThis vulnerability can be mitigated by using `preserveOrder:false` or by validating input data before passing it to the builder.\n## Remediation\nUpgrade `fast-xml-parser` to version 4.5.4, 5.3.8 or higher.\n## References\n- [GitHub Commit](https://github.com/NaturalIntelligence/fast-xml-parser/commit/c13a961910f14986295dd28484eee830fa1a0e8a)\n- [GitHub PR](https://github.com/NaturalIntelligence/fast-xml-parser/pull/791)\n",
+      "epssDetails": {
+        "percentile": "0.15367",
+        "probability": "0.00050",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-27942"
+        ],
+        "CWE": [
+          "CWE-120"
+        ],
+        "GHSA": [
+          "GHSA-fj3w-jwp8-x2g3"
+        ]
+      },
+      "packageName": "fast-xml-parser",
+      "proprietary": false,
+      "creationTime": "2026-02-26T08:28:03.435013Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-02-26T06:18:31Z",
+      "exploitDetails": {
+        "sources": [],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Not Defined",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Not Defined",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-02-26T14:00:41.564814Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-03-13T20:09:24.997326Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "medium",
+      "from": [
+        "skypanelv2@1.0.0",
+        "@aws-sdk/client-s3@3.927.0",
+        "@aws-sdk/core@3.927.0",
+        "@aws-sdk/xml-builder@3.921.0",
+        "fast-xml-parser@5.2.5"
+      ],
+      "upgradePath": [
+        false,
+        "@aws-sdk/client-s3@3.974.0",
+        "@aws-sdk/core@3.973.24",
+        "@aws-sdk/xml-builder@3.972.15",
+        "fast-xml-parser@5.5.8"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "fast-xml-parser",
+      "version": "5.2.5"
+    },
+    {
+      "id": "SNYK-JS-FASTXMLPARSER-15677840",
+      "title": "XML Entity Expansion",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+      "credit": [
+        "deprrous"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=4.0.0-beta.0 <5.5.6"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "5.5.6"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.7,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "fast-xml-parser",
+      "references": [
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/commit/bd26122c838e6a55e7d7ac49b4ccc01a49999a01",
+          "title": "GitHub Commit"
+        },
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/releases/tag/v5.5.6",
+          "title": "GitHub Release"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-03-23T01:00:34.018587Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.7,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-03-18T05:05:04.042823Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-18T05:05:04.042823Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-23T01:00:34.018587Z"
+        }
+      ],
+      "description": "## Overview\n[fast-xml-parser](https://www.npmjs.org/package/fast-xml-parser) is a Validate XML, Parse XML, Build XML without C/C++ based libraries\n\nAffected versions of this package are vulnerable to XML Entity Expansion in the `replaceEntitiesValue()` function, which doesn't protect unlimited expansion of numeric entities the way it does DOCTYPE data (as described and fixed for [CVE-2026-26278](https://security.snyk.io/vuln/SNYK-JS-FASTXMLPARSER-15307668)). An attacker can exhaust system memory and CPU resources by submitting XML input containing a large number of numeric character references - `&#NNN;` and `&#xHH;`.\r\n\r\n**Note:** This is a bypass for the fix to the DOCTYPE expansion vulnerability in 5.3.6.\n\n## Details\n\nDenial of Service (DoS) describes a family of attacks, all aimed at making a system inaccessible to its intended and legitimate users.\n\nUnlike other vulnerabilities, DoS attacks usually do not aim at breaching security. Rather, they are focused on making websites and services unavailable to genuine users resulting in downtime.\n\nOne popular Denial of Service vulnerability is DDoS (a Distributed Denial of Service), an attack that attempts to clog network pipes to the system by generating a large volume of traffic from many machines.\n\nWhen it comes to open source libraries, DoS vulnerabilities allow attackers to trigger such a crash or crippling of the service by using a flaw either in the application code or from the use of open source libraries.\n\nTwo common types of DoS vulnerabilities:\n\n* High CPU/Memory Consumption- An attacker sending crafted requests that could cause the system to take a disproportionate amount of time to process. For example, [commons-fileupload:commons-fileupload](https://security.snyk.io/vuln/SNYK-JAVA-COMMONSFILEUPLOAD-30082).\n\n* Crash - An attacker sending crafted requests that could cause the system to crash. For Example,  [npm `ws` package](https://snyk.io/vuln/npm:ws:20171108)\n\n## Remediation\nUpgrade `fast-xml-parser` to version 5.5.6 or higher.\n## References\n- [GitHub Commit](https://github.com/NaturalIntelligence/fast-xml-parser/commit/bd26122c838e6a55e7d7ac49b4ccc01a49999a01)\n- [GitHub Release](https://github.com/NaturalIntelligence/fast-xml-parser/releases/tag/v5.5.6)\n",
+      "epssDetails": {
+        "percentile": "0.11183",
+        "probability": "0.00038",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-33036"
+        ],
+        "CWE": [
+          "CWE-776"
+        ],
+        "GHSA": [
+          "GHSA-8gc5-j5rx-235r"
+        ]
+      },
+      "packageName": "fast-xml-parser",
+      "proprietary": false,
+      "creationTime": "2026-03-18T05:04:09.526094Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-03-17T19:45:41Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-03-18T05:04:09.832483Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-03-23T01:00:34.018587Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "@aws-sdk/client-s3@3.927.0",
+        "@aws-sdk/core@3.927.0",
+        "@aws-sdk/xml-builder@3.921.0",
+        "fast-xml-parser@5.2.5"
+      ],
+      "upgradePath": [
+        false,
+        "@aws-sdk/client-s3@3.974.0",
+        "@aws-sdk/core@3.973.24",
+        "@aws-sdk/xml-builder@3.972.15",
+        "fast-xml-parser@5.5.8"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "fast-xml-parser",
+      "version": "5.2.5"
+    },
+    {
+      "id": "SNYK-JS-FASTXMLPARSER-15699647",
+      "title": "Improper Validation of Specified Quantity in Input",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+      "credit": [
+        "restriction"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=4.0.0-beta.3 <5.5.7"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "5.5.7"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.2,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "fast-xml-parser",
+      "references": [
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/security/advisories/GHSA-jp2q-39xq-3w4g",
+          "title": "GitHub Advisory"
+        },
+        {
+          "url": "https://github.com/NaturalIntelligence/fast-xml-parser/commit/239b64aa1fc5c5455ddebbbb54a187eb68c9fdb7",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.2,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-03-20T08:24:37.713849Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 5.9,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-20T08:24:37.713849Z"
+        }
+      ],
+      "description": "## Overview\n[fast-xml-parser](https://www.npmjs.org/package/fast-xml-parser) is a Validate XML, Parse XML, Build XML without C/C++ based libraries\n\nAffected versions of this package are vulnerable to Improper Validation of Specified Quantity in Input in the `DocTypeReader` component when the `maxEntityCount` or `maxEntitySize` configuration options are explicitly set to 0. Due to JavaScript's falsy evaluation, the intended limits are bypassed. An attacker can cause unbounded entity expansion and exhaust server memory by supplying crafted XML input containing numerous large entities.\r\n\r\n**Note:**\r\n\r\nThis is only exploitable if the application is configured with `processEntities` enabled and either `maxEntityCount` or `maxEntitySize` set to 0.\n## PoC\n```js\r\nconst { XMLParser } = require(\"fast-xml-parser\");\r\n\r\n// Developer intends: \"no entities allowed at all\"\r\nconst parser = new XMLParser({\r\n  processEntities: {\r\n    enabled: true,\r\n    maxEntityCount: 0,    // should mean \"zero entities allowed\"\r\n    maxEntitySize: 0       // should mean \"zero-length entities only\"\r\n  }\r\n});\r\n\r\n// Generate XML with many large entities\r\nlet entities = \"\";\r\nfor (let i = 0; i < 1000; i++) {\r\n  entities += `<!ENTITY e${i} \"${\"A\".repeat(100000)}\">`;\r\n}\r\n\r\nconst xml = `<?xml version=\"1.0\"?>\r\n<!DOCTYPE foo [\r\n  ${entities}\r\n]>\r\n<foo>&e0;</foo>`;\r\n\r\n// This should throw \"Entity count exceeds maximum\" but does not\r\ntry {\r\n  const result = parser.parse(xml);\r\n  console.log(\"VULNERABLE: parsed without error, entities bypassed limits\");\r\n} catch (e) {\r\n  console.log(\"SAFE:\", e.message);\r\n}\r\n\r\n// Control test: setting maxEntityCount to 1 correctly blocks\r\nconst safeParser = new XMLParser({\r\n  processEntities: {\r\n    enabled: true,\r\n    maxEntityCount: 1,\r\n    maxEntitySize: 100\r\n  }\r\n});\r\n\r\ntry {\r\n  safeParser.parse(xml);\r\n  console.log(\"ERROR: should have thrown\");\r\n} catch (e) {\r\n  console.log(\"CONTROL:\", e.message);  // \"Entity count (2) exceeds maximum allowed (1)\"\r\n}\r\n```\n## Remediation\nUpgrade `fast-xml-parser` to version 5.5.7 or higher.\n## References\n- [GitHub Advisory](https://github.com/NaturalIntelligence/fast-xml-parser/security/advisories/GHSA-jp2q-39xq-3w4g)\n- [GitHub Commit](https://github.com/NaturalIntelligence/fast-xml-parser/commit/239b64aa1fc5c5455ddebbbb54a187eb68c9fdb7)\n",
+      "epssDetails": null,
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-33349"
+        ],
+        "CWE": [
+          "CWE-1284"
+        ],
+        "GHSA": [
+          "GHSA-jp2q-39xq-3w4g"
+        ]
+      },
+      "packageName": "fast-xml-parser",
+      "proprietary": false,
+      "creationTime": "2026-03-20T08:23:40.277528Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-03-19T19:13:13Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-03-20T08:23:40.494944Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-03-20T08:24:37.713849Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "@aws-sdk/client-s3@3.927.0",
+        "@aws-sdk/core@3.927.0",
+        "@aws-sdk/xml-builder@3.921.0",
+        "fast-xml-parser@5.2.5"
+      ],
+      "upgradePath": [
+        false,
+        "@aws-sdk/client-s3@3.974.0",
+        "@aws-sdk/core@3.973.24",
+        "@aws-sdk/xml-builder@3.972.15",
+        "fast-xml-parser@5.5.8"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "fast-xml-parser",
+      "version": "5.2.5"
+    },
+    {
+      "id": "SNYK-JS-LODASH-15053838",
+      "title": "Prototype Pollution",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L",
+      "credit": [
+        "lukas-eu"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=4.0.0 <4.17.23"
+        ]
+      },
+      "exploit": "Not Defined",
+      "fixedIn": [
+        "4.17.23"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "medium",
+      "cvssScore": 6.9,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "lodash",
+      "references": [
+        {
+          "url": "https://github.com/lodash/lodash/commit/edadd452146f7e4bad4ea684e955708931d84d81",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "SUSE",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+          "cvssV3BaseScore": 8.2,
+          "modificationTime": "2026-02-12T11:04:11.049925Z"
+        },
+        {
+          "assigner": "NVD",
+          "severity": "medium",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+          "cvssV3BaseScore": 5.3,
+          "modificationTime": "2026-02-18T01:16:59.766406Z"
+        },
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+          "cvssV3BaseScore": 8.2,
+          "modificationTime": "2026-03-22T07:44:59.510091Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:L/SC:N/SI:N/SA:N",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 6.9,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-01-22T07:08:27.188933Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 6.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-22T07:08:27.188933Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+          "assigner": "SUSE",
+          "severity": "high",
+          "baseScore": 8.2,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-12T11:04:11.049925Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+          "assigner": "NVD",
+          "severity": "medium",
+          "baseScore": 5.3,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-18T01:16:59.766406Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 8.2,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-22T07:44:59.510091Z"
+        }
+      ],
+      "description": "## Overview\n[lodash](https://www.npmjs.com/package/lodash) is a modern JavaScript utility library delivering modularity, performance, & extras.\n\nAffected versions of this package are vulnerable to Prototype Pollution via the `_.unset` and `_.omit` functions. An attacker can delete methods held in properties of global prototypes but cannot overwrite those properties.\n\n## Details\n\nPrototype Pollution is a vulnerability affecting JavaScript. Prototype Pollution refers to the ability to inject properties into existing JavaScript language construct prototypes, such as objects. JavaScript allows all Object attributes to be altered, including their magical attributes such as `__proto__`, `constructor` and `prototype`. An attacker manipulates these attributes to overwrite, or pollute, a JavaScript application object prototype of the base object by injecting other values.  Properties on the `Object.prototype` are then inherited by all the JavaScript objects through the prototype chain. When that happens, this leads to either denial of service by triggering JavaScript exceptions, or it tampers with the application source code to force the code path that the attacker injects, thereby leading to remote code execution.\n\nThere are two main ways in which the pollution of prototypes occurs:\n\n-   Unsafe `Object` recursive merge\n    \n-   Property definition by path\n    \n\n### Unsafe Object recursive merge\n\nThe logic of a vulnerable recursive merge function follows the following high-level model:\n```\nmerge (target, source)\n\n  foreach property of source\n\n    if property exists and is an object on both the target and the source\n\n      merge(target[property], source[property])\n\n    else\n\n      target[property] = source[property]\n```\n<br>  \n\nWhen the source object contains a property named `__proto__` defined with `Object.defineProperty()` , the condition that checks if the property exists and is an object on both the target and the source passes and the merge recurses with the target, being the prototype of `Object` and the source of `Object` as defined by the attacker. Properties are then copied on the `Object` prototype.\n\nClone operations are a special sub-class of unsafe recursive merges, which occur when a recursive merge is conducted on an empty object: `merge({},source)`.\n\n`lodash` and `Hoek` are examples of libraries susceptible to recursive merge attacks.\n\n### Property definition by path\n\nThere are a few JavaScript libraries that use an API to define property values on an object based on a given path. The function that is generally affected contains this signature: `theFunction(object, path, value)`\n\nIf the attacker can control the value of “path”, they can set this value to `__proto__.myValue`. `myValue` is then assigned to the prototype of the class of the object.\n\n## Types of attacks\n\nThere are a few methods by which Prototype Pollution can be manipulated:\n\n| Type |Origin  |Short description |\n|--|--|--|\n| **Denial of service (DoS)**|Client  |This is the most likely attack. <br>DoS occurs when `Object` holds generic functions that are implicitly called for various operations (for example, `toString` and `valueOf`). <br> The attacker pollutes `Object.prototype.someattr` and alters its state to an unexpected value such as `Int` or `Object`. In this case, the code fails and is likely to cause a denial of service.  <br>**For example:** if an attacker pollutes `Object.prototype.toString` by defining it as an integer, if the codebase at any point was reliant on `someobject.toString()` it would fail. |\n |**Remote Code Execution**|Client|Remote code execution is generally only possible in cases where the codebase evaluates a specific attribute of an object, and then executes that evaluation.<br>**For example:** `eval(someobject.someattr)`. In this case, if the attacker pollutes `Object.prototype.someattr` they are likely to be able to leverage this in order to execute code.|\n|**Property Injection**|Client|The attacker pollutes properties that the codebase relies on for their informative value, including security properties such as cookies or tokens.<br>  **For example:** if a codebase checks privileges for `someuser.isAdmin`, then when the attacker pollutes `Object.prototype.isAdmin` and sets it to equal `true`, they can then achieve admin privileges.|\n\n## Affected environments\n\nThe following environments are susceptible to a Prototype Pollution attack:\n\n-   Application server\n    \n-   Web server\n\n-   Web browser\n    \n\n## How to prevent\n\n1.  Freeze the prototype— use `Object.freeze (Object.prototype)`.\n    \n2.  Require schema validation of JSON input.\n    \n3.  Avoid using unsafe recursive merge functions.\n    \n4.  Consider using objects without prototypes (for example, `Object.create(null)`), breaking the prototype chain and preventing pollution.\n    \n5.  As a best practice use `Map` instead of `Object`.\n\n### For more information on this vulnerability type:\n\n[Arteau, Olivier. “JavaScript prototype pollution attack in NodeJS application.” GitHub, 26 May 2018](https://github.com/HoLyVieR/prototype-pollution-nsec18/blob/master/paper/JavaScript_prototype_pollution_attack_in_NodeJS.pdf)\n\n## Remediation\nUpgrade `lodash` to version 4.17.23 or higher.\n## References\n- [GitHub Commit](https://github.com/lodash/lodash/commit/edadd452146f7e4bad4ea684e955708931d84d81)\n",
+      "epssDetails": {
+        "percentile": "0.07863",
+        "probability": "0.00028",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2025-13465"
+        ],
+        "CWE": [
+          "CWE-1321"
+        ],
+        "GHSA": [
+          "GHSA-xxjr-mmjv-4gpg"
+        ]
+      },
+      "packageName": "lodash",
+      "proprietary": false,
+      "creationTime": "2026-01-22T07:06:24.683701Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-01-21T23:01:22Z",
+      "exploitDetails": {
+        "sources": [],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Not Defined",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Not Defined",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-01-22T07:08:27.179012Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-03-22T07:44:59.510091Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "medium",
+      "from": [
+        "skypanelv2@1.0.0",
+        "express-validator@7.3.0",
+        "lodash@4.17.21"
+      ],
+      "upgradePath": [
+        false,
+        "express-validator@7.3.0",
+        "lodash@4.17.23"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "lodash",
+      "version": "4.17.21"
+    },
+    {
+      "id": "SNYK-JS-LODASH-15053838",
+      "title": "Prototype Pollution",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L",
+      "credit": [
+        "lukas-eu"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=4.0.0 <4.17.23"
+        ]
+      },
+      "exploit": "Not Defined",
+      "fixedIn": [
+        "4.17.23"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "medium",
+      "cvssScore": 6.9,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "lodash",
+      "references": [
+        {
+          "url": "https://github.com/lodash/lodash/commit/edadd452146f7e4bad4ea684e955708931d84d81",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "SUSE",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+          "cvssV3BaseScore": 8.2,
+          "modificationTime": "2026-02-12T11:04:11.049925Z"
+        },
+        {
+          "assigner": "NVD",
+          "severity": "medium",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+          "cvssV3BaseScore": 5.3,
+          "modificationTime": "2026-02-18T01:16:59.766406Z"
+        },
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+          "cvssV3BaseScore": 8.2,
+          "modificationTime": "2026-03-22T07:44:59.510091Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:L/SC:N/SI:N/SA:N",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 6.9,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-01-22T07:08:27.188933Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 6.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-22T07:08:27.188933Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+          "assigner": "SUSE",
+          "severity": "high",
+          "baseScore": 8.2,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-12T11:04:11.049925Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+          "assigner": "NVD",
+          "severity": "medium",
+          "baseScore": 5.3,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-18T01:16:59.766406Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 8.2,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-22T07:44:59.510091Z"
+        }
+      ],
+      "description": "## Overview\n[lodash](https://www.npmjs.com/package/lodash) is a modern JavaScript utility library delivering modularity, performance, & extras.\n\nAffected versions of this package are vulnerable to Prototype Pollution via the `_.unset` and `_.omit` functions. An attacker can delete methods held in properties of global prototypes but cannot overwrite those properties.\n\n## Details\n\nPrototype Pollution is a vulnerability affecting JavaScript. Prototype Pollution refers to the ability to inject properties into existing JavaScript language construct prototypes, such as objects. JavaScript allows all Object attributes to be altered, including their magical attributes such as `__proto__`, `constructor` and `prototype`. An attacker manipulates these attributes to overwrite, or pollute, a JavaScript application object prototype of the base object by injecting other values.  Properties on the `Object.prototype` are then inherited by all the JavaScript objects through the prototype chain. When that happens, this leads to either denial of service by triggering JavaScript exceptions, or it tampers with the application source code to force the code path that the attacker injects, thereby leading to remote code execution.\n\nThere are two main ways in which the pollution of prototypes occurs:\n\n-   Unsafe `Object` recursive merge\n    \n-   Property definition by path\n    \n\n### Unsafe Object recursive merge\n\nThe logic of a vulnerable recursive merge function follows the following high-level model:\n```\nmerge (target, source)\n\n  foreach property of source\n\n    if property exists and is an object on both the target and the source\n\n      merge(target[property], source[property])\n\n    else\n\n      target[property] = source[property]\n```\n<br>  \n\nWhen the source object contains a property named `__proto__` defined with `Object.defineProperty()` , the condition that checks if the property exists and is an object on both the target and the source passes and the merge recurses with the target, being the prototype of `Object` and the source of `Object` as defined by the attacker. Properties are then copied on the `Object` prototype.\n\nClone operations are a special sub-class of unsafe recursive merges, which occur when a recursive merge is conducted on an empty object: `merge({},source)`.\n\n`lodash` and `Hoek` are examples of libraries susceptible to recursive merge attacks.\n\n### Property definition by path\n\nThere are a few JavaScript libraries that use an API to define property values on an object based on a given path. The function that is generally affected contains this signature: `theFunction(object, path, value)`\n\nIf the attacker can control the value of “path”, they can set this value to `__proto__.myValue`. `myValue` is then assigned to the prototype of the class of the object.\n\n## Types of attacks\n\nThere are a few methods by which Prototype Pollution can be manipulated:\n\n| Type |Origin  |Short description |\n|--|--|--|\n| **Denial of service (DoS)**|Client  |This is the most likely attack. <br>DoS occurs when `Object` holds generic functions that are implicitly called for various operations (for example, `toString` and `valueOf`). <br> The attacker pollutes `Object.prototype.someattr` and alters its state to an unexpected value such as `Int` or `Object`. In this case, the code fails and is likely to cause a denial of service.  <br>**For example:** if an attacker pollutes `Object.prototype.toString` by defining it as an integer, if the codebase at any point was reliant on `someobject.toString()` it would fail. |\n |**Remote Code Execution**|Client|Remote code execution is generally only possible in cases where the codebase evaluates a specific attribute of an object, and then executes that evaluation.<br>**For example:** `eval(someobject.someattr)`. In this case, if the attacker pollutes `Object.prototype.someattr` they are likely to be able to leverage this in order to execute code.|\n|**Property Injection**|Client|The attacker pollutes properties that the codebase relies on for their informative value, including security properties such as cookies or tokens.<br>  **For example:** if a codebase checks privileges for `someuser.isAdmin`, then when the attacker pollutes `Object.prototype.isAdmin` and sets it to equal `true`, they can then achieve admin privileges.|\n\n## Affected environments\n\nThe following environments are susceptible to a Prototype Pollution attack:\n\n-   Application server\n    \n-   Web server\n\n-   Web browser\n    \n\n## How to prevent\n\n1.  Freeze the prototype— use `Object.freeze (Object.prototype)`.\n    \n2.  Require schema validation of JSON input.\n    \n3.  Avoid using unsafe recursive merge functions.\n    \n4.  Consider using objects without prototypes (for example, `Object.create(null)`), breaking the prototype chain and preventing pollution.\n    \n5.  As a best practice use `Map` instead of `Object`.\n\n### For more information on this vulnerability type:\n\n[Arteau, Olivier. “JavaScript prototype pollution attack in NodeJS application.” GitHub, 26 May 2018](https://github.com/HoLyVieR/prototype-pollution-nsec18/blob/master/paper/JavaScript_prototype_pollution_attack_in_NodeJS.pdf)\n\n## Remediation\nUpgrade `lodash` to version 4.17.23 or higher.\n## References\n- [GitHub Commit](https://github.com/lodash/lodash/commit/edadd452146f7e4bad4ea684e955708931d84d81)\n",
+      "epssDetails": {
+        "percentile": "0.07863",
+        "probability": "0.00028",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2025-13465"
+        ],
+        "CWE": [
+          "CWE-1321"
+        ],
+        "GHSA": [
+          "GHSA-xxjr-mmjv-4gpg"
+        ]
+      },
+      "packageName": "lodash",
+      "proprietary": false,
+      "creationTime": "2026-01-22T07:06:24.683701Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-01-21T23:01:22Z",
+      "exploitDetails": {
+        "sources": [],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Not Defined",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Not Defined",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-01-22T07:08:27.179012Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-03-22T07:44:59.510091Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "medium",
+      "from": [
+        "skypanelv2@1.0.0",
+        "recharts@2.15.4",
+        "lodash@4.17.21"
+      ],
+      "upgradePath": [
+        false,
+        "recharts@2.15.4",
+        "lodash@4.17.23"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "lodash",
+      "version": "4.17.21"
+    },
+    {
+      "id": "SNYK-JS-MULTER-15365916",
+      "title": "Missing Release of Resource after Effective Lifetime",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "credit": [
+        "nawin23"
+      ],
+      "semver": {
+        "vulnerable": [
+          "<2.1.0"
+        ]
+      },
+      "exploit": "Not Defined",
+      "fixedIn": [
+        "2.1.0"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.7,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "multer",
+      "references": [
+        {
+          "url": "https://github.com/expressjs/multer/commit/cccf0fe0e64150c4f42ccf6654165c0d66b9adab",
+          "title": "GitHub Commit"
+        },
+        {
+          "url": "https://cna.openjsf.org/security-advisories.html",
+          "title": "Vendor Advisory"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-03-03T05:26:49.585216Z"
+        },
+        {
+          "assigner": "NVD",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-03-20T01:23:24.258319Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.7,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-03-01T09:01:57.384861Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-01T09:01:57.384861Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-03T05:26:49.585216Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "NVD",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-20T01:23:24.258319Z"
+        }
+      ],
+      "description": "## Overview\n\nAffected versions of this package are vulnerable to Missing Release of Resource after Effective Lifetime in the `makeMiddleware()` function, when dropping a connection during file upload. An attacker can cause resource exhaustion.\n\n## Details\n\nDenial of Service (DoS) describes a family of attacks, all aimed at making a system inaccessible to its intended and legitimate users.\n\nUnlike other vulnerabilities, DoS attacks usually do not aim at breaching security. Rather, they are focused on making websites and services unavailable to genuine users resulting in downtime.\n\nOne popular Denial of Service vulnerability is DDoS (a Distributed Denial of Service), an attack that attempts to clog network pipes to the system by generating a large volume of traffic from many machines.\n\nWhen it comes to open source libraries, DoS vulnerabilities allow attackers to trigger such a crash or crippling of the service by using a flaw either in the application code or from the use of open source libraries.\n\nTwo common types of DoS vulnerabilities:\n\n* High CPU/Memory Consumption- An attacker sending crafted requests that could cause the system to take a disproportionate amount of time to process. For example, [commons-fileupload:commons-fileupload](https://security.snyk.io/vuln/SNYK-JAVA-COMMONSFILEUPLOAD-30082).\n\n* Crash - An attacker sending crafted requests that could cause the system to crash. For Example,  [npm `ws` package](https://snyk.io/vuln/npm:ws:20171108)\n\n## Remediation\nUpgrade `multer` to version 2.1.0 or higher.\n## References\n- [GitHub Commit](https://github.com/expressjs/multer/commit/cccf0fe0e64150c4f42ccf6654165c0d66b9adab)\n- [Vendor Advisory](https://cna.openjsf.org/security-advisories.html)\n",
+      "epssDetails": {
+        "percentile": "0.03961",
+        "probability": "0.00017",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-2359"
+        ],
+        "CWE": [
+          "CWE-772"
+        ],
+        "GHSA": [
+          "GHSA-v52c-386h-88mc"
+        ]
+      },
+      "packageName": "multer",
+      "proprietary": false,
+      "creationTime": "2026-03-01T08:36:10.027641Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-03-01T01:18:27Z",
+      "exploitDetails": {
+        "sources": [],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Not Defined",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Not Defined",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-03-01T09:01:57.372756Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-03-20T01:23:24.258319Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "multer@2.0.2"
+      ],
+      "upgradePath": [
+        false,
+        "multer@2.1.0"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "multer",
+      "version": "2.0.2"
+    },
+    {
+      "id": "SNYK-JS-MULTER-15365918",
+      "title": "Incomplete Cleanup",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "credit": [
+        "Ethan Kim"
+      ],
+      "semver": {
+        "vulnerable": [
+          "<2.1.0"
+        ]
+      },
+      "exploit": "Not Defined",
+      "fixedIn": [
+        "2.1.0"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.7,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "multer",
+      "references": [
+        {
+          "url": "https://github.com/expressjs/multer/commit/739919097dde3921ec31b930e4b9025036fa74ee",
+          "title": "GitHub Commit"
+        },
+        {
+          "url": "https://cna.openjsf.org/security-advisories.html",
+          "title": "Vendor Advisory"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-03-03T05:26:44.770140Z"
+        },
+        {
+          "assigner": "NVD",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-03-20T01:23:22.252385Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.7,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-03-01T09:18:03.359633Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-01T09:18:03.359633Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-03T05:26:44.770140Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "NVD",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-20T01:23:22.252385Z"
+        }
+      ],
+      "description": "## Overview\n\nAffected versions of this package are vulnerable to Incomplete Cleanup in the `makeMiddleware()` function in `make-middleware.js`. An attacker can cause resource exhaustion by sending malformed requests.\n\n## Details\n\nDenial of Service (DoS) describes a family of attacks, all aimed at making a system inaccessible to its intended and legitimate users.\n\nUnlike other vulnerabilities, DoS attacks usually do not aim at breaching security. Rather, they are focused on making websites and services unavailable to genuine users resulting in downtime.\n\nOne popular Denial of Service vulnerability is DDoS (a Distributed Denial of Service), an attack that attempts to clog network pipes to the system by generating a large volume of traffic from many machines.\n\nWhen it comes to open source libraries, DoS vulnerabilities allow attackers to trigger such a crash or crippling of the service by using a flaw either in the application code or from the use of open source libraries.\n\nTwo common types of DoS vulnerabilities:\n\n* High CPU/Memory Consumption- An attacker sending crafted requests that could cause the system to take a disproportionate amount of time to process. For example, [commons-fileupload:commons-fileupload](https://security.snyk.io/vuln/SNYK-JAVA-COMMONSFILEUPLOAD-30082).\n\n* Crash - An attacker sending crafted requests that could cause the system to crash. For Example,  [npm `ws` package](https://snyk.io/vuln/npm:ws:20171108)\n\n## Remediation\nUpgrade `multer` to version 2.1.0 or higher.\n## References\n- [GitHub Commit](https://github.com/expressjs/multer/commit/739919097dde3921ec31b930e4b9025036fa74ee)\n- [Vendor Advisory](https://cna.openjsf.org/security-advisories.html)\n",
+      "epssDetails": {
+        "percentile": "0.03961",
+        "probability": "0.00017",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-3304"
+        ],
+        "CWE": [
+          "CWE-459"
+        ],
+        "GHSA": [
+          "GHSA-xf7r-hgr6-v32p"
+        ]
+      },
+      "packageName": "multer",
+      "proprietary": false,
+      "creationTime": "2026-03-01T08:56:50.535935Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-02-27T18:23:04Z",
+      "exploitDetails": {
+        "sources": [],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Not Defined",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Not Defined",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-03-01T09:18:03.344678Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-03-20T01:23:22.252385Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "multer@2.0.2"
+      ],
+      "upgradePath": [
+        false,
+        "multer@2.1.0"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "multer",
+      "version": "2.0.2"
+    },
+    {
+      "id": "SNYK-JS-MULTER-15417528",
+      "title": "Uncontrolled Recursion",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "credit": [
+        "Yuki Matsuhashi"
+      ],
+      "semver": {
+        "vulnerable": [
+          "<2.1.1"
+        ]
+      },
+      "exploit": "Not Defined",
+      "fixedIn": [
+        "2.1.1"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.7,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "multer",
+      "references": [
+        {
+          "url": "https://github.com/expressjs/multer/commit/7e66481f8b2e6c54b982b34c152479e096ce2752",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "NVD",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-03-10T01:19:54.880676Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.7,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-03-05T07:57:29.260246Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-05T07:57:29.260246Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "NVD",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-03-10T01:19:54.880676Z"
+        }
+      ],
+      "description": "## Overview\n\nAffected versions of this package are vulnerable to Uncontrolled Recursion. An attacker can cause the application to crash or become unresponsive by sending malformed requests that trigger uncontrolled recursion, potentially leading to a stack overflow.\n## Remediation\nUpgrade `multer` to version 2.1.1 or higher.\n## References\n- [GitHub Commit](https://github.com/expressjs/multer/commit/7e66481f8b2e6c54b982b34c152479e096ce2752)\n",
+      "epssDetails": {
+        "percentile": "0.18227",
+        "probability": "0.00058",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-3520"
+        ],
+        "CWE": [
+          "CWE-674"
+        ],
+        "GHSA": [
+          "GHSA-5528-5vmv-3xc2"
+        ]
+      },
+      "packageName": "multer",
+      "proprietary": false,
+      "creationTime": "2026-03-05T07:50:41.644401Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-03-04T18:27:15Z",
+      "exploitDetails": {
+        "sources": [],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Not Defined",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Not Defined",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-03-05T07:56:12.047201Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-03-10T01:19:54.880676Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "multer@2.0.2"
+      ],
+      "upgradePath": [
+        false,
+        "multer@2.1.1"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "multer",
+      "version": "2.0.2"
+    },
+    {
+      "id": "SNYK-JS-QS-14724253",
+      "title": "Allocation of Resources Without Limits or Throttling",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+      "credit": [
+        "Samip Mainali"
+      ],
+      "semver": {
+        "vulnerable": [
+          "<6.14.1"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "6.14.1"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.7,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "qs",
+      "references": [
+        {
+          "url": "https://github.com/ljharb/qs/commit/3086902ecf7f088d0d1803887643ac6c03d415b9",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-01-01T09:28:08.542339Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.7,
+          "cvssVersion": "4.0",
+          "modificationTime": "2025-12-30T09:31:30.585558Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2025-12-30T09:31:30.585558Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-01T09:28:08.542339Z"
+        }
+      ],
+      "description": "## Overview\n[qs](https://www.npmjs.com/package/qs) is a querystring parser that supports nesting and arrays, with a depth limit.\n\nAffected versions of this package are vulnerable to Allocation of Resources Without Limits or Throttling via improper enforcement of the `arrayLimit` option in bracket notation parsing. An attacker can exhaust server memory and cause application unavailability by submitting a large number of bracket notation parameters - like `a[]=1&a[]=2` - in a single HTTP request.\n## PoC\n```js\r\n\r\nconst qs = require('qs');\r\nconst attack = 'a[]=' + Array(10000).fill('x').join('&a[]=');\r\nconst result = qs.parse(attack, { arrayLimit: 100 });\r\nconsole.log(result.a.length);  // Output: 10000 (should be max 100)\r\n```\n## Remediation\nUpgrade `qs` to version 6.14.1 or higher.\n## References\n- [GitHub Commit](https://github.com/ljharb/qs/commit/3086902ecf7f088d0d1803887643ac6c03d415b9)\n",
+      "epssDetails": {
+        "percentile": "0.19054",
+        "probability": "0.00061",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2025-15284"
+        ],
+        "CWE": [
+          "CWE-770"
+        ],
+        "GHSA": [
+          "GHSA-6rw7-vpxm-498p"
+        ]
+      },
+      "packageName": "qs",
+      "proprietary": false,
+      "creationTime": "2025-12-30T09:09:30.571348Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2025-12-30T00:01:56Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2025-12-30T09:31:30.575510Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-01-01T09:28:08.542339Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "express@4.21.2",
+        "qs@6.13.0"
+      ],
+      "upgradePath": [
+        false,
+        "express@4.22.0",
+        "qs@6.14.2"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "qs",
+      "version": "6.13.0"
+    },
+    {
+      "id": "SNYK-JS-QS-15268416",
+      "title": "Allocation of Resources Without Limits or Throttling",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+      "credit": [
+        "SharokhAtaie"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=6.7.0 <6.14.2"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "6.14.2"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.2,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "qs",
+      "references": [
+        {
+          "url": "https://github.com/ljharb/qs/commit/f6a7abff1f13d644db9b05fe4f2c98ada6bf8482",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "medium",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+          "cvssV3BaseScore": 5.3,
+          "modificationTime": "2026-02-13T05:44:36.413749Z"
+        },
+        {
+          "assigner": "NVD",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-02-25T01:18:28.970240Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.2,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-02-26T12:06:22.123661Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-26T12:06:22.123661Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+          "assigner": "Red Hat",
+          "severity": "medium",
+          "baseScore": 5.3,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-13T05:44:36.413749Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "NVD",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-25T01:18:28.970240Z"
+        }
+      ],
+      "description": "## Overview\n[qs](https://www.npmjs.com/package/qs) is a querystring parser that supports nesting and arrays, with a depth limit.\n\nAffected versions of this package are vulnerable to Allocation of Resources Without Limits or Throttling via the `parseArrayValue` function when the `comma` option is in use. An attacker can exhaust system memory by submitting a parameter containing a large number of comma-separated values, resulting in the allocation of excessively large arrays.\r\n\r\n**Note:**\r\nThis is only exploitable if the `comma` option is explicitly set to true. `arrayLimit` is properly enforced for index and bracket notation.\n## PoC\n```js\r\nconst qs = require('qs');\r\n\r\nconst payload = 'a=' + ','.repeat(25);  // 26 elements after split (bypasses arrayLimit: 5)\r\nconst options = { comma: true, arrayLimit: 5, throwOnLimitExceeded: true };\r\n\r\ntry {\r\n  const result = qs.parse(payload, options);\r\n  console.log(result.a.length);  // Outputs: 26 (bypass successful)\r\n} catch (e) {\r\n  console.log('Limit enforced:', e.message);  // Not thrown\r\n}\r\n```\n## Remediation\nUpgrade `qs` to version 6.14.2 or higher.\n## References\n- [GitHub Commit](https://github.com/ljharb/qs/commit/f6a7abff1f13d644db9b05fe4f2c98ada6bf8482)\n",
+      "epssDetails": {
+        "percentile": "0.13095",
+        "probability": "0.00043",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-2391"
+        ],
+        "CWE": [
+          "CWE-770"
+        ],
+        "GHSA": [
+          "GHSA-w7fw-mjwx-w883"
+        ]
+      },
+      "packageName": "qs",
+      "proprietary": false,
+      "creationTime": "2026-02-12T07:33:26.992101Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-02-12T05:20:07Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-02-12T08:09:30.892673Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-02-26T12:06:22.123661Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "express@4.21.2",
+        "qs@6.13.0"
+      ],
+      "upgradePath": [
+        false,
+        "express@4.22.0",
+        "qs@6.14.2"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "qs",
+      "version": "6.13.0"
+    },
+    {
+      "id": "SNYK-JS-QS-14724253",
+      "title": "Allocation of Resources Without Limits or Throttling",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+      "credit": [
+        "Samip Mainali"
+      ],
+      "semver": {
+        "vulnerable": [
+          "<6.14.1"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "6.14.1"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.7,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "qs",
+      "references": [
+        {
+          "url": "https://github.com/ljharb/qs/commit/3086902ecf7f088d0d1803887643ac6c03d415b9",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-01-01T09:28:08.542339Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.7,
+          "cvssVersion": "4.0",
+          "modificationTime": "2025-12-30T09:31:30.585558Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2025-12-30T09:31:30.585558Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-01T09:28:08.542339Z"
+        }
+      ],
+      "description": "## Overview\n[qs](https://www.npmjs.com/package/qs) is a querystring parser that supports nesting and arrays, with a depth limit.\n\nAffected versions of this package are vulnerable to Allocation of Resources Without Limits or Throttling via improper enforcement of the `arrayLimit` option in bracket notation parsing. An attacker can exhaust server memory and cause application unavailability by submitting a large number of bracket notation parameters - like `a[]=1&a[]=2` - in a single HTTP request.\n## PoC\n```js\r\n\r\nconst qs = require('qs');\r\nconst attack = 'a[]=' + Array(10000).fill('x').join('&a[]=');\r\nconst result = qs.parse(attack, { arrayLimit: 100 });\r\nconsole.log(result.a.length);  // Output: 10000 (should be max 100)\r\n```\n## Remediation\nUpgrade `qs` to version 6.14.1 or higher.\n## References\n- [GitHub Commit](https://github.com/ljharb/qs/commit/3086902ecf7f088d0d1803887643ac6c03d415b9)\n",
+      "epssDetails": {
+        "percentile": "0.19054",
+        "probability": "0.00061",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2025-15284"
+        ],
+        "CWE": [
+          "CWE-770"
+        ],
+        "GHSA": [
+          "GHSA-6rw7-vpxm-498p"
+        ]
+      },
+      "packageName": "qs",
+      "proprietary": false,
+      "creationTime": "2025-12-30T09:09:30.571348Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2025-12-30T00:01:56Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2025-12-30T09:31:30.575510Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-01-01T09:28:08.542339Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "express@4.21.2",
+        "body-parser@1.20.3",
+        "qs@6.13.0"
+      ],
+      "upgradePath": [
+        false,
+        "express@4.22.0",
+        "body-parser@1.20.4",
+        "qs@6.14.2"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "qs",
+      "version": "6.13.0"
+    },
+    {
+      "id": "SNYK-JS-QS-15268416",
+      "title": "Allocation of Resources Without Limits or Throttling",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+      "credit": [
+        "SharokhAtaie"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=6.7.0 <6.14.2"
+        ]
+      },
+      "exploit": "Proof of Concept",
+      "fixedIn": [
+        "6.14.2"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 8.2,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "qs",
+      "references": [
+        {
+          "url": "https://github.com/ljharb/qs/commit/f6a7abff1f13d644db9b05fe4f2c98ada6bf8482",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "medium",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+          "cvssV3BaseScore": 5.3,
+          "modificationTime": "2026-02-13T05:44:36.413749Z"
+        },
+        {
+          "assigner": "NVD",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "cvssV3BaseScore": 7.5,
+          "modificationTime": "2026-02-25T01:18:28.970240Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.2,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-02-26T12:06:22.123661Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H/E:P",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-26T12:06:22.123661Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+          "assigner": "Red Hat",
+          "severity": "medium",
+          "baseScore": 5.3,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-13T05:44:36.413749Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+          "assigner": "NVD",
+          "severity": "high",
+          "baseScore": 7.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-25T01:18:28.970240Z"
+        }
+      ],
+      "description": "## Overview\n[qs](https://www.npmjs.com/package/qs) is a querystring parser that supports nesting and arrays, with a depth limit.\n\nAffected versions of this package are vulnerable to Allocation of Resources Without Limits or Throttling via the `parseArrayValue` function when the `comma` option is in use. An attacker can exhaust system memory by submitting a parameter containing a large number of comma-separated values, resulting in the allocation of excessively large arrays.\r\n\r\n**Note:**\r\nThis is only exploitable if the `comma` option is explicitly set to true. `arrayLimit` is properly enforced for index and bracket notation.\n## PoC\n```js\r\nconst qs = require('qs');\r\n\r\nconst payload = 'a=' + ','.repeat(25);  // 26 elements after split (bypasses arrayLimit: 5)\r\nconst options = { comma: true, arrayLimit: 5, throwOnLimitExceeded: true };\r\n\r\ntry {\r\n  const result = qs.parse(payload, options);\r\n  console.log(result.a.length);  // Outputs: 26 (bypass successful)\r\n} catch (e) {\r\n  console.log('Limit enforced:', e.message);  // Not thrown\r\n}\r\n```\n## Remediation\nUpgrade `qs` to version 6.14.2 or higher.\n## References\n- [GitHub Commit](https://github.com/ljharb/qs/commit/f6a7abff1f13d644db9b05fe4f2c98ada6bf8482)\n",
+      "epssDetails": {
+        "percentile": "0.13095",
+        "probability": "0.00043",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-2391"
+        ],
+        "CWE": [
+          "CWE-770"
+        ],
+        "GHSA": [
+          "GHSA-w7fw-mjwx-w883"
+        ]
+      },
+      "packageName": "qs",
+      "proprietary": false,
+      "creationTime": "2026-02-12T07:33:26.992101Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-02-12T05:20:07Z",
+      "exploitDetails": {
+        "sources": [
+          "Snyk"
+        ],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Proof of Concept",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Proof of Concept",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-02-12T08:09:30.892673Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-02-26T12:06:22.123661Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "express@4.21.2",
+        "body-parser@1.20.3",
+        "qs@6.13.0"
+      ],
+      "upgradePath": [
+        false,
+        "express@4.22.0",
+        "body-parser@1.20.4",
+        "qs@6.14.2"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "qs",
+      "version": "6.13.0"
+    },
+    {
+      "id": "SNYK-JS-REACTROUTER-14908286",
+      "title": "Open Redirect",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N",
+      "credit": [
+        "Andrey Pshenkin"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=6.0.0 <6.30.2",
+          ">=7.0.0 <7.9.6"
+        ]
+      },
+      "exploit": "Not Defined",
+      "fixedIn": [
+        "6.30.2",
+        "7.9.6"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 7.1,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "react-router",
+      "references": [
+        {
+          "url": "https://github.com/remix-run/react-router/commit/02e65a55daa6f9c0aa88d0de8732330e0b449dad",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "medium",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N",
+          "cvssV3BaseScore": 6.5,
+          "modificationTime": "2026-01-13T13:32:33.950122Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.1,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-01-27T14:39:27.704071Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 6.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-27T14:39:27.704071Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N",
+          "assigner": "Red Hat",
+          "severity": "medium",
+          "baseScore": 6.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-13T13:32:33.950122Z"
+        }
+      ],
+      "description": "## Overview\n\nAffected versions of this package are vulnerable to Open Redirect via the `resolvePath()` function when used with `navigate`, `<Link>`, or `redirect`. An attacker can cause the application to redirect users to external, potentially malicious URLs by supplying crafted paths. \r\n\r\n**Note:**\r\n\r\nThis is only exploitable if untrusted content is passed into navigation paths in the application code.\n## Remediation\nUpgrade `react-router` to version 6.30.2, 7.9.6 or higher.\n## References\n- [GitHub Commit](https://github.com/remix-run/react-router/commit/02e65a55daa6f9c0aa88d0de8732330e0b449dad)\n",
+      "epssDetails": {
+        "percentile": "0.11815",
+        "probability": "0.00039",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2025-68470"
+        ],
+        "CWE": [
+          "CWE-601"
+        ],
+        "GHSA": [
+          "GHSA-9jcx-v3wj-wh4m"
+        ]
+      },
+      "packageName": "react-router",
+      "proprietary": false,
+      "creationTime": "2026-01-09T11:43:01.158744Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-01-08T20:48:21Z",
+      "exploitDetails": {
+        "sources": [],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Not Defined",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Not Defined",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-01-09T11:43:01.594575Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-01-27T14:39:27.704071Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "react-router-dom@7.9.5",
+        "react-router@7.9.5"
+      ],
+      "upgradePath": [
+        false,
+        "react-router-dom@7.9.6",
+        "react-router@7.9.6"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "react-router",
+      "version": "7.9.5"
+    },
+    {
+      "id": "SNYK-JS-REACTROUTER-14908293",
+      "title": "Cross-site Scripting (XSS)",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N",
+      "credit": [
+        "Isaac David"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=7.0.0 <7.12.0"
+        ]
+      },
+      "exploit": "Not Defined",
+      "fixedIn": [
+        "7.12.0"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "medium",
+      "cvssScore": 6.3,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "react-router",
+      "references": [
+        {
+          "url": "https://github.com/remix-run/react-router/commit/c89c32c562a7723c45ee71dab1c892acaf7a608d",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N",
+          "cvssV3BaseScore": 8.2,
+          "modificationTime": "2026-01-13T05:25:12.495456Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:P/VC:N/VI:L/VA:N/SC:H/SI:L/SA:N",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 6.3,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-01-09T12:06:33.805170Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8.2,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-09T12:06:33.805170Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 8.2,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-13T05:25:12.495456Z"
+        }
+      ],
+      "description": "## Overview\n\nAffected versions of this package are vulnerable to Cross-site Scripting (XSS) via the ScrollRestoration API when using the `getKey` or `storageKey` props during server-side rendering in Framework Mode. An attacker can execute arbitrary JavaScript code by supplying untrusted content to generate the keys. This is only exploitable if server-side rendering is enabled in Framework Mode and untrusted input is used for key generation.\r\n\r\n**Note:**\r\n\r\nThis issue does not impact applications using Declarative Mode `<BrowserRouter>` or Data Mode `createBrowserRouter/<RouterProvider>` and server-side rendering in Framework Mode is disabled.\n## Details\n\nCross-site scripting (or XSS) is a code vulnerability that occurs when an attacker “injects” a malicious script into an otherwise trusted website. The injected script gets downloaded and executed by the end user’s browser when the user interacts with the compromised website.\n\nThis is done by escaping the context of the web application; the web application then delivers that data to its users along with other trusted dynamic content, without validating it. The browser unknowingly executes malicious script on the client side (through client-side languages; usually JavaScript or HTML)  in order to perform actions that are otherwise typically blocked by the browser’s Same Origin Policy.\n\nInjecting malicious code is the most prevalent manner by which XSS is exploited; for this reason, escaping characters in order to prevent this manipulation is the top method for securing code against this vulnerability.\n\nEscaping means that the application is coded to mark key characters, and particularly key characters included in user input, to prevent those characters from being interpreted in a dangerous context. For example, in HTML, `<` can be coded as  `&lt`; and `>` can be coded as `&gt`; in order to be interpreted and displayed as themselves in text, while within the code itself, they are used for HTML tags. If malicious content is injected into an application that escapes special characters and that malicious content uses `<` and `>` as HTML tags, those characters are nonetheless not interpreted as HTML tags by the browser if they’ve been correctly escaped in the application code and in this way the attempted attack is diverted.\n \nThe most prominent use of XSS is to steal cookies (source: OWASP HttpOnly) and hijack user sessions, but XSS exploits have been used to expose sensitive information, enable access to privileged services and functionality and deliver malware. \n\n### Types of attacks\nThere are a few methods by which XSS can be manipulated:\n\n|Type|Origin|Description|\n|--|--|--|\n|**Stored**|Server|The malicious code is inserted in the application (usually as a link) by the attacker. The code is activated every time a user clicks the link.|\n|**Reflected**|Server|The attacker delivers a malicious link externally from the vulnerable web site application to a user. When clicked, malicious code is sent to the vulnerable web site, which reflects the attack back to the user’s browser.| \n|**DOM-based**|Client|The attacker forces the user’s browser to render a malicious page. The data in the page itself delivers the cross-site scripting data.|\n|**Mutated**| |The attacker injects code that appears safe, but is then rewritten and modified by the browser, while parsing the markup. An example is rebalancing unclosed quotation marks or even adding quotation marks to unquoted parameters.|\n\n### Affected environments\nThe following environments are susceptible to an XSS attack:\n\n* Web servers\n* Application servers\n* Web application environments\n\n### How to prevent\nThis section describes the top best practices designed to specifically protect your code: \n\n* Sanitize data input in an HTTP request before reflecting it back, ensuring all data is validated, filtered or escaped before echoing anything back to the user, such as the values of query parameters during searches. \n* Convert special characters such as `?`, `&`, `/`, `<`, `>` and spaces to their respective HTML or URL encoded equivalents. \n* Give users the option to disable client-side scripts.\n* Redirect invalid requests.\n* Detect simultaneous logins, including those from two separate IP addresses, and invalidate those sessions.\n* Use and enforce a Content Security Policy (source: Wikipedia) to disable any features that might be manipulated for an XSS attack.\n* Read the documentation for any of the libraries referenced in your code to understand which elements allow for embedded HTML.\n\n## Remediation\nUpgrade `react-router` to version 7.12.0 or higher.\n## References\n- [GitHub Commit](https://github.com/remix-run/react-router/commit/c89c32c562a7723c45ee71dab1c892acaf7a608d)\n",
+      "epssDetails": {
+        "percentile": "0.04429",
+        "probability": "0.00018",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-21884"
+        ],
+        "CWE": [
+          "CWE-79"
+        ],
+        "GHSA": [
+          "GHSA-8v8x-cx79-35w7"
+        ]
+      },
+      "packageName": "react-router",
+      "proprietary": false,
+      "creationTime": "2026-01-09T12:05:57.222456Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-01-08T20:50:05Z",
+      "exploitDetails": {
+        "sources": [],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Not Defined",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Not Defined",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-01-09T12:05:57.462844Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-01-13T05:25:12.495456Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "medium",
+      "from": [
+        "skypanelv2@1.0.0",
+        "react-router-dom@7.9.5",
+        "react-router@7.9.5"
+      ],
+      "upgradePath": [
+        false,
+        "react-router-dom@7.12.0",
+        "react-router@7.12.0"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "react-router",
+      "version": "7.9.5"
+    },
+    {
+      "id": "SNYK-JS-REACTROUTER-14908429",
+      "title": "Cross-site Request Forgery (CSRF)",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N",
+      "credit": [
+        "Oceandust"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=7.0.0 <7.12.0"
+        ]
+      },
+      "exploit": "Not Defined",
+      "fixedIn": [
+        "7.12.0"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "medium",
+      "cvssScore": 6.9,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "react-router",
+      "references": [
+        {
+          "url": "https://github.com/remix-run/react-router/commit/75b1ef50867d8fa3d5ffdab28245d5fec307d6a7",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "Red Hat",
+          "severity": "medium",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N",
+          "cvssV3BaseScore": 6.5,
+          "modificationTime": "2026-01-13T14:33:02.051277Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:A/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 6.9,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-01-09T12:55:09.715787Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N",
+          "assigner": "Snyk",
+          "severity": "medium",
+          "baseScore": 6.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-09T12:55:09.715787Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N",
+          "assigner": "Red Hat",
+          "severity": "medium",
+          "baseScore": 6.5,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-13T14:33:02.051277Z"
+        }
+      ],
+      "description": "## Overview\n\nAffected versions of this package are vulnerable to Cross-site Request Forgery (CSRF) due to the improper origin checks of UI route submissions in server-side route `action` handlers in Framework Mode. An attacker can execute unauthorized actions by tricking a user into submitting a crafted POST request to a UI route.\r\n\r\n**Note:**\r\n\r\nThis issue does not impact applications using Declarative Mode `<BrowserRouter>` or Data Mode `createBrowserRouter/<RouterProvider>`.\n## Remediation\nUpgrade `react-router` to version 7.12.0 or higher.\n## References\n- [GitHub Commit](https://github.com/remix-run/react-router/commit/75b1ef50867d8fa3d5ffdab28245d5fec307d6a7)\n",
+      "epssDetails": {
+        "percentile": "0.05439",
+        "probability": "0.00021",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-22030"
+        ],
+        "CWE": [
+          "CWE-346",
+          "CWE-352"
+        ],
+        "GHSA": [
+          "GHSA-h5cw-625j-3rxh"
+        ]
+      },
+      "packageName": "react-router",
+      "proprietary": false,
+      "creationTime": "2026-01-09T12:49:41.298932Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-01-08T20:57:09Z",
+      "exploitDetails": {
+        "sources": [],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Not Defined",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Not Defined",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-01-09T12:49:41.481941Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-01-13T14:33:02.051277Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "medium",
+      "from": [
+        "skypanelv2@1.0.0",
+        "react-router-dom@7.9.5",
+        "react-router@7.9.5"
+      ],
+      "upgradePath": [
+        false,
+        "react-router-dom@7.12.0",
+        "react-router@7.12.0"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "react-router",
+      "version": "7.9.5"
+    },
+    {
+      "id": "SNYK-JS-REACTROUTER-14908531",
+      "title": "Cross-site Scripting (XSS)",
+      "CVSSv3": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:H/A:N",
+      "credit": [
+        "Oceandust"
+      ],
+      "semver": {
+        "vulnerable": [
+          ">=7.0.0 <7.12.0"
+        ]
+      },
+      "exploit": "Not Defined",
+      "fixedIn": [
+        "7.12.0"
+      ],
+      "patches": [],
+      "insights": {
+        "triageAdvice": null
+      },
+      "language": "js",
+      "severity": "high",
+      "cvssScore": 7.2,
+      "functions": [],
+      "malicious": false,
+      "isDisputed": false,
+      "moduleName": "react-router",
+      "references": [
+        {
+          "url": "https://github.com/remix-run/react-router/commit/c05ef936fd9334f82aafa7e9087b78a8bf5c745d",
+          "title": "GitHub Commit"
+        }
+      ],
+      "cvssDetails": [
+        {
+          "assigner": "NVD",
+          "severity": "medium",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+          "cvssV3BaseScore": 6.1,
+          "modificationTime": "2026-02-11T01:18:40.976891Z"
+        },
+        {
+          "assigner": "Red Hat",
+          "severity": "high",
+          "cvssV3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:H/A:N",
+          "cvssV3BaseScore": 8,
+          "modificationTime": "2026-01-13T05:25:32.624665Z"
+        }
+      ],
+      "cvssSources": [
+        {
+          "type": "primary",
+          "vector": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:A/VC:N/VI:H/VA:N/SC:H/SI:H/SA:H",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 7.2,
+          "cvssVersion": "4.0",
+          "modificationTime": "2026-01-09T12:58:21.111067Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:H/A:N",
+          "assigner": "Snyk",
+          "severity": "high",
+          "baseScore": 8,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-09T12:58:21.111067Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+          "assigner": "NVD",
+          "severity": "medium",
+          "baseScore": 6.1,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-02-11T01:18:40.976891Z"
+        },
+        {
+          "type": "secondary",
+          "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:H/A:N",
+          "assigner": "Red Hat",
+          "severity": "high",
+          "baseScore": 8,
+          "cvssVersion": "3.1",
+          "modificationTime": "2026-01-13T05:25:32.624665Z"
+        }
+      ],
+      "description": "## Overview\n\nAffected versions of this package are vulnerable to Cross-site Scripting (XSS) in the navigation redirect process for loaders or actions in Framework Mode, Data Mode, or the unstable RSC modes. An attacker can execute arbitrary JavaScript code in the context of the user's browser by supplying a crafted URL that is used as a redirect target.\r\n\r\n**Note:**\r\n\r\nThis issue does not impact applications using Declarative Mode `<BrowserRouter>`.\n## Details\n\nCross-site scripting (or XSS) is a code vulnerability that occurs when an attacker “injects” a malicious script into an otherwise trusted website. The injected script gets downloaded and executed by the end user’s browser when the user interacts with the compromised website.\n\nThis is done by escaping the context of the web application; the web application then delivers that data to its users along with other trusted dynamic content, without validating it. The browser unknowingly executes malicious script on the client side (through client-side languages; usually JavaScript or HTML)  in order to perform actions that are otherwise typically blocked by the browser’s Same Origin Policy.\n\nInjecting malicious code is the most prevalent manner by which XSS is exploited; for this reason, escaping characters in order to prevent this manipulation is the top method for securing code against this vulnerability.\n\nEscaping means that the application is coded to mark key characters, and particularly key characters included in user input, to prevent those characters from being interpreted in a dangerous context. For example, in HTML, `<` can be coded as  `&lt`; and `>` can be coded as `&gt`; in order to be interpreted and displayed as themselves in text, while within the code itself, they are used for HTML tags. If malicious content is injected into an application that escapes special characters and that malicious content uses `<` and `>` as HTML tags, those characters are nonetheless not interpreted as HTML tags by the browser if they’ve been correctly escaped in the application code and in this way the attempted attack is diverted.\n \nThe most prominent use of XSS is to steal cookies (source: OWASP HttpOnly) and hijack user sessions, but XSS exploits have been used to expose sensitive information, enable access to privileged services and functionality and deliver malware. \n\n### Types of attacks\nThere are a few methods by which XSS can be manipulated:\n\n|Type|Origin|Description|\n|--|--|--|\n|**Stored**|Server|The malicious code is inserted in the application (usually as a link) by the attacker. The code is activated every time a user clicks the link.|\n|**Reflected**|Server|The attacker delivers a malicious link externally from the vulnerable web site application to a user. When clicked, malicious code is sent to the vulnerable web site, which reflects the attack back to the user’s browser.| \n|**DOM-based**|Client|The attacker forces the user’s browser to render a malicious page. The data in the page itself delivers the cross-site scripting data.|\n|**Mutated**| |The attacker injects code that appears safe, but is then rewritten and modified by the browser, while parsing the markup. An example is rebalancing unclosed quotation marks or even adding quotation marks to unquoted parameters.|\n\n### Affected environments\nThe following environments are susceptible to an XSS attack:\n\n* Web servers\n* Application servers\n* Web application environments\n\n### How to prevent\nThis section describes the top best practices designed to specifically protect your code: \n\n* Sanitize data input in an HTTP request before reflecting it back, ensuring all data is validated, filtered or escaped before echoing anything back to the user, such as the values of query parameters during searches. \n* Convert special characters such as `?`, `&`, `/`, `<`, `>` and spaces to their respective HTML or URL encoded equivalents. \n* Give users the option to disable client-side scripts.\n* Redirect invalid requests.\n* Detect simultaneous logins, including those from two separate IP addresses, and invalidate those sessions.\n* Use and enforce a Content Security Policy (source: Wikipedia) to disable any features that might be manipulated for an XSS attack.\n* Read the documentation for any of the libraries referenced in your code to understand which elements allow for embedded HTML.\n\n## Remediation\nUpgrade `react-router` to version 7.12.0 or higher.\n## References\n- [GitHub Commit](https://github.com/remix-run/react-router/commit/c05ef936fd9334f82aafa7e9087b78a8bf5c745d)\n",
+      "epssDetails": {
+        "percentile": "0.04341",
+        "probability": "0.00018",
+        "modelVersion": "v2025.03.14"
+      },
+      "identifiers": {
+        "CVE": [
+          "CVE-2026-22029"
+        ],
+        "CWE": [
+          "CWE-79"
+        ],
+        "GHSA": [
+          "GHSA-2w69-qvjg-hvjx"
+        ]
+      },
+      "packageName": "react-router",
+      "proprietary": false,
+      "creationTime": "2026-01-09T12:58:08.693917Z",
+      "functions_new": [],
+      "alternativeIds": [],
+      "disclosureTime": "2026-01-08T20:54:18Z",
+      "exploitDetails": {
+        "sources": [],
+        "maturityLevels": [
+          {
+            "type": "secondary",
+            "level": "Not Defined",
+            "format": "CVSSv3"
+          },
+          {
+            "type": "primary",
+            "level": "Not Defined",
+            "format": "CVSSv4"
+          }
+        ]
+      },
+      "packageManager": "npm",
+      "publicationTime": "2026-01-09T12:58:08.901251Z",
+      "severityBasedOn": "CVSS",
+      "modificationTime": "2026-02-11T01:18:40.976891Z",
+      "socialTrendAlert": false,
+      "severityWithCritical": "high",
+      "from": [
+        "skypanelv2@1.0.0",
+        "react-router-dom@7.9.5",
+        "react-router@7.9.5"
+      ],
+      "upgradePath": [
+        false,
+        "react-router-dom@7.12.0",
+        "react-router@7.12.0"
+      ],
+      "isUpgradable": true,
+      "isPatchable": false,
+      "name": "react-router",
+      "version": "7.9.5"
+    }
+  ],
+  "ok": false,
+  "dependencyCount": 500,
+  "org": "gvps-cloud",
+  "policy": "# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.\nversion: v1.25.1\n# ignores vulnerabilities until expiry date; change duration by modifying expiry date\nignore:\n  javascript/NoHardcodedPasswords:\n    - scripts/create-test-admin.js:\n        reason: >-\n          Dev utility scripts that intentionally use default admin credentials\n          for seeding. Not shipped to clients.\n        expires: 2026-04-24T03:25:28.026Z\n        created: 2026-03-25T03:25:28.028Z\n        source: cli\n    - scripts/ensure-admin-user.js:\n        reason: >-\n          Dev utility scripts that intentionally use default admin credentials\n          for seeding. Not shipped to clients.\n        expires: 2026-04-24T03:25:56.238Z\n        created: 2026-03-25T03:25:56.242Z\n        source: cli\n    - scripts/update-admin-password.js:\n        reason: >-\n          Dev utility scripts that intentionally use default admin credentials\n          for seeding. Not shipped to clients.\n        expires: 2026-04-24T03:25:59.156Z\n        created: 2026-03-25T03:25:59.160Z\n        source: cli\n    - scripts/verify-admin-status.js:\n        reason: >-\n          Dev utility scripts that intentionally use default admin credentials\n          for seeding. Not shipped to clients.\n        expires: 2026-04-24T03:26:02.128Z\n        created: 2026-03-25T03:26:02.133Z\n        source: cli\npatch: {}\nexclude:\n  global:\n    - scripts/create-test-admin.js:\n        reason: 'Dev seeding scripts, default credentials intentional.'\n        created: 2026-03-25T03:29:30.099Z\n    - scripts/ensure-admin-user.js:\n        reason: 'Dev seeding scripts, default credentials intentional.'\n        created: 2026-03-25T03:29:40.413Z\n    - scripts/update-admin-password.js:\n        reason: 'Dev seeding scripts, default credentials intentional.'\n        created: 2026-03-25T03:29:43.456Z\n    - scripts/verify-admin-status.js:\n        reason: 'Dev seeding scripts, default credentials intentional.'\n        created: 2026-03-25T03:29:46.572Z\n",
+  "isPrivate": true,
+  "licensesPolicy": {
+    "severities": {},
+    "orgLicenseRules": {
+      "AGPL-1.0": {
+        "licenseType": "AGPL-1.0",
+        "severity": "high",
+        "instructions": ""
+      },
+      "AGPL-3.0": {
+        "licenseType": "AGPL-3.0",
+        "severity": "high",
+        "instructions": ""
+      },
+      "Artistic-1.0": {
+        "licenseType": "Artistic-1.0",
+        "severity": "medium",
+        "instructions": ""
+      },
+      "Artistic-2.0": {
+        "licenseType": "Artistic-2.0",
+        "severity": "medium",
+        "instructions": ""
+      },
+      "CDDL-1.0": {
+        "licenseType": "CDDL-1.0",
+        "severity": "medium",
+        "instructions": ""
+      },
+      "CPOL-1.02": {
+        "licenseType": "CPOL-1.02",
+        "severity": "high",
+        "instructions": ""
+      },
+      "EPL-1.0": {
+        "licenseType": "EPL-1.0",
+        "severity": "medium",
+        "instructions": ""
+      },
+      "GPL-2.0": {
+        "licenseType": "GPL-2.0",
+        "severity": "high",
+        "instructions": ""
+      },
+      "GPL-3.0": {
+        "licenseType": "GPL-3.0",
+        "severity": "high",
+        "instructions": ""
+      },
+      "LGPL-2.0": {
+        "licenseType": "LGPL-2.0",
+        "severity": "medium",
+        "instructions": ""
+      },
+      "LGPL-2.1": {
+        "licenseType": "LGPL-2.1",
+        "severity": "medium",
+        "instructions": ""
+      },
+      "LGPL-3.0": {
+        "licenseType": "LGPL-3.0",
+        "severity": "medium",
+        "instructions": ""
+      },
+      "MPL-1.1": {
+        "licenseType": "MPL-1.1",
+        "severity": "medium",
+        "instructions": ""
+      },
+      "MPL-2.0": {
+        "licenseType": "MPL-2.0",
+        "severity": "medium",
+        "instructions": ""
+      },
+      "MS-RL": {
+        "licenseType": "MS-RL",
+        "severity": "medium",
+        "instructions": ""
+      },
+      "SimPL-2.0": {
+        "licenseType": "SimPL-2.0",
+        "severity": "high",
+        "instructions": ""
+      }
+    }
+  },
+  "packageManager": "npm",
+  "ignoreSettings": {
+    "adminOnly": false,
+    "reasonRequired": false,
+    "disregardFilesystemIgnores": false
+  },
+  "summary": "23 vulnerable dependency paths",
+  "remediation": {
+    "unresolved": [
+      {
+        "id": "SNYK-JS-D3COLOR-1076592",
+        "title": "Regular Expression Denial of Service (ReDoS)",
+        "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:P",
+        "credit": [
+          "Yeting Li"
+        ],
+        "semver": {
+          "vulnerable": [
+            "<3.1.0"
+          ]
+        },
+        "exploit": "Proof of Concept",
+        "fixedIn": [
+          "3.1.0"
+        ],
+        "patches": [],
+        "insights": {
+          "triageAdvice": null
+        },
+        "language": "js",
+        "severity": "medium",
+        "cvssScore": 5.3,
+        "functions": [],
+        "malicious": false,
+        "isDisputed": false,
+        "moduleName": "d3-color",
+        "references": [
+          {
+            "url": "https://github.com/d3/d3-color/pull/100",
+            "title": "Github PR"
+          },
+          {
+            "url": "https://github.com/d3/d3-color/pull/99",
+            "title": "Github PR"
+          },
+          {
+            "url": "https://github.com/d3/d3-color/pull/89",
+            "title": "GitHub PR"
+          },
+          {
+            "url": "https://github.com/d3/d3-color/releases/tag/v3.1.0",
+            "title": "Github Releases"
+          }
+        ],
+        "cvssDetails": [],
+        "cvssSources": [
+          {
+            "type": "primary",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L/E:P",
+            "assigner": "Snyk",
+            "severity": "medium",
+            "baseScore": 5.3,
+            "cvssVersion": "3.1",
+            "modificationTime": "2024-03-06T14:04:38.134700Z"
+          }
+        ],
+        "description": "## Overview\n[d3-color](https://www.npmjs.org/package/d3-color) is a Color spaces! RGB, HSL, Cubehelix, Lab and HCL (Lch).\n\nAffected versions of this package are vulnerable to Regular Expression Denial of Service (ReDoS) via the `rgb()` and `hrc()` functions. \r\n\r\nPoC by Yeting Li: \r\n```\r\nvar d3Color = require(\"d3-color\")\r\n// d3Color.rgb(\"rgb(255,255,255)\")\r\n\r\nfunction build_blank(n) {\r\n    var ret = \"rgb(\"\r\n    for (var i = 0; i < n; i++) {\r\n        ret += \"1\"\r\n    }\r\n    return ret + \"!\";\r\n}\r\n\r\nfor(var i = 1; i <= 5000000; i++) {\r\n    if (i % 1000 == 0) {\r\n        var time = Date.now();\r\n        var attack_str = build_blank(i)\r\n        d3Color.rgb(attack_str)\r\n        var time_cost = Date.now() - time;\r\n        console.log(\"attack_str.length: \" + attack_str.length + \": \" + time_cost+\" ms\")\r\n    }\r\n}\r\n```\n\n## Details\n\nDenial of Service (DoS) describes a family of attacks, all aimed at making a system inaccessible to its original and legitimate users. There are many types of DoS attacks, ranging from trying to clog the network pipes to the system by generating a large volume of traffic from many machines (a Distributed Denial of Service - DDoS - attack) to sending crafted requests that cause a system to crash or take a disproportional amount of time to process.\n\nThe Regular expression Denial of Service (ReDoS) is a type of Denial of Service attack. Regular expressions are incredibly powerful, but they aren't very intuitive and can ultimately end up making it easy for attackers to take your site down.\n\nLet’s take the following regular expression as an example:\n```js\nregex = /A(B|C+)+D/\n```\n\nThis regular expression accomplishes the following:\n- `A` The string must start with the letter 'A'\n- `(B|C+)+` The string must then follow the letter A with either the letter 'B' or some number of occurrences of the letter 'C' (the `+` matches one or more times). The `+` at the end of this section states that we can look for one or more matches of this section.\n- `D` Finally, we ensure this section of the string ends with a 'D'\n\nThe expression would match inputs such as `ABBD`, `ABCCCCD`, `ABCBCCCD` and `ACCCCCD`\n\nIt most cases, it doesn't take very long for a regex engine to find a match:\n\n```bash\n$ time node -e '/A(B|C+)+D/.test(\"ACCCCCCCCCCCCCCCCCCCCCCCCCCCCD\")'\n0.04s user 0.01s system 95% cpu 0.052 total\n\n$ time node -e '/A(B|C+)+D/.test(\"ACCCCCCCCCCCCCCCCCCCCCCCCCCCCX\")'\n1.79s user 0.02s system 99% cpu 1.812 total\n```\n\nThe entire process of testing it against a 30 characters long string takes around ~52ms. But when given an invalid string, it takes nearly two seconds to complete the test, over ten times as long as it took to test a valid string. The dramatic difference is due to the way regular expressions get evaluated.\n\nMost Regex engines will work very similarly (with minor differences). The engine will match the first possible way to accept the current character and proceed to the next one. If it then fails to match the next one, it will backtrack and see if there was another way to digest the previous character. If it goes too far down the rabbit hole only to find out the string doesn’t match in the end, and if many characters have multiple valid regex paths, the number of backtracking steps can become very large, resulting in what is known as _catastrophic backtracking_.\n\nLet's look at how our expression runs into this problem, using a shorter string: \"ACCCX\". While it seems fairly straightforward, there are still four different ways that the engine could match those three C's:\n1. CCC\n2. CC+C\n3. C+CC\n4. C+C+C.\n\nThe engine has to try each of those combinations to see if any of them potentially match against the expression. When you combine that with the other steps the engine must take, we can use [RegEx 101 debugger](https://regex101.com/debugger) to see the engine has to take a total of 38 steps before it can determine the string doesn't match.\n\nFrom there, the number of steps the engine must use to validate a string just continues to grow.\n\n| String | Number of C's | Number of steps |\n| -------|-------------:| -----:|\n| ACCCX | 3 | 38\n| ACCCCX | 4 | 71\n| ACCCCCX | 5 | 136\n| ACCCCCCCCCCCCCCX | 14 | 65,553\n\n\nBy the time the string includes 14 C's, the engine has to take over 65,000 steps just to see if the string is valid. These extreme situations can cause them to work very slowly (exponentially related to input size, as shown above), allowing an attacker to exploit this and can cause the service to excessively consume CPU, resulting in a Denial of Service.\n\n## Remediation\nUpgrade `d3-color` to version 3.1.0 or higher.\n## References\n- [Github PR](https://github.com/d3/d3-color/pull/100)\n- [Github PR](https://github.com/d3/d3-color/pull/99)\n- [GitHub PR](https://github.com/d3/d3-color/pull/89)\n- [Github Releases](https://github.com/d3/d3-color/releases/tag/v3.1.0)\n",
+        "epssDetails": null,
+        "identifiers": {
+          "CVE": [],
+          "CWE": [
+            "CWE-400"
+          ]
+        },
+        "packageName": "d3-color",
+        "proprietary": true,
+        "creationTime": "2021-02-18T13:32:47.195986Z",
+        "functions_new": [],
+        "alternativeIds": [],
+        "disclosureTime": "2021-02-18T13:30:50Z",
+        "exploitDetails": {
+          "sources": [
+            "Snyk"
+          ],
+          "maturityLevels": [
+            {
+              "type": "secondary",
+              "level": "Proof of Concept",
+              "format": "CVSSv3"
+            },
+            {
+              "type": "primary",
+              "level": "Proof of Concept",
+              "format": "CVSSv4"
+            }
+          ]
+        },
+        "packageManager": "npm",
+        "publicationTime": "2021-07-05T14:17:56Z",
+        "severityBasedOn": "CVSS",
+        "modificationTime": "2024-03-06T14:04:38.134700Z",
+        "socialTrendAlert": false,
+        "packagePopularityRank": 99,
+        "from": [
+          "skypanelv2@1.0.0",
+          "react-simple-maps@3.0.0",
+          "d3-zoom@2.0.0",
+          "d3-transition@2.0.0",
+          "d3-color@2.0.0"
+        ],
+        "upgradePath": [],
+        "isUpgradable": false,
+        "isPatchable": false,
+        "isPinnable": false,
+        "isRuntime": false,
+        "name": "d3-color",
+        "version": "2.0.0",
+        "severityWithCritical": "medium"
+      },
+      {
+        "id": "SNYK-JS-LODASH-15053838",
+        "title": "Prototype Pollution",
+        "CVSSv3": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L",
+        "credit": [
+          "lukas-eu"
+        ],
+        "semver": {
+          "vulnerable": [
+            ">=4.0.0 <4.17.23"
+          ]
+        },
+        "exploit": "Not Defined",
+        "fixedIn": [
+          "4.17.23"
+        ],
+        "patches": [],
+        "insights": {
+          "triageAdvice": null
+        },
+        "language": "js",
+        "severity": "medium",
+        "cvssScore": 6.9,
+        "functions": [],
+        "malicious": false,
+        "isDisputed": false,
+        "moduleName": "lodash",
+        "references": [
+          {
+            "url": "https://github.com/lodash/lodash/commit/edadd452146f7e4bad4ea684e955708931d84d81",
+            "title": "GitHub Commit"
+          }
+        ],
+        "cvssDetails": [
+          {
+            "assigner": "SUSE",
+            "severity": "high",
+            "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+            "cvssV3BaseScore": 8.2,
+            "modificationTime": "2026-02-12T11:04:11.049925Z"
+          },
+          {
+            "assigner": "NVD",
+            "severity": "medium",
+            "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+            "cvssV3BaseScore": 5.3,
+            "modificationTime": "2026-02-18T01:16:59.766406Z"
+          },
+          {
+            "assigner": "Red Hat",
+            "severity": "high",
+            "cvssV3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+            "cvssV3BaseScore": 8.2,
+            "modificationTime": "2026-03-22T07:44:59.510091Z"
+          }
+        ],
+        "cvssSources": [
+          {
+            "type": "primary",
+            "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:L/SC:N/SI:N/SA:N",
+            "assigner": "Snyk",
+            "severity": "medium",
+            "baseScore": 6.9,
+            "cvssVersion": "4.0",
+            "modificationTime": "2026-01-22T07:08:27.188933Z"
+          },
+          {
+            "type": "secondary",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L",
+            "assigner": "Snyk",
+            "severity": "medium",
+            "baseScore": 6.5,
+            "cvssVersion": "3.1",
+            "modificationTime": "2026-01-22T07:08:27.188933Z"
+          },
+          {
+            "type": "secondary",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+            "assigner": "SUSE",
+            "severity": "high",
+            "baseScore": 8.2,
+            "cvssVersion": "3.1",
+            "modificationTime": "2026-02-12T11:04:11.049925Z"
+          },
+          {
+            "type": "secondary",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+            "assigner": "NVD",
+            "severity": "medium",
+            "baseScore": 5.3,
+            "cvssVersion": "3.1",
+            "modificationTime": "2026-02-18T01:16:59.766406Z"
+          },
+          {
+            "type": "secondary",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:H",
+            "assigner": "Red Hat",
+            "severity": "high",
+            "baseScore": 8.2,
+            "cvssVersion": "3.1",
+            "modificationTime": "2026-03-22T07:44:59.510091Z"
+          }
+        ],
+        "description": "## Overview\n[lodash](https://www.npmjs.com/package/lodash) is a modern JavaScript utility library delivering modularity, performance, & extras.\n\nAffected versions of this package are vulnerable to Prototype Pollution via the `_.unset` and `_.omit` functions. An attacker can delete methods held in properties of global prototypes but cannot overwrite those properties.\n\n## Details\n\nPrototype Pollution is a vulnerability affecting JavaScript. Prototype Pollution refers to the ability to inject properties into existing JavaScript language construct prototypes, such as objects. JavaScript allows all Object attributes to be altered, including their magical attributes such as `__proto__`, `constructor` and `prototype`. An attacker manipulates these attributes to overwrite, or pollute, a JavaScript application object prototype of the base object by injecting other values.  Properties on the `Object.prototype` are then inherited by all the JavaScript objects through the prototype chain. When that happens, this leads to either denial of service by triggering JavaScript exceptions, or it tampers with the application source code to force the code path that the attacker injects, thereby leading to remote code execution.\n\nThere are two main ways in which the pollution of prototypes occurs:\n\n-   Unsafe `Object` recursive merge\n    \n-   Property definition by path\n    \n\n### Unsafe Object recursive merge\n\nThe logic of a vulnerable recursive merge function follows the following high-level model:\n```\nmerge (target, source)\n\n  foreach property of source\n\n    if property exists and is an object on both the target and the source\n\n      merge(target[property], source[property])\n\n    else\n\n      target[property] = source[property]\n```\n<br>  \n\nWhen the source object contains a property named `__proto__` defined with `Object.defineProperty()` , the condition that checks if the property exists and is an object on both the target and the source passes and the merge recurses with the target, being the prototype of `Object` and the source of `Object` as defined by the attacker. Properties are then copied on the `Object` prototype.\n\nClone operations are a special sub-class of unsafe recursive merges, which occur when a recursive merge is conducted on an empty object: `merge({},source)`.\n\n`lodash` and `Hoek` are examples of libraries susceptible to recursive merge attacks.\n\n### Property definition by path\n\nThere are a few JavaScript libraries that use an API to define property values on an object based on a given path. The function that is generally affected contains this signature: `theFunction(object, path, value)`\n\nIf the attacker can control the value of “path”, they can set this value to `__proto__.myValue`. `myValue` is then assigned to the prototype of the class of the object.\n\n## Types of attacks\n\nThere are a few methods by which Prototype Pollution can be manipulated:\n\n| Type |Origin  |Short description |\n|--|--|--|\n| **Denial of service (DoS)**|Client  |This is the most likely attack. <br>DoS occurs when `Object` holds generic functions that are implicitly called for various operations (for example, `toString` and `valueOf`). <br> The attacker pollutes `Object.prototype.someattr` and alters its state to an unexpected value such as `Int` or `Object`. In this case, the code fails and is likely to cause a denial of service.  <br>**For example:** if an attacker pollutes `Object.prototype.toString` by defining it as an integer, if the codebase at any point was reliant on `someobject.toString()` it would fail. |\n |**Remote Code Execution**|Client|Remote code execution is generally only possible in cases where the codebase evaluates a specific attribute of an object, and then executes that evaluation.<br>**For example:** `eval(someobject.someattr)`. In this case, if the attacker pollutes `Object.prototype.someattr` they are likely to be able to leverage this in order to execute code.|\n|**Property Injection**|Client|The attacker pollutes properties that the codebase relies on for their informative value, including security properties such as cookies or tokens.<br>  **For example:** if a codebase checks privileges for `someuser.isAdmin`, then when the attacker pollutes `Object.prototype.isAdmin` and sets it to equal `true`, they can then achieve admin privileges.|\n\n## Affected environments\n\nThe following environments are susceptible to a Prototype Pollution attack:\n\n-   Application server\n    \n-   Web server\n\n-   Web browser\n    \n\n## How to prevent\n\n1.  Freeze the prototype— use `Object.freeze (Object.prototype)`.\n    \n2.  Require schema validation of JSON input.\n    \n3.  Avoid using unsafe recursive merge functions.\n    \n4.  Consider using objects without prototypes (for example, `Object.create(null)`), breaking the prototype chain and preventing pollution.\n    \n5.  As a best practice use `Map` instead of `Object`.\n\n### For more information on this vulnerability type:\n\n[Arteau, Olivier. “JavaScript prototype pollution attack in NodeJS application.” GitHub, 26 May 2018](https://github.com/HoLyVieR/prototype-pollution-nsec18/blob/master/paper/JavaScript_prototype_pollution_attack_in_NodeJS.pdf)\n\n## Remediation\nUpgrade `lodash` to version 4.17.23 or higher.\n## References\n- [GitHub Commit](https://github.com/lodash/lodash/commit/edadd452146f7e4bad4ea684e955708931d84d81)\n",
+        "epssDetails": {
+          "percentile": "0.07863",
+          "probability": "0.00028",
+          "modelVersion": "v2025.03.14"
+        },
+        "identifiers": {
+          "CVE": [
+            "CVE-2025-13465"
+          ],
+          "CWE": [
+            "CWE-1321"
+          ],
+          "GHSA": [
+            "GHSA-xxjr-mmjv-4gpg"
+          ]
+        },
+        "packageName": "lodash",
+        "proprietary": false,
+        "creationTime": "2026-01-22T07:06:24.683701Z",
+        "functions_new": [],
+        "alternativeIds": [],
+        "disclosureTime": "2026-01-21T23:01:22Z",
+        "exploitDetails": {
+          "sources": [],
+          "maturityLevels": [
+            {
+              "type": "secondary",
+              "level": "Not Defined",
+              "format": "CVSSv3"
+            },
+            {
+              "type": "primary",
+              "level": "Not Defined",
+              "format": "CVSSv4"
+            }
+          ]
+        },
+        "packageManager": "npm",
+        "publicationTime": "2026-01-22T07:08:27.179012Z",
+        "severityBasedOn": "CVSS",
+        "modificationTime": "2026-03-22T07:44:59.510091Z",
+        "socialTrendAlert": false,
+        "packagePopularityRank": 99,
+        "from": [
+          "skypanelv2@1.0.0",
+          "recharts@2.15.4",
+          "lodash@4.17.21"
+        ],
+        "upgradePath": [
+          false,
+          "recharts@2.15.4",
+          "lodash@4.17.23"
+        ],
+        "isUpgradable": true,
+        "isPatchable": false,
+        "isPinnable": false,
+        "isRuntime": false,
+        "name": "lodash",
+        "version": "4.17.21",
+        "severityWithCritical": "medium"
+      }
+    ],
+    "upgrade": {
+      "@aws-sdk/client-s3@3.927.0": {
+        "upgradeTo": "@aws-sdk/client-s3@3.974.0",
+        "upgrades": [
+          "fast-xml-parser@5.2.5",
+          "fast-xml-parser@5.2.5",
+          "fast-xml-parser@5.2.5",
+          "fast-xml-parser@5.2.5",
+          "fast-xml-parser@5.2.5",
+          "fast-xml-parser@5.2.5"
+        ],
+        "vulns": [
+          "SNYK-JS-FASTXMLPARSER-15155603",
+          "SNYK-JS-FASTXMLPARSER-15307668",
+          "SNYK-JS-FASTXMLPARSER-15324289",
+          "SNYK-JS-FASTXMLPARSER-15353391",
+          "SNYK-JS-FASTXMLPARSER-15677840",
+          "SNYK-JS-FASTXMLPARSER-15699647"
+        ]
+      },
+      "axios@1.13.1": {
+        "upgradeTo": "axios@1.13.5",
+        "upgrades": [
+          "axios@1.13.1"
+        ],
+        "vulns": [
+          "SNYK-JS-AXIOS-15252993"
+        ]
+      },
+      "express@4.21.2": {
+        "upgradeTo": "express@4.22.0",
+        "upgrades": [
+          "qs@6.13.0",
+          "qs@6.13.0"
+        ],
+        "vulns": [
+          "SNYK-JS-QS-14724253",
+          "SNYK-JS-QS-15268416"
+        ]
+      },
+      "multer@2.0.2": {
+        "upgradeTo": "multer@2.1.1",
+        "upgrades": [
+          "multer@2.0.2",
+          "multer@2.0.2",
+          "multer@2.0.2"
+        ],
+        "vulns": [
+          "SNYK-JS-MULTER-15417528",
+          "SNYK-JS-MULTER-15365916",
+          "SNYK-JS-MULTER-15365918"
+        ]
+      },
+      "react-router-dom@7.9.5": {
+        "upgradeTo": "react-router-dom@7.12.0",
+        "upgrades": [
+          "react-router@7.9.5",
+          "react-router@7.9.5",
+          "react-router@7.9.5",
+          "react-router@7.9.5"
+        ],
+        "vulns": [
+          "SNYK-JS-REACTROUTER-14908293",
+          "SNYK-JS-REACTROUTER-14908429",
+          "SNYK-JS-REACTROUTER-14908531",
+          "SNYK-JS-REACTROUTER-14908286"
+        ]
+      }
+    },
+    "patch": {},
+    "ignore": {},
+    "pin": {}
+  },
+  "filesystemPolicy": true,
+  "filtered": {
+    "ignore": [],
+    "patch": []
+  },
+  "uniqueCount": 18,
+  "projectName": "skypanelv2",
+  "displayTargetFile": "package-lock.json",
+  "hasUnknownVersions": false,
+  "path": "C:\\Users\\moran\\Documents\\skypanelv2"
+}

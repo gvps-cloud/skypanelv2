@@ -66,6 +66,7 @@ const parseHslCssVar = (
 const colorFromHslTuple = (tuple: [number, number, number]) =>
   new THREE.Color().setHSL(tuple[0] / 360, tuple[1] / 100, tuple[2] / 100);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const resolveThemeColors = (): GlobeThemeColors => {
   const style = getComputedStyle(document.documentElement);
   const primary = parseHslCssVar(style, '--primary', [188, 82, 46]);
@@ -143,6 +144,7 @@ const rotateVectorY = (vector: THREE.Vector3, rotation: number): THREE.Vector3 =
 const toThreeVector = (point: { x: number; y: number; z: number }) =>
   new THREE.Vector3(point.x, point.y, point.z);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const getSpriteVisualState = (
   regionId: string,
   hoveredRegionId: string | null,
@@ -642,13 +644,20 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
       rootObserver.disconnect();
       styleObserver?.disconnect();
 
-      markerSpritesRef.current.forEach((sprite) => {
+      // Capture ref values at cleanup time to avoid stale references
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const sprites = markerSpritesRef.current;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const localPositions = markerLocalPositionsRef.current;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const markerSt = markerStateRef.current;
+      sprites.forEach((sprite) => {
         (sprite.material as THREE.SpriteMaterial).map?.dispose();
         sprite.material.dispose();
       });
-      markerSpritesRef.current.clear();
-      markerLocalPositionsRef.current.clear();
-      markerStateRef.current.clear();
+      sprites.clear();
+      localPositions.clear();
+      markerSt.clear();
 
       renderer.dispose();
       globeGeometry.dispose();

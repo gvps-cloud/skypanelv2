@@ -2,8 +2,8 @@
  * Tests for EgressBillingService live organization overview
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { Pool, PoolClient } from 'pg';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
+import { Pool } from 'pg';
 import { EgressBillingService } from './egressBillingService';
 
 describe('EgressBillingService - getOrganizationOverview Live Data', () => {

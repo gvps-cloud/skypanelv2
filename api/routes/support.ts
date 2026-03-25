@@ -89,7 +89,6 @@ router.get("/tickets", authenticateToken, requireOrganization, async (req: Reque
   try {
     const user = (req as any).user;
     const userId = user.id;
-    const userRole = user.role;
     const organizationId = user.organizationId;
 
     let result;

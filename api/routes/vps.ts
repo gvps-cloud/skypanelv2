@@ -376,13 +376,6 @@ const bytesToGigabytes = (value: number): number => {
   return value / 1_000_000_000;
 };
 
-const safeNumber = (value: unknown): number => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  return 0;
-};
-
 const extractTransferUsedBytes = (value: unknown): number => {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;

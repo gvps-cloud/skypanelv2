@@ -2,7 +2,7 @@
  * Egress Credit Manager Component
  * Admin interface for managing organization egress credits and pack settings
  */
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   Database,
@@ -10,9 +10,7 @@ import {
   Minus,
   Search,
   RefreshCw,
-  ShoppingCart,
   AlertTriangle,
-  CheckCircle2,
   Building2,
   ChevronRight,
   Settings,
@@ -214,12 +212,12 @@ const AdjustCreditsDialog: React.FC<AdjustCreditsDialogProps> = ({
 };
 
 const EgressCreditManager: React.FC = () => {
-  const { user } = useAuth();
+  useAuth(); // auth context initialized via component tree
   const [searchQuery, setSearchQuery] = useState('');
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [balanceData, setBalanceData] = useState<EgressBalanceData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);

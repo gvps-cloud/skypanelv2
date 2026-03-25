@@ -297,7 +297,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
                 </TabsContent>
                 <TabsContent
                   value="preview-text"
-                  className="mt-4 border rounded-md p-4 bg-slate-50 min-h-[300px] whitespace-pre-wrap font-mono text-sm"
+                  className="mt-4 border rounded-md p-4 min-h-[300px] whitespace-pre-wrap font-mono text-sm"
                 >
                   {previewContent.text}
                 </TabsContent>

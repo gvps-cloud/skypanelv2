@@ -14,7 +14,7 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Command, CommandList } from '@/components/ui/command';
 import { RegionSelector } from '@/components/VPS/RegionSelector';

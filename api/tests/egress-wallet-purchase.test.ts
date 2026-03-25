@@ -2,7 +2,7 @@
  * Tests for egress wallet purchase functionality
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Pool } from 'pg';
 import request from 'supertest';
 import app from '../app';
@@ -253,13 +253,12 @@ describe('Egress Wallet Purchase API', () => {
   describe('POST /api/egress/credits/purchase/complete with organizationId', () => {
     it('should complete purchase with provided organizationId', async () => {
       // First create a PayPal payment transaction
-      const paymentResult = await pool.query(
+      await pool.query(
         `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, status, paypal_order_id, description, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
          RETURNING id`,
         [testOrgId, 0.60, 'USD', 'paypal', 'paypal', 'completed', 'test-paypal-order-' + Date.now(), 'Egress credit purchase']
       );
-      const transactionId = paymentResult.rows[0].id;
 
       // Ensure credit packs exist
       await pool.query(

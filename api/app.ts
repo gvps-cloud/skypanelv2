@@ -17,7 +17,6 @@ import express, {
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
-import helmet from "helmet";
 import { enhancedHelmet } from "./middleware/security.js";
 import {
   smartRateLimit,

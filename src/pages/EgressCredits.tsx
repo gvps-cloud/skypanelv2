@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import {
   Database,
   Plus,
@@ -45,7 +45,6 @@ import {
 } from '@/components/ui/table';
 
 const EgressCredits: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
 

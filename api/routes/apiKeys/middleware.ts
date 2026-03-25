@@ -31,7 +31,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { query } from '../../lib/database.js';
 import { hashApiKey, validateApiKeyFormat } from '../../lib/secureRandom.js';
-import { type AuthenticatedRequest } from '../../middleware/auth.js';
 
 /**
  * Extended request interface for API key authentication

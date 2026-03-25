@@ -217,6 +217,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       return userNavItems;
     },
     [
+      pathname,
       currentHash,
       isActivityActive,
       isAdminRoute,

@@ -36,7 +36,7 @@ SkyPanelV2 is a full-stack VPS hosting and billing panel with:
 - TypeScript with ESM modules
 - PostgreSQL via `pg`
 - JWT authentication
-- Helmet, CORS, express-validator, multer, and custom rate limiting middleware
+- Helmet, CORS, express-validator, and custom rate limiting middleware
 
 ### Integrations
 

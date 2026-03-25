@@ -218,7 +218,6 @@ class RateLimitMetricsStore {
    * Analyze configuration effectiveness and provide recommendations
    */
   private analyzeConfigEffectiveness(events: RateLimitEvent[]): RateLimitMetrics['configEffectiveness'] {
-    const rateLimitConfig = config.rateLimiting;
     const recommendations: string[] = [];
     
     // Calculate average limit utilization by user type

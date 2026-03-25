@@ -99,8 +99,6 @@ export function validateRateLimitConfiguration(): ConfigValidationResult {
   // Rate-based warnings were removed as they don't reflect VPS hosting platform needs
   // where high API usage is legitimate for server management operations
   const anonymousRatePerMinute = rateLimitConfig.anonymousMaxRequests / windowMinutes;
-  const authenticatedRatePerMinute = rateLimitConfig.authenticatedMaxRequests / windowMinutes;
-  const adminRatePerMinute = rateLimitConfig.adminMaxRequests / windowMinutes;
 
   // 5. Trust proxy validation
   if (typeof rateLimitConfig.trustProxy === 'string') {

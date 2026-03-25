@@ -332,7 +332,7 @@ router.post(
         timestamp: new Date().toISOString()
       });
 
-      const result = await AuthService.requestPasswordReset(email);
+      await AuthService.requestPasswordReset(email);
 
       // Always return the same message regardless of whether email exists
       // This prevents email enumeration attacks

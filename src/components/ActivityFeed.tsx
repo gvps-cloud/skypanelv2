@@ -9,7 +9,6 @@ import {
   Shield,
   Check,
   X,
-  MoreHorizontal,
   Inbox,
   Loader2
 } from 'lucide-react';
@@ -21,7 +20,6 @@ import {
 } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { formatRelativeTime } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
@@ -38,14 +36,6 @@ export interface ActivityData {
   created_at: string;
   organization_name?: string;
 }
-
-type ActivityType = 
-  | 'invitation_received'
-  | 'invitation_accepted'
-  | 'invitation_declined'
-  | 'member_added'
-  | 'member_removed'
-  | 'role_updated';
 
 interface ActivityItemProps {
   activity: ActivityData;

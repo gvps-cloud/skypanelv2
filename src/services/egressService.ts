@@ -67,7 +67,7 @@ class EgressService {
       try {
         const user = JSON.parse(userStr);
         organizationId = user.organizationId;
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -345,7 +345,7 @@ class EgressService {
   /**
    * Get current wallet balance for an organization
    */
-  async getWalletBalance(organizationId: string): Promise<{
+  async getWalletBalance(_organizationId: string): Promise<{
     success: boolean;
     data?: { balance: number };
     error?: string;

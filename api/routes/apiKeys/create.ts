@@ -34,7 +34,7 @@
  * - Row-level security (RLS) ensures users can only access their own keys
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { query } from '../../lib/database.js';
 import { authenticateToken, type AuthenticatedRequest } from '../../middleware/auth.js';
 import {

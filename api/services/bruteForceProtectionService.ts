@@ -15,8 +15,6 @@
  * and other brute force attempts by progressively increasing lockout durations.
  */
 
-import { randomBytes } from 'crypto';
-import { config } from '../config/index.js';
 import Redis from 'ioredis';
 
 /**
@@ -64,17 +62,6 @@ const RESET_WINDOW = 24 * 60 * 60 * 1000;
 /**
  * Redis client interface (lazy-loaded)
  */
-interface RedisClient {
-  set(key: string, value: string, mode?: string, duration?: number): Promise<'OK' | null>;
-  get(key: string): Promise<string | null>;
-  del(key: string): Promise<number>;
-  incr(key: string): Promise<number>;
-  expire(key: string, seconds: number): Promise<number>;
-  keys(pattern: string): Promise<string[]>;
-  quit?(): Promise<void>;
-  disconnect?(): Promise<void>;
-}
-
 let redisClient: Redis | null = null;
 let redisAvailable = false;
 

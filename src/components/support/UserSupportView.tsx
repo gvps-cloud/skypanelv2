@@ -6,10 +6,7 @@ import React, {
   useState,
 } from "react";
 import {
-  Loader2,
-  Mail,
   Plus,
-  RefreshCw,
   RotateCcw,
   Send,
   Ticket,
@@ -17,7 +14,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -32,8 +28,6 @@ import {
   SupportTicket,
   TicketMessage,
   TicketStatus,
-  isReopenRequestMessage,
-  formatTicketMessage,
 } from "@/types/support";
 import { TicketList } from "./shared/TicketList";
 import { TicketDetailHeader } from "./shared/TicketDetailHeader";
@@ -59,10 +53,6 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
   onCreateTicketHandled,
 }) => {
   const { user } = useAuth();
-  const currentUserDisplayName = useMemo(
-    () => `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.email || "You",
-    [user?.email, user?.firstName, user?.lastName],
-  );
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [replyMessage, setReplyMessage] = useState("");
@@ -205,7 +195,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
       setLoading(false);
       setTicketsInitialized(true);
     }
-  }, [authHeader, user?.organizationId]);
+  }, [authHeader]);
 
   useEffect(() => {
     fetchTickets();
@@ -324,7 +314,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
       es.close();
       eventSourceRef.current = null;
     };
-  }, [selectedTicket?.id, token, scrollToBottom]);
+  }, [selectedTicket?.id, token, scrollToBottom]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openTicket = useCallback(
     async (ticket: SupportTicket) => {
@@ -445,7 +435,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
     } catch (error: any) {
       toast.error(error.message || "Failed to send reply");
     }
-  }, [selectedTicket, replyMessage, authHeader, openTicket]);
+  }, [selectedTicket, replyMessage, authHeader, openTicket, scrollToBottom]);
 
   const requestReopen = useCallback(async () => {
     if (!selectedTicket) return;
@@ -508,6 +498,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
     authHeader,
     openTicket,
     fetchTickets,
+    scrollToBottom,
   ]);
 
   const handleCreateTicket = async (data: CreateTicketData) => {

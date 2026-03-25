@@ -37,7 +37,7 @@
  * - Inactive keys are excluded by default unless explicitly requested
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { query } from '../../lib/database.js';
 import { authenticateToken, type AuthenticatedRequest } from '../../middleware/auth.js';
 

@@ -133,7 +133,7 @@ class PaymentService {
       try {
         const user = JSON.parse(userStr);
         organizationId = user.organizationId;
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -721,7 +721,7 @@ class ApiClient {
       try {
         const user = JSON.parse(userStr);
         organizationId = user.organizationId;
-      } catch (e) {
+      } catch {
         // ignore
       }
     }

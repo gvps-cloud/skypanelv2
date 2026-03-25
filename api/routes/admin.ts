@@ -98,14 +98,6 @@ const mergeCustomPreset = (
   return existing ?? null;
 };
 
-const ORGANIZATION_ROLE_PRIORITY = [
-  "owner",
-  "admin",
-  "vps_manager",
-  "support_agent",
-  "viewer",
-];
-
 const normalizeOrganizationRoleName = (roleName?: string | null) => {
   if (!roleName) return null;
   return roleName === "member" ? "viewer" : roleName;
@@ -117,14 +109,6 @@ const toLegacyOrganizationMemberRole = (roleName?: string | null) => {
   if (normalizedRoleName === "owner") return "owner";
   if (normalizedRoleName === "admin") return "admin";
   return "member";
-};
-
-const getOrganizationRolePriority = (roleName?: string | null) => {
-  const normalizedRoleName = normalizeOrganizationRoleName(roleName);
-  if (!normalizedRoleName) return ORGANIZATION_ROLE_PRIORITY.length;
-
-  const index = ORGANIZATION_ROLE_PRIORITY.indexOf(normalizedRoleName);
-  return index === -1 ? ORGANIZATION_ROLE_PRIORITY.length : index;
 };
 
 const buildAdminOrganizationQuery = (whereClause = "") => `

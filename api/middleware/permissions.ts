@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from './auth.js';
 import { query } from '../lib/database.js';
 import { RoleService, Permission } from '../services/roles.js';
