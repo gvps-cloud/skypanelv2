@@ -101,6 +101,9 @@ const Organizations: React.FC = () => {
     purchaseHistory: any[];
   } | null>(null);
   const [creditsLoading, setCreditsLoading] = useState(false);
+  const [creditPacks, setCreditPacks] = useState<any[]>([]);
+  const [packsLoading, setPacksLoading] = useState(false);
+  const [billingLoading, setBillingLoading] = useState(false);
   const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
   const { token, user, switchOrganization } = useAuth();
   const navigate = useNavigate();
