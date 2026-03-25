@@ -15,7 +15,6 @@ import {
   getEgressCreditBalanceDetails,
   getEgressCreditPurchaseHistory,
   getAvailableCreditPacks,
-  purchaseEgressCredits,
   addEgressCredits,
   removeEgressCredits,
   getVPSHourlyUsage,
@@ -212,112 +211,11 @@ router.post(
   }
 );
 
-/**
- * POST /api/egress/credits/purchase/complete
- * Complete purchase after PayPal approval
- * This is called from the success return page
- */
-router.post(
-  "/credits/purchase/complete",
-  requireOrganization,
-  [
-    body("paymentId")
-      .isString()
-      .withMessage("Payment ID is required"),
-    body("packId")
-      .isString()
-      .withMessage("Pack ID is required"),
-    body("organizationId")
-      .isUUID()
-      .withMessage("Organization ID is required"),
-  ],
-  async (req: Request, res: Response) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          error: "Validation failed",
-          details: errors.array(),
-        });
-      }
-
-      const { paymentId, packId, organizationId } = req.body;
-      const { id: userId } = (req as AuthenticatedRequest).user;
-
-      // Verify user is a member of this organization
-      const memberCheck = await dbQuery(
-        `SELECT 1 FROM organization_members WHERE user_id = $1 AND organization_id = $2`,
-        [userId, organizationId],
-      );
-
-      if (memberCheck.rows.length === 0) {
-        return res.status(403).json({
-          success: false,
-          error: "You are not a member of this organization",
-        });
-      }
-
-      // Verify the payment was captured
-      const transactionResult = await dbQuery(
-        `SELECT id, amount, currency, status
-         FROM payment_transactions
-         WHERE paypal_order_id = $1 AND organization_id = $2`,
-        [paymentId, organizationId],
-      );
-
-      if (transactionResult.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: "Payment not found",
-        });
-      }
-
-      const transaction = transactionResult.rows[0];
-
-      if (transaction.status !== "completed") {
-        return res.status(400).json({
-          success: false,
-          error: "Payment not completed",
-        });
-      }
-
-      // Check if credits were already applied for this transaction
-      const existingPurchaseResult = await dbQuery(
-        `SELECT id FROM egress_credit_packs WHERE payment_transaction_id = $1`,
-        [transaction.id],
-      );
-
-      if (existingPurchaseResult.rows.length > 0) {
-        return res.json({
-          success: true,
-          message: "Credits already applied",
-          data: { purchaseId: existingPurchaseResult.rows[0].id },
-        });
-      }
-
-      // Apply the credits
-      await purchaseEgressCredits(organizationId, packId, transaction.id, userId);
-
-      const balanceDetails = await getEgressCreditBalanceDetails(organizationId);
-
-      res.json({
-        success: true,
-        message: "Egress credits purchased successfully",
-        data: {
-          newBalance: balanceDetails.creditsGb,
-          warning: balanceDetails.warning,
-        },
-      });
-    } catch (error) {
-      console.error("Error completing egress credit purchase:", error);
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to complete purchase",
-      });
-    }
-  }
-);
+// REMOVED: Duplicate route POST /api/egress/credits/purchase/complete
+// This endpoint has been removed in favor of the organization-scoped endpoint:
+// POST /api/organizations/:id/egress/credits/purchase/complete
+// The organization-scoped endpoint provides better security by validating
+// both paypal_order_id AND organization_id to prevent org crossing attacks.
 
 /**
  * GET /api/egress/credits/wallet-balance

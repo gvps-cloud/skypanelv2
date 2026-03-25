@@ -110,8 +110,8 @@ export const PurchaseEgressCreditsDialog: React.FC<PurchaseEgressCreditsDialogPr
 
     try {
       setIsProcessing(true);
-      // Complete the purchase via org-scoped API
-      const result = await egressService.completeOrganizationPurchase(organizationId, orderId, pack.id);
+      // Complete the purchase via org-scoped API (the single unified endpoint)
+      const result = await egressService.completePurchase(organizationId, orderId, pack.id);
       if (result.success) {
         toast.success(`Successfully purchased ${formatGb(pack.gb)} of egress credits!`);
         await onPurchaseSuccess();

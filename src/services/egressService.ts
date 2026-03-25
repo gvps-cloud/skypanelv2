@@ -189,48 +189,6 @@ class EgressService {
   }
 
   /**
-   * Complete purchase after PayPal approval
-   */
-  async completePurchase(paymentId: string, packId: string): Promise<{
-    success: boolean;
-    message?: string;
-    data?: {
-      newBalance: number;
-      warning: boolean;
-    };
-    error?: string;
-  }> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/egress/credits/purchase/complete`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ paymentId, packId }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to complete purchase",
-        };
-      }
-
-      return {
-        success: true,
-        message: data.message,
-        data: data.data,
-      };
-    } catch (error) {
-      console.error("Complete purchase error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
-    }
-  }
-
-  /**
    * Get purchase history
    */
   async getPurchaseHistory(limit = 50): Promise<{
@@ -543,9 +501,16 @@ class EgressService {
   }
 
   /**
-   * Complete organization egress credit purchase
+   * Complete egress credit purchase for an organization
+   *
+   * This is the ONLY method for completing egress credit purchases.
+   * Previous method completePurchase() has been removed to avoid confusion.
+   *
+   * @param organizationId - Target organization ID from URL parameter
+   * @param paymentId - PayPal order ID
+   * @param packId - Credit pack ID
    */
-  async completeOrganizationPurchase(
+  async completePurchase(
     organizationId: string,
     paymentId: string,
     packId: string

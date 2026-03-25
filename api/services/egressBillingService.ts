@@ -1197,11 +1197,36 @@ export class EgressBillingService {
         }
 
         for (const [organizationId, items] of byOrg.entries()) {
-          const organizationName = items[0]?.organizationName || null;
-          const totalMeasured = round(items.reduce((sum, item) => sum + item.measuredUsageGb, 0), 6);
-          const totalQuota = round(items.reduce((sum, item) => sum + item.allocatedPoolQuotaGb, 0), 6);
-          const totalBillable = round(items.reduce((sum, item) => sum + item.allocatedBillableGb, 0), 6);
-          const totalAmount = round(items.reduce((sum, item) => sum + item.amount, 0), 6);
+          // Collect all unique vps_instance_ids and validate they exist in the database
+          const vpsInstanceIds = Array.from(new Set(
+            items.filter(item => item.vpsInstanceId).map(item => item.vpsInstanceId)
+          ));
+          
+          let validVpsIds: Set<string> = new Set();
+          if (vpsInstanceIds.length > 0) {
+            const vpsCheckResult = await client.query(
+              `SELECT id FROM vps_instances WHERE id = ANY($1::uuid[])`,
+              [vpsInstanceIds]
+            );
+            validVpsIds = new Set(vpsCheckResult.rows.map((row) => String(row.id)));
+          }
+
+          // Replace vps_instance_id with NULL if the referenced VPS instance no longer exists
+          const itemsWithValidVpsIds = items.map((item) => {
+            if (item.vpsInstanceId && !validVpsIds.has(item.vpsInstanceId)) {
+              console.warn(
+                `VPS instance ${item.vpsInstanceId} no longer exists; setting vps_instance_id to NULL for allocation ` +
+                `(organization: ${organizationId}, label: ${item.label}, provider: ${item.providerInstanceId})`
+              );
+              return { ...item, vpsInstanceId: null as any };
+            }
+            return item;
+          });
+          const organizationName = itemsWithValidVpsIds[0]?.organizationName || null;
+          const totalMeasured = round(itemsWithValidVpsIds.reduce((sum, item) => sum + item.measuredUsageGb, 0), 6);
+          const totalQuota = round(itemsWithValidVpsIds.reduce((sum, item) => sum + item.allocatedPoolQuotaGb, 0), 6);
+          const totalBillable = round(itemsWithValidVpsIds.reduce((sum, item) => sum + item.allocatedBillableGb, 0), 6);
+          const totalAmount = round(itemsWithValidVpsIds.reduce((sum, item) => sum + item.amount, 0), 6);
 
           const cycleResult = await client.query(
             `INSERT INTO organization_egress_billing_cycles (
@@ -1233,7 +1258,7 @@ export class EgressBillingService {
           );
 
           const billingCycleId = cycleResult.rows[0]?.id;
-          for (const item of items) {
+          for (const item of itemsWithValidVpsIds) {
             await client.query(
               `INSERT INTO organization_egress_billing_allocations (
                  billing_cycle_id, billing_month, pool_id, pool_scope, region_id, organization_id,

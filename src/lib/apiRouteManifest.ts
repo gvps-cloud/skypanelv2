@@ -742,11 +742,6 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "POST",
-    "path": "/api/egress/credits/purchase/complete",
-    "protected": true
-  },
-  {
-    "method": "POST",
     "path": "/api/egress/credits/purchase/wallet",
     "protected": true
   },

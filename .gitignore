@@ -25,6 +25,7 @@ dist-ssr
 *.sln
 *.sw?
 .vite
+*.kilo
 
 # Environment files
 .env

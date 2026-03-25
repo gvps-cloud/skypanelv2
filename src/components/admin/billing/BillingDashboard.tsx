@@ -4,9 +4,50 @@ import { BillingOverview } from './BillingOverview';
 import { BillingClientList } from './BillingClientList';
 import { BillingTransactions } from './BillingTransactions';
 import { BillingInvoices } from './BillingInvoices';
+import { EgressBilling } from './EgressBilling';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
-export const BillingDashboard: React.FC = () => {
+interface BillingDashboardProps {
+  filteredEgressPricing: any[];
+  filteredLiveEgressUsage: any[];
+  filteredEgressHistory: any[];
+  egressPricingLoading: boolean;
+  liveEgressUsageLoading: boolean;
+  egressHistoryLoading: boolean;
+  egressPricingSyncing: boolean;
+  egressExecuting: boolean;
+  savingEgressRegionId: string | null;
+  egressHistoryMonth: string;
+  onFetchLiveEgressUsage: () => void;
+  onSyncEgressPricing: () => void;
+  onExecuteEgressBilling: () => void;
+  onUpdateEgressPricingRegion: (regionId: string, payload: any) => void;
+  onFetchEgressHistory: () => void;
+  onSetEgressHistoryMonth: (month: string) => void;
+  formatCurrency: (amount: number | null | undefined) => string;
+  formatDateTime: (value: string | null | undefined) => string;
+}
+
+export const BillingDashboard: React.FC<BillingDashboardProps> = ({
+  filteredEgressPricing,
+  filteredLiveEgressUsage,
+  filteredEgressHistory,
+  egressPricingLoading,
+  liveEgressUsageLoading,
+  egressHistoryLoading,
+  egressPricingSyncing,
+  egressExecuting,
+  savingEgressRegionId,
+  egressHistoryMonth,
+  onFetchLiveEgressUsage,
+  onSyncEgressPricing,
+  onExecuteEgressBilling,
+  onUpdateEgressPricingRegion,
+  onFetchEgressHistory,
+  onSetEgressHistoryMonth,
+  formatCurrency,
+  formatDateTime,
+}) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   return (
@@ -26,6 +67,7 @@ export const BillingDashboard: React.FC = () => {
           <TabsTrigger value="clients">Clients</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="egress">Egress Billing</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="space-y-4">
           <BillingOverview />
@@ -68,6 +110,28 @@ export const BillingDashboard: React.FC = () => {
               <BillingInvoices />
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="egress" className="space-y-4">
+          <EgressBilling
+            filteredEgressPricing={filteredEgressPricing}
+            filteredLiveEgressUsage={filteredLiveEgressUsage}
+            filteredEgressHistory={filteredEgressHistory}
+            egressPricingLoading={egressPricingLoading}
+            liveEgressUsageLoading={liveEgressUsageLoading}
+            egressHistoryLoading={egressHistoryLoading}
+            egressPricingSyncing={egressPricingSyncing}
+            egressExecuting={egressExecuting}
+            savingEgressRegionId={savingEgressRegionId}
+            egressHistoryMonth={egressHistoryMonth}
+            onFetchLiveEgressUsage={onFetchLiveEgressUsage}
+            onSyncEgressPricing={onSyncEgressPricing}
+            onExecuteEgressBilling={onExecuteEgressBilling}
+            onUpdateEgressPricingRegion={onUpdateEgressPricingRegion}
+            onFetchEgressHistory={onFetchEgressHistory}
+            onSetEgressHistoryMonth={onSetEgressHistoryMonth}
+            formatCurrency={formatCurrency}
+            formatDateTime={formatDateTime}
+          />
         </TabsContent>
       </Tabs>
     </div>

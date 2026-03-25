@@ -448,7 +448,20 @@ router.post('/:id/egress/credits/purchase', checkEgressManagePermission, async (
   }
 });
 
-// POST /:id/egress/credits/purchase/complete - Complete egress credit purchase
+/**
+ * POST /:id/egress/credits/purchase/complete
+ * Complete egress credit purchase for an organization
+ *
+ * This is the ONLY endpoint for completing egress credit purchases.
+ * The previous endpoint at /api/egress/credits/purchase/complete has been removed.
+ *
+ * Security: Validates both paypal_order_id AND organization_id to prevent org crossing attacks
+ * Auth: Requires JWT authentication + egress_manage permission check via checkEgressManagePermission
+ *
+ * @param id - Organization ID from URL parameter
+ * @param paymentId - PayPal order ID from request body
+ * @param packId - Credit pack ID from request body
+ */
 router.post('/:id/egress/credits/purchase/complete', checkEgressManagePermission, async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   const user = req.user;
