@@ -4,6 +4,7 @@
  */
 
 import { query } from '../lib/database.js';
+import type { PoolClient } from 'pg';
 import type { ThemePalette } from './themeService.js';
 
 export interface InvoiceData {
@@ -467,18 +468,23 @@ export class InvoiceService {
     htmlContent: string,
     data: Record<string, unknown>,
     totalAmount: number,
-    currency: string = 'USD'
+    currency: string = 'USD',
+    client?: PoolClient
   ): Promise<string> {
     try {
       await this.ensureInvoiceTable();
 
-      const result = await query(
+      const queryFn = client
+        ? (text: string, params: unknown[]) => client.query(text, params)
+        : (text: string, params: unknown[]) => query(text, params);
+
+      const result = await queryFn(
         `INSERT INTO billing_invoices (
-          organization_id, 
-          invoice_number, 
-          html_content, 
-          data, 
-          total_amount, 
+          organization_id,
+          invoice_number,
+          html_content,
+          data,
+          total_amount,
           currency
         )
         VALUES ($1, $2, $3, $4, $5, $6)

@@ -4,6 +4,7 @@
  */
 
 import { query, transaction } from '../lib/database.js';
+import { randomUUID } from 'crypto';
 import { logActivity } from './activityLogger.js';
 import { linodeService } from './linodeService.js';
 import { round } from './egress/egressUtils.js';
@@ -361,10 +362,65 @@ export async function addEgressCredits(
 
       // Record the adjustment in egress_credit_packs
       await client.query(
-        `INSERT INTO egress_credit_packs 
+        `INSERT INTO egress_credit_packs
          (organization_id, pack_id, credits_gb, amount_paid, adjustment_type, reason)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [organizationId, 'admin_adjustment', gbToAdd, 0, 'admin_add', reason || 'Admin credit addition'],
+      );
+
+      // Create payment transaction record for the adjustment
+      await client.query(
+        `INSERT INTO payment_transactions (
+           organization_id, amount, currency, payment_method, payment_provider,
+           status, description, metadata
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          organizationId,
+          0, // Admin adjustments are free
+          'USD',
+          'admin_adjustment',
+          'admin',
+          'completed',
+          `Admin added ${gbToAdd}GB egress credits`,
+          JSON.stringify({ adjustment_type: 'admin_add', credits_gb: gbToAdd, reason, admin_id: adminUserId })
+        ]
+      );
+
+      // Generate invoice for the adjustment (inside same transaction for atomicity)
+      const invoiceNumber = `INV-EGRESS-ADD-${randomUUID()}-${organizationId.slice(0, 8)}`;
+      const invoiceMetadata = {
+        sourceType: 'egress_admin_add',
+        credits_gb: gbToAdd,
+        reason,
+        admin_id: adminUserId
+      };
+      const invoiceData = {
+        id: `inv-${randomUUID()}`,
+        invoiceNumber,
+        organizationId,
+        items: [{
+          description: `Egress Credits Added (${gbToAdd}GB)`,
+          quantity: 1,
+          unitPrice: 0,
+          amount: 0
+        }],
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+        currency: 'USD' as const,
+        createdAt: new Date(),
+        status: 'paid' as const,
+      };
+
+      const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData);
+      await InvoiceService.createInvoice(
+        organizationId,
+        invoiceNumber,
+        htmlContent,
+        invoiceMetadata,
+        invoiceData.total,
+        invoiceData.currency,
+        client
       );
 
       return Number(result.rows[0].credits_gb);
@@ -384,62 +440,6 @@ export async function addEgressCredits(
         reason,
       },
     });
-
-    // Create payment transaction record for the adjustment
-    await transaction(async (client) => {
-      await client.query(
-        `INSERT INTO payment_transactions (
-           organization_id, amount, currency, payment_method, payment_provider,
-           status, description, metadata
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [
-          organizationId,
-          0, // Admin adjustments are free
-          'USD',
-          'admin_adjustment',
-          'admin',
-          'completed',
-          `Admin added ${gbToAdd}GB egress credits`,
-          JSON.stringify({ adjustment_type: 'admin_add', credits_gb: gbToAdd, reason, admin_id: adminUserId })
-        ]
-      );
-    });
-
-    // Generate invoice for the adjustment
-    const invoiceNumber = `INV-EGRESS-ADD-${Date.now()}-${organizationId.slice(0, 8)}`;
-    const invoiceMetadata = {
-      sourceType: 'egress_admin_add',
-      credits_gb: gbToAdd,
-      reason,
-      admin_id: adminUserId
-    };
-    const invoiceData = {
-      id: `inv-${Date.now()}`,
-      invoiceNumber,
-      organizationId,
-      items: [{
-        description: `Egress Credits Added (${gbToAdd}GB)`,
-        quantity: 1,
-        unitPrice: 0,
-        amount: 0
-      }],
-      subtotal: 0,
-      tax: 0,
-      total: 0,
-      currency: 'USD' as const,
-      createdAt: new Date(),
-      status: 'paid' as const,
-    };
-
-    const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData);
-    await InvoiceService.createInvoice(
-      organizationId,
-      invoiceNumber,
-      htmlContent,
-      invoiceMetadata,
-      invoiceData.total,
-      invoiceData.currency
-    );
 
     return newBalance;
   } catch (error) {
@@ -494,10 +494,65 @@ export async function removeEgressCredits(
 
       // Record the adjustment in egress_credit_packs
       await client.query(
-        `INSERT INTO egress_credit_packs 
+        `INSERT INTO egress_credit_packs
          (organization_id, pack_id, credits_gb, amount_paid, adjustment_type, reason)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [organizationId, 'admin_adjustment', gbToRemove, 0, 'admin_remove', reason || 'Admin credit removal'],
+      );
+
+      // Create payment transaction record for the adjustment
+      await client.query(
+        `INSERT INTO payment_transactions (
+           organization_id, amount, currency, payment_method, payment_provider,
+           status, description, metadata
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          organizationId,
+          0, // Admin adjustments are free
+          'USD',
+          'admin_adjustment',
+          'admin',
+          'completed',
+          `Admin removed ${gbToRemove}GB egress credits`,
+          JSON.stringify({ adjustment_type: 'admin_remove', credits_gb: gbToRemove, reason, admin_id: adminUserId })
+        ]
+      );
+
+      // Generate invoice for the adjustment (inside same transaction for atomicity)
+      const invoiceNumber = `INV-EGRESS-REM-${randomUUID()}-${organizationId.slice(0, 8)}`;
+      const invoiceMetadata = {
+        sourceType: 'egress_admin_remove',
+        credits_gb: gbToRemove,
+        reason,
+        admin_id: adminUserId
+      };
+      const invoiceData = {
+        id: `inv-${randomUUID()}`,
+        invoiceNumber,
+        organizationId,
+        items: [{
+          description: `Egress Credits Removed (${gbToRemove}GB)`,
+          quantity: 1,
+          unitPrice: 0,
+          amount: 0
+        }],
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+        currency: 'USD' as const,
+        createdAt: new Date(),
+        status: 'paid' as const,
+      };
+
+      const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData);
+      await InvoiceService.createInvoice(
+        organizationId,
+        invoiceNumber,
+        htmlContent,
+        invoiceMetadata,
+        invoiceData.total,
+        invoiceData.currency,
+        client
       );
 
       return Number(result.rows[0].credits_gb);
@@ -517,62 +572,6 @@ export async function removeEgressCredits(
         reason,
       },
     });
-
-    // Create payment transaction record for the adjustment
-    await transaction(async (client) => {
-      await client.query(
-        `INSERT INTO payment_transactions (
-           organization_id, amount, currency, payment_method, payment_provider,
-           status, description, metadata
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [
-          organizationId,
-          0, // Admin adjustments are free
-          'USD',
-          'admin_adjustment',
-          'admin',
-          'completed',
-          `Admin removed ${gbToRemove}GB egress credits`,
-          JSON.stringify({ adjustment_type: 'admin_remove', credits_gb: gbToRemove, reason, admin_id: adminUserId })
-        ]
-      );
-    });
-
-    // Generate invoice for the adjustment
-    const invoiceNumber = `INV-EGRESS-REM-${Date.now()}-${organizationId.slice(0, 8)}`;
-    const invoiceMetadata = {
-      sourceType: 'egress_admin_remove',
-      credits_gb: gbToRemove,
-      reason,
-      admin_id: adminUserId
-    };
-    const invoiceData = {
-      id: `inv-${Date.now()}`,
-      invoiceNumber,
-      organizationId,
-      items: [{
-        description: `Egress Credits Removed (${gbToRemove}GB)`,
-        quantity: 1,
-        unitPrice: 0,
-        amount: 0
-      }],
-      subtotal: 0,
-      tax: 0,
-      total: 0,
-      currency: 'USD' as const,
-      createdAt: new Date(),
-      status: 'paid' as const,
-    };
-
-    const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData);
-    await InvoiceService.createInvoice(
-      organizationId,
-      invoiceNumber,
-      htmlContent,
-      invoiceMetadata,
-      invoiceData.total,
-      invoiceData.currency
-    );
 
     return newBalance;
   } catch (error) {
