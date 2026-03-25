@@ -111,6 +111,14 @@ const normalizeOrganizationRoleName = (roleName?: string | null) => {
   return roleName === "member" ? "viewer" : roleName;
 };
 
+const toLegacyOrganizationMemberRole = (roleName?: string | null) => {
+  const normalizedRoleName = normalizeOrganizationRoleName(roleName);
+
+  if (normalizedRoleName === "owner") return "owner";
+  if (normalizedRoleName === "admin") return "admin";
+  return "member";
+};
+
 const getOrganizationRolePriority = (roleName?: string | null) => {
   const normalizedRoleName = normalizeOrganizationRoleName(roleName);
   if (!normalizedRoleName) return ORGANIZATION_ROLE_PRIORITY.length;
@@ -4875,6 +4883,7 @@ router.post(
           .json(formatBusinessLogicError("Invalid role", "INVALID_ROLE"));
         return;
       }
+      const selectedLegacyRole = toLegacyOrganizationMemberRole(selectedRole.name);
 
       const userResult = await query(
         "SELECT id, name, email, role as user_role FROM users WHERE id = $1",
@@ -4912,7 +4921,7 @@ router.post(
             [
               organizationId,
               userId,
-              selectedRole.name,
+              selectedLegacyRole,
               selectedRole.id,
               new Date().toISOString(),
             ],
@@ -4931,7 +4940,7 @@ router.post(
           [
             organizationId,
             userId,
-            selectedRole.name,
+            selectedLegacyRole,
             selectedRole.id,
             new Date().toISOString(),
           ],
@@ -5078,6 +5087,7 @@ router.put(
           .json(formatBusinessLogicError("Invalid role", "INVALID_ROLE"));
         return;
       }
+      const selectedLegacyRole = toLegacyOrganizationMemberRole(selectedRole.name);
 
       // If changing to owner, handle ownership transfer
       if (selectedRole.name === "owner") {
@@ -5109,7 +5119,7 @@ router.put(
             `UPDATE organization_members
              SET role = $1, role_id = $2
              WHERE organization_id = $3 AND user_id = $4`,
-            [selectedRole.name, selectedRole.id, organizationId, userId],
+            [selectedLegacyRole, selectedRole.id, organizationId, userId],
           );
 
           await query("COMMIT");
@@ -5135,7 +5145,7 @@ router.put(
           `UPDATE organization_members
            SET role = $1, role_id = $2
            WHERE organization_id = $3 AND user_id = $4`,
-          [selectedRole.name, selectedRole.id, organizationId, userId],
+          [selectedLegacyRole, selectedRole.id, organizationId, userId],
         );
       }
 
