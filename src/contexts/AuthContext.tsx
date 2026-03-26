@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { buildApiUrl } from "../lib/api";
 
 export interface User {
   id: string;
@@ -131,11 +132,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isImpersonating, setIsImpersonating] = useState(false);
 
   const logout = async () => {
-    // Call backend to blacklist the token
+    // Clear local state FIRST so navigation can't abort before cleanup
     const currentToken = token;
+    setUser(null);
+    setToken(null);
+    setIsImpersonating(false);
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
+
+    // Then blacklist on backend (best-effort, local state is already clean)
     if (currentToken) {
       try {
-        await fetch("/api/auth/logout", {
+        await fetch(buildApiUrl("/auth/logout"), {
           method: "POST",
           headers: {
             Authorization: `Bearer ${currentToken}`,
@@ -143,16 +151,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           },
         });
       } catch (error) {
-        // Log but don't block logout if backend call fails
+        // Log but don't block — local state is already cleared
         console.error("Backend logout failed:", error);
       }
     }
-
-    setUser(null);
-    setToken(null);
-    setIsImpersonating(false);
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
   };
 
   const refreshToken = async (currentToken?: string) => {
@@ -186,7 +188,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (error) {
       console.error("Token refresh error:", error);
-      logout(); // If refresh fails, logout the user
+      try { await logout(); } catch {} // If refresh fails, logout the user
       throw error;
     }
   };
@@ -223,8 +225,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (storedToken && storedUser) {
       // Check if token is expired
       if (isTokenExpired(storedToken)) {
-        logout();
-        window.location.href = "/";
+        (async () => {
+          try { await logout(); } catch {}
+          window.location.href = "/";
+        })();
         setLoading(false);
         return;
       }
@@ -262,8 +266,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const tokenCheckInterval = setInterval(() => {
       const currentToken = getAuthToken();
       if (currentToken && isTokenExpired(currentToken)) {
-        logout();
-        window.location.href = "/";
+        (async () => {
+          try { await logout(); } catch {}
+          window.location.href = "/";
+        })();
       }
     }, 60000); // Check every 60 seconds
 

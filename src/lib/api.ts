@@ -737,11 +737,12 @@ class ApiClient {
     if (!response.ok) {
       // Handle 401 Unauthorized - token expired or invalid
       if (response.status === 401) {
-        const logoutCallback = (window as any).__autoLogoutCallback;
+        const logoutCallback = (window as any).__autoLogoutCallback as (() => void | Promise<void>) | undefined;
 
         if (logoutCallback) {
-          logoutCallback();
-          window.location.href = "/";
+          Promise.resolve(logoutCallback()).finally(() => {
+            window.location.href = "/";
+          });
         }
       }
 

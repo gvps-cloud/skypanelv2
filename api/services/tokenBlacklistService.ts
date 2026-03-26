@@ -72,17 +72,8 @@ async function initializeRedis(): Promise<void> {
       }
     };
 
-    // Use REDIS_URL if available, otherwise use individual components
-    if (redisUrl) {
-      redisClient = new Redis(redisUrl, redisOptions);
-    } else {
-      redisClient = new Redis({
-        ...redisOptions,
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD,
-      });
-    }
+    // Use REDIS_URL (already validated above)
+    redisClient = new Redis(redisUrl, redisOptions);
 
     redisClient.on('error', (err) => {
       console.error('Token blacklist Redis error:', err);

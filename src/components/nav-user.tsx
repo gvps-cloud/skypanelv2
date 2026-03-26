@@ -48,8 +48,11 @@ export function NavUser({
   const isAdmin = user.role === "admin"
 
   const handleLogout = async () => {
-    await logout()
-    navigate("/login")
+    try {
+      await logout()
+    } finally {
+      navigate("/login")
+    }
   }
 
   return (
