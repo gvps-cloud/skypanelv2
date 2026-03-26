@@ -56,6 +56,7 @@ import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Pricing from "./pages/Pricing";
 import SSHKeys from "./pages/SSHKeys";
+import Documentation from "./pages/Documentation";
 
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import Organizations from "./pages/Organizations";
@@ -394,6 +395,9 @@ function AppRoutes() {
         />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/faq" element={<FAQ />} />
+        <Route path="/docs" element={<Documentation />} />
+        <Route path="/docs/:categorySlug" element={<Documentation />} />
+        <Route path="/docs/:categorySlug/:articleSlug" element={<Documentation />} />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/status" element={<Status />} />
