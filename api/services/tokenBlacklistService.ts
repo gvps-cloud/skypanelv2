@@ -53,6 +53,9 @@ async function initializeRedis(): Promise<void> {
   // Check if Redis is configured
   const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI;
   if (!redisUrl) {
+    if (process.env.REDIS_HOST || process.env.REDIS_PORT || process.env.REDIS_PASSWORD) {
+      console.warn('Token blacklist: REDIS_HOST/REDIS_PORT/REDIS_PASSWORD are no longer supported. Please use REDIS_URL instead.');
+    }
     console.log('Token blacklist: Redis not configured, using in-memory storage');
     redisAvailable = false;
     return;
@@ -71,17 +74,7 @@ async function initializeRedis(): Promise<void> {
       }
     };
 
-    // Use REDIS_URL if available, otherwise use individual components
-    if (redisUrl) {
-      redisClient = new Redis(redisUrl, redisOptions);
-    } else {
-      redisClient = new Redis({
-        ...redisOptions,
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD,
-      });
-    }
+    redisClient = new Redis(redisUrl, redisOptions);
 
     redisClient.on('error', (err) => {
       console.error('Token blacklist Redis error:', err);

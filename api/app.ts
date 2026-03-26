@@ -48,6 +48,8 @@ import adminBillingRoutes from "./routes/admin/billing.js";
 import githubRoutes from "./routes/github.js";
 import egressRoutes from "./routes/egress.js";
 import apiKeysRoutes from "./routes/apiKeys/index.js";
+import documentationRoutes from "./routes/documentation.js";
+import adminDocumentationRoutes from "./routes/adminDocumentation.js";
 import {
   initializeMetricsCollection,
   startMetricsPersistence,
@@ -115,6 +117,8 @@ app.use("/api/activities", activitiesRoutes);
 app.use("/api/pricing", pricingRoutes);
 app.use("/api/egress", egressRoutes);
 app.use("/api/api-keys", apiKeysRoutes);
+app.use("/api/documentation", documentationRoutes);
+app.use("/api/admin/documentation", adminDocumentationRoutes);
 
 // Health check routes are now handled by the dedicated health router
 

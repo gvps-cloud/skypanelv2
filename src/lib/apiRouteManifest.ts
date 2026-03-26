@@ -176,6 +176,71 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "protected": true
   },
   {
+    "method": "GET",
+    "path": "/api/admin/documentation/articles",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/documentation/articles",
+    "protected": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/documentation/articles/:id",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/documentation/articles/:id",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/documentation/articles/:id",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/documentation/articles/:id/files",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/documentation/articles/reorder",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/documentation/categories",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/documentation/categories",
+    "protected": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/documentation/categories/:id",
+    "protected": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/documentation/categories/:id",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/documentation/categories/reorder",
+    "protected": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/documentation/files/:id",
+    "protected": true
+  },
+  {
     "method": "POST",
     "path": "/api/admin/egress/execute",
     "protected": true
@@ -688,6 +753,26 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "GET",
     "path": "/api/contact/config",
+    "protected": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/documentation/articles/:slug",
+    "protected": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/documentation/categories",
+    "protected": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/documentation/categories/:slug",
+    "protected": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/documentation/files/:id",
     "protected": false
   },
   {

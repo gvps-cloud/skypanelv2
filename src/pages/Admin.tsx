@@ -61,6 +61,7 @@ import RegionLabelManager from "@/components/admin/RegionLabelManager";
 import { AdminSupportView } from "@/components/admin/AdminSupportView";
 import { VPSPlanWizard } from "@/components/admin/VPSPlanWizard";
 import EgressCreditManager from "@/components/admin/EgressCreditManager";
+import DocumentationManager from "@/components/admin/documentation/DocumentationManager";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { SSHTerminal } from "@/components/VPS/SSHTerminal";
 import { useCategoryDisplayName } from "@/hooks/useCategoryMappings";
@@ -160,6 +161,7 @@ type AdminSection =
   | "user-management"
   | "rate-limiting"
   | "faq-management"
+  | "documentation"
   | "platform"
   | "egress-credits"
   | "contact-management"
@@ -182,10 +184,11 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "egress-credits",
   "rate-limiting",
   "faq-management",
+  "documentation",
   "platform",
   "contact-management",
   "billing",
-  "email-templates",
+  "email-templates"
 ];
 
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
@@ -1401,6 +1404,9 @@ const Admin: React.FC = () => {
         break;
       case "contact-management":
         // Contact management will handle its own data fetching
+        break;
+      case "documentation":
+        // Documentation manager handles its own data fetching
         break;
       default:
         fetchTickets();
@@ -3937,6 +3943,10 @@ const Admin: React.FC = () => {
             <FAQItemManager token={token || ""} />
             <UpdatesManager token={token || ""} />
           </div>
+        </SectionPanel>
+
+        <SectionPanel section="documentation" activeSection={activeTab}>
+          <DocumentationManager />
         </SectionPanel>
 
         <SectionPanel section="platform" activeSection={activeTab}>
