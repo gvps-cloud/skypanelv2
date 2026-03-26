@@ -740,7 +740,7 @@ class ApiClient {
         const logoutCallback = (window as any).__autoLogoutCallback as (() => void | Promise<void>) | undefined;
 
         if (logoutCallback) {
-          Promise.resolve(logoutCallback()).finally(() => {
+          Promise.resolve().then(() => logoutCallback()).finally(() => {
             window.location.href = "/";
           });
         }

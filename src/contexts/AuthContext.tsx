@@ -132,8 +132,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isImpersonating, setIsImpersonating] = useState(false);
 
   const logout = async () => {
+    // Read persisted token first (React state may already be null in other closures)
+    const currentToken = localStorage.getItem("auth_token") || token;
+
     // Clear local state FIRST so navigation can't abort before cleanup
-    const currentToken = token;
     setUser(null);
     setToken(null);
     setIsImpersonating(false);
