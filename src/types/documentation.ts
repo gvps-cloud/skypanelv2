@@ -37,9 +37,8 @@ export interface DocumentationArticleWithFiles extends DocumentationArticle {
 
 export interface DocumentationFile {
   id: string;
-  article_id: string;
+  article_id?: string;
   filename: string;
-  stored_path: string;
   file_size: number;
   mime_type: string;
   created_at: string;

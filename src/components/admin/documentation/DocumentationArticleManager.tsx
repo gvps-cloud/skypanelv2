@@ -352,7 +352,7 @@ export default function DocumentationArticleManager() {
       return data.file;
     } catch (error) {
       console.error("Failed to upload file:", error);
-      return null;
+      throw error;
     }
   };
 
@@ -371,7 +371,7 @@ export default function DocumentationArticleManager() {
       return true;
     } catch (error) {
       console.error("Failed to delete file:", error);
-      return false;
+      throw error;
     }
   };
 
@@ -398,7 +398,15 @@ export default function DocumentationArticleManager() {
         await uploadFile(newArticle.id, file);
       }
 
-      setArticles((prev) => [...prev, newArticle]);
+      // Merge category name into the sparse server response
+      const category = categories.find(c => c.id === newArticle.category_id);
+      const mergedArticle: DocumentationArticle = {
+        ...newArticle,
+        category_name: category?.name,
+        category_slug: category?.slug,
+        files: [],
+      };
+      setArticles((prev) => [...prev, mergedArticle]);
       setShowCreateDialog(false);
       form.reset();
       setPendingFiles([]);
@@ -441,9 +449,19 @@ export default function DocumentationArticleManager() {
         await uploadFile(selectedArticle.id, file);
       }
 
+      // Merge sparse server response with existing article to preserve category_name and files
+      const category = categories.find(c => c.id === responseData.article.category_id);
       setArticles((prev) =>
         prev.map((art) =>
-          art.id === selectedArticle.id ? responseData.article : art
+          art.id === selectedArticle.id
+            ? {
+                ...art,
+                ...responseData.article,
+                category_name: category?.name ?? art.category_name,
+                category_slug: category?.slug ?? art.category_slug,
+                files: art.files,
+              }
+            : art
         )
       );
       setShowEditDialog(false);
@@ -509,7 +527,7 @@ export default function DocumentationArticleManager() {
 
       setArticles((prev) =>
         prev.map((art) =>
-          art.id === article.id ? data.article : art
+          art.id === article.id ? { ...art, ...data.article, category_name: art.category_name, category_slug: art.category_slug, files: art.files } : art
         )
       );
       toast.success(`Article ${!article.is_active ? "activated" : "deactivated"}`);

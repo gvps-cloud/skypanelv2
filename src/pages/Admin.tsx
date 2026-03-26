@@ -1405,6 +1405,9 @@ const Admin: React.FC = () => {
       case "contact-management":
         // Contact management will handle its own data fetching
         break;
+      case "documentation":
+        // Documentation manager handles its own data fetching
+        break;
       default:
         fetchTickets();
         break;

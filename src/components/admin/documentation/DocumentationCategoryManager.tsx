@@ -125,10 +125,11 @@ function SortableRow({
       <TableCell>
         <button
           className="cursor-grab active:cursor-grabbing"
+          aria-label="Reorder category"
           {...attributes}
           {...listeners}
         >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
+          <GripVertical className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
         </button>
       </TableCell>
       <TableCell className="font-medium">{category.name}</TableCell>
@@ -158,16 +159,17 @@ function SortableRow({
             variant="ghost"
             size="icon"
             onClick={() => onEdit(category)}
+            aria-label="Edit category"
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="h-4 w-4" aria-hidden="true" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onDelete(category)}
-            disabled={(category.article_count || 0) > 0}
+            aria-label="Delete category"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </TableCell>

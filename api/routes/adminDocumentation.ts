@@ -121,7 +121,6 @@ router.get('/categories', async (req: AuthenticatedRequest, res: Response): Prom
     console.error('Admin documentation categories fetch error:', error);
     res.status(500).json({
       error: 'Failed to fetch documentation categories',
-      details: error.message
     });
   }
 });
@@ -135,7 +134,7 @@ router.post(
   [
     body('name').isString().trim().isLength({ min: 1, max: 255 }).withMessage('Category name is required (max 255 characters)'),
     body('description').optional().isString().trim(),
-    body('slug').optional().isString().trim().isLength({ min: 1, max: 255 }),
+    body('slug').optional().isString().trim().isLength({ min: 1, max: 255 }).matches(/^[a-z0-9-]+$/).withMessage('Slug must contain only lowercase letters, numbers, and hyphens'),
     body('icon').optional().isString().trim().isLength({ max: 100 }),
     body('display_order').optional().isInt({ min: 0 }).withMessage('Display order must be a non-negative integer'),
     body('is_active').optional().isBoolean()
@@ -213,7 +212,6 @@ router.post(
       console.error('Admin documentation category create error:', error);
       res.status(500).json({
         error: 'Failed to create documentation category',
-        details: error.message
       });
     }
   }
@@ -229,7 +227,7 @@ router.put(
     param('id').isUUID().withMessage('Invalid category ID'),
     body('name').optional().isString().trim().isLength({ min: 1, max: 255 }),
     body('description').optional().isString().trim(),
-    body('slug').optional().isString().trim().isLength({ min: 1, max: 255 }),
+    body('slug').optional().isString().trim().isLength({ min: 1, max: 255 }).matches(/^[a-z0-9-]+$/).withMessage('Slug must contain only lowercase letters, numbers, and hyphens'),
     body('icon').optional().isString().trim().isLength({ max: 100 }),
     body('is_active').optional().isBoolean()
   ],
@@ -334,7 +332,6 @@ router.put(
       console.error('Admin documentation category update error:', error);
       res.status(500).json({
         error: 'Failed to update documentation category',
-        details: error.message
       });
     }
   }
@@ -377,11 +374,14 @@ router.delete(
 
       // Delete associated files from disk
       for (const row of categoryResult.rows) {
-        if (row.stored_path && fs.existsSync(row.stored_path)) {
-          try {
-            fs.unlinkSync(row.stored_path);
-          } catch (unlinkError) {
-            console.warn('Failed to delete file:', row.stored_path, unlinkError);
+        if (row.stored_path) {
+          const resolvedPath = path.resolve(DOCUMENTATION_UPLOAD_DIR, row.stored_path);
+          if (resolvedPath.startsWith(DOCUMENTATION_UPLOAD_DIR) && fs.existsSync(resolvedPath)) {
+            try {
+              fs.unlinkSync(resolvedPath);
+            } catch (unlinkError) {
+              console.warn('Failed to delete file:', row.stored_path, unlinkError);
+            }
           }
         }
       }
@@ -410,7 +410,6 @@ router.delete(
       console.error('Admin documentation category delete error:', error);
       res.status(500).json({
         error: 'Failed to delete documentation category',
-        details: error.message
       });
     }
   }
@@ -472,7 +471,6 @@ router.post(
       console.error('Admin documentation categories reorder error:', error);
       res.status(500).json({
         error: 'Failed to reorder documentation categories',
-        details: error.message
       });
     }
   }
@@ -512,7 +510,6 @@ router.get('/articles', async (req: AuthenticatedRequest, res: Response): Promis
     console.error('Admin documentation articles fetch error:', error);
     res.status(500).json({
       error: 'Failed to fetch documentation articles',
-      details: error.message
     });
   }
 });
@@ -574,7 +571,6 @@ router.get(
       console.error('Admin documentation article fetch error:', error);
       res.status(500).json({
         error: 'Failed to fetch documentation article',
-        details: error.message
       });
     }
   }
@@ -589,7 +585,7 @@ router.post(
   [
     body('category_id').isUUID().withMessage('Valid category ID is required'),
     body('title').isString().trim().isLength({ min: 1, max: 500 }).withMessage('Title is required (max 500 characters)'),
-    body('slug').optional().isString().trim().isLength({ min: 1, max: 500 }),
+    body('slug').optional().isString().trim().isLength({ min: 1, max: 500 }).matches(/^[a-z0-9-]+$/).withMessage('Slug must contain only lowercase letters, numbers, and hyphens'),
     body('content').isString().withMessage('Content is required'),
     body('summary').optional().isString().trim(),
     body('display_order').optional().isInt({ min: 0 }).withMessage('Display order must be a non-negative integer'),
@@ -681,7 +677,6 @@ router.post(
       console.error('Admin documentation article create error:', error);
       res.status(500).json({
         error: 'Failed to create documentation article',
-        details: error.message
       });
     }
   }
@@ -697,7 +692,7 @@ router.put(
     param('id').isUUID().withMessage('Invalid article ID'),
     body('category_id').optional().isUUID().withMessage('Invalid category ID'),
     body('title').optional().isString().trim().isLength({ min: 1, max: 500 }),
-    body('slug').optional().isString().trim().isLength({ min: 1, max: 500 }),
+    body('slug').optional().isString().trim().isLength({ min: 1, max: 500 }).matches(/^[a-z0-9-]+$/).withMessage('Slug must contain only lowercase letters, numbers, and hyphens'),
     body('content').optional().isString(),
     body('summary').optional().isString().trim(),
     body('is_active').optional().isBoolean()
@@ -821,7 +816,6 @@ router.put(
       console.error('Admin documentation article update error:', error);
       res.status(500).json({
         error: 'Failed to update documentation article',
-        details: error.message
       });
     }
   }
@@ -862,11 +856,14 @@ router.delete(
 
       // Delete associated files from disk
       for (const row of articleResult.rows) {
-        if (row.stored_path && fs.existsSync(row.stored_path)) {
-          try {
-            fs.unlinkSync(row.stored_path);
-          } catch (unlinkError) {
-            console.warn('Failed to delete file:', row.stored_path, unlinkError);
+        if (row.stored_path) {
+          const resolvedPath = path.resolve(DOCUMENTATION_UPLOAD_DIR, row.stored_path);
+          if (resolvedPath.startsWith(DOCUMENTATION_UPLOAD_DIR) && fs.existsSync(resolvedPath)) {
+            try {
+              fs.unlinkSync(resolvedPath);
+            } catch (unlinkError) {
+              console.warn('Failed to delete file:', row.stored_path, unlinkError);
+            }
           }
         }
       }
@@ -895,7 +892,6 @@ router.delete(
       console.error('Admin documentation article delete error:', error);
       res.status(500).json({
         error: 'Failed to delete documentation article',
-        details: error.message
       });
     }
   }
@@ -957,7 +953,6 @@ router.post(
       console.error('Admin documentation articles reorder error:', error);
       res.status(500).json({
         error: 'Failed to reorder documentation articles',
-        details: error.message
       });
     }
   }
@@ -1012,7 +1007,7 @@ router.post(
         [
           id,
           file.originalname,
-          file.path,
+          file.filename,
           file.size,
           file.mimetype,
           new Date().toISOString()
@@ -1046,7 +1041,6 @@ router.post(
       }
       res.status(500).json({
         error: 'Failed to upload file',
-        details: error.message
       });
     }
   }
@@ -1082,10 +1076,11 @@ router.delete(
 
       const file = fileResult.rows[0];
 
-      // Delete file from disk
-      if (fs.existsSync(file.stored_path)) {
+      // Delete file from disk with path containment check
+      const resolvedPath = path.resolve(DOCUMENTATION_UPLOAD_DIR, file.stored_path);
+      if (resolvedPath.startsWith(DOCUMENTATION_UPLOAD_DIR) && fs.existsSync(resolvedPath)) {
         try {
-          fs.unlinkSync(file.stored_path);
+          fs.unlinkSync(resolvedPath);
         } catch (unlinkError) {
           console.warn('Failed to delete file from disk:', file.stored_path, unlinkError);
         }
@@ -1115,7 +1110,6 @@ router.delete(
       console.error('Admin documentation file delete error:', error);
       res.status(500).json({
         error: 'Failed to delete file',
-        details: error.message
       });
     }
   }

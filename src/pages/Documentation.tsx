@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import DOMPurify from 'dompurify';
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -57,6 +58,7 @@ export default function Documentation() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingArticle, setIsLoadingArticle] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [articleNotFound, setArticleNotFound] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -87,11 +89,13 @@ export default function Documentation() {
     const fetchArticle = async () => {
       if (!articleSlug) {
         setSelectedArticle(null);
+        setArticleNotFound(false);
         return;
       }
 
       try {
         setIsLoadingArticle(true);
+        setArticleNotFound(false);
         const response = await apiClient.get<{ article: DocumentationArticleWithFiles }>(
           `/documentation/articles/${articleSlug}?category_slug=${categorySlug}`
         );
@@ -99,6 +103,7 @@ export default function Documentation() {
       } catch (err) {
         console.error("Failed to fetch article:", err);
         setSelectedArticle(null);
+        setArticleNotFound(true);
       } finally {
         setIsLoadingArticle(false);
       }
@@ -269,7 +274,7 @@ export default function Documentation() {
       {/* Content */}
       <div
         className="prose-content"
-        dangerouslySetInnerHTML={{ __html: article.content }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content, { USE_PROFILES: { html: true } }) }}
       />
 
       {/* Files */}
@@ -459,6 +464,13 @@ export default function Documentation() {
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-32 w-full" />
                   </div>
+                ) : articleNotFound ? (
+                  <Alert>
+                    <AlertTitle>Article not found</AlertTitle>
+                    <AlertDescription>
+                      The documentation article you're looking for doesn't exist or has been removed.
+                    </AlertDescription>
+                  </Alert>
                 ) : selectedArticle ? (
                   <ArticleContent article={selectedArticle} />
                 ) : currentCategory ? (

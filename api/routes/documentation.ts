@@ -5,6 +5,10 @@
 import { Router, type Request, type Response } from 'express';
 import { query } from '../lib/database.js';
 import fs from 'fs';
+import path from 'path';
+
+const UPLOAD_DIR = process.env.UPLOAD_PATH || './uploads';
+const DOCUMENTATION_UPLOAD_DIR = path.resolve(UPLOAD_DIR, 'documentation');
 
 const router = Router();
 
@@ -58,7 +62,6 @@ router.get('/categories', async (req: Request, res: Response): Promise<void> => 
     console.error('Documentation categories fetch error:', error);
     res.status(500).json({
       error: 'Failed to fetch documentation categories',
-      details: error.message
     });
   }
 });
@@ -105,7 +108,6 @@ router.get('/categories/:slug', async (req: Request, res: Response): Promise<voi
     console.error('Documentation category fetch error:', error);
     res.status(500).json({
       error: 'Failed to fetch documentation category',
-      details: error.message
     });
   }
 });
@@ -178,7 +180,6 @@ router.get('/articles/:slug', async (req: Request, res: Response): Promise<void>
     console.error('Documentation article fetch error:', error);
     res.status(500).json({
       error: 'Failed to fetch documentation article',
-      details: error.message
     });
   }
 });
@@ -190,6 +191,13 @@ router.get('/articles/:slug', async (req: Request, res: Response): Promise<void>
 router.get('/files/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      res.status(400).json({ error: 'Invalid file ID format' });
+      return;
+    }
 
     // Get file info from database
     const fileResult = await query(
@@ -215,8 +223,16 @@ router.get('/files/:id', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Resolve and validate file path is within upload directory
+    const resolvedPath = path.resolve(DOCUMENTATION_UPLOAD_DIR, file.stored_path);
+    if (!resolvedPath.startsWith(DOCUMENTATION_UPLOAD_DIR)) {
+      console.error('Documentation file path traversal attempt:', file.stored_path);
+      res.status(404).json({ error: 'File not found' });
+      return;
+    }
+
     // Check if file exists on disk
-    if (!fs.existsSync(file.stored_path)) {
+    if (!fs.existsSync(resolvedPath)) {
       res.status(404).json({ error: 'File not found on server' });
       return;
     }
@@ -226,13 +242,12 @@ router.get('/files/:id', async (req: Request, res: Response): Promise<void> => {
     res.setHeader('Content-Length', file.file_size);
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}"`);
 
-    const fileStream = fs.createReadStream(file.stored_path);
+    const fileStream = fs.createReadStream(resolvedPath);
     fileStream.pipe(res);
   } catch (error: any) {
     console.error('Documentation file download error:', error);
     res.status(500).json({
       error: 'Failed to download file',
-      details: error.message
     });
   }
 });
