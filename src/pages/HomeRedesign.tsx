@@ -300,6 +300,16 @@ const faqs = [
     answer:
       "No, we do not support nested virtualization (nested KVM) on our platform at this time. Our infrastructure is optimized for direct workloads and containerization rather than running hypervisors within our VMs.",
   },
+  {
+    question: "What is egress billing and how does it work?",
+    answer:
+      "Egress is the outbound network data sent from your VPS to the internet. We use a prepaid credit model: you purchase egress credit packs in advance (starting at $0.50 for 100GB), and your usage is automatically deducted from your balance every hour. This keeps your costs predictable with no surprise bills.",
+  },
+  {
+    question: "What happens if my egress credits run out?",
+    answer:
+      "When your organization's egress credit balance reaches zero, your VPS instances may be suspended to prevent unbilled network usage. You'll receive notifications before your balance runs low, and you can purchase additional credit packs at any time to restore service immediately.",
+  },
 ];
 
 const testimonials = [
