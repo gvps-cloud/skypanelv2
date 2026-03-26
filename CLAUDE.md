@@ -15,9 +15,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run lint` - ESLint validation
 - `npm run check` - TypeScript type checking without emitting files
 - `npm run preview` - Preview production build locally
-- `npm run test` - vitest run (equivalent to `npm run test:security` but for all tests)
-- `npm run test:ui` - vitest run src/ (frontend unit tests)
-- `npm run test:api` - vitest run api/ (backend unit tests)
 
 ### API Documentation
 - `npm run docs:api:sync` - Sync API documentation (auto-runs via pre* hooks on `dev`, `client:dev`, and `build`)
@@ -149,6 +146,13 @@ COMPANY_BRAND_NAME=SkyPanel
 # File Upload
 MAX_FILE_SIZE=10485760
 UPLOAD_PATH=./uploads
+
+# Optional Services
+REDIS_URL=redis://localhost:6379  # Redis caching (optional)
+REDIS_PASSWORD=your-redis-password
+GITHUB_TOKEN=your-github-token  # Optional GitHub integration
+BACKUP_STORAGE_PROVIDER=local  # Backup storage: local, s3, gcs
+BACKUP_RETENTION_DAYS=30
 ```
 
 ### Rate Limiting Configuration
@@ -182,7 +186,7 @@ Rate limits are configurable via environment variables. Default values are set i
 - `vps_egress_hourly_readings` - Hourly transfer usage readings
 
 ### Database Migrations
-SQL migrations are in the `migrations/` directory with naming convention `NNN_description.sql`. Apply pending migrations with `node scripts/run-migration.js`.
+SQL migrations are in the `migrations/` directory (34 total: 001–034, with 006 skipped). Apply pending migrations with `node scripts/run-migration.js`.
 
 ## API Routes
 

@@ -1217,6 +1217,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "POST",
+    "path": "/api/vps/:id/rebuild",
+    "protected": true
+  },
+  {
+    "method": "POST",
     "path": "/api/vps/:id/shutdown",
     "protected": true
   },

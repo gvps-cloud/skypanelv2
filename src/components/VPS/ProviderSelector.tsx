@@ -1,13 +1,15 @@
 /**
  * Provider Selector Component
  * Allows users to select from active cloud providers
+ * Now uses the standardized AccordionSelect component
  */
 
 import React, { useState, useEffect } from 'react';
-import { Server, ChevronDown, AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import type { Provider, ProviderType } from '@/types/provider';
 import { toast } from 'sonner';
 import { getUserFriendlyErrorMessage, isCredentialError } from '@/lib/providerErrors';
+import { ProviderAccordionSelect } from './ProviderAccordionSelect';
 
 interface ProviderSelectorProps {
   value: string | null;
@@ -45,7 +47,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
       const data = await response.json();
       // Providers are already filtered for active=true and ordered by display_order on the backend
       const activeProviders = data.providers || [];
-      
+
       setProviders(activeProviders);
 
       // Auto-select Linode if no provider is selected and Linode is available
@@ -73,8 +75,11 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const selectedProvider = providers.find(p => p.id === value);
+  const handleSelect = (providerId: string, provider: Provider) => {
+    onChange(providerId, provider.type);
+  };
 
+  // Show loading state
   if (loading) {
     return (
       <div className="space-y-2">
@@ -89,10 +94,11 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
     );
   }
 
+  // Show error state
   if (error) {
     const errorMessage = getUserFriendlyErrorMessage(error);
     const isCredError = isCredentialError(error);
-    
+
     return (
       <div className="space-y-2">
         <label className="block text-sm font-medium text-muted-foreground">
@@ -108,15 +114,6 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
                   Please contact your administrator to configure provider credentials.
                 </p>
               )}
-              {!isCredError && (
-                <button
-                  onClick={fetchProviders}
-                  className="flex items-center gap-2 text-sm text-primary hover:underline"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Retry
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -124,6 +121,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
     );
   }
 
+  // Show no providers state
   if (providers.length === 0) {
     return (
       <div className="space-y-2">
@@ -147,38 +145,13 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
     );
   }
 
+  // Show provider selector using AccordionSelect
   return (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-muted-foreground">
-        Provider *
-      </label>
-      <div className="relative">
-        <select
-          value={value || ''}
-          onChange={(e) => {
-            const provider = providers.find(p => p.id === e.target.value);
-            if (provider) {
-              onChange(provider.id, provider.type);
-            }
-          }}
-          disabled={disabled}
-          className="w-full px-4 py-3 min-h-[48px] border border-rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-base appearance-none pr-10 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
-          aria-label="Select cloud provider"
-        >
-          {providers.map((provider) => (
-            <option key={provider.id} value={provider.id}>
-              {provider.name}
-            </option>
-          ))}
-        </select>
-        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-      </div>
-      {selectedProvider && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Server className="h-4 w-4" />
-          <span>Selected: {selectedProvider.name}</span>
-        </div>
-      )}
-    </div>
+    <ProviderAccordionSelect
+      providers={providers}
+      selectedProviderId={value}
+      onSelect={handleSelect}
+      disabled={disabled}
+    />
   );
 };

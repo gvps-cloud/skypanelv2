@@ -116,6 +116,25 @@ export class LinodeProviderService extends BaseProviderService {
         case 'delete':
           await linodeService.deleteLinodeInstance(id);
           break;
+
+        case 'rebuild':
+          if (!_params?.image || !_params?.root_pass) {
+            throw this.createError('MISSING_PARAMS', 'Rebuild requires image and root_pass parameters');
+          }
+          await linodeService.rebuildLinodeInstance(id, {
+            image: _params.image,
+            root_pass: _params.root_pass,
+            authorized_keys: _params.authorized_keys,
+            authorized_users: _params.authorized_users,
+            booted: _params.booted,
+            disk_encryption: _params.disk_encryption,
+            maintenance_policy: _params.maintenance_policy,
+            metadata: _params.metadata,
+            stackscript_id: _params.stackscript_id,
+            stackscript_data: _params.stackscript_data,
+            type: _params.type,
+          });
+          break;
         
         default:
           throw this.createError('INVALID_ACTION', `Unknown action: ${action}`);

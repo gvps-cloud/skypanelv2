@@ -54,7 +54,9 @@ import { BulkDeleteModal } from "@/components/VPS/BulkDeleteModal";
 import { generateUniqueVPSLabel } from "@/lib/vpsLabelGenerator";
 import { ProviderSelector } from "@/components/VPS/ProviderSelector";
 import { CreateVPSSteps } from "@/components/VPS/CreateVPSSteps";
-import { CountryIcon } from "@/components/VPS/RegionSelector";
+import { RegionAccordionSelect } from "@/components/VPS/RegionAccordionSelect";
+import { RegionMultiSelect } from "@/components/VPS/RegionMultiSelect";
+import { PlanAccordionSelect, PlanSummary, type VPSPlan } from "@/components/VPS/PlanAccordionSelect";
 import {
   getActiveSteps,
   getCurrentStepDisplay,
@@ -158,7 +160,7 @@ const VPS: React.FC = () => {
   const [isRefreshingInstances, setIsRefreshingInstances] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [regionFilter, setRegionFilter] = useState<string>("all");
+  const [selectedRegionFilters, setSelectedRegionFilters] = useState<string[]>([]);
   const [selectedInstances, setSelectedInstances] = useState<VPSInstance[]>([]);
   const [selectedRowSelection, setSelectedRowSelection] =
     useState<RowSelectionState>({});
@@ -205,7 +207,7 @@ const VPS: React.FC = () => {
       type: "",
       type_class: "standard",
       region: "",
-      image: "linode/ubuntu22.04",
+      image: "",
       rootPassword: "",
       sshKeys: [],
       backups: false,
@@ -579,14 +581,16 @@ const VPS: React.FC = () => {
   ]);
 
   useEffect(() => {
-    if (regionFilter === "all") {
+    if (selectedRegionFilters.length === 0) {
       return;
     }
-    const hasRegion = regionOptions.some((region) => region.id === regionFilter);
-    if (!hasRegion) {
-      setRegionFilter("all");
+    // Remove any selected regions that no longer exist in regionOptions
+    const validRegionIds = new Set(regionOptions.map((r) => r.id));
+    const invalidIds = selectedRegionFilters.filter((id) => !validRegionIds.has(id));
+    if (invalidIds.length > 0) {
+      setSelectedRegionFilters((prev) => prev.filter((id) => validRegionIds.has(id)));
     }
-  }, [regionOptions, regionFilter]);
+  }, [regionOptions, selectedRegionFilters]);
 
   useEffect(() => {
     const fetchCreateRegions = async () => {
@@ -1766,7 +1770,8 @@ const VPS: React.FC = () => {
     const matchesStatus =
       statusFilter === "all" || instance.status === statusFilter;
     const matchesRegion =
-      regionFilter === "all" || instance.region === regionFilter;
+      selectedRegionFilters.length === 0 ||
+      selectedRegionFilters.includes(instance.region);
     return matchesSearch && matchesStatus && matchesRegion;
   });
 
@@ -2168,80 +2173,13 @@ const VPS: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={regionSearch}
-              onChange={(event) => setRegionSearch(event.target.value)}
-              placeholder="Search regions by city or country..."
-              className="pl-10"
-              aria-label="Search VPS regions"
-            />
-          </div>
-          <div className="space-y-3">
-            {createRegionsLoading && (
-              <div className="rounded-xl border p-4 text-sm text-muted-foreground">
-                Loading regions...
-              </div>
-            )}
-            {!createRegionsLoading && createRegionsError && (
-              <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-                {createRegionsError}
-              </div>
-            )}
-            {!createRegionsLoading &&
-              !createRegionsError &&
-              filteredCreateRegionOptions.length > 0 && (
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {filteredCreateRegionOptions.map((region) => {
-                    const isSelected = region.id === createForm.region;
-
-                    return (
-                      <button
-                        key={region.id}
-                        type="button"
-                        onClick={() => setCreateForm({ type: "", region: region.id })}
-                        className={`rounded-xl border p-4 text-left transition-colors ${
-                          isSelected
-                            ? "border-primary bg-primary/10"
-                            : "border-border bg-card hover:border-primary/40 hover:bg-muted/40"
-                        }`}
-                        aria-pressed={isSelected}
-                      >
-                        <div className="flex h-full flex-col gap-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/70">
-                              <CountryIcon country={region.country} label={region.label} />
-                            </span>
-                            <Check
-                              className={`mt-1 h-4 w-4 shrink-0 ${
-                                isSelected ? "opacity-100 text-primary" : "opacity-0"
-                              }`}
-                            />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="truncate font-medium text-foreground">
-                              {region.label}
-                            </div>
-                            <div className="mt-1 text-sm text-muted-foreground">
-                              {region.country || "Region"}
-                            </div>
-                          </div>
-                          <div className="mt-auto text-xs font-medium text-muted-foreground">
-                            {region.id}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            {!createRegionsLoading && !createRegionsError && filteredCreateRegionOptions.length === 0 && (
-              <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                No regions available for the selected category.
-              </div>
-            )}
-          </div>
+          <RegionAccordionSelect
+            regions={filteredCreateRegionOptions}
+            selectedRegion={createForm.region}
+            onSelect={(regionId) => setCreateForm({ ...createForm, region: regionId })}
+            loading={createRegionsLoading}
+            error={createRegionsError}
+          />
           {selectedCreateRegion && (
             <p className="text-xs text-muted-foreground">
               Selected region: {selectedCreateRegion.label}
@@ -2275,104 +2213,12 @@ const VPS: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={planSearch}
-              onChange={(event) => setPlanSearch(event.target.value)}
-              placeholder="Search plans by name, specs, or price..."
-              className="pl-10"
-              aria-label="Search VPS plans"
-            />
-          </div>
-          <div className="space-y-3">
-            {filteredPlanOptions.map((option) => {
-              const matchingPlan = filteredProviderPlans.find((plan) => plan.id === option.value);
-              const isSelected = option.value === createForm.type;
-
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setCreateForm({ type: option.value })}
-                  className={`w-full rounded-xl border p-4 text-left transition-colors ${
-                    isSelected
-                      ? "border-primary bg-primary/10"
-                      : "border-border bg-card hover:border-primary/40 hover:bg-muted/40"
-                  }`}
-                  aria-pressed={isSelected}
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/70">
-                      <Server className="h-4 w-4 text-muted-foreground" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-start justify-between gap-3">
-                        <span className="truncate font-medium text-foreground">
-                          {option.label}
-                        </span>
-                        <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                          {option.meta}
-                        </span>
-                      </span>
-                      {option.description && (
-                        <span className="mt-1 block text-sm text-muted-foreground">
-                          {option.description}
-                        </span>
-                      )}
-                      {matchingPlan && (
-                        <span className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                          <span className="rounded-full border border-border/70 px-2 py-1">{matchingPlan.vcpus} vCPU</span>
-                          <span className="rounded-full border border-border/70 px-2 py-1">{formatSelectedPlanMemory(matchingPlan.memory)} RAM</span>
-                          <span className="rounded-full border border-border/70 px-2 py-1">{Math.round(matchingPlan.disk / 1024)} GB Storage</span>
-                          <span className="rounded-full border border-border/70 px-2 py-1">{matchingPlan.transfer} GB Transfer</span>
-                        </span>
-                      )}
-                    </span>
-                    <Check
-                      className={`mt-1 h-4 w-4 shrink-0 ${
-                        isSelected ? "opacity-100 text-primary" : "opacity-0"
-                      }`}
-                    />
-                  </div>
-                </button>
-              );
-            })}
-            {filteredPlanOptions.length === 0 && (
-              <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                No plans available for this category and region.
-              </div>
-            )}
-          </div>
-          {planHelperText && (
-            <p className="text-xs text-muted-foreground">
-              {planHelperText}
-            </p>
-          )}
-          {selectedType && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="gap-1">
-                <Cpu className="h-3.5 w-3.5 mr-1" />
-                {selectedType.vcpus} vCPU
-              </Badge>
-              <Badge variant="outline" className="gap-1">
-                <MemoryStick className="h-3.5 w-3.5 mr-1" />
-                {formatSelectedPlanMemory(selectedType.memory)} RAM
-              </Badge>
-              <Badge variant="outline" className="gap-1">
-                <HardDrive className="h-3.5 w-3.5 mr-1" />
-                {Math.round(selectedType.disk / 1024)} GB Storage
-              </Badge>
-              <Badge variant="outline" className="gap-1">
-                <Network className="h-3.5 w-3.5 mr-1" />
-                {selectedType.transfer} GB Transfer
-              </Badge>
-              <Badge variant="secondary" className="gap-1">
-                <DollarSign className="h-3.5 w-3.5 mr-1" />
-                {formatCurrency(selectedType.price.monthly)} / mo
-              </Badge>
-            </div>
-          )}
+          <PlanAccordionSelect
+            plans={filteredProviderPlans as VPSPlan[]}
+            selectedPlanId={createForm.type}
+            onSelect={(planId) => setCreateForm({ type: planId })}
+          />
+          <PlanSummary plan={selectedType as VPSPlan | null} />
         </div>
       ),
     },
@@ -2709,22 +2555,19 @@ const VPS: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="w-full sm:w-[180px]">
-                <Select value={regionFilter} onValueChange={setRegionFilter}>
-                  <SelectTrigger id="vps-region-filter" aria-label="Region filter">
-                    <SelectValue placeholder="All regions" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-64">
-                    <SelectItem value="all">All regions</SelectItem>
-                    {regionOptions.map((region) => (
-                      <SelectItem key={region.id} value={region.id}>
-                        {region.country
-                          ? `${region.label} · ${region.country}`
-                          : region.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="w-full sm:w-[200px]">
+                <RegionMultiSelect
+                  regions={regionOptions}
+                  selectedRegionIds={selectedRegionFilters}
+                  onRegionToggle={(regionId) => {
+                    setSelectedRegionFilters(prev =>
+                      prev.includes(regionId)
+                        ? prev.filter(id => id !== regionId)
+                        : [...prev, regionId]
+                    );
+                  }}
+                  onClearAll={() => setSelectedRegionFilters([])}
+                />
               </div>
             </div>
           </div>

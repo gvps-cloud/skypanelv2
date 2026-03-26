@@ -6,6 +6,7 @@ import { handleProviderError, logError } from "../lib/errorHandling.js";
 import type { ProviderType } from "../services/providers/IProviderService.js";
 import type {
   CreateLinodeRequest,
+  RebuildLinodeRequest,
   LinodeInstance,
   LinodeInstanceBackupsResponse,
   LinodeInstanceStatsResponse,
@@ -686,6 +687,7 @@ const PROGRESS_ACTION_MAP: Record<string, string[]> = {
     "linode_migrate",
   ],
   backing_up: ["linode_snapshot", "linode_snapshot_create"],
+  rebuilding: ["linode_rebuild"],
 };
 
 const pickProgressEvent = (
@@ -3336,6 +3338,320 @@ router.post("/:id/reboot", async (req: Request, res: Response) => {
     res
       .status(500)
       .json({ error: err.message || "Failed to reboot VPS instance" });
+  }
+});
+
+// Instance actions: rebuild (reinstall OS)
+router.post("/:id/rebuild", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const userId = user.id;
+    const userRole = user.role;
+    const organizationId = user.organizationId;
+
+    // Check vps_manage permission for non-admin users
+    if (userRole !== "admin") {
+      const hasVpsManagePermission = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        "vps_manage",
+      );
+
+      if (!hasVpsManagePermission) {
+        return res.status(403).json({
+          error: "Insufficient permissions",
+          required: "vps_manage",
+        });
+      }
+    }
+
+    // Validate required fields
+    const {
+      image,
+      rootPassword,
+      sshKeys = [],
+      authorizedUsers,
+      booted,
+      diskEncryption,
+      maintenancePolicy,
+      metadata,
+      stackscriptId,
+      stackscriptData,
+      linodeType,
+    } = req.body || {};
+
+    if (!image || typeof image !== "string" || image.trim().length === 0) {
+      return res.status(400).json({
+        error: "Image is required for rebuild",
+        code: "MISSING_IMAGE",
+      });
+    }
+
+    if (
+      !rootPassword ||
+      typeof rootPassword !== "string" ||
+      rootPassword.length < 6
+    ) {
+      return res.status(400).json({
+        error:
+          "Root password is required and must be at least 6 characters long",
+        code: "INVALID_ROOT_PASSWORD",
+      });
+    }
+
+    // Fetch instance record
+    let rowRes;
+    if (user.role === "admin") {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
+    if (rowRes.rows.length === 0)
+      return res.status(404).json({ error: "Instance not found" });
+
+    const row = rowRes.rows[0];
+    
+    // Fetch provider name for whitelabeling
+    const providerResult = await query(
+      "SELECT name FROM service_providers WHERE id = $1 LIMIT 1",
+      [row.provider_id]
+    );
+    const providerName = providerResult.rows[0]?.name || "Cloud Provider";
+
+    const providerType = row.provider_type || "linode";
+    const providerInstanceId = Number(row.provider_instance_id);
+
+    // Resolve SSH keys (same logic as create route)
+    let resolvedAuthorizedKeys: string[] | undefined;
+
+    if (Array.isArray(sshKeys) && sshKeys.length > 0) {
+      const normalizedKeys = (sshKeys as any[])
+        .map((value) => {
+          if (typeof value === "string" || typeof value === "number") {
+            return String(value).trim();
+          }
+          if (value && typeof value === "object" && "id" in value) {
+            return String((value as { id: unknown }).id).trim();
+          }
+          return "";
+        })
+        .filter((value) => value.length > 0);
+
+      const directPublicKeys: string[] = [];
+      const requestedKeyIds: string[] = [];
+
+      for (const key of normalizedKeys) {
+        if (key.startsWith("ssh-") || key.startsWith("sk-")) {
+          directPublicKeys.push(key);
+        } else {
+          requestedKeyIds.push(key);
+        }
+      }
+
+      const resolvedKeys: string[] = [...directPublicKeys];
+
+      if (requestedKeyIds.length > 0) {
+        // Load provider API token for SSH key resolution
+        let providerApiToken: string | null = null;
+        try {
+          const providerResult = await query(
+            "SELECT id, api_key_encrypted FROM service_providers WHERE id = $1 AND active = true LIMIT 1",
+            [row.provider_id],
+          );
+          if (providerResult.rows.length > 0) {
+            providerApiToken = await normalizeProviderToken(
+              providerResult.rows[0].id,
+              providerResult.rows[0].api_key_encrypted,
+            );
+          }
+        } catch (tokenErr) {
+          console.warn("Failed to load provider token for SSH key resolution:", tokenErr);
+        }
+
+        if (providerApiToken) {
+          try {
+            const providerKeys =
+              await linodeService.getSSHKeys(providerApiToken);
+            const keyLookup = new Map(
+              providerKeys.map((providerKey: any) => [
+                String(providerKey.id),
+                String(providerKey.ssh_key || ""),
+              ]),
+            );
+
+            for (const keyId of requestedKeyIds) {
+              const matchedKey = keyLookup.get(keyId);
+              if (matchedKey && matchedKey.trim().length > 0) {
+                resolvedKeys.push(matchedKey.trim());
+              } else {
+                console.warn(
+                  "Selected SSH key could not be resolved for rebuild",
+                  { keyId, provider_id: row.provider_id },
+                );
+              }
+            }
+          } catch (sshKeyErr) {
+            logError("SSH key resolution during rebuild", sshKeyErr, {
+              organizationId,
+              provider_id: row.provider_id,
+              requestedKeys: requestedKeyIds,
+            });
+          }
+        }
+      }
+
+      if (resolvedKeys.length > 0) {
+        resolvedAuthorizedKeys = Array.from(new Set(resolvedKeys));
+      }
+    }
+
+    // Build rebuild request
+    const rebuildPayload: RebuildLinodeRequest = {
+      image: image.trim(),
+      root_pass: rootPassword,
+    };
+
+    if (resolvedAuthorizedKeys && resolvedAuthorizedKeys.length > 0) {
+      rebuildPayload.authorized_keys = resolvedAuthorizedKeys;
+    }
+
+    // authorized_users — Linode usernames whose SSH keys are added
+    if (Array.isArray(authorizedUsers) && authorizedUsers.length > 0) {
+      rebuildPayload.authorized_users = authorizedUsers
+        .map((u: any) => String(u).trim())
+        .filter((u: string) => u.length > 0);
+    }
+
+    // booted — whether to boot after rebuild (defaults to true on Linode side)
+    if (typeof booted === "boolean") {
+      rebuildPayload.booted = booted;
+    }
+
+    // disk_encryption — 'enabled' or 'disabled'
+    if (
+      typeof diskEncryption === "string" &&
+      ["enabled", "disabled"].includes(diskEncryption)
+    ) {
+      rebuildPayload.disk_encryption = diskEncryption as "enabled" | "disabled";
+    }
+
+    // maintenance_policy — 'linode/migrate' or 'linode/power_off_on'
+    if (
+      typeof maintenancePolicy === "string" &&
+      ["linode/migrate", "linode/power_off_on"].includes(maintenancePolicy)
+    ) {
+      rebuildPayload.maintenance_policy = maintenancePolicy as
+        | "linode/migrate"
+        | "linode/power_off_on";
+    }
+
+    // metadata — user-defined metadata object
+    if (
+      metadata &&
+      typeof metadata === "object" &&
+      !Array.isArray(metadata)
+    ) {
+      rebuildPayload.metadata = metadata;
+    }
+
+    // stackscript_id — StackScript to run during deployment
+    if (
+      stackscriptId !== undefined &&
+      stackscriptId !== null &&
+      Number.isFinite(Number(stackscriptId))
+    ) {
+      rebuildPayload.stackscript_id = Number(stackscriptId);
+    }
+
+    // stackscript_data — UDF data for the StackScript
+    if (
+      stackscriptData &&
+      typeof stackscriptData === "object" &&
+      !Array.isArray(stackscriptData)
+    ) {
+      rebuildPayload.stackscript_data = stackscriptData;
+    }
+
+    // type — Linode type ID to resize to during rebuild
+    if (
+      typeof linodeType === "string" &&
+      linodeType.trim().length > 0
+    ) {
+      rebuildPayload.type = linodeType.trim();
+    }
+
+    // Call Linode rebuild API
+    const rebuilt = await linodeService.rebuildLinodeInstance(
+      providerInstanceId,
+      rebuildPayload,
+    );
+
+    const status = rebuilt.status || "rebuilding";
+    const ip =
+      Array.isArray(rebuilt.ipv4) && rebuilt.ipv4.length > 0
+        ? rebuilt.ipv4[0]
+        : null;
+
+    // Update the stored configuration with the new image and encrypted password
+    const existingConfig =
+      row.configuration && typeof row.configuration === "object"
+        ? row.configuration
+        : {};
+
+    const updatedConfig = {
+      ...existingConfig,
+      image: image.trim(),
+      auth: {
+        method: "password",
+        user: "root",
+        password_enc: encryptSecret(String(rootPassword)),
+      },
+    };
+
+    await query(
+      "UPDATE vps_instances SET status = $1, ip_address = $2, configuration = $3, updated_at = NOW() WHERE id = $4",
+      [status, ip, updatedConfig, id],
+    );
+
+    // Log rebuild action
+    try {
+      await logActivity(
+        {
+          userId: user.id,
+          organizationId: user.organizationId,
+          eventType: "vps.rebuild",
+          entityType: "vps",
+          entityId: String(id),
+          message: `Rebuilt VPS '${row.label}' with image '${image.trim()}' on ${providerType}`,
+          status: "success",
+        },
+        req as any,
+      );
+    } catch (logErr) {
+      console.warn("Failed to log vps.rebuild activity:", logErr);
+    }
+
+    res.json({ status, image: image.trim(), providerName });
+  } catch (err: any) {
+    console.error("VPS rebuild error:", err);
+
+    // Handle provider-specific errors
+    const structuredError = handleProviderError(
+      err,
+      "linode",
+      "rebuild VPS instance",
+    );
+
+    res.status(structuredError.statusCode || 500).json({
+      error: structuredError.message || err.message || "Failed to rebuild VPS instance",
+      code: structuredError.code,
+      details: structuredError.details,
+    });
   }
 });
 

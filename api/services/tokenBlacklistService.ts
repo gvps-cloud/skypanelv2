@@ -12,6 +12,10 @@
  */
 
 import Redis from 'ioredis';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 /**
  * Token blacklist entry structure
@@ -55,12 +59,9 @@ async function initializeRedis(): Promise<void> {
   }
 
   try {
-    redisClient = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
+    const redisOptions: any = {
       maxRetriesPerRequest: 3,
-      retryStrategy: (times) => {
+      retryStrategy: (times: number) => {
         if (times > 3) {
           console.warn('Token blacklist: Redis reconnection failed, using in-memory storage');
           redisAvailable = false;
@@ -68,7 +69,19 @@ async function initializeRedis(): Promise<void> {
         }
         return Math.min(times * 100, 3000);
       }
-    });
+    };
+
+    // Use REDIS_URL if available, otherwise use individual components
+    if (redisUrl) {
+      redisClient = new Redis(redisUrl, redisOptions);
+    } else {
+      redisClient = new Redis({
+        ...redisOptions,
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD,
+      });
+    }
 
     redisClient.on('error', (err) => {
       console.error('Token blacklist Redis error:', err);

@@ -99,6 +99,31 @@ export interface CreateLinodeRequest {
   stackscript_data?: Record<string, any>;
 }
 
+export interface RebuildLinodeRequest {
+  /** Image ID to deploy the Linode Disk from (required). */
+  image: string;
+  /** Root user password for the newly created disk (required). */
+  root_pass: string;
+  /** Public SSH keys appended to root's ~/.ssh/authorized_keys. */
+  authorized_keys?: string[];
+  /** Linode usernames whose profile SSH keys are added automatically. */
+  authorized_users?: string[];
+  /** Whether to boot the Linode after rebuild. Defaults to true. */
+  booted?: boolean;
+  /** Disk encryption setting: 'enabled' or 'disabled'. */
+  disk_encryption?: 'enabled' | 'disabled';
+  /** Maintenance policy: 'linode/migrate' or 'linode/power_off_on'. */
+  maintenance_policy?: 'linode/migrate' | 'linode/power_off_on';
+  /** User-defined metadata relevant to the rebuild. */
+  metadata?: Record<string, any>;
+  /** StackScript ID to run during deployment. */
+  stackscript_id?: number;
+  /** User Defined Fields (UDF) data for the StackScript. */
+  stackscript_data?: Record<string, any>;
+  /** Linode type ID to resize to during rebuild. */
+  type?: string;
+}
+
 export interface LinodeImage {
   id: string;
   label: string;
@@ -1805,6 +1830,44 @@ class LinodeService {
       }
     } catch (error) {
       console.error('Error deleting Linode instance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Rebuild a Linode instance with a new image
+   * This wipes all disks and configs, then deploys the specified image.
+   * Linode API: POST /linode/instances/{linodeId}/rebuild
+   */
+  async rebuildLinodeInstance(instanceId: number, rebuildRequest: RebuildLinodeRequest): Promise<LinodeInstance> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/linode/instances/${instanceId}/rebuild`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(rebuildRequest),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        let errorMessage = `Linode API error: ${response.status} ${response.statusText}`;
+        try {
+          const parsed = JSON.parse(errorBody);
+          if (parsed.errors && Array.isArray(parsed.errors) && parsed.errors.length > 0) {
+            errorMessage = parsed.errors.map((e: any) => e.reason || e.message || JSON.stringify(e)).join('; ');
+          }
+        } catch {
+          // Use default error message
+        }
+        throw new Error(errorMessage);
+      }
+
+      return await response.json() as LinodeInstance;
+    } catch (error) {
+      console.error('Error rebuilding Linode instance:', error);
       throw error;
     }
   }

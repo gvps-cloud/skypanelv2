@@ -32,6 +32,7 @@ import {
   Save,
   Loader2,
   ShoppingCart,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
@@ -47,6 +48,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
@@ -63,6 +71,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Area, AreaChart, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ActiveHoursDisplay } from "@/components/VPS/ActiveHoursDisplay";
+import RebuildOSSelect from "@/components/VPS/RebuildOSSelect";
 import { egressService } from "@/services/egressService";
 import { Database } from "lucide-react";
 
@@ -536,6 +545,7 @@ const getProgressValue = (detail: VpsInstanceDetail | null): number | null => {
   if (detail.status === "rebooting") return 60;
   if (detail.status === "restoring") return 40;
   if (detail.status === "backing_up") return 70;
+  if (detail.status === "rebuilding") return 30;
   return null;
 };
 
@@ -559,13 +569,15 @@ const getProgressText = (
       return "Restoring backup...";
     case "backing_up":
       return "Creating backup...";
+    case "rebuilding":
+      return "Rebuilding server...";
     default:
       return "";
   }
 };
 
 const isTransitionalState = (status: string): boolean => {
-  return ["provisioning", "rebooting", "restoring", "backing_up"].includes(
+  return ["provisioning", "rebooting", "restoring", "backing_up", "rebuilding"].includes(
     status,
   );
 };
@@ -667,6 +679,22 @@ const VPSDetail: React.FC = () => {
   const [egressBalance, setEgressBalance] = useState<number | null>(null);
   const [egressLoading, setEgressLoading] = useState<boolean>(false);
   const [egressMonthlyUsed, setEgressMonthlyUsed] = useState<number>(0);
+
+  // Rebuild (reinstall) state
+  const [rebuildDialogOpen, setRebuildDialogOpen] = useState<boolean>(false);
+  const [rebuildImage, setRebuildImage] = useState<string>("");
+  const [rebuildPassword, setRebuildPassword] = useState<string>("");
+  const [rebuildConfirmLabel, setRebuildConfirmLabel] = useState<string>("");
+  const [rebuildLoading, setRebuildLoading] = useState<boolean>(false);
+  const [availableImages, setAvailableImages] = useState<Array<{ id: string; label: string; vendor: string }>>([]);
+  const [imagesLoading, setImagesLoading] = useState<boolean>(false);
+  const [rebuildSSHKeys, setRebuildSSHKeys] = useState<string[]>([]);
+  const [organizationSSHKeys, setOrganizationSSHKeys] = useState<Array<{ id: string; name: string; fingerprint: string }>>([]);
+  const [sshKeysLoading, setSshKeysLoading] = useState<boolean>(false);
+  const [rebuildBooted, setRebuildBooted] = useState<boolean>(true);
+  const [rebuildDiskEncryption, setRebuildDiskEncryption] = useState<string>("");
+  const [rebuildMaintenancePolicy, setRebuildMaintenancePolicy] = useState<string>("");
+  const [rebuildShowAdvanced, setRebuildShowAdvanced] = useState<boolean>(false);
 
   const tabDefinitions = useMemo<TabDefinition[]>(() => {
     const tabs: TabDefinition[] = [
@@ -1287,6 +1315,130 @@ const VPSDetail: React.FC = () => {
   const allowStop = detail?.status === "running";
   const allowReboot =
     detail?.status === "running" || detail?.status === "rebooting";
+  const allowRebuild =
+    detail?.status === "running" || detail?.status === "stopped";
+
+  const openRebuildDialog = useCallback(async () => {
+    setRebuildDialogOpen(true);
+    setRebuildImage("");
+    setRebuildPassword("");
+    setRebuildConfirmLabel("");
+    setRebuildSSHKeys([]);
+    setRebuildBooted(true);
+    setRebuildDiskEncryption("");
+    setRebuildMaintenancePolicy("");
+    setRebuildShowAdvanced(false);
+    
+    // Fetch SSH keys for this organization
+    if (organizationSSHKeys.length === 0) {
+      setSshKeysLoading(true);
+      try {
+        const response = await fetch("/api/ssh-keys", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (Array.isArray(data.keys)) {
+          setOrganizationSSHKeys(
+            data.keys.map((key: any) => ({
+              id: String(key.id),
+              name: key.name,
+              fingerprint: key.fingerprint,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch SSH keys:", err);
+      } finally {
+        setSshKeysLoading(false);
+      }
+    }
+    
+    // Fetch available images
+    if (availableImages.length === 0) {
+      setImagesLoading(true);
+      try {
+        const response = await fetch("/api/vps/images", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (Array.isArray(data.images)) {
+          setAvailableImages(
+            data.images
+              .filter((img: any) => img.is_public && !img.deprecated)
+              .map((img: any) => ({
+                id: img.id,
+                label: img.label,
+                vendor: img.vendor || "",
+              }))
+              .sort((a: any, b: any) => a.label.localeCompare(b.label)),
+          );
+        }
+      } catch (err) {
+        console.error("Failed to fetch images:", err);
+        toast.error("Failed to load available images");
+      } finally {
+        setImagesLoading(false);
+      }
+    }
+  }, [token, availableImages.length]);
+
+  const performRebuild = useCallback(async () => {
+    if (!detail) return;
+    if (!rebuildImage) {
+      toast.error("Please select an image");
+      return;
+    }
+    if (!rebuildPassword || rebuildPassword.length < 6) {
+      toast.error("Root password must be at least 6 characters");
+      return;
+    }
+    if (rebuildConfirmLabel !== detail.label) {
+      toast.error("Please type the instance label to confirm");
+      return;
+    }
+
+    setRebuildLoading(true);
+    try {
+      const response = await fetch(`/api/vps/${detail.id}/rebuild`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          image: rebuildImage,
+          rootPassword: rebuildPassword,
+          sshKeys: rebuildSSHKeys,
+          booted: rebuildBooted,
+          ...(rebuildDiskEncryption ? { diskEncryption: rebuildDiskEncryption } : {}),
+          ...(rebuildMaintenancePolicy ? { maintenancePolicy: rebuildMaintenancePolicy } : {}),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to rebuild instance");
+      }
+      toast.success("Rebuild request sent — the server is being reinstalled");
+      setRebuildDialogOpen(false);
+      setRebuildImage("");
+      setRebuildPassword("");
+      setRebuildConfirmLabel("");
+      setRebuildSSHKeys([]);
+      setRebuildBooted(true);
+      setRebuildDiskEncryption("");
+      setRebuildMaintenancePolicy("");
+      setRebuildShowAdvanced(false);
+      await loadData({ silent: true });
+    } catch (err) {
+      console.error("Failed to rebuild VPS instance:", err);
+      const message =
+        err instanceof Error ? err.message : "Failed to rebuild instance";
+      toast.error(message);
+    } finally {
+      setRebuildLoading(false);
+    }
+  }, [detail, rebuildImage, rebuildPassword, rebuildConfirmLabel, rebuildSSHKeys, rebuildBooted, rebuildDiskEncryption, rebuildMaintenancePolicy, token, loadData]);
+
   const backupsEnabled = detail?.backups?.enabled ?? false;
   const backupToggleBusy =
     backupAction === "enable" || backupAction === "disable";
@@ -1980,6 +2132,18 @@ const VPSDetail: React.FC = () => {
                 />
                 <span className="hidden xs:inline sm:hidden md:inline">
                   {actionLoading === "reboot" ? "Rebooting…" : "Reboot"}
+                </span>
+              </button>
+              {/* Rebuild Button */}
+              <button
+                type="button"
+                disabled={!allowRebuild || rebuildLoading}
+                onClick={openRebuildDialog}
+                className={`inline-flex items-center justify-center gap-2 rounded-lg border border-orange-500/50 px-3 py-2 text-xs sm:text-sm font-medium text-orange-600 dark:text-orange-400 hover:bg-orange-500/10 active:bg-orange-500/20 focus:outline-none focus:ring-2 focus:ring-orange-400 min-h-[44px] touch-manipulation ${!allowRebuild || rebuildLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <HardDrive className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden xs:inline sm:hidden md:inline">
+                  {rebuildLoading ? "Rebuilding…" : "Rebuild"}
                 </span>
               </button>
               {/* Refresh Button */}
@@ -4323,6 +4487,236 @@ const VPSDetail: React.FC = () => {
               disabled={sshConfirmLoading}
             >
               {sshConfirmLoading ? "Verifying..." : "Confirm & Open"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rebuild (Reinstall OS) Dialog */}
+      <Dialog open={rebuildDialogOpen} onOpenChange={(open) => {
+        if (!rebuildLoading) {
+          setRebuildDialogOpen(open);
+          if (!open) {
+            setRebuildImage("");
+            setRebuildPassword("");
+            setRebuildConfirmLabel("");
+            setRebuildSSHKeys([]);
+            setRebuildBooted(true);
+            setRebuildDiskEncryption("");
+            setRebuildMaintenancePolicy("");
+            setRebuildShowAdvanced(false);
+          }
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Rebuild Server
+            </DialogTitle>
+            <DialogDescription>
+              This will <strong className="text-destructive">destroy all data</strong> on this server and reinstall with a fresh operating system. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Image Selection */}
+            <div className="space-y-2">
+              <Label>Operating System</Label>
+              <RebuildOSSelect
+                images={availableImages}
+                selectedImageId={rebuildImage}
+                onImageSelect={setRebuildImage}
+                loading={imagesLoading}
+              />
+            </div>
+
+            {/* Root Password */}
+            <div className="space-y-2">
+              <Label htmlFor="rebuild-password">New Root Password</Label>
+              <Input
+                id="rebuild-password"
+                type="password"
+                placeholder="Minimum 6 characters"
+                value={rebuildPassword}
+                onChange={(e) => setRebuildPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+
+            {/* SSH Keys */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">SSH Keys (Optional)</Label>
+              {sshKeysLoading ? (
+                <div className="flex items-center justify-center py-4 space-x-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Loading SSH keys...</span>
+                </div>
+              ) : organizationSSHKeys.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No SSH keys found. You can add SSH keys in the SSH Keys page.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {organizationSSHKeys.map((key) => {
+                    const isSelected = rebuildSSHKeys.includes(String(key.id));
+                    return (
+                      <div
+                        key={key.id}
+                        onClick={() => {
+                          if (isSelected) {
+                            setRebuildSSHKeys(rebuildSSHKeys.filter((id) => id !== String(key.id)));
+                          } else {
+                            setRebuildSSHKeys([...rebuildSSHKeys, String(key.id)]);
+                          }
+                        }}
+                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/10 dark:bg-primary/20"
+                            : "border hover:border-input dark:hover:border-gray-500"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}}
+                          className="mt-0.5 h-4 w-4 text-primary focus:ring-primary border rounded"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{key.name}</p>
+                          <p className="text-xs text-muted-foreground font-mono truncate">{key.fingerprint}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Advanced Options */}
+            <div className="border rounded-md">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setRebuildShowAdvanced(!rebuildShowAdvanced)}
+              >
+                Advanced Options
+                <ChevronDown className={`h-4 w-4 transition-transform ${rebuildShowAdvanced ? "rotate-180" : ""}`} />
+              </button>
+              {rebuildShowAdvanced && (
+                <div className="space-y-4 border-t px-3 py-3">
+                  {/* Boot after rebuild */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm font-medium">Boot after rebuild</Label>
+                      <p className="text-xs text-muted-foreground">Automatically start the server after rebuild completes</p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={rebuildBooted}
+                      onClick={() => setRebuildBooted(!rebuildBooted)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        rebuildBooted ? "bg-primary" : "bg-muted"
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        rebuildBooted ? "translate-x-6" : "translate-x-1"
+                      }`} />
+                    </button>
+                  </div>
+
+                  {/* Disk Encryption */}
+                  <div className="space-y-2">
+                    <Label htmlFor="rebuild-disk-encryption">Disk Encryption</Label>
+                    <Select value={rebuildDiskEncryption || "default"} onValueChange={(v) => setRebuildDiskEncryption(v === "default" ? "" : v)}>
+                      <SelectTrigger className="w-full" id="rebuild-disk-encryption">
+                        <SelectValue placeholder="Default (provider setting)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Default (provider setting)</SelectItem>
+                        <SelectItem value="enabled">Enabled</SelectItem>
+                        <SelectItem value="disabled">Disabled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Maintenance Policy */}
+                  <div className="space-y-2">
+                    <Label htmlFor="rebuild-maintenance-policy">Maintenance Policy</Label>
+                    <Select value={rebuildMaintenancePolicy || "default"} onValueChange={(v) => setRebuildMaintenancePolicy(v === "default" ? "" : v)}>
+                      <SelectTrigger className="w-full" id="rebuild-maintenance-policy">
+                        <SelectValue placeholder="Default" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Default</SelectItem>
+                        <SelectItem value="linode/migrate">Live Migration</SelectItem>
+                        <SelectItem value="linode/power_off_on">Power Off / On</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Defines how the server behaves during provider maintenance</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Confirmation */}
+            <div className="space-y-2 rounded-md border border-destructive/50 bg-destructive/5 p-3">
+              <Label htmlFor="rebuild-confirm" className="text-sm font-medium text-destructive">
+                Type <strong>{detail?.label || "instance-label"}</strong> to confirm
+              </Label>
+              <Input
+                id="rebuild-confirm"
+                type="text"
+                placeholder={detail?.label || ""}
+                value={rebuildConfirmLabel}
+                onChange={(e) => setRebuildConfirmLabel(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={rebuildLoading}
+              onClick={() => {
+                setRebuildDialogOpen(false);
+                setRebuildImage("");
+                setRebuildPassword("");
+                setRebuildConfirmLabel("");
+                setRebuildSSHKeys([]);
+                setRebuildBooted(true);
+                setRebuildDiskEncryption("");
+                setRebuildMaintenancePolicy("");
+                setRebuildShowAdvanced(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={
+                rebuildLoading ||
+                !rebuildImage ||
+                !rebuildPassword ||
+                rebuildPassword.length < 6 ||
+                rebuildConfirmLabel !== (detail?.label || "")
+              }
+              onClick={performRebuild}
+            >
+              {rebuildLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Rebuilding...
+                </>
+              ) : (
+                "Rebuild Server"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

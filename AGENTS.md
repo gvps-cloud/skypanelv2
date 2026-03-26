@@ -260,6 +260,7 @@ The Express app currently registers these route groups:
 - `/api/organizations`
 - `/api/pricing`
 - `/api/egress`
+- `/api/api-keys` - User API key management with row-level security
 
 Cross-cutting backend behavior includes:
 
@@ -327,7 +328,7 @@ Key frontend files:
 - `src/components/admin/EgressPackSettings.tsx` — admin pack pricing config
 - `src/services/egressService.ts` — frontend API client
 
-Database migrations 026–033 implement the egress system (tables: `organization_egress_credits`, `egress_credit_packs`, `vps_egress_hourly_readings`, etc.).
+Database migrations 026–033 implement the egress system (tables: `organization_egress_credits`, `egress_credit_packs`, `vps_egress_hourly_readings`, etc.). Note: 34 migrations total (001–034, with 006 skipped).
 
 ## Testing Notes
 
