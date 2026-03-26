@@ -696,8 +696,8 @@ All tiers are configurable via environment variables. Per-user overrides can be 
 |---------|---------|-------------|
 | **Linode API Token** | VPS infrastructure | [Linode Cloud Manager](https://cloud.linode.com/profile/tokens) |
 | **PayPal Client ID & Secret** | Payment processing | [PayPal Developer](https://developer.paypal.com/) |
-| **Resend API Key** *(optional)* | Email delivery | [Resend Dashboard](https://resend.com/) |
-| **SMTP Credentials** *(optional)* | Fallback email | Your SMTP provider |
+| **Resend API Key** *(at least one email provider required)* | Email delivery | [Resend Dashboard](https://resend.com/) |
+| **SMTP Credentials** *(at least one email provider required)* | Email delivery (fallback) | Your SMTP provider |
 
 ### Quick Start
 

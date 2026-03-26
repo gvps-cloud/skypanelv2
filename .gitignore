@@ -13,6 +13,16 @@ dist
 dist-ssr
 *.local
 *.openclaw
+.openclaw/
+
+# Local memory files
+memory/
+HEARTBEAT.md
+IDENTITY.md
+MEMORY.md
+SOUL.md
+TOOLS.md
+USER.md
 *.remember
 # Editor directories and files
 .vscode/*
