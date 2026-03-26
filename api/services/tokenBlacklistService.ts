@@ -60,6 +60,7 @@ async function initializeRedis(): Promise<void> {
 
   try {
     const redisOptions: any = {
+      lazyConnect: true,
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         if (times > 3) {
@@ -71,17 +72,7 @@ async function initializeRedis(): Promise<void> {
       }
     };
 
-    // Use REDIS_URL if available, otherwise use individual components
-    if (redisUrl) {
-      redisClient = new Redis(redisUrl, redisOptions);
-    } else {
-      redisClient = new Redis({
-        ...redisOptions,
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD,
-      });
-    }
+    redisClient = new Redis(redisUrl, redisOptions);
 
     redisClient.on('error', (err) => {
       console.error('Token blacklist Redis error:', err);
