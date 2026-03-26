@@ -60,6 +60,7 @@ async function initializeRedis(): Promise<void> {
 
   try {
     const redisOptions: any = {
+      lazyConnect: true,
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         if (times > 3) {

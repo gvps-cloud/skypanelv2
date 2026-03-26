@@ -836,7 +836,7 @@ class ApiClient {
  * Setup auto-logout on token expiration
  * This function should be called once during app initialization
  */
-export function setupAutoLogout(logoutCallback: () => void) {
+export function setupAutoLogout(logoutCallback: () => void | Promise<void>) {
   // Store the callback globally so ApiClient can access it
   (window as any).__autoLogoutCallback = logoutCallback;
 }
