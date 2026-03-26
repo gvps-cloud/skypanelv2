@@ -31,6 +31,19 @@ import {
 } from "@/components/ui/sidebar"
 import { useSidebar } from "@/components/ui/sidebar-context"
 
+/**
+ * Render a sidebar user menu button that opens a dropdown with user-related actions.
+ *
+ * Displays the user's avatar, name, and email, and provides navigation items for Settings, Support,
+ * and Log out. If the user's role is `"admin"`, an Admin item is shown.
+ *
+ * @param user - Object containing user information:
+ *   - `name`: display name shown in the menu
+ *   - `email`: email shown under the name
+ *   - `avatar`: URL for the user's avatar image
+ *   - `role` (optional): when set to `"admin"`, shows the Admin menu item
+ * @returns A React element containing a sidebar menu with the user's info and navigation actions
+ */
 export function NavUser({
   user,
 }: {

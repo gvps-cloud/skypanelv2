@@ -45,9 +45,10 @@ let redisClient: Redis | null = null;
 let redisAvailable = false;
 
 /**
- * Initialize Redis connection (lazy loading)
- * This function attempts to connect to Redis but gracefully falls back
- * to in-memory storage if Redis is not configured or unavailable
+ * Attempts to initialize and connect a Redis client for blacklist storage.
+ *
+ * If a Redis URL is not configured or the connection cannot be established, leaves the service using
+ * in-memory fallback and updates the module's Redis availability flag and client reference accordingly.
  */
 async function initializeRedis(): Promise<void> {
   // Check if Redis is configured

@@ -70,7 +70,9 @@ let redisClient: Redis | null = null;
 let redisAvailable = false;
 
 /**
- * Initialize Redis connection (lazy loading)
+ * Establishes and configures the Redis client used for persistence, or disables Redis and falls back to in-memory storage when unavailable.
+ *
+ * Attempts to read Redis connection URL from REDIS_URL or REDIS_URI, constructs a client configured for lazy connection and bounded retries, registers error/ready handlers that update the module-wide `redisAvailable` flag, and calls `connect()`. If no URL is provided or connection fails, leaves `redisClient` null and sets `redisAvailable = false` so the module uses the in-memory fallback.
  */
 async function initializeRedis(): Promise<void> {
   const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI;

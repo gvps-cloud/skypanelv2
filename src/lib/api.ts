@@ -834,8 +834,9 @@ class ApiClient {
 }
 
 /**
- * Setup auto-logout on token expiration
- * This function should be called once during app initialization
+ * Registers a global auto-logout callback invoked when an unauthorized (401) response is detected.
+ *
+ * @param logoutCallback - Callback executed on auto-logout; may return a `Promise<void>` or `void`. The callback is stored as `window.__autoLogoutCallback` for the ApiClient to invoke.
  */
 export function setupAutoLogout(logoutCallback: () => void | Promise<void>) {
   // Store the callback globally so ApiClient can access it
