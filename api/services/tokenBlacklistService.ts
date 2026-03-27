@@ -11,6 +11,7 @@
  * token reuse after logout. Entries auto-expire based on the token's TTL.
  */
 
+import crypto from 'crypto';
 import Redis from 'ioredis';
 import dotenv from 'dotenv';
 
@@ -122,9 +123,10 @@ function extractJti(payload: any, token: string): string {
     return payload.jti;
   }
 
-  // Generate jti from token hash for backwards compatibility
-  // This ensures we can blacklist tokens that don't have a jti claim
-  return Buffer.from(token).toString('base64').substring(0, 32);
+  // Generate jti from SHA-256 hash of the full token string
+  // Using base64(token).substring(0, 32) only covers the JWT header
+  // which is identical across tokens, causing all tokens to share the same blacklist entry
+  return crypto.createHash('sha256').update(token).digest('hex').substring(0, 32);
 }
 
 /**
