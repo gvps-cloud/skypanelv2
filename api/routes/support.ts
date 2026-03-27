@@ -443,7 +443,11 @@ router.post(
         sender_user_id: userId,
         sender_name: senderName,
       };
-      await query(`NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload).replace(/'/g, "''")}'`);
+      try {
+        await query(`NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload).replace(/'/g, "''")}'`);
+      } catch (notifyErr) {
+        console.warn(`[Support] Ticket NOTIFY failed for ticket ${id}:`, notifyErr);
+      }
 
       res.status(201).json({
         reply: {

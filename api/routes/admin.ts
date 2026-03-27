@@ -679,9 +679,13 @@ router.patch(
         ticket_id: id,
         new_status: nextStatus,
       };
-      await query(
-        `NOTIFY "ticket_${id}", '${JSON.stringify(statusNotification).replace(/'/g, "''")}'`,
-      );
+      try {
+        await query(
+          `NOTIFY "ticket_${id}", '${JSON.stringify(statusNotification).replace(/'/g, "''")}'`,
+        );
+      } catch (notifyErr) {
+        console.warn(`[Admin] Ticket NOTIFY failed for ticket ${id}:`, notifyErr);
+      }
 
       const userMessageByStatus: Record<
         string,
@@ -849,9 +853,13 @@ router.post(
         created_at: replyRow.created_at,
         sender_name: "Support Team",
       };
-      await query(
-        `NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload).replace(/'/g, "''")}'`,
-      );
+      try {
+        await query(
+          `NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload).replace(/'/g, "''")}'`,
+        );
+      } catch (notifyErr) {
+        console.warn(`[Admin] Ticket NOTIFY failed for ticket ${id}:`, notifyErr);
+      }
 
       res.status(201).json({
         reply: {
