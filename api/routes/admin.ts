@@ -672,14 +672,20 @@ router.patch(
         throw new Error("Failed to update ticket status");
       }
 
-      // Notify SSE listeners
+      // Notify SSE listeners (id is a UUID from req.params — validate before use)
+      const ticketIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!ticketIdPattern.test(id)) {
+        res.status(400).json({ error: "Invalid ticket ID." });
+        return;
+      }
+
       const statusNotification = {
         type: "ticket_status_change",
         ticket_id: id,
         new_status: nextStatus,
       };
       await query(
-        `NOTIFY "ticket_${id}", '${JSON.stringify(statusNotification)}'`,
+        `NOTIFY "ticket_${id}", '${JSON.stringify(statusNotification).replace(/'/g, "''")}'`,
       );
 
       const userMessageByStatus: Record<
@@ -849,7 +855,7 @@ router.post(
         sender_name: "Support Team",
       };
       await query(
-        `NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload)}'`,
+        `NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload).replace(/'/g, "''")}'`,
       );
 
       res.status(201).json({

@@ -443,7 +443,7 @@ router.post(
         sender_user_id: userId,
         sender_name: senderName,
       };
-      await query(`NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload)}'`);
+      await query(`NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload).replace(/'/g, "''")}'`);
 
       res.status(201).json({
         reply: {
