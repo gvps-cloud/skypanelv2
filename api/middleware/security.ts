@@ -24,6 +24,7 @@ import helmet from 'helmet';
  * - upgrade-insecure-requests: Automatically upgrade HTTP to HTTPS
  */
 const helmetConfig = {
+  hidePoweredBy: true,
   // Content Security Policy - strict but allows React/Modern web apps to function
   contentSecurityPolicy: {
     directives: {

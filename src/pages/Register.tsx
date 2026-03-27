@@ -61,7 +61,7 @@ export default function Register() {
       toast.success(`Registration successful! Welcome to ${BRAND_NAME}!`);
       // Check for post-login redirect URL (works for registration too)
       const redirectUrl = sessionStorage.getItem('postLoginRedirect');
-      if (redirectUrl) {
+      if (redirectUrl && redirectUrl.startsWith('/') && !redirectUrl.startsWith('//')) {
         sessionStorage.removeItem('postLoginRedirect');
         navigate(redirectUrl);
       } else {

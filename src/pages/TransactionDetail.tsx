@@ -11,7 +11,9 @@ const TransactionDetail: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const fromPath = location.state?.from || '/billing';
+  const fromPath = (typeof location.state?.from === 'string' && location.state.from.startsWith('/') && !location.state.from.startsWith('//'))
+    ? location.state.from
+    : '/billing';
   const fromLabel = location.state?.fromLabel || 'Back to Billing';
   const { token } = useAuth();
   const [transaction, setTransaction] = useState<PaymentTransactionDetail | null>(null);

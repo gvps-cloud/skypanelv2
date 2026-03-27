@@ -39,7 +39,7 @@ export default function Login() {
       toast.success("Login successful!");
       // Check for post-login redirect URL
       const redirectUrl = sessionStorage.getItem('postLoginRedirect');
-      if (redirectUrl) {
+      if (redirectUrl && redirectUrl.startsWith('/') && !redirectUrl.startsWith('//')) {
         sessionStorage.removeItem('postLoginRedirect');
         navigate(redirectUrl);
       } else {
