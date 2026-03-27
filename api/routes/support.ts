@@ -444,7 +444,7 @@ router.post(
         sender_name: senderName,
       };
       try {
-        await query(`NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload).replace(/'/g, "''")}'`);
+        await query('SELECT pg_notify($1, $2)', [`ticket_${id}`, JSON.stringify(notificationPayload)]);
       } catch (notifyErr) {
         console.warn(`[Support] Ticket NOTIFY failed for ticket ${id}:`, notifyErr);
       }
@@ -1205,6 +1205,10 @@ router.get(
       const client = await pool.connect();
       const channelName = `ticket_${id}`;
 
+      // Validate channel name to prevent SQL injection since LISTEN doesn't support parameters
+      if (!/^[a-zA-Z0-9_-]+$/.test(channelName)) {
+        throw new Error("Invalid channel name");
+      }
       await client.query(`LISTEN "${channelName}"`);
 
       // Handle notifications
@@ -1228,6 +1232,10 @@ router.get(
       req.on("close", async () => {
         clearInterval(heartbeat);
         client.removeListener("notification", notificationHandler);
+        // Validate channel name to prevent SQL injection
+        if (!/^[a-zA-Z0-9_-]+$/.test(channelName)) {
+          throw new Error("Invalid channel name");
+        }
         await client.query(`UNLISTEN "${channelName}"`);
         client.release();
         res.end();

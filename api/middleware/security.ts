@@ -49,7 +49,7 @@ const helmetConfig = {
       scriptSrc: [
         "'self'",
         "'unsafe-inline'",
-        "'unsafe-eval'", // Required for React development and some libraries
+        // Removed 'unsafe-eval' for production hardening. React production builds do not require it.
       ],
       scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'"], // Required for inline styles (React/Tailwind)

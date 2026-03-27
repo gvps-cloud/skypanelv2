@@ -250,13 +250,13 @@ describe('XSS Protection Tests', () => {
         const hasScriptSrc = csp.includes('script-src');
         expect(hasScriptSrc).toBe(true);
 
-        // Our config includes 'unsafe-eval' and 'unsafe-inline' for React compatibility
-        // In production, consider using nonce or hash-based CSP for stricter security
+        // Our config includes 'unsafe-inline' for React compatibility
+        // 'unsafe-eval' has been removed for production hardening
         const hasUnsafeEval = csp.includes("'unsafe-eval'");
         const hasUnsafeInline = csp.includes("'unsafe-inline'");
 
-        // Both should be present for React compatibility
-        expect(hasUnsafeEval).toBe(true);
+        // unsafe-eval should be false, unsafe-inline should be true
+        expect(hasUnsafeEval).toBe(false);
         expect(hasUnsafeInline).toBe(true);
       }
     });

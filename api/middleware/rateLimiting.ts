@@ -839,3 +839,13 @@ export const passwordResetRateLimiter = rateLimit({
     });
   }
 });
+
+// Production rate limit warning
+if (process.env.NODE_ENV === 'production') {
+  const totalLimit = (config.rateLimiting.anonymousMaxRequests || 0) + 
+                     (config.rateLimiting.authenticatedMaxRequests || 0) + 
+                     (config.rateLimiting.adminMaxRequests || 0);
+  if (totalLimit > 100000) {
+    console.warn('[Security Warning] Rate limits are effectively disabled in production (>100k total). Please review your configuration.');
+  }
+}

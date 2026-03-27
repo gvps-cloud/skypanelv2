@@ -82,6 +82,7 @@ function extractApiKey(req: Request): string | null {
   // Check query parameter (NOT recommended, but supported)
   const apiKeyQuery = req.query.apikey;
   if (apiKeyQuery && typeof apiKeyQuery === 'string') {
+    console.warn('[Security] API key provided via query parameter. This is insecure as it may be logged in access logs. Please use the X-API-Key header instead.');
     return apiKeyQuery.trim();
   }
 

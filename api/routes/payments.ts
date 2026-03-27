@@ -187,6 +187,35 @@ router.post(
       const userId = authReq.user?.id;
       const organizationId = authReq.user?.organizationId ?? null;
 
+      // Security: Verify order ownership before capture
+      const orderCheck = await dbQuery(
+        "SELECT organization_id, status FROM payment_transactions WHERE id = $1",
+        [orderId]
+      );
+
+      if (orderCheck.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: "Payment record not found",
+        });
+      }
+
+      const order = orderCheck.rows[0];
+      if (order.organization_id !== organizationId) {
+        console.warn(`[Security] Unauthorized payment capture attempt: User ${userId} tried to capture order ${orderId} belonging to org ${order.organization_id}`);
+        return res.status(403).json({
+          success: false,
+          error: "Unauthorized: This payment does not belong to your organization",
+        });
+      }
+
+      if (order.status === 'completed') {
+        return res.status(400).json({
+          success: false,
+          error: "Payment has already been captured",
+        });
+      }
+
       const result = await PayPalService.capturePayment(orderId, organizationId ?? undefined);
 
       if (result.success) {
@@ -333,7 +362,25 @@ router.post(
       }
 
       const { amount, description } = req.body;
-      const { organizationId } = (req as AuthenticatedRequest).user;
+      const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
+
+      // Security: Check for billing_manage or vps_create permission
+      const hasPermission = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        'billing_manage'
+      ) || await RoleService.checkPermission(
+        userId,
+        organizationId,
+        'vps_create'
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          error: "Insufficient permissions to deduct from wallet",
+        });
+      }
 
       const success = await PayPalService.deductFundsFromWallet(
         organizationId,
