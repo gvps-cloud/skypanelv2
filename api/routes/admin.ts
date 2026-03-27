@@ -672,15 +672,17 @@ router.patch(
         throw new Error("Failed to update ticket status");
       }
 
-      // Notify SSE listeners via pg_notify() with parameterized queries (prevents SQL injection)
+      // Notify SSE listeners
+
       const statusNotification = {
         type: "ticket_status_change",
         ticket_id: id,
         new_status: nextStatus,
       };
       try {
-        const safeChannelName = `ticket_${id}`;
-        await query(`SELECT pg_notify($1, $2)`, [safeChannelName, JSON.stringify(statusNotification)]);
+        await query(
+          `NOTIFY "ticket_${id}", '${JSON.stringify(statusNotification).replace(/'/g, "''")}'`,
+        );
       } catch (notifyErr) {
         console.warn(`[Admin] Ticket NOTIFY failed for ticket ${id}:`, notifyErr);
       }
@@ -852,9 +854,9 @@ router.post(
         sender_name: "Support Team",
       };
       try {
-        // Use pg_notify() with parameterized queries to prevent SQL injection
-        const safeChannelName = `ticket_${id}`;
-        await query(`SELECT pg_notify($1, $2)`, [safeChannelName, JSON.stringify(notificationPayload)]);
+        await query(
+          `NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload).replace(/'/g, "''")}'`,
+        );
       } catch (notifyErr) {
         console.warn(`[Admin] Ticket NOTIFY failed for ticket ${id}:`, notifyErr);
       }
@@ -5667,13 +5669,6 @@ router.get(
 
       // Send initial connection success
       res.write('data: {"type":"connected"}\n\n');
-
-      // Validate ticket ID is a valid UUID before use in LISTEN/UNLISTEN SQL
-      // (LISTEN/UNLISTEN don't support parameterized queries, so we must validate first)
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(id)) {
-        return res.status(400).json({ error: "Invalid ticket ID format" });
-      }
 
       // Create PostgreSQL client for LISTEN
       const client = await pool.connect();

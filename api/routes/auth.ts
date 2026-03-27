@@ -27,9 +27,7 @@ router.post(
     body("email").isEmail().normalizeEmail({ gmail_remove_dots: false }),
     body("password")
       .isLength({ min: 8 })
-      .withMessage("Password must be at least 8 characters")
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-      .withMessage("Password must contain at least one uppercase letter, one lowercase letter, and one number"),
+      .withMessage("Password must be at least 8 characters"),
     body("firstName")
       .trim()
       .isLength({ min: 1 })
@@ -366,9 +364,7 @@ router.post(
     body("token").notEmpty().withMessage("Reset token is required"),
     body("password")
       .isLength({ min: 8 })
-      .withMessage("Password must be at least 8 characters")
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-      .withMessage("Password must contain at least one uppercase letter, one lowercase letter, and one number"),
+      .withMessage("Password must be at least 8 characters"),
   ],
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -596,9 +592,7 @@ router.put(
       .withMessage("Current password is required"),
     body("newPassword")
       .isLength({ min: 8 })
-      .withMessage("New password must be at least 8 characters")
-      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-      .withMessage("New password must contain at least one uppercase letter, one lowercase letter, and one number"),
+      .withMessage("New password must be at least 8 characters"),
   ],
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
