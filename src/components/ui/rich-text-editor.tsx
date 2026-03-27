@@ -32,7 +32,7 @@ export default function RichTextEditor({
   return (
     <div className="rounded-lg border bg-background overflow-hidden">
       <Editor
-        tinymceScriptSrc="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js"
+        tinymceScriptSrc="/tinymce/tinymce.min.js"
         onInit={handleInit}
         value={value}
         onEditorChange={(newValue) => onChange(newValue)}
