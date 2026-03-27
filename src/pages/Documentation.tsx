@@ -17,6 +17,11 @@ import {
   Server,
   Code,
   LayoutGrid,
+  Globe,
+  Cpu,
+  HardDrive,
+  Database,
+  DollarSign,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +39,50 @@ import type {
   DocumentationArticleWithFiles,
 } from "@/types/documentation";
 import ApiReference from "@/components/docs/ApiReference";
+
+// ── Plans & Regions types ───────────────────────────────────────────────────
+
+interface VpsPlan {
+  id: number | string;
+  name: string;
+  base_price: number;
+  markup_price: number;
+  specifications: {
+    vcpus?: number;
+    memory?: number;
+    disk?: number;
+    transfer?: number;
+    transfer_gb?: number;
+    [key: string]: unknown;
+  };
+  type_class?: string;
+}
+
+interface PublicRegion {
+  id: string;
+  label: string;
+  country: string;
+  status: string;
+  site_type: string;
+  speedTestUrl?: string;
+  displayLabel?: string;
+  displayCountry?: string;
+}
+
+function formatMemory(mb: number): string {
+  if (mb >= 1024) return `${(mb / 1024).toFixed(mb % 1024 === 0 ? 0 : 1)} GB`;
+  return `${mb} MB`;
+}
+
+function formatStorage(gb: number): string {
+  if (gb >= 1024) return `${(gb / 1024).toFixed(1)} TB`;
+  return `${gb} GB`;
+}
+
+function formatTransfer(gb: number): string {
+  if (gb >= 1024) return `${(gb / 1024).toFixed(0)} TB`;
+  return `${gb} GB`;
+}
 
 const categoryIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Rocket,
@@ -233,6 +282,9 @@ export default function Documentation() {
   const [articleNotFound, setArticleNotFound] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [vpsPlans, setVpsPlans] = useState<VpsPlan[]>([]);
+  const [publicRegions, setPublicRegions] = useState<PublicRegion[]>([]);
+  const [loadingPlansRegions, setLoadingPlansRegions] = useState(false);
 
   const handleNavigate = useCallback(
     (path: string) => {
@@ -310,6 +362,30 @@ export default function Documentation() {
     };
     fetchArticle();
   }, [articleSlug, categorySlug]);
+
+  // Fetch plans & regions for the plans-regions article
+  useEffect(() => {
+    if (articleSlug !== "plans-regions") return;
+
+    const fetchPlansAndRegions = async () => {
+      try {
+        setLoadingPlansRegions(true);
+        const [plansRes, regionsRes] = await Promise.all([
+          fetch("/api/pricing/vps"),
+          fetch("/api/pricing/public-regions"),
+        ]);
+        const plansData = await plansRes.json();
+        const regionsData = await regionsRes.json();
+        setVpsPlans(plansData.plans || []);
+        setPublicRegions(regionsData.regions || []);
+      } catch (err) {
+        console.error("Failed to fetch plans/regions for docs:", err);
+      } finally {
+        setLoadingPlansRegions(false);
+      }
+    };
+    fetchPlansAndRegions();
+  }, [articleSlug]);
 
   // Clear search on navigation
   useEffect(() => {
@@ -412,6 +488,195 @@ export default function Documentation() {
     </div>
   );
 
+  // ── Render: Plans & Regions article (dynamic data) ───────────────────────
+
+  const renderPlansRegionsArticle = (article: DocumentationArticleWithFiles) => (
+    <article className="max-w-3xl">
+      <Breadcrumb
+        category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
+        article={article.title}
+      />
+
+      <h1 className="text-2xl font-bold tracking-tight mb-3">{article.title}</h1>
+      {article.summary && (
+        <p className="text-muted-foreground text-lg mb-8">{article.summary}</p>
+      )}
+
+      {/* Article content (intro / explanatory text) */}
+      {article.content && (
+        <div
+          className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm mb-10"
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(article.content, { USE_PROFILES: { html: true } }),
+          }}
+        />
+      )}
+
+      {/* ── Plan Tiers (dynamic) ──────────────────────────────────────── */}
+      <div className="mb-10">
+        <h2 className="text-xl font-semibold tracking-tight mb-1 flex items-center gap-2">
+          <Server className="h-5 w-5 text-primary" />
+          Plan Tiers
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Available VPS plans configured by your administrator.
+        </p>
+
+        {loadingPlansRegions ? (
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : vpsPlans.length === 0 ? (
+          <div className="rounded-lg border bg-muted/30 py-8 text-center">
+            <p className="text-sm text-muted-foreground">No VPS plans are currently configured.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="px-4 py-3 text-left font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <Server className="h-3.5 w-3.5 text-muted-foreground" />
+                      Plan
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
+                      vCPUs
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">RAM</th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
+                      Storage
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <Database className="h-3.5 w-3.5 text-muted-foreground" />
+                      Transfer
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium">
+                    <span className="flex items-center justify-end gap-1.5">
+                      <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                      Price
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {vpsPlans.map((plan) => {
+                  const specs = plan.specifications || {};
+                  const vcpus = Number(specs.vcpus ?? specs.cpu_cores ?? 0);
+                  const memory = Number(specs.memory ?? specs.memory_gb ?? 0);
+                  const disk = Number(specs.disk ?? specs.storage_gb ?? 0);
+                  const transfer = Number(specs.transfer ?? specs.transfer_gb ?? specs.bandwidth_gb ?? 0);
+                  const price = Number(plan.base_price || 0) + Number(plan.markup_price || 0);
+
+                  return (
+                    <tr key={plan.id} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="px-4 py-3 font-medium">{plan.name}</td>
+                      <td className="px-4 py-3">{vcpus}</td>
+                      <td className="px-4 py-3">{formatMemory(memory)}</td>
+                      <td className="px-4 py-3">{formatStorage(disk)}</td>
+                      <td className="px-4 py-3">{formatTransfer(transfer)}</td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        ${price.toFixed(2)}/mo
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Regions (dynamic) ─────────────────────────────────────────── */}
+      <div className="mb-10">
+        <h2 className="text-xl font-semibold tracking-tight mb-1 flex items-center gap-2">
+          <Globe className="h-5 w-5 text-primary" />
+          Regions
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Available data center locations.
+        </p>
+
+        {loadingPlansRegions ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : publicRegions.length === 0 ? (
+          <div className="rounded-lg border bg-muted/30 py-8 text-center">
+            <p className="text-sm text-muted-foreground">No regions are currently configured.</p>
+          </div>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {publicRegions.map((region) => {
+              const label = region.displayLabel || region.label;
+              const country = region.displayCountry || region.country?.toUpperCase() || "";
+              return (
+                <div
+                  key={region.id}
+                  className="flex items-center gap-3 rounded-lg border p-3 bg-card"
+                >
+                  <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {region.id}{country ? ` — ${country}` : ""}
+                    </p>
+                  </div>
+                  {region.speedTestUrl && (
+                    <a
+                      href={region.speedTestUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline shrink-0"
+                    >
+                      Speed test
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* File attachments */}
+      {article.files && article.files.length > 0 && (
+        <div className="mt-10 border-t pt-6">
+          <h3 className="text-sm font-semibold mb-3">Attachments</h3>
+          <div className="space-y-2">
+            {article.files.map((file) => (
+              <a
+                key={file.id}
+                href={`/api/documentation/files/${file.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent transition-colors"
+              >
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
+                <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
+                <Download className="h-3.5 w-3.5 text-muted-foreground" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </article>
+  );
+
   // ── Render: Article view ─────────────────────────────────────────────────
 
   const renderArticle = (article: DocumentationArticleWithFiles) => (
@@ -512,6 +777,8 @@ export default function Documentation() {
         Back to docs
       </Button>
     </div>
+  ) : selectedArticle && articleSlug === "plans-regions" ? (
+    renderPlansRegionsArticle(selectedArticle)
   ) : selectedArticle ? (
     renderArticle(selectedArticle)
   ) : isApiReferenceCategory ? (

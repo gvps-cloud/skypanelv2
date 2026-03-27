@@ -15,7 +15,7 @@ import {
 import { ImpersonationBanner } from "./components/admin/ImpersonationBanner";
 import { ImpersonationLoadingOverlay } from "./components/admin/ImpersonationLoadingOverlay";
 import { setupAutoLogout } from "@/lib/api";
-import { useEffect } from "react";
+import { Suspense, useEffect, lazy } from "react";
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -27,40 +27,45 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// ── Eager imports (critical path / lightweight) ─────────────────────────
+
 import Home from "./pages/HomeRedesign";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
-import VPS from "./pages/VPS";
-import Billing from "./pages/Billing";
-import EgressCredits from "./pages/EgressCredits";
-import InvoiceDetail from "./pages/InvoiceDetail";
-import TransactionDetail from "./pages/TransactionDetail";
-import BillingPaymentSuccess from "./pages/BillingPaymentSuccess";
-import BillingPaymentCancel from "./pages/BillingPaymentCancel";
-import Support from "./pages/Support";
-import Settings from "./pages/Settings";
-import Admin from "./pages/Admin";
-import VPSDetail from "./pages/VPSDetail";
-import VpsSshConsole from "./pages/VpsSshConsole";
 import AppLayout from "./components/AppLayout";
-import ActivityPage from "./pages/Activity";
-import ApiDocs from "./pages/ApiDocs";
 import FAQ from "./pages/FAQ";
 import AboutUs from "./pages/AboutUs";
 import Contact from "./pages/Contact";
 import Status from "./pages/Status";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-import Pricing from "./pages/Pricing";
-import SSHKeys from "./pages/SSHKeys";
-import Documentation from "./pages/Documentation";
-
-import AdminUserDetail from "./pages/admin/AdminUserDetail";
-import Organizations from "./pages/Organizations";
 import AcceptInvitation from "./pages/AcceptInvitation";
+
+// ── Lazy imports (route-level code splitting) ───────────────────────────
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const VPS = lazy(() => import("./pages/VPS"));
+const VPSDetail = lazy(() => import("./pages/VPSDetail"));
+const VpsSshConsole = lazy(() => import("./pages/VpsSshConsole"));
+const SSHKeys = lazy(() => import("./pages/SSHKeys"));
+const Organizations = lazy(() => import("./pages/Organizations"));
+const Billing = lazy(() => import("./pages/Billing"));
+const EgressCredits = lazy(() => import("./pages/EgressCredits"));
+const InvoiceDetail = lazy(() => import("./pages/InvoiceDetail"));
+const TransactionDetail = lazy(() => import("./pages/TransactionDetail"));
+const BillingPaymentSuccess = lazy(() => import("./pages/BillingPaymentSuccess"));
+const BillingPaymentCancel = lazy(() => import("./pages/BillingPaymentCancel"));
+const Support = lazy(() => import("./pages/Support"));
+const Settings = lazy(() => import("./pages/Settings"));
+const ActivityPage = lazy(() => import("./pages/Activity"));
+const ApiDocs = lazy(() => import("./pages/ApiDocs"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Documentation = lazy(() => import("./pages/Documentation"));
+const Admin = lazy(() => import("./pages/Admin"));
+const AdminUserDetail = lazy(() => import("./pages/admin/AdminUserDetail"));
 
 // Component to handle impersonation banner display
 function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
@@ -203,10 +208,19 @@ function AutoLogoutSetup() {
   return null;
 }
 
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
 function AppRoutes() {
   return (
     <>
       <AutoLogoutSetup />
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route
@@ -408,6 +422,7 @@ function AppRoutes() {
         <Route path="/organizations/invitations/:token/decline" element={<AcceptInvitation />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </>
   );
 }

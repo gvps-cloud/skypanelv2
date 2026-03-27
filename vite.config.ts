@@ -106,6 +106,83 @@ export default defineConfig(({ _mode }) => {
       }
     })
   ],
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+
+          // React ecosystem
+          if (id.includes('react-dom') || id.includes('/react/') || id.includes('/react-router')) {
+            return 'vendor-react';
+          }
+          // Radix UI primitives
+          if (id.includes('@radix-ui')) {
+            return 'vendor-radix';
+          }
+          // Icons (lucide is large)
+          if (id.includes('lucide-react')) {
+            return 'vendor-icons';
+          }
+          // Framer Motion
+          if (id.includes('framer-motion')) {
+            return 'vendor-motion';
+          }
+          // Terminal (xterm)
+          if (id.includes('@xterm')) {
+            return 'vendor-xterm';
+          }
+          // TanStack
+          if (id.includes('@tanstack')) {
+            return 'vendor-query';
+          }
+          // Charts
+          if (id.includes('recharts') || id.includes('chart.js')) {
+            return 'vendor-charts';
+          }
+          // DOMPurify / sanitization
+          if (id.includes('dompurify') || id.includes('isomorphic-dompurify')) {
+            return 'vendor-sanitize';
+          }
+          // Forms (react-hook-form, zod)
+          if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('/zod')) {
+            return 'vendor-forms';
+          }
+          // Date utilities
+          if (id.includes('date-fns') || id.includes('react-day-picker')) {
+            return 'vendor-date';
+          }
+          // Toast / notifications
+          if (id.includes('sonner') || id.includes('react-hot-toast')) {
+            return 'vendor-toast';
+          }
+          // Command palette / drawer / dialog
+          if (id.includes('cmdk') || id.includes('vaul')) {
+            return 'vendor-ui-utils';
+          }
+          // PayPal
+          if (id.includes('@paypal')) {
+            return 'vendor-paypal';
+          }
+          // Three.js (3D globe)
+          if (id.includes('/three/') || id.includes('three.js')) {
+            return 'vendor-three';
+          }
+          // Maps
+          if (id.includes('react-simple-maps') || id.includes('d3-') || id.includes('topojson')) {
+            return 'vendor-maps';
+          }
+          // Drag and drop
+          if (id.includes('@dnd-kit')) {
+            return 'vendor-dnd';
+          }
+          // Everything else from node_modules
+          return 'vendor-misc';
+        },
+      },
+    },
+  },
   // Expose custom env prefix so frontend can read COMPANY-NAME
   envPrefix: ["VITE_"], // Removed COMPANY- to prevent accidental bundling of sensitive env vars
   server: {
