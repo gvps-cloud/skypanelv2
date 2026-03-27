@@ -443,10 +443,16 @@ router.post(
         sender_user_id: userId,
         sender_name: senderName,
       };
-      try {
-        await query(`NOTIFY "ticket_${id}", '${JSON.stringify(notificationPayload).replace(/'/g, "''")}'`);
-      } catch (notifyErr) {
-        console.warn(`[Support] Ticket NOTIFY failed for ticket ${id}:`, notifyErr);
+      // Validate ticket ID format before use in pg_notify to prevent SQL injection
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(id)) {
+        try {
+          // Use pg_notify() with parameterized queries instead of raw NOTIFY string interpolation
+          const safeChannelName = `ticket_${id}`;
+          await query(`SELECT pg_notify($1, $2)`, [safeChannelName, JSON.stringify(notificationPayload)]);
+        } catch (notifyErr) {
+          console.warn(`[Support] Ticket NOTIFY failed for ticket ${id}:`, notifyErr);
+        }
       }
 
       res.status(201).json({
@@ -1200,6 +1206,13 @@ router.get(
 
       // Send initial connection success
       res.write('data: {"type":"connected"}\n\n');
+
+      // Validate ticket ID is a valid UUID before use in LISTEN/UNLISTEN SQL
+      // (LISTEN/UNLISTEN don't support parameterized queries, so we must validate first)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        return res.status(400).json({ error: "Invalid ticket ID format" });
+      }
 
       // Create PostgreSQL client for LISTEN
       const client = await pool.connect();

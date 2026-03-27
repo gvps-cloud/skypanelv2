@@ -226,6 +226,12 @@ interface LimitConfig {
   windowMs: number;
 }
 
+/**
+ * Tracks whether the production rate limit warning has been shown
+ * to avoid flooding the console on every request
+ */
+let productionWarningShown = false;
+
 function getBaseLimitConfig(userType: UserType): LimitConfig {
   const rateLimitConfig = config.rateLimiting;
 
@@ -242,6 +248,18 @@ function getBaseLimitConfig(userType: UserType): LimitConfig {
 
   // Development mode multipliers - much more generous
   const developmentMultiplier = isDevelopment ? 100 : 1; // 100x higher limits in development
+
+  // Production safety check: warn once if rate limits are effectively disabled
+  if (!isDevelopment && !productionWarningShown) {
+    const totalMax = rateLimitConfig.anonymousMaxRequests + rateLimitConfig.authenticatedMaxRequests + rateLimitConfig.adminMaxRequests;
+    if (totalMax > 100000) {
+      productionWarningShown = true;
+      console.warn(
+        `⚠️  Rate limiting appears to be disabled (total limits: ${totalMax}). ` +
+        `Verify RATE_LIMIT_* environment variables are set correctly for production.`
+      );
+    }
+  }
 
   switch (userType) {
     case "admin":

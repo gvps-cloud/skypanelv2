@@ -42,14 +42,17 @@ const helmetConfig = {
       formAction: ["'self'"],
       frameAncestors: ["'none'"],
       frameSrc: ["'self'", 'https://www.paypal.com'],
-      imgSrc: ["'self'", 'data:', 'blob:', 'https:', 'http://localhost:*'],
+      // imgSrc: HTTPS sources + data/blob for flexibility in a hosting panel
+      // TODO: Tighten to specific domains (PayPal, gravatar, etc.) for higher security
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
       manifestSrc: ["'self'"],
       mediaSrc: ["'self'"],
       objectSrc: ["'none'"],
       scriptSrc: [
         "'self'",
         "'unsafe-inline'",
-        "'unsafe-eval'", // Required for React development and some libraries
+        // Removed 'unsafe-eval' - if React build tooling requires eval, use nonce-based CSP
+        // React production builds should not use eval; this is primarily a dev mode concern
       ],
       scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'"], // Required for inline styles (React/Tailwind)

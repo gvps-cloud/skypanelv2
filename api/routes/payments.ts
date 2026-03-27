@@ -187,6 +187,30 @@ router.post(
       const userId = authReq.user?.id;
       const organizationId = authReq.user?.organizationId ?? null;
 
+      // Verify the payment order belongs to the requesting user's organization
+      // This prevents authenticated users from capturing other organizations' orders
+      if (organizationId) {
+        const orderCheck = await dbQuery(
+          `SELECT id, organization_id, status FROM payment_transactions
+           WHERE provider_transaction_id = $1 AND organization_id = $2`,
+          [orderId, organizationId],
+        );
+
+        if (orderCheck.rows.length === 0) {
+          return res.status(403).json({
+            success: false,
+            error: "Payment order not found or does not belong to your organization",
+          });
+        }
+
+        if (orderCheck.rows[0].status === 'completed') {
+          return res.status(400).json({
+            success: false,
+            error: "Payment has already been captured",
+          });
+        }
+      }
+
       const result = await PayPalService.capturePayment(orderId, organizationId ?? undefined);
 
       if (result.success) {
@@ -333,7 +357,26 @@ router.post(
       }
 
       const { amount, description } = req.body;
-      const { organizationId } = (req as AuthenticatedRequest).user;
+      const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+
+      // Only users with billing_manage or vps_create permission can deduct funds
+      const hasBillingPermission = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        'billing_manage'
+      );
+      const hasVpsCreatePermission = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        'vps_create'
+      );
+
+      if (!hasBillingPermission && !hasVpsCreatePermission) {
+        return res.status(403).json({
+          success: false,
+          error: "Insufficient permissions to deduct funds",
+        });
+      }
 
       const success = await PayPalService.deductFundsFromWallet(
         organizationId,
