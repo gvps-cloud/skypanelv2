@@ -23,6 +23,7 @@ const navLinks: NavLinkConfig[] = [
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
   { label: "FAQ", href: "/faq" },
+  { label: "Docs", href: "/docs" },
 ];
 
 export function MarketingNavbar({ sticky = true }: MarketingNavbarProps) {

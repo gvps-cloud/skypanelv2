@@ -28,6 +28,11 @@ export const authenticateToken = async (
   next: NextFunction
 ) => {
   try {
+    // If API key authentication already set req.user, skip JWT validation
+    if ((req as any).user?.isApiKey) {
+      return next();
+    }
+
     // Extract token from Authorization header or cookies
     let token: string | null = null;
 

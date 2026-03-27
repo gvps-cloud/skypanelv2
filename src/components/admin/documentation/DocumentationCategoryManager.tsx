@@ -186,7 +186,7 @@ export default function DocumentationCategoryManager() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<DocumentationCategory | null>(null);
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("auth_token");
 
   const createForm = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),

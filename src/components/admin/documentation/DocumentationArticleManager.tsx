@@ -212,7 +212,7 @@ export default function DocumentationArticleManager() {
   const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("auth_token");
 
   const form = useForm<ArticleFormData>({
     resolver: zodResolver(articleSchema),

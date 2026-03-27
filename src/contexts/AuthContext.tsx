@@ -22,7 +22,7 @@ export interface AuthContextType {
   isImpersonating: boolean;
   login: (email: string, password: string, code?: string) => Promise<any>;
   register: (data: RegisterData) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
   updateProfile: (data: {
     firstName?: string;
@@ -130,7 +130,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const [isImpersonating, setIsImpersonating] = useState(false);
 
-  const logout = () => {
+  const logout = async () => {
+    // Notify server to blacklist the token
+    if (token) {
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+      } catch {
+        // Continue with local cleanup even if server request fails
+      }
+    }
+
     setUser(null);
     setToken(null);
     setIsImpersonating(false);

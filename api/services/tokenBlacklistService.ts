@@ -54,19 +54,20 @@ async function initializeRedis(): Promise<void> {
   const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI;
   if (!redisUrl) {
     if (process.env.REDIS_HOST || process.env.REDIS_PORT || process.env.REDIS_PASSWORD) {
-      console.warn('Token blacklist: REDIS_HOST/REDIS_PORT/REDIS_PASSWORD are no longer supported. Please use REDIS_URL instead.');
+      console.warn('[Token blacklist] REDIS_HOST/REDIS_PORT/REDIS_PASSWORD are no longer supported. Please use REDIS_URL instead.');
     }
-    console.log('Token blacklist: Redis not configured, using in-memory storage');
+    console.log('[Token blacklist] Redis not configured, using in-memory storage');
     redisAvailable = false;
     return;
   }
 
   try {
     const redisOptions: any = {
+      lazyConnect: true,
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         if (times > 3) {
-          console.warn('Token blacklist: Redis reconnection failed, using in-memory storage');
+          console.warn('[Token blacklist] Redis reconnection failed, using in-memory storage');
           redisAvailable = false;
           return null;
         }
@@ -77,19 +78,31 @@ async function initializeRedis(): Promise<void> {
     redisClient = new Redis(redisUrl, redisOptions);
 
     redisClient.on('error', (err) => {
-      console.error('Token blacklist Redis error:', err);
+      console.error('[Token blacklist] Redis error:', err.message);
       redisAvailable = false;
     });
 
     redisClient.on('ready', () => {
-      console.log('Token blacklist: Redis connection established');
+      console.log('[Token blacklist] Redis connected and ready');
       redisAvailable = true;
     });
 
+    redisClient.on('close', () => {
+      console.log('[Token blacklist] Redis connection closed');
+      redisAvailable = false;
+    });
+
+    redisClient.on('reconnecting', (ms: number) => {
+      console.log(`[Token blacklist] Redis reconnecting in ${ms}ms`);
+    });
+
+    const maskedUrl = redisUrl.replace(/:\/\/([^@]+)@/, '://***@');
+    console.log(`[Token blacklist] Connecting to Redis: ${maskedUrl}`);
     await redisClient.connect();
+    console.log('[Token blacklist] Redis connection established');
     redisAvailable = true;
   } catch (error) {
-    console.warn('Token blacklist: Failed to connect to Redis, using in-memory storage:', error);
+    console.warn('[Token blacklist] Failed to connect to Redis, using in-memory storage:', error);
     redisAvailable = false;
     redisClient = null;
   }
@@ -172,17 +185,17 @@ export async function add(token: string, userId?: string): Promise<void> {
       try {
         const key = `blacklist:${jti}`;
         await redisClient.set(key, JSON.stringify(entry), 'PX', ttl);
-        console.log(`Token blacklisted (Redis): jti=${jti}, userId=${userId || 'unknown'}, ttl=${ttlSeconds}s`);
+        console.log(`[Token blacklist] Token blacklisted (Redis): jti=${jti}, userId=${userId || 'unknown'}, ttl=${ttlSeconds}s`);
         return;
       } catch (redisError) {
-        console.warn('Token blacklist: Redis write failed, falling back to in-memory:', redisError);
+        console.warn('[Token blacklist] Redis write failed, falling back to in-memory:', redisError);
         redisAvailable = false;
       }
     }
 
     // Fallback to in-memory storage
     inMemoryBlacklist.set(jti, entry);
-    console.log(`Token blacklisted (in-memory): jti=${jti}, userId=${userId || 'unknown'}, ttl=${ttlSeconds}s`);
+    console.log(`[Token blacklist] Token blacklisted (in-memory): jti=${jti}, userId=${userId || 'unknown'}, ttl=${ttlSeconds}s`);
 
     // Schedule cleanup for this specific entry
     setTimeout(() => {
@@ -190,7 +203,7 @@ export async function add(token: string, userId?: string): Promise<void> {
     }, ttl);
 
   } catch (error) {
-    console.error('Token blacklist: Failed to add token:', error);
+    console.error('[Token blacklist] Failed to add token:', error);
     throw error;
   }
 }
@@ -235,7 +248,7 @@ export async function isRevoked(token: string): Promise<boolean> {
         }
         return false;
       } catch (redisError) {
-        console.warn('Token blacklist: Redis read failed, falling back to in-memory:', redisError);
+        console.warn('[Token blacklist] Redis read failed, falling back to in-memory:', redisError);
         redisAvailable = false;
       }
     }
@@ -255,7 +268,7 @@ export async function isRevoked(token: string): Promise<boolean> {
     return true;
 
   } catch (error) {
-    console.error('Token blacklist: Failed to check revocation status:', error);
+    console.error('[Token blacklist] Failed to check revocation status:', error);
     // Fail open - if we can't check, allow the token through
     // JWT verification will still catch expired tokens
     return false;
@@ -324,7 +337,7 @@ function cleanupExpiredEntries(): void {
   }
 
   if (cleaned > 0) {
-    console.log(`Token blacklist: Cleaned up ${cleaned} expired entries from in-memory storage`);
+    console.log(`[Token blacklist] Cleaned up ${cleaned} expired entries from in-memory storage`);
   }
 }
 
@@ -343,9 +356,9 @@ export async function shutdown(): Promise<void> {
   if (redisClient && typeof redisClient.quit === 'function') {
     try {
       await redisClient.quit();
-      console.log('Token blacklist: Redis connection closed');
+      console.log('[Token blacklist] Redis connection closed');
     } catch (error) {
-      console.error('Token blacklist: Error closing Redis connection:', error);
+      console.error('[Token blacklist] Error closing Redis connection:', error);
     }
   }
 
@@ -356,7 +369,7 @@ export async function shutdown(): Promise<void> {
 // Initialize Redis connection on module load
 initializeRedis().catch(() => {
   // Redis initialization failed, in-memory storage will be used
-  console.log('Token blacklist: Initialized with in-memory storage');
+  console.log('[Token blacklist] Initialized with in-memory storage');
 });
 
 // Start cleanup interval

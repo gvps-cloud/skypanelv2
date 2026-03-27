@@ -48,6 +48,7 @@ import adminBillingRoutes from "./routes/admin/billing.js";
 import githubRoutes from "./routes/github.js";
 import egressRoutes from "./routes/egress.js";
 import apiKeysRoutes from "./routes/apiKeys/index.js";
+import { authenticateApiKey } from "./routes/apiKeys/middleware.js";
 import documentationRoutes from "./routes/documentation.js";
 import adminDocumentationRoutes from "./routes/adminDocumentation.js";
 import {
@@ -90,6 +91,9 @@ app.use("/api", smartRateLimit);
 initializeMetricsCollection();
 startMetricsPersistence();
 BillingCronService.start();
+
+// API key authentication (sets req.user if X-API-Key / Bearer sk_live_* provided)
+app.use("/api", authenticateApiKey);
 
 // Routes
 app.use("/api/auth", authRoutes);

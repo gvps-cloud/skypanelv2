@@ -7,6 +7,7 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
+  BookOpen,
   CreditCard,
   FileText,
   HelpCircle,
@@ -160,6 +161,12 @@ const Navigation: React.FC = () => {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <Link to="/docs" className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Documentation
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link to="/api-docs" className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   API Docs
@@ -209,6 +216,11 @@ const Navigation: React.FC = () => {
                     <SheetClose asChild>
                       <Button variant="outline" size="sm" asChild>
                         <Link to="/support">Support</Link>
+                      </Button>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to="/docs">Docs</Link>
                       </Button>
                     </SheetClose>
                     <SheetClose asChild>

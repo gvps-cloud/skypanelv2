@@ -76,19 +76,20 @@ async function initializeRedis(): Promise<void> {
   const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI;
   if (!redisUrl) {
     if (process.env.REDIS_HOST || process.env.REDIS_PORT || process.env.REDIS_PASSWORD) {
-      console.warn('Brute force protection: REDIS_HOST/REDIS_PORT/REDIS_PASSWORD are no longer supported. Please use REDIS_URL instead.');
+      console.warn('[Brute force] REDIS_HOST/REDIS_PORT/REDIS_PASSWORD are no longer supported. Please use REDIS_URL instead.');
     }
-    console.log('Brute force protection: Redis not configured, using in-memory storage');
+    console.log('[Brute force] Redis not configured, using in-memory storage');
     redisAvailable = false;
     return;
   }
 
   try {
     const redisOptions: any = {
+      lazyConnect: true,
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {
         if (times > 3) {
-          console.warn('Brute force protection: Redis reconnection failed, using in-memory storage');
+          console.warn('[Brute force] Redis reconnection failed, using in-memory storage');
           redisAvailable = false;
           return null;
         }
@@ -99,19 +100,31 @@ async function initializeRedis(): Promise<void> {
     redisClient = new Redis(redisUrl, redisOptions);
 
     redisClient.on('error', (err) => {
-      console.error('Brute force protection Redis error:', err);
+      console.error('[Brute force] Redis error:', err.message);
       redisAvailable = false;
     });
 
     redisClient.on('ready', () => {
-      console.log('Brute force protection: Redis connection established');
+      console.log('[Brute force] Redis connected and ready');
       redisAvailable = true;
     });
 
+    redisClient.on('close', () => {
+      console.log('[Brute force] Redis connection closed');
+      redisAvailable = false;
+    });
+
+    redisClient.on('reconnecting', (ms: number) => {
+      console.log(`[Brute force] Redis reconnecting in ${ms}ms`);
+    });
+
+    const maskedUrl = redisUrl.replace(/:\/\/([^@]+)@/, '://***@');
+    console.log(`[Brute force] Connecting to Redis: ${maskedUrl}`);
     await redisClient.connect();
+    console.log('[Brute force] Redis connection established');
     redisAvailable = true;
   } catch (error) {
-    console.warn('Brute force protection: Failed to connect to Redis, using in-memory storage:', error);
+    console.warn('[Brute force] Failed to connect to Redis, using in-memory storage:', error);
     redisAvailable = false;
     redisClient = null;
   }
@@ -204,11 +217,11 @@ export async function trackFailedAttempt(ipAddress: string, email: string): Prom
           // Store with 7 day expiry (maximum lockout period)
           await redisClient.set(key, JSON.stringify(entry), 'PX', MAX_LOCKOUT_DURATION);
 
-          console.warn(`Brute force protection: ${type} ${id} - Failed attempt ${attempts}${lockedUntil ? `, locked until ${new Date(lockedUntil).toISOString()}` : ''}`);
+          console.warn(`[Brute force] ${type} ${id} - Failed attempt ${attempts}${lockedUntil ? `, locked until ${new Date(lockedUntil).toISOString()}` : ''}`);
 
           continue;
         } catch (redisError) {
-          console.warn('Brute force protection: Redis write failed, falling back to in-memory:', redisError);
+          console.warn('[Brute force] Redis write failed, falling back to in-memory:', redisError);
           redisAvailable = false;
         }
       }
@@ -243,10 +256,10 @@ export async function trackFailedAttempt(ipAddress: string, email: string): Prom
 
       inMemoryAttempts.set(key, entry);
 
-      console.warn(`Brute force protection (in-memory): ${type} ${id} - Failed attempt ${attempts}${lockedUntil ? `, locked until ${new Date(lockedUntil).toISOString()}` : ''}`);
+      console.warn(`[Brute force] (in-memory): ${type} ${id} - Failed attempt ${attempts}${lockedUntil ? `, locked until ${new Date(lockedUntil).toISOString()}` : ''}`);
 
     } catch (error) {
-      console.error(`Brute force protection: Failed to track attempt for ${type} ${id}:`, error);
+      console.error(`[Brute force] Failed to track attempt for ${type} ${id}:`, error);
     }
   }
 }
@@ -303,7 +316,7 @@ export async function isLockedOut(
             entry = JSON.parse(data) as FailedAttempt;
           }
         } catch (redisError) {
-          console.warn('Brute force protection: Redis read failed, falling back to in-memory:', redisError);
+          console.warn('[Brute force] Redis read failed, falling back to in-memory:', redisError);
           redisAvailable = false;
           entry = null;
         }
@@ -332,7 +345,7 @@ export async function isLockedOut(
       }
 
     } catch (error) {
-      console.error(`Brute force protection: Failed to check lockout for ${type} ${id}:`, error);
+      console.error(`[Brute force] Failed to check lockout for ${type} ${id}:`, error);
     }
   }
 
@@ -372,20 +385,20 @@ export async function resetAttempts(ipAddress: string, email?: string): Promise<
       if (redisAvailable && redisClient) {
         try {
           await redisClient.del(key);
-          console.log(`Brute force protection: Reset ${type} ${id} after successful login`);
+          console.log(`[Brute force] Reset ${type} ${id} after successful login`);
           continue;
         } catch (redisError) {
-          console.warn('Brute force protection: Redis delete failed, falling back to in-memory:', redisError);
+          console.warn('[Brute force] Redis delete failed, falling back to in-memory:', redisError);
           redisAvailable = false;
         }
       }
 
       // Fallback to in-memory storage
       inMemoryAttempts.delete(key);
-      console.log(`Brute force protection (in-memory): Reset ${type} ${id} after successful login`);
+      console.log(`[Brute force] (in-memory): Reset ${type} ${id} after successful login`);
 
     } catch (error) {
-      console.error(`Brute force protection: Failed to reset ${type} ${id}:`, error);
+      console.error(`[Brute force] Failed to reset ${type} ${id}:`, error);
     }
   }
 }
@@ -460,7 +473,7 @@ function cleanupExpiredEntries(): void {
   }
 
   if (cleaned > 0) {
-    console.log(`Brute force protection: Cleaned up ${cleaned} expired entries from in-memory storage`);
+    console.log(`[Brute force] Cleaned up ${cleaned} expired entries from in-memory storage`);
   }
 }
 
@@ -478,9 +491,9 @@ export async function shutdown(): Promise<void> {
   if (redisClient && typeof redisClient.quit === 'function') {
     try {
       await redisClient.quit();
-      console.log('Brute force protection: Redis connection closed');
+      console.log('[Brute force] Redis connection closed');
     } catch (error) {
-      console.error('Brute force protection: Error closing Redis connection:', error);
+      console.error('[Brute force] Error closing Redis connection:', error);
     }
   }
 
@@ -489,7 +502,7 @@ export async function shutdown(): Promise<void> {
 
 // Initialize Redis connection on module load
 initializeRedis().catch(() => {
-  console.log('Brute force protection: Initialized with in-memory storage');
+  console.log('[Brute force] Initialized with in-memory storage');
 });
 
 // Start cleanup interval
