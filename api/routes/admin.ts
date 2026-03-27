@@ -672,12 +672,7 @@ router.patch(
         throw new Error("Failed to update ticket status");
       }
 
-      // Notify SSE listeners (id is a UUID from req.params — validate before use)
-      const ticketIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!ticketIdPattern.test(id)) {
-        res.status(400).json({ error: "Invalid ticket ID." });
-        return;
-      }
+      // Notify SSE listeners
 
       const statusNotification = {
         type: "ticket_status_change",

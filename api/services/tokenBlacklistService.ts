@@ -124,9 +124,33 @@ function extractJti(payload: any, token: string): string {
   }
 
   // Generate jti from SHA-256 hash of the full token string
-  // Using base64(token).substring(0, 32) only covers the JWT header
-  // which is identical across tokens, causing all tokens to share the same blacklist entry
   return crypto.createHash('sha256').update(token).digest('hex').substring(0, 32);
+}
+
+/**
+ * Legacy JTI derivation (base64 substring) — only covers JWT header, same for all tokens.
+ * Kept for backward compatibility during rolling deploys.
+ * TODO: Remove after max token TTL has elapsed and tokens use real jti claims.
+ */
+function extractLegacyJti(payload: any, token: string): string {
+  if (payload.jti) {
+    return payload.jti;
+  }
+  return Buffer.from(token).toString('base64').substring(0, 32);
+}
+
+/**
+ * Get all JTI candidates for a token (both legacy and new).
+ * Used during migration window for dual-key blacklist checks.
+ */
+function getJtiCandidates(payload: any, token: string): string[] {
+  if (payload.jti) {
+    return [payload.jti];
+  }
+  return [
+    extractJti(payload, token),
+    extractLegacyJti(payload, token),
+  ];
 }
 
 /**
@@ -168,12 +192,13 @@ export async function add(token: string, userId?: string): Promise<void> {
       throw new Error('Invalid token format');
     }
 
-    const jti = extractJti(payload, token);
+    const jtiCandidates = getJtiCandidates(payload, token);
+    const primaryJti = jtiCandidates[0];
     const expiresAt = getTokenExpiration(payload);
     const blacklistedAt = Date.now();
 
     const entry: BlacklistEntry = {
-      jti,
+      jti: primaryJti,
       expiresAt,
       blacklistedAt,
       userId
@@ -185,9 +210,11 @@ export async function add(token: string, userId?: string): Promise<void> {
     // Try Redis first if available
     if (redisAvailable && redisClient) {
       try {
-        const key = `blacklist:${jti}`;
-        await redisClient.set(key, JSON.stringify(entry), 'PX', ttl);
-        console.log(`[Token blacklist] Token blacklisted (Redis): jti=${jti}, userId=${userId || 'unknown'}, ttl=${ttlSeconds}s`);
+        // Write all JTI candidates for backward compatibility (dual-key migration)
+        for (const candidate of jtiCandidates) {
+          await redisClient.set(`blacklist:${candidate}`, JSON.stringify({ ...entry, jti: candidate }), 'PX', ttl);
+        }
+        console.log(`[Token blacklist] Token blacklisted (Redis): jti=${primaryJti}, userId=${userId || 'unknown'}, ttl=${ttlSeconds}s`);
         return;
       } catch (redisError) {
         console.warn('[Token blacklist] Redis write failed, falling back to in-memory:', redisError);
@@ -196,12 +223,16 @@ export async function add(token: string, userId?: string): Promise<void> {
     }
 
     // Fallback to in-memory storage
-    inMemoryBlacklist.set(jti, entry);
-    console.log(`[Token blacklist] Token blacklisted (in-memory): jti=${jti}, userId=${userId || 'unknown'}, ttl=${ttlSeconds}s`);
+    for (const candidate of jtiCandidates) {
+      inMemoryBlacklist.set(candidate, { ...entry, jti: candidate });
+    }
+    console.log(`[Token blacklist] Token blacklisted (in-memory): jti=${primaryJti}, userId=${userId || 'unknown'}, ttl=${ttlSeconds}s`);
 
-    // Schedule cleanup for this specific entry
+    // Schedule cleanup for all candidates
     setTimeout(() => {
-      inMemoryBlacklist.delete(jti);
+      for (const candidate of jtiCandidates) {
+        inMemoryBlacklist.delete(candidate);
+      }
     }, ttl);
 
   } catch (error) {
@@ -234,18 +265,18 @@ export async function isRevoked(token: string): Promise<boolean> {
       return false; // Invalid format, let JWT verification handle it
     }
 
-    const jti = extractJti(payload, token);
+    const jtiCandidates = getJtiCandidates(payload, token);
 
     // Check Redis first if available
     if (redisAvailable && redisClient) {
       try {
-        const key = `blacklist:${jti}`;
-        const entry = await redisClient.get(key);
-        if (entry) {
-          const parsed = JSON.parse(entry) as BlacklistEntry;
-          // Verify entry hasn't expired
-          if (Date.now() < parsed.expiresAt) {
-            return true;
+        for (const candidate of jtiCandidates) {
+          const entry = await redisClient.get(`blacklist:${candidate}`);
+          if (entry) {
+            const parsed = JSON.parse(entry) as BlacklistEntry;
+            if (Date.now() < parsed.expiresAt) {
+              return true;
+            }
           }
         }
         return false;
@@ -256,18 +287,18 @@ export async function isRevoked(token: string): Promise<boolean> {
     }
 
     // Fallback to in-memory storage
-    const entry = inMemoryBlacklist.get(jti);
-    if (!entry) {
-      return false;
+    for (const candidate of jtiCandidates) {
+      const entry = inMemoryBlacklist.get(candidate);
+      if (entry) {
+        if (Date.now() >= entry.expiresAt) {
+          inMemoryBlacklist.delete(candidate);
+        } else {
+          return true;
+        }
+      }
     }
 
-    // Check if entry has expired
-    if (Date.now() >= entry.expiresAt) {
-      inMemoryBlacklist.delete(jti);
-      return false;
-    }
-
-    return true;
+    return false;
 
   } catch (error) {
     console.error('[Token blacklist] Failed to check revocation status:', error);
