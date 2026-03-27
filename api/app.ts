@@ -17,6 +17,7 @@ import express, {
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
+import fs from "fs";
 import { enhancedHelmet } from "./middleware/security.js";
 import {
   smartRateLimit,
@@ -143,10 +144,14 @@ app.use((error: Error, req: Request, res: Response, _next: NextFunction) => {
 });
 
 /**
- * 404 handler
+ * Serve the built frontend from /dist
+ *
+ * Serves whenever the dist/ directory exists (i.e. after `npm run build`),
+ * regardless of NODE_ENV. In dev mode Vite runs on its own port (5173)
+ * so this only affects requests hitting the Express server directly.
  */
-if (process.env.NODE_ENV === "production") {
-  // Serve the built frontend from /dist when running in production
+const distExists = fs.existsSync(clientBuildPath);
+if (distExists) {
   app.use(express.static(clientBuildPath));
 
   app.get("*", (req: Request, res: Response, next: NextFunction) => {
