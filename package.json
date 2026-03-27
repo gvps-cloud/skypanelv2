@@ -24,7 +24,7 @@
         "server:dev": "nodemon",
         "dev": "concurrently \"npm run client:dev\" \"npm run server:dev\"",
         "prestart": "npm run kill-ports",
-        "start": "concurrently \"node --import tsx api/server.ts\" \"vite preview --port 5173 --strictPort\"",
+        "start": "node --import tsx api/server.ts",
         "pm2:start": "npm run kill-ports && npm run build && pm2 start ecosystem.config.cjs --env production",
         "pm2:reload": "pm2 reload ecosystem.config.cjs --env production",
         "pm2:stop": "pm2 stop skypanelv2-api skypanelv2-ui && pm2 delete skypanelv2-api skypanelv2-ui",
@@ -37,7 +37,8 @@
         "audit:security": "npm audit --audit-level=high",
         "scan:code": "semgrep --config=auto --error",
         "test:security": "vitest run tests/security/",
-        "verify:security": "npm-run-all audit:security scan:code test:security"
+        "verify:security": "npm-run-all audit:security scan:code test:security",
+        "start:dev": "concurrently \"node --import tsx api/server.ts\" \"vite preview --port 5173 --strictPort\""
     },
     "dependencies": {
         "@dnd-kit/core": "^6.3.1",
@@ -121,7 +122,8 @@
         "xterm-addon-search": "^0.13.0",
         "xterm-addon-web-links": "^0.9.0",
         "zod": "^4.1.12",
-        "zustand": "^5.0.3"
+        "zustand": "^5.0.3",
+        "tsx": "^4.20.3"
     },
     "devDependencies": {
         "@eslint/js": "^9.25.0",
@@ -165,7 +167,6 @@
         "shadcn": "^3.5.0",
         "supertest": "^7.1.4",
         "tailwindcss": "^3.4.17",
-        "tsx": "^4.20.3",
         "typescript": "~5.8.3",
         "typescript-eslint": "^8.30.1",
         "vite": "^6.3.5",
