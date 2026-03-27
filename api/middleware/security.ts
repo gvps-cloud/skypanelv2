@@ -49,10 +49,11 @@ const helmetConfig = {
       scriptSrc: [
         "'self'",
         "'unsafe-inline'",
+        'https://cdn.jsdelivr.net',
         // Removed 'unsafe-eval' for production hardening. React production builds do not require it.
       ],
       scriptSrcAttr: ["'none'"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // Required for inline styles (React/Tailwind)
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"], // Required for inline styles (React/Tailwind) + TinyMCE CDN
       upgradeInsecureRequests: [],
       workerSrc: ["'self'", 'blob:'],
     },
