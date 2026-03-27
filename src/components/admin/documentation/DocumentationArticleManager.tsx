@@ -32,7 +32,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -675,7 +675,7 @@ export default function DocumentationArticleManager() {
           setPendingFiles([]);
         }
       }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Article</DialogTitle>
             <DialogDescription>
@@ -740,12 +740,12 @@ export default function DocumentationArticleManager() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="content">Content (HTML)</Label>
-              <Textarea
-                id="content"
-                {...form.register("content")}
-                className="min-h-[300px] font-mono"
-                placeholder="<h1>Title</h1><p>Content here...</p>"
+              <Label htmlFor="content">Content</Label>
+              <RichTextEditor
+                value={form.watch("content") || ""}
+                onChange={(html) => form.setValue("content", html)}
+                placeholder="Start writing your article..."
+                height={350}
               />
               {form.formState.errors.content && (
                 <p className="text-sm text-destructive">{form.formState.errors.content.message}</p>
@@ -840,7 +840,7 @@ export default function DocumentationArticleManager() {
           setPendingFiles([]);
         }
       }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Article</DialogTitle>
             <DialogDescription>
@@ -905,11 +905,11 @@ export default function DocumentationArticleManager() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-content">Content (HTML)</Label>
-              <Textarea
-                id="edit-content"
-                {...editForm.register("content")}
-                className="min-h-[300px] font-mono"
+              <Label htmlFor="edit-content">Content</Label>
+              <RichTextEditor
+                value={editForm.watch("content") || ""}
+                onChange={(html) => editForm.setValue("content", html)}
+                height={350}
               />
               {editForm.formState.errors.content && (
                 <p className="text-sm text-destructive">{editForm.formState.errors.content.message}</p>

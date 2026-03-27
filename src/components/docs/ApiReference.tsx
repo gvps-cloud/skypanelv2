@@ -87,8 +87,25 @@ const sectionConfig: Array<{
     title: "VPS Management",
     description: "Create, manage, and control virtual private server instances.",
     icon: <Server className="h-4 w-4" />,
-    prefixes: ["/api/vps"],
+    prefixes: [
+      "/api/vps/providers",
+      "/api/vps/plans",
+      "/api/vps/images",
+      "/api/vps/stackscripts",
+      "/api/vps/apps",
+      "/api/vps/linode",
+    ],
     priority: 2,
+  },
+  {
+    id: "vps-instances",
+    title: "VPS Instances & Lifecycle",
+    description: "Instance management, power control, backups, networking, and configuration.",
+    icon: <Server className="h-4 w-4" />,
+    prefixes: [
+      "/api/vps", // catch-all for individual instance routes like /api/vps/:id
+    ],
+    priority: 2.5,
   },
   {
     id: "billing",
@@ -168,25 +185,36 @@ const normalizePath = (value: string): string => {
 };
 
 const getSectionForPath = (path: string): typeof sectionConfig[number] | null => {
-  // Check admin first (higher priority match)
+  // Check most specific prefixes first to avoid incorrect matches
+  // e.g. /api/egress/admin should match "admin", not "egress"
+
+  // Check admin first (highest specificity for /api/admin/*)
   if (path.startsWith("/api/admin")) {
     return sectionConfig.find(s => s.id === "admin") || null;
   }
-  
-  // Check egress (before other matches)
+
+  // Check egress
   if (path.startsWith("/api/egress")) {
     return sectionConfig.find(s => s.id === "egress") || null;
   }
-  
-  // Check other sections
+
+  // Check remaining sections, preferring longest prefix match
+  const matchingSections: Array<{ section: typeof sectionConfig[number]; prefix: string }> = [];
   for (const section of sectionConfig) {
     if (section.id === "admin" || section.id === "egress") continue;
     for (const prefix of section.prefixes) {
       if (path === prefix || path.startsWith(`${prefix}/`)) {
-        return section;
+        matchingSections.push({ section, prefix });
       }
     }
   }
+
+  // Sort by prefix length (longest first) for most specific match
+  if (matchingSections.length > 0) {
+    matchingSections.sort((a, b) => b.prefix.length - a.prefix.length);
+    return matchingSections[0].section;
+  }
+
   return null;
 };
 
