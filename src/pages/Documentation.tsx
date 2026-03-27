@@ -22,6 +22,8 @@ import {
   HardDrive,
   Database,
   DollarSign,
+  Wifi,
+  Loader2,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +41,7 @@ import type {
   DocumentationArticleWithFiles,
 } from "@/types/documentation";
 import ApiReference from "@/components/docs/ApiReference";
+import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
 
 // ── Plans & Regions types ───────────────────────────────────────────────────
 
@@ -74,11 +77,15 @@ function formatMemory(mb: number): string {
   return `${mb} MB`;
 }
 
-function formatStorage(gb: number): string {
+// disk from Linode API is in MB; convert to GB for display
+function formatStorage(mb: number): string {
+  const gb = mb / 1024;
   if (gb >= 1024) return `${(gb / 1024).toFixed(1)} TB`;
-  return `${gb} GB`;
+  if (gb === Math.floor(gb)) return `${gb} GB`;
+  return `${gb.toFixed(1)} GB`;
 }
 
+// transfer from Linode API is in GB
 function formatTransfer(gb: number): string {
   if (gb >= 1024) return `${(gb / 1024).toFixed(0)} TB`;
   return `${gb} GB`;
@@ -285,6 +292,7 @@ export default function Documentation() {
   const [vpsPlans, setVpsPlans] = useState<VpsPlan[]>([]);
   const [publicRegions, setPublicRegions] = useState<PublicRegion[]>([]);
   const [loadingPlansRegions, setLoadingPlansRegions] = useState(false);
+  const { data: enabledCategoryMappings = [] } = useEnabledCategoryMappings();
 
   const handleNavigate = useCallback(
     (path: string) => {
@@ -490,192 +498,304 @@ export default function Documentation() {
 
   // ── Render: Plans & Regions article (dynamic data) ───────────────────────
 
-  const renderPlansRegionsArticle = (article: DocumentationArticleWithFiles) => (
-    <article className="max-w-3xl">
-      <Breadcrumb
-        category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
-        article={article.title}
-      />
+  // ── Helpers for Plans & Regions ──────────────────────────────────────────
 
-      <h1 className="text-2xl font-bold tracking-tight mb-3">{article.title}</h1>
-      {article.summary && (
-        <p className="text-muted-foreground text-lg mb-8">{article.summary}</p>
-      )}
+  const DEFAULT_CATEGORY_META: Record<string, { label: string; order: number }> = {
+    nanode:      { label: "Nanode",         order: 0 },
+    standard:    { label: "Standard",       order: 1 },
+    dedicated:   { label: "Dedicated CPU",  order: 2 },
+    premium:     { label: "Premium",        order: 3 },
+    highmem:     { label: "High Memory",    order: 4 },
+    gpu:         { label: "GPU",            order: 5 },
+    accelerated: { label: "Accelerated",    order: 6 },
+  };
 
-      {/* Article content (intro / explanatory text) */}
-      {article.content && (
-        <div
-          className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm mb-10"
-          dangerouslySetInnerHTML={{
-            __html: DOMPurify.sanitize(article.content, { USE_PROFILES: { html: true } }),
-          }}
-        />
-      )}
+  const getCategoryLabel = useCallback((category: string): string => {
+    const mapping = enabledCategoryMappings.find(
+      (item) => item.original_category === category,
+    );
+    if (mapping?.custom_name) return mapping.custom_name;
+    return (
+      DEFAULT_CATEGORY_META[category]?.label ??
+      category.charAt(0).toUpperCase() + category.slice(1)
+    );
+  }, [enabledCategoryMappings]);
 
-      {/* ── Plan Tiers (dynamic) ──────────────────────────────────────── */}
-      <div className="mb-10">
-        <h2 className="text-xl font-semibold tracking-tight mb-1 flex items-center gap-2">
-          <Server className="h-5 w-5 text-primary" />
-          Plan Tiers
-        </h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Available VPS plans configured by your administrator.
-        </p>
+  const groupedPlans = useMemo(() => {
+    const groups: Record<string, typeof vpsPlans> = {};
+    for (const plan of vpsPlans) {
+      const cat = plan.type_class || "standard";
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(plan);
+    }
+    // Sort categories by display_order
+    return Object.entries(groups).sort((a, b) => {
+      const mappingA = enabledCategoryMappings.find((m) => m.original_category === a[0]);
+      const mappingB = enabledCategoryMappings.find((m) => m.original_category === b[0]);
+      const orderA = mappingA?.display_order ?? DEFAULT_CATEGORY_META[a[0]]?.order ?? 99;
+      const orderB = mappingB?.display_order ?? DEFAULT_CATEGORY_META[b[0]]?.order ?? 99;
+      return orderA - orderB;
+    });
+  }, [vpsPlans, enabledCategoryMappings]);
 
-        {loadingPlansRegions ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        ) : vpsPlans.length === 0 ? (
-          <div className="rounded-lg border bg-muted/30 py-8 text-center">
-            <p className="text-sm text-muted-foreground">No VPS plans are currently configured.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <Server className="h-3.5 w-3.5 text-muted-foreground" />
-                      Plan
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
-                      vCPUs
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium">RAM</th>
-                  <th className="px-4 py-3 text-left font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <HardDrive className="h-3.5 w-3.5 text-muted-foreground" />
-                      Storage
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <Database className="h-3.5 w-3.5 text-muted-foreground" />
-                      Transfer
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium">
-                    <span className="flex items-center justify-end gap-1.5">
-                      <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
-                      Price
-                    </span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {vpsPlans.map((plan) => {
-                  const specs = plan.specifications || {};
-                  const vcpus = Number(specs.vcpus ?? specs.cpu_cores ?? 0);
-                  const memory = Number(specs.memory ?? specs.memory_gb ?? 0);
-                  const disk = Number(specs.disk ?? specs.storage_gb ?? 0);
-                  const transfer = Number(specs.transfer ?? specs.transfer_gb ?? specs.bandwidth_gb ?? 0);
-                  const price = Number(plan.base_price || 0) + Number(plan.markup_price || 0);
+  // Latency state for inline speed testing (same approach as /status page)
+  const [docsLatencyState, setDocsLatencyState] = useState<Record<string, { loading: boolean; latency?: number; error?: boolean }>>({});
+  const [docsTestingAll, setDocsTestingAll] = useState(false);
 
-                  return (
-                    <tr key={plan.id} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium">{plan.name}</td>
-                      <td className="px-4 py-3">{vcpus}</td>
-                      <td className="px-4 py-3">{formatMemory(memory)}</td>
-                      <td className="px-4 py-3">{formatStorage(disk)}</td>
-                      <td className="px-4 py-3">{formatTransfer(transfer)}</td>
-                      <td className="px-4 py-3 text-right font-medium">
-                        ${price.toFixed(2)}/mo
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+  const measureDocsLatency = useCallback(async (regionId: string, speedTestUrl: string) => {
+    setDocsLatencyState((prev) => ({ ...prev, [regionId]: { loading: true } }));
+    try {
+      const startTime = performance.now();
+      await fetch(`${speedTestUrl}?t=${Date.now()}`, { mode: "no-cors", cache: "no-store" });
+      const latency = Math.round(performance.now() - startTime);
+      setDocsLatencyState((prev) => ({ ...prev, [regionId]: { loading: false, latency } }));
+    } catch {
+      setDocsLatencyState((prev) => ({ ...prev, [regionId]: { loading: false, error: true } }));
+    }
+  }, []);
 
-      {/* ── Regions (dynamic) ─────────────────────────────────────────── */}
-      <div className="mb-10">
-        <h2 className="text-xl font-semibold tracking-tight mb-1 flex items-center gap-2">
-          <Globe className="h-5 w-5 text-primary" />
-          Regions
-        </h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Available data center locations.
-        </p>
+  const testAllDocsRegions = useCallback(async () => {
+    setDocsTestingAll(true);
+    const withUrls = publicRegions.filter((r) => r.speedTestUrl);
+    await Promise.all(withUrls.map((r) => measureDocsLatency(r.id, r.speedTestUrl!)));
+    setDocsTestingAll(false);
+  }, [publicRegions, measureDocsLatency]);
 
-        {loadingPlansRegions ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
-          </div>
-        ) : publicRegions.length === 0 ? (
-          <div className="rounded-lg border bg-muted/30 py-8 text-center">
-            <p className="text-sm text-muted-foreground">No regions are currently configured.</p>
-          </div>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {publicRegions.map((region) => {
-              const label = region.displayLabel || region.label;
-              const country = region.displayCountry || region.country?.toUpperCase() || "";
+  const getDocsLatencyBadgeClass = (ms: number): string => {
+    if (ms < 100) return "bg-green-500 text-white dark:text-white";
+    if (ms < 200) return "bg-yellow-500 text-black dark:text-black";
+    if (ms < 300) return "bg-orange-500 text-white dark:text-white";
+    return "bg-red-500 text-white dark:text-white";
+  };
+
+  // ── Render: Plans & Regions article ──────────────────────────────────────
+
+  const renderPlansRegionsArticle = (article: DocumentationArticleWithFiles) => {
+    const renderPlanTable = (plans: typeof vpsPlans) => (
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="px-4 py-3 text-left font-medium">Plan</th>
+              <th className="px-4 py-3 text-left font-medium">vCPUs</th>
+              <th className="px-4 py-3 text-left font-medium">RAM</th>
+              <th className="px-4 py-3 text-left font-medium">Storage</th>
+              <th className="px-4 py-3 text-left font-medium">Transfer</th>
+              <th className="px-4 py-3 text-right font-medium">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            {plans.map((plan) => {
+              const specs = plan.specifications || {};
+              const vcpus = Number(specs.vcpus ?? specs.cpu_cores ?? 0);
+              const memory = Number(specs.memory ?? specs.memory_gb ?? 0);
+              const disk = Number(specs.disk ?? specs.storage_gb ?? 0);
+              const transfer = Number(specs.transfer ?? specs.transfer_gb ?? specs.bandwidth_gb ?? 0);
+              const price = Number(plan.base_price || 0) + Number(plan.markup_price || 0);
               return (
-                <div
-                  key={region.id}
-                  className="flex items-center gap-3 rounded-lg border p-3 bg-card"
-                >
-                  <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {region.id}{country ? ` — ${country}` : ""}
-                    </p>
-                  </div>
-                  {region.speedTestUrl && (
-                    <a
-                      href={region.speedTestUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline shrink-0"
-                    >
-                      Speed test
-                    </a>
-                  )}
-                </div>
+                <tr key={plan.id} className="border-b last:border-0 hover:bg-muted/30">
+                  <td className="px-4 py-3 font-medium">{plan.name}</td>
+                  <td className="px-4 py-3">{vcpus}</td>
+                  <td className="px-4 py-3">{formatMemory(memory)}</td>
+                  <td className="px-4 py-3">{formatStorage(disk)}</td>
+                  <td className="px-4 py-3">{formatTransfer(transfer)}</td>
+                  <td className="px-4 py-3 text-right font-medium">${price.toFixed(2)}/mo</td>
+                </tr>
               );
             })}
+          </tbody>
+        </table>
+      </div>
+    );
+
+    return (
+      <article className="max-w-3xl">
+        <Breadcrumb
+          category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
+          article={article.title}
+        />
+        <h1 className="text-2xl font-bold tracking-tight mb-3">{article.title}</h1>
+        {article.summary && (
+          <p className="text-muted-foreground text-lg mb-8">{article.summary}</p>
+        )}
+
+        {article.content && (
+          <div
+            className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm mb-10"
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(article.content, { USE_PROFILES: { html: true } }),
+            }}
+          />
+        )}
+
+        {/* ── Plan Tiers grouped by type_class ──────────────────────── */}
+        <div className="mb-10">
+          <h2 className="text-xl font-semibold tracking-tight mb-1 flex items-center gap-2">
+            <Server className="h-5 w-5 text-primary" />
+            Plan Tiers
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Available VPS plans configured by your administrator.
+          </p>
+
+          {loadingPlansRegions ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : vpsPlans.length === 0 ? (
+            <div className="rounded-lg border bg-muted/30 py-8 text-center">
+              <p className="text-sm text-muted-foreground">No VPS plans are currently configured.</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {groupedPlans.map(([typeClass, plans]) => (
+                <div key={typeClass}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Cpu className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold">{getCategoryLabel(typeClass)}</h3>
+                    <Badge variant="secondary" className="text-[10px] px-1.5">
+                      {plans.length} plan{plans.length !== 1 ? "s" : ""}
+                    </Badge>
+                  </div>
+                  {renderPlanTable(plans)}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Regions with inline speed test ────────────────────────── */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              Regions
+            </h2>
+            {publicRegions.some((r) => r.speedTestUrl) && (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={testAllDocsRegions}
+                disabled={docsTestingAll}
+                className="h-8 text-xs"
+              >
+                {docsTestingAll ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                    Testing All...
+                  </>
+                ) : (
+                  <>
+                    <Wifi className="mr-1.5 h-3 w-3" />
+                    Test All Regions
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Available data center locations. Test latency from your browser.
+          </p>
+
+          {loadingPlansRegions ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : publicRegions.length === 0 ? (
+            <div className="rounded-lg border bg-muted/30 py-8 text-center">
+              <p className="text-sm text-muted-foreground">No regions are currently configured.</p>
+            </div>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {publicRegions.map((region) => {
+                const label = region.displayLabel || region.label;
+                const country = region.displayCountry || region.country?.toUpperCase() || "";
+                const lat = docsLatencyState[region.id];
+
+                return (
+                  <div
+                    key={region.id}
+                    className="flex flex-col gap-2 rounded-lg border p-3 bg-card"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {country}
+                        </p>
+                      </div>
+                      {lat?.latency !== undefined && (
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${getDocsLatencyBadgeClass(lat.latency)}`}>
+                          {lat.latency}ms
+                        </span>
+                      )}
+                      {lat?.error && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5">Failed</Badge>
+                      )}
+                    </div>
+                    {region.speedTestUrl && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full h-7 text-xs"
+                        onClick={() => measureDocsLatency(region.id, region.speedTestUrl!)}
+                        disabled={lat?.loading || docsTestingAll}
+                      >
+                        {lat?.loading ? (
+                          <>
+                            <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                            Testing...
+                          </>
+                        ) : lat?.latency !== undefined ? (
+                          <>
+                            <Wifi className="mr-1.5 h-3 w-3" />
+                            Retest
+                          </>
+                        ) : (
+                          <>
+                            <Wifi className="mr-1.5 h-3 w-3" />
+                            Test Latency
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* File attachments */}
+        {article.files && article.files.length > 0 && (
+          <div className="mt-10 border-t pt-6">
+            <h3 className="text-sm font-semibold mb-3">Attachments</h3>
+            <div className="space-y-2">
+              {article.files.map((file) => (
+                <a
+                  key={file.id}
+                  href={`/api/documentation/files/${file.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent transition-colors"
+                >
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
+                  <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
+                  <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                </a>
+              ))}
+            </div>
           </div>
         )}
-      </div>
-
-      {/* File attachments */}
-      {article.files && article.files.length > 0 && (
-        <div className="mt-10 border-t pt-6">
-          <h3 className="text-sm font-semibold mb-3">Attachments</h3>
-          <div className="space-y-2">
-            {article.files.map((file) => (
-              <a
-                key={file.id}
-                href={`/api/documentation/files/${file.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent transition-colors"
-              >
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
-                <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
-                <Download className="h-3.5 w-3.5 text-muted-foreground" />
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-    </article>
-  );
+      </article>
+    );
+  };
 
   // ── Render: Article view ─────────────────────────────────────────────────
 
