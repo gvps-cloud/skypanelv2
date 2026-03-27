@@ -1,20 +1,10 @@
-import React, { useMemo, useState, useCallback, useEffect } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   BookOpen,
   Copy,
   Search,
   Lock,
   Code2,
-  Zap,
-  DollarSign,
-  HelpCircle,
-  Mail,
-  Palette,
-  Activity,
-  Server,
-  Users,
-  CreditCard,
-  Shield,
   Globe,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -37,24 +27,15 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { BRAND_NAME } from "@/lib/brand";
-import { ACTIVE_API_ROUTE_MANIFEST, type ActiveApiRoute } from "@/lib/apiRouteManifest";
+import {
+  type SectionDefinition,
+  type EndpointDefinition,
+  syncSectionsWithActiveRoutes,
+  buildBaseSections,
+} from "@/lib/apiDocsShared";
+import { ACTIVE_API_ROUTE_MANIFEST } from "@/lib/apiRouteManifest";
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
-type GroupedEndpoint = ActiveApiRoute & {
-  relativePath: string;
-};
-
-type ApiSection = {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  basePath: string;
-  endpoints: GroupedEndpoint[];
-};
-
-// ── Constants ────────────────────────────────────────────────────────────────
+// ── Rendering Helpers ──────────────────────────────────────────────────────
 
 const methodStyles: Record<string, string> = {
   GET: "bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:text-emerald-400 dark:border-emerald-800",
@@ -65,249 +46,18 @@ const methodStyles: Record<string, string> = {
   DEFAULT: "bg-muted text-foreground border-border",
 };
 
-// Section configuration based on path prefixes
-const sectionConfig: Array<{
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  prefixes: string[];
-  priority: number;
-}> = [
-  {
-    id: "auth",
-    title: "Authentication",
-    description: "User authentication, registration, password management, and API keys.",
-    icon: <Lock className="h-4 w-4" />,
-    prefixes: ["/api/auth"],
-    priority: 1,
-  },
-  {
-    id: "vps",
-    title: "VPS Management",
-    description: "Create, manage, and control virtual private server instances.",
-    icon: <Server className="h-4 w-4" />,
-    prefixes: [
-      "/api/vps/providers",
-      "/api/vps/plans",
-      "/api/vps/images",
-      "/api/vps/stackscripts",
-      "/api/vps/apps",
-      "/api/vps/linode",
-    ],
-    priority: 2,
-  },
-  {
-    id: "vps-instances",
-    title: "VPS Instances & Lifecycle",
-    description: "Instance management, power control, backups, networking, and configuration.",
-    icon: <Server className="h-4 w-4" />,
-    prefixes: [
-      "/api/vps", // catch-all for individual instance routes like /api/vps/:id
-    ],
-    priority: 2.5,
-  },
-  {
-    id: "billing",
-    title: "Billing & Payments",
-    description: "Wallet management, payment processing, and transaction history.",
-    icon: <CreditCard className="h-4 w-4" />,
-    prefixes: ["/api/payments", "/api/invoices"],
-    priority: 3,
-  },
-  {
-    id: "organizations",
-    title: "Organizations",
-    description: "Organization management, membership, and invitations.",
-    icon: <Users className="h-4 w-4" />,
-    prefixes: ["/api/organizations"],
-    priority: 4,
-  },
-  {
-    id: "support",
-    title: "Support Tickets",
-    description: "Create and manage support tickets and replies.",
-    icon: <HelpCircle className="h-4 w-4" />,
-    prefixes: ["/api/support"],
-    priority: 5,
-  },
-  {
-    id: "notifications",
-    title: "Notifications",
-    description: "Real-time notifications and activity streams.",
-    icon: <Activity className="h-4 w-4" />,
-    prefixes: ["/api/notifications", "/api/activities", "/api/activity"],
-    priority: 6,
-  },
-  {
-    id: "ssh-keys",
-    title: "SSH Keys",
-    description: "Manage SSH keys for VPS access.",
-    icon: <Code2 className="h-4 w-4" />,
-    prefixes: ["/api/ssh-keys"],
-    priority: 7,
-  },
-  {
-    id: "egress",
-    title: "Egress & Network Transfer",
-    description: "Prepaid network transfer credits and usage tracking.",
-    icon: <Globe className="h-4 w-4" />,
-    prefixes: ["/api/egress"],
-    priority: 8,
-  },
-  {
-    id: "admin",
-    title: "Admin APIs",
-    description: "Administrative endpoints for platform management.",
-    icon: <Shield className="h-4 w-4" />,
-    prefixes: ["/api/admin"],
-    priority: 100,
-  },
-  {
-    id: "public",
-    title: "Public APIs",
-    description: "Public endpoints for pricing, FAQ, contact, and health checks.",
-    icon: <Globe className="h-4 w-4" />,
-    prefixes: ["/api/pricing", "/api/faq", "/api/contact", "/api/health", "/api/theme", "/api/documentation"],
-    priority: 0,
-  },
-];
-
-// ── Utility Functions ────────────────────────────────────────────────────────
-
-const normalizePath = (value: string): string => {
-  if (!value) return "/";
-  const collapsed = value.replace(/\/{2,}/g, "/");
-  if (collapsed.length > 1 && collapsed.endsWith("/")) {
-    return collapsed.slice(0, -1);
-  }
-  return collapsed;
-};
-
-const getSectionForPath = (path: string): typeof sectionConfig[number] | null => {
-  // Check most specific prefixes first to avoid incorrect matches
-  // e.g. /api/egress/admin should match "admin", not "egress"
-
-  // Check admin first (highest specificity for /api/admin/*)
-  if (path.startsWith("/api/admin")) {
-    return sectionConfig.find(s => s.id === "admin") || null;
-  }
-
-  // Check egress
-  if (path.startsWith("/api/egress")) {
-    return sectionConfig.find(s => s.id === "egress") || null;
-  }
-
-  // Check remaining sections, preferring longest prefix match
-  const matchingSections: Array<{ section: typeof sectionConfig[number]; prefix: string }> = [];
-  for (const section of sectionConfig) {
-    if (section.id === "admin" || section.id === "egress") continue;
-    for (const prefix of section.prefixes) {
-      if (path === prefix || path.startsWith(`${prefix}/`)) {
-        matchingSections.push({ section, prefix });
-      }
-    }
-  }
-
-  // Sort by prefix length (longest first) for most specific match
-  if (matchingSections.length > 0) {
-    matchingSections.sort((a, b) => b.prefix.length - a.prefix.length);
-    return matchingSections[0].section;
-  }
-
-  return null;
-};
-
-const getRelativePath = (path: string, basePath: string): string => {
-  if (path === basePath) return "/";
-  const suffix = path.slice(basePath.length);
-  if (!suffix) return "/";
-  return suffix.startsWith("/") ? suffix : `/${suffix}`;
-};
-
-const groupEndpointsBySection = (routes: ActiveApiRoute[]): ApiSection[] => {
-  const sectionMap = new Map<string, GroupedEndpoint[]>();
-  const unmatchedEndpoints: GroupedEndpoint[] = [];
-
-  // Group routes by section
-  for (const route of routes) {
-    const section = getSectionForPath(route.path);
-    const relativePath = section 
-      ? getRelativePath(route.path, section.prefixes[0])
-      : route.path;
-
-    const endpoint: GroupedEndpoint = {
-      ...route,
-      relativePath,
-    };
-
-    if (section) {
-      const key = section.id;
-      if (!sectionMap.has(key)) {
-        sectionMap.set(key, []);
-      }
-      sectionMap.get(key)!.push(endpoint);
-    } else {
-      unmatchedEndpoints.push(endpoint);
-    }
-  }
-
-  // Build sections array
-  const sections: ApiSection[] = sectionConfig
-    .filter(config => sectionMap.has(config.id))
-    .map(config => ({
-      id: config.id,
-      title: config.title,
-      description: config.description,
-      icon: config.icon,
-      basePath: config.prefixes[0],
-      endpoints: sectionMap.get(config.id) || [],
-    }))
-    .sort((a, b) => {
-      const aConfig = sectionConfig.find(s => s.id === a.id);
-      const bConfig = sectionConfig.find(s => s.id === b.id);
-      return (aConfig?.priority || 99) - (bConfig?.priority || 99);
-    });
-
-  // Add unmatched endpoints to "Other" section if any
-  if (unmatchedEndpoints.length > 0) {
-    sections.push({
-      id: "other",
-      title: "Other APIs",
-      description: "Additional API endpoints.",
-      icon: <Code2 className="h-4 w-4" />,
-      basePath: "/api",
-      endpoints: unmatchedEndpoints.sort((a, b) => a.path.localeCompare(b.path)),
-    });
-  }
-
-  // Sort endpoints within each section
-  for (const section of sections) {
-    section.endpoints.sort((a, b) => {
-      const pathCompare = a.relativePath.localeCompare(b.relativePath);
-      if (pathCompare !== 0) return pathCompare;
-      return a.method.localeCompare(b.method);
-    });
-  }
-
-  return sections;
-};
-
-const buildCurlCommand = (endpoint: GroupedEndpoint) => {
-  const baseUrl = typeof window !== 'undefined' 
-    ? `${window.location.protocol}//${window.location.host}`
-    : 'https://api.example.com';
-  const url = `${baseUrl}${endpoint.path}`;
+const buildCurlCommand = (sectionBase: string, endpoint: EndpointDefinition) => {
+  const url = `${sectionBase}${endpoint.path}`;
 
   const lines = [`curl -X ${endpoint.method} "${url}"`];
 
-  if (endpoint.protected) {
+  if (endpoint.auth) {
     lines.push('  -H "Authorization: Bearer YOUR_API_KEY"');
   }
 
-  if (["POST", "PUT", "PATCH"].includes(endpoint.method)) {
+  if (endpoint.body) {
     lines.push('  -H "Content-Type: application/json"');
-    lines.push('  -d \'{"key": "value"}\'');
+    lines.push(`  -d '${JSON.stringify(endpoint.body)}'`);
   }
 
   return lines.join(" \\\n");
@@ -323,8 +73,21 @@ export default function ApiReference({ onBack }: ApiReferenceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
 
-  // Group endpoints by section
-  const sections = useMemo(() => groupEndpointsBySection(ACTIVE_API_ROUTE_MANIFEST), []);
+  const apiBase = (
+    typeof window !== "undefined"
+      ? `${window.location.protocol}//${window.location.host}/api`
+      : "/api"
+  ).replace(/\/$/, "");
+
+  // Use the same shared data source as ApiDocs (/api-docs)
+  const baseSections = useMemo<SectionDefinition[]>(
+    () => buildBaseSections(apiBase),
+    [apiBase],
+  );
+  const sections = useMemo(
+    () => syncSectionsWithActiveRoutes(baseSections, apiBase),
+    [baseSections, apiBase],
+  );
 
   // Filter sections based on search
   const filteredSections = useMemo(() => {
@@ -336,8 +99,9 @@ export default function ApiReference({ onBack }: ApiReferenceProps) {
         endpoints: section.endpoints.filter(
           (endpoint) =>
             endpoint.path.toLowerCase().includes(query) ||
+            endpoint.description.toLowerCase().includes(query) ||
             endpoint.method.toLowerCase().includes(query) ||
-            (endpoint.protected ? "auth" : "public").includes(query)
+            (endpoint.auth ? "auth" : "public").includes(query)
         ),
       }))
       .filter((section) => section.endpoints.length > 0);
@@ -345,17 +109,18 @@ export default function ApiReference({ onBack }: ApiReferenceProps) {
 
   // Stats
   const stats = useMemo(() => {
-    const total = ACTIVE_API_ROUTE_MANIFEST.length;
-    const protected_ = ACTIVE_API_ROUTE_MANIFEST.filter(r => r.protected).length;
+    const allEndpoints = sections.flatMap((s) => s.endpoints);
+    const total = allEndpoints.length;
+    const protected_ = allEndpoints.filter((e) => e.auth).length;
     const public_ = total - protected_;
     return { total, protected: protected_, public: public_ };
-  }, []);
+  }, [sections]);
 
   // Copy handler
-  const handleCopy = useCallback(async (text: string, label: string, endpointKey: string) => {
+  const handleCopy = useCallback(async (text: string, label: string, endpointKeyStr: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedEndpoint(endpointKey);
+      setCopiedEndpoint(endpointKeyStr);
       toast.success(`${label} copied to clipboard`);
       setTimeout(() => setCopiedEndpoint(null), 2000);
     } catch {
@@ -446,8 +211,8 @@ export default function ApiReference({ onBack }: ApiReferenceProps) {
               </CardContent>
             </Card>
           ) : (
-            filteredSections.map((section) => (
-              <Card key={section.id} id={`api-section-${section.id}`}>
+            filteredSections.map((section, sectionIdx) => (
+              <Card key={sectionIdx} id={`api-section-${sectionIdx}`}>
                 <CardHeader>
                   <div className="flex items-center gap-3">
                     <div className="rounded-lg bg-primary/10 p-2 text-primary">
@@ -460,7 +225,7 @@ export default function ApiReference({ onBack }: ApiReferenceProps) {
                   </div>
                   <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                     <code className="rounded bg-muted px-2 py-1 font-mono">
-                      {section.basePath}
+                      {section.base}
                     </code>
                     <Badge variant="secondary" className="font-normal">
                       {section.endpoints.length}{" "}
@@ -471,11 +236,11 @@ export default function ApiReference({ onBack }: ApiReferenceProps) {
                 <CardContent className="pt-0">
                   <Accordion type="single" collapsible className="w-full">
                     {section.endpoints.map((endpoint, index) => {
-                      const endpointKey = `${section.id}-${endpoint.method}-${endpoint.path}-${index}`;
+                      const endpointKeyStr = `${sectionIdx}-${endpoint.method}-${endpoint.path}-${index}`;
                       return (
                         <AccordionItem
-                          value={endpointKey}
-                          key={endpointKey}
+                          value={endpointKeyStr}
+                          key={endpointKeyStr}
                           className="border-b last:border-0"
                         >
                           <AccordionTrigger className="hover:no-underline py-3">
@@ -489,9 +254,9 @@ export default function ApiReference({ onBack }: ApiReferenceProps) {
                                 {endpoint.method}
                               </Badge>
                               <code className="flex-1 text-sm font-medium truncate">
-                                {endpoint.relativePath}
+                                {endpoint.path}
                               </code>
-                              {endpoint.protected && (
+                              {endpoint.auth && (
                                 <span title="Requires authentication">
                                   <Lock className="h-4 w-4 text-amber-600 shrink-0" />
                                 </span>
@@ -500,22 +265,34 @@ export default function ApiReference({ onBack }: ApiReferenceProps) {
                           </AccordionTrigger>
                           <AccordionContent className="pt-4 pb-2">
                             <div className="space-y-4">
-                              {/* Path display */}
+                              {/* Full Path */}
                               <div>
                                 <h4 className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
                                   Full Path
                                 </h4>
                                 <code className="block text-sm font-mono bg-muted/50 rounded-md px-3 py-2">
-                                  {endpoint.path}
+                                  {section.base}{endpoint.path}
                                 </code>
                               </div>
+
+                              {/* Description */}
+                              {endpoint.description && (
+                                <div>
+                                  <h4 className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
+                                    Description
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    {endpoint.description}
+                                  </p>
+                                </div>
+                              )}
 
                               {/* Authentication badge */}
                               <div className="flex items-center gap-2">
                                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                                   Authentication
                                 </h4>
-                                {endpoint.protected ? (
+                                {endpoint.auth ? (
                                   <Badge variant="outline" className="text-amber-700 border-amber-200 dark:text-amber-400 dark:border-amber-800">
                                     <Lock className="h-3 w-3 mr-1" />
                                     Required
@@ -540,13 +317,13 @@ export default function ApiReference({ onBack }: ApiReferenceProps) {
                                     className="h-7 px-2 text-xs"
                                     onClick={() =>
                                       handleCopy(
-                                        buildCurlCommand(endpoint),
+                                        buildCurlCommand(section.base, endpoint),
                                         "cURL command",
-                                        endpointKey
+                                        endpointKeyStr
                                       )
                                     }
                                   >
-                                    {copiedEndpoint === endpointKey ? (
+                                    {copiedEndpoint === endpointKeyStr ? (
                                       "Copied!"
                                     ) : (
                                       <>
@@ -558,10 +335,84 @@ export default function ApiReference({ onBack }: ApiReferenceProps) {
                                 </div>
                                 <ScrollArea className="max-h-48 rounded-lg border bg-muted/30">
                                   <pre className="text-xs font-mono leading-relaxed p-4 whitespace-pre-wrap break-all">
-                                    {buildCurlCommand(endpoint)}
+                                    {buildCurlCommand(section.base, endpoint)}
                                   </pre>
                                 </ScrollArea>
                               </div>
+
+                              {/* Request Body (if available) */}
+                              {endpoint.body && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                      Request Body
+                                    </h4>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 px-2 text-xs"
+                                      onClick={() =>
+                                        handleCopy(
+                                          JSON.stringify(endpoint.body, null, 2),
+                                          "Request body",
+                                          `body-${endpointKeyStr}`
+                                        )
+                                      }
+                                    >
+                                      {copiedEndpoint === `body-${endpointKeyStr}` ? (
+                                        "Copied!"
+                                      ) : (
+                                        <>
+                                          <Copy className="mr-1.5 h-3 w-3" />
+                                          Copy
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                  <ScrollArea className="max-h-48 rounded-lg border bg-muted/30">
+                                    <pre className="text-xs font-mono leading-relaxed p-4 whitespace-pre-wrap break-all">
+                                      {JSON.stringify(endpoint.body, null, 2)}
+                                    </pre>
+                                  </ScrollArea>
+                                </div>
+                              )}
+
+                              {/* Response (if available) */}
+                              {endpoint.response && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                      Response
+                                    </h4>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 px-2 text-xs"
+                                      onClick={() =>
+                                        handleCopy(
+                                          JSON.stringify(endpoint.response, null, 2),
+                                          "Response",
+                                          `response-${endpointKeyStr}`
+                                        )
+                                      }
+                                    >
+                                      {copiedEndpoint === `response-${endpointKeyStr}` ? (
+                                        "Copied!"
+                                      ) : (
+                                        <>
+                                          <Copy className="mr-1.5 h-3 w-3" />
+                                          Copy
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                  <ScrollArea className="max-h-48 rounded-lg border bg-muted/30">
+                                    <pre className="text-xs font-mono leading-relaxed p-4 whitespace-pre-wrap break-all">
+                                      {JSON.stringify(endpoint.response, null, 2)}
+                                    </pre>
+                                  </ScrollArea>
+                                </div>
+                              )}
                             </div>
                           </AccordionContent>
                         </AccordionItem>

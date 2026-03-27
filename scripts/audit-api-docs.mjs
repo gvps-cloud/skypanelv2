@@ -5,6 +5,7 @@ import ts from "typescript";
 const repoRoot = process.cwd();
 const appFile = path.join(repoRoot, "api", "app.ts");
 const apiDocsFile = path.join(repoRoot, "src", "pages", "ApiDocs.tsx");
+const apiDocsSharedFile = path.join(repoRoot, "src", "lib", "apiDocsShared.tsx");
 const args = new Set(process.argv.slice(2));
 const manifestOnly = args.has("--manifest-only");
 
@@ -207,36 +208,81 @@ const isPlaceholderResponse = (node) => {
   return false;
 };
 
-const parseApiDocsSections = () => {
-  const { source } = readSource(apiDocsFile, ts.ScriptKind.TSX);
+const findSectionsArrayInSource = ({ source }) => {
   let sectionsArray = null;
 
   walk(source, (node) => {
+    if (sectionsArray) return;
     if (!ts.isVariableDeclaration(node)) return;
     if (!ts.isIdentifier(node.name)) return;
-    if (!["sections", "baseSections"].includes(node.name.text)) return;
-    if (!node.initializer || !ts.isCallExpression(node.initializer)) return;
-    const [factoryArg] = node.initializer.arguments;
-    if (!factoryArg || !ts.isArrowFunction(factoryArg)) return;
+    if (!["sections", "baseSections", "buildBaseSections"].includes(node.name.text)) return;
 
-    if (ts.isArrayLiteralExpression(factoryArg.body)) {
-      sectionsArray = factoryArg.body;
+    const init = node.initializer;
+
+    // Direct array literal: const x = [...]
+    if (ts.isArrayLiteralExpression(init)) {
+      sectionsArray = init;
       return;
     }
 
-    if (ts.isBlock(factoryArg.body)) {
-      for (const stmt of factoryArg.body.statements) {
-        if (ts.isReturnStatement(stmt) && stmt.expression) {
-          if (ts.isArrayLiteralExpression(stmt.expression)) {
-            sectionsArray = stmt.expression;
+    // Arrow function returning array: const x = () => [...]
+    if (init && ts.isArrowFunction(init)) {
+      if (ts.isArrayLiteralExpression(init.body)) {
+        sectionsArray = init.body;
+        return;
+      }
+      if (ts.isBlock(init.body)) {
+        for (const stmt of init.body.statements) {
+          if (ts.isReturnStatement(stmt) && stmt.expression) {
+            if (ts.isArrayLiteralExpression(stmt.expression)) {
+              sectionsArray = stmt.expression;
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    // useMemo(() => [...], [deps])
+    if (init && ts.isCallExpression(init)) {
+      const [factoryArg] = init.arguments;
+      if (!factoryArg || !ts.isArrowFunction(factoryArg)) return;
+      if (ts.isArrayLiteralExpression(factoryArg.body)) {
+        sectionsArray = factoryArg.body;
+        return;
+      }
+      if (ts.isBlock(factoryArg.body)) {
+        for (const stmt of factoryArg.body.statements) {
+          if (ts.isReturnStatement(stmt) && stmt.expression) {
+            if (ts.isArrayLiteralExpression(stmt.expression)) {
+              sectionsArray = stmt.expression;
+              return;
+            }
           }
         }
       }
     }
   });
 
+  return sectionsArray;
+};
+
+const parseApiDocsSections = () => {
+  // Try the shared module first, fall back to ApiDocs.tsx
+  const sharedSource = fs.existsSync(apiDocsSharedFile)
+    ? readSource(apiDocsSharedFile, ts.ScriptKind.TSX)
+    : null;
+  let sectionsArray = sharedSource
+    ? findSectionsArrayInSource(sharedSource)
+    : null;
+
   if (!sectionsArray) {
-    throw new Error("Could not locate sections array in ApiDocs.tsx");
+    const { source } = readSource(apiDocsFile, ts.ScriptKind.TSX);
+    sectionsArray = findSectionsArrayInSource({ source });
+  }
+
+  if (!sectionsArray) {
+    throw new Error("Could not locate sections array in ApiDocs.tsx or apiDocsShared.tsx");
   }
 
   const sections = [];
