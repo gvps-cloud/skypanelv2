@@ -375,7 +375,13 @@ router.post(
       let userId = rawUserId as string | undefined;
 
       if (!userId && email) {
-        const normalizedEmail = (email as string).trim().toLowerCase();
+        if (typeof email !== "string") {
+          return res.status(400).json({
+            success: false,
+            error: "Email must be a string.",
+          });
+        }
+        const normalizedEmail = email.trim().toLowerCase();
         const { rows } = await query(
           "SELECT id FROM users WHERE LOWER(email) = $1",
           [normalizedEmail],
