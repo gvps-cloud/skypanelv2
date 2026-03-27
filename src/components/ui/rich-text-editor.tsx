@@ -1,6 +1,46 @@
-import { useRef, useCallback } from "react";
-import { Editor } from "@tinymce/tinymce-react";
-import { Loader2 } from "lucide-react";
+import { useCallback, useEffect } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
+import { Table } from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import Underline from "@tiptap/extension-underline";
+import TextAlign from "@tiptap/extension-text-align";
+import { TextStyle } from "@tiptap/extension-text-style";
+import Color from "@tiptap/extension-color";
+import Placeholder from "@tiptap/extension-placeholder";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { common, createLowlight } from "lowlight";
+
+import {
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  Strikethrough,
+  Code,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Table as TableIcon,
+  Quote,
+  Minus,
+  Undo,
+  Redo,
+  CodeSquare,
+  RemoveFormatting,
+} from "lucide-react";
 
 interface RichTextEditorProps {
   value: string;
@@ -10,12 +50,45 @@ interface RichTextEditorProps {
   height?: number;
 }
 
-/**
- * Rich text editor component using TinyMCE.
- *
- * Provides WYSIWYG HTML editing for documentation article content.
- * Loads TinyMCE from CDN (self-hosted would need additional Vite config).
- */
+const lowlight = createLowlight(common);
+
+// ── Toolbar button ────────────────────────────────────────────────────────
+function ToolbarButton({
+  onClick,
+  active = false,
+  disabled = false,
+  title,
+  children,
+}: {
+  onClick: () => void;
+  active?: boolean;
+  disabled?: boolean;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`inline-flex items-center justify-center h-8 w-8 rounded text-sm transition-colors ${
+        active
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+      } ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ── Toolbar separator ─────────────────────────────────────────────────────
+function ToolbarSeparator() {
+  return <div className="w-px h-6 bg-border mx-1" />;
+}
+
+// ── Main component ────────────────────────────────────────────────────────
 export default function RichTextEditor({
   value,
   onChange,
@@ -23,163 +96,281 @@ export default function RichTextEditor({
   disabled = false,
   height = 400,
 }: RichTextEditorProps) {
-  const editorRef = useRef<any>(null);
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        codeBlock: false, // replaced by CodeBlockLowlight
+      }),
+      CodeBlockLowlight.configure({ lowlight }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
+      }),
+      Image.configure({ inline: false, allowBase64: true }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableCell,
+      TableHeader,
+      Underline,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TextStyle,
+      Color,
+      Placeholder.configure({ placeholder }),
+    ],
+    content: value,
+    editable: !disabled,
+    editorProps: {
+      attributes: {
+        class:
+          "prose prose-slate dark:prose-invert max-w-none focus:outline-none px-3 py-2 overflow-y-auto",
+      },
+    },
+    onUpdate: ({ editor: ed }) => {
+      onChange(ed.getHTML());
+    },
+  });
 
-  const handleInit = useCallback((_evt: any, editor: any) => {
-    editorRef.current = editor;
-  }, []);
+  // Sync external value changes into the editor
+  const isInternalUpdate = useCallback(() => false, []);
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const currentHTML = editor.getHTML();
+    // Only update if the value actually changed from outside
+    if (value !== currentHTML) {
+      void isInternalUpdate;
+      editor.commands.setContent(value || "");
+    }
+  }, [value, editor, isInternalUpdate]);
+
+  // Toggle editable state
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    editor.setEditable(!disabled);
+  }, [disabled, editor]);
+
+  if (!editor) return null;
+
+  // ── Link helper ──────────────────────────────────────────────────────
+  const addLink = () => {
+    const previous = editor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("URL", previous || "https://");
+    if (url === null) return;
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  };
+
+  // ── Image helper ─────────────────────────────────────────────────────
+  const addImage = () => {
+    const url = window.prompt("Image URL", "https://");
+    if (url === null || url === "") return;
+    editor.chain().focus().setImage({ src: url }).run();
+  };
 
   return (
     <div className="rounded-lg border bg-background overflow-hidden">
-      <Editor
-        tinymceScriptSrc="/tinymce/tinymce.min.js"
-        onInit={handleInit}
-        value={value}
-        onEditorChange={(newValue) => onChange(newValue)}
-        disabled={disabled}
-        init={{
-          height,
-          menubar: "file edit view insert format tools table help",
-          plugins: [
-            "advlist",
-            "autolink",
-            "lists",
-            "link",
-            "image",
-            "charmap",
-            "preview",
-            "anchor",
-            "searchreplace",
-            "visualblocks",
-            "code",
-            "fullscreen",
-            "insertdatetime",
-            "media",
-            "table",
-            "help",
-            "wordcount",
-            "codesample",
-          ],
-          toolbar:
-            "undo redo | blocks | bold italic underline strikethrough | " +
-            "forecolor backcolor | alignleft aligncenter alignright alignjustify | " +
-            "bullist numlist outdent indent | link image media table codesample | " +
-            "code fullscreen | removeformat help",
-          content_style: `
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-              font-size: 14px;
-              line-height: 1.6;
-              color: #1a1a1a;
-              padding: 12px;
-            }
-            pre {
-              background-color: #f4f4f5;
-              border-radius: 6px;
-              padding: 12px;
-              font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'DejaVu Sans Mono', Menlo, Consolas, monospace;
-              font-size: 13px;
-            }
-            code {
-              background-color: #f4f4f5;
-              padding: 2px 6px;
-              border-radius: 4px;
-              font-size: 13px;
-            }
-            pre code {
-              background: none;
-              padding: 0;
-            }
-            table {
-              border-collapse: collapse;
-              width: 100%;
-            }
-            table td, table th {
-              border: 1px solid #e4e4e7;
-              padding: 8px 12px;
-            }
-            table th {
-              background-color: #f4f4f5;
-              font-weight: 600;
-            }
-            blockquote {
-              border-left: 4px solid #a1a1aa;
-              margin: 16px 0;
-              padding-left: 16px;
-              color: #71717a;
-            }
-            img {
-              max-width: 100%;
-              height: auto;
-              border-radius: 8px;
-            }
-            a {
-              color: #2563eb;
-              text-decoration: underline;
-            }
-            h1, h2, h3, h4, h5, h6 {
-              font-weight: 600;
-              letter-spacing: -0.025em;
-            }
-            h1 { font-size: 1.875rem; margin-bottom: 0.75rem; }
-            h2 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-            h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
-            h4 { font-size: 1.125rem; margin-bottom: 0.5rem; }
-          `,
-          placeholder,
-          skin: "oxide",
-          content_css: "default",
-          resize: true,
-          statusbar: true,
-          elementpath: false,
-          branding: false,
-          promotion: false,
-          // Dark mode support via media query detection
-          content_css_cors: true,
-          // Table defaults
-          table_default_styles: {
-            width: "100%",
-          },
-          // Image defaults
-          image_dimensions: false,
-          image_class_list: [{ title: "Responsive", value: "img-responsive" }],
-          // Link defaults
-          link_default_target: "_blank",
-          // Codesample languages
-          codesample_languages: [
-            { text: "HTML/XML", value: "markup" },
-            { text: "JavaScript", value: "javascript" },
-            { text: "TypeScript", value: "typescript" },
-            { text: "CSS", value: "css" },
-            { text: "Python", value: "python" },
-            { text: "Bash", value: "bash" },
-            { text: "JSON", value: "json" },
-            { text: "SQL", value: "sql" },
-          ],
-          // Setup dark mode detection
-          setup: (editor: any) => {
-            editor.on("init", () => {
-              const isDark = document.documentElement.classList.contains("dark");
-              if (isDark) {
-                editor.getDoc().documentElement.classList.add("dark");
-                editor.dom.addStyle(`
-                  body { background-color: #18181b; color: #e4e4e7; }
-                  pre { background-color: #27272a; }
-                  code { background-color: #27272a; }
-                  table td, table th { border-color: #3f3f46; }
-                  table th { background-color: #27272a; }
-                  blockquote { color: #a1a1aa; border-color: #52525b; }
-                `);
-              }
-            });
-          },
-        }}
+      {/* ── Toolbar ─────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/40 px-2 py-1">
+        {/* Undo / Redo */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          title="Undo"
+        >
+          <Undo className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          title="Redo"
+        >
+          <Redo className="h-4 w-4" />
+        </ToolbarButton>
+
+        <ToolbarSeparator />
+
+        {/* Text style */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          active={editor.isActive("bold")}
+          title="Bold"
+        >
+          <Bold className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          active={editor.isActive("italic")}
+          title="Italic"
+        >
+          <Italic className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          active={editor.isActive("underline")}
+          title="Underline"
+        >
+          <UnderlineIcon className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          active={editor.isActive("strike")}
+          title="Strikethrough"
+        >
+          <Strikethrough className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          active={editor.isActive("code")}
+          title="Inline code"
+        >
+          <Code className="h-4 w-4" />
+        </ToolbarButton>
+
+        <ToolbarSeparator />
+
+        {/* Headings */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          active={editor.isActive("heading", { level: 1 })}
+          title="Heading 1"
+        >
+          <Heading1 className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          active={editor.isActive("heading", { level: 2 })}
+          title="Heading 2"
+        >
+          <Heading2 className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          active={editor.isActive("heading", { level: 3 })}
+          title="Heading 3"
+        >
+          <Heading3 className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+          active={editor.isActive("heading", { level: 4 })}
+          title="Heading 4"
+        >
+          <Heading4 className="h-4 w-4" />
+        </ToolbarButton>
+
+        <ToolbarSeparator />
+
+        {/* Lists */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          active={editor.isActive("bulletList")}
+          title="Bullet list"
+        >
+          <List className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          active={editor.isActive("orderedList")}
+          title="Ordered list"
+        >
+          <ListOrdered className="h-4 w-4" />
+        </ToolbarButton>
+
+        <ToolbarSeparator />
+
+        {/* Alignment */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setTextAlign("left").run()}
+          active={editor.isActive({ textAlign: "left" })}
+          title="Align left"
+        >
+          <AlignLeft className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setTextAlign("center").run()}
+          active={editor.isActive({ textAlign: "center" })}
+          title="Align center"
+        >
+          <AlignCenter className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setTextAlign("right").run()}
+          active={editor.isActive({ textAlign: "right" })}
+          title="Align right"
+        >
+          <AlignRight className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+          active={editor.isActive({ textAlign: "justify" })}
+          title="Justify"
+        >
+          <AlignJustify className="h-4 w-4" />
+        </ToolbarButton>
+
+        <ToolbarSeparator />
+
+        {/* Block elements */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          active={editor.isActive("blockquote")}
+          title="Blockquote"
+        >
+          <Quote className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          active={editor.isActive("codeBlock")}
+          title="Code block"
+        >
+          <CodeSquare className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          title="Horizontal rule"
+        >
+          <Minus className="h-4 w-4" />
+        </ToolbarButton>
+
+        <ToolbarSeparator />
+
+        {/* Insert */}
+        <ToolbarButton onClick={addLink} active={editor.isActive("link")} title="Link">
+          <LinkIcon className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton onClick={addImage} title="Image">
+          <ImageIcon className="h-4 w-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+          }
+          title="Insert table"
+        >
+          <TableIcon className="h-4 w-4" />
+        </ToolbarButton>
+
+        <ToolbarSeparator />
+
+        {/* Clear formatting */}
+        <ToolbarButton
+          onClick={() =>
+            editor.chain().focus().clearNodes().unsetAllMarks().run()
+          }
+          title="Clear formatting"
+        >
+          <RemoveFormatting className="h-4 w-4" />
+        </ToolbarButton>
+      </div>
+
+      {/* ── Editor area ─────────────────────────────────────────────────── */}
+      <EditorContent
+        editor={editor}
+        style={{ minHeight: height, maxHeight: height + 200 }}
+        className="tiptap-editor-content"
       />
-      {disabled && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/50">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      )}
     </div>
   );
 }

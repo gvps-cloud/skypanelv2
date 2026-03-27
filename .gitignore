@@ -73,9 +73,6 @@ coverage/
 # Build artifacts
 build/
 
-# TinyMCE vendor assets (copied from node_modules via npm run tinymce:copy)
-public/tinymce/
-
 # Miscellaneous
 .claude-docs/
 .claude

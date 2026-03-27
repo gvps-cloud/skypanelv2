@@ -422,3 +422,105 @@ bile Toast Styles */
     scroll-behavior: auto !important;
   }
 }
+
+/* ── TipTap rich text editor styles ──────────────────────────────────────── */
+.tiptap-editor-content .tiptap {
+  outline: none;
+}
+
+.tiptap-editor-content .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  height: 0;
+}
+
+.tiptap-editor-content .tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  overflow: hidden;
+}
+
+.tiptap-editor-content .tiptap table td,
+.tiptap-editor-content .tiptap table th {
+  border: 1px solid hsl(var(--border));
+  padding: 6px 10px;
+  min-width: 80px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.tiptap-editor-content .tiptap table th {
+  background-color: hsl(var(--muted));
+  font-weight: 600;
+  text-align: left;
+}
+
+.tiptap-editor-content .tiptap table .selectedCell {
+  background-color: hsl(var(--accent));
+}
+
+.tiptap-editor-content .tiptap pre {
+  background-color: hsl(var(--muted));
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  overflow-x: auto;
+}
+
+.tiptap-editor-content .tiptap pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+.tiptap-editor-content .tiptap code {
+  background-color: hsl(var(--muted));
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.tiptap-editor-content .tiptap blockquote {
+  border-left: 4px solid hsl(var(--muted-foreground) / 0.3);
+  margin: 1em 0;
+  padding-left: 16px;
+  color: hsl(var(--muted-foreground));
+}
+
+.tiptap-editor-content .tiptap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.tiptap-editor-content .tiptap a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tiptap-editor-content .tiptap hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 1.5em 0;
+}
+
+.tiptap-editor-content .tiptap ul,
+.tiptap-editor-content .tiptap ol {
+  padding-left: 1.5em;
+}
+
+.tiptap-editor-content .tiptap li {
+  margin: 2px 0;
+}
+
+/* Highlight language in code blocks */
+.tiptap-editor-content .tiptap pre .hljs {
+  background: none;
+}
