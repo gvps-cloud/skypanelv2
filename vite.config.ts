@@ -169,9 +169,9 @@ export default defineConfig(({ _mode }) => {
           if (id.includes('/three/') || id.includes('three.js')) {
             return 'vendor-three';
           }
-          // Maps
+          // Maps (keep with react chunk to avoid createContext race)
           if (id.includes('react-simple-maps') || id.includes('d3-') || id.includes('topojson')) {
-            return 'vendor-maps';
+            return 'vendor-react';
           }
           // Drag and drop
           if (id.includes('@dnd-kit')) {
