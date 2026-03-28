@@ -844,10 +844,17 @@ const VPS: React.FC = () => {
   }, [token, createForm.provider_id, createForm.region, createForm.type_class]);
 
   const loadProviderImages = useCallback(async () => {
+    if (!createForm.provider_id) {
+      setProviderImages([]);
+      return;
+    }
     try {
-      const res = await fetch("/api/vps/images", {
+      const res = await fetch(
+        `/api/vps/images?provider_id=${encodeURIComponent(createForm.provider_id)}`,
+        {
         headers: { Authorization: `Bearer ${token}` },
-      });
+        },
+      );
       const payload = await res.json();
       if (!res.ok) throw new Error(payload.error || "Failed to load images");
       setProviderImages(payload.images || []);
@@ -855,7 +862,7 @@ const VPS: React.FC = () => {
       console.error("Failed to load provider images:", error);
       toast.error(error.message || "Failed to load images");
     }
-  }, [token]);
+  }, [token, createForm.provider_id]);
 
   const loadProviderStackScripts = useCallback(async () => {
     try {

@@ -120,15 +120,16 @@ function getUserFriendlyMessage(error: ProviderError): string {
 
 /**
  * Get display name for provider
+ * SECURITY: Returns the provider name as-is (whitelabel name set by admin)
+ * or a generic "Provider" fallback. No hardcoded upstream provider names.
  */
 function getProviderDisplayName(provider?: string): string {
   if (!provider) return 'Provider';
   
-  const displayNames: Record<string, string> = {
-    'linode': 'Linode',
-  };
-  
-  return displayNames[provider.toLowerCase()] || provider;
+  // Return the provider name as-is - this should be the whitelabel name
+  // set by the admin in service_providers.name
+  // Capitalize first letter for better display
+  return provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
 /**

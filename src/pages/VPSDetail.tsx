@@ -1357,18 +1357,24 @@ const VPSDetail: React.FC = () => {
     if (availableImages.length === 0) {
       setImagesLoading(true);
       try {
-        const response = await fetch("/api/vps/images", {
+        const providerId = detail?.providerId;
+        if (!providerId) {
+          throw new Error("Provider context missing for image catalog");
+        }
+        const response = await fetch(
+          `/api/vps/images?provider_id=${encodeURIComponent(providerId)}`,
+          {
           headers: { Authorization: `Bearer ${token}` },
-        });
+          },
+        );
         const data = await response.json();
         if (Array.isArray(data.images)) {
           setAvailableImages(
             data.images
-              .filter((img: any) => img.is_public && !img.deprecated)
               .map((img: any) => ({
                 id: img.id,
                 label: img.label,
-                vendor: img.vendor || "",
+                vendor: img.distribution || "",
               }))
               .sort((a: any, b: any) => a.label.localeCompare(b.label)),
           );
@@ -1380,7 +1386,7 @@ const VPSDetail: React.FC = () => {
         setImagesLoading(false);
       }
     }
-  }, [token, availableImages.length]);
+  }, [token, availableImages.length, detail, organizationSSHKeys.length]);
 
   const performRebuild = useCallback(async () => {
     if (!detail) return;
@@ -2059,11 +2065,9 @@ const VPSDetail: React.FC = () => {
                   {(detail?.providerName || detail?.providerType) && (
                     <span className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium w-fit border border-primary/20 text-primary bg-primary/10 dark:border-primary/60 dark:text-primary dark:bg-primary/30">
                       <Cloud className="h-3 w-3" />
-                      {detail.providerName ||
-                        (detail.providerType
-                          ? detail.providerType.charAt(0).toUpperCase() +
-                            detail.providerType.slice(1)
-                          : "Unknown")}
+                      {/* SECURITY: Use providerName (whitelabel) or generic "Cloud" fallback */}
+                      {/* Never expose raw providerType to users */}
+                      {detail.providerName || "Cloud"}
                     </span>
                   )}
                   {detail?.updatedAt && (
@@ -2330,11 +2334,8 @@ const VPSDetail: React.FC = () => {
                         <dd className="mt-1 flex items-center gap-2">
                           <Cloud className="h-4 w-4 text-primary" />
                           <span className="text-xs sm:text-sm font-medium text-foreground">
-                            {detail?.providerName ||
-                              (detail?.providerType
-                                ? detail.providerType.charAt(0).toUpperCase() +
-                                  detail.providerType.slice(1)
-                                : "Unknown")}
+                            {/* SECURITY: Use providerName (whitelabel) or generic "Cloud" fallback */}
+                            {detail?.providerName || "Cloud"}
                           </span>
                         </dd>
                       </div>
@@ -2488,14 +2489,13 @@ const VPSDetail: React.FC = () => {
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     Automatic snapshots captured by the underlying platform.
-                    {detail?.providerType &&
-                      detail.providerType !== "linode" && (
-                        <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
-                          Note: Backup features may vary by provider. Some
-                          options may not be available for{" "}
-                          {detail.providerName || detail.providerType}.
-                        </span>
-                      )}
+                    {/* SECURITY: Only show provider-specific notes if providerName is set */}
+                    {detail?.providerName && (
+                      <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
+                        Note: Backup features may vary by provider. Some
+                        options may not be available for {detail.providerName}.
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="px-6 py-5 space-y-5">
@@ -4232,11 +4232,8 @@ const VPSDetail: React.FC = () => {
                       <span className="text-muted-foreground">Provider</span>
                       <span className="font-medium text-foreground flex items-center gap-2 sm:text-right">
                         <Cloud className="h-3.5 w-3.5 text-primary" />
-                        {detail.providerName ||
-                          (detail.providerType
-                            ? detail.providerType.charAt(0).toUpperCase() +
-                              detail.providerType.slice(1)
-                            : "Unknown")}
+                        {/* SECURITY: Use providerName (whitelabel) or generic "Cloud" fallback */}
+                        {detail.providerName || "Cloud"}
                       </span>
                     </div>
                   )}

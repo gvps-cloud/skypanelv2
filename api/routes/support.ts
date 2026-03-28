@@ -4,6 +4,7 @@ import { authenticateToken, requireOrganization } from "../middleware/auth.js";
 import { query, pool } from "../lib/database.js";
 import { logActivity } from "../services/activityLogger.js";
 import { RoleService } from "../services/roles.js";
+import { tokenBlacklistService } from "../services/tokenBlacklistService.js";
 
 const router = express.Router();
 
@@ -1139,6 +1140,12 @@ router.get(
         return;
       }
 
+      const isRevoked = await tokenBlacklistService.isRevoked(token);
+      if (isRevoked) {
+        res.status(401).json({ error: "Token has been revoked" });
+        return;
+      }
+
       // Validate token manually (similar to notification stream)
       const jwt = await import("jsonwebtoken");
       const { config } = await import("../config/index.js");
@@ -1210,12 +1217,45 @@ router.get(
         throw new Error("Invalid channel name");
       }
       await client.query(`LISTEN "${channelName}"`);
+      let streamClosed = false;
+      let heartbeat: NodeJS.Timeout | null = null;
+      const closeStream = async (reason: string) => {
+        if (streamClosed) {
+          return;
+        }
+        streamClosed = true;
+        if (heartbeat) {
+          clearInterval(heartbeat);
+          heartbeat = null;
+        }
+        client.removeListener("notification", notificationHandler);
+        try {
+          if (/^[a-zA-Z0-9_-]+$/.test(channelName)) {
+            await client.query(`UNLISTEN "${channelName}"`);
+          }
+        } catch (unlistenErr) {
+          console.warn("Failed to unlisten support stream channel:", unlistenErr);
+        } finally {
+          client.release();
+        }
+        try {
+          res.write(`event: error\ndata: ${JSON.stringify({ error: reason })}\n\n`);
+        } catch {
+          // no-op
+        }
+        res.end();
+      };
 
       // Handle notifications
-      const notificationHandler = (msg: {
+      const notificationHandler = async (msg: {
         channel: string;
         payload?: string;
       }) => {
+        const revoked = await tokenBlacklistService.isRevoked(token);
+        if (revoked) {
+          await closeStream("Token has been revoked");
+          return;
+        }
         if (msg.channel === channelName && msg.payload) {
           res.write(`data: ${msg.payload}\n\n`);
         }
@@ -1224,21 +1264,18 @@ router.get(
       client.on("notification", notificationHandler);
 
       // Send heartbeat every 30 seconds
-      const heartbeat = setInterval(() => {
+      heartbeat = setInterval(async () => {
+        const revoked = await tokenBlacklistService.isRevoked(token);
+        if (revoked) {
+          await closeStream("Token has been revoked");
+          return;
+        }
         res.write(": heartbeat\n\n");
       }, 30000);
 
       // Cleanup on client disconnect
       req.on("close", async () => {
-        clearInterval(heartbeat);
-        client.removeListener("notification", notificationHandler);
-        // Validate channel name to prevent SQL injection
-        if (!/^[a-zA-Z0-9_-]+$/.test(channelName)) {
-          throw new Error("Invalid channel name");
-        }
-        await client.query(`UNLISTEN "${channelName}"`);
-        client.release();
-        res.end();
+        await closeStream("Client disconnected");
       });
     } catch (err: unknown) {
       console.error("Ticket stream error:", err);

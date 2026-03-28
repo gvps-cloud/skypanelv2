@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import { createHash } from "crypto";
 import { authenticateToken, requireOrganization } from "../middleware/auth.js";
 import { query } from "../lib/database.js";
 import { linodeService } from "../services/linodeService.js";
@@ -36,6 +37,64 @@ router.use(authenticateToken, requireOrganization);
 import { config } from "../config/index.js";
 
 const DEFAULT_RDNS_BASE_DOMAIN = config.RDNS_BASE_DOMAIN;
+
+const TEMPLATE_ID_PREFIX = "tpl_";
+
+function toTemplateId(providerId: string, upstreamImageId: string): string {
+  const digest = createHash("sha256")
+    .update(`${providerId}:${upstreamImageId}`)
+    .digest("hex")
+    .slice(0, 24);
+  return `${TEMPLATE_ID_PREFIX}${digest}`;
+}
+
+function normalizeImageTemplate(
+  image: any,
+  providerId: string,
+): {
+  id: string;
+  label: string;
+  description: string | null;
+  distribution: string | null;
+  minDiskSize: number | null;
+  public: boolean;
+  deprecated: boolean;
+} {
+  const upstreamId = String(image?.id || "").trim();
+  return {
+    id: toTemplateId(providerId, upstreamId),
+    label: image?.label || upstreamId,
+    description: image?.description || null,
+    distribution: image?.vendor || null,
+    minDiskSize:
+      typeof image?.size === "number" && Number.isFinite(image.size)
+        ? image.size
+        : null,
+    public: Boolean(image?.is_public),
+    deprecated: Boolean(image?.deprecated),
+  };
+}
+
+async function resolveImageForProvider(
+  providerId: string,
+  requestedImage: string,
+  providerApiToken?: string,
+): Promise<string | null> {
+  const requested = requestedImage.trim();
+  if (!requested.startsWith(TEMPLATE_ID_PREFIX)) {
+    return requested;
+  }
+
+  const images = await linodeService.getLinodeImages(providerApiToken);
+  for (const image of images) {
+    const upstreamId = String(image.id || "").trim();
+    if (toTemplateId(providerId, upstreamId) === requested) {
+      return upstreamId;
+    }
+  }
+
+  return null;
+}
 
 async function loadActiveProviderToken(
   providerType: "linode",
@@ -1030,8 +1089,29 @@ router.get("/apps", async (req: Request, res: Response) => {
 // Get available Linode images
 router.get("/images", async (req: Request, res: Response) => {
   try {
-    const images = await linodeService.getLinodeImages();
-    res.json({ images });
+    const providerId =
+      typeof req.query.provider_id === "string" ? req.query.provider_id.trim() : "";
+
+    if (!providerId) {
+      return res.status(400).json({
+        error: "provider_id query parameter is required",
+        code: "PROVIDER_ID_REQUIRED",
+      });
+    }
+
+    const providerToken = await loadProviderTokenById(providerId, "linode");
+    if (!providerToken) {
+      return res.status(404).json({
+        error: "Provider not found or inactive",
+        code: "PROVIDER_NOT_FOUND",
+      });
+    }
+
+    const images = await linodeService.getLinodeImages(providerToken);
+    const templates = images.map((image) =>
+      normalizeImageTemplate(image, providerId),
+    );
+    res.json({ images: templates });
   } catch (err: any) {
     console.error("Images fetch error:", err);
     res.status(500).json({ error: err.message || "Failed to fetch images" });
@@ -1379,15 +1459,15 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
   }
 });
 
-// Get Linode SSH keys for the active organization
-router.get("/linode/ssh-keys", async (req: Request, res: Response) => {
+// Get SSH keys for the active organization (organization-scoped for security)
+// SECURITY: This endpoint queries the local database to ensure organization isolation
+// and prevent cross-organization SSH key exposure.
+router.get("/providers/:providerId/ssh-keys", async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
     const organizationId = (req as any).user?.organizationId;
-
     if (!userId || !organizationId) {
-      res.status(401).json({ error: "Authentication required" });
-      return;
+      return res.status(401).json({ error: "Authentication required" });
     }
 
     const canViewKeys = await RoleService.checkPermission(
@@ -1395,55 +1475,37 @@ router.get("/linode/ssh-keys", async (req: Request, res: Response) => {
       organizationId,
       "ssh_keys_view",
     );
-
     if (!canViewKeys) {
-      res.status(403).json({ error: "You do not have permission to view SSH keys" });
-      return;
+      return res
+        .status(403)
+        .json({ error: "You do not have permission to view SSH keys" });
     }
 
-    const apiToken = await resolveProviderTokenOrRespond(res, "linode");
-    if (!apiToken) {
-      return;
-    }
-
-    // Fetch all SSH keys from Linode API
-    const allLinodeKeys = await linodeService.getSSHKeys(apiToken);
-
-    // Get organization SSH keys from database to filter
-    const organizationKeysResult = await query(
-      `SELECT linode_key_id
+    // SECURITY FIX: Query local database with organization scoping
+    // instead of fetching ALL keys from Linode API (which would expose cross-org keys)
+    const result = await query(
+      `SELECT id, name, public_key, fingerprint, linode_key_id, created_at
        FROM user_ssh_keys
-       WHERE organization_id = $1 AND linode_key_id IS NOT NULL`,
-      [organizationId],
+       WHERE organization_id = $1
+       ORDER BY created_at DESC`,
+      [organizationId]
     );
 
-    // Create a set of organization Linode key IDs for efficient filtering
-    const organizationLinodeKeyIds = new Set(
-      organizationKeysResult.rows.map((row: any) => String(row.linode_key_id)),
-    );
+    // Map to expected format for LinodeConfiguration component
+    const keys = result.rows.map(row => ({
+      id: row.linode_key_id || row.id,
+      label: row.name,
+      ssh_key: row.public_key,
+      fingerprint: row.fingerprint,
+      created: row.created_at,
+    }));
 
-    // Filter Linode keys to only include organization keys
-    const filteredKeys = allLinodeKeys.filter((key: any) =>
-      organizationLinodeKeyIds.has(String(key.id)),
-    );
-
-    res.json({
-      ssh_keys: filteredKeys,
-      total: filteredKeys.length,
-    });
+    return res.json({ ssh_keys: keys });
   } catch (err: any) {
-    console.error("Linode SSH keys fetch error:", err);
-
-    // Determine appropriate status code
-    const statusCode = err.status || err.statusCode || 500;
-
-    res.status(statusCode).json({
-      error: {
-        code: err.code || "API_ERROR",
-        message: err.message || "Failed to fetch SSH keys",
-        provider: "linode",
-      },
-    });
+    console.error("SSH keys fetch error:", err);
+    return res
+      .status(500)
+      .json({ error: err.message || "Failed to fetch SSH keys" });
   }
 });
 
@@ -2601,6 +2663,19 @@ router.post("/", async (req: Request, res: Response) => {
       return;
     }
 
+    const requestedImage = String(image).trim();
+    const resolvedImage = await resolveImageForProvider(
+      String(provider_id),
+      requestedImage,
+      providerApiToken || undefined,
+    );
+    if (!resolvedImage) {
+      return res.status(400).json({
+        error: "Invalid OS template selected for the chosen provider.",
+        code: "INVALID_OS_TEMPLATE",
+      });
+    }
+
     // Resolve plan details from database
     // Plans store provider plan id in provider_plan_id and region under specifications.region
     let regionToUse: string | undefined = region;
@@ -2869,7 +2944,7 @@ router.post("/", async (req: Request, res: Response) => {
         const linodeCreatePayload: CreateLinodeRequest = {
           type: providerPlanId,
           region: regionToUse,
-          image,
+          image: resolvedImage,
           label,
           root_pass: rootPassword,
           backups_enabled: backups,
@@ -2900,7 +2975,10 @@ router.post("/", async (req: Request, res: Response) => {
           >;
         }
 
-        created = await linodeService.createLinodeInstance(linodeCreatePayload);
+        created = await linodeService.createLinodeInstance(
+          linodeCreatePayload,
+          providerApiToken || undefined,
+        );
         providerInstanceId = String(created.id);
       } else {
         res.status(400).json({
@@ -2916,6 +2994,7 @@ router.post("/", async (req: Request, res: Response) => {
         label,
         region: regionToUse,
         image,
+        resolvedImage,
       });
 
       // Handle provider-specific errors
@@ -2937,7 +3016,11 @@ router.post("/", async (req: Request, res: Response) => {
     const configuration = {
       type: providerPlanId,
       region: regionToUse,
-      image,
+      image: resolvedImage,
+      template_id: requestedImage.startsWith(TEMPLATE_ID_PREFIX)
+        ? requestedImage
+        : toTemplateId(String(provider_id), resolvedImage),
+      provider_template_id: resolvedImage,
       backups,
       backup_frequency: validatedBackupFrequency,
       privateIP,
@@ -3417,6 +3500,34 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Instance not found" });
 
     const row = rowRes.rows[0];
+    let providerApiToken: string | null = null;
+    try {
+      const providerTokenRes = await query(
+        "SELECT id, api_key_encrypted FROM service_providers WHERE id = $1 AND active = true LIMIT 1",
+        [row.provider_id],
+      );
+      if (providerTokenRes.rows.length > 0) {
+        providerApiToken = await normalizeProviderToken(
+          providerTokenRes.rows[0].id,
+          providerTokenRes.rows[0].api_key_encrypted,
+        );
+      }
+    } catch (tokenErr) {
+      console.warn("Failed to load provider token for rebuild:", tokenErr);
+    }
+
+    const requestedImage = image.trim();
+    const resolvedImage = await resolveImageForProvider(
+      String(row.provider_id || "default"),
+      requestedImage,
+      providerApiToken || undefined,
+    );
+    if (!resolvedImage) {
+      return res.status(400).json({
+        error: "Invalid OS template selected for rebuild",
+        code: "INVALID_OS_TEMPLATE",
+      });
+    }
     
     // Fetch provider name for whitelabeling
     const providerResult = await query(
@@ -3459,26 +3570,28 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
 
       if (requestedKeyIds.length > 0) {
         // Load provider API token for SSH key resolution
-        let providerApiToken: string | null = null;
+        let providerApiTokenForKeys: string | null = providerApiToken;
         try {
-          const providerResult = await query(
-            "SELECT id, api_key_encrypted FROM service_providers WHERE id = $1 AND active = true LIMIT 1",
-            [row.provider_id],
-          );
-          if (providerResult.rows.length > 0) {
-            providerApiToken = await normalizeProviderToken(
-              providerResult.rows[0].id,
-              providerResult.rows[0].api_key_encrypted,
+          if (!providerApiTokenForKeys) {
+            const providerResult = await query(
+              "SELECT id, api_key_encrypted FROM service_providers WHERE id = $1 AND active = true LIMIT 1",
+              [row.provider_id],
             );
+            if (providerResult.rows.length > 0) {
+              providerApiTokenForKeys = await normalizeProviderToken(
+                providerResult.rows[0].id,
+                providerResult.rows[0].api_key_encrypted,
+              );
+            }
           }
         } catch (tokenErr) {
           console.warn("Failed to load provider token for SSH key resolution:", tokenErr);
         }
 
-        if (providerApiToken) {
+        if (providerApiTokenForKeys) {
           try {
             const providerKeys =
-              await linodeService.getSSHKeys(providerApiToken);
+              await linodeService.getSSHKeys(providerApiTokenForKeys);
             const keyLookup = new Map(
               providerKeys.map((providerKey: any) => [
                 String(providerKey.id),
@@ -3514,7 +3627,7 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
 
     // Build rebuild request
     const rebuildPayload: RebuildLinodeRequest = {
-      image: image.trim(),
+      image: resolvedImage,
       root_pass: rootPassword,
     };
 
@@ -3591,6 +3704,7 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
     const rebuilt = await linodeService.rebuildLinodeInstance(
       providerInstanceId,
       rebuildPayload,
+      providerApiToken || undefined,
     );
 
     const status = rebuilt.status || "rebuilding";
@@ -3607,7 +3721,11 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
 
     const updatedConfig = {
       ...existingConfig,
-      image: image.trim(),
+      image: resolvedImage,
+      template_id: requestedImage.startsWith(TEMPLATE_ID_PREFIX)
+        ? requestedImage
+        : toTemplateId(String(row.provider_id || "default"), resolvedImage),
+      provider_template_id: resolvedImage,
       auth: {
         method: "password",
         user: "root",
@@ -3629,7 +3747,7 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
           eventType: "vps.rebuild",
           entityType: "vps",
           entityId: String(id),
-          message: `Rebuilt VPS '${row.label}' with image '${image.trim()}' on ${providerType}`,
+          message: `Rebuilt VPS '${row.label}' with template '${requestedImage}' on ${providerType}`,
           status: "success",
         },
         req as any,
@@ -3638,7 +3756,7 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
       console.warn("Failed to log vps.rebuild activity:", logErr);
     }
 
-    res.json({ status, image: image.trim(), providerName });
+    res.json({ status, image: requestedImage, providerName });
   } catch (err: any) {
     console.error("VPS rebuild error:", err);
 
