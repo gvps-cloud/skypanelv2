@@ -1006,12 +1006,12 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/",
             description:
-              "Provision a new VPS instance with the configured Linode provider.",
+              "Provision a new VPS instance with the configured cloud provider.",
             auth: true,
             body: {
               label: "production-web-1",
               provider_id: "provider_001",
-              provider_type: "linode",
+              provider_type: "cloud",
               type: "g6-standard-2",
               region: "us-east",
               image: "tpl_4a61d5f6f1f9a9f3e58ab1e2",
@@ -1281,10 +1281,10 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/providers",
             description:
-              "List configured cloud providers available to the tenant (e.g. Linode).",
+              "List configured cloud providers available to the tenant.",
             auth: true,
             response: {
-              providers: [{ id: "linode", name: "Linode", type: "linode" }],
+              providers: [{ id: "provider_001", name: "Primary Provider", type: "cloud" }],
             },
           },
           {
@@ -1359,22 +1359,6 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
               "Provider SSH keys available to the authenticated organization.",
             auth: true,
             params: { providerId: "provider_001" },
-            response: {
-              ssh_keys: [
-                {
-                  id: 2001,
-                  label: "shared-key",
-                  ssh_key: "ssh-ed25519 AAAA...",
-                },
-              ],
-            },
-          },
-          {
-            method: "GET",
-            path: "/linode/ssh-keys",
-            description:
-              "Legacy compatibility endpoint for provider SSH keys (prefer `/providers/:providerId/ssh-keys`).",
-            auth: true,
             response: {
               ssh_keys: [
                 {
@@ -2660,7 +2644,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
                 {
                   id: "update_001",
                   title: "October platform update",
-                  content: "Enhanced Linode support",
+                  content: "Enhanced provider support",
                   display_order: 1,
                 },
               ],
@@ -2673,7 +2657,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             auth: true,
             body: {
               title: "October platform update",
-              content: "Enhanced Linode support",
+              content: "Enhanced provider support",
             },
             response: {
               update: { id: "update_001", title: "October platform update" },
@@ -2814,7 +2798,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
               "List infrastructure providers configured in the admin panel.",
             auth: true,
             response: {
-              providers: [{ id: "linode", name: "Linode", type: "linode" }],
+              providers: [{ id: "provider_001", name: "Primary Provider", type: "cloud" }],
             },
           },
           {
@@ -3359,7 +3343,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
               plan: {
                 id: "g6-standard-2",
                 label: "Updated Plan",
-                provider: "linode",
+                provider: "provider_001",
                 type_class: "standard",
                 price: { hourly: 0.06, monthly: 45 },
                 updated_at: "2024-10-25T10:00:00Z",
@@ -3379,7 +3363,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description: "List all configured infrastructure providers.",
             auth: true,
             response: {
-              providers: [{ id: "linode", name: "Linode", type: "linode", status: "active" }],
+              providers: [{ id: "provider_001", name: "Primary Provider", type: "cloud", status: "active" }],
             },
           },
           {
@@ -3387,7 +3371,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/providers",
             description: "Add a new infrastructure provider.",
             auth: true,
-            body: { name: "New Provider", type: "linode", apiToken: "token" },
+            body: { name: "New Provider", type: "cloud", apiToken: "token" },
             response: { success: true, provider: { id: "prov_001" } },
           },
           {
@@ -3399,9 +3383,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             response: {
               success: true,
               provider: {
-                id: "linode",
+                id: "provider_001",
                 name: "Updated Provider",
-                type: "linode",
+                type: "cloud",
                 status: "active",
                 metadata: { regions_enabled: 10 },
                 created_at: "2024-01-01T00:00:00Z",
@@ -3450,12 +3434,12 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/providers/reorder",
             description: "Reorder providers for display priority.",
             auth: true,
-            body: { order: ["linode", "aws"] },
+            body: { order: ["provider_001", "provider_002"] },
             response: {
               success: true,
               providers: [
-                { id: "linode", name: "Linode", type: "linode", display_order: 1 },
-                { id: "aws", name: "AWS", type: "aws", display_order: 2 },
+                { id: "provider_001", name: "Primary Provider", type: "cloud", display_order: 1 },
+                { id: "provider_002", name: "Secondary Provider", type: "cloud", display_order: 2 },
               ],
             },
           },
@@ -3465,7 +3449,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description: "Get list of infrastructure servers.",
             auth: true,
             response: {
-              servers: [{ id: "srv_001", hostname: "node1", status: "online", provider: "linode" }],
+              servers: [{ id: "srv_001", hostname: "node1", status: "online", provider: "provider_001" }],
             },
           },
           {
