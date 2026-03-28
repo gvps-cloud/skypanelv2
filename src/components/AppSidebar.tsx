@@ -5,6 +5,7 @@ import {
   Building2,
   CreditCard,
   BookOpen,
+  FileText,
   Key,
   LayoutDashboard,
   LifeBuoy,
@@ -50,6 +51,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const isBillingActive = pathname.startsWith("/billing");
   const isSshKeysActive = pathname.startsWith("/ssh-keys");
   const isApiDocsActive = pathname.startsWith("/api-docs");
+  const isDocsActive = pathname.startsWith("/docs");
   const isAdminRoute = pathname.startsWith("/admin");
 
   const navMainItems = React.useMemo(
@@ -209,6 +211,12 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           icon: BookOpen,
           isActive: isApiDocsActive,
         },
+        {
+          title: "Documentation",
+          url: "/docs",
+          icon: FileText,
+          isActive: isDocsActive,
+        },
       ];
 
       return userNavItems;
@@ -221,6 +229,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       isBillingActive,
       isApiDocsActive,
       isDashboardActive,
+      isDocsActive,
       isSshKeysActive,
       isVpsActive,
     ]
