@@ -101,11 +101,11 @@ SELECT id, 'API Keys', 'api-keys',
 
 <h4>Method 1: X-API-Key Header</h4>
 <pre><code>curl -H "X-API-Key: sk_live_your_key_here" \
-  https://your-domain.com/api/vps</code></pre>
+  {{PLATFORM_URL}}/api/vps</code></pre>
 
 <h4>Method 2: Bearer Token</h4>
 <pre><code>curl -H "Authorization: Bearer sk_live_your_key_here" \
-  https://your-domain.com/api/vps</code></pre>
+  {{PLATFORM_URL}}/api/vps</code></pre>
 
 <h3>Managing API Keys</h3>
 <table>

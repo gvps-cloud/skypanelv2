@@ -661,7 +661,7 @@ SELECT id, 'API Authentication', 'authentication',
 
 <h3>Getting a Token</h3>
 <p>Authenticate with your email and password:</p>
-<pre><code>curl -X POST https://your-domain.com/api/auth/login \
+<pre><code>curl -X POST {{PLATFORM_URL}}/api/auth/login \
   -H "Content-Type: application/json" \
   -d "{
     \"email\": \"you@example.com\",
@@ -675,7 +675,7 @@ SELECT id, 'API Authentication', 'authentication',
 
 <h3>Using the Token</h3>
 <p>Include the token in the Authorization header:</p>
-<pre><code>curl https://your-domain.com/api/vps \
+<pre><code>curl {{PLATFORM_URL}}/api/vps \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"</code></pre>
 
 <h3>Token Lifecycle</h3>

@@ -109,6 +109,15 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Replace documentation template placeholders before rendering.
+// {{PLATFORM_URL}} → current origin (e.g. https://gvps.cloud)
+function renderDocHtml(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const platformUrl = window.location.origin;
+  const replaced = raw.replace(/\{\{PLATFORM_URL\}\}/g, platformUrl);
+  return DOMPurify.sanitize(replaced, { USE_PROFILES: { html: true } });
+}
+
 // ── Sidebar ──────────────────────────────────────────────────────────────────
 
 function Sidebar({
@@ -631,7 +640,7 @@ export default function Documentation() {
           <div
             className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm mb-6"
             dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(parts[0], { USE_PROFILES: { html: true } }),
+              __html: renderDocHtml(parts[0]),
             }}
           />
         )}
@@ -671,7 +680,7 @@ export default function Documentation() {
           <div
             className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm"
             dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(parts[1], { USE_PROFILES: { html: true } }),
+              __html: renderDocHtml(parts[1]),
             }}
           />
         )}
@@ -721,7 +730,7 @@ export default function Documentation() {
           <div
             className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm mb-10"
             dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(article.content, { USE_PROFILES: { html: true } }),
+              __html: renderDocHtml(article.content),
             }}
           />
         )}
@@ -913,7 +922,7 @@ export default function Documentation() {
       <div
         className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm"
         dangerouslySetInnerHTML={{
-          __html: DOMPurify.sanitize(article.content, { USE_PROFILES: { html: true } }),
+          __html: renderDocHtml(article.content),
         }}
       />
 
