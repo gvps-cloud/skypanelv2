@@ -1306,12 +1306,12 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/images",
             description:
-              "Available base operating system images per provider (Linode variant).",
+              "Available base operating system templates exposed through the platform catalog.",
             auth: true,
             response: {
               images: [
-                { id: "linode/ubuntu24.04", label: "Ubuntu 24.04 LTS" },
-                { id: "linode/debian12", label: "Debian 12" },
+                { id: "tpl_4a61d5f6f1f9a9f3e58ab1e2", label: "Ubuntu 24.04 LTS" },
+                { id: "tpl_2a3f4963fbe3229ff43a7f5a", label: "Debian 12" },
               ],
             },
           },
@@ -1335,9 +1335,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
           },
           {
             method: "GET",
-            path: "/linode/ssh-keys",
+            path: "/providers/:providerId/ssh-keys",
             description:
-              "Linode SSH keys available to the authenticated organization.",
+              "Provider SSH keys available to the authenticated organization.",
             auth: true,
             response: {
               ssh_keys: [
@@ -2140,7 +2140,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/tickets/:id/stream",
             description:
               "Server-sent event stream for live ticket updates; token is passed via query string.",
-            auth: false,
+            auth: true,
             params: { token: "JWT_TOKEN" },
             response: {
               eventStream: true,
@@ -3486,7 +3486,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/tickets/:id/stream",
             description: "SSE stream for admin ticket updates.",
-            auth: false,
+            auth: true,
             params: { token: "ADMIN_TOKEN" },
             response: { eventStream: true },
           },

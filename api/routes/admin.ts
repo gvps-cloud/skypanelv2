@@ -46,6 +46,7 @@ import {
   formatServerError,
 } from "../lib/validation.js";
 import { EgressBillingService } from "../services/egressBillingService.js";
+import { tokenBlacklistService } from "../services/tokenBlacklistService.js";
 
 const router = express.Router();
 
@@ -5622,6 +5623,12 @@ router.get(
       const token = req.query.token as string;
       if (!token) {
         res.status(401).json({ error: "Authentication token required" });
+        return;
+      }
+
+      const isRevoked = await tokenBlacklistService.isRevoked(token);
+      if (isRevoked) {
+        res.status(401).json({ error: "Token has been revoked" });
         return;
       }
 

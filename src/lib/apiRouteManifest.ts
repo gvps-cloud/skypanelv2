@@ -1352,6 +1352,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/vps/providers/:providerId/ssh-keys",
+    "protected": true
+  },
+  {
+    "method": "GET",
     "path": "/api/vps/stackscripts",
     "protected": true
   },

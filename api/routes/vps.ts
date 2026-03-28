@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import { createHash } from "crypto";
 import { authenticateToken, requireOrganization } from "../middleware/auth.js";
 import { query } from "../lib/database.js";
 import { linodeService } from "../services/linodeService.js";
@@ -36,6 +37,63 @@ router.use(authenticateToken, requireOrganization);
 import { config } from "../config/index.js";
 
 const DEFAULT_RDNS_BASE_DOMAIN = config.RDNS_BASE_DOMAIN;
+
+const TEMPLATE_ID_PREFIX = "tpl_";
+
+function toTemplateId(providerId: string, upstreamImageId: string): string {
+  const digest = createHash("sha256")
+    .update(`${providerId}:${upstreamImageId}`)
+    .digest("hex")
+    .slice(0, 24);
+  return `${TEMPLATE_ID_PREFIX}${digest}`;
+}
+
+function normalizeImageTemplate(
+  image: any,
+  providerId: string,
+): {
+  id: string;
+  provider_template_id: string;
+  label: string;
+  description: string | null;
+  distribution: string | null;
+  minDiskSize: number | null;
+  public: boolean;
+} {
+  const upstreamId = String(image?.id || "").trim();
+  return {
+    id: toTemplateId(providerId, upstreamId),
+    provider_template_id: upstreamId,
+    label: image?.label || upstreamId,
+    description: image?.description || null,
+    distribution: image?.vendor || null,
+    minDiskSize:
+      typeof image?.size === "number" && Number.isFinite(image.size)
+        ? image.size
+        : null,
+    public: Boolean(image?.is_public),
+  };
+}
+
+async function resolveImageForProvider(
+  providerId: string,
+  requestedImage: string,
+): Promise<string | null> {
+  const requested = requestedImage.trim();
+  if (!requested.startsWith(TEMPLATE_ID_PREFIX)) {
+    return requested;
+  }
+
+  const images = await linodeService.getLinodeImages();
+  for (const image of images) {
+    const upstreamId = String(image.id || "").trim();
+    if (toTemplateId(providerId, upstreamId) === requested) {
+      return upstreamId;
+    }
+  }
+
+  return null;
+}
 
 async function loadActiveProviderToken(
   providerType: "linode",
@@ -1030,8 +1088,15 @@ router.get("/apps", async (req: Request, res: Response) => {
 // Get available Linode images
 router.get("/images", async (req: Request, res: Response) => {
   try {
+    const providerId =
+      typeof req.query.provider_id === "string" && req.query.provider_id.trim()
+        ? req.query.provider_id.trim()
+        : "default";
     const images = await linodeService.getLinodeImages();
-    res.json({ images });
+    const templates = images.map((image) =>
+      normalizeImageTemplate(image, providerId),
+    );
+    res.json({ images: templates });
   } catch (err: any) {
     console.error("Images fetch error:", err);
     res.status(500).json({ error: err.message || "Failed to fetch images" });
@@ -1380,6 +1445,32 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
 });
 
 // Get Linode SSH keys for the active organization
+router.get("/providers/:providerId/ssh-keys", async (req: Request, res: Response) => {
+  try {
+    const { providerId } = req.params;
+    const normalizedProviderId =
+      providerId === "active" || providerId === "default"
+        ? undefined
+        : providerId;
+    const token = await resolveProviderTokenOrRespond(
+      res,
+      "linode",
+      normalizedProviderId,
+    );
+    if (!token) {
+      return;
+    }
+
+    const keys = await linodeService.getSSHKeys(token);
+    return res.json({ ssh_keys: keys });
+  } catch (err: any) {
+    console.error("SSH keys fetch error:", err);
+    return res
+      .status(500)
+      .json({ error: err.message || "Failed to fetch SSH keys" });
+  }
+});
+
 router.get("/linode/ssh-keys", async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
@@ -2601,6 +2692,18 @@ router.post("/", async (req: Request, res: Response) => {
       return;
     }
 
+    const requestedImage = String(image).trim();
+    const resolvedImage = await resolveImageForProvider(
+      String(provider_id),
+      requestedImage,
+    );
+    if (!resolvedImage) {
+      return res.status(400).json({
+        error: "Invalid OS template selected for the chosen provider.",
+        code: "INVALID_OS_TEMPLATE",
+      });
+    }
+
     // Resolve plan details from database
     // Plans store provider plan id in provider_plan_id and region under specifications.region
     let regionToUse: string | undefined = region;
@@ -2869,7 +2972,7 @@ router.post("/", async (req: Request, res: Response) => {
         const linodeCreatePayload: CreateLinodeRequest = {
           type: providerPlanId,
           region: regionToUse,
-          image,
+          image: resolvedImage,
           label,
           root_pass: rootPassword,
           backups_enabled: backups,
@@ -2916,6 +3019,7 @@ router.post("/", async (req: Request, res: Response) => {
         label,
         region: regionToUse,
         image,
+        resolvedImage,
       });
 
       // Handle provider-specific errors
@@ -2938,6 +3042,7 @@ router.post("/", async (req: Request, res: Response) => {
       type: providerPlanId,
       region: regionToUse,
       image,
+      provider_template_id: resolvedImage,
       backups,
       backup_frequency: validatedBackupFrequency,
       privateIP,
@@ -3417,6 +3522,17 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Instance not found" });
 
     const row = rowRes.rows[0];
+    const requestedImage = image.trim();
+    const resolvedImage = await resolveImageForProvider(
+      String(row.provider_id || "default"),
+      requestedImage,
+    );
+    if (!resolvedImage) {
+      return res.status(400).json({
+        error: "Invalid OS template selected for rebuild",
+        code: "INVALID_OS_TEMPLATE",
+      });
+    }
     
     // Fetch provider name for whitelabeling
     const providerResult = await query(
@@ -3514,7 +3630,7 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
 
     // Build rebuild request
     const rebuildPayload: RebuildLinodeRequest = {
-      image: image.trim(),
+      image: resolvedImage,
       root_pass: rootPassword,
     };
 
@@ -3607,7 +3723,8 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
 
     const updatedConfig = {
       ...existingConfig,
-      image: image.trim(),
+      image: requestedImage,
+      provider_template_id: resolvedImage,
       auth: {
         method: "password",
         user: "root",
@@ -3629,7 +3746,7 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
           eventType: "vps.rebuild",
           entityType: "vps",
           entityId: String(id),
-          message: `Rebuilt VPS '${row.label}' with image '${image.trim()}' on ${providerType}`,
+          message: `Rebuilt VPS '${row.label}' with template '${requestedImage}' on ${providerType}`,
           status: "success",
         },
         req as any,
@@ -3638,7 +3755,7 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
       console.warn("Failed to log vps.rebuild activity:", logErr);
     }
 
-    res.json({ status, image: image.trim(), providerName });
+    res.json({ status, image: requestedImage, providerName });
   } catch (err: any) {
     console.error("VPS rebuild error:", err);
 

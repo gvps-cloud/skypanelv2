@@ -39,7 +39,8 @@ export default function LinodeConfiguration({
       try {
         setLoadingKeys(true);
         setKeysError(null);
-        const response = await fetch('/api/vps/linode/ssh-keys', {
+        const providerId = formData.provider_id || 'active';
+        const response = await fetch(`/api/vps/providers/${providerId}/ssh-keys`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -62,7 +63,7 @@ export default function LinodeConfiguration({
     };
 
     fetchSSHKeys();
-  }, [token]);
+  }, [token, formData.provider_id]);
 
   // Validate password strength
   const validatePassword = (password: string): string => {
