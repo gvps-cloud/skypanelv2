@@ -8,11 +8,15 @@
 
 INSERT INTO platform_settings (key, value)
 VALUES ('branding', jsonb_build_object(
-  'company_name', 'SkyPanelV2',
+  'company_name', 'the platform',
   'support_email', 'support@example.com',
   'rdns_base_domain', 'ip.rev.example.com'
 ))
-ON CONFLICT (key) DO NOTHING;
+ON CONFLICT (key) DO UPDATE
+SET value = EXCLUDED.value
+WHERE platform_settings.value->>'company_name' IN ('SkyPanelV2', 'GVPS.Cloud')
+   OR platform_settings.value->>'support_email' IN ('support@skypanelv2.com', 'support@gvps.cloud')
+   OR platform_settings.value->>'rdns_base_domain' = 'ip.rev.gvps.cloud';
 
 -- ============================================================================
 -- 2. Fix documentation articles — replace GVPS.Cloud with platform-agnostic text

@@ -28,14 +28,16 @@ dotenv.config({ path: join(__dirname, '..', '.env') });
 const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production'
+    ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
+    : false,
 });
 
 const BRAND_NAME =
   process.env.COMPANY_BRAND_NAME?.trim() ||
   process.env.VITE_COMPANY_NAME?.trim() ||
   process.env.COMPANY_NAME?.trim() ||
-  'SkyPanelV2';
+  'the platform';
 
 const RDNS_DOMAIN =
   process.env.RDNS_BASE_DOMAIN?.trim() ||
@@ -130,8 +132,8 @@ async function seedBranding() {
       `, [RDNS_DOMAIN]);
     } else {
       await client.query(`
-        INSERT INTO networking_config (id, rdns_base_domain, created_at, updated_at)
-        VALUES (gen_random_uuid(), $1::text, NOW(), NOW())
+        INSERT INTO networking_config (rdns_base_domain, created_at, updated_at)
+        VALUES ($1::text, NOW(), NOW())
       `, [RDNS_DOMAIN]);
     }
     console.log('✅ networking_config.rdns_base_domain updated');
