@@ -26,11 +26,6 @@ WHERE title   LIKE '%GVPS.Cloud%'
    OR content LIKE '%GVPS.Cloud%'
    OR summary LIKE '%GVPS.Cloud%';
 
--- Also catch lowercase/variant forms
-UPDATE documentation_articles
-SET content = REPLACE(content, 'GVPS.Cloud', 'the platform')
-WHERE content LIKE '%GVPS.Cloud%';
-
 -- Fix specific article titles that should be friendlier
 -- NOTE: This targets legacy databases that may have the old slug 'welcome-to-gvps-cloud'.
 -- Fresh installs seed with 'welcome-to-platform' so this is a no-op on new databases.

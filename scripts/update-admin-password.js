@@ -7,7 +7,7 @@ const { Pool } = pg;
 
 async function run() {
   const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com';
-  const password = 'admin123';
+  const password = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin123#';
   console.log(`🔐 Updating admin password hash to bcryptjs(12) for admin user (${adminEmail})...`);
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -16,7 +16,6 @@ async function run() {
 
   try {
     const client = await pool.connect();
-    const password = 'admin123';
     const saltRounds = 12;
     const hash = await bcrypt.hash(password, saltRounds);
     console.log('🧾 New hash prefix:', hash.slice(0, 10));
@@ -35,7 +34,7 @@ async function run() {
         [adminEmail]
       );
       const ok = await bcrypt.compare(password, rows[0].password_hash);
-      console.log('🧪 Post-update compare("admin123") =>', ok);
+      console.log('🧪 Post-update password compare =>', ok);
     }
 
     client.release();

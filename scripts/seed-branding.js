@@ -28,7 +28,7 @@ dotenv.config({ path: join(__dirname, '..', '.env') });
 const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 const BRAND_NAME =
@@ -64,6 +64,7 @@ async function seedBranding() {
       support_email: SUPPORT_EMAIL,
       rdns_base_domain: RDNS_DOMAIN,
     });
+    // Persist branding to platform_settings for future API consumption (e.g., public brand info endpoint)
     await client.query(`
       INSERT INTO platform_settings (key, value)
       VALUES ('branding', $1::jsonb)

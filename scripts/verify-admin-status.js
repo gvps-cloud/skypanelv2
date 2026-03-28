@@ -16,7 +16,7 @@ const pool = new Pool({
 });
 
 const adminEmail = (process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com').trim();
-const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
+const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin123#';
 
 async function verifyAdmin() {
   try {
