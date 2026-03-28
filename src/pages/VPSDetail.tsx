@@ -1357,18 +1357,24 @@ const VPSDetail: React.FC = () => {
     if (availableImages.length === 0) {
       setImagesLoading(true);
       try {
-        const response = await fetch("/api/vps/images", {
+        const providerId = detail?.providerId;
+        if (!providerId) {
+          throw new Error("Provider context missing for image catalog");
+        }
+        const response = await fetch(
+          `/api/vps/images?provider_id=${encodeURIComponent(providerId)}`,
+          {
           headers: { Authorization: `Bearer ${token}` },
-        });
+          },
+        );
         const data = await response.json();
         if (Array.isArray(data.images)) {
           setAvailableImages(
             data.images
-              .filter((img: any) => img.is_public && !img.deprecated)
               .map((img: any) => ({
                 id: img.id,
                 label: img.label,
-                vendor: img.vendor || "",
+                vendor: img.distribution || "",
               }))
               .sort((a: any, b: any) => a.label.localeCompare(b.label)),
           );
@@ -1380,7 +1386,7 @@ const VPSDetail: React.FC = () => {
         setImagesLoading(false);
       }
     }
-  }, [token, availableImages.length]);
+  }, [token, availableImages.length, detail, organizationSSHKeys.length]);
 
   const performRebuild = useCallback(async () => {
     if (!detail) return;

@@ -681,9 +681,10 @@ class LinodeService {
     return this.createLinodeInstance(createReq);
   }
 
-  private getHeaders(): HeadersInit {
+  private getHeaders(apiToken?: string): HeadersInit {
+    const token = apiToken || this.apiToken;
     return {
-      'Authorization': `Bearer ${this.apiToken}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
   }
@@ -784,9 +785,10 @@ class LinodeService {
   /**
    * Fetch all available Linode images
    */
-  async getLinodeImages(): Promise<LinodeImage[]> {
+  async getLinodeImages(apiToken?: string): Promise<LinodeImage[]> {
     try {
-      if (!this.apiToken) {
+      const token = apiToken || this.apiToken;
+      if (!token) {
         throw new Error('Linode API token not configured');
       }
       const isDebug = process.env.LOG_LEVEL === 'debug' || process.env.NODE_ENV !== 'production'
@@ -794,7 +796,7 @@ class LinodeService {
         console.log('Fetching Linode images')
       }
       const response = await fetch(`${this.baseUrl}/images`, {
-        headers: this.getHeaders(),
+        headers: this.getHeaders(token),
       });
       if (isDebug) {
         console.log('Linode API response status:', response.status)
@@ -1118,15 +1120,19 @@ class LinodeService {
   /**
    * Create a new Linode instance
    */
-  async createLinodeInstance(createRequest: CreateLinodeRequest): Promise<LinodeInstance> {
+  async createLinodeInstance(
+    createRequest: CreateLinodeRequest,
+    apiToken?: string,
+  ): Promise<LinodeInstance> {
     try {
-      if (!this.apiToken) {
+      const token = apiToken || this.apiToken;
+      if (!token) {
         throw new Error('Linode API token not configured');
       }
 
       const response = await fetch(`${this.baseUrl}/linode/instances`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: this.getHeaders(token),
         body: JSON.stringify(createRequest),
       });
 
@@ -1839,15 +1845,20 @@ class LinodeService {
    * This wipes all disks and configs, then deploys the specified image.
    * Linode API: POST /linode/instances/{linodeId}/rebuild
    */
-  async rebuildLinodeInstance(instanceId: number, rebuildRequest: RebuildLinodeRequest): Promise<LinodeInstance> {
+  async rebuildLinodeInstance(
+    instanceId: number,
+    rebuildRequest: RebuildLinodeRequest,
+    apiToken?: string,
+  ): Promise<LinodeInstance> {
     try {
-      if (!this.apiToken) {
+      const token = apiToken || this.apiToken;
+      if (!token) {
         throw new Error('Linode API token not configured');
       }
 
       const response = await fetch(`${this.baseUrl}/linode/instances/${instanceId}/rebuild`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: this.getHeaders(token),
         body: JSON.stringify(rebuildRequest),
       });
 
