@@ -150,7 +150,7 @@ ON CONFLICT DO NOTHING;
 
 -- VPS Guide articles
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
-SELECT id, 'Connecting to Your VPS', 'connecting-to-your-vps',
+SELECT id, 'Connecting to Your VPS', 'connecting',
 '<h2>Connecting to Your VPS</h2>
 <p>There are two ways to connect to your VPS: SSH client or the built-in web console.</p>
 <h3>Via SSH Client</h3>
@@ -174,7 +174,7 @@ FROM documentation_categories WHERE slug = 'vps-guide'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
-SELECT id, 'Rebuilding Your VPS', 'rebuilding-your-vps',
+SELECT id, 'Rebuilding Your VPS', 'rebuilding',
 '<h2>Rebuilding Your VPS</h2>
 <p>Rebuilding reinstalls the operating system on your VPS. All data on the disk will be lost.</p>
 <h3>When to Rebuild</h3>

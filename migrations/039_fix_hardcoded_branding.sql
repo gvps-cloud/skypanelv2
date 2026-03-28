@@ -101,3 +101,18 @@ ALTER TABLE networking_config
 -- ============================================================================
 
 DELETE FROM documentation_articles WHERE slug = 'plans-regions';
+
+-- ============================================================================
+-- 8. Deduplicate articles from old slugs (migration 037 originally seeded
+--     'connecting-to-your-vps' and 'rebuilding-your-vps'; migration 038
+--     introduced richer versions at 'connecting' and 'rebuilding'.
+--     This removes the stale shorter articles if both exist.
+-- ============================================================================
+
+-- Only delete if the new (comprehensive) version already exists
+DELETE FROM documentation_articles
+WHERE slug IN ('connecting-to-your-vps', 'rebuilding-your-vps')
+  AND EXISTS (
+    SELECT 1 FROM documentation_articles
+    WHERE slug IN ('connecting', 'rebuilding')
+  );
