@@ -26,7 +26,7 @@ async function runMigration() {
   if (!process.env.DATABASE_URL) {
     console.error('❌ DATABASE_URL environment variable is not set!');
     console.log('Please set your PostgreSQL connection string in the .env file:');
-    console.log('DATABASE_URL=postgresql://username:password@localhost:5432/skypanelv2_db_name');
+    console.log('DATABASE_URL=postgresql://username:password@localhost:5432/your_db_name');
     process.exit(1);
   }
 
@@ -88,7 +88,7 @@ async function runMigration() {
 
     // Check if admin user was created
     const adminResult = await pool.query(
-      "SELECT email, name, role FROM users WHERE email = 'admin@skypanelv2.com'"
+      "SELECT email, name, role FROM users WHERE email = 'admin@example.com'"
     );
 
     if (adminResult.rows.length > 0) {

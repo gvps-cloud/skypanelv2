@@ -2029,16 +2029,16 @@ router.get(
       const result = await query(
         "SELECT * FROM networking_config ORDER BY updated_at DESC LIMIT 1",
       );
-      const config = result.rows?.[0] || null;
-      if (config) {
-        return res.json({ config });
+      const networkingConfig = result.rows?.[0] || null;
+      if (networkingConfig) {
+        return res.json({ config: networkingConfig });
       }
       // Fallback to default if no row exists
-      return res.json({ config: { rdns_base_domain: "ip.rev.gvps.cloud" } });
+      return res.json({ config: { rdns_base_domain: config.RDNS_BASE_DOMAIN } });
     } catch (err: any) {
       if (isMissingTableError(err)) {
         return res.json({
-          config: { rdns_base_domain: "ip.rev.gvps.cloud" },
+          config: { rdns_base_domain: config.RDNS_BASE_DOMAIN },
           warning: "networking_config table not found. Apply migrations.",
         });
       }

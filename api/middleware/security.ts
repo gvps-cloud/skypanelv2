@@ -15,7 +15,7 @@ import helmet from 'helmet';
  * - style-src 'self' 'unsafe-inline': Allow styles from same origin + inline (needed for React/Tailwind)
  * - img-src 'self' data: blob: https://*: Allow images from same origin, data URLs, blobs, and any HTTPS
  * - font-src 'self' data:: Allow fonts from same origin and data URLs
- * - connect-src 'self' https://api.paypal.com https://www.paypal.com: Allow API calls to self and PayPal
+ * - connect-src 'self' https://api.paypal.com https://www.paypal.com https://cdn.jsdelivr.net https://*.speedtest.linode.com https://api.linode.com: Allow API calls to self, PayPal, status page map data, and Linode latency checks
  * - frame-src https://www.paypal.com: Only allow PayPal for iframe embeds
  * - object-src 'none': Block plugins (Flash, etc.)
  * - base-uri 'self': Restrict <base> tag to same origin
@@ -35,6 +35,9 @@ const helmetConfig = {
         "'self'",
         'https://api.paypal.com',
         'https://www.paypal.com',
+        'https://cdn.jsdelivr.net', // Status page: world map GeoJSON
+        'https://*.speedtest.linode.com', // Status page: live region latency checks
+        'https://api.linode.com', // Status page: public region data
         'ws://localhost:*',
         'wss://localhost:*',
       ],

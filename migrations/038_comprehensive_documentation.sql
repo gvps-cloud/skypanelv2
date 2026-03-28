@@ -1,17 +1,16 @@
 -- Migration 038: Comprehensive documentation articles
 -- Description: Adds detailed documentation for all categories
-
--- Clear existing articles and re-seed with comprehensive content
-DELETE FROM documentation_articles;
+-- NOTE: Uses ON CONFLICT DO NOTHING to preserve manually edited articles.
+--       This migration only seeds on a fresh database.
 
 -- ═══════════════════════════════════════════════════════════════════════
 -- GETTING STARTED (category: getting-started)
 -- ═══════════════════════════════════════════════════════════════════════
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
-SELECT id, 'Welcome to GVPS.Cloud', 'welcome',
-'<h2>Welcome to GVPS.Cloud</h2>
-<p>GVPS.Cloud is a modern cloud hosting platform built for developers, businesses, and teams. This documentation covers everything you need to deploy, manage, and scale your infrastructure.</p>
+SELECT id, 'Welcome to the platform', 'welcome',
+'<h2>Welcome to the platform</h2>
+<p>the platform is a modern cloud hosting platform built for developers, businesses, and teams. This documentation covers everything you need to deploy, manage, and scale your infrastructure.</p>
 
 <h3>Platform Overview</h3>
 <ul>
@@ -35,12 +34,13 @@ SELECT id, 'Welcome to GVPS.Cloud', 'welcome',
 <h3>Need Help?</h3>
 <p>If you run into any issues, check the <strong>FAQ</strong> or open a <strong>support ticket</strong> from the Support page. Our team is available to assist you.</p>',
 'Platform overview and quick start guide for new users.', 0, TRUE
-FROM documentation_categories WHERE slug = 'getting-started';
+FROM documentation_categories WHERE slug = 'getting-started'
+ON CONFLICT DO NOTHING;
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'Creating Your First VPS', 'creating-your-first-vps',
 '<h2>Creating Your First VPS</h2>
-<p>Deploy a Virtual Private Server in minutes with GVPS.Cloud. Here is a step-by-step walkthrough.</p>
+<p>Deploy a Virtual Private Server in minutes with the platform. Here is a step-by-step walkthrough.</p>
 
 <h3>Step 1: Navigate to VPS</h3>
 <p>Click <strong>Compute</strong> in the sidebar, then click <strong>Create VPS</strong>.</p>
@@ -91,7 +91,8 @@ SELECT id, 'Creating Your First VPS', 'creating-your-first-vps',
 <li>Manage backups, firewalls, and more</li>
 </ul>',
 'Step-by-step guide to deploying your first virtual server.', 1, TRUE
-FROM documentation_categories WHERE slug = 'getting-started';
+FROM documentation_categories WHERE slug = 'getting-started'
+ON CONFLICT DO NOTHING;
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'Web Console (Browser SSH)', 'web-console',
@@ -127,7 +128,8 @@ SELECT id, 'Web Console (Browser SSH)', 'web-console',
 <li>If the console disconnects, refresh the page to reconnect</li>
 </ul>',
 'Using the browser-based SSH console to access your VPS.', 2, TRUE
-FROM documentation_categories WHERE slug = 'getting-started';
+FROM documentation_categories WHERE slug = 'getting-started'
+ON CONFLICT DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════════════════════
 -- ACCOUNT MANAGEMENT (category: account-management)
@@ -144,10 +146,10 @@ SELECT id, 'Managing SSH Keys', 'ssh-keys',
 <p>This creates two files:</p>
 <ul>
 <li><code>~/.ssh/id_ed25519</code> — Your private key (keep this secret)</li>
-<li><code>~/.ssh/id_ed25519.pub</code> — Your public key (add this to GVPS.Cloud)</li>
+<li><code>~/.ssh/id_ed25519.pub</code> — Your public key (add this to the platform)</li>
 </ul>
 
-<h3>Adding a Key to GVPS.Cloud</h3>
+<h3>Adding a Key to the platform</h3>
 <ol>
 <li>Go to <strong>SSH Keys</strong> in the sidebar</li>
 <li>Click <strong>Add SSH Key</strong></li>
@@ -175,7 +177,8 @@ SELECT id, 'Managing SSH Keys', 'ssh-keys',
 <li>Consider using an SSH agent to manage multiple keys</li>
 </ul>',
 'How to generate, add, and manage SSH keys for secure server access.', 0, TRUE
-FROM documentation_categories WHERE slug = 'account-management';
+FROM documentation_categories WHERE slug = 'account-management'
+ON CONFLICT DO NOTHING;
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'User Settings & Profile', 'user-settings',
@@ -216,7 +219,8 @@ SELECT id, 'User Settings & Profile', 'user-settings',
 <h3>Account Deletion</h3>
 <p>Contact support to request account deletion. All VPS instances, organizations you own, and associated data will be permanently removed.</p>',
 'Account settings, security, notifications, and API key management.', 1, TRUE
-FROM documentation_categories WHERE slug = 'account-management';
+FROM documentation_categories WHERE slug = 'account-management'
+ON CONFLICT DO NOTHING;
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'Organization Management', 'organizations',
@@ -265,7 +269,8 @@ SELECT id, 'Organization Management', 'organizations',
 <h3>Leaving an Organization</h3>
 <p>Members can leave an organization from the Members tab. Owners cannot leave — they must transfer ownership first or delete the organization.</p>',
 'Team collaboration with organizations, roles, and invitations.', 2, TRUE
-FROM documentation_categories WHERE slug = 'account-management';
+FROM documentation_categories WHERE slug = 'account-management'
+ON CONFLICT DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════════════════════
 -- BILLING & PAYMENTS (category: billing-payments)
@@ -274,7 +279,7 @@ FROM documentation_categories WHERE slug = 'account-management';
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'Billing Overview', 'billing-overview',
 '<h2>Billing Overview</h2>
-<p>GVPS.Cloud uses a transparent, pay-as-you-go billing model. You only pay for what you use.</p>
+<p>the platform uses a transparent, pay-as-you-go billing model. You only pay for what you use.</p>
 
 <h3>How Billing Works</h3>
 <ul>
@@ -303,12 +308,13 @@ SELECT id, 'Billing Overview', 'billing-overview',
 </ul>
 
 <h3>Payment Methods</h3>
-<p>GVPS.Cloud accepts PayPal for all payments. Add or update your PayPal account in <strong>Billing → Payment Methods</strong>.</p>
+<p>the platform accepts PayPal for all payments. Add or update your PayPal account in <strong>Billing → Payment Methods</strong>.</p>
 
 <h3>Refunds</h3>
 <p>Refund requests can be submitted through support tickets. Refund eligibility depends on the circumstances and is evaluated on a case-by-case basis.</p>',
 'Understanding the billing system, wallet, invoices, and payments.', 0, TRUE
-FROM documentation_categories WHERE slug = 'billing-payments';
+FROM documentation_categories WHERE slug = 'billing-payments'
+ON CONFLICT DO NOTHING;
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'Egress Credits & Transfer Billing', 'egress-credits',
@@ -352,12 +358,13 @@ SELECT id, 'Egress Credits & Transfer Billing', 'egress-credits',
 </tbody>
 </table>',
 'Prepaid credit packs for network transfer billing and monitoring.', 1, TRUE
-FROM documentation_categories WHERE slug = 'billing-payments';
+FROM documentation_categories WHERE slug = 'billing-payments'
+ON CONFLICT DO NOTHING;
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'Payment Methods & Wallet', 'payments',
 '<h2>Payment Methods & Wallet</h2>
-<p>GVPS.Cloud uses a wallet-based payment system. Add funds to your wallet, and charges deduct automatically.</p>
+<p>the platform uses a wallet-based payment system. Add funds to your wallet, and charges deduct automatically.</p>
 
 <h3>Adding Funds</h3>
 <ol>
@@ -388,7 +395,8 @@ SELECT id, 'Payment Methods & Wallet', 'payments',
 <h3>Low Balance</h3>
 <p>When your wallet balance drops below a threshold, you will receive an email notification. Ensure sufficient funds to avoid service interruption.</p>',
 'PayPal integration, wallet management, and transaction history.', 2, TRUE
-FROM documentation_categories WHERE slug = 'billing-payments';
+FROM documentation_categories WHERE slug = 'billing-payments'
+ON CONFLICT DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════════════════════
 -- VPS GUIDE (category: vps-guide)
@@ -433,7 +441,8 @@ Are you sure you want to continue connecting (yes/no)?</code></pre>
 </tbody>
 </table>',
 'SSH and web console access with troubleshooting tips.', 0, TRUE
-FROM documentation_categories WHERE slug = 'vps-guide';
+FROM documentation_categories WHERE slug = 'vps-guide'
+ON CONFLICT DO NOTHING;
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'VPS Management', 'vps-management',
@@ -478,7 +487,8 @@ SELECT id, 'VPS Management', 'vps-management',
 <h3>Hostname & Notes</h3>
 <p>Set a custom hostname for your VPS and add notes for your own reference. Notes support plain text and are only visible to you.</p>',
 'VPS power controls, networking, backups, monitoring, and configuration.', 1, TRUE
-FROM documentation_categories WHERE slug = 'vps-guide';
+FROM documentation_categories WHERE slug = 'vps-guide'
+ON CONFLICT DO NOTHING;
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'Rebuilding Your VPS', 'rebuilding',
@@ -516,7 +526,7 @@ SELECT id, 'Rebuilding Your VPS', 'rebuilding',
 <ul>
 <li>All files on the disk</li>
 <li>Installed software and configurations</li>
-<li>SSH keys stored on the server (your GVPS.Cloud SSH keys are re-applied)</li>
+<li>SSH keys stored on the server (your SSH keys from the platform are re-applied)</li>
 <li>Database data</li>
 <li>Cron jobs and scheduled tasks</li>
 </ul>
@@ -529,47 +539,12 @@ SELECT id, 'Rebuilding Your VPS', 'rebuilding',
 <li>Take a snapshot if you might want to revert</li>
 </ol>',
 'Reinstall the OS on your VPS. Data is permanently deleted.', 2, TRUE
-FROM documentation_categories WHERE slug = 'vps-guide';
+FROM documentation_categories WHERE slug = 'vps-guide'
+ON CONFLICT DO NOTHING;
 
-INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
-SELECT id, 'VPS Plans & Regions', 'plans-regions',
-'<h2>VPS Plans & Regions</h2>
-<p>GVPS.Cloud offers flexible VPS plans across multiple global regions.</p>
-
-<h3>Plan Tiers</h3>
-<table>
-<thead><tr><th>Tier</th><th>vCPUs</th><th>RAM</th><th>Storage</th><th>Transfer</th><th>Price</th></tr></thead>
-<tbody>
-<tr><td>Nano</td><td>1</td><td>512 MB</td><td>15 GB</td><td>1 TB</td><td>$5/mo</td></tr>
-<tr><td>Starter</td><td>1</td><td>1 GB</td><td>25 GB</td><td>2 TB</td><td>$10/mo</td></tr>
-<tr><td>Standard</td><td>2</td><td>4 GB</td><td>80 GB</td><td>4 TB</td><td>$24/mo</td></tr>
-<tr><td>Pro</td><td>4</td><td>8 GB</td><td>160 GB</td><td>5 TB</td><td>$48/mo</td></tr>
-<tr><td>Enterprise</td><td>8</td><td>16 GB</td><td>320 GB</td><td>6 TB</td><td>$96/mo</td></tr>
-</tbody>
-</table>
-
-<h3>Regions</h3>
-<p>Available data center locations:</p>
-<ul>
-<li><strong>US East</strong> — Newark, New Jersey</li>
-<li><strong>US West</strong> — Fremont, California</li>
-<li><strong>US Central</strong> — Dallas, Texas</li>
-<li><strong>EU West</strong> — Frankfurt, Germany</li>
-<li><strong>EU North</strong> — Stockholm, Sweden</li>
-<li><strong>Asia Pacific</strong> — Singapore, Tokyo, Mumbai</li>
-</ul>
-
-<h3>Choosing a Region</h3>
-<ul>
-<li>Host close to your primary users for lowest latency</li>
-<li>Consider data sovereignty requirements</li>
-<li>Multi-region deployments for high availability</li>
-</ul>
-
-<h3>Billing</h3>
-<p>All plans are billed hourly, up to the monthly cap. You are only charged for the hours your VPS is running.</p>',
-'Available VPS plan tiers, regions, and pricing details.', 3, TRUE
-FROM documentation_categories WHERE slug = 'vps-guide';
+-- NOTE: Plans & Regions article intentionally omitted.
+-- Plan details are managed dynamically via the admin panel and pricing APIs.
+-- Do not add a static article for this content.
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'Firewalls & Security', 'firewalls',
@@ -622,7 +597,8 @@ SELECT id, 'Firewalls & Security', 'firewalls',
 <li>Disable root login and use SSH keys exclusively</li>
 </ul>',
 'Configuring firewall rules to secure your VPS.', 4, TRUE
-FROM documentation_categories WHERE slug = 'vps-guide';
+FROM documentation_categories WHERE slug = 'vps-guide'
+ON CONFLICT DO NOTHING;
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'Backups & Snapshots', 'backups',
@@ -670,7 +646,8 @@ SELECT id, 'Backups & Snapshots', 'backups',
 <li>Keep critical data backed up off-server as well (S3, etc.)</li>
 </ul>',
 'Automated backups and on-demand snapshots for data protection.', 5, TRUE
-FROM documentation_categories WHERE slug = 'vps-guide';
+FROM documentation_categories WHERE slug = 'vps-guide'
+ON CONFLICT DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════════════════════
 -- API REFERENCE (category: api-reference)
@@ -680,7 +657,7 @@ FROM documentation_categories WHERE slug = 'vps-guide';
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'API Authentication', 'authentication',
 '<h2>API Authentication</h2>
-<p>The GVPS.Cloud API uses Bearer token authentication for protected endpoints.</p>
+<p>The platform API uses Bearer token authentication for protected endpoints.</p>
 
 <h3>Getting a Token</h3>
 <p>Authenticate with your email and password:</p>
@@ -726,8 +703,9 @@ SELECT id, 'API Authentication', 'authentication',
 <tr><td>429</td><td>Rate limit exceeded</td></tr>
 </tbody>
 </table>',
-'How to authenticate with the GVPS.Cloud API using tokens and API keys.', 0, TRUE
-FROM documentation_categories WHERE slug = 'api-reference';
+'How to authenticate with the platform API using tokens and API keys.', 0, TRUE
+FROM documentation_categories WHERE slug = 'api-reference'
+ON CONFLICT DO NOTHING;
 
 -- Update timestamps
 UPDATE documentation_categories SET updated_at = NOW();

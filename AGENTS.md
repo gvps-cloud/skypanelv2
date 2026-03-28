@@ -74,6 +74,7 @@ These sync automatically before `dev`, `client:dev`, and `build`.
 - `npm run db:reset:confirm` - Reset database without prompt
 - `npm run db:fresh` - Reset database and apply migrations
 - `npm run seed:admin` - Seed the default admin user
+- `node scripts/seed-branding.js` - Update database branding (docs, FAQ, contact, rDNS) to match .env
 
 ### Runtime / Deployment Helpers
 
@@ -106,6 +107,19 @@ ENCRYPTION_KEY=your-32-character-encryption-key
 COMPANY_NAME=SkyPanelV2
 VITE_COMPANY_NAME=SkyPanelV2
 COMPANY_BRAND_NAME=SkyPanelV2
+```
+
+### Networking
+
+```bash
+RDNS_BASE_DOMAIN=ip.rev.example.com
+```
+
+### Admin Seed Defaults (optional)
+
+```bash
+DEFAULT_ADMIN_EMAIL=admin@example.com
+DEFAULT_ADMIN_PASSWORD=Admin123#
 ```
 
 ### External Services

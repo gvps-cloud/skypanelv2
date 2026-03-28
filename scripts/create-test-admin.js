@@ -23,8 +23,8 @@ async function createTestAdmin() {
   try {
     // Parse command line arguments - handle both --flag=value and --flag value formats
     const args = process.argv.slice(2);
-    let email = 'admin@gvps.cloud';
-    let password = 'Admin123#';
+    let email = process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com';
+    let password = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin123#';
 
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
@@ -50,7 +50,7 @@ async function createTestAdmin() {
     }
 
     console.log(`📧 Email: ${email}`);
-    console.log(`🔑 Password: ${password}\n`);
+    console.log('🔑 Password: [hidden]\n');
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -72,7 +72,7 @@ async function createTestAdmin() {
         'UPDATE users SET password_hash = $1, role = $2 WHERE email = $3',
         [hashedPassword, 'admin', email]
       );
-      console.log(`✅ Password updated to: ${password}`);
+      console.log('✅ Password updated');
       console.log('✅ Role set to: admin');
 
       // Check if user has an organization
@@ -155,7 +155,7 @@ async function createTestAdmin() {
       console.log(`   Email: ${result.rows[0].email}`);
       console.log(`   Role: ${result.rows[0].role}`);
       console.log(`   Organization: ${orgResult.rows[0].name}`);
-      console.log(`   Password: ${password}\n`);
+      console.log('   Password: [hidden]\n');
     }
 
   } catch (error) {

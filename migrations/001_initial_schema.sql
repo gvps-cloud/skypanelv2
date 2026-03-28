@@ -186,7 +186,7 @@ BEGIN
     INSERT INTO users (id, email, password_hash, name, role)
     VALUES (
         uuid_generate_v4(),
-        'admin@skypanelv2.com',
+        'admin@example.com',
         '$2a$10$bHfm.XqgmNFKFUcUoVbmbuAXCzVbMzRQjpN1WNtWMNxydlXVFZyrq',
         'System Administrator',
         'admin'
@@ -194,20 +194,20 @@ BEGIN
     RETURNING id INTO admin_user_id;
 
     IF admin_user_id IS NULL THEN
-        SELECT id INTO admin_user_id FROM users WHERE email = 'admin@skypanelv2.com';
+        SELECT id INTO admin_user_id FROM users WHERE email = 'admin@example.com';
     END IF;
 
     INSERT INTO organizations (id, name, slug, owner_id)
     VALUES (
         uuid_generate_v4(),
-        'SkyPanelV2 Admin',
-        'skypanelv2-admin',
+        'Platform Admin',
+        'platform-admin',
         admin_user_id
     ) ON CONFLICT (slug) DO NOTHING
     RETURNING id INTO admin_org_id;
 
     IF admin_org_id IS NULL THEN
-        SELECT id INTO admin_org_id FROM organizations WHERE slug = 'skypanelv2-admin';
+        SELECT id INTO admin_org_id FROM organizations WHERE slug = 'platform-admin';
     END IF;
 
     INSERT INTO organization_members (organization_id, user_id, role)
@@ -441,7 +441,7 @@ CREATE INDEX IF NOT EXISTS idx_vps_stackscript_configs_order ON vps_stackscript_
 -- Migration 007: Networking config
 CREATE TABLE IF NOT EXISTS networking_config (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  rdns_base_domain TEXT NOT NULL DEFAULT 'ip.rev.gvps.cloud',
+  rdns_base_domain TEXT NOT NULL DEFAULT 'ip.rev.example.com',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -742,8 +742,8 @@ ON CONFLICT DO NOTHING;
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
 SELECT
     id,
-    'What is SkyPanelV2?',
-    'SkyPanelV2 is a cloud infrastructure platform that provides VPS hosting, dedicated servers, and managed services. We offer flexible, scalable solutions for businesses of all sizes.',
+    'What is this platform?',
+    'This is a cloud infrastructure platform that provides VPS hosting, dedicated servers, and managed services. It offers flexible, scalable solutions for businesses of all sizes.',
     0,
     TRUE
 FROM faq_categories WHERE name = 'Getting Started'
@@ -1002,7 +1002,7 @@ INSERT INTO contact_methods (method_type, title, description, is_active, config)
     'For general questions and account help',
     TRUE,
     jsonb_build_object(
-        'email_address', 'support@skypanelv2.com',
+        'email_address', 'support@example.com',
         'response_time', 'We reply within one business day.'
     )
 )
