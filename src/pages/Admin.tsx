@@ -46,6 +46,7 @@ import { BillingDashboard } from "@/components/admin/billing/BillingDashboard";
 import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
 import { UserManagement } from "@/components/admin/UserManagement";
+import { SSHKeyManagement } from "@/components/admin/SSHKeyManagement";
 import { OrganizationManagement } from "@/components/admin/OrganizationManagement";
 import { EmailTemplatesManager } from "@/components/admin/email/EmailTemplatesManager";
 import { RateLimitMonitoring } from "@/components/admin/RateLimitMonitoring";
@@ -159,6 +160,7 @@ type AdminSection =
   | "theme"
   | "organizations"
   | "user-management"
+  | "ssh-keys"
   | "rate-limiting"
   | "faq-management"
   | "documentation"
@@ -181,6 +183,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "theme",
   "organizations",
   "user-management",
+  "ssh-keys",
   "egress-credits",
   "rate-limiting",
   "faq-management",
@@ -3855,6 +3858,10 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="user-management" activeSection={activeTab}>
           <UserManagement />
+        </SectionPanel>
+
+        <SectionPanel section="ssh-keys" activeSection={activeTab}>
+          <SSHKeyManagement />
         </SectionPanel>
 
         <SectionPanel section="egress-credits" activeSection={activeTab}>

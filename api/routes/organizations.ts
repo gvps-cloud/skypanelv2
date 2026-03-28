@@ -623,6 +623,30 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+// GET /all - List all organizations (admin only)
+router.get('/all', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  const user = req.user;
+  if (!user) return res.status(401).json({ error: 'Authentication required' });
+  
+  // Check if user is admin
+  if (user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  try {
+    const result = await query(
+      `SELECT id, name, slug, created_at
+       FROM organizations
+       ORDER BY name ASC`
+    );
+    
+    res.json({ organizations: result.rows });
+  } catch (error) {
+    console.error('Failed to fetch all organizations:', error);
+    res.status(500).json({ error: 'Failed to fetch organizations' });
+  }
+});
+
 // PUT /:id - Update organization settings
 router.put('/:id', requirePermission('settings_manage'), async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;

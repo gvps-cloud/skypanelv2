@@ -84,6 +84,12 @@ export interface OrganizationSSHKey {
   } | null;
 }
 
+export interface AdminSSHKey extends OrganizationSSHKey {
+  organization_id: string;
+  organization_name: string;
+  public_key: string; // Required for admin view
+}
+
 export interface OrganizationResources {
   organization_id: string;
   organization_name: string;

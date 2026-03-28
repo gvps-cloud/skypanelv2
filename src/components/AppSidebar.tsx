@@ -88,6 +88,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               "regions",
               "vps-plans",
               "category-mappings",
+              "ssh-keys",
             ].includes(activeAnchor),
             items: [
               { title: "Servers", url: `/admin#servers`, isActive: activeAnchor === "servers" },
@@ -97,6 +98,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               { title: "Providers", url: `/admin#providers`, isActive: activeAnchor === "providers" },
               { title: "VPS Plans", url: `/admin#vps-plans`, isActive: activeAnchor === "vps-plans" },
               { title: "Category Mappings", url: `/admin#category-mappings`, isActive: activeAnchor === "category-mappings" },
+              { title: "SSH Keys", url: `/admin#ssh-keys`, isActive: activeAnchor === "ssh-keys" },
             ],
           },
           {
