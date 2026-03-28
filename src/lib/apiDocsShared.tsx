@@ -1010,11 +1010,11 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             auth: true,
             body: {
               label: "production-web-1",
-              provider_id: "linode",
+              provider_id: "provider_001",
               provider_type: "linode",
               type: "g6-standard-2",
               region: "us-east",
-              image: "linode/ubuntu24.04",
+              image: "tpl_4a61d5f6f1f9a9f3e58ab1e2",
               rootPassword: "Sup3rSecure!",
               sshKeys: ["123"],
               backups: true,
@@ -1101,6 +1101,24 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             response: {
               success: true,
               message: "VPS reboot initiated",
+            },
+          },
+          {
+            method: "POST",
+            path: "/:id/rebuild",
+            description:
+              "Reinstall a VPS using a platform OS template id (`tpl_*`) and a new root password.",
+            auth: true,
+            body: {
+              image: "tpl_4a61d5f6f1f9a9f3e58ab1e2",
+              rootPassword: "Sup3rSecure!",
+              sshKeys: ["123"],
+              booted: true,
+            },
+            response: {
+              status: "rebuilding",
+              image: "tpl_4a61d5f6f1f9a9f3e58ab1e2",
+              providerName: "Cloud Provider",
             },
           },
           {
@@ -1308,6 +1326,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Available base operating system templates exposed through the platform catalog.",
             auth: true,
+            params: { provider_id: "provider_001" },
             response: {
               images: [
                 { id: "tpl_4a61d5f6f1f9a9f3e58ab1e2", label: "Ubuntu 24.04 LTS" },
@@ -1338,6 +1357,23 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/providers/:providerId/ssh-keys",
             description:
               "Provider SSH keys available to the authenticated organization.",
+            auth: true,
+            params: { providerId: "provider_001" },
+            response: {
+              ssh_keys: [
+                {
+                  id: 2001,
+                  label: "shared-key",
+                  ssh_key: "ssh-ed25519 AAAA...",
+                },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/linode/ssh-keys",
+            description:
+              "Legacy compatibility endpoint for provider SSH keys (prefer `/providers/:providerId/ssh-keys`).",
             auth: true,
             response: {
               ssh_keys: [
@@ -2140,7 +2176,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/tickets/:id/stream",
             description:
               "Server-sent event stream for live ticket updates; token is passed via query string.",
-            auth: true,
+            auth: false,
             params: { token: "JWT_TOKEN" },
             response: {
               eventStream: true,
@@ -3486,7 +3522,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/tickets/:id/stream",
             description: "SSE stream for admin ticket updates.",
-            auth: true,
+            auth: false,
             params: { token: "ADMIN_TOKEN" },
             response: { eventStream: true },
           },
