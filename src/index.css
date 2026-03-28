@@ -424,10 +424,19 @@ bile Toast Styles */
 }
 
 /* ── TipTap rich text editor styles ──────────────────────────────────────── */
-.tiptap-editor-content .tiptap {
+
+/* Editor body — normal readable text */
+.tiptap-editor-content .tiptap.tiptap-body {
   outline: none;
+  padding: 12px 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  color: hsl(var(--foreground));
+  overflow-y: auto;
 }
 
+/* Placeholder */
 .tiptap-editor-content .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
@@ -436,13 +445,82 @@ bile Toast Styles */
   height: 0;
 }
 
+/* Paragraphs */
+.tiptap-editor-content .tiptap p {
+  margin: 0 0 0.75em 0;
+}
+
+/* Headings */
+.tiptap-editor-content .tiptap h1 { font-size: 1.75rem; font-weight: 700; margin: 1em 0 0.5em; }
+.tiptap-editor-content .tiptap h2 { font-size: 1.4rem; font-weight: 600; margin: 0.85em 0 0.4em; }
+.tiptap-editor-content .tiptap h3 { font-size: 1.2rem; font-weight: 600; margin: 0.75em 0 0.35em; }
+.tiptap-editor-content .tiptap h4 { font-size: 1.05rem; font-weight: 600; margin: 0.65em 0 0.3em; }
+
+/* Inline code — high contrast */
+.tiptap-editor-content .tiptap code {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.875em;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 500;
+}
+
+/* Code blocks — high contrast with proper scrollbar */
+.tiptap-editor-content .tiptap pre {
+  background-color: hsl(220 14% 12%);
+  color: #e4e4e7;
+  border-radius: 8px;
+  padding: 16px 20px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+.dark .tiptap-editor-content .tiptap pre {
+  background-color: hsl(220 14% 10%);
+}
+
+.tiptap-editor-content .tiptap pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+  font-weight: 400;
+}
+
+/* Syntax highlight tokens — readable on dark bg */
+.tiptap-editor-content .tiptap pre .hljs-keyword,
+.tiptap-editor-content .tiptap pre .hljs-selector-tag,
+.tiptap-editor-content .tiptap pre .hljs-built_in { color: #c678dd; }
+.tiptap-editor-content .tiptap pre .hljs-string,
+.tiptap-editor-content .tiptap pre .hljs-attr { color: #98c379; }
+.tiptap-editor-content .tiptap pre .hljs-number,
+.tiptap-editor-content .tiptap pre .hljs-literal { color: #d19a66; }
+.tiptap-editor-content .tiptap pre .hljs-comment,
+.tiptap-editor-content .tiptap pre .hljs-doctag { color: #7f848e; font-style: italic; }
+.tiptap-editor-content .tiptap pre .hljs-title,
+.tiptap-editor-content .tiptap pre .hljs-function { color: #61afef; }
+.tiptap-editor-content .tiptap pre .hljs-type,
+.tiptap-editor-content .tiptap pre .hljs-params { color: #e5c07b; }
+.tiptap-editor-content .tiptap pre .hljs-meta { color: #56b6c2; }
+.tiptap-editor-content .tiptap pre .hljs-attr { color: #d19a66; }
+.tiptap-editor-content .tiptap pre .hljs-tag { color: #e06c75; }
+.tiptap-editor-content .tiptap pre .hljs-name { color: #e06c75; }
+.tiptap-editor-content .tiptap pre .hljs-variable { color: #e06c75; }
+.tiptap-editor-content .tiptap pre .hljs-selector-class { color: #d19a66; }
+.tiptap-editor-content .tiptap pre .hljs-selector-id { color: #61afef; }
+.tiptap-editor-content .tiptap pre .hljs { background: none; }
+
+/* Tables */
 .tiptap-editor-content .tiptap table {
   border-collapse: collapse;
   width: 100%;
   margin: 1em 0;
   overflow: hidden;
 }
-
 .tiptap-editor-content .tiptap table td,
 .tiptap-editor-content .tiptap table th {
   border: 1px solid hsl(var(--border));
@@ -450,42 +528,17 @@ bile Toast Styles */
   min-width: 80px;
   vertical-align: top;
   box-sizing: border-box;
-  position: relative;
 }
-
 .tiptap-editor-content .tiptap table th {
   background-color: hsl(var(--muted));
   font-weight: 600;
   text-align: left;
 }
-
 .tiptap-editor-content .tiptap table .selectedCell {
   background-color: hsl(var(--accent));
 }
 
-.tiptap-editor-content .tiptap pre {
-  background-color: hsl(var(--muted));
-  border-radius: 6px;
-  padding: 12px 16px;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 13px;
-  overflow-x: auto;
-}
-
-.tiptap-editor-content .tiptap pre code {
-  background: none;
-  padding: 0;
-  font-size: inherit;
-}
-
-.tiptap-editor-content .tiptap code {
-  background-color: hsl(var(--muted));
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 13px;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-}
-
+/* Blockquote */
 .tiptap-editor-content .tiptap blockquote {
   border-left: 4px solid hsl(var(--muted-foreground) / 0.3);
   margin: 1em 0;
@@ -493,34 +546,51 @@ bile Toast Styles */
   color: hsl(var(--muted-foreground));
 }
 
+/* Lists */
+.tiptap-editor-content .tiptap ul,
+.tiptap-editor-content .tiptap ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+.tiptap-editor-content .tiptap li {
+  margin: 2px 0;
+}
+
+/* Images */
 .tiptap-editor-content .tiptap img {
   max-width: 100%;
   height: auto;
   border-radius: 8px;
 }
 
+/* Links */
 .tiptap-editor-content .tiptap a {
   color: hsl(var(--primary));
   text-decoration: underline;
   cursor: pointer;
 }
 
+/* Horizontal rule */
 .tiptap-editor-content .tiptap hr {
   border: none;
   border-top: 1px solid hsl(var(--border));
   margin: 1.5em 0;
 }
 
-.tiptap-editor-content .tiptap ul,
-.tiptap-editor-content .tiptap ol {
-  padding-left: 1.5em;
+/* Scrollbar for the editor content area */
+.tiptap-editor-content {
+  overflow-y: auto;
 }
-
-.tiptap-editor-content .tiptap li {
-  margin: 2px 0;
+.tiptap-editor-content::-webkit-scrollbar {
+  width: 8px;
 }
-
-/* Highlight language in code blocks */
-.tiptap-editor-content .tiptap pre .hljs {
-  background: none;
+.tiptap-editor-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tiptap-editor-content::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 4px;
+}
+.tiptap-editor-content::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.4);
 }
