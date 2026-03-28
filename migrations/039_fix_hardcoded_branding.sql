@@ -96,11 +96,15 @@ ALTER TABLE networking_config
   ALTER COLUMN rdns_base_domain SET DEFAULT 'ip.rev.example.com';
 
 -- ============================================================================
--- 7. Remove hardcoded plans & regions article
---     Plan details are managed dynamically — no static doc needed
+-- 7. Update plans & regions article — brand-agnostic title
+--     NOTE: Frontend (Documentation.tsx) has special-case rendering for this
+--     slug (articleSlug === 'plans-regions'), so the row must be preserved.
 -- ============================================================================
 
-DELETE FROM documentation_articles WHERE slug = 'plans-regions';
+UPDATE documentation_articles
+SET title = 'Plans & Regions',
+    summary = 'View available plans and datacenter regions.'
+WHERE slug = 'plans-regions';
 
 -- ============================================================================
 -- 8. Deduplicate articles from old slugs (migration 037 originally seeded

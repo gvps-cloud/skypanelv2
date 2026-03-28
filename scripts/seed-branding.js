@@ -144,10 +144,12 @@ async function seedBranding() {
     }
 
     // ─── 4. Update contact methods email ─────────────────────────────
+    // Only update legacy/placeholder values — don't overwrite intentional customizations
     const contactResult = await client.query(`
       UPDATE contact_methods
       SET config = jsonb_set(config, '{email_address}', to_jsonb($1::text))
       WHERE method_type = 'email'
+        AND config->>'email_address' IN ('support@example.com', 'support@skypanelv2.com', 'support@gvps.cloud')
     `, [SUPPORT_EMAIL]);
     console.log(`✅ contact_methods: ${contactResult.rowCount} rows updated`);
 
