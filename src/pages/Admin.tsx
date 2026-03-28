@@ -1470,7 +1470,7 @@ const Admin: React.FC = () => {
       if (!res.ok)
         throw new Error(data.error || "Failed to load rDNS configuration");
       const base = (data.config?.rdns_base_domain ??
-        "ip.rev.gvps.cloud") as string;
+        "ip.rev.example.com") as string;
       setRdnsBaseDomain(base);
       if (data.warning) {
         toast.message(data.warning);
@@ -4822,7 +4822,7 @@ const Admin: React.FC = () => {
                       <p className="text-sm text-muted-foreground">
                         Define the base domain used when setting custom rDNS for
                         VPS instances. If unset, the system falls back to{" "}
-                        <span className="font-mono">ip.rev.gvps.cloud</span>.
+                        <span className="font-mono">ip.rev.example.com</span>.
                       </p>
                     </div>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -4832,14 +4832,14 @@ const Admin: React.FC = () => {
                           id="rdns-domain"
                           value={rdnsBaseDomain}
                           onChange={(e) => setRdnsBaseDomain(e.target.value)}
-                          placeholder="ip.rev.gvps.cloud"
+                          placeholder="ip.rev.example.com"
                           disabled={rdnsLoading}
                         />
                         <p className="text-xs text-muted-foreground">
                           Example final rDNS:{" "}
                           <span className="font-mono">
                             123-45-67-89.
-                            {rdnsBaseDomain || "ip.rev.gvps.cloud"}
+                            {rdnsBaseDomain || "ip.rev.example.com"}
                           </span>
                         </p>
                       </div>

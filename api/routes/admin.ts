@@ -2034,11 +2034,11 @@ router.get(
         return res.json({ config });
       }
       // Fallback to default if no row exists
-      return res.json({ config: { rdns_base_domain: "ip.rev.gvps.cloud" } });
+      return res.json({ config: { rdns_base_domain: config.RDNS_BASE_DOMAIN } });
     } catch (err: any) {
       if (isMissingTableError(err)) {
         return res.json({
-          config: { rdns_base_domain: "ip.rev.gvps.cloud" },
+          config: { rdns_base_domain: config.RDNS_BASE_DOMAIN },
           warning: "networking_config table not found. Apply migrations.",
         });
       }

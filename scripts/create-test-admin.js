@@ -23,8 +23,8 @@ async function createTestAdmin() {
   try {
     // Parse command line arguments - handle both --flag=value and --flag value formats
     const args = process.argv.slice(2);
-    let email = 'admin@gvps.cloud';
-    let password = 'Admin123#';
+    let email = process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com';
+    let password = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin123#';
 
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];

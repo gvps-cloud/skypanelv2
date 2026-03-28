@@ -95,7 +95,7 @@ async function cleanMigration() {
     console.log('\n📝 Next steps:');
     console.log('1. Start the application: npm run dev');
     console.log('2. Login with admin credentials:');
-    console.log('   Email: admin@skypanelv2.com');
+    console.log('   Email: admin@example.com');
     console.log('   Password: admin123');
 
   } catch (error) {

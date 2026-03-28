@@ -717,7 +717,10 @@ node scripts/generate-ssh-secret.js  # Generates SSH_CRED_SECRET
 npm run db:fresh       # Reset + run all migrations
 npm run seed:admin     # Create admin user
 
-# 5. Start development
+# 5. Apply branding (updates docs, FAQ, contact info to match .env)
+node scripts/seed-branding.js
+
+# 6. Start development
 npm run dev            # Frontend (5173) + Backend (3001)
 ```
 
@@ -741,9 +744,19 @@ PAYPAL_MODE=sandbox
 LINODE_API_TOKEN=your-linode-api-token
 
 # Branding
-VITE_COMPANY_NAME=gvps.cloud
-COMPANY_NAME=gvps.cloud
+VITE_COMPANY_NAME=YourBrand
+COMPANY_NAME=YourBrand
+COMPANY_BRAND_NAME=YourBrand
+
+# Networking (used for VPS reverse DNS)
+RDNS_BASE_DOMAIN=ip.rev.yourdomain.com
+
+# Default Admin Seed (optional, used by scripts/create-test-admin.js)
+# DEFAULT_ADMIN_EMAIL=admin@yourdomain.com
+# DEFAULT_ADMIN_PASSWORD=ChangeMeImmediately
 ```
+
+> ⚠️ **Branding**: After setting the env vars above, run `node scripts/seed-branding.js` to update the database with your brand name in documentation articles, FAQ items, contact methods, and networking config. Migrations use generic placeholders; this script replaces them with your configured values.
 
 > For the complete environment variable reference, see [`repo-docs/ENVIRONMENT_VARIABLES.md`](./repo-docs/ENVIRONMENT_VARIABLES.md) and [`.env.example`](./.env.example).
 

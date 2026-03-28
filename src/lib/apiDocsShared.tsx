@@ -2404,7 +2404,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
               adminToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
               admin: {
                 id: "user_123",
-                email: "admin@skypanelv2.com",
+                email: "admin@example.com",
                 name: "Admin User",
                 firstName: "Admin",
                 lastName: "User",

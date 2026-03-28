@@ -673,7 +673,7 @@ const VPSDetail: React.FC = () => {
 
   // rDNS base domain configuration
   const [rdnsBaseDomain, setRdnsBaseDomain] =
-    useState<string>("ip.rev.gvps.cloud");
+    useState<string>("ip.rev.example.com");
 
   // Egress credits state
   const [egressBalance, setEgressBalance] = useState<number | null>(null);

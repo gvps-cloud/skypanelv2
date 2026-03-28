@@ -18,7 +18,7 @@ const pool = new Pool({
 
 async function ensureAdminUser() {
   try {
-    const email = 'admin@skypanelv2.com';
+    const email = 'admin@example.com';
     const password = 'admin123';
     const hashedPassword = await bcrypt.hash(password, 10);
     

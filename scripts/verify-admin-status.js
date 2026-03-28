@@ -17,8 +17,8 @@ const pool = new Pool({
 
 async function verifyAdmin() {
   try {
-    console.log('🔍 Checking database for admin@skypanelv2.com...');
-    const res = await pool.query('SELECT id, email, role, password_hash FROM users WHERE email = $1', ['admin@skypanelv2.com']);
+    console.log('🔍 Checking database for admin@example.com...');
+    const res = await pool.query('SELECT id, email, role, password_hash FROM users WHERE email = $1', ['admin@example.com']);
     
     if (res.rows.length > 0) {
       console.log('✅ User found in database:');
@@ -30,7 +30,7 @@ async function verifyAdmin() {
       const loginRes = await fetch('http://localhost:3001/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'admin@skypanelv2.com', password: 'admin123' })
+        body: JSON.stringify({ email: 'admin@example.com', password: 'admin123' })
       });
       
       if (loginRes.ok) {
@@ -44,7 +44,7 @@ async function verifyAdmin() {
       }
       
     } else {
-      console.log('❌ User admin@skypanelv2.com NOT found in database.');
+      console.log('❌ User admin@example.com NOT found in database.');
     }
   } catch (err) {
     console.error('Error:', err);

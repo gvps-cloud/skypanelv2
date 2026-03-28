@@ -51,6 +51,7 @@ export interface Config {
   PROVIDER_TOKEN_SECRET?: string;
   CONTACT_FORM_RECIPIENT?: string;
   COMPANY_BRAND_NAME: string;
+  RDNS_BASE_DOMAIN: string;
   corsOrigins: string[];
 }
 
@@ -224,6 +225,8 @@ function getConfig(): Config {
       process.env.COMPANY_NAME?.trim() ||
       process.env.COMPANY_BRAND_NAME?.trim() ||
       'SkyPanelV2',
+    RDNS_BASE_DOMAIN:
+      process.env.RDNS_BASE_DOMAIN?.trim() || 'ip.rev.example.com',
     corsOrigins: (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map(url => url.trim()),
   };
 

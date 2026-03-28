@@ -31,7 +31,7 @@ async function applySingleMigration() {
     if (!process.env.DATABASE_URL) {
       console.error('❌ DATABASE_URL environment variable is not set!');
       console.log('Set it in .env, e.g.:');
-      console.log('DATABASE_URL=postgresql://username:password@localhost:5432/skypanelv2');
+      console.log('DATABASE_URL=postgresql://username:password@localhost:5432/your_db_name');
       process.exit(1);
     }
 
