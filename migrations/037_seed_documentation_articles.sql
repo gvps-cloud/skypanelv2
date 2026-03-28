@@ -220,14 +220,14 @@ Authorization: Bearer YOUR_TOKEN_HERE</code></pre>
 Authorization: Bearer YOUR_TOKEN_HERE</code></pre>
 <h3>API Keys</h3>
 <p>You can also create long-lived API keys in <strong>Settings → API Keys</strong> for programmatic access.</p>',
-'How to authenticate with the the platform API.', 0, TRUE
+'How to authenticate with the platform API.', 0, TRUE
 FROM documentation_categories WHERE slug = 'api-reference'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'API Endpoints Overview', 'api-endpoints-overview',
 '<h2>API Endpoints Overview</h2>
-<p>The the platform API follows REST conventions. All endpoints are prefixed with <code>/api</code>.</p>
+<p>The platform API follows REST conventions. All endpoints are prefixed with <code>/api</code>.</p>
 <h3>Core Endpoints</h3>
 <table>
 <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>

@@ -2987,7 +2987,7 @@ router.post("/", async (req: Request, res: Response) => {
       setImmediate(async () => {
         try {
           // Fetch configured base domain from admin networking config
-          let baseDomain = "ip.rev.example.com";
+          let baseDomain = DEFAULT_RDNS_BASE_DOMAIN;
           try {
             const cfgRes = await query(
               "SELECT rdns_base_domain FROM networking_config ORDER BY updated_at DESC LIMIT 1",

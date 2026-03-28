@@ -85,6 +85,15 @@ async function seedBranding() {
     `, [BRAND_NAME]);
     console.log(`✅ documentation_articles: ${docResult.rowCount} rows updated`);
 
+    // Clean up any "the the" → "the" artifacts from the replacement above
+    await client.query(`
+      UPDATE documentation_articles
+      SET content = REPLACE(content, 'the the ', 'the '),
+          summary = REPLACE(summary, 'the the ', 'the ')
+      WHERE content LIKE '%the the %'
+         OR summary LIKE '%the the %'
+    `);
+
     // Fix specific welcome article title/slug
     const welcomeSlug = 'welcome-to-' + BRAND_NAME.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     await client.query(`

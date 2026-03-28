@@ -526,7 +526,7 @@ SELECT id, 'Rebuilding Your VPS', 'rebuilding',
 <ul>
 <li>All files on the disk</li>
 <li>Installed software and configurations</li>
-<li>SSH keys stored on the server (your the platform SSH keys are re-applied)</li>
+<li>SSH keys stored on the server (your SSH keys from the platform are re-applied)</li>
 <li>Database data</li>
 <li>Cron jobs and scheduled tasks</li>
 </ul>
@@ -657,7 +657,7 @@ ON CONFLICT DO NOTHING;
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'API Authentication', 'authentication',
 '<h2>API Authentication</h2>
-<p>The the platform API uses Bearer token authentication for protected endpoints.</p>
+<p>The platform API uses Bearer token authentication for protected endpoints.</p>
 
 <h3>Getting a Token</h3>
 <p>Authenticate with your email and password:</p>
@@ -703,7 +703,7 @@ SELECT id, 'API Authentication', 'authentication',
 <tr><td>429</td><td>Rate limit exceeded</td></tr>
 </tbody>
 </table>',
-'How to authenticate with the the platform API using tokens and API keys.', 0, TRUE
+'How to authenticate with the platform API using tokens and API keys.', 0, TRUE
 FROM documentation_categories WHERE slug = 'api-reference'
 ON CONFLICT DO NOTHING;
 

@@ -15,10 +15,13 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+const adminEmail = (process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com').trim();
+const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
+
 async function verifyAdmin() {
   try {
-    console.log('🔍 Checking database for admin@example.com...');
-    const res = await pool.query('SELECT id, email, role, password_hash FROM users WHERE email = $1', ['admin@example.com']);
+    console.log(`🔍 Checking database for ${adminEmail}...`);
+    const res = await pool.query('SELECT id, email, role, password_hash FROM users WHERE email = $1', [adminEmail]);
     
     if (res.rows.length > 0) {
       console.log('✅ User found in database:');
@@ -26,11 +29,11 @@ async function verifyAdmin() {
       console.log(`   Role: ${res.rows[0].role}`);
       console.log(`   Has Password Hash: ${!!res.rows[0].password_hash}`);
       
-      console.log('\n🔄 Attempting API Login with password "admin123"...');
+      console.log(`\n🔄 Attempting API Login...`);
       const loginRes = await fetch('http://localhost:3001/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'admin@example.com', password: 'admin123' })
+        body: JSON.stringify({ email: adminEmail, password: adminPassword })
       });
       
       if (loginRes.ok) {
@@ -44,7 +47,7 @@ async function verifyAdmin() {
       }
       
     } else {
-      console.log('❌ User admin@example.com NOT found in database.');
+      console.log(`❌ User ${adminEmail} NOT found in database.`);
     }
   } catch (err) {
     console.error('Error:', err);

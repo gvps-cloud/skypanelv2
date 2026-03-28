@@ -18,8 +18,8 @@ const pool = new Pool({
 
 async function ensureAdminUser() {
   try {
-    const email = 'admin@example.com';
-    const password = 'admin123';
+    const email = process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com';
+    const password = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
     const hashedPassword = await bcrypt.hash(password, 10);
     
     console.log(`Checking for user: ${email}`);

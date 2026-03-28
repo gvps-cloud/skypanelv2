@@ -32,6 +32,8 @@ SET content = REPLACE(content, 'GVPS.Cloud', 'the platform')
 WHERE content LIKE '%GVPS.Cloud%';
 
 -- Fix specific article titles that should be friendlier
+-- NOTE: This targets legacy databases that may have the old slug 'welcome-to-gvps-cloud'.
+-- Fresh installs seed with 'welcome-to-platform' so this is a no-op on new databases.
 UPDATE documentation_articles
 SET title   = 'Welcome to the Platform',
     slug    = 'welcome-to-platform',
@@ -62,6 +64,8 @@ WHERE slug = 'welcome' AND (title LIKE '%GVPS%' OR content LIKE '%GVPS.Cloud%');
 -- 3. Fix FAQ items — replace SkyPanelV2 brand name
 -- ============================================================================
 
+-- Legacy upgrade fix: old databases may have question = 'What is SkyPanelV2?'
+-- Fresh installs seed with 'What is this platform?' so this is a no-op on new databases.
 UPDATE faq_items
 SET question = 'What is this platform?',
     answer   = 'This is a cloud infrastructure platform that provides VPS hosting, dedicated servers, and managed services. It offers flexible, scalable solutions for businesses of all sizes.'

@@ -762,10 +762,12 @@ RDNS_BASE_DOMAIN=ip.rev.yourdomain.com
 
 ### Default Admin Credentials
 
-| Field | Value |
-|-------|-------|
-| Email | `admin@skypanelv2.com` |
-| Password | `admin123` |
+Credentials are configurable via `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` environment variables (set in `.env`).
+
+| Field | Default |
+|-------|---------|
+| Email | `admin@example.com` |
+| Password | `Admin123#` |
 
 ### Development Commands
 

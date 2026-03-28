@@ -1980,7 +1980,7 @@ class LinodeService {
    * This will set the rDNS to use the configured rDNS domain domain instead of linodeusercontent.com
    * This method is designed to run in the background without blocking VPS creation
    */
-  async setupCustomRDNSAsync(instanceId: number, label: string = `instance-${instanceId}`, baseDomain: string = 'ip.rev.example.com'): Promise<void> {
+  async setupCustomRDNSAsync(instanceId: number, label: string = `instance-${instanceId}`, baseDomain: string = config.RDNS_BASE_DOMAIN): Promise<void> {
     const logPrefix = `[rDNS-${instanceId}]`;
 
     try {

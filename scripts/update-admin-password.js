@@ -6,7 +6,9 @@ dotenv.config();
 const { Pool } = pg;
 
 async function run() {
-  console.log('🔐 Updating admin password hash to bcryptjs(12) for "admin123"...');
+  const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com';
+  const password = 'admin123';
+  console.log(`🔐 Updating admin password hash to bcryptjs(12) for admin user (${adminEmail})...`);
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
@@ -21,7 +23,7 @@ async function run() {
 
     const { rowCount } = await client.query(
       'UPDATE users SET password_hash = $1 WHERE email = $2',
-      [hash, 'admin@example.com']
+      [hash, adminEmail]
     );
 
     if (rowCount === 0) {
@@ -30,7 +32,7 @@ async function run() {
       console.log('✅ Admin password updated');
       const { rows } = await client.query(
         'SELECT password_hash FROM users WHERE email = $1',
-        ['admin@example.com']
+        [adminEmail]
       );
       const ok = await bcrypt.compare(password, rows[0].password_hash);
       console.log('🧪 Post-update compare("admin123") =>', ok);
