@@ -1322,11 +1322,6 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
-    "path": "/api/vps/linode/ssh-keys",
-    "protected": true
-  },
-  {
-    "method": "GET",
     "path": "/api/vps/networking/config",
     "protected": true
   },

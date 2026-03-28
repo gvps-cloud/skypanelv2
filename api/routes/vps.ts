@@ -1459,7 +1459,9 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
   }
 });
 
-// Get Linode SSH keys for the active organization
+// Get SSH keys for the active organization (organization-scoped for security)
+// SECURITY: This endpoint queries the local database to ensure organization isolation
+// and prevent cross-organization SSH key exposure.
 router.get("/providers/:providerId/ssh-keys", async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user?.id;
@@ -1479,94 +1481,31 @@ router.get("/providers/:providerId/ssh-keys", async (req: Request, res: Response
         .json({ error: "You do not have permission to view SSH keys" });
     }
 
-    const { providerId } = req.params;
-    const normalizedProviderId =
-      providerId === "active" || providerId === "default"
-        ? undefined
-        : providerId;
-    const token = await resolveProviderTokenOrRespond(
-      res,
-      "linode",
-      normalizedProviderId,
+    // SECURITY FIX: Query local database with organization scoping
+    // instead of fetching ALL keys from Linode API (which would expose cross-org keys)
+    const result = await query(
+      `SELECT id, name, public_key, fingerprint, linode_key_id, created_at
+       FROM user_ssh_keys
+       WHERE organization_id = $1
+       ORDER BY created_at DESC`,
+      [organizationId]
     );
-    if (!token) {
-      return;
-    }
 
-    const keys = await linodeService.getSSHKeys(token);
+    // Map to expected format for LinodeConfiguration component
+    const keys = result.rows.map(row => ({
+      id: row.linode_key_id || row.id,
+      label: row.name,
+      ssh_key: row.public_key,
+      fingerprint: row.fingerprint,
+      created: row.created_at,
+    }));
+
     return res.json({ ssh_keys: keys });
   } catch (err: any) {
     console.error("SSH keys fetch error:", err);
     return res
       .status(500)
       .json({ error: err.message || "Failed to fetch SSH keys" });
-  }
-});
-
-router.get("/linode/ssh-keys", async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user?.id;
-    const organizationId = (req as any).user?.organizationId;
-
-    if (!userId || !organizationId) {
-      res.status(401).json({ error: "Authentication required" });
-      return;
-    }
-
-    const canViewKeys = await RoleService.checkPermission(
-      userId,
-      organizationId,
-      "ssh_keys_view",
-    );
-
-    if (!canViewKeys) {
-      res.status(403).json({ error: "You do not have permission to view SSH keys" });
-      return;
-    }
-
-    const apiToken = await resolveProviderTokenOrRespond(res, "linode");
-    if (!apiToken) {
-      return;
-    }
-
-    // Fetch all SSH keys from Linode API
-    const allLinodeKeys = await linodeService.getSSHKeys(apiToken);
-
-    // Get organization SSH keys from database to filter
-    const organizationKeysResult = await query(
-      `SELECT linode_key_id
-       FROM user_ssh_keys
-       WHERE organization_id = $1 AND linode_key_id IS NOT NULL`,
-      [organizationId],
-    );
-
-    // Create a set of organization Linode key IDs for efficient filtering
-    const organizationLinodeKeyIds = new Set(
-      organizationKeysResult.rows.map((row: any) => String(row.linode_key_id)),
-    );
-
-    // Filter Linode keys to only include organization keys
-    const filteredKeys = allLinodeKeys.filter((key: any) =>
-      organizationLinodeKeyIds.has(String(key.id)),
-    );
-
-    res.json({
-      ssh_keys: filteredKeys,
-      total: filteredKeys.length,
-    });
-  } catch (err: any) {
-    console.error("Linode SSH keys fetch error:", err);
-
-    // Determine appropriate status code
-    const statusCode = err.status || err.statusCode || 500;
-
-    res.status(statusCode).json({
-      error: {
-        code: err.code || "API_ERROR",
-        message: err.message || "Failed to fetch SSH keys",
-        provider: "linode",
-      },
-    });
   }
 });
 
