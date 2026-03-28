@@ -199,30 +199,8 @@ FROM documentation_categories WHERE slug = 'vps-guide'
 ON CONFLICT DO NOTHING;
 
 -- API Reference articles
-INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
-SELECT id, 'API Authentication', 'api-authentication',
-'<h2>API Authentication</h2>
-<p>All authenticated API requests require a Bearer token in the Authorization header.</p>
-<h3>Getting a Token</h3>
-<pre><code>POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "you@example.com",
-  "password": "your-password"
-}</code></pre>
-<h3>Using the Token</h3>
-<pre><code>GET /api/vps
-Authorization: Bearer YOUR_TOKEN_HERE</code></pre>
-<h3>Token Expiry</h3>
-<p>Tokens expire after 7 days. Use the refresh endpoint to get a new token:</p>
-<pre><code>POST /api/auth/refresh
-Authorization: Bearer YOUR_TOKEN_HERE</code></pre>
-<h3>API Keys</h3>
-<p>You can also create long-lived API keys in <strong>Settings → API Keys</strong> for programmatic access.</p>',
-'How to authenticate with the platform API.', 0, TRUE
-FROM documentation_categories WHERE slug = 'api-reference'
-ON CONFLICT DO NOTHING;
+-- NOTE: API Authentication article is seeded by migration 038 with slug 'authentication'.
+-- Do not add a duplicate here.
 
 INSERT INTO documentation_articles (category_id, title, slug, content, summary, display_order, is_active)
 SELECT id, 'API Endpoints Overview', 'api-endpoints-overview',
