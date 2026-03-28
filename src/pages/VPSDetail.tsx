@@ -952,8 +952,8 @@ const VPSDetail: React.FC = () => {
   const accountQuotaGb = accountTransferInfo?.quotaGb ?? null;
   const accountUsedGb = accountTransferInfo?.usedGb ?? null;
   const accountBillableGb = accountTransferInfo?.billableGb ?? null;
-  const usageQuotaGb = accountQuotaGb ?? undefined ?? transferQuotaGb;
-  const usageUsedGb = accountUsedGb ?? undefined ?? transferUsedGb;
+  const usageQuotaGb = accountQuotaGb ?? transferQuotaGb;
+  const usageUsedGb = accountUsedGb ?? transferUsedGb;
   const transferUsagePercent =
     usageQuotaGb > 0
       ? Math.min(100, Math.max(0, (usageUsedGb / usageQuotaGb) * 100))

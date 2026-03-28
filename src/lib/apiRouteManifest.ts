@@ -537,6 +537,26 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/admin/ssh-keys",
+    "protected": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/ssh-keys",
+    "protected": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/ssh-keys/:keyId",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/ssh-keys/:keyId",
+    "protected": true
+  },
+  {
+    "method": "GET",
     "path": "/api/admin/stackscripts/configs",
     "protected": true
   },
@@ -1038,6 +1058,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "PUT",
     "path": "/api/organizations/:id/roles/:roleId",
+    "protected": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/organizations/all",
     "protected": true
   },
   {
