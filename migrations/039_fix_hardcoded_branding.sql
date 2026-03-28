@@ -110,9 +110,11 @@ DELETE FROM documentation_articles WHERE slug = 'plans-regions';
 -- ============================================================================
 
 -- Only delete if the new (comprehensive) version already exists
-DELETE FROM documentation_articles
-WHERE slug IN ('connecting-to-your-vps', 'rebuilding-your-vps')
-  AND EXISTS (
-    SELECT 1 FROM documentation_articles
-    WHERE slug IN ('connecting', 'rebuilding')
-  );
+-- Delete legacy short articles only if the comprehensive version exists for each
+DELETE FROM documentation_articles AS old
+WHERE (old.slug = 'connecting-to-your-vps' AND EXISTS (
+         SELECT 1 FROM documentation_articles WHERE slug = 'connecting'
+      ))
+   OR (old.slug = 'rebuilding-your-vps' AND EXISTS (
+         SELECT 1 FROM documentation_articles WHERE slug = 'rebuilding'
+      ));

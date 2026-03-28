@@ -5,6 +5,10 @@
  * This ensures that documentation articles, FAQ items, contact methods, and
  * networking config all reflect the configured brand — not hardcoded defaults.
  *
+ * The script is rerunnable: on subsequent runs it reads the previously stored
+ * brand name from platform_settings so that changing BRAND_NAME in .env will
+ * correctly replace the old brand throughout the database.
+ *
  * Usage:
  *   node scripts/seed-branding.js
  *
@@ -50,15 +54,27 @@ const SUPPORT_EMAIL =
   'support@example.com';
 
 async function seedBranding() {
+  let client;
   console.log(`🎨 Seeding branding configuration...`);
   console.log(`   Brand name  : ${BRAND_NAME}`);
   console.log(`   rDNS domain : ${RDNS_DOMAIN}`);
   console.log(`   Support email: ${SUPPORT_EMAIL}\n`);
 
-  const client = await pool.connect();
-
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
+
+    // ─── 0. Read the previously stored brand name (if any) ──────────
+    let previousBrand = null;
+    const prevResult = await client.query(
+      `SELECT value->>'company_name' AS brand FROM platform_settings WHERE key = 'branding'`
+    );
+    if (prevResult.rows.length > 0 && prevResult.rows[0].brand) {
+      previousBrand = prevResult.rows[0].brand;
+    }
+    if (previousBrand) {
+      console.log(`   Previous brand: ${previousBrand} (will be replaced)`);
+    }
 
     // ─── 1. Update platform_settings branding entry ──────────────────
     const brandingJSON = JSON.stringify({
@@ -76,45 +92,56 @@ async function seedBranding() {
     console.log('✅ platform_settings.branding updated');
 
     // ─── 2. Update documentation articles ────────────────────────────
-    // Replace generic "the platform" references with the actual brand name
-    const docResult = await client.query(`
-      UPDATE documentation_articles
-      SET title   = REPLACE(title,   'the platform', $1::text),
-          content = REPLACE(content, 'the platform', $1::text),
-          summary = REPLACE(summary, 'the platform', $1::text)
-      WHERE title   LIKE '%the platform%'
-         OR content LIKE '%the platform%'
-         OR summary LIKE '%the platform%'
-    `, [BRAND_NAME]);
-    console.log(`✅ documentation_articles: ${docResult.rowCount} rows updated`);
+    // Replace generic "the platform" placeholder AND any previous brand name
+    const placeholders = ['the platform'];
+    if (previousBrand && previousBrand !== 'the platform') {
+      placeholders.push(previousBrand);
+    }
+
+    for (const placeholder of placeholders) {
+      const docResult = await client.query(`
+        UPDATE documentation_articles
+        SET title   = REPLACE(title,   $1::text, $2::text),
+            content = REPLACE(content, $1::text, $2::text),
+            summary = REPLACE(summary, $1::text, $2::text)
+        WHERE title   LIKE '%' || $1::text || '%'
+           OR content LIKE '%' || $1::text || '%'
+           OR summary LIKE '%' || $1::text || '%'
+      `, [placeholder, BRAND_NAME]);
+      console.log(`✅ documentation_articles (${placeholder} → ${BRAND_NAME}): ${docResult.rowCount} rows updated`);
+    }
 
     // Clean up any "the the" → "the" artifacts from the replacement above
     await client.query(`
       UPDATE documentation_articles
       SET content = REPLACE(content, 'the the ', 'the '),
-          summary = REPLACE(summary, 'the the ', 'the ')
+          summary = REPLACE(summary, 'the the ', 'the '),
+          title   = REPLACE(title,   'the the ', 'the ')
       WHERE content LIKE '%the the %'
          OR summary LIKE '%the the %'
+         OR title   LIKE '%the the %'
     `);
 
-    // Fix specific welcome article title/slug
+    // Fix specific welcome article title/slug (only the generic placeholder variant)
     const welcomeSlug = 'welcome-to-' + BRAND_NAME.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     await client.query(`
       UPDATE documentation_articles
       SET title = $1::text,
           slug  = $2::text
-      WHERE slug IN ('welcome-to-platform', 'welcome')
+      WHERE slug = 'welcome-to-platform'
     `, [`Welcome to ${BRAND_NAME}`, welcomeSlug]);
 
     // ─── 3. Update FAQ items ─────────────────────────────────────────
-    const faqResult = await client.query(`
-      UPDATE faq_items
-      SET question = REPLACE(question, 'this platform', $1::text),
-          answer   = REPLACE(answer,   'this platform', $1::text)
-      WHERE question LIKE '%this platform%'
-         OR answer   LIKE '%this platform%'
-    `, [BRAND_NAME]);
-    console.log(`✅ faq_items: ${faqResult.rowCount} rows updated`);
+    for (const placeholder of placeholders) {
+      const faqResult = await client.query(`
+        UPDATE faq_items
+        SET question = REPLACE(question, $1::text, $2::text),
+            answer   = REPLACE(answer,   $1::text, $2::text)
+        WHERE question LIKE '%' || $1::text || '%'
+           OR answer   LIKE '%' || $1::text || '%'
+      `, [placeholder === 'the platform' ? 'this platform' : placeholder, BRAND_NAME]);
+      console.log(`✅ faq_items (${placeholder}): ${faqResult.rowCount} rows updated`);
+    }
 
     // ─── 4. Update contact methods email ─────────────────────────────
     const contactResult = await client.query(`
@@ -142,11 +169,13 @@ async function seedBranding() {
     console.log('\n🎉 Branding seed complete!');
 
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch (_) { /* ignore rollback error */ }
+    }
     console.error('❌ Branding seed failed:', error);
     process.exit(1);
   } finally {
-    client.release();
+    client?.release();
     await pool.end();
   }
 }

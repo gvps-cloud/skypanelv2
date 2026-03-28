@@ -757,7 +757,6 @@ RDNS_BASE_DOMAIN=ip.rev.yourdomain.com
 ```
 
 > ⚠️ **Branding**: After setting the env vars above, run `node scripts/seed-branding.js` to update the database with your brand name in documentation articles, FAQ items, contact methods, and networking config. Migrations use generic placeholders; this script replaces them with your configured values.
->
 > For the complete environment variable reference, see [`repo-docs/ENVIRONMENT_VARIABLES.md`](./repo-docs/ENVIRONMENT_VARIABLES.md) and [`.env.example`](./.env.example).
 
 ### Default Admin Credentials
