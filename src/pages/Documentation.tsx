@@ -371,9 +371,9 @@ export default function Documentation() {
     fetchArticle();
   }, [articleSlug, categorySlug]);
 
-  // Fetch plans & regions for the plans-regions article
+  // Fetch plans & regions for the plans-regions and creating-your-first-vps articles
   useEffect(() => {
-    if (articleSlug !== "plans-regions") return;
+    if (articleSlug !== "plans-regions" && articleSlug !== "creating-your-first-vps") return;
 
     const fetchPlansAndRegions = async () => {
       try {
@@ -568,45 +568,143 @@ export default function Documentation() {
     return "bg-red-500 text-white dark:text-white";
   };
 
+  // ── Shared plan table renderer ────────────────────────────────────────────
+
+  const renderPlanTable = (plans: typeof vpsPlans) => (
+    <div className="overflow-x-auto rounded-lg border">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b bg-muted/50">
+            <th className="px-4 py-3 text-left font-medium">Plan</th>
+            <th className="px-4 py-3 text-left font-medium">vCPUs</th>
+            <th className="px-4 py-3 text-left font-medium">RAM</th>
+            <th className="px-4 py-3 text-left font-medium">Storage</th>
+            <th className="px-4 py-3 text-left font-medium">Transfer</th>
+            <th className="px-4 py-3 text-right font-medium">Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          {plans.map((plan) => {
+            const specs = plan.specifications || {};
+            const vcpus = Number(specs.vcpus ?? specs.cpu_cores ?? 0);
+            const memory = Number(specs.memory ?? specs.memory_gb ?? 0);
+            const disk = Number(specs.disk ?? specs.storage_gb ?? 0);
+            const transfer = Number(specs.transfer ?? specs.transfer_gb ?? specs.bandwidth_gb ?? 0);
+            const price = Number(plan.base_price || 0) + Number(plan.markup_price || 0);
+            return (
+              <tr key={plan.id} className="border-b last:border-0 hover:bg-muted/30">
+                <td className="px-4 py-3 font-medium">{plan.name}</td>
+                <td className="px-4 py-3">{vcpus}</td>
+                <td className="px-4 py-3">{formatMemory(memory)}</td>
+                <td className="px-4 py-3">{formatStorage(disk)}</td>
+                <td className="px-4 py-3">{formatTransfer(transfer)}</td>
+                <td className="px-4 py-3 text-right font-medium">${price.toFixed(2)}/mo</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  // ── Render: Creating Your First VPS article (dynamic plans) ──────────────
+
+  const renderCreatingVpsArticle = (article: DocumentationArticleWithFiles) => {
+    const MARKER = "<!-- VPS_PLANS_TABLE -->";
+    const parts = article.content
+      ? article.content.split(MARKER)
+      : ["", ""];
+
+    return (
+      <article className="max-w-3xl">
+        <Breadcrumb
+          category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
+          article={article.title}
+        />
+        <h1 className="text-2xl font-bold tracking-tight mb-3">{article.title}</h1>
+        {article.summary && (
+          <p className="text-muted-foreground text-lg mb-8">{article.summary}</p>
+        )}
+
+        {/* Content before the plans table marker */}
+        {parts[0] && (
+          <div
+            className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm mb-6"
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(parts[0], { USE_PROFILES: { html: true } }),
+            }}
+          />
+        )}
+
+        {/* Dynamic plans table (same as plans-regions) */}
+        <div className="mb-6">
+          {loadingPlansRegions ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : vpsPlans.length === 0 ? (
+            <div className="rounded-lg border bg-muted/30 py-8 text-center">
+              <p className="text-sm text-muted-foreground">No VPS plans are currently configured.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {groupedPlans.map(([typeClass, plans]) => (
+                <div key={typeClass}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Cpu className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold">{getCategoryLabel(typeClass)}</h3>
+                    <Badge variant="secondary" className="text-[10px] px-1.5">
+                      {plans.length} plan{plans.length !== 1 ? "s" : ""}
+                    </Badge>
+                  </div>
+                  {renderPlanTable(plans)}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Content after the plans table marker */}
+        {parts[1] && (
+          <div
+            className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm"
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(parts[1], { USE_PROFILES: { html: true } }),
+            }}
+          />
+        )}
+
+        {/* File attachments */}
+        {article.files && article.files.length > 0 && (
+          <div className="mt-10 border-t pt-6">
+            <h3 className="text-sm font-semibold mb-3">Attachments</h3>
+            <div className="space-y-2">
+              {article.files.map((file) => (
+                <a
+                  key={file.id}
+                  href={`/api/documentation/files/${file.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent transition-colors"
+                >
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
+                  <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
+                  <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+      </article>
+    );
+  };
+
   // ── Render: Plans & Regions article ──────────────────────────────────────
 
   const renderPlansRegionsArticle = (article: DocumentationArticleWithFiles) => {
-    const renderPlanTable = (plans: typeof vpsPlans) => (
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium">Plan</th>
-              <th className="px-4 py-3 text-left font-medium">vCPUs</th>
-              <th className="px-4 py-3 text-left font-medium">RAM</th>
-              <th className="px-4 py-3 text-left font-medium">Storage</th>
-              <th className="px-4 py-3 text-left font-medium">Transfer</th>
-              <th className="px-4 py-3 text-right font-medium">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            {plans.map((plan) => {
-              const specs = plan.specifications || {};
-              const vcpus = Number(specs.vcpus ?? specs.cpu_cores ?? 0);
-              const memory = Number(specs.memory ?? specs.memory_gb ?? 0);
-              const disk = Number(specs.disk ?? specs.storage_gb ?? 0);
-              const transfer = Number(specs.transfer ?? specs.transfer_gb ?? specs.bandwidth_gb ?? 0);
-              const price = Number(plan.base_price || 0) + Number(plan.markup_price || 0);
-              return (
-                <tr key={plan.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium">{plan.name}</td>
-                  <td className="px-4 py-3">{vcpus}</td>
-                  <td className="px-4 py-3">{formatMemory(memory)}</td>
-                  <td className="px-4 py-3">{formatStorage(disk)}</td>
-                  <td className="px-4 py-3">{formatTransfer(transfer)}</td>
-                  <td className="px-4 py-3 text-right font-medium">${price.toFixed(2)}/mo</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    );
 
     return (
       <article className="max-w-3xl">
@@ -899,6 +997,8 @@ export default function Documentation() {
     </div>
   ) : selectedArticle && articleSlug === "plans-regions" ? (
     renderPlansRegionsArticle(selectedArticle)
+  ) : selectedArticle && articleSlug === "creating-your-first-vps" ? (
+    renderCreatingVpsArticle(selectedArticle)
   ) : selectedArticle ? (
     renderArticle(selectedArticle)
   ) : isApiReferenceCategory ? (
