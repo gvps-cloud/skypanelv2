@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   RefreshCw,
-  Database,
   AlertCircle,
   Server,
   MapPin,
@@ -39,6 +38,13 @@ interface ServiceComponent {
   icon: React.ComponentType<{ className?: string }>;
   instances?: number;
   description: string;
+  // BetterStack monitor fields
+  availability?: number;
+  statusHistory?: Array<{
+    day: string;
+    status: string;
+    downtimeDuration: number;
+  }>;
 }
 
 interface IncidentUpdate {
@@ -392,7 +398,7 @@ export default function Status() {
       }
       setRegions(regionsData_);
 
-      // Update services with live data
+      // Update services with live data (BetterStack monitors will be added after fetch)
       const liveServices: ServiceComponent[] = [
         {
           name: "VPS Infrastructure",
@@ -400,13 +406,6 @@ export default function Status() {
           icon: Server,
           instances: vpsCount,
           description: `Virtual Private Server provisioning and management${vpsCount > 0 ? ` (${vpsRunning} running, ${vpsStopped} stopped)` : ''}`
-        },
-        {
-          name: "Database Services",
-          status: "operational",
-          icon: Database,
-          instances: 1,
-          description: "PostgreSQL database backend"
         },
         {
           name: "Regions",
@@ -434,6 +433,20 @@ export default function Status() {
           setBsStatusReports(uptimeData.statusReports ?? []);
           setBsCachedAt(uptimeData.cachedAt);
           setBsStale(uptimeData.stale ?? false);
+          
+          // Merge BetterStack monitors into services (build fresh array to avoid Strict Mode duplicates)
+          const monitors = uptimeData.monitors ?? [];
+          if (monitors.length > 0) {
+            const monitorServices: ServiceComponent[] = monitors.map((monitor: BetterStackMonitor) => ({
+              name: monitor.name,
+              status: monitor.status as ServiceStatus,
+              icon: Shield,
+              description: `${getAvailabilityLabel(monitor.availability)} availability`,
+              availability: monitor.availability,
+              statusHistory: monitor.statusHistory,
+            }));
+            setServices([...liveServices, ...monitorServices]);
+          }
         } else {
           setBsConfigured(false);
         }
@@ -453,13 +466,6 @@ export default function Status() {
           icon: Server,
           instances: 0,
           description: "Virtual Private Server provisioning and management"
-        },
-        {
-          name: "Database Services",
-          status: "operational",
-          icon: Database,
-          instances: 1,
-          description: "PostgreSQL database backend"
         },
       ];
       setServices(fallbackServices);
@@ -755,76 +761,6 @@ export default function Status() {
         </section>
       )}
 
-      {/* Better Stack — Monitors */}
-      {bsConfigured && bsMonitors.length > 0 && (
-        <section className="mt-12 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Shield className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-2xl font-semibold">External Monitoring</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">Better Stack</Badge>
-              <Badge variant={bsMonitors.every(m => m.status === "operational") ? "default" : "destructive"}>
-                {bsMonitors.filter(m => m.status === "operational").length}/{bsMonitors.length} operational
-              </Badge>
-            </div>
-          </div>
-          <Card className="shadow-sm">
-            <CardContent className="divide-y">
-              {bsMonitors.map((monitor) => (
-                <div key={monitor.id} className="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className={`h-3 w-3 rounded-full flex-shrink-0 ${
-                      monitor.status === "operational" ? "bg-green-500" :
-                      monitor.status === "degraded" ? "bg-yellow-500" :
-                      monitor.status === "downtime" ? "bg-red-500" :
-                      "bg-blue-500"
-                    }`} />
-                    <div className="min-w-0">
-                      <h3 className="font-semibold truncate">{monitor.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {monitor.status === "operational" ? "Operational" :
-                         monitor.status === "degraded" ? "Degraded Performance" :
-                         monitor.status === "downtime" ? "Service Down" :
-                         "Scheduled Maintenance"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {/* 90-day availability bar */}
-                    {monitor.statusHistory.length > 0 && (
-                      <div className="hidden md:flex items-center gap-1.5" title="90-day availability">
-                        <div className="flex gap-px">
-                          {monitor.statusHistory.slice(-90).map((day, idx) => (
-                            <div
-                              key={idx}
-                              className={`w-1.5 h-5 rounded-sm ${
-                                day.status === "operational"
-                                  ? "bg-green-500"
-                                  : day.status === "degraded"
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
-                              }`}
-                              title={`${day.day}: ${day.status}${day.downtimeDuration > 0 ? ` (${formatDuration(day.downtimeDuration)} downtime)` : ""}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {/* Availability percentage */}
-                    <div className="text-right">
-                      <div className="text-sm font-semibold">{getAvailabilityLabel(monitor.availability)}</div>
-                      <div className="text-xs text-muted-foreground">availability</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </section>
-      )}
-
       {/* Better Stack — Incident History (last 30 days) */}
       {bsConfigured && bsIncidentsHistory.length > 0 && (
         <section className="mt-12 space-y-4">
@@ -910,8 +846,8 @@ export default function Status() {
                 </div>
               </div>
             ) : (
-              services.map((service) => (
-                <div key={service.name} className="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+              services.map((service, idx) => (
+                <div key={`${service.name}-${idx}`} className="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
                   <div className="flex flex-1 items-start gap-4">
                     <service.icon className="mt-1 h-8 w-8 text-muted-foreground" />
                     <div className="space-y-1">
@@ -922,7 +858,36 @@ export default function Status() {
                       )}
                     </div>
                   </div>
-                  <StatusDot variant={service.status === "operational" ? "running" : service.status === "degraded" ? "warning" : service.status === "maintenance" ? "loading" : "error"} label={getStatusLabel(service.status)} showPing={service.status === "operational"} className="md:justify-end" />
+                  <div className="flex items-center gap-4">
+                    {/* 90-day availability bar for BetterStack monitors */}
+                    {service.statusHistory && service.statusHistory.length > 0 && (
+                      <div className="hidden md:flex items-center gap-1.5" title="90-day availability">
+                        <div className="flex gap-px">
+                          {service.statusHistory.slice(-90).map((day, idx) => (
+                            <div
+                              key={idx}
+                              className={`w-1.5 h-5 rounded-sm ${
+                                day.status === "operational"
+                                  ? "bg-green-500"
+                                  : day.status === "degraded"
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
+                              }`}
+                              title={`${day.day}: ${day.status}${day.downtimeDuration > 0 ? ` (${formatDuration(day.downtimeDuration)} downtime)` : ""}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Availability percentage badge for BetterStack monitors */}
+                    {service.availability !== undefined && (
+                      <div className="text-right">
+                        <div className="text-sm font-semibold">{getAvailabilityLabel(service.availability)}</div>
+                        <div className="text-xs text-muted-foreground">availability</div>
+                      </div>
+                    )}
+                    <StatusDot variant={service.status === "operational" ? "running" : service.status === "degraded" ? "warning" : service.status === "maintenance" ? "loading" : "error"} label={getStatusLabel(service.status)} showPing={service.status === "operational"} className="md:justify-end" />
+                  </div>
                 </div>
               ))
             )}
