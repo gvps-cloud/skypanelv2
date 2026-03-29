@@ -6,6 +6,7 @@ import {
   Server,
   Lock,
   Code2,
+  Key,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,15 +28,31 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BRAND_NAME } from "@/lib/brand";
 import {
   type SectionDefinition,
+  type EndpointDefinition,
   methodStyles,
   formatJson,
   syncSectionsWithActiveRoutes,
   buildBaseSections,
   buildCurlCommand,
 } from "@/lib/apiDocsShared";
+import { ApiKeyInput } from "@/components/api-docs/ApiKeyInput";
+import { RequestBuilder } from "@/components/api-docs/RequestBuilder";
+import { ResponseViewer } from "@/components/api-docs/ResponseViewer";
+import { executeRequest, validateApiKey } from "@/lib/apiDocsTryIt";
+
+// Response state type
+interface ResponseState {
+  status: number | null;
+  statusText: string | null;
+  duration: number | null;
+  data: unknown;
+  error: string | null;
+  headers?: Record<string, string>;
+}
 
 export default function ApiDocs() {
   const apiBase = (
@@ -45,6 +62,10 @@ export default function ApiDocs() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  // Per-endpoint response tracking - each endpoint has its own response displayed inline
+  const [responses, setResponses] = useState<Map<string, ResponseState>>(new Map());
+  const [executingEndpoint, setExecutingEndpoint] = useState<string | null>(null);
 
   const baseSections = useMemo<SectionDefinition[]>(() => buildBaseSections(apiBase), [apiBase]);
   const sections = useMemo(
@@ -88,6 +109,74 @@ export default function ApiDocs() {
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, [sections]);
+
+  // Validate API key
+  const handleValidateApiKey = useCallback(async (key: string) => {
+    return validateApiKey(key);
+  }, []);
+
+  // Execute API request - stores response per-endpoint for inline display
+  const handleExecuteRequest = useCallback(async (
+    endpointKey: string,
+    request: { method: string; url: string; body?: unknown; params?: Record<string, string> }
+  ) => {
+    if (!apiKey) {
+      toast.error("Please enter an API key first");
+      return;
+    }
+
+    setExecutingEndpoint(endpointKey);
+    // Clear previous response for this endpoint
+    setResponses((prev) => {
+      const next = new Map(prev);
+      next.set(endpointKey, { status: null, statusText: null, duration: null, data: null, error: null });
+      return next;
+    });
+
+    try {
+      const result = await executeRequest({
+        ...request,
+        apiKey,
+      });
+
+      setResponses((prev) => {
+        const next = new Map(prev);
+        next.set(endpointKey, {
+          status: result.status,
+          statusText: result.statusText,
+          duration: result.duration,
+          data: result.data,
+          error: result.error || null,
+          headers: result.headers,
+        });
+        return next;
+      });
+
+      if (result.error) {
+        toast.error(result.error);
+      } else if (result.status >= 200 && result.status < 300) {
+        toast.success(`Request successful (${result.status})`);
+      } else {
+        toast.warning(`Request returned ${result.status}`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Request failed";
+      setResponses((prev) => {
+        const next = new Map(prev);
+        next.set(endpointKey, {
+          status: 0,
+          statusText: "Error",
+          duration: null,
+          data: null,
+          error: errorMessage,
+        });
+        return next;
+      });
+      toast.error(errorMessage);
+    } finally {
+      setExecutingEndpoint(null);
+    }
+  }, [apiKey]);
 
   const handleCopy = useCallback(async (value: string, label: string) => {
     try {
@@ -139,7 +228,7 @@ export default function ApiDocs() {
               {BRAND_NAME} API Documentation
             </h1>
             <p className="text-sm text-muted-foreground">
-              Complete reference for all backend endpoints. Copy ready-to-use cURL examples.
+              Complete reference for all backend endpoints. Test endpoints directly with your API key.
             </p>
           </div>
         </div>
@@ -156,6 +245,26 @@ export default function ApiDocs() {
           />
         </div>
       </div>
+
+      {/* API Key Input */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Key className="h-4 w-4" />
+            Interactive Testing
+          </CardTitle>
+          <CardDescription>
+            Enter your API key to test endpoints directly from this page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ApiKeyInput
+            apiKey={apiKey}
+            onApiKeyChange={setApiKey}
+            onValidate={handleValidateApiKey}
+          />
+        </CardContent>
+      </Card>
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
@@ -423,6 +532,25 @@ export default function ApiDocs() {
                             )}
                           </TabsContent>
                         </Tabs>
+
+                        {/* Try It Section */}
+                        {endpoint.auth && (
+                          <div className="mt-4 pt-4 border-t">
+                            <RequestBuilder
+                              endpoint={endpoint}
+                              apiBase={section.base}
+                              apiKey={apiKey}
+                              onExecute={(request) =>
+                                handleExecuteRequest(
+                                  `${section.title}-${endpoint.path}-${index}`,
+                                  request
+                                )
+                              }
+                              isLoading={executingEndpoint === `${section.title}-${endpoint.path}-${index}`}
+                              response={responses.get(`${section.title}-${endpoint.path}-${index}`)}
+                            />
+                          </div>
+                        )}
                       </AccordionContent>
                     </AccordionItem>
                   ))}

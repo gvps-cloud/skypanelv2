@@ -1,53 +1,10 @@
 {
-  "generatedAt": "2026-03-23T04:01:13.652Z",
-  "actualCount": 254,
-  "actualProtectedCount": 230,
-  "docsCount": 250,
-  "docsProtectedCount": 226,
-  "missingInDocs": [
-    {
-      "method": "GET",
-      "path": "/api/admin/platform/region-labels",
-      "protected": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/platform/region-labels/:regionId",
-      "protected": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/platform/region-labels/:regionId",
-      "protected": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/platform/region-labels/:regionId",
-      "protected": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/platform/region-labels/bulk",
-      "protected": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/egress/credits/purchase/wallet",
-      "protected": true,
-      "source": "api\\routes\\egress.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/egress/credits/wallet-balance",
-      "protected": true,
-      "source": "api\\routes\\egress.ts"
-    }
-  ],
+  "generatedAt": "2026-03-29T00:36:01.255Z",
+  "actualCount": 276,
+  "actualProtectedCount": 248,
+  "docsCount": 279,
+  "docsProtectedCount": 251,
+  "missingInDocs": [],
   "staleInDocs": [],
   "authMismatches": [],
   "incompleteDocs": [
@@ -255,20 +212,6 @@
       ]
     },
     {
-      "key": "GET /api/vps/images",
-      "section": "VPS Catalog & Integrations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/vps/linode/ssh-keys",
-      "section": "VPS Catalog & Integrations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
       "key": "GET /api/vps/apps",
       "section": "VPS Catalog & Integrations",
       "issues": [
@@ -325,6 +268,13 @@
       ]
     },
     {
+      "key": "GET /api/egress/credits/wallet-balance",
+      "section": "Egress & Network Billing",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
       "key": "GET /api/egress/usage/:vpsId",
       "section": "Egress & Network Billing",
       "issues": [
@@ -340,6 +290,13 @@
     },
     {
       "key": "GET /api/organizations",
+      "section": "Organizations",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/organizations/all",
       "section": "Organizations",
       "issues": [
         "missing_params"
@@ -669,6 +626,27 @@
       ]
     },
     {
+      "key": "GET /api/admin/platform/region-labels",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/admin/platform/region-labels/:regionId",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "DELETE /api/admin/platform/region-labels/:regionId",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_body"
+      ]
+    },
+    {
       "key": "GET /api/admin/theme",
       "section": "Admin Platform Management",
       "issues": [
@@ -757,6 +735,69 @@
       "section": "Admin Platform Management",
       "issues": [
         "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/admin/documentation/categories",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "DELETE /api/admin/documentation/categories/:id",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_body"
+      ]
+    },
+    {
+      "key": "GET /api/admin/documentation/articles",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/admin/documentation/articles/:id",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "DELETE /api/admin/documentation/articles/:id",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_body"
+      ]
+    },
+    {
+      "key": "DELETE /api/admin/documentation/files/:id",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_body"
+      ]
+    },
+    {
+      "key": "GET /api/admin/ssh-keys",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/admin/ssh-keys/:keyId",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "DELETE /api/admin/ssh-keys/:keyId",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_body"
       ]
     },
     {
@@ -1026,6 +1067,34 @@
       ]
     },
     {
+      "key": "GET /api/documentation/categories",
+      "section": "Documentation",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/documentation/categories/:slug",
+      "section": "Documentation",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/documentation/articles/:slug",
+      "section": "Documentation",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/documentation/files/:id",
+      "section": "Documentation",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
       "key": "POST /api/egress/admin/billing/run",
       "section": "Admin Egress Management",
       "issues": [
@@ -1251,6 +1320,84 @@
       "path": "/api/admin/contact/methods/:method_type",
       "protected": true,
       "source": "api\\routes\\admin\\contact.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/documentation/articles",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/documentation/articles",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/documentation/articles/:id",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/documentation/articles/:id",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/documentation/articles/:id",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/documentation/articles/:id/files",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/documentation/articles/reorder",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/documentation/categories",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/documentation/categories",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/documentation/categories/:id",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/documentation/categories/:id",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/documentation/categories/reorder",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/documentation/files/:id",
+      "protected": true,
+      "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "POST",
@@ -1608,6 +1755,30 @@
     },
     {
       "method": "GET",
+      "path": "/api/admin/ssh-keys",
+      "protected": true,
+      "source": "api\\routes\\admin\\sshKeys.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/ssh-keys",
+      "protected": true,
+      "source": "api\\routes\\admin\\sshKeys.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/ssh-keys/:keyId",
+      "protected": true,
+      "source": "api\\routes\\admin\\sshKeys.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/ssh-keys/:keyId",
+      "protected": true,
+      "source": "api\\routes\\admin\\sshKeys.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/admin/stackscripts/configs",
       "protected": true,
       "source": "api\\routes\\admin.ts"
@@ -1871,6 +2042,30 @@
       "source": "api\\routes\\contact.ts"
     },
     {
+      "method": "GET",
+      "path": "/api/documentation/articles/:slug",
+      "protected": false,
+      "source": "api\\routes\\documentation.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/documentation/categories",
+      "protected": false,
+      "source": "api\\routes\\documentation.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/documentation/categories/:slug",
+      "protected": false,
+      "source": "api\\routes\\documentation.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/documentation/files/:id",
+      "protected": false,
+      "source": "api\\routes\\documentation.ts"
+    },
+    {
       "method": "POST",
       "path": "/api/egress/admin/billing/run",
       "protected": true,
@@ -1927,12 +2122,6 @@
     {
       "method": "POST",
       "path": "/api/egress/credits/purchase",
-      "protected": true,
-      "source": "api\\routes\\egress.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/egress/credits/purchase/complete",
       "protected": true,
       "source": "api\\routes\\egress.ts"
     },
@@ -2191,6 +2380,12 @@
     {
       "method": "PUT",
       "path": "/api/organizations/:id/roles/:roleId",
+      "protected": true,
+      "source": "api\\routes\\organizations.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/organizations/all",
       "protected": true,
       "source": "api\\routes\\organizations.ts"
     },
@@ -2508,6 +2703,12 @@
     },
     {
       "method": "POST",
+      "path": "/api/vps/:id/rebuild",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "POST",
       "path": "/api/vps/:id/shutdown",
       "protected": true,
       "source": "api\\routes\\vps.ts"
@@ -2521,12 +2722,6 @@
     {
       "method": "GET",
       "path": "/api/vps/images",
-      "protected": true,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/linode/ssh-keys",
       "protected": true,
       "source": "api\\routes\\vps.ts"
     },
@@ -2557,6 +2752,12 @@
     {
       "method": "GET",
       "path": "/api/vps/providers/:providerId/regions",
+      "protected": true,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/providers/:providerId/ssh-keys",
       "protected": true,
       "source": "api\\routes\\vps.ts"
     },
@@ -3029,6 +3230,17 @@
     {
       "sectionTitle": "VPS Provisioning & Lifecycle",
       "sectionBase": "/api/vps",
+      "method": "POST",
+      "relativePath": "/:id/rebuild",
+      "path": "/api/vps/:id/rebuild",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
       "method": "DELETE",
       "relativePath": "/:id",
       "path": "/api/vps/:id",
@@ -3191,6 +3403,7 @@
       "relativePath": "/images",
       "path": "/api/vps/images",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3209,9 +3422,10 @@
       "sectionTitle": "VPS Catalog & Integrations",
       "sectionBase": "/api/vps",
       "method": "GET",
-      "relativePath": "/linode/ssh-keys",
-      "path": "/api/vps/linode/ssh-keys",
+      "relativePath": "/providers/:providerId/ssh-keys",
+      "path": "/api/vps/providers/:providerId/ssh-keys",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3331,9 +3545,19 @@
     {
       "sectionTitle": "Egress & Network Billing",
       "sectionBase": "/api/egress",
+      "method": "GET",
+      "relativePath": "/credits/wallet-balance",
+      "path": "/api/egress/credits/wallet-balance",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Egress & Network Billing",
+      "sectionBase": "/api/egress",
       "method": "POST",
-      "relativePath": "/credits/purchase/complete",
-      "path": "/api/egress/credits/purchase/complete",
+      "relativePath": "/credits/purchase/wallet",
+      "path": "/api/egress/credits/purchase/wallet",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
@@ -3365,6 +3589,16 @@
       "method": "GET",
       "relativePath": "/",
       "path": "/api/organizations",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "GET",
+      "relativePath": "/all",
+      "path": "/api/organizations/all",
       "auth": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
@@ -4285,6 +4519,58 @@
       "sectionTitle": "Admin Platform Management",
       "sectionBase": "/api/admin",
       "method": "GET",
+      "relativePath": "/platform/region-labels",
+      "path": "/api/admin/platform/region-labels",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/platform/region-labels/:regionId",
+      "path": "/api/admin/platform/region-labels/:regionId",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PUT",
+      "relativePath": "/platform/region-labels/:regionId",
+      "path": "/api/admin/platform/region-labels/:regionId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "DELETE",
+      "relativePath": "/platform/region-labels/:regionId",
+      "path": "/api/admin/platform/region-labels/:regionId",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/platform/region-labels/bulk",
+      "path": "/api/admin/platform/region-labels/bulk",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
       "relativePath": "/theme",
       "path": "/api/admin/theme",
       "auth": true,
@@ -4517,6 +4803,184 @@
       "method": "GET",
       "relativePath": "/github/commits",
       "path": "/api/admin/github/commits",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/documentation/categories",
+      "path": "/api/admin/documentation/categories",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/documentation/categories",
+      "path": "/api/admin/documentation/categories",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PUT",
+      "relativePath": "/documentation/categories/:id",
+      "path": "/api/admin/documentation/categories/:id",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "DELETE",
+      "relativePath": "/documentation/categories/:id",
+      "path": "/api/admin/documentation/categories/:id",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/documentation/categories/reorder",
+      "path": "/api/admin/documentation/categories/reorder",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/documentation/articles",
+      "path": "/api/admin/documentation/articles",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/documentation/articles",
+      "path": "/api/admin/documentation/articles",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/documentation/articles/:id",
+      "path": "/api/admin/documentation/articles/:id",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "PUT",
+      "relativePath": "/documentation/articles/:id",
+      "path": "/api/admin/documentation/articles/:id",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "DELETE",
+      "relativePath": "/documentation/articles/:id",
+      "path": "/api/admin/documentation/articles/:id",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/documentation/articles/reorder",
+      "path": "/api/admin/documentation/articles/reorder",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/documentation/articles/:id/files",
+      "path": "/api/admin/documentation/articles/:id/files",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "DELETE",
+      "relativePath": "/documentation/files/:id",
+      "path": "/api/admin/documentation/files/:id",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/ssh-keys",
+      "path": "/api/admin/ssh-keys",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "GET",
+      "relativePath": "/ssh-keys/:keyId",
+      "path": "/api/admin/ssh-keys/:keyId",
+      "auth": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/ssh-keys",
+      "path": "/api/admin/ssh-keys",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "DELETE",
+      "relativePath": "/ssh-keys/:keyId",
+      "path": "/api/admin/ssh-keys/:keyId",
       "auth": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
@@ -5117,6 +5581,46 @@
       "method": "GET",
       "relativePath": "/vps",
       "path": "/api/pricing/vps",
+      "auth": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Documentation",
+      "sectionBase": "/api/documentation",
+      "method": "GET",
+      "relativePath": "/categories",
+      "path": "/api/documentation/categories",
+      "auth": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Documentation",
+      "sectionBase": "/api/documentation",
+      "method": "GET",
+      "relativePath": "/categories/:slug",
+      "path": "/api/documentation/categories/:slug",
+      "auth": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Documentation",
+      "sectionBase": "/api/documentation",
+      "method": "GET",
+      "relativePath": "/articles/:slug",
+      "path": "/api/documentation/articles/:slug",
+      "auth": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Documentation",
+      "sectionBase": "/api/documentation",
+      "method": "GET",
+      "relativePath": "/files/:id",
+      "path": "/api/documentation/files/:id",
       "auth": false,
       "hasResponse": true,
       "isPlaceholderResponse": false

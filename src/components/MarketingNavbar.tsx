@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, Cloud, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { BRAND_NAME } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 
@@ -93,7 +94,7 @@ export function MarketingNavbar({ sticky = true }: MarketingNavbarProps) {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-2 text-lg font-semibold" onClick={closeMobileMenu}>
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <Cloud className="h-5 w-5" />
+            <Logo size="md" />
           </div>
           <span>{BRAND_NAME}</span>
         </Link>

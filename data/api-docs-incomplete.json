@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-03-23T04:01:13.655Z",
-  "totalIncomplete": 142,
+  "generatedAt": "2026-03-29T00:36:01.258Z",
+  "totalIncomplete": 158,
   "endpoints": [
     {
       "key": "POST /api/auth/refresh",
@@ -206,20 +206,6 @@
       ]
     },
     {
-      "key": "GET /api/vps/images",
-      "section": "VPS Catalog & Integrations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/vps/linode/ssh-keys",
-      "section": "VPS Catalog & Integrations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
       "key": "GET /api/vps/apps",
       "section": "VPS Catalog & Integrations",
       "issues": [
@@ -276,6 +262,13 @@
       ]
     },
     {
+      "key": "GET /api/egress/credits/wallet-balance",
+      "section": "Egress & Network Billing",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
       "key": "GET /api/egress/usage/:vpsId",
       "section": "Egress & Network Billing",
       "issues": [
@@ -291,6 +284,13 @@
     },
     {
       "key": "GET /api/organizations",
+      "section": "Organizations",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/organizations/all",
       "section": "Organizations",
       "issues": [
         "missing_params"
@@ -620,6 +620,27 @@
       ]
     },
     {
+      "key": "GET /api/admin/platform/region-labels",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/admin/platform/region-labels/:regionId",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "DELETE /api/admin/platform/region-labels/:regionId",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_body"
+      ]
+    },
+    {
       "key": "GET /api/admin/theme",
       "section": "Admin Platform Management",
       "issues": [
@@ -708,6 +729,69 @@
       "section": "Admin Platform Management",
       "issues": [
         "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/admin/documentation/categories",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "DELETE /api/admin/documentation/categories/:id",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_body"
+      ]
+    },
+    {
+      "key": "GET /api/admin/documentation/articles",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/admin/documentation/articles/:id",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "DELETE /api/admin/documentation/articles/:id",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_body"
+      ]
+    },
+    {
+      "key": "DELETE /api/admin/documentation/files/:id",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_body"
+      ]
+    },
+    {
+      "key": "GET /api/admin/ssh-keys",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/admin/ssh-keys/:keyId",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "DELETE /api/admin/ssh-keys/:keyId",
+      "section": "Admin Platform Management",
+      "issues": [
+        "missing_body"
       ]
     },
     {
@@ -972,6 +1056,34 @@
     {
       "key": "GET /api/pricing/vps",
       "section": "Pricing",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/documentation/categories",
+      "section": "Documentation",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/documentation/categories/:slug",
+      "section": "Documentation",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/documentation/articles/:slug",
+      "section": "Documentation",
+      "issues": [
+        "missing_params"
+      ]
+    },
+    {
+      "key": "GET /api/documentation/files/:id",
+      "section": "Documentation",
       "issues": [
         "missing_params"
       ]

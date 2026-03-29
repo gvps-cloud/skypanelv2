@@ -16,6 +16,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { BRAND_NAME } from "@/lib/brand";
@@ -274,7 +275,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             >
               <Link to="/dashboard">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Server className="size-4" />
+                  <Logo size="sm" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{BRAND_NAME}</span>
