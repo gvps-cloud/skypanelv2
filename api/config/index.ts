@@ -53,6 +53,9 @@ export interface Config {
   COMPANY_BRAND_NAME: string;
   RDNS_BASE_DOMAIN: string;
   corsOrigins: string[];
+  // Better Stack / Better Uptime integration
+  BETTERUPTIME_API_KEY?: string;
+  BETTERUPTIME_STATUS_PAGE_ID?: string;
 }
 
 /**
@@ -232,6 +235,9 @@ function getConfig(): Config {
     RDNS_BASE_DOMAIN:
       process.env.RDNS_BASE_DOMAIN?.trim() || 'ip.rev.example.com',
     corsOrigins: (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map(url => url.trim()),
+    // Better Stack / Better Uptime (optional)
+    BETTERUPTIME_API_KEY: process.env.BETTERUPTIME_API_KEY?.trim() || undefined,
+    BETTERUPTIME_STATUS_PAGE_ID: process.env.BETTERUPTIME_STATUS_PAGE_ID?.trim() || undefined,
   };
 
   // Debug logging

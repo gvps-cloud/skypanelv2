@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -12,6 +12,13 @@ import {
   Plus,
   Minus,
   RotateCcw,
+  Clock,
+  ExternalLink,
+  Activity,
+  ChevronDown,
+  ChevronUp,
+  Wrench,
+  Shield,
 } from "lucide-react";
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 
@@ -46,6 +53,53 @@ interface Incident {
   status: ServiceStatus;
   startTime: string;
   updates: IncidentUpdate[];
+}
+
+// Better Stack types
+interface BetterStackMonitor {
+  id: string;
+  name: string;
+  status: "operational" | "degraded" | "downtime" | "maintenance";
+  availability: number;
+  statusHistory: Array<{
+    day: string;
+    status: string;
+    downtimeDuration: number;
+  }>;
+}
+
+interface BetterStackIncident {
+  id: string;
+  name: string;
+  url: string;
+  cause: string | null;
+  startedAt: string;
+  acknowledgedAt: string | null;
+  resolvedAt: string | null;
+  status: "started" | "acknowledged" | "resolved";
+  regions: string[];
+}
+
+interface BetterStackStatusUpdate {
+  id: string;
+  author: string | null;
+  status: string;
+  message: string;
+  createdAt: string;
+}
+
+interface BetterStackStatusReport {
+  id: string;
+  title: string;
+  reportType: "manual" | "automatic" | "maintenance";
+  startsAt: string;
+  endsAt: string | null;
+  aggregateState: "operational" | "degraded" | "downtime" | "maintenance";
+  affectedResources: Array<{
+    statusPageResourceId: string;
+    status: string;
+  }>;
+  statusUpdates: BetterStackStatusUpdate[];
 }
 
 interface Region {
@@ -133,6 +187,16 @@ export default function Status() {
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Better Stack state
+  const [bsMonitors, setBsMonitors] = useState<BetterStackMonitor[]>([]);
+  const [bsActiveIncidents, setBsActiveIncidents] = useState<BetterStackIncident[]>([]);
+  const [bsIncidentsHistory, setBsIncidentsHistory] = useState<BetterStackIncident[]>([]);
+  const [bsStatusReports, setBsStatusReports] = useState<BetterStackStatusReport[]>([]);
+  const [bsConfigured, setBsConfigured] = useState(false);
+  const [bsCachedAt, setBsCachedAt] = useState<string | null>(null);
+  const [bsStale, setBsStale] = useState(false);
+  const [expandedIncident, setExpandedIncident] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   // Measure latency to a speed test URL
   const measureLatency = useCallback(async (regionId: string, speedTestUrl: string) => {
     setLatencyState((prev) => ({
@@ -356,6 +420,27 @@ export default function Status() {
       setServices(liveServices);
       setActiveIncidents([]);
       setLastUpdated(new Date().toLocaleTimeString());
+
+      // Fetch Better Stack uptime data
+      try {
+        const uptimeResponse = await fetch('/api/health/uptime');
+        const uptimeData = await uptimeResponse.json();
+
+        if (uptimeData.success && uptimeData.configured) {
+          setBsConfigured(true);
+          setBsMonitors(uptimeData.monitors ?? []);
+          setBsActiveIncidents(uptimeData.activeIncidents ?? []);
+          setBsIncidentsHistory(uptimeData.incidentsHistory ?? []);
+          setBsStatusReports(uptimeData.statusReports ?? []);
+          setBsCachedAt(uptimeData.cachedAt);
+          setBsStale(uptimeData.stale ?? false);
+        } else {
+          setBsConfigured(false);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch Better Stack data:', err);
+        setBsConfigured(false);
+      }
     } catch (err) {
       console.error('Failed to fetch live data:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch live data');
@@ -423,7 +508,49 @@ export default function Status() {
     );
   };
 
-  const allOperational = services.every(s => s.status === "operational");
+  const allOperational = services.every(s => s.status === "operational")
+    && (!bsConfigured || bsMonitors.every(m => m.status === "operational"));
+
+  // Compute 90-day availability bar data for Better Stack monitors
+  const getAvailabilityColor = (avail: number) => {
+    if (avail >= 0.999) return "bg-green-500";
+    if (avail >= 0.99) return "bg-green-400";
+    if (avail >= 0.95) return "bg-yellow-500";
+    return "bg-red-500";
+  };
+
+  const getAvailabilityLabel = (avail: number) => {
+    return (avail * 100).toFixed(2) + "%";
+  };
+
+  const formatDuration = (seconds: number) => {
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+    if (seconds < 86400) return `${Math.round(seconds / 3600)}h`;
+    return `${Math.round(seconds / 86400)}d`;
+  };
+
+  const getReportTypeIcon = (type: string) => {
+    switch (type) {
+      case "maintenance":
+        return <Wrench className="h-4 w-4 text-blue-500" />;
+      case "automatic":
+        return <AlertTriangle className="h-4 w-4 text-orange-500" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+    }
+  };
+
+  const getReportTypeLabel = (type: string) => {
+    switch (type) {
+      case "maintenance":
+        return "Scheduled Maintenance";
+      case "automatic":
+        return "Auto-detected Incident";
+      default:
+        return "Reported Incident";
+    }
+  };
 
   return (
     <PublicLayout>
@@ -453,6 +580,14 @@ export default function Status() {
             </div>
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide">
               <span>Last updated {lastUpdated}</span>
+              {bsConfigured && bsCachedAt && (
+                <>
+                  <Separator orientation="vertical" className="h-4" />
+                  <span className="text-muted-foreground">
+                    Uptime data {bsStale ? "(refreshing...)" : `cached ${new Date(bsCachedAt).toLocaleTimeString()}`}
+                  </span>
+                </>
+              )}
               <Separator orientation="vertical" className="h-4" />
               <Button
                 size="sm"
@@ -519,6 +654,244 @@ export default function Status() {
               </Card>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Better Stack — Active Incidents & Status Reports */}
+      {bsConfigured && (bsActiveIncidents.length > 0 || bsStatusReports.filter(r => r.aggregateState !== "operational").length > 0) && (
+        <section className="mt-12 space-y-4">
+          <div className="flex items-center gap-3">
+            <Activity className="h-5 w-5 text-orange-500" />
+            <h2 className="text-2xl font-semibold text-foreground">Active Incidents</h2>
+            <Badge variant="destructive" className="ml-auto">
+              {bsActiveIncidents.length + bsStatusReports.filter(r => r.aggregateState !== "operational").length} active
+            </Badge>
+          </div>
+          <div className="space-y-4">
+            {/* Active unresolved incidents from Better Stack */}
+            {bsActiveIncidents.map((incident) => (
+              <Card key={incident.id} className="border-orange-500/50">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                        <span className="truncate">{incident.name}</span>
+                      </CardTitle>
+                      <CardDescription className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span>Started: {new Date(incident.startedAt).toLocaleString()}</span>
+                        {incident.cause && (
+                          <span className="text-orange-600 dark:text-orange-400">Cause: {incident.cause}</span>
+                        )}
+                        {incident.regions.length > 0 && (
+                          <span>Regions: {incident.regions.join(", ").toUpperCase()}</span>
+                        )}
+                      </CardDescription>
+                    </div>
+                    <Badge variant={incident.status === "acknowledged" ? "secondary" : "destructive"}>
+                      {incident.status === "acknowledged" ? "Acknowledged" : "Investigating"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
+
+            {/* Status reports (incidents + maintenance with updates) */}
+            {bsStatusReports
+              .filter(r => r.aggregateState !== "operational")
+              .map((report) => (
+                <Card key={report.id} className={report.reportType === "maintenance" ? "border-blue-500/50" : "border-orange-500/50"}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="flex items-center gap-2">
+                          {getReportTypeIcon(report.reportType)}
+                          <span className="truncate">{report.title}</span>
+                        </CardTitle>
+                        <CardDescription className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                          <span>
+                            {report.endsAt
+                              ? `${new Date(report.startsAt).toLocaleString()} — ${new Date(report.endsAt).toLocaleString()}`
+                              : `Started: ${new Date(report.startsAt).toLocaleString()}`}
+                          </span>
+                          <Badge variant="outline" className="text-xs">
+                            {getReportTypeLabel(report.reportType)}
+                          </Badge>
+                        </CardDescription>
+                      </div>
+                      <Badge variant={report.aggregateState === "downtime" ? "destructive" : report.aggregateState === "maintenance" ? "outline" : "secondary"}>
+                        {report.aggregateState === "downtime" ? "Downtime" : report.aggregateState === "degraded" ? "Degraded" : report.aggregateState === "maintenance" ? "Maintenance" : "Operational"}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  {report.statusUpdates.length > 0 && (
+                    <CardContent>
+                      <div
+                        className="cursor-pointer flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => setExpandedIncident(expandedIncident === report.id ? null : report.id)}
+                      >
+                        {expandedIncident === report.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {report.statusUpdates.length} update{report.statusUpdates.length !== 1 ? "s" : ""}
+                      </div>
+                      {expandedIncident === report.id && (
+                        <div className="mt-3 space-y-3 border-l-2 border-muted pl-4">
+                          {report.statusUpdates.map((update) => (
+                            <div key={update.id} className="relative">
+                              <div className="absolute -left-[1.35rem] top-1.5 h-2 w-2 rounded-full bg-muted-foreground" />
+                              <div className="text-xs text-muted-foreground mb-1">
+                                {new Date(update.createdAt).toLocaleString()}
+                                {update.author && ` · ${update.author}`}
+                              </div>
+                              <div className="text-sm">{update.message || update.status}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  )}
+                </Card>
+              ))}
+          </div>
+        </section>
+      )}
+
+      {/* Better Stack — Monitors */}
+      {bsConfigured && bsMonitors.length > 0 && (
+        <section className="mt-12 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Shield className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-2xl font-semibold">External Monitoring</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">Better Stack</Badge>
+              <Badge variant={bsMonitors.every(m => m.status === "operational") ? "default" : "destructive"}>
+                {bsMonitors.filter(m => m.status === "operational").length}/{bsMonitors.length} operational
+              </Badge>
+            </div>
+          </div>
+          <Card className="shadow-sm">
+            <CardContent className="divide-y">
+              {bsMonitors.map((monitor) => (
+                <div key={monitor.id} className="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className={`h-3 w-3 rounded-full flex-shrink-0 ${
+                      monitor.status === "operational" ? "bg-green-500" :
+                      monitor.status === "degraded" ? "bg-yellow-500" :
+                      monitor.status === "downtime" ? "bg-red-500" :
+                      "bg-blue-500"
+                    }`} />
+                    <div className="min-w-0">
+                      <h3 className="font-semibold truncate">{monitor.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {monitor.status === "operational" ? "Operational" :
+                         monitor.status === "degraded" ? "Degraded Performance" :
+                         monitor.status === "downtime" ? "Service Down" :
+                         "Scheduled Maintenance"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {/* 90-day availability bar */}
+                    {monitor.statusHistory.length > 0 && (
+                      <div className="hidden md:flex items-center gap-1.5" title="90-day availability">
+                        <div className="flex gap-px">
+                          {monitor.statusHistory.slice(-90).map((day, idx) => (
+                            <div
+                              key={idx}
+                              className={`w-1.5 h-5 rounded-sm ${
+                                day.status === "operational"
+                                  ? "bg-green-500"
+                                  : day.status === "degraded"
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
+                              }`}
+                              title={`${day.day}: ${day.status}${day.downtimeDuration > 0 ? ` (${formatDuration(day.downtimeDuration)} downtime)` : ""}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Availability percentage */}
+                    <div className="text-right">
+                      <div className="text-sm font-semibold">{getAvailabilityLabel(monitor.availability)}</div>
+                      <div className="text-xs text-muted-foreground">availability</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      {/* Better Stack — Incident History (last 30 days) */}
+      {bsConfigured && bsIncidentsHistory.length > 0 && (
+        <section className="mt-12 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-2xl font-semibold">Incident History</h2>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowHistory(!showHistory)}
+              className="h-8"
+            >
+              {showHistory ? (
+                <>
+                  <ChevronUp className="mr-2 h-3.5 w-3.5" />
+                  Hide History
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="mr-2 h-3.5 w-3.5" />
+                  Show {bsIncidentsHistory.filter(i => i.resolvedAt).length} Past Incidents
+                </>
+              )}
+            </Button>
+          </div>
+          {showHistory && (
+            <Card className="shadow-sm">
+              <CardContent className="divide-y">
+                {bsIncidentsHistory
+                  .filter(i => i.resolvedAt)
+                  .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+                  .slice(0, 20)
+                  .map((incident) => {
+                    const start = new Date(incident.startedAt);
+                    const end = new Date(incident.resolvedAt!);
+                    const durationMs = end.getTime() - start.getTime();
+                    return (
+                      <div key={incident.id} className="flex flex-col gap-2 py-4 md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-3 w-3 rounded-full flex-shrink-0 bg-green-500" title="Resolved" />
+                          <div className="min-w-0">
+                            <h3 className="font-medium truncate text-sm">{incident.name}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {start.toLocaleDateString()} · {start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              {" – "}
+                              {end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm">
+                          {incident.cause && (
+                            <span className="text-muted-foreground truncate max-w-[200px]" title={incident.cause}>
+                              {incident.cause}
+                            </span>
+                          )}
+                          <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                            {formatDuration(durationMs / 1000)}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </CardContent>
+            </Card>
+          )}
         </section>
       )}
 
@@ -1132,12 +1505,17 @@ export default function Status() {
         <CardContent className="space-y-4 px-6 py-8">
           <h3 className="text-lg font-semibold text-foreground">About this page</h3>
           <p className="text-sm text-muted-foreground leading-6">
-            Monitoring updates every 60 seconds using probes from multiple regions. Major incidents trigger real-time notifications for customers subscribed to alerts. For historical reports or compliance requests, contact our support team.
+            {bsConfigured
+              ? "Service availability is monitored every 60 seconds via Better Stack probes from multiple global regions. Incidents are reported automatically and supplemented with manual updates from our operations team."
+              : "Monitoring updates every 60 seconds using probes from multiple regions. Major incidents trigger real-time notifications for customers subscribed to alerts."
+            }
+            {" "}For historical reports or compliance requests, contact our support team.
           </p>
           <div className="flex flex-wrap gap-3 text-xs uppercase tracking-wide text-muted-foreground/80">
             <Badge variant="secondary">Real-time metrics</Badge>
             <Badge variant="secondary">Multi-region checks</Badge>
             <Badge variant="secondary">Transparent history</Badge>
+            {bsConfigured && <Badge variant="secondary">Better Stack</Badge>}
           </div>
         </CardContent>
       </Card>

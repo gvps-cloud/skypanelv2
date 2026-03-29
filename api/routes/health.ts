@@ -16,6 +16,7 @@ import { config } from "../config/index.js";
 import { query } from "../lib/database.js";
 import { PlatformStatsService } from "../services/platformStatsService.js";
 import { optionalAuth, AuthenticatedRequest } from "../middleware/auth.js";
+import { getBetterStackData } from "../services/betterStackService.js";
 
 const router = Router();
 
@@ -399,6 +400,43 @@ router.get("/platform-stats", async (req: Request, res: Response) => {
       success: false,
       message: "Failed to retrieve platform statistics",
       timestamp: new Date().toISOString(),
+      error:
+        process.env.NODE_ENV === "development"
+          ? (error as Error).message
+          : "Internal server error",
+    });
+  }
+});
+
+/**
+ * Better Stack Uptime Data Endpoint
+ * Returns monitor statuses, active incidents, incident history, and status reports
+ * from the Better Stack (Better Uptime) integration.
+ * Public access – data is cached in the database with 5-minute TTL.
+ * Gracefully returns { configured: false } when BETTERUPTIME_API_KEY is not set.
+ */
+router.get("/uptime", async (req: Request, res: Response) => {
+  try {
+    const uptimeData = await getBetterStackData();
+
+    res.status(200).json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      ...uptimeData,
+    });
+  } catch (error) {
+    console.error("Uptime data endpoint failed:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve uptime data",
+      timestamp: new Date().toISOString(),
+      configured: !!(process.env.BETTERUPTIME_API_KEY && process.env.BETTERUPTIME_STATUS_PAGE_ID),
+      monitors: [],
+      activeIncidents: [],
+      incidentsHistory: [],
+      statusReports: [],
+      cachedAt: null,
+      stale: false,
       error:
         process.env.NODE_ENV === "development"
           ? (error as Error).message

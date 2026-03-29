@@ -917,6 +917,11 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/health/uptime",
+    "protected": false
+  },
+  {
+    "method": "GET",
     "path": "/api/invoices",
     "protected": true
   },
