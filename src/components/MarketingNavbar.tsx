@@ -20,6 +20,7 @@ const navLinks: NavLinkConfig[] = [
   { label: "Capabilities", href: "#capabilities", isAnchor: true },
   { label: "Solutions", href: "#solutions", isAnchor: true },
   { label: "Pricing", href: "/pricing" },
+  { label: "Regions", href: "/regions" },
   { label: "Status", href: "/status" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },

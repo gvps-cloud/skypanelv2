@@ -52,6 +52,7 @@ export interface Config {
   CONTACT_FORM_RECIPIENT?: string;
   COMPANY_BRAND_NAME: string;
   RDNS_BASE_DOMAIN: string;
+  VPS_TAG: string;
   corsOrigins: string[];
   // Better Stack / Better Uptime integration
   BETTERUPTIME_API_KEY?: string;
@@ -234,6 +235,7 @@ function getConfig(): Config {
       'SkyPanelV2',
     RDNS_BASE_DOMAIN:
       process.env.RDNS_BASE_DOMAIN?.trim() || 'ip.rev.example.com',
+    VPS_TAG: process.env.VPS_TAG?.trim() || 'skypanelv2',
     corsOrigins: (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map(url => url.trim()),
     // Better Stack / Better Uptime (optional)
     BETTERUPTIME_API_KEY: process.env.BETTERUPTIME_API_KEY?.trim() || undefined,

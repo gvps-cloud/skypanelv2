@@ -953,7 +953,7 @@ class LinodeService {
         script: req.script,
         images: req.images,
         is_public: req.is_public ?? false,
-        rev_note: req.rev_note ?? 'Initial version created via SkyPanelV2',
+        rev_note: req.rev_note ?? 'Initial version created via GVPS.Cloud',
         description: req.description ?? req.label,
         user_defined_fields: req.user_defined_fields ?? [],
       };

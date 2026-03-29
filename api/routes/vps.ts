@@ -2950,8 +2950,8 @@ router.post("/", async (req: Request, res: Response) => {
           root_pass: rootPassword,
           backups_enabled: backups,
           private_ip: privateIP,
-          tags: ["skypanelv2"],
-          group: "skypanelv2",
+          tags: [config.VPS_TAG],
+          group: config.VPS_TAG,
         };
 
         if (resolvedAuthorizedKeys && resolvedAuthorizedKeys.length > 0) {
@@ -3228,7 +3228,7 @@ router.post("/:id/boot", async (req: Request, res: Response) => {
 
     await linodeService.bootLinodeInstance(providerInstanceId);
     const detail = await linodeService.getLinodeInstance(providerInstanceId);
-    const status = detail.status;
+    const status = normalizeProviderStatus(detail.status);
     const ip =
       Array.isArray(detail.ipv4) && detail.ipv4.length > 0
         ? detail.ipv4[0]
@@ -3309,7 +3309,7 @@ router.post("/:id/shutdown", async (req: Request, res: Response) => {
 
     await linodeService.shutdownLinodeInstance(providerInstanceId);
     const detail = await linodeService.getLinodeInstance(providerInstanceId);
-    const status = detail.status;
+    const status = normalizeProviderStatus(detail.status);
     const ip =
       Array.isArray(detail.ipv4) && detail.ipv4.length > 0
         ? detail.ipv4[0]
@@ -3391,7 +3391,7 @@ router.post("/:id/reboot", async (req: Request, res: Response) => {
 
     await linodeService.rebootLinodeInstance(providerInstanceId);
     const detail = await linodeService.getLinodeInstance(providerInstanceId);
-    const status = detail.status;
+    const status = normalizeProviderStatus(detail.status);
     const ip =
       Array.isArray(detail.ipv4) && detail.ipv4.length > 0
         ? detail.ipv4[0]

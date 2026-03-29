@@ -61,7 +61,7 @@ interface CachedStats<T> {
 export class PlatformStatsService {
   private static vpsStatsCache: CachedStats<VPSStats> | null = null;
   private static platformStatsCache: CachedStats<PlatformStats> | null = null;
-  private static readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  private static readonly CACHE_TTL_MS = 60 * 1000; // 1 minute
 
   /**
    * Check if cached data is still valid
@@ -85,19 +85,65 @@ export class PlatformStatsService {
     }
 
     try {
-      // Get total count and status breakdown
+      // Get total count and status breakdown with normalization
+      // Map provider-specific statuses to canonical statuses:
+      // - offline, shutting_down, suspended -> stopped
+      // - booting, migrating, rebuilding, cloning, restoring -> provisioning
+      // - deleting -> error
       const statusResult = await query(`
         SELECT 
           COUNT(*) as total,
-          status,
-          COUNT(*) FILTER (WHERE status = 'running') as running,
-          COUNT(*) FILTER (WHERE status = 'stopped') as stopped,
-          COUNT(*) FILTER (WHERE status = 'provisioning') as provisioning,
-          COUNT(*) FILTER (WHERE status = 'rebooting') as rebooting,
-          COUNT(*) FILTER (WHERE status = 'error') as error
+          COUNT(*) FILTER (WHERE 
+            CASE 
+              WHEN status IN ('running') THEN 'running'
+              WHEN status IN ('stopped', 'offline', 'shutting_down', 'suspended') THEN 'stopped'
+              WHEN status IN ('provisioning', 'booting', 'migrating', 'rebuilding', 'cloning', 'restoring') THEN 'provisioning'
+              WHEN status IN ('rebooting') THEN 'rebooting'
+              WHEN status IN ('error', 'deleting') THEN 'error'
+              ELSE 'unknown'
+            END = 'running'
+          ) as running,
+          COUNT(*) FILTER (WHERE 
+            CASE 
+              WHEN status IN ('running') THEN 'running'
+              WHEN status IN ('stopped', 'offline', 'shutting_down', 'suspended') THEN 'stopped'
+              WHEN status IN ('provisioning', 'booting', 'migrating', 'rebuilding', 'cloning', 'restoring') THEN 'provisioning'
+              WHEN status IN ('rebooting') THEN 'rebooting'
+              WHEN status IN ('error', 'deleting') THEN 'error'
+              ELSE 'unknown'
+            END = 'stopped'
+          ) as stopped,
+          COUNT(*) FILTER (WHERE 
+            CASE 
+              WHEN status IN ('running') THEN 'running'
+              WHEN status IN ('stopped', 'offline', 'shutting_down', 'suspended') THEN 'stopped'
+              WHEN status IN ('provisioning', 'booting', 'migrating', 'rebuilding', 'cloning', 'restoring') THEN 'provisioning'
+              WHEN status IN ('rebooting') THEN 'rebooting'
+              WHEN status IN ('error', 'deleting') THEN 'error'
+              ELSE 'unknown'
+            END = 'provisioning'
+          ) as provisioning,
+          COUNT(*) FILTER (WHERE 
+            CASE 
+              WHEN status IN ('running') THEN 'running'
+              WHEN status IN ('stopped', 'offline', 'shutting_down', 'suspended') THEN 'stopped'
+              WHEN status IN ('provisioning', 'booting', 'migrating', 'rebuilding', 'cloning', 'restoring') THEN 'provisioning'
+              WHEN status IN ('rebooting') THEN 'rebooting'
+              WHEN status IN ('error', 'deleting') THEN 'error'
+              ELSE 'unknown'
+            END = 'rebooting'
+          ) as rebooting,
+          COUNT(*) FILTER (WHERE 
+            CASE 
+              WHEN status IN ('running') THEN 'running'
+              WHEN status IN ('stopped', 'offline', 'shutting_down', 'suspended') THEN 'stopped'
+              WHEN status IN ('provisioning', 'booting', 'migrating', 'rebuilding', 'cloning', 'restoring') THEN 'provisioning'
+              WHEN status IN ('rebooting') THEN 'rebooting'
+              WHEN status IN ('error', 'deleting') THEN 'error'
+              ELSE 'unknown'
+            END = 'error'
+          ) as error
         FROM vps_instances
-        GROUP BY ROLLUP(status)
-        HAVING status IS NULL
       `);
 
       const statusRow = statusResult.rows[0] || {

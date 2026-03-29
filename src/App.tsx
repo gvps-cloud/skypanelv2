@@ -52,6 +52,7 @@ import FAQ from "./pages/FAQ";
 import AboutUs from "./pages/AboutUs";
 import Contact from "./pages/Contact";
 import Status from "./pages/Status";
+import Regions from "./pages/Regions";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Pricing from "./pages/Pricing";
@@ -401,6 +402,7 @@ function AppRoutes() {
         <Route path="/about" element={<AboutUs />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/status" element={<Status />} />
+        <Route path="/regions" element={<Regions />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/organizations/invitations/:token" element={<AcceptInvitation />} />
