@@ -44,8 +44,25 @@ async function applySingleMigration() {
     const client = await pool.connect();
     console.log('✅ Database connection successful!');
 
-    const migrationPath = join(__dirname, '..', migrationArg);
-    console.log(`📄 Reading migration file: ${migrationPath}`);
+    // Validate migration filename to prevent path traversal
+    const migrationName = migrationArg.replace(/^\/+|\/+$|\.\./g, '');
+    if (!migrationName.endsWith('.sql')) {
+      console.error('❌ Migration file must end with .sql');
+      process.exit(1);
+    }
+
+    const migrationsDir = join(__dirname, '..', 'migrations');
+    const migrationPath = join(migrationsDir, migrationName);
+
+    // Ensure the resolved path is within the migrations directory
+    const resolvedPath = require('path').resolve(migrationPath);
+    const resolvedMigrationsDir = require('path').resolve(migrationsDir);
+    if (!resolvedPath.startsWith(resolvedMigrationsDir)) {
+      console.error('❌ Invalid migration path: path traversal detected');
+      process.exit(1);
+    }
+
+    console.log(`📄 Reading migration file: ${migrationName}`);
     const migrationSQL = readFileSync(migrationPath, 'utf8');
 
     console.log('🚀 Applying migration...');

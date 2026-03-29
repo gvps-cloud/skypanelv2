@@ -20,7 +20,7 @@ const enhancedPutHandler = async (req: AuthenticatedRequest, res: Response) => {
     
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.error(`[Contact Method Update] Validation failed for ${method_type}:`, errors.array());
+      console.error('[Contact Method Update] Validation failed for %s:', method_type, errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 

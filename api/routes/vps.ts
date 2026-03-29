@@ -2034,7 +2034,8 @@ router.get("/:id", async (req: Request, res: Response) => {
           await linodeService.getLinodeInstance(providerInstanceId);
       } catch (err) {
         console.warn(
-          `Failed to fetch Linode provider detail for instance ${instanceRow.provider_instance_id}:`,
+          'Failed to fetch Linode provider detail for instance %s:',
+          instanceRow.provider_instance_id,
           err,
         );
       }
@@ -3105,7 +3106,9 @@ router.post("/", async (req: Request, res: Response) => {
           );
         } catch (rdnsErr) {
           console.warn(
-            `Background rDNS setup failed for VPS ${label} (${providerInstanceId}):`,
+            'Background rDNS setup failed for VPS %s (%s):',
+            label,
+            providerInstanceId,
             rdnsErr,
           );
         }

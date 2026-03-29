@@ -126,6 +126,7 @@ const ActivityPage: React.FC = () => {
         const dlUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = dlUrl;
+        // Use safe static filename
         a.download = 'activity_export.csv';
         document.body.appendChild(a);
         a.click();

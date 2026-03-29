@@ -335,3 +335,4 @@ PostgreSQL `LISTEN/NOTIFY` → `notificationService` EventEmitter → SSE endpoi
 - **Admin impersonation audit**: All impersonation actions are logged for compliance
 - **Egress credit zero handling**: Automatic VPS suspension when credits reach zero (handled in egress services)
 - **Wallet-based billing**: Prepaid system requires sufficient balance before billing cycle processing
+- **Site logo/favicon**: Single source of truth is `public/favicon.svg` — the `Logo` component (`src/components/Logo.tsx`) renders it as an `<img>` tag used by navbar, sidebar, and footer. `index.html` links it as the browser favicon. To update icons, replace `favicon.svg` and regenerate raster variants via [realfavicongenerator.net](https://realfavicongenerator.net/)

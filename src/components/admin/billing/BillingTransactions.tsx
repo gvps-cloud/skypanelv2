@@ -132,7 +132,9 @@ export const BillingTransactions: React.FC = () => {
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.setAttribute('download', `invoice-${invoiceNumber || invoiceId}.html`);
+      // Sanitize filename to prevent XSS
+      const safeFilename = `invoice-${invoiceNumber || invoiceId}.html`.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
+      link.setAttribute('download', safeFilename);
       document.body.appendChild(link);
       link.click();
       link.remove();

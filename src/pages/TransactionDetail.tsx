@@ -121,12 +121,14 @@ const TransactionDetail: React.FC = () => {
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get('content-disposition');
+      // Sanitize filename to prevent XSS
+      const sanitizeFilename = (name: string) => name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
       let filename = `invoice-${result.invoiceNumber || result.invoiceId}.pdf`;
       const filenameMatch = contentDisposition?.match(/filename\*?=(?:UTF-8''|"?)([^";\n]+)/i);
 
       if (filenameMatch && filenameMatch[1]) {
         try {
-          filename = decodeURIComponent(filenameMatch[1].replace(/"/g, ''));
+          filename = sanitizeFilename(decodeURIComponent(filenameMatch[1].replace(/"/g, '')));
         } catch (filenameError) {
           console.warn('Failed to decode invoice filename:', filenameError);
         }

@@ -192,7 +192,7 @@ src/
 
 migrations/             SQL migrations
 scripts/                Database, migration, admin, diagnostics, and maintenance scripts
-public/                 Static assets and icons
+public/                 Static assets, icons, and favicon.svg (single source of truth for site logo)
 repo-docs/              Internal docs and audit artifacts
 deploy/                 Deployment-related templates
 ```
@@ -380,3 +380,4 @@ Notable scripts currently present in `scripts/` include:
 - Prefer existing helpers/services instead of duplicating logic
 - Be careful with org-aware data access, billing visibility, and impersonation
 - Treat public marketing pages and authenticated panel flows as separate product surfaces when making changes
+- The site logo/favicon is a single source of truth: `public/favicon.svg` — the `Logo` component (`src/components/Logo.tsx`) renders it as an `<img>` tag, and `index.html` links it as the browser favicon. To update icons, replace `favicon.svg` and regenerate raster variants via [realfavicongenerator.net](https://realfavicongenerator.net/)

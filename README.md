@@ -759,6 +759,27 @@ RDNS_BASE_DOMAIN=ip.rev.yourdomain.com
 > ⚠️ **Branding**: After setting the env vars above, run `node scripts/seed-branding.js` to update the database with your brand name in documentation articles, FAQ items, contact methods, and networking config. Migrations use generic placeholders; this script replaces them with your configured values.
 > For the complete environment variable reference, see [`repo-docs/ENVIRONMENT_VARIABLES.md`](./repo-docs/ENVIRONMENT_VARIABLES.md) and [`.env.example`](./.env.example).
 
+### Icons & Logo
+
+The site icon and logo are sourced from a single file: **`public/favicon.svg`**. This SVG is used everywhere:
+
+| Usage | Location |
+|-------|----------|
+| Browser tab favicon | `index.html` → `<link rel="icon" href="/favicon.svg">` |
+| Public navbar logo | `src/components/MarketingNavbar.tsx` → `<Logo>` |
+| Dashboard sidebar logo | `src/components/AppSidebar.tsx` → `<Logo>` |
+| Footer logo | `src/components/MarketingFooter.tsx` → `<Logo>` |
+
+The `Logo` component (`src/components/Logo.tsx`) renders an `<img>` tag pointing to `/favicon.svg`, so all surfaces stay in sync automatically.
+
+**To change the icon:**
+1. Replace `public/favicon.svg` with your new SVG
+2. Regenerate raster icons using [realfavicongenerator.net](https://realfavicongenerator.net/) — upload your SVG and download the full icon package
+3. Place the generated files in `public/` (`favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png`, etc.)
+4. Update `public/site.webmanifest` if icon filenames change
+
+See [`PWA_SETUP.md`](./PWA_SETUP.md) for additional PWA-specific icon requirements (192×192 and 512×512 PNGs).
+
 ### Default Admin Credentials
 
 Credentials are configurable via `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` environment variables (set in `.env`).

@@ -64,7 +64,9 @@ export const BillingInvoices: React.FC = () => {
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.setAttribute('download', `invoice-${number}.html`); // Currently HTML, requirement mentions PDF but system generates HTML. I will stick to HTML as per existing logic, or use a PDF library client side?
+      // Sanitize filename to prevent XSS
+      const safeFilename = `invoice-${number}.html`.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
+      link.setAttribute('download', safeFilename); // Currently HTML, requirement mentions PDF but system generates HTML. I will stick to HTML as per existing logic, or use a PDF library client side?
       // Requirement: "download the invoice as a PDF file".
       // The current backend returns HTML.
       // To get PDF, we either need a backend PDF generator (e.g. puppeteer) or client-side (html2pdf).

@@ -683,7 +683,7 @@ router.patch(
       try {
         await query('SELECT pg_notify($1, $2)', [`ticket_${id}`, JSON.stringify(statusNotification)]);
       } catch (notifyErr) {
-        console.warn(`[Admin] Ticket NOTIFY failed for ticket ${id}:`, notifyErr);
+        console.warn('[Admin] Ticket NOTIFY failed for ticket %s:', id, notifyErr);
       }
 
       const userMessageByStatus: Record<
@@ -855,7 +855,7 @@ router.post(
       try {
         await query('SELECT pg_notify($1, $2)', [`ticket_${id}`, JSON.stringify(notificationPayload)]);
       } catch (notifyErr) {
-        console.warn(`[Admin] Ticket NOTIFY failed for ticket ${id}:`, notifyErr);
+        console.warn('[Admin] Ticket NOTIFY failed for ticket %s:', id, notifyErr);
       }
 
       res.status(201).json({

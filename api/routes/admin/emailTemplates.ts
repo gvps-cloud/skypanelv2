@@ -123,7 +123,7 @@ router.get('/:name', async (req, res) => {
       variables: extractHandlebarsVariables([template.subject, template.html_body, template.text_body])
     });
   } catch (error) {
-    console.error(`Error fetching email template ${name}:`, error);
+    console.error('Error fetching email template %s:', name, error);
     res.status(500).json({ error: 'Failed to fetch email template' });
   }
 });
@@ -195,7 +195,7 @@ router.put('/:name', async (req: AuthenticatedRequest, res) => {
     
     res.json(updatedTemplate);
   } catch (error) {
-    console.error(`Error updating email template ${name}:`, error);
+    console.error('Error updating email template %s:', name, error);
     res.status(500).json({ error: 'Failed to update email template' });
   }
 });
