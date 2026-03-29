@@ -71,7 +71,7 @@ export default function AboutUs() {
                 <p className="text-sm text-destructive">Unable to load live metrics.</p>
               ) : (
                 <div className="grid gap-2">
-                  <div className="flex justify-between"><span className="text-sm">Total users</span><strong>{formatStat(stats?.users.total)}</strong></div>
+                  <div className="flex justify-between"><span className="text-sm">Total users</span><strong>{formatStat(stats?.users.regular)}</strong></div>
                   <div className="flex justify-between"><span className="text-sm">VPS deployed</span><strong>{formatStat(stats?.vps.total)}</strong></div>
                   <div className="flex justify-between"><span className="text-sm">Open tickets</span><strong>{formatStat(stats?.support.openTickets)}</strong></div>
                   <div className="flex justify-between"><span className="text-sm">Regions</span><strong>{formatStat(stats?.regions.total)}</strong></div>

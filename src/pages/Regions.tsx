@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { MapPin, Wifi, Loader2, Plus, Minus } from "lucide-react";
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import PublicLayout from "@/components/PublicLayout";
 import { BRAND_NAME } from "@/lib/brand";
+import { RegionMarker, RegionInfoCard, useSpiderfy } from "@/components/regions";
 
 interface Region {
   id: string;
@@ -193,6 +194,12 @@ export default function Regions() {
     }
 
     setIsTestingAll(false);
+    // Reset map view and pagination after test all completes
+    setZoom(1);
+    setCenter([0, 0]);
+    setSelectedRegion(null);
+    setResultPage(0);
+    currentPageRef.current = 0;
   }, [regions, measureLatency, setLatency, zoomToRegion]);
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.5, 4));
@@ -271,21 +278,69 @@ export default function Regions() {
                       <ComposableMap projection="geoEqualEarth" width={900} height={520} style={{ width: "100%", height: "100%" }}>
                         <ZoomableGroup zoom={zoom} center={center} onMoveEnd={({ zoom: newZoom, center: newCenter }) => { setZoom(newZoom); setCenter(newCenter); }}>
                           <Geographies geography="https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json">
-                            {({ geographies }) => geographies.map((geo) => <Geography key={geo.rsmKey} geography={geo} fill="#e2e8f0" stroke="#94a3b8" className="hover:fill-slate-300 transition" />)}
+                            {({ geographies }) => geographies.map((geo) => (
+                              <Geography 
+                                key={geo.rsmKey} 
+                                geography={geo} 
+                                fill="#e2e8f0" 
+                                stroke="#94a3b8" 
+                                className="hover:fill-slate-300 dark:hover:fill-slate-700 transition" 
+                              />
+                            ))}
                           </Geographies>
                           {regions.map((region) => {
                             const coords = REGION_COORDINATES[region.id];
                             if (!coords) return null;
                             const state = (latencyState[region.id] ?? { loading: false, error: false }) as LatencyState[string];
+                            const mapCoords: [number, number] = [(coords.x - 50) * 3.6, (50 - coords.y) * 1.8];
+                            
                             return (
-                              <Marker key={region.id} coordinates={[(coords.x - 50) * 3.6, (50 - coords.y) * 1.8]}>
-                                <circle r={selectedRegion === region.id ? 8 : 6} fill={getMarkerColor(state.latency, state.loading, state.error)} stroke="#fff" strokeWidth={1.5} onClick={() => { handleRegionClick(region.id); setSelectedRegion(region.id); }} />
-                                <text y={-12} textAnchor="middle" fontSize={8} fill="#1e293b" pointerEvents="none">{region.id}</text>
+                              <Marker key={region.id} coordinates={mapCoords}>
+                                <RegionMarker
+                                  regionId={region.id}
+                                  regionLabel={region.label}
+                                  country={region.country}
+                                  latency={state.latency}
+                                  minLatency={state.min}
+                                  maxLatency={state.max}
+                                  loading={state.loading}
+                                  error={state.error}
+                                  isSelected={selectedRegion === region.id}
+                                  size={zoom > 2 ? "lg" : zoom > 1.5 ? "md" : "sm"}
+                                  onClick={() => {
+                                    handleRegionClick(region.id);
+                                    setSelectedRegion(region.id);
+                                  }}
+                                />
                               </Marker>
                             );
                           })}
                         </ZoomableGroup>
                       </ComposableMap>
+                      
+                      {/* Floating info card for selected region */}
+                      {selectedRegion && (() => {
+                        const region = regions.find((r) => r.id === selectedRegion);
+                        if (!region) return null;
+                        const state = (latencyState[region.id] ?? { loading: false, error: false }) as LatencyState[string];
+                        
+                        return (
+                          <RegionInfoCard
+                            regionId={region.id}
+                            regionLabel={region.label}
+                            country={region.country}
+                            siteType={region.site_type}
+                            status={region.status}
+                            latency={state.latency}
+                            minLatency={state.min}
+                            maxLatency={state.max}
+                            loading={state.loading}
+                            error={state.error}
+                            onTest={() => region.speedTestUrl && testRegion(region.id, region.speedTestUrl)}
+                            onClose={() => setSelectedRegion(null)}
+                          />
+                        );
+                      })()}
                     </div>
                     <div className="mt-3 flex items-center gap-2">
                       <Button size="sm" variant="outline" onClick={handleZoomIn} className="h-8 w-8 p-0" disabled={zoom >= 4}><Plus className="h-4 w-4" /></Button>
@@ -309,14 +364,26 @@ export default function Regions() {
                         <p className="text-sm text-muted-foreground">No latency results yet. Run "Test All" or click any marker.</p>
                       ) : (
                         (() => {
-                          const resultRegions = regions.filter((region) => latencyState[region.id]?.latency !== undefined || latencyState[region.id]?.error);
+                          // After Test All completes, show only regions with latency <= 125ms
+                          const allTestedRegions = regions.filter((region) => latencyState[region.id]?.latency !== undefined || latencyState[region.id]?.error);
+                          const resultRegions = !isTestingAll 
+                            ? allTestedRegions.filter((region) => {
+                                const latency = latencyState[region.id]?.latency;
+                                return latency !== undefined && latency <= 125;
+                              })
+                            : allTestedRegions;
                           const totalPages = Math.max(Math.ceil(resultRegions.length / RESULTS_PER_PAGE), 1);
                           const pageStart = resultPage * RESULTS_PER_PAGE;
                           const pageRegions = resultRegions.slice(pageStart, pageStart + RESULTS_PER_PAGE);
 
                           return (
                             <div className="rounded-lg border border-border p-3">
-                              <h4 className="text-sm font-semibold mb-2">Latency results</h4>
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-sm font-semibold">Latency results</h4>
+                                {!isTestingAll && allTestedRegions.length > 0 && (
+                                  <span className="text-xs text-muted-foreground">Showing {resultRegions.length} of {allTestedRegions.length} regions (≤125ms)</span>
+                                )}
+                              </div>
                               {pageRegions.length === 0 ? (
                                 <p className="text-sm text-muted-foreground">No results on this page.</p>
                               ) : (
