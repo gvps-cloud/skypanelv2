@@ -4,6 +4,7 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import BackToTopButton from "./components/BackToTopButton";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -423,6 +424,7 @@ export default function App() {
             <Router>
               <AppRoutes />
               <Toaster position="bottom-right" richColors closeButton />
+              <BackToTopButton />
             </Router>
           </ImpersonationProvider>
         </AuthProvider>

@@ -5205,7 +5205,7 @@ const Admin: React.FC = () => {
                       <SelectValue placeholder="Select provider" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="linode">Upstream Provider</SelectItem>
+                      <SelectItem value="linode">Linode</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

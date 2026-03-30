@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, type Variants } from "framer-motion";
 import {
   ArrowRight,
-  ArrowUp,
   CheckCircle2,
   Clock3,
   Globe2,
@@ -133,31 +132,7 @@ const AnimatedCounter = ({
   );
 };
 
-const BackToTopButton = () => {
-  const [visible, setVisible] = useState(false);
 
-  useEffect(() => {
-    const onScroll = () => setVisible(window.scrollY > 480);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  return (
-    <motion.button
-      type="button"
-      initial={{ opacity: 0, scale: 0.92 }}
-      animate={{ opacity: visible ? 1 : 0, scale: visible ? 1 : 0.92 }}
-      transition={{ duration: 0.2 }}
-      className={`fixed bottom-6 right-6 z-50 rounded-full border border-border bg-background/90 p-3 text-foreground shadow-lg backdrop-blur transition hover:border-primary/40 hover:text-primary ${
-        visible ? "pointer-events-auto" : "pointer-events-none"
-      }`}
-      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      aria-label="Back to top"
-    >
-      <ArrowUp className="h-4 w-4" />
-    </motion.button>
-  );
-};
 
 const capabilityTabs: Array<{
   key: CapabilityKey;
@@ -1045,7 +1020,6 @@ export default function HomeRedesign() {
       </main>
 
       <MarketingFooter />
-      <BackToTopButton />
     </div>
   );
 }
