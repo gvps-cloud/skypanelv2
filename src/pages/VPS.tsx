@@ -344,14 +344,23 @@ const VPS: React.FC = () => {
     return groups;
   }, [providerImages]);
 
-  // Constrain visible OS versions when a WordPress StackScript specifies allowed base images
+  // Strip vendor/brand prefix from image IDs to get the base ID for comparison
+  // e.g. "linode/ubuntu22.04" → "ubuntu22.04", "SkyPanelV2/ubuntu22.04" → "ubuntu22.04"
+  const baseImageId = (id: string) => id.includes("/") ? id.slice(id.indexOf("/") + 1) : id;
+
+  // Constrain visible OS versions when a StackScript specifies allowed base images
   const effectiveOsGroups = useMemo(() => {
     const allowed = Array.isArray(selectedStackScript?.images)
       ? (selectedStackScript!.images as string[])
       : [];
     if (!selectedStackScript) return osGroups;
-    const knownIds = new Set((providerImages || []).map((i: any) => i.id));
-    const allowedKnown = allowed.filter((id: string) => knownIds.has(id));
+    // Normalize both sides: StackScript images use "linode/..." prefix, provider images use branded prefix
+    const knownBaseIds = new Map(
+      (providerImages || []).map((i: any) => [baseImageId(i.id), i.id]),
+    );
+    const allowedKnown = allowed
+      .map((id: string) => knownBaseIds.get(baseImageId(id)))
+      .filter((id): id is string => id !== undefined);
     // If the StackScript allows any/all (no specific known image IDs), show all OS groups
     if (allowed.length === 0 || allowedKnown.length === 0) return osGroups;
     const allowedSet = new Set(allowedKnown);
@@ -369,12 +378,12 @@ const VPS: React.FC = () => {
     const allowed = Array.isArray(selectedStackScript.images)
       ? (selectedStackScript.images as string[])
       : [];
-    const byId = new Map(
-      (providerImages || []).map((img: any) => [img.id, img.label || img.id]),
+    const byBaseId = new Map(
+      (providerImages || []).map((img: any) => [baseImageId(img.id), img.label || img.id]),
     );
     const knownLabels = allowed
-      .filter((id) => byId.has(id))
-      .map((id) => String(byId.get(id)).replace(/^linode\//i, ""));
+      .map((id) => byBaseId.get(baseImageId(id)))
+      .filter((label): label is string => label !== undefined);
     if (allowed.length === 0 || knownLabels.length === 0)
       return "Any Linux distribution";
     return knownLabels.join(", ");
@@ -715,8 +724,13 @@ const VPS: React.FC = () => {
     const allowed = Array.isArray(selectedStackScript.images)
       ? (selectedStackScript.images as string[])
       : [];
-    const knownIds = new Set((providerImages || []).map((i: any) => i.id));
-    const allowedKnown = allowed.filter((id) => knownIds.has(id));
+    // Normalize: map base IDs to branded provider image IDs
+    const knownByBase = new Map(
+      (providerImages || []).map((i: any) => [baseImageId(i.id), i.id]),
+    );
+    const allowedKnown = allowed
+      .map((id) => knownByBase.get(baseImageId(id)))
+      .filter((id): id is string => id !== undefined);
     // If unrestricted (any/all), don't force-change the current image
     if (allowed.length === 0 || allowedKnown.length === 0) return;
     const current = createForm.image;
@@ -1591,8 +1605,12 @@ const VPS: React.FC = () => {
       // Enforce image compatibility and validate fields for StackScripts
       if (selectedStackScript && Array.isArray(selectedStackScript.images)) {
         const allowed = selectedStackScript.images as string[];
-        const knownIds = new Set((providerImages || []).map((i: any) => i.id));
-        const allowedKnown = allowed.filter((id) => knownIds.has(id));
+        const knownByBase = new Map(
+          (providerImages || []).map((i: any) => [baseImageId(i.id), i.id]),
+        );
+        const allowedKnown = allowed
+          .map((id) => knownByBase.get(baseImageId(id)))
+          .filter((id): id is string => id !== undefined);
         // If the script is unrestricted (any/all), skip strict enforcement
         if (allowedKnown.length > 0) {
           if (!createForm.image || !allowedKnown.includes(createForm.image)) {

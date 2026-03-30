@@ -174,9 +174,12 @@ export function StackScriptAccordionSelect({
         </p>
       )}
       {selectedStackScript && selectedId !== 'none' && (
-        <p className="text-xs text-muted-foreground">
-          Selected: {selectedStackScript.label}
-        </p>
+        <div className="text-xs text-muted-foreground space-y-0.5">
+          <p>Selected: {selectedStackScript.label}</p>
+          {selectedStackScript.description && (
+            <p className="text-muted-foreground/70">{selectedStackScript.description}</p>
+          )}
+        </div>
       )}
     </div>
   );

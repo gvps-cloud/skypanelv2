@@ -696,7 +696,8 @@ CREATE TABLE IF NOT EXISTS faq_items (
     display_order INTEGER NOT NULL DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (category_id, question)
 );
 
 CREATE TABLE IF NOT EXISTS faq_updates (
@@ -740,194 +741,99 @@ INSERT INTO faq_categories (name, description, display_order, is_active) VALUES
 ON CONFLICT DO NOTHING;
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'What is this platform?',
-    'This is a cloud infrastructure platform that provides VPS hosting, dedicated servers, and managed services. It offers flexible, scalable solutions for businesses of all sizes.',
-    0,
-    TRUE
-FROM faq_categories WHERE name = 'Getting Started'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'What is this platform?', 'This is a cloud infrastructure platform that provides VPS hosting, dedicated servers, and managed services. It offers flexible, scalable solutions for businesses of all sizes.', 0, TRUE
+FROM faq_categories c WHERE c.name = 'Getting Started'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'What is this platform?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'How do I create an account?',
-    'Click the ''Register'' button at the top right of the page. Fill in your email, create a password, and verify your email address. Once verified, you can start deploying services immediately.',
-    1,
-    TRUE
-FROM faq_categories WHERE name = 'Getting Started'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'How do I create an account?', 'Click the ''Register'' button at the top right of the page. Fill in your email, create a password, and verify your email address. Once verified, you can start deploying services immediately.', 1, TRUE
+FROM faq_categories c WHERE c.name = 'Getting Started'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'How do I create an account?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'What payment methods do you accept?',
-    'We accept PayPal for wallet top-ups. You can add funds to your wallet using credit/debit cards through PayPal''s secure payment gateway.',
-    2,
-    TRUE
-FROM faq_categories WHERE name = 'Getting Started'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'What payment methods do you accept?', 'We accept PayPal for wallet top-ups. You can add funds to your wallet using credit/debit cards through PayPal''s secure payment gateway.', 2, TRUE
+FROM faq_categories c WHERE c.name = 'Getting Started'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'What payment methods do you accept?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'How does billing work?',
-    'We use an hourly billing model. Resources are billed every hour based on usage. Charges are automatically deducted from your prepaid wallet balance.',
-    3,
-    TRUE
-FROM faq_categories WHERE name = 'Getting Started'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'How does billing work?', 'We use an hourly billing model. Resources are billed every hour based on usage. Charges are automatically deducted from your prepaid wallet balance.', 3, TRUE
+FROM faq_categories c WHERE c.name = 'Getting Started'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'How does billing work?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'What is a VPS?',
-    'A Virtual Private Server (VPS) is a virtualized server that provides dedicated resources (CPU, RAM, storage) in a shared hosting environment. It gives you full root access and control over your server.',
-    0,
-    TRUE
-FROM faq_categories WHERE name = 'VPS Hosting'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'What is a VPS?', 'A Virtual Private Server (VPS) is a virtualized server that provides dedicated resources (CPU, RAM, storage) in a shared hosting environment. It gives you full root access and control over your server.', 0, TRUE
+FROM faq_categories c WHERE c.name = 'VPS Hosting'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'What is a VPS?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'What operating systems are available?',
-    'We offer a wide range of Linux distributions including Ubuntu, Debian, CentOS, Fedora, and more. You can also deploy custom images or use marketplace applications.',
-    1,
-    TRUE
-FROM faq_categories WHERE name = 'VPS Hosting'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'What operating systems are available?', 'We offer a wide range of Linux distributions including Ubuntu, Debian, CentOS, Fedora, and more. You can also deploy custom images or use marketplace applications.', 1, TRUE
+FROM faq_categories c WHERE c.name = 'VPS Hosting'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'What operating systems are available?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'Can I upgrade or downgrade my VPS?',
-    'Yes! You can resize your VPS at any time. Upgrades happen quickly, while downgrades may require some downtime for disk reduction.',
-    2,
-    TRUE
-FROM faq_categories WHERE name = 'VPS Hosting'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'Can I upgrade or downgrade my VPS?', 'Yes! You can resize your VPS at any time. Upgrades happen quickly, while downgrades may require some downtime for disk reduction.', 2, TRUE
+FROM faq_categories c WHERE c.name = 'VPS Hosting'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'Can I upgrade or downgrade my VPS?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'Do you provide backups?',
-    'Yes, we offer automated daily backups and manual snapshots. You can enable backups for any VPS instance and restore from any backup point.',
-    3,
-    TRUE
-FROM faq_categories WHERE name = 'VPS Hosting'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'Do you provide backups?', 'Yes, we offer automated daily backups and manual snapshots. You can enable backups for any VPS instance and restore from any backup point.', 3, TRUE
+FROM faq_categories c WHERE c.name = 'VPS Hosting'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'Do you provide backups?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'How do I add funds to my wallet?',
-    'Go to the Billing section and click ''Add Funds''. Enter the amount you want to add and complete the payment through PayPal.',
-    0,
-    TRUE
-FROM faq_categories WHERE name = 'Billing & Payments'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'How do I add funds to my wallet?', 'Go to the Billing section and click ''Add Funds''. Enter the amount you want to add and complete the payment through PayPal.', 0, TRUE
+FROM faq_categories c WHERE c.name = 'Billing & Payments'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'How do I add funds to my wallet?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'Can I get a refund?',
-    'We offer prorated refunds for unused services. Contact our support team to request a refund, and we''ll process it within 5-7 business days.',
-    1,
-    TRUE
-FROM faq_categories WHERE name = 'Billing & Payments'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'Can I get a refund?', 'We offer prorated refunds for unused services. Contact our support team to request a refund, and we''ll process it within 5-7 business days.', 1, TRUE
+FROM faq_categories c WHERE c.name = 'Billing & Payments'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'Can I get a refund?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'What happens if my wallet runs out of funds?',
-    'You''ll receive email notifications when your balance is low. If your wallet reaches zero, your services will be suspended until you add more funds.',
-    2,
-    TRUE
-FROM faq_categories WHERE name = 'Billing & Payments'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'What happens if my wallet runs out of funds?', 'You''ll receive email notifications when your balance is low. If your wallet reaches zero, your services will be suspended until you add more funds.', 2, TRUE
+FROM faq_categories c WHERE c.name = 'Billing & Payments'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'What happens if my wallet runs out of funds?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'Can I set up auto-reload?',
-    'Currently, auto-reload is not available, but it''s on our roadmap. You''ll need to manually add funds as needed.',
-    3,
-    TRUE
-FROM faq_categories WHERE name = 'Billing & Payments'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'Can I set up auto-reload?', 'Currently, auto-reload is not available, but it''s on our roadmap. You''ll need to manually add funds as needed.', 3, TRUE
+FROM faq_categories c WHERE c.name = 'Billing & Payments'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'Can I set up auto-reload?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'How do I contact support?',
-    'You can create a support ticket from your dashboard. We typically respond within 24 hours for regular tickets and within 4 hours for urgent issues.',
-    0,
-    TRUE
-FROM faq_categories WHERE name = 'Support'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'How do I contact support?', 'You can create a support ticket from your dashboard. We typically respond within 24 hours for regular tickets and within 4 hours for urgent issues.', 0, TRUE
+FROM faq_categories c WHERE c.name = 'Support'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'How do I contact support?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'Do you offer live chat support?',
-    'Currently, support is provided through our ticketing system. Live chat support is planned for future releases.',
-    1,
-    TRUE
-FROM faq_categories WHERE name = 'Support'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'Do you offer live chat support?', 'Currently, support is provided through our ticketing system. Live chat support is planned for future releases.', 1, TRUE
+FROM faq_categories c WHERE c.name = 'Support'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'Do you offer live chat support?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'What are your support hours?',
-    'Our support team is available 24/7 for critical issues. Regular tickets are handled during business hours (9 AM - 6 PM EST).',
-    2,
-    TRUE
-FROM faq_categories WHERE name = 'Support'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'What are your support hours?', 'Our support team is available 24/7 for critical issues. Regular tickets are handled during business hours (9 AM - 6 PM EST).', 2, TRUE
+FROM faq_categories c WHERE c.name = 'Support'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'What are your support hours?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'What data centers do you use?',
-    'We partner with leading infrastructure providers including Linode/Akamai and ReliableSite. Servers are available in multiple regions worldwide including North America, Europe, and Asia.',
-    0,
-    TRUE
-FROM faq_categories WHERE name = 'Technical'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'What data centers do you use?', 'We partner with leading infrastructure providers to deliver reliable cloud hosting. Servers are available in multiple regions worldwide including North America, Europe, and Asia.', 0, TRUE
+FROM faq_categories c WHERE c.name = 'Technical'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'What data centers do you use?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'Do you provide DDoS protection?',
-    'Yes, all our services include basic DDoS protection. Advanced DDoS mitigation is available as an add-on.',
-    1,
-    TRUE
-FROM faq_categories WHERE name = 'Technical'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'Do you provide DDoS protection?', 'Yes, all our services include basic DDoS protection. Advanced DDoS mitigation is available as an add-on.', 1, TRUE
+FROM faq_categories c WHERE c.name = 'Technical'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'Do you provide DDoS protection?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'Can I use my own domain?',
-    'Yes! You can point your domain to your VPS using A/AAAA records. We also support custom reverse DNS.',
-    2,
-    TRUE
-FROM faq_categories WHERE name = 'Technical'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'Can I use my own domain?', 'Yes! You can point your domain to your VPS using A/AAAA records. We also support custom reverse DNS.', 2, TRUE
+FROM faq_categories c WHERE c.name = 'Technical'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'Can I use my own domain?');
 
 INSERT INTO faq_items (category_id, question, answer, display_order, is_active)
-SELECT
-    id,
-    'Is there an API available?',
-    'Yes, we provide a comprehensive RESTful API. You can generate API keys from your account settings and integrate with our platform programmatically.',
-    3,
-    TRUE
-FROM faq_categories WHERE name = 'Technical'
-ON CONFLICT DO NOTHING;
+SELECT c.id, 'Is there an API available?', 'Yes, we provide a comprehensive RESTful API. You can generate API keys from your account settings and integrate with our platform programmatically.', 3, TRUE
+FROM faq_categories c WHERE c.name = 'Technical'
+AND NOT EXISTS (SELECT 1 FROM faq_items i WHERE i.category_id = c.id AND i.question = 'Is there an API available?');
 
 INSERT INTO faq_updates (title, description, published_date, display_order, is_active) VALUES
 ('New API endpoints for theme controls', 'Automate theme presets and dynamic branding from your CI/CD pipeline.', NOW() - INTERVAL '7 days', 0, TRUE),
