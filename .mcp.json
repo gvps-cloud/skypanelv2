@@ -1,1 +1,1 @@
-{"mcpServers":{"playwright-test":{"command":"npx","args":["playwright","run-test-mcp-server"],"disabled":true,"alwaysAllow":[]}}}
+{"mcpServers":{"playwright-test":{"command":"cmd","args":["/c","npx","playwright","run-test-mcp-server"],"disabled":true,"alwaysAllow":[]}}}
