@@ -18,7 +18,6 @@ WHERE key = 'theme'
     OR jsonb_typeof(value) <> 'object'
     OR NOT (value ? 'presetId')
     OR NULLIF(BTRIM(value->>'presetId'), '') IS NULL
-    OR (value->>'presetId') = 'teal'
     OR (value->>'presetId') NOT IN (
       'teal',
       'mono',
