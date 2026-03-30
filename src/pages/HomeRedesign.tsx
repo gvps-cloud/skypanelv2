@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { motion, type Variants } from "framer-motion";
 import {
   ArrowRight,
@@ -441,6 +441,21 @@ export default function HomeRedesign() {
       isMounted = false;
     };
   }, []);
+
+  // Handle hash anchor scrolling when navigating from other pages
+  const location = useLocation();
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.slice(1); // Remove "#"
+      const el = document.getElementById(id);
+      if (el) {
+        // Small delay to allow page content to render
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
+    }
+  }, [location.hash]);
 
   const heroMetrics: MetricCard[] = useMemo(
     () => [
