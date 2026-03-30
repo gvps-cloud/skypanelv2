@@ -90,10 +90,17 @@ export function MarketingNavbar({ sticky = true }: MarketingNavbarProps) {
     );
   };
 
+  const handleLogoClick = () => {
+    closeMobileMenu();
+    if (location.pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
     <header className={wrapperClasses.join(" ")}>
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-2 text-lg font-semibold" onClick={closeMobileMenu}>
+        <Link to="/" className="flex items-center gap-2 text-lg font-semibold" onClick={handleLogoClick}>
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
             <Logo size="md" />
           </div>
