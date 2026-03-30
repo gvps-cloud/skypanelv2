@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, Globe, Zap, Server, CheckCircle2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getCountryFlagEmoji } from '@/lib/regionCoordinates';
+import { CountryFlag } from '@/components/regions/RegionMarker';
 import { Link } from 'react-router-dom';
 
 interface RegionData {
@@ -26,8 +26,6 @@ interface GlobeRegionPanelProps {
 
 export default function GlobeRegionPanel({ region, onClose }: GlobeRegionPanelProps) {
   if (!region) return null;
-
-  const countryFlag = getCountryFlagEmoji(region.country?.toUpperCase() || '');
 
   // Get capability labels for display
   const capabilityLabels: Record<string, { label: string; icon: React.ReactNode }> = {
@@ -57,8 +55,9 @@ export default function GlobeRegionPanel({ region, onClose }: GlobeRegionPanelPr
                 <Globe className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">
-                  {countryFlag} {region.displayLabel || region.label}
+                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <CountryFlag countryCode={region.country?.toLowerCase() || ''} size={20} />
+                  <span>{region.displayLabel || region.label}</span>
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   {region.displayCountry || region.country}
