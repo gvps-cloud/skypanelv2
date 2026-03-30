@@ -1015,7 +1015,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
               provider_type: "cloud",
               type: "g6-standard-2",
               region: "us-east",
-              image: "tpl_4a61d5f6f1f9a9f3e58ab1e2",
+              image: "SkyPanelV2/linode/ubuntu22.04",
               rootPassword: "Sup3rSecure!",
               sshKeys: ["123"],
               backups: true,
@@ -1108,17 +1108,17 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/:id/rebuild",
             description:
-              "Reinstall a VPS using a platform OS template id (`tpl_*`) and a new root password.",
+              "Reinstall a VPS using a platform OS template id (`{CompanyBrandName}/*`) and a new root password.",
             auth: true,
             body: {
-              image: "tpl_4a61d5f6f1f9a9f3e58ab1e2",
+              image: "SkyPanelV2/linode/ubuntu22.04",
               rootPassword: "Sup3rSecure!",
               sshKeys: ["123"],
               booted: true,
             },
             response: {
               status: "rebuilding",
-              image: "tpl_4a61d5f6f1f9a9f3e58ab1e2",
+              image: "SkyPanelV2/linode/ubuntu22.04",
               providerName: "Cloud Provider",
             },
           },
@@ -1330,8 +1330,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             params: { provider_id: "provider_001" },
             response: {
               images: [
-                { id: "tpl_4a61d5f6f1f9a9f3e58ab1e2", label: "Ubuntu 24.04 LTS" },
-                { id: "tpl_2a3f4963fbe3229ff43a7f5a", label: "Debian 12" },
+                { id: "SkyPanelV2/linode/ubuntu22.04", label: "Ubuntu 24.04 LTS" },
+                { id: "SkyPanelV2/linode/debian12", label: "Debian 12" },
               ],
             },
           },

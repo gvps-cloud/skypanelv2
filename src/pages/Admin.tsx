@@ -5205,7 +5205,7 @@ const Admin: React.FC = () => {
                       <SelectValue placeholder="Select provider" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="linode">Linode / Akamai</SelectItem>
+                      <SelectItem value="linode">Upstream Provider</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -5214,7 +5214,7 @@ const Admin: React.FC = () => {
                   <Input
                     id="provider-key"
                     type="password"
-                    placeholder="Enter Linode API token"
+                    placeholder="Enter upstream API token"
                     value={newProvider.apiKey}
                     onChange={(e) =>
                       setNewProvider((prev) => ({
@@ -5224,7 +5224,7 @@ const Admin: React.FC = () => {
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Create an API token from your Linode Cloud Manager with full
+                    Create an API token from your upstream provider dashboard with full
                     access permissions
                   </p>
                 </div>

@@ -171,7 +171,7 @@ export const EgressBilling: React.FC<EgressBillingProps> = ({
                 egressPricingSyncing && "animate-spin",
               )}
             />
-            {egressPricingSyncing ? "Syncing…" : "Sync Linode Pricing"}
+            {egressPricingSyncing ? "Syncing…" : "Sync Upstream Pricing"}
           </Button>
           <Button
             variant="secondary"
@@ -266,7 +266,7 @@ export const EgressBilling: React.FC<EgressBillingProps> = ({
             Region Pricing Controls
           </CardTitle>
           <CardDescription>
-            Base price comes from Linode pricing sync. Enter only your
+            Base price comes from upstream pricing sync. Enter only your
             markup and enable billing for the regions you want to charge.
           </CardDescription>
         </CardHeader>

@@ -209,7 +209,7 @@ const SortableRow: React.FC<SortableRowProps> = ({
               </TooltipTrigger>
               <TooltipContent>
                 <p className="max-w-xs">
-                  Original category from the Linode API. This value cannot be changed.
+                  Original category from the provider API. This value cannot be changed.
                 </p>
               </TooltipContent>
             </Tooltip>

@@ -38,14 +38,28 @@ import { config } from "../config/index.js";
 
 const DEFAULT_RDNS_BASE_DOMAIN = config.RDNS_BASE_DOMAIN;
 
-const TEMPLATE_ID_PREFIX = "tpl_";
+const LEGACY_TEMPLATE_PREFIX = "tpl_";
+const BRANDED_TEMPLATE_PREFIX = config.COMPANY_BRAND_NAME + "/";
 
-function toTemplateId(providerId: string, upstreamImageId: string): string {
+function isBrandedTemplateId(id: string): boolean {
+  return id.startsWith(BRANDED_TEMPLATE_PREFIX);
+}
+
+function isLegacyTemplateId(id: string): boolean {
+  return id.startsWith(LEGACY_TEMPLATE_PREFIX);
+}
+
+function toBrandedTemplateId(upstreamImageId: string): string {
+  return `${BRANDED_TEMPLATE_PREFIX}${upstreamImageId}`;
+}
+
+/** @deprecated Legacy hash-based template ID — kept for backwards compatibility */
+function toLegacyTemplateId(providerId: string, upstreamImageId: string): string {
   const digest = createHash("sha256")
     .update(`${providerId}:${upstreamImageId}`)
     .digest("hex")
     .slice(0, 24);
-  return `${TEMPLATE_ID_PREFIX}${digest}`;
+  return `${LEGACY_TEMPLATE_PREFIX}${digest}`;
 }
 
 function normalizeImageTemplate(
@@ -61,8 +75,11 @@ function normalizeImageTemplate(
   deprecated: boolean;
 } {
   const upstreamId = String(image?.id || "").trim();
+  // Strip 'linode/' prefix from upstream ID for white-labeling
+  // e.g., 'linode/ubuntu22.04' -> 'ubuntu22.04'
+  const whiteLabelId = upstreamId.replace(/^linode\//, '');
   return {
-    id: toTemplateId(providerId, upstreamId),
+    id: toBrandedTemplateId(whiteLabelId),
     label: image?.label || upstreamId,
     description: image?.description || null,
     distribution: image?.vendor || null,
@@ -81,19 +98,32 @@ async function resolveImageForProvider(
   providerApiToken?: string,
 ): Promise<string | null> {
   const requested = requestedImage.trim();
-  if (!requested.startsWith(TEMPLATE_ID_PREFIX)) {
-    return requested;
-  }
 
-  const images = await linodeService.getLinodeImages(providerApiToken);
-  for (const image of images) {
-    const upstreamId = String(image.id || "").trim();
-    if (toTemplateId(providerId, upstreamId) === requested) {
-      return upstreamId;
+  // Path 1: Branded template ID (e.g. "SkyPanelV2/ubuntu22.04") → strip prefix and restore 'linode/'
+  if (isBrandedTemplateId(requested)) {
+    const whiteLabelId = requested.slice(BRANDED_TEMPLATE_PREFIX.length);
+    // Restore 'linode/' prefix for upstream API (e.g., 'ubuntu22.04' -> 'linode/ubuntu22.04')
+    // Only add prefix if not already present (handles edge cases)
+    if (!whiteLabelId.startsWith('linode/')) {
+      return `linode/${whiteLabelId}`;
     }
+    return whiteLabelId;
   }
 
-  return null;
+  // Path 2: Legacy hash-based template ID (e.g. "tpl_4a61d5f6f1f9a9f3e58ab1e2") → lookup
+  if (isLegacyTemplateId(requested)) {
+    const images = await linodeService.getLinodeImages(providerApiToken);
+    for (const image of images) {
+      const upstreamId = String(image.id || "").trim();
+      if (toLegacyTemplateId(providerId, upstreamId) === requested) {
+        return upstreamId;
+      }
+    }
+    return null;
+  }
+
+  // Path 3: Bare upstream image ID → pass through as-is
+  return requested;
 }
 
 async function loadActiveProviderToken(
@@ -3018,9 +3048,9 @@ router.post("/", async (req: Request, res: Response) => {
       type: providerPlanId,
       region: regionToUse,
       image: resolvedImage,
-      template_id: requestedImage.startsWith(TEMPLATE_ID_PREFIX)
+      template_id: isBrandedTemplateId(requestedImage) || isLegacyTemplateId(requestedImage)
         ? requestedImage
-        : toTemplateId(String(provider_id), resolvedImage),
+        : toBrandedTemplateId(resolvedImage),
       provider_template_id: resolvedImage,
       backups,
       backup_frequency: validatedBackupFrequency,
@@ -3725,9 +3755,9 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
     const updatedConfig = {
       ...existingConfig,
       image: resolvedImage,
-      template_id: requestedImage.startsWith(TEMPLATE_ID_PREFIX)
+      template_id: isBrandedTemplateId(requestedImage) || isLegacyTemplateId(requestedImage)
         ? requestedImage
-        : toTemplateId(String(row.provider_id || "default"), resolvedImage),
+        : toBrandedTemplateId(resolvedImage),
       provider_template_id: resolvedImage,
       auth: {
         method: "password",

@@ -430,7 +430,7 @@ export const SSHKeyManagement: React.FC = () => {
             <div className="bg-background/50 backdrop-blur-sm rounded-lg p-4 border">
               <div className="flex items-center gap-2">
                 <Server className="h-5 w-5 text-green-500" />
-                <span className="text-sm font-medium text-muted-foreground">Synced to Linode</span>
+                <span className="text-sm font-medium text-muted-foreground">Synced to Upstream</span>
               </div>
               <p className="text-2xl font-bold mt-1">
                 {sshKeys.filter(k => k.linode_key_id).length}
