@@ -13,7 +13,19 @@ VALUES ('branding', jsonb_build_object(
   'rdns_base_domain', 'ip.rev.example.com'
 ))
 ON CONFLICT (key) DO UPDATE
-SET value = EXCLUDED.value
+SET value = jsonb_build_object(
+  'company_name', CASE
+    WHEN platform_settings.value->>'company_name' IN ('SkyPanelV2', 'GVPS.Cloud')
+    THEN 'the platform'
+    ELSE platform_settings.value->>'company_name'
+  END,
+  'support_email', CASE
+    WHEN platform_settings.value->>'support_email' IN ('support@skypanelv2.com', 'support@gvps.cloud')
+    THEN 'support@example.com'
+    ELSE platform_settings.value->>'support_email'
+  END,
+  'rdns_base_domain', platform_settings.value->>'rdns_base_domain'
+)
 WHERE platform_settings.value->>'company_name' IN ('SkyPanelV2', 'GVPS.Cloud')
    OR platform_settings.value->>'support_email' IN ('support@skypanelv2.com', 'support@gvps.cloud')
    OR platform_settings.value->>'rdns_base_domain' = 'ip.rev.gvps.cloud';

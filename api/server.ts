@@ -8,6 +8,45 @@ import { BillingService } from "./services/billingService.js";
 import { EgressBillingService } from "./services/egressBillingService.js";
 import { EgressHourlyBillingService } from "./services/egressHourlyBillingService.js";
 import { notificationService } from "./services/notificationService.js";
+import { query } from "./lib/database.js";
+import { config } from "./config/index.js";
+
+/**
+ * Sync env-driven config into the database on startup.
+ * This ensures .env values (like RDNS_BASE_DOMAIN) are reflected in the
+ * networking_config table, which the admin UI reads from.
+ */
+async function syncEnvConfigToDatabase() {
+  try {
+    const envDomain = config.RDNS_BASE_DOMAIN?.trim();
+    if (!envDomain) return;
+
+    const existing = await query(
+      "SELECT id, rdns_base_domain FROM networking_config ORDER BY updated_at DESC LIMIT 1",
+    );
+    const row = existing.rows?.[0];
+
+    if (row) {
+      if (row.rdns_base_domain !== envDomain) {
+        await query(
+          "UPDATE networking_config SET rdns_base_domain = $1, updated_at = NOW() WHERE id = $2",
+          [envDomain, row.id],
+        );
+        console.log(
+          `🔄 Synced RDNS_BASE_DOMAIN from .env: ${row.rdns_base_domain} → ${envDomain}`,
+        );
+      }
+    } else {
+      await query(
+        "INSERT INTO networking_config (rdns_base_domain, created_at, updated_at) VALUES ($1, NOW(), NOW())",
+        [envDomain],
+      );
+      console.log(`🔄 Created networking_config from .env: RDNS_BASE_DOMAIN=${envDomain}`);
+    }
+  } catch (error) {
+    console.warn("⚠️ Could not sync RDNS_BASE_DOMAIN to database:", (error as Error).message);
+  }
+}
 
 /**
  * start server with port
@@ -23,6 +62,9 @@ const server = app.listen(PORT, () => {
   notificationService.start().catch((error) => {
     console.error("Failed to start notification service:", error);
   });
+
+  // Sync .env config (RDNS_BASE_DOMAIN, etc.) into database on startup
+  syncEnvConfigToDatabase();
 
   // Start hourly billing scheduler
   startBillingScheduler();
