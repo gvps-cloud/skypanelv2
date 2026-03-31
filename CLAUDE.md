@@ -141,7 +141,7 @@ TRUST_PROXY=true
 # Branding
 COMPANY_NAME=SkyPanelV2
 VITE_COMPANY_NAME=SkyPanelV2
-COMPANY_BRAND_NAME=SkyPanel
+COMPANY_BRAND_NAME=SkyPanelV2
 
 # File Upload
 MAX_FILE_SIZE=10485760
@@ -186,7 +186,7 @@ Rate limits are configurable via environment variables. Default values are set i
 - `vps_egress_hourly_readings` - Hourly transfer usage readings
 
 ### Database Migrations
-SQL migrations are in the `migrations/` directory (34 total: 001–034, with 006 skipped). Apply pending migrations with `node scripts/run-migration.js`.
+SQL migrations are in the `migrations/` directory (47 total: 001–047, sequential). Apply pending migrations with `node scripts/run-migration.js`.
 
 ## API Routes
 

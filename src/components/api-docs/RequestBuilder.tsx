@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
-import { Play, Loader2, Copy, Check } from "lucide-react";
+import { Play, Loader2, Copy, Check, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,9 @@ interface RequestBuilderProps {
   endpoint: EndpointDefinition;
   apiBase: string;
   apiKey: string | null;
+  requiresAuth?: boolean;
+  isAdmin?: boolean;
+  endpointAdmin?: boolean;
   onExecute: (request: {
     method: string;
     url: string;
@@ -42,6 +45,9 @@ export function RequestBuilder({
   endpoint,
   apiBase,
   apiKey,
+  requiresAuth = true,
+  isAdmin = false,
+  endpointAdmin = false,
   onExecute,
   isLoading = false,
   response,
@@ -68,6 +74,7 @@ export function RequestBuilder({
   const hasBody = ["POST", "PUT", "PATCH"].includes(endpoint.method);
   const hasPathParams = pathParams.length > 0;
   const hasQueryParams = Object.keys(queryParams).length > 0;
+  const isAdminBlocked = endpointAdmin && !isAdmin;
 
   const methodStyle = methodStyles[endpoint.method] || methodStyles.DEFAULT;
 
@@ -107,7 +114,12 @@ export function RequestBuilder({
   }, []);
 
   const handleExecute = useCallback(async () => {
-    if (!apiKey) {
+    if (isAdminBlocked) {
+      toast.error("Admin access required for this endpoint");
+      return;
+    }
+
+    if (requiresAuth && !apiKey) {
       toast.error("Please enter an API key first");
       return;
     }
@@ -128,7 +140,7 @@ export function RequestBuilder({
       body: parsedBody,
       params: queryParams,
     });
-  }, [apiKey, hasBody, bodyText, endpoint.method, fullUrl, queryParams, onExecute]);
+  }, [isAdminBlocked, requiresAuth, apiKey, hasBody, bodyText, endpoint.method, fullUrl, queryParams, onExecute]);
 
   const handleCopyCurl = useCallback(async () => {
     const lines = [`curl -X ${endpoint.method} "${fullUrl}"`];
@@ -156,13 +168,34 @@ export function RequestBuilder({
           variant="outline"
           size="sm"
           className="w-full mt-2"
-          disabled={!endpoint.auth && !apiKey}
+          disabled={isAdminBlocked || (requiresAuth && !apiKey)}
         >
-          <Play className="h-4 w-4 mr-2" />
-          Try It
+          {isAdminBlocked ? (
+            <>
+              <ShieldAlert className="h-4 w-4 mr-2" />
+              Admin Access Required
+            </>
+          ) : (
+            <>
+              <Play className="h-4 w-4 mr-2" />
+              Try It
+            </>
+          )}
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-4 space-y-4">
+        {isAdminBlocked ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950 p-4 text-sm text-red-700 dark:text-red-400">
+            <div className="flex items-center gap-2 font-medium">
+              <ShieldAlert className="h-4 w-4" />
+              Admin Access Required
+            </div>
+            <p className="mt-1 text-red-600 dark:text-red-400/80">
+              This endpoint requires administrator privileges. Contact your platform admin for access.
+            </p>
+          </div>
+        ) : (
+        <>
         {/* Method and URL display */}
         <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
           <Badge className={methodStyle}>{endpoint.method}</Badge>
@@ -226,7 +259,7 @@ export function RequestBuilder({
         <div className="flex gap-2">
           <Button
             onClick={handleExecute}
-            disabled={isLoading || !apiKey}
+            disabled={isLoading || (requiresAuth && !apiKey)}
             className="flex-1"
           >
             {isLoading ? (
@@ -250,7 +283,7 @@ export function RequestBuilder({
           </Button>
         </div>
 
-        {!apiKey && endpoint.auth && (
+        {!apiKey && requiresAuth && (
           <p className="text-sm text-amber-600 dark:text-amber-500">
             ⚠️ This endpoint requires authentication. Please enter your API key above.
           </p>
@@ -269,6 +302,8 @@ export function RequestBuilder({
               headers={response.headers}
             />
           </div>
+        )}
+        </>
         )}
       </CollapsibleContent>
     </Collapsible>

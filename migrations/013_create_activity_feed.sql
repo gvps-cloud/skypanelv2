@@ -1,4 +1,4 @@
--- Migration 014: Create activity_feed table
+-- Migration 013: Create activity_feed table
 
 -- Create activity_feed table
 CREATE TABLE IF NOT EXISTS activity_feed (

@@ -174,4 +174,39 @@ export abstract class BaseProviderService implements IProviderService {
   abstract getImages(): Promise<any[]>;
   abstract getRegions(): Promise<any[]>;
   abstract validateCredentials(): Promise<boolean>;
+
+  // ── IP Address Management ──
+  abstract listIPs(page?: number, pageSize?: number): Promise<{ data: any[]; pages: number; total: number }>;
+  abstract getIPAddress(address: string): Promise<any>;
+  abstract allocateIP(request: any): Promise<any>;
+  abstract deleteIPAddress(instanceId: string, address: string): Promise<void>;
+  abstract assignIPs(request: any): Promise<void>;
+  abstract shareIPs(request: any): Promise<void>;
+  abstract updateIPReverseDNS(address: string, rdns: string | null): Promise<any>;
+
+  // ── IPv6 Management ──
+  abstract listIPv6Pools(): Promise<any[]>;
+  abstract listIPv6Ranges(): Promise<any[]>;
+  abstract createIPv6Range(request: any): Promise<any>;
+  abstract deleteIPv6Range(range: string): Promise<void>;
+
+  // ── VLAN Management ──
+  abstract listVLANs(): Promise<any[]>;
+  abstract deleteVLAN(regionId: string, label: string): Promise<void>;
+
+  // ── Firewall Management ──
+  abstract listFirewalls(): Promise<{ data: any[]; pages: number; total: number }>;
+  abstract createFirewall(params: any): Promise<any>;
+  abstract getFirewall(firewallId: number): Promise<any>;
+  abstract updateFirewall(firewallId: number, updates: any): Promise<any>;
+  abstract deleteFirewall(firewallId: number): Promise<void>;
+  abstract getFirewallRules(firewallId: number): Promise<any>;
+  abstract updateFirewallRules(firewallId: number, rules: any): Promise<any>;
+  abstract getFirewallDevices(firewallId: number): Promise<any[]>;
+  abstract attachFirewallDevice(firewallId: number, type: string, entityId: number): Promise<any>;
+  abstract detachFirewallDevice(firewallId: number, deviceId: number): Promise<void>;
+  abstract getFirewallSettings(): Promise<any>;
+  abstract updateFirewallSettings(settings: any): Promise<any>;
+  abstract listFirewallTemplates(): Promise<any[]>;
+  abstract getFirewallTemplate(slug: string): Promise<any>;
 }

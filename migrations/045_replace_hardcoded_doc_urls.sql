@@ -1,4 +1,4 @@
--- Migration 044: Replace hardcoded URLs in documentation with {{PLATFORM_URL}} placeholder
+-- Migration 045: Replace hardcoded URLs in documentation with {{PLATFORM_URL}} placeholder
 -- Description: The frontend (Documentation.tsx) now replaces {{PLATFORM_URL}} with
 --              window.location.origin at render time, so docs always show the actual
 --              platform URL instead of a generic placeholder like "your-domain.com".

@@ -16,6 +16,7 @@ const AUTH_MARKERS = [
   "requireOrganization",
   "authenticateSSE",
 ];
+const ADMIN_MARKER = "requireAdmin";
 
 const normalizePath = (value) => {
   if (!value) return "/";
@@ -61,6 +62,9 @@ const getStringLiteralValue = (node) => {
 const hasAuthMarker = (text) =>
   AUTH_MARKERS.some((marker) => text.includes(marker));
 
+const hasAdminMarker = (text) =>
+  text.includes(ADMIN_MARKER);
+
 const parseAppMounts = () => {
   const { source } = readSource(appFile, ts.ScriptKind.TS);
   const importMap = new Map();
@@ -101,6 +105,7 @@ const parseAppMounts = () => {
 const parseRouteFile = (absolutePath, basePath) => {
   const { source } = readSource(absolutePath, ts.ScriptKind.TS);
   let defaultProtected = false;
+  let defaultAdmin = false;
   const entries = [];
 
   walk(source, (node) => {
@@ -108,6 +113,9 @@ const parseRouteFile = (absolutePath, basePath) => {
       const callText = node.getText(source);
       if (hasAuthMarker(callText)) {
         defaultProtected = true;
+      }
+      if (hasAdminMarker(callText)) {
+        defaultAdmin = true;
       }
       return;
     }
@@ -128,11 +136,13 @@ const parseRouteFile = (absolutePath, basePath) => {
         .map((arg) => arg.getText(source))
         .join(" ");
       const protectedRoute = defaultProtected || hasAuthMarker(restArgsText);
+      const adminRoute = defaultAdmin || hasAdminMarker(restArgsText);
 
       entries.push({
         method,
         path: normalizePath(`${basePath}${routePath}`),
         protected: protectedRoute,
+        admin: adminRoute,
         source: path.relative(repoRoot, absolutePath),
       });
     }
@@ -550,7 +560,8 @@ const manifestRoutes = actualRoutes.map((route) => ({
   method: route.method,
   path: route.path,
   protected: route.protected,
+  admin: route.admin,
 }));
-const manifestContent = `export type ActiveApiRoute = {\n  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";\n  path: string;\n  protected: boolean;\n};\n\nexport const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = ${JSON.stringify(manifestRoutes, null, 2)};\n`;
+const manifestContent = `export type ActiveApiRoute = {\n  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";\n  path: string;\n  protected: boolean;\n  admin: boolean;\n};\n\nexport const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = ${JSON.stringify(manifestRoutes, null, 2)};\n`;
 fs.writeFileSync(manifestPath, manifestContent, "utf8");
 console.log(`Route manifest refreshed at ${path.relative(repoRoot, manifestPath)}`);

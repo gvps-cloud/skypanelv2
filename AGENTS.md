@@ -103,6 +103,8 @@ ENCRYPTION_KEY=your-32-character-encryption-key
 
 ### Branding
 
+> **Note:** These are example values. Set these to match your deployment brand.
+
 ```bash
 COMPANY_NAME=SkyPanelV2
 VITE_COMPANY_NAME=SkyPanelV2
@@ -342,7 +344,7 @@ Key frontend files:
 - `src/components/admin/EgressPackSettings.tsx` — admin pack pricing config
 - `src/services/egressService.ts` — frontend API client
 
-Database migrations 026–033 implement the egress system (tables: `organization_egress_credits`, `egress_credit_packs`, `vps_egress_hourly_readings`, etc.). Note: 34 migrations total (001–034, with 006 skipped).
+Database migrations 025–032 implement the egress system (tables: `organization_egress_credits`, `egress_credit_packs`, `vps_egress_hourly_readings`, etc.). Note: 47 migrations total (001–047, sequential).
 
 ## Testing Notes
 

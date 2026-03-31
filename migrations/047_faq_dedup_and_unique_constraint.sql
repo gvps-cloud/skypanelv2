@@ -1,4 +1,4 @@
--- Migration 046: FAQ deduplication, unique constraint, and white-label scrub
+-- Migration 047: FAQ deduplication, unique constraint, and white-label scrub
 -- Description:
 --   1. Removes duplicate FAQ items that accumulated from repeated migration runs
 --   2. Adds a unique constraint on (category_id, question) to prevent future duplicates

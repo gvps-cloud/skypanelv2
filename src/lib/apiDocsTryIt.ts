@@ -29,9 +29,12 @@ export async function executeRequest(options: ExecuteRequestOptions): Promise<Ex
 
   try {
     const headers: Record<string, string> = {
-      "X-API-Key": apiKey,
       "Accept": "application/json",
     };
+
+    if (apiKey) {
+      headers["X-API-Key"] = apiKey;
+    }
 
     if (body) {
       headers["Content-Type"] = "application/json";

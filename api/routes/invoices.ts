@@ -18,7 +18,7 @@ const resolveCompanyName = (): string =>
   (process.env['COMPANY-NAME'] && process.env['COMPANY-NAME'].trim())
   || (process.env.COMPANY_NAME && process.env.COMPANY_NAME.trim())
   || (process.env.VITE_COMPANY_NAME && process.env.VITE_COMPANY_NAME.trim())
-  || 'GVPS | Cloud';
+  || 'SkyPanelV2';
 
 const resolveCompanyLogo = (): string | undefined =>
   (process.env.COMPANY_LOGO_URL && process.env.COMPANY_LOGO_URL.trim())

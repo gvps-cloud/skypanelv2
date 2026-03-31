@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { TIMEZONE_OPTIONS } from "@/lib/timezones";
+import { BRAND_NAME } from "@/lib/brand";
 
 const Settings: React.FC = () => {
   const {
@@ -729,7 +730,7 @@ const Settings: React.FC = () => {
                 <CardHeader>
                   <CardTitle>Create API Key</CardTitle>
                   <CardDescription>
-                    Generate a new API key for accessing the SkyPanel API
+                    Generate a new API key for accessing the {BRAND_NAME} API
                     programmatically.
                   </CardDescription>
                 </CardHeader>

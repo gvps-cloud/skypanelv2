@@ -1,6 +1,6 @@
 # Provider API Notes (Linode)
 
-SkyPanel exposes a handful of internal endpoints that wrap the Linode API. This file captures the Linode-focused endpoints.
+SkyPanelV2 exposes a handful of internal endpoints that wrap the Linode API. This file captures the Linode-focused endpoints.
 
 ## Admin Endpoints
 

@@ -115,7 +115,7 @@ export class InvoiceService {
       || (process.env['COMPANY-NAME'] && process.env['COMPANY-NAME'].trim())
       || (process.env.COMPANY_NAME && process.env.COMPANY_NAME.trim())
       || (process.env.VITE_COMPANY_NAME && process.env.VITE_COMPANY_NAME.trim())
-      || 'GVPS | Cloud';
+      || 'SkyPanelV2';
 
     const formattedDate = new Date(invoiceData.createdAt).toLocaleString('en-US', {
       year: 'numeric',

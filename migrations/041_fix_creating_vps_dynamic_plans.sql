@@ -1,4 +1,4 @@
--- Migration: 040
+-- Migration: 041
 -- Replace hardcoded plan table in "Creating Your First VPS" article with a marker
 -- that the frontend replaces with dynamic plan data from the pricing API.
 

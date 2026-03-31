@@ -197,6 +197,138 @@ export interface ProviderError {
   originalError?: any;
 }
 
+// ── Firewall Types ──
+
+export type FirewallProtocol = 'TCP' | 'UDP' | 'ICMP' | 'IPENCAP' | 'GRE';
+export type FirewallAction = 'ACCEPT' | 'DROP';
+export type FirewallStatus = 'enabled' | 'disabled';
+
+export interface FirewallRule {
+  protocol: FirewallProtocol;
+  ports?: string;
+  addresses: { ipv4?: string[]; ipv6?: string[] };
+  action: FirewallAction;
+  label?: string;
+  description?: string;
+}
+
+export interface FirewallRules {
+  inbound: FirewallRule[];
+  outbound: FirewallRule[];
+  inbound_policy: FirewallAction;
+  outbound_policy: FirewallAction;
+}
+
+export interface FirewallEntity {
+  id: number;
+  type: 'linode' | 'linode_interface' | 'nodebalancer';
+  label: string;
+  url: string;
+}
+
+export interface ProviderFirewall {
+  id: number;
+  label: string;
+  status: FirewallStatus;
+  rules: FirewallRules;
+  entities: FirewallEntity[];
+  tags: string[];
+  created: string;
+  updated: string;
+}
+
+export interface FirewallDevice {
+  id: number;
+  entity: FirewallEntity;
+  created: string;
+  updated: string;
+}
+
+export interface FirewallSettings {
+  default_firewall_ids: {
+    linode: number | null;
+    nodebalancer: number | null;
+  };
+}
+
+export interface FirewallTemplate {
+  slug: string;
+  label: string;
+  description: string;
+  rules: FirewallRules;
+}
+
+export interface CreateFirewallParams {
+  label: string;
+  rules: {
+    inbound_policy: FirewallAction;
+    outbound_policy: FirewallAction;
+    inbound?: FirewallRule[];
+    outbound?: FirewallRule[];
+  };
+  tags?: string[];
+}
+
+// ── IP Address Management Types ──
+
+export interface ProviderIPAddress {
+  address: string;
+  gateway?: string;
+  subnetMask?: string;
+  prefix: number;
+  type: 'ipv4' | 'ipv6' | 'ipv6/pool' | 'ipv6/range';
+  public: boolean;
+  rdns: string | null;
+  instanceId: string | null;
+  region: string;
+}
+
+export interface ProviderIPv6Range {
+  range: string;
+  instanceId: string | null;
+  instanceIds: string[];
+  routeTarget: string | null;
+  region: string;
+  prefixLength: number;
+  created: string;
+}
+
+export interface ProviderIPv6Pool {
+  range: string;
+  instanceId: string | null;
+  region: string;
+  prefixLength: number;
+}
+
+export interface ProviderVLAN {
+  label: string;
+  region: string;
+  instanceIds: string[];
+  created: string;
+}
+
+export interface ProviderAllocateIPRequest {
+  instanceId: string;
+  public: boolean;
+  type: 'ipv4' | 'ipv6';
+}
+
+export interface ProviderAssignIPsRequest {
+  assignments: Array<{ address: string; instanceId: string }>;
+  region: string;
+}
+
+export interface ProviderShareIPsRequest {
+  instanceId: string;
+  ips: string[];
+}
+
+export interface ProviderCreateIPv6RangeRequest {
+  instanceId?: string;
+  routeTarget?: string;
+  prefixLength: number;
+}
+
 /**
  * Interface that all provider implementations must implement
  *
@@ -337,4 +469,43 @@ export interface IProviderService {
    * }
    */
   validateCredentials(): Promise<boolean>;
+
+  // ── IP Address Management ──
+
+  listIPs(page?: number, pageSize?: number): Promise<{ data: ProviderIPAddress[]; pages: number; total: number }>;
+  getIPAddress(address: string): Promise<ProviderIPAddress>;
+  allocateIP(request: ProviderAllocateIPRequest): Promise<ProviderIPAddress>;
+  deleteIPAddress(instanceId: string, address: string): Promise<void>;
+  assignIPs(request: ProviderAssignIPsRequest): Promise<void>;
+  shareIPs(request: ProviderShareIPsRequest): Promise<void>;
+  updateIPReverseDNS(address: string, rdns: string | null): Promise<ProviderIPAddress>;
+
+  // ── IPv6 Management ──
+
+  listIPv6Pools(): Promise<ProviderIPv6Pool[]>;
+  listIPv6Ranges(): Promise<ProviderIPv6Range[]>;
+  createIPv6Range(request: ProviderCreateIPv6RangeRequest): Promise<{ range: string; routeTarget: string }>;
+  deleteIPv6Range(range: string): Promise<void>;
+
+  // ── VLAN Management ──
+
+  listVLANs(): Promise<ProviderVLAN[]>;
+  deleteVLAN(regionId: string, label: string): Promise<void>;
+
+  // ── Firewall Management ──
+
+  listFirewalls(): Promise<{ data: ProviderFirewall[]; pages: number; total: number }>;
+  createFirewall(params: CreateFirewallParams): Promise<ProviderFirewall>;
+  getFirewall(firewallId: number): Promise<ProviderFirewall>;
+  updateFirewall(firewallId: number, updates: { label?: string; status?: FirewallStatus; tags?: string[] }): Promise<ProviderFirewall>;
+  deleteFirewall(firewallId: number): Promise<void>;
+  getFirewallRules(firewallId: number): Promise<FirewallRules>;
+  updateFirewallRules(firewallId: number, rules: FirewallRules): Promise<FirewallRules>;
+  getFirewallDevices(firewallId: number): Promise<FirewallDevice[]>;
+  attachFirewallDevice(firewallId: number, type: string, entityId: number): Promise<FirewallDevice>;
+  detachFirewallDevice(firewallId: number, deviceId: number): Promise<void>;
+  getFirewallSettings(): Promise<FirewallSettings>;
+  updateFirewallSettings(settings: FirewallSettings): Promise<FirewallSettings>;
+  listFirewallTemplates(): Promise<FirewallTemplate[]>;
+  getFirewallTemplate(slug: string): Promise<FirewallTemplate>;
 }

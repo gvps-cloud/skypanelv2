@@ -1,4 +1,4 @@
--- Migration 024: Migrate SSH keys from user scope to organization scope
+-- Migration 023: Migrate SSH keys from user scope to organization scope
 
 ALTER TABLE user_ssh_keys
 ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;

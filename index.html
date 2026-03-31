@@ -13,7 +13,7 @@
       const candidates = [env['COMPANY-NAME'], env.COMPANY_NAME, env.VITE_COMPANY_NAME];
       const companyName = candidates
         .map((value) => (typeof value === 'string' ? value.trim() : ''))
-        .find((value) => value.length > 0) || 'GVPS Cloud';
+        .find((value) => value.length > 0) || 'GVPSCloud';
       document.title = `${companyName} | Cloud`;
     </script>
     <script type="module">

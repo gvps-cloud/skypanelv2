@@ -1,4 +1,4 @@
--- Migration 042: Expand platform documentation
+-- Migration 043: Expand platform documentation
 -- Description: Adds Support category and 12 new articles across all categories
 -- NOTE: Uses ON CONFLICT DO NOTHING to preserve manually edited articles.
 --       This migration only seeds on a fresh database.

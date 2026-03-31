@@ -576,7 +576,7 @@ export class AuthService {
 
       const user = userResult.rows[0];
       const secret = authenticator.generateSecret();
-      const otpauth = authenticator.keyuri(user.email, 'SkyPanelV2', secret);
+      const otpauth = authenticator.keyuri(user.email, config.COMPANY_BRAND_NAME, secret);
       const qrCode = await QRCode.toDataURL(otpauth);
 
       await query('UPDATE users SET two_factor_secret = $1 WHERE id = $2', [secret, userId]);

@@ -1,4 +1,4 @@
--- Migration 016: Seed default organization roles and predefined permissions
+-- Migration 015: Seed default organization roles and predefined permissions
 
 -- Create a table to store predefined permission definitions
 CREATE TABLE IF NOT EXISTS predefined_permissions (

@@ -92,7 +92,7 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `FROM_EMAIL` | **Yes** | - | Default sender email address |
-| `FROM_NAME` | No | `GVPSCloud` | Default sender name |
+| `FROM_NAME` | No | `COMPANY_BRAND_NAME` | Default sender name (falls back to `COMPANY_BRAND_NAME` if unset) |
 | `CONTACT_FORM_RECIPIENT` | **Yes** | - | Email address for contact form submissions |
 | `TEST_EMAIL` | No | - | Email address for testing SMTP configuration |
 

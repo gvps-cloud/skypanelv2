@@ -1,4 +1,4 @@
--- Migration 045: Scrub vendor references from documentation and FAQ content
+-- Migration 046: Scrub vendor references from documentation and FAQ content
 -- Description: Replaces "Linode" with vendor-neutral language in user-facing
 --              documentation_articles and faq_items content. Idempotent — only
 --              touches rows that still contain vendor references.

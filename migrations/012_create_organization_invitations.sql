@@ -1,4 +1,4 @@
--- Migration 013: Create organization_invitations table
+-- Migration 012: Create organization_invitations table
 
 -- Create organization_invitations table
 CREATE TABLE IF NOT EXISTS organization_invitations (

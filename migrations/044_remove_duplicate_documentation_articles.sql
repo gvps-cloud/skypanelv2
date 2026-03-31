@@ -1,4 +1,4 @@
--- Migration 043: Remove duplicate documentation articles
+-- Migration 044: Remove duplicate documentation articles
 -- Description: Cleans up overlapping articles seeded by migrations 037 and 038.
 --              Migration 037 introduced shorter starter articles; migration 038
 --              seeded comprehensive versions with different slugs. Both co-exist

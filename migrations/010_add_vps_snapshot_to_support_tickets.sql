@@ -1,4 +1,4 @@
--- Migration 011: Add VPS snapshot fields to support tickets
+-- Migration 010: Add VPS snapshot fields to support tickets
 -- This allows VPS information to be retained even if the VPS is deleted
 
 ALTER TABLE support_tickets

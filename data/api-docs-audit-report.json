@@ -1,10 +1,95 @@
 {
-  "generatedAt": "2026-03-29T00:36:01.255Z",
-  "actualCount": 276,
-  "actualProtectedCount": 248,
+  "generatedAt": "2026-03-30T21:50:17.761Z",
+  "actualCount": 290,
+  "actualProtectedCount": 261,
   "docsCount": 279,
   "docsProtectedCount": 251,
-  "missingInDocs": [],
+  "missingInDocs": [
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/ips",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/ips",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/ips/:address",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/networking/ips/:address/rdns",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/networking/ips/:instanceId/:address",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/ips/assign",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/ips/share",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/ipv6/pools",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/ipv6/ranges",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/ipv6/ranges",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/networking/ipv6/ranges/:range",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/vlans",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/networking/vlans/:regionId/:label",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/uptime",
+      "protected": false,
+      "source": "api\\routes\\health.ts"
+    }
+  ],
   "staleInDocs": [],
   "authMismatches": [],
   "incompleteDocs": [
@@ -1563,6 +1648,72 @@
     },
     {
       "method": "GET",
+      "path": "/api/admin/networking/ips",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/ips",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/ips/:address",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/networking/ips/:address/rdns",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/networking/ips/:instanceId/:address",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/ips/assign",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/ips/share",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/ipv6/pools",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/ipv6/ranges",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/ipv6/ranges",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/networking/ipv6/ranges/:range",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/admin/networking/rdns",
       "protected": true,
       "source": "api\\routes\\admin.ts"
@@ -1572,6 +1723,18 @@
       "path": "/api/admin/networking/rdns",
       "protected": true,
       "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/vlans",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/networking/vlans/:regionId/:label",
+      "protected": true,
+      "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "GET",
@@ -2206,6 +2369,12 @@
     {
       "method": "GET",
       "path": "/api/health/status",
+      "protected": false,
+      "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/uptime",
       "protected": false,
       "source": "api\\routes\\health.ts"
     },

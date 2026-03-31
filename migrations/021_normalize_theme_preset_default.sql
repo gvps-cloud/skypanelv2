@@ -1,4 +1,4 @@
--- Migration 022: normalize persisted theme preset defaults
+-- Migration 021: normalize persisted theme preset defaults
 -- Keep custom presets intact while ensuring valid preset identifiers.
 
 UPDATE platform_settings

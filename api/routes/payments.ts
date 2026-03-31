@@ -63,7 +63,7 @@ router.get("/config", requireOrganization, (req: Request, res: Response) => {
           ? "live"
           : "sandbox",
       disableFunding,
-      brandName: "SkyPanelV2",
+      brandName: config.COMPANY_BRAND_NAME,
     },
   });
 });

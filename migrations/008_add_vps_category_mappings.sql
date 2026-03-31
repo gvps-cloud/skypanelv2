@@ -1,4 +1,4 @@
--- Migration 009: Add VPS category mappings for white-labeling
+-- Migration 008: Add VPS category mappings for white-labeling
 
 -- Create vps_category_mappings table
 CREATE TABLE IF NOT EXISTS vps_category_mappings (

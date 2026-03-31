@@ -17,7 +17,7 @@ interface EmailTemplate {
 type RenderedEmail = { subject: string; html: string; text: string };
 
 const resolveCompanyName = (): string =>
-  (config.COMPANY_BRAND_NAME && config.COMPANY_BRAND_NAME.trim())
+  config.COMPANY_BRAND_NAME
   || (process.env.COMPANY_NAME && process.env.COMPANY_NAME.trim())
   || (process.env.VITE_COMPANY_NAME && process.env.VITE_COMPANY_NAME.trim())
   || 'SkyPanelV2';

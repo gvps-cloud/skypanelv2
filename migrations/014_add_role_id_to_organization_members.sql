@@ -1,4 +1,4 @@
--- Migration 015: Add role_id column to organization_members table
+-- Migration 014: Add role_id column to organization_members table
 
 -- Add role_id column to organization_members table
 ALTER TABLE organization_members

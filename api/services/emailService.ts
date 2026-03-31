@@ -176,11 +176,7 @@ export async function sendWelcomeEmail(
   name?: string,
 ): Promise<void> {
   const displayName = name || "there";
-  const companyName =
-    config.COMPANY_BRAND_NAME ||
-    process.env.COMPANY_NAME ||
-    process.env.VITE_COMPANY_NAME ||
-    "SkyPanelV2";
+  const companyName = config.COMPANY_BRAND_NAME;
   
   const { subject, html, text } = await renderTemplate("welcome", {
     displayName,
@@ -208,11 +204,7 @@ export async function sendInvitationEmail(
   const acceptLink = `${baseUrl}/organizations/invitations/${invitationData.token}`;
   const declineLink = `${baseUrl}/organizations/invitations/${invitationData.token}?action=decline`;
   const formattedExpiresAt = new Date(invitationData.expiresAt).toLocaleDateString();
-  const companyName =
-    config.COMPANY_BRAND_NAME ||
-    process.env.COMPANY_NAME ||
-    process.env.VITE_COMPANY_NAME ||
-    "SkyPanelV2";
+  const companyName = config.COMPANY_BRAND_NAME;
 
   const { subject, html, text } = await renderTemplate("invitation", {
     ...invitationData,
@@ -236,11 +228,7 @@ export async function sendLoginNotificationEmail(
   name?: string,
 ): Promise<void> {
   const displayName = name || "there";
-  const companyName =
-    config.COMPANY_BRAND_NAME ||
-    process.env.COMPANY_NAME ||
-    process.env.VITE_COMPANY_NAME ||
-    "SkyPanelV2";
+  const companyName = config.COMPANY_BRAND_NAME;
   
   const { subject, html, text } = await renderTemplate("login_notification", {
     displayName,
@@ -261,11 +249,7 @@ export async function sendPasswordResetEmail(
   );
   const resetPageUrl = `${baseUrl}/reset-password`;
   const displayName = name || "there";
-  const companyName =
-    config.COMPANY_BRAND_NAME ||
-    process.env.COMPANY_NAME ||
-    process.env.VITE_COMPANY_NAME ||
-    "SkyPanelV2";
+  const companyName = config.COMPANY_BRAND_NAME;
   
   const { subject, html, text } = await renderTemplate("password_reset", {
     displayName,
@@ -314,11 +298,7 @@ export async function sendContactFormEmail(
   data: ContactFormEmailData,
   replyTo?: string,
 ): Promise<void> {
-  const companyName =
-    config.COMPANY_BRAND_NAME ||
-    process.env.COMPANY_NAME ||
-    process.env.VITE_COMPANY_NAME ||
-    "SkyPanelV2";
+  const companyName = config.COMPANY_BRAND_NAME;
   const { subject, html, text } = await renderTemplate("contact_form", {
     ...data,
     submittedAt: data.sentAt,
@@ -359,11 +339,7 @@ export async function sendAccountNotificationEmail({
   occurredAt,
 }: AccountNotificationEmailOptions): Promise<void> {
   const displayName = name || "there";
-  const companyName =
-    config.COMPANY_BRAND_NAME ||
-    process.env.COMPANY_NAME ||
-    process.env.VITE_COMPANY_NAME ||
-    "SkyPanelV2";
+  const companyName = config.COMPANY_BRAND_NAME;
   
   const { subject, html, text } = await renderTemplate("account_notification", {
     displayName,

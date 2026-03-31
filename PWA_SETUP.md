@@ -31,7 +31,7 @@ You need to create two PNG icon files from your logo:
 
 ### Option 1: Online Tool (Easiest)
 1. Visit https://realfavicongenerator.net/ or https://www.pwabuilder.com/imageGenerator
-2. Upload `public/logo.svg`
+2. Upload `public/favicon.svg`
 3. Download generated icons
 4. Save as:
    - `public/pwa-192x192.png` (192x192 pixels)
@@ -41,8 +41,8 @@ You need to create two PNG icon files from your logo:
 ```bash
 # Install ImageMagick first if needed
 # Then run:
-convert public/logo.svg -resize 192x192 -background white -flatten public/pwa-192x192.png
-convert public/logo.svg -resize 512x512 -background white -flatten public/pwa-512x512.png
+convert public/favicon.svg -resize 192x192 -background white -flatten public/pwa-192x192.png
+convert public/favicon.svg -resize 512x512 -background white -flatten public/pwa-512x512.png
 ```
 
 ### Option 3: Design Tool

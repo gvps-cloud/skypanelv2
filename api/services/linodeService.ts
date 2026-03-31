@@ -299,6 +299,72 @@ export interface LinodeEventsResponse {
   data?: any[];
 }
 
+export interface LinodeIPAddress {
+  address: string;
+  gateway: string;
+  subnet_mask: string;
+  prefix: number;
+  type: 'ipv4' | 'ipv6' | 'ipv6/pool' | 'ipv6/range';
+  public: boolean;
+  rdns: string | null;
+  linode_id: number | null;
+  region: string;
+  interface_id: number | null;
+}
+
+export interface LinodeListIPsResponse {
+  data: LinodeIPAddress[];
+  page: number;
+  pages: number;
+  results: number;
+}
+
+export interface LinodeAllocateIPRequest {
+  linode_id: number;
+  public: boolean;
+  type: 'ipv4' | 'ipv6';
+}
+
+export interface LinodeAssignIPsRequest {
+  assignments: Array<{ address: string; linode_id: number }>;
+  region: string;
+}
+
+export interface LinodeShareIPsRequest {
+  linode_id: number;
+  ips: string[];
+}
+
+export interface LinodeIPv6Range {
+  range: string;
+  prefix: number;
+  region: string;
+  route_target: string | null;
+  is_bgp: boolean;
+  linodes: number[];
+  created: string;
+}
+
+export interface LinodeIPv6Pool {
+  range: string;
+  prefix: number;
+  region: string;
+  route_target: string | null;
+}
+
+export interface LinodeVLAN {
+  label: string;
+  region: string;
+  linodes: number[];
+  created: string;
+}
+
+export interface LinodeCreateIPv6RangeRequest {
+  linode_id?: number;
+  route_target?: string;
+  prefix_length: number;
+}
+
 class LinodeService {
   private readonly apiToken: string;
   private readonly baseUrl = 'https://api.linode.com/v4';
@@ -953,7 +1019,7 @@ class LinodeService {
         script: req.script,
         images: req.images,
         is_public: req.is_public ?? false,
-        rev_note: req.rev_note ?? 'Initial version created via GVPS.Cloud',
+        rev_note: req.rev_note ?? `Initial version created via ${config.COMPANY_BRAND_NAME}`,
         description: req.description ?? req.label,
         user_defined_fields: req.user_defined_fields ?? [],
       };
@@ -1668,6 +1734,270 @@ class LinodeService {
     }
   }
 
+  async createFirewall(label: string, rules: {
+    inbound_policy: 'ACCEPT' | 'DROP';
+    outbound_policy: 'ACCEPT' | 'DROP';
+    inbound?: Array<{ protocol: string; ports?: string; addresses: { ipv4?: string[]; ipv6?: string[] }; action: 'ACCEPT' | 'DROP'; label?: string; description?: string }>;
+    outbound?: Array<{ protocol: string; ports?: string; addresses: { ipv4?: string[]; ipv6?: string[] }; action: 'ACCEPT' | 'DROP'; label?: string; description?: string }>;
+  }, tags?: string[]): Promise<Record<string, unknown>> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const body: Record<string, unknown> = { label, rules };
+      if (tags) body.tags = tags;
+
+      const response = await fetch(`${this.baseUrl}/networking/firewalls`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating firewall:', error);
+      throw error;
+    }
+  }
+
+  async getFirewall(firewallId: number): Promise<Record<string, unknown>> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/firewalls/${firewallId}`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching firewall ${firewallId}:`, error);
+      throw error;
+    }
+  }
+
+  async updateFirewall(firewallId: number, updates: { label?: string; status?: 'enabled' | 'disabled'; tags?: string[] }): Promise<Record<string, unknown>> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/firewalls/${firewallId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error updating firewall ${firewallId}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteFirewall(firewallId: number): Promise<void> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/firewalls/${firewallId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+    } catch (error) {
+      console.error(`Error deleting firewall ${firewallId}:`, error);
+      throw error;
+    }
+  }
+
+  async getFirewallRules(firewallId: number): Promise<Record<string, unknown>> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/firewalls/${firewallId}/rules`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching firewall rules for ${firewallId}:`, error);
+      throw error;
+    }
+  }
+
+  async updateFirewallRules(firewallId: number, rules: {
+    inbound_policy: 'ACCEPT' | 'DROP';
+    outbound_policy: 'ACCEPT' | 'DROP';
+    inbound?: Array<{ protocol: string; ports?: string; addresses: { ipv4?: string[]; ipv6?: string[] }; action: 'ACCEPT' | 'DROP'; label?: string; description?: string }>;
+    outbound?: Array<{ protocol: string; ports?: string; addresses: { ipv4?: string[]; ipv6?: string[] }; action: 'ACCEPT' | 'DROP'; label?: string; description?: string }>;
+  }): Promise<Record<string, unknown>> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/firewalls/${firewallId}/rules`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: JSON.stringify(rules),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error updating firewall rules for ${firewallId}:`, error);
+      throw error;
+    }
+  }
+
+  async getFirewallHistory(firewallId: number): Promise<Record<string, unknown>[]> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/firewalls/${firewallId}/history`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      const data = await response.json();
+      return Array.isArray(data?.data) ? data.data : [];
+    } catch (error) {
+      console.error(`Error fetching firewall history for ${firewallId}:`, error);
+      throw error;
+    }
+  }
+
+  async getFirewallSettings(): Promise<Record<string, unknown>> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/firewalls/settings`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching firewall settings:', error);
+      throw error;
+    }
+  }
+
+  async updateFirewallSettings(settings: Record<string, unknown>): Promise<Record<string, unknown>> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/firewalls/settings`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: JSON.stringify(settings),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating firewall settings:', error);
+      throw error;
+    }
+  }
+
+  async listFirewallTemplates(): Promise<Record<string, unknown>[]> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/firewalls/templates`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      const data = await response.json();
+      return Array.isArray(data?.data) ? data.data : [];
+    } catch (error) {
+      console.error('Error listing firewall templates:', error);
+      throw error;
+    }
+  }
+
+  async getFirewallTemplate(slug: string): Promise<Record<string, unknown>> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/firewalls/templates/${encodeURIComponent(slug)}`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching firewall template ${slug}:`, error);
+      throw error;
+    }
+  }
+
   async getLinodeInstanceEvents(instanceId: number, params: { page?: number; pageSize?: number } = {}): Promise<LinodeEventsResponse> {
     try {
       if (!this.apiToken) {
@@ -2048,6 +2378,342 @@ class LinodeService {
       console.error(`${logPrefix} Error setting up custom rDNS for VPS ${label}:`, error);
       // Don't throw the error - we don't want rDNS setup failure to affect anything else
       // The VPS is still functional without custom rDNS
+    }
+  }
+
+  // ── IP Address Management ──
+
+  async listAllIPs(page: number = 1, pageSize: number = 100): Promise<LinodeListIPsResponse> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/networking/ips?page=${page}&page_size=${pageSize}`,
+        { headers: this.getHeaders() }
+      );
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return (await response.json()) as LinodeListIPsResponse;
+    } catch (error) {
+      console.error('Error listing IPs:', error);
+      throw error;
+    }
+  }
+
+  async getIPAddress(address: string): Promise<LinodeIPAddress> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/networking/ips/${encodeURIComponent(address)}`,
+        { headers: this.getHeaders() }
+      );
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return (await response.json()) as LinodeIPAddress;
+    } catch (error) {
+      console.error(`Error getting IP ${address}:`, error);
+      throw error;
+    }
+  }
+
+  async allocateIP(request: LinodeAllocateIPRequest): Promise<LinodeIPAddress> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/ips`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return (await response.json()) as LinodeIPAddress;
+    } catch (error) {
+      console.error('Error allocating IP:', error);
+      throw error;
+    }
+  }
+
+  async deleteIPAddress(instanceId: number, address: string): Promise<void> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/linode/instances/${instanceId}/ips/${encodeURIComponent(address)}`,
+        { method: 'DELETE', headers: this.getHeaders() }
+      );
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+    } catch (error) {
+      console.error(`Error deleting IP ${address}:`, error);
+      throw error;
+    }
+  }
+
+  async assignIPs(request: LinodeAssignIPsRequest): Promise<void> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/ips/assign`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+    } catch (error) {
+      console.error('Error assigning IPs:', error);
+      throw error;
+    }
+  }
+
+  async shareIPs(request: LinodeShareIPsRequest): Promise<void> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/ips/share`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+    } catch (error) {
+      console.error('Error sharing IPs:', error);
+      throw error;
+    }
+  }
+
+  // ── IPv6 Management ──
+
+  async listIPv6Pools(): Promise<LinodeIPv6Pool[]> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const all: LinodeIPv6Pool[] = [];
+      let page = 1;
+      let totalPages = 1;
+
+      while (page <= totalPages) {
+        const response = await fetch(
+          `${this.baseUrl}/networking/ipv6/pools?page=${page}&page_size=100`,
+          { headers: this.getHeaders() }
+        );
+
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+        }
+
+        const payload = await response.json();
+        const rows: any[] = Array.isArray(payload?.data) ? payload.data : [];
+        all.push(...rows.map((r: any) => ({
+          range: r.range,
+          prefix: r.prefix ?? 0,
+          region: r.region,
+          route_target: r.route_target ?? null,
+        })));
+
+        totalPages = Number(payload?.pages ?? 1);
+        if (!rows.length || page >= totalPages) break;
+        page += 1;
+      }
+
+      return all;
+    } catch (error) {
+      console.error('Error listing IPv6 pools:', error);
+      throw error;
+    }
+  }
+
+  async listIPv6Ranges(): Promise<LinodeIPv6Range[]> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const all: LinodeIPv6Range[] = [];
+      let page = 1;
+      let totalPages = 1;
+
+      while (page <= totalPages) {
+        const response = await fetch(
+          `${this.baseUrl}/networking/ipv6/ranges?page=${page}&page_size=100`,
+          { headers: this.getHeaders() }
+        );
+
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+        }
+
+        const payload = await response.json();
+        const rows: any[] = Array.isArray(payload?.data) ? payload.data : [];
+        all.push(...rows.map((r: any) => ({
+          range: r.range,
+          prefix: r.prefix ?? 64,
+          region: r.region,
+          route_target: r.route_target ?? null,
+          is_bgp: r.is_bgp ?? false,
+          linodes: Array.isArray(r.linodes) ? r.linodes : [],
+          created: r.created ?? '',
+        })));
+
+        totalPages = Number(payload?.pages ?? 1);
+        if (!rows.length || page >= totalPages) break;
+        page += 1;
+      }
+
+      return all;
+    } catch (error) {
+      console.error('Error listing IPv6 ranges:', error);
+      throw error;
+    }
+  }
+
+  async createIPv6Range(request: LinodeCreateIPv6RangeRequest): Promise<{ range: string; route_target: string }> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(`${this.baseUrl}/networking/ipv6/ranges`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      return (await response.json()) as { range: string; route_target: string };
+    } catch (error) {
+      console.error('Error creating IPv6 range:', error);
+      throw error;
+    }
+  }
+
+  async deleteIPv6Range(range: string): Promise<void> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/networking/ipv6/ranges/${encodeURIComponent(range)}`,
+        { method: 'DELETE', headers: this.getHeaders() }
+      );
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+    } catch (error) {
+      console.error(`Error deleting IPv6 range ${range}:`, error);
+      throw error;
+    }
+  }
+
+  // ── VLAN Management ──
+
+  async listVLANs(): Promise<LinodeVLAN[]> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const all: LinodeVLAN[] = [];
+      let page = 1;
+      let totalPages = 1;
+
+      while (page <= totalPages) {
+        const response = await fetch(
+          `${this.baseUrl}/networking/vlans?page=${page}&page_size=100`,
+          { headers: this.getHeaders() }
+        );
+
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+        }
+
+        const payload = await response.json();
+        const rows: any[] = Array.isArray(payload?.data) ? payload.data : [];
+        all.push(...rows.map((r: any) => ({
+          label: r.label,
+          region: r.region,
+          linodes: Array.isArray(r.linodes) ? r.linodes : [],
+          created: r.created ?? '',
+        })));
+
+        totalPages = Number(payload?.pages ?? 1);
+        if (!rows.length || page >= totalPages) break;
+        page += 1;
+      }
+
+      return all;
+    } catch (error) {
+      console.error('Error listing VLANs:', error);
+      throw error;
+    }
+  }
+
+  async deleteVLAN(regionId: string, label: string): Promise<void> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/networking/vlans/${encodeURIComponent(regionId)}/${encodeURIComponent(label)}`,
+        { method: 'DELETE', headers: this.getHeaders() }
+      );
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+    } catch (error) {
+      console.error(`Error deleting VLAN ${label}:`, error);
+      throw error;
     }
   }
 }

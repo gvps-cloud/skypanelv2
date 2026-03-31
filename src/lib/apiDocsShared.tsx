@@ -24,6 +24,7 @@ export type EndpointDefinition = {
   path: string;
   description: string;
   auth?: boolean;
+  admin?: boolean;
   body?: unknown;
   params?: Record<string, unknown>;
   response?: unknown;
@@ -374,6 +375,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/register",
             description:
               "Create a new customer account and return an authenticated session.",
+            auth: false,
             body: {
               email: "admin@example.com",
               password: "Sup3rSecure!",
@@ -398,6 +400,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/login",
             description:
               "Authenticate an existing user and issue a fresh JWT token.",
+            auth: false,
             body: {
               email: "admin@example.com",
               password: "Sup3rSecure!",
@@ -571,6 +574,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/forgot-password",
             description:
               "Initiate the password reset workflow by emailing a recovery link.",
+            auth: false,
             body: {
               email: "admin@example.com",
             },
@@ -585,6 +589,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/reset-password",
             description:
               "Complete the reset flow by providing a valid token and new password.",
+            auth: false,
             body: {
               email: "admin@example.com",
               token: "reset_token_here",
@@ -599,6 +604,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/verify-email",
             description: "Verify user email address using verification token.",
+            auth: false,
             body: {
               token: "verification_token_here",
             },
@@ -614,7 +620,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             auth: true,
             response: {
               success: true,
-              qrCodeUri: "otpauth://totp/SkyPanel:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=SkyPanel",
+              qrCodeUri: `otpauth://totp/${BRAND_NAME}:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=${BRAND_NAME}`,
               backupCodes: ["code1", "code2", "code3", "code4"],
             },
           },
@@ -2619,8 +2625,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
                 {
                   id: "faq_001",
                   category_id: "cat_general",
-                  question: "What is SkyPANEL?",
-                  answer: "SkyPANEL manages VPS workloads across providers.",
+                  question: `What is ${BRAND_NAME}?`,
+                  answer: `${BRAND_NAME} manages VPS workloads across providers.`,
                 },
               ],
             },
@@ -3273,7 +3279,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description: "List all email templates.",
             auth: true,
             response: {
-              templates: [{ name: "welcome", subject: "Welcome to SkyPanel" }],
+              templates: [{ name: "welcome", subject: `Welcome to ${BRAND_NAME}` }],
             },
           },
           {
@@ -3282,7 +3288,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description: "Get a specific email template content.",
             auth: true,
             response: {
-              template: { name: "welcome", subject: "Welcome to SkyPanel", body: "<html>...</html>" },
+              template: { name: "welcome", subject: `Welcome to ${BRAND_NAME}`, body: "<html>...</html>" },
             },
           },
           {
@@ -3290,13 +3296,13 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/email-templates/:name",
             description: "Update an email template.",
             auth: true,
-            body: { subject: "Welcome to SkyPanel!", body: "<html>updated...</html>" },
+            body: { subject: `Welcome to ${BRAND_NAME}!`, body: "<html>updated...</html>" },
             response: {
               id: 1,
               name: "welcome",
-              subject: "Welcome to SkyPanel!",
+              subject: `Welcome to ${BRAND_NAME}!`,
               html_body: "<html>updated...</html>",
-              text_body: "Welcome to SkyPanel!",
+              text_body: `Welcome to ${BRAND_NAME}!`,
               use_default_theme: false,
               created_at: "2026-01-01T00:00:00Z",
               updated_at: "2026-10-25T10:00:00Z",
@@ -3918,6 +3924,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/",
             description: "Basic health check.",
+            auth: false,
             response: {
               success: true,
               message: "API is healthy",
@@ -3928,6 +3935,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/status",
             description: "Public platform status with VPS counts.",
+            auth: false,
             response: {
               status: "operational",
               vpsStats: { running: 150, stopped: 20, provisioning: 5 },
@@ -3938,6 +3946,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/detailed",
             description: "Detailed health check with rate limiting info.",
+            auth: false,
             response: {
               health: "ok",
               rateLimiting: { status: "healthy" },
@@ -3947,6 +3956,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/stats",
             description: "VPS infrastructure metrics.",
+            auth: false,
             response: {
               totalInstances: 175,
               byStatus: { running: 150, stopped: 20 },
@@ -3956,6 +3966,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/platform-stats",
             description: "All-time platform statistics for about page.",
+            auth: false,
             response: {
               totalVPS: 500,
 
@@ -4010,6 +4021,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/",
             description: "Get current theme configuration.",
+            auth: false,
             response: {
               theme: {
                 id: "default",
@@ -4030,6 +4042,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/config",
             description: "Get contact page configuration including available categories and methods.",
+            auth: false,
             response: {
               config: {
                 categories: [{ id: "sales", label: "Sales", enabled: true }],
@@ -4041,6 +4054,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/",
             description: "Submit a contact form message.",
+            auth: false,
             body: {
               name: "John Doe",
               email: "john@example.com",
@@ -4064,6 +4078,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/categories",
             description: "Get FAQ categories for the public marketing site.",
+            auth: false,
             response: {
               categories: [
                 { id: "cat_001", name: "General", displayOrder: 1, itemCount: 10 },
@@ -4074,6 +4089,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/updates",
             description: "Get platform update changelog entries.",
+            auth: false,
             response: {
               updates: [
                 { id: "update_001", title: "New VPS Features", content: "Added backup scheduling", displayOrder: 1 },
@@ -4092,6 +4108,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/",
             description: "Get public pricing overview.",
+            auth: false,
             response: {
               pricing: {
                 startingAt: 4.99,
@@ -4104,6 +4121,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/public-regions",
             description: "Get available public regions with pricing.",
+            auth: false,
             response: {
               regions: [
                 { id: "us-east", label: "Newark, NJ", country: "US", available: true },
@@ -4114,6 +4132,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/category-mappings",
             description: "Get enabled category mappings for white-label display on public pages.",
+            auth: false,
             response: {
               success: true,
               mappings: [
@@ -4136,6 +4155,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/vps",
             description: "Get public VPS pricing information.",
+            auth: false,
             response: {
               plans: [
                 { id: "g6-standard-1", label: "Nanode 1GB", price: { monthly: 4.99 } },
@@ -4154,6 +4174,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/categories",
             description: "Get all public documentation categories.",
+            auth: false,
             response: {
               categories: [
                 { id: "cat_001", name: "Getting Started", slug: "getting-started", articleCount: 5 },
@@ -4164,6 +4185,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/categories/:slug",
             description: "Get a specific documentation category by slug with articles.",
+            auth: false,
             response: {
               category: {
                 id: "cat_001",
@@ -4177,6 +4199,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/articles/:slug",
             description: "Get a specific documentation article by slug.",
+            auth: false,
             response: {
               article: {
                 id: "art_001",
@@ -4191,6 +4214,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/files/:id",
             description: "Download a documentation file attachment.",
+            auth: false,
             response: {
               contentType: "image/png",
               body: "<binary stream>",

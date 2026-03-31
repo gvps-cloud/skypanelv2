@@ -1,4 +1,4 @@
--- Migration 008: Add type_class to vps_plans and create vps_plan_regions junction table
+-- Migration 007: Add type_class to vps_plans and create vps_plan_regions junction table
 
 -- Add type_class column to vps_plans table
 ALTER TABLE vps_plans

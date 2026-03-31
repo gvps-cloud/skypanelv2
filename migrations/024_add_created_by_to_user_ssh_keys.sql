@@ -1,4 +1,4 @@
--- Migration 025: Track SSH key creators at the database level
+-- Migration 024: Track SSH key creators at the database level
 
 ALTER TABLE user_ssh_keys
 ADD COLUMN IF NOT EXISTS created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL;

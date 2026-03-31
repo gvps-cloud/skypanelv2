@@ -1,4 +1,4 @@
--- Migration 012: Create organization_roles table
+-- Migration 011: Create organization_roles table
 
 -- Create organization_roles table
 CREATE TABLE IF NOT EXISTS organization_roles (

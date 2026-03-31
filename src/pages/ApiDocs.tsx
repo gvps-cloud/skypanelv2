@@ -5,6 +5,7 @@ import {
   Search,
   Server,
   Lock,
+  Shield,
   Code2,
   Key,
 } from "lucide-react";
@@ -30,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BRAND_NAME } from "@/lib/brand";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   type SectionDefinition,
   type EndpointDefinition,
@@ -59,6 +61,9 @@ export default function ApiDocs() {
     import.meta.env.VITE_API_URL ||
     `${window.location.protocol}//${window.location.host}/api`
   ).replace(/\/$/, "");
+
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState("");
@@ -120,11 +125,6 @@ export default function ApiDocs() {
     endpointKey: string,
     request: { method: string; url: string; body?: unknown; params?: Record<string, string> }
   ) => {
-    if (!apiKey) {
-      toast.error("Please enter an API key first");
-      return;
-    }
-
     setExecutingEndpoint(endpointKey);
     // Clear previous response for this endpoint
     setResponses((prev) => {
@@ -422,6 +422,9 @@ export default function ApiDocs() {
                           {endpoint.auth && (
                             <Lock className="h-4 w-4 text-amber-600 shrink-0" />
                           )}
+                          {endpoint.admin && (
+                            <Shield className="h-4 w-4 text-red-600 shrink-0" />
+                          )}
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="pt-4">
@@ -534,23 +537,24 @@ export default function ApiDocs() {
                         </Tabs>
 
                         {/* Try It Section */}
-                        {endpoint.auth && (
-                          <div className="mt-4 pt-4 border-t">
-                            <RequestBuilder
-                              endpoint={endpoint}
-                              apiBase={section.base}
-                              apiKey={apiKey}
-                              onExecute={(request) =>
-                                handleExecuteRequest(
-                                  `${section.title}-${endpoint.path}-${index}`,
-                                  request
-                                )
-                              }
-                              isLoading={executingEndpoint === `${section.title}-${endpoint.path}-${index}`}
-                              response={responses.get(`${section.title}-${endpoint.path}-${index}`)}
-                            />
-                          </div>
-                        )}
+                        <div className="mt-4 pt-4 border-t">
+                          <RequestBuilder
+                            endpoint={endpoint}
+                            apiBase={section.base}
+                            apiKey={apiKey}
+                            requiresAuth={endpoint.auth}
+                            isAdmin={isAdmin}
+                            endpointAdmin={endpoint.admin}
+                            onExecute={(request) =>
+                              handleExecuteRequest(
+                                `${section.title}-${endpoint.path}-${index}`,
+                                request
+                              )
+                            }
+                            isLoading={executingEndpoint === `${section.title}-${endpoint.path}-${index}`}
+                            response={responses.get(`${section.title}-${endpoint.path}-${index}`)}
+                          />
+                        </div>
                       </AccordionContent>
                     </AccordionItem>
                   ))}

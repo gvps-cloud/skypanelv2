@@ -63,6 +63,7 @@ import { AdminSupportView } from "@/components/admin/AdminSupportView";
 import { VPSPlanWizard } from "@/components/admin/VPSPlanWizard";
 import EgressCreditManager from "@/components/admin/EgressCreditManager";
 import DocumentationManager from "@/components/admin/documentation/DocumentationManager";
+import { NetworkingDashboard } from "@/components/admin/networking/NetworkingDashboard";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { SSHTerminal } from "@/components/VPS/SSHTerminal";
 import { useCategoryDisplayName } from "@/hooks/useCategoryMappings";
@@ -927,7 +928,7 @@ const Admin: React.FC = () => {
   }, []);
 
   // Networking rDNS state
-  const [networkingTab, setNetworkingTab] = useState<"rdns" | "ipam">("rdns");
+  const [networkingTab, setNetworkingTab] = useState<"rdns" | "ips" | "ipv6" | "vlans" | "firewalls" | "assign" | "share">("rdns");
   const [rdnsBaseDomain, setRdnsBaseDomain] = useState<string>("");
   const [rdnsLoading, setRdnsLoading] = useState<boolean>(false);
   const [rdnsSaving, setRdnsSaving] = useState<boolean>(false);
@@ -2652,7 +2653,7 @@ const Admin: React.FC = () => {
                   Administration Sections
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Quick access to the core areas of SkyPanelV2.
+                  Quick access to the core areas of {BRAND_NAME}.
                 </p>
               </div>
             </div>
@@ -4816,9 +4817,14 @@ const Admin: React.FC = () => {
                   setNetworkingTab(value as typeof networkingTab)
                 }
               >
-                <TabsList>
+                <TabsList className="flex-wrap">
                   <TabsTrigger value="rdns">Reverse DNS</TabsTrigger>
-                  <TabsTrigger value="ipam">IP Management</TabsTrigger>
+                  <TabsTrigger value="ips">IP Addresses</TabsTrigger>
+                  <TabsTrigger value="ipv6">IPv6</TabsTrigger>
+                  <TabsTrigger value="vlans">VLANs</TabsTrigger>
+                  <TabsTrigger value="firewalls">Firewalls</TabsTrigger>
+                  <TabsTrigger value="assign">Assign IPs</TabsTrigger>
+                  <TabsTrigger value="share">Share IPs</TabsTrigger>
                 </TabsList>
                 <TabsContent value="rdns" className="space-y-6 pt-6">
                   <div className="space-y-3">
@@ -4863,201 +4869,23 @@ const Admin: React.FC = () => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="ipam" className="space-y-6 pt-6">
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-base font-semibold text-foreground mb-2">
-                        IP Address Management (IPAM)
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Manage IPv4 and IPv6 addresses allocated across your
-                        Linode infrastructure.
-                      </p>
-                    </div>
-
-                    {/* IP Allocation Overview */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm font-medium">
-                            Total IPs
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold text-foreground">
-                            {servers.length > 0 ? servers.length : "0"}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Allocated addresses
-                          </p>
-                        </CardContent>
-                      </Card>
-
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm font-medium">
-                            IPv4
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold text-foreground">
-                            {servers.filter((s) => s.ip_address).length}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Active IPv4 addresses
-                          </p>
-                        </CardContent>
-                      </Card>
-
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm font-medium">
-                            IPv6
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-2xl font-bold text-foreground">
-                            {
-                              servers.filter((s) => s.configuration?.ipv6)
-                                .length
-                            }
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Active IPv6 ranges
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {/* IP Address Table */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">
-                          IP Addresses
-                        </CardTitle>
-                        <CardDescription>
-                          View and manage IP addresses across all VPS instances
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="rounded-md border">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Instance ID</TableHead>
-                                <TableHead>Label</TableHead>
-                                <TableHead>IPv4 Address</TableHead>
-                                <TableHead>IPv6 Range</TableHead>
-                                <TableHead>Region</TableHead>
-                                <TableHead>Status</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {servers.length === 0 ? (
-                                <TableRow>
-                                  <TableCell
-                                    colSpan={6}
-                                    className="text-center py-8 text-muted-foreground"
-                                  >
-                                    No servers found. Deploy a VPS to see IP
-                                    allocations.
-                                  </TableCell>
-                                </TableRow>
-                              ) : (
-                                servers.map((server) => (
-                                  <TableRow key={server.id}>
-                                    <TableCell className="font-mono text-xs">
-                                      {server.provider_instance_id || server.id}
-                                    </TableCell>
-                                    <TableCell className="font-medium">
-                                      {server.label || "Unnamed Instance"}
-                                    </TableCell>
-                                    <TableCell className="font-mono text-sm">
-                                      {server.ip_address || (
-                                        <span className="text-muted-foreground">
-                                          N/A
-                                        </span>
-                                      )}
-                                    </TableCell>
-                                    <TableCell className="font-mono text-xs">
-                                      {server.configuration?.ipv6 ? (
-                                        <span
-                                          className="block max-w-[200px] truncate"
-                                          title={String(
-                                            server.configuration.ipv6,
-                                          )}
-                                        >
-                                          {String(server.configuration.ipv6)}
-                                        </span>
-                                      ) : (
-                                        <span className="text-muted-foreground">
-                                          N/A
-                                        </span>
-                                      )}
-                                    </TableCell>
-                                    <TableCell className="text-sm">
-                                      {String(
-                                        server.configuration?.region ||
-                                          "Unknown",
-                                      )}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge
-                                        variant={
-                                          server.status === "running"
-                                            ? "default"
-                                            : "secondary"
-                                        }
-                                      >
-                                        {server.status || "Unknown"}
-                                      </Badge>
-                                    </TableCell>
-                                  </TableRow>
-                                ))
-                              )}
-                            </TableBody>
-                          </Table>
-                        </div>
-
-                        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-                          <div>
-                            Showing {servers.length} instance
-                            {servers.length !== 1 ? "s" : ""}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span>IP data synced from Linode API</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Additional IPAM Information */}
-                    <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800">
-                      <CardContent className="pt-6">
-                        <div className="flex gap-3">
-                          <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                          <div className="space-y-2">
-                            <h4 className="font-medium text-foreground">
-                              About IP Management
-                            </h4>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              IP addresses are automatically allocated when you
-                              create VPS instances. Each instance receives a
-                              public IPv4 address and an IPv6 range. You can
-                              configure reverse DNS (rDNS) for these IPs in the
-                              rDNS tab. All IP information is synced in
-                              real-time from the Linode API.
-                            </p>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              Note: Instance IDs shown here do not expose
-                              sensitive internal identifiers and are safe for
-                              status monitoring purposes.
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                <TabsContent value="ips" className="pt-6">
+                  <NetworkingDashboard tab="ips" />
+                </TabsContent>
+                <TabsContent value="ipv6" className="pt-6">
+                  <NetworkingDashboard tab="ipv6" />
+                </TabsContent>
+                <TabsContent value="vlans" className="pt-6">
+                  <NetworkingDashboard tab="vlans" />
+                </TabsContent>
+                <TabsContent value="firewalls" className="pt-6">
+                  <NetworkingDashboard tab="firewalls" />
+                </TabsContent>
+                <TabsContent value="assign" className="pt-6">
+                  <NetworkingDashboard tab="assign" />
+                </TabsContent>
+                <TabsContent value="share" className="pt-6">
+                  <NetworkingDashboard tab="share" />
                 </TabsContent>
               </Tabs>
             </CardContent>
