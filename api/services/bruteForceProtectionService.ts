@@ -87,10 +87,13 @@ async function initializeRedis(): Promise<void> {
     const redisOptions: any = {
       lazyConnect: true,
       maxRetriesPerRequest: 3,
+      connectTimeout: 5000,
       retryStrategy: (times: number) => {
         if (times > 3) {
           console.warn('[Brute force] Redis reconnection failed, using in-memory storage');
           redisAvailable = false;
+          // Don't disconnect here as it causes unhandled error events
+          // ioredis will stop reconnecting when we return null
           return null;
         }
         return Math.min(times * 100, 3000);
@@ -100,6 +103,10 @@ async function initializeRedis(): Promise<void> {
     redisClient = new Redis(redisUrl, redisOptions);
 
     redisClient.on('error', (err) => {
+      // Ignore connection closed errors as they just mean redis isn't available
+      if (err.message && err.message.includes('Connection is closed')) {
+        return;
+      }
       console.error('[Brute force] Redis error:', err.message);
       redisAvailable = false;
     });
@@ -123,9 +130,17 @@ async function initializeRedis(): Promise<void> {
     await redisClient.connect();
     console.log('[Brute force] Redis connection established');
     redisAvailable = true;
-  } catch (error) {
-    console.warn('[Brute force] Failed to connect to Redis, using in-memory storage:', error);
+  } catch (error: any) {
+    console.warn('[Brute force] Failed to connect to Redis, using in-memory storage:', error.message || error);
     redisAvailable = false;
+    // Ensure the client stops reconnecting attempts
+    if (redisClient) {
+      try {
+        redisClient.disconnect(false);
+      } catch {
+        // Ignore disconnect errors
+      }
+    }
     redisClient = null;
   }
 }
