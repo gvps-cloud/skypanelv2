@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
-import { randomBytes } from 'crypto';
+import { randomInt } from 'crypto';
 import { query, transaction } from '../lib/database.js';
 import { config } from '../config/index.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -25,7 +25,12 @@ export interface LoginData {
   code?: string; // 2FA code
 }
 
-const RESET_TOKEN_LENGTH = 32;
+const RESET_CODE_LENGTH = 8;
+
+function generatePasswordResetCode(): string {
+  const maxValue = 10 ** RESET_CODE_LENGTH;
+  return randomInt(0, maxValue).toString().padStart(RESET_CODE_LENGTH, '0');
+}
 
 /**
  * Validate password strength requirements
@@ -330,7 +335,7 @@ export class AuthService {
       console.info('Password reset requested for email:', {
         email: email.toLowerCase(),
         timestamp: new Date().toISOString(),
-        tokenLength: RESET_TOKEN_LENGTH
+        codeLength: RESET_CODE_LENGTH
       });
 
       const result = await query(
@@ -349,14 +354,13 @@ export class AuthService {
 
       const user = result.rows[0];
 
-      // Generate a cryptographically secure reset token
-      // Use full length for maximum security (32 bytes = 64 hex chars)
-      const resetToken = randomBytes(RESET_TOKEN_LENGTH).toString('hex').toUpperCase();
+      // Generate a fixed-length numeric code that matches the reset UI/email copy.
+      const resetToken = generatePasswordResetCode();
       const resetExpires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour from now
 
       console.info('Generated password reset token for user:', {
         userId: user.id,
-        tokenLength: resetToken.length,
+        codeLength: resetToken.length,
         expiresAt: resetExpires.toISOString(),
         timestamp: new Date().toISOString()
       });
@@ -405,13 +409,17 @@ export class AuthService {
 
   static async resetPassword(email: string, token: string, newPassword: string) {
     try {
-      const normalizedToken = token.toUpperCase();
+      const normalizedToken = token.trim();
       const normalizedEmail = email.toLowerCase().trim();
+
+      if (!/^\d{8}$/.test(normalizedToken)) {
+        throw new Error('Reset code must be exactly 8 digits');
+      }
 
       // Log password reset attempt for security monitoring
       console.info('Password reset attempt:', {
         email: normalizedEmail,
-        tokenLength: normalizedToken.length,
+        codeLength: normalizedToken.length,
         timestamp: new Date().toISOString()
       });
 
@@ -426,7 +434,7 @@ export class AuthService {
           email: normalizedEmail,
           timestamp: new Date().toISOString()
         });
-        throw new Error('Invalid or expired reset token, or email does not match');
+        throw new Error('Invalid or expired reset code, or email does not match');
       }
 
       const user = userResult.rows[0];

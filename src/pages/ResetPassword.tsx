@@ -146,8 +146,8 @@ export default function ResetPassword() {
                       maxLength={RESET_CODE_LENGTH}
                       value={resetCode}
                       onChange={(value) => {
-                        // Only allow uppercase letters and digits
-                        const sanitized = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        // Keep the client-side input aligned with the server's 8-digit code format.
+                        const sanitized = value.replace(/\D/g, '');
                         setResetCode(sanitized.slice(0, RESET_CODE_LENGTH));
                       }}
                     >
