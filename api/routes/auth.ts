@@ -369,7 +369,10 @@ router.post(
       .isEmail()
       .normalizeEmail({ gmail_remove_dots: false })
       .withMessage("Valid email is required"),
-    body("token").notEmpty().withMessage("Reset token is required"),
+    body("token")
+      .trim()
+      .matches(/^\d{8}$/)
+      .withMessage("Reset code must be exactly 8 digits"),
     body("password")
       .isLength({ min: 8 })
       .withMessage("Password must be at least 8 characters")

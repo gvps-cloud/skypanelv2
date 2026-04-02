@@ -4,18 +4,18 @@
  * **Test Coverage:**
  * - Token blacklist functionality (logout and rejection)
  * - Brute force protection (lockout after 5 failed attempts)
- * - Password reset token strength (32-byte crypto random)
+ * - Password reset code generation and lifecycle
  * - Enhanced password requirements validation
  *
  * **Security Principles Verified:**
  * 1. JWT tokens are blacklisted on logout to prevent reuse
  * 2. Brute force attacks are mitigated with exponential backoff
- * 3. Password reset tokens use cryptographically secure random bytes
+ * 3. Password reset codes are fixed-length numeric one-time codes
  * 4. Password requirements enforce minimum strength standards
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { randomBytes } from 'crypto';
+import { randomInt } from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../../api/lib/database.js';
@@ -354,57 +354,45 @@ describe('Authentication Security Tests', () => {
     });
   });
 
-  describe('Password Reset Token Security', () => {
+  describe('Password Reset Code Security', () => {
     /**
-     * **SECURITY TEST: Use 32-Byte Crypto Random Tokens**
+     * **SECURITY TEST: Use Fixed-Length Numeric Reset Codes**
      *
-     * Verifies that password reset tokens are generated using cryptographically
-     * secure random bytes with sufficient entropy (32 bytes = 256 bits).
+     * Verifies that password reset codes are generated as 8-digit numeric values,
+     * matching the user-facing reset flow and preserving enough entropy for
+     * short-lived one-time use.
      *
-     * **Threat Mitigated:** Token prediction and brute force attacks
+     * **Threat Mitigated:** Code format mismatch and code prediction attacks
      * **Security Standard:** NIST SP 800-90A (CSPRNG)
      */
-    it('should use 32-byte crypto random tokens for password reset', async () => {
-      // Generate a password reset token using the same method as AuthService
-      const RESET_TOKEN_LENGTH = 8;
-      const resetToken = randomBytes(RESET_TOKEN_LENGTH)
-        .toString('hex')
-        .slice(0, RESET_TOKEN_LENGTH)
-        .toUpperCase();
+    it('should generate 8-digit numeric codes for password reset', async () => {
+      await AuthService.requestPasswordReset(testUserEmail);
 
-      // Verify token properties
-      expect(resetToken).toBeDefined();
-      expect(resetToken.length).toBe(RESET_TOKEN_LENGTH);
-      expect(resetToken).toMatch(/^[A-Z0-9]+$/); // Alphanumeric uppercase
+      const userWithCode = await query(
+        'SELECT reset_token, reset_expires FROM users WHERE email = $1',
+        [testUserEmail]
+      );
 
-      // Verify it's using crypto.randomBytes (not Math.random)
-      const token1 = randomBytes(8).toString('hex').slice(0, 8).toUpperCase();
-      const token2 = randomBytes(8).toString('hex').slice(0, 8).toUpperCase();
+      const resetCode = userWithCode.rows[0].reset_token;
 
-      // Two generated tokens should be different (extremely high probability)
-      expect(token1).not.toBe(token2);
+      expect(resetCode).toBeDefined();
+      expect(resetCode).toMatch(/^\d{8}$/);
 
-      // Verify entropy: character distribution should be roughly uniform
-      // This is a statistical test for randomness
-      const tokens: string[] = [];
-      for (let i = 0; i < 100; i++) {
-        tokens.push(randomBytes(8).toString('hex').slice(0, 8).toUpperCase());
-      }
+      // Sample the same generation strategy directly to ensure it stays numeric
+      // and padded to 8 digits even when leading zeroes occur.
+      const sampleCodes = Array.from({ length: 100 }, () =>
+        randomInt(0, 10 ** 8).toString().padStart(8, '0')
+      );
 
-      // Check for duplicates (should be none with proper entropy)
-      const uniqueTokens = new Set(tokens);
-      expect(uniqueTokens.size).toBe(100); // All tokens should be unique
+      expect(sampleCodes.every((code) => /^\d{8}$/.test(code))).toBe(true);
 
-      // Check character distribution (should be roughly uniform)
-      const allChars = tokens.join('');
-      const uniqueChars = new Set(allChars.split(''));
-      const distributionThreshold = 0.02; // Each char should appear at least 2% of the time
+      const uniqueCodes = new Set(sampleCodes);
+      expect(uniqueCodes.size).toBeGreaterThan(95);
 
-      for (const char of uniqueChars) {
-        const count = allChars.split(char).length - 1;
-        const frequency = count / allChars.length;
-        expect(frequency).toBeGreaterThan(distributionThreshold);
-      }
+      await query(
+        'UPDATE users SET reset_token = NULL, reset_expires = NULL WHERE email = $1',
+        [testUserEmail]
+      );
     });
 
     /**
@@ -443,6 +431,8 @@ describe('Authentication Security Tests', () => {
           [expiredTime, testUserEmail]
         );
 
+        expect(userWithToken.rows[0].reset_token).toMatch(/^\d{8}$/);
+
         // Attempt to use expired token
         await expect(
           AuthService.resetPassword(testUserEmail, userWithToken.rows[0].reset_token, 'NewPass123!')
@@ -466,8 +456,8 @@ describe('Authentication Security Tests', () => {
      * **Security Standard:** OWASP Session Management
      */
     it('should consume token after successful password reset', async () => {
-      // Create a reset token using the new 32-byte format
-      const resetToken = randomBytes(32).toString('hex').toUpperCase();
+      // Create a reset code using the same 8-digit numeric format as production.
+      const resetToken = randomInt(0, 10 ** 8).toString().padStart(8, '0');
       const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
 
       await query(
