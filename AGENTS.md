@@ -383,3 +383,34 @@ Notable scripts currently present in `scripts/` include:
 - Be careful with org-aware data access, billing visibility, and impersonation
 - Treat public marketing pages and authenticated panel flows as separate product surfaces when making changes
 - The site logo/favicon is a single source of truth: `public/favicon.svg` — the `Logo` component (`src/components/Logo.tsx`) renders it as an `<img>` tag, and `index.html` links it as the browser favicon. To update icons, replace `favicon.svg` and regenerate raster variants via [realfavicongenerator.net](https://realfavicongenerator.net/)
+
+## Cursor Cloud specific instructions
+
+### Environment
+
+- **Node.js 22.22.0** is required (matches `.nvmrc`). Use `nvm use` to activate.
+- **npm** is the package manager (lockfile: `package-lock.json`).
+- All secrets (`DATABASE_URL`, `JWT_SECRET`, `ENCRYPTION_KEY`, `SSH_CRED_SECRET`, etc.) are injected as environment variables via Cursor Secrets. The `.env` file must be generated from `.env.example` by mapping these injected env vars at setup time — it is **not** committed to the repo.
+- The `DATABASE_URL` points to an **external PostgreSQL instance** (not localhost). All migrations and seed data are already applied. Do **not** run `db:fresh`, `db:reset`, or destructive migration commands.
+- Redis is available via the injected `REDIS_URL` and is used for token blacklist and brute-force protection.
+
+### Running the app
+
+- `npm run dev` starts both Vite (port 5173) and Express API (port 3001) concurrently.
+- `npm run dev-up` is the preferred clean-start command — it kills ports 3001/5173/8000 first.
+- The Vite dev server proxies `/api/` requests to the Express backend automatically.
+- Access the app at `http://localhost:5173`.
+
+### Lint / Type check / Tests
+
+- `npm run lint` — ESLint (expect warnings, 0 errors).
+- `npm run check` — TypeScript type check (`tsc --noEmit`).
+- `npx vitest run tests/security/` — runs security tests (the only test suite with a defined path). There is no `npm test` script.
+- API docs sync (`npm run docs:api:sync`) runs automatically via pre-hooks before `dev`, `client:dev`, and `build`.
+
+### Gotchas
+
+- The `predev` and `preclient:dev` hooks run `docs:api:sync` automatically — this is normal and takes a few seconds before the dev server starts.
+- The backend starts an hourly billing scheduler and egress billing on boot — log output about "0 instances billed" is expected with an empty VPS fleet.
+- `@prisma/client` and `prisma` are listed as dependencies but the app uses raw `pg` queries with SQL migrations — there is no `prisma/schema.prisma` file.
+- The admin user `admin@skypanelv2.com` / `admin123` is seeded in the external database and can be used for development.
