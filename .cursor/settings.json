@@ -1,0 +1,22 @@
+{
+  "plugins": {
+    "linear": {
+      "enabled": true
+    },
+    "snyk-secure-development": {
+      "enabled": true
+    },
+    "neon-postgres": {
+      "enabled": true
+    },
+    "prisma": {
+      "enabled": true
+    },
+    "context7-plugin": {
+      "enabled": true
+    },
+    "continual-learning": {
+      "enabled": true
+    }
+  }
+}
