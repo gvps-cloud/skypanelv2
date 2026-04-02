@@ -14,6 +14,7 @@ import express, {
   type Response,
   type NextFunction,
 } from "express";
+import type { Stats } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
@@ -72,6 +73,121 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const clientBuildPath = path.resolve(__dirname, "../dist");
 const clientIndexFile = path.join(clientBuildPath, "index.html");
+
+const truthyValues = new Set(["1", "true", "yes", "on"]);
+const falsyValues = new Set(["0", "false", "no", "off"]);
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function readEnvString(...values: Array<string | undefined>): string {
+  for (const value of values) {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+  }
+
+  return "";
+}
+
+function readEnvBoolean(value: string | undefined, fallback: boolean): boolean {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  if (truthyValues.has(normalizedValue)) {
+    return true;
+  }
+
+  if (falsyValues.has(normalizedValue)) {
+    return false;
+  }
+
+  return fallback;
+}
+
+function buildRuntimeHeadMarkup(): string {
+  const companyName = readEnvString(
+    process.env.COMPANY_NAME,
+    process.env.VITE_COMPANY_NAME,
+  ) || "GVPSCloud";
+
+  const scriptSrc = readEnvString(
+    process.env.VITE_RYBBIT_SCRIPT_URL,
+    process.env.VITE_TRACKING_SCRIPT_URL,
+  );
+  const siteId = readEnvString(process.env.VITE_RYBBIT_SITE_ID);
+  const trackErrors = readEnvBoolean(process.env.VITE_RYBBIT_TRACK_ERRORS, true);
+  const sessionReplay = readEnvBoolean(process.env.VITE_RYBBIT_SESSION_REPLAY, true);
+
+  const runtimeConfig = {
+    VITE_RYBBIT_SCRIPT_URL: scriptSrc,
+    VITE_TRACKING_SCRIPT_URL: readEnvString(process.env.VITE_TRACKING_SCRIPT_URL),
+    VITE_RYBBIT_SITE_ID: siteId,
+    VITE_RYBBIT_TRACK_ERRORS: trackErrors,
+    VITE_RYBBIT_SESSION_REPLAY: sessionReplay,
+  };
+
+  const headParts = [
+    `<script>document.title = ${JSON.stringify(`${companyName} | Cloud`)};</script>`,
+    `<script>window.__APP_RUNTIME_CONFIG__ = ${JSON.stringify(runtimeConfig)};</script>`,
+  ];
+
+  if (scriptSrc && siteId) {
+    const attrs = [
+      `id="gvps-rybbit-script"`,
+      `src="${escapeHtml(scriptSrc)}"`,
+      `data-site-id="${escapeHtml(siteId)}"`,
+    ];
+
+    if (trackErrors) {
+      attrs.push(`data-track-errors="true"`);
+    }
+
+    if (sessionReplay) {
+      attrs.push(`data-session-replay="true"`);
+    }
+
+    headParts.push(`<script ${attrs.join(" ")} defer></script>`);
+  }
+
+  return headParts.join("");
+}
+
+let cachedClientIndexTemplate = "";
+let cachedClientIndexMtimeMs = -1;
+
+function getClientIndexTemplate(): string {
+  const stats: Stats = fs.statSync(clientIndexFile);
+  if (
+    cachedClientIndexTemplate &&
+    cachedClientIndexMtimeMs === stats.mtimeMs
+  ) {
+    return cachedClientIndexTemplate;
+  }
+
+  cachedClientIndexTemplate = fs.readFileSync(clientIndexFile, "utf8");
+  cachedClientIndexMtimeMs = stats.mtimeMs;
+  return cachedClientIndexTemplate;
+}
+
+function renderClientIndexHtml(): string {
+  const template = getClientIndexTemplate();
+  return template.replace(
+    "<!-- APP_RUNTIME_HEAD -->",
+    buildRuntimeHeadMarkup(),
+  );
+}
 
 // Security middleware - use enhanced Helmet configuration with XSS protection
 app.use(enhancedHelmet);
@@ -156,18 +272,18 @@ app.use((error: Error, req: Request, res: Response, _next: NextFunction) => {
  */
 const distExists = fs.existsSync(clientBuildPath);
 if (distExists) {
-  app.use(express.static(clientBuildPath));
+  app.use(express.static(clientBuildPath, { index: false }));
 
   app.get("*", (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api/")) {
       return next();
     }
 
-    res.sendFile(clientIndexFile, (err) => {
-      if (err) {
-        next(err);
-      }
-    });
+    try {
+      res.type("html").send(renderClientIndexHtml());
+    } catch (err) {
+      next(err);
+    }
   });
 }
 
