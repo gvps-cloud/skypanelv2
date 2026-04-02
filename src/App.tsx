@@ -17,6 +17,7 @@ import { ImpersonationBanner } from "./components/admin/ImpersonationBanner";
 import { ImpersonationLoadingOverlay } from "./components/admin/ImpersonationLoadingOverlay";
 import { setupAutoLogout } from "@/lib/api";
 import { useEffect } from "react";
+import GlobalTrackingScript from "./components/GlobalTrackingScript";
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -423,6 +424,7 @@ export default function App() {
           <ImpersonationProvider>
             <Router>
               <AppRoutes />
+              <GlobalTrackingScript />
               <Toaster position="bottom-right" richColors closeButton />
               <BackToTopButton />
             </Router>
