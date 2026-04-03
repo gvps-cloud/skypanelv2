@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, Menu, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/Logo";
 import { BRAND_NAME } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
-
-interface MarketingNavbarProps {
-  sticky?: boolean;
-}
 
 interface NavLinkConfig {
   label: string;
@@ -22,53 +19,43 @@ const navLinks: NavLinkConfig[] = [
   { label: "Pricing", href: "/pricing" },
   { label: "Regions", href: "/regions" },
   { label: "Status", href: "/status" },
-  { label: "About", href: "/about" },
-  { label: "Contact", href: "/contact" },
-  { label: "FAQ", href: "/faq" },
   { label: "Docs", href: "/docs" },
 ];
 
-export function MarketingNavbar({ sticky = true }: MarketingNavbarProps) {
+export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === "/";
 
   const scrollToAnchor = (href: string) => {
     if (!href.startsWith("#")) return;
-    const id = href.slice(1);
-    const el = typeof document !== "undefined" ? document.getElementById(id) : null;
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    const el = document.getElementById(href.slice(1));
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const resolveHref = (link: NavLinkConfig) => {
-    if (link.isAnchor && !isHome) {
-      return `/${link.href}`;
-    }
-    return link.href;
-  };
-
-  const wrapperClasses = [
-    "border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/65",
-  ];
-  if (sticky) {
-    wrapperClasses.push("sticky top-0 z-40");
-  }
+  const resolveHref = (link: NavLinkConfig) =>
+    link.isAnchor && !isHome ? `/${link.href}` : link.href;
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
+  const handleLogoClick = () => {
+    closeMobileMenu();
+    if (isHome) window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const renderNavLink = (link: NavLinkConfig) => {
     const resolvedHref = resolveHref(link);
+    const baseClass =
+      "text-sm text-muted-foreground transition-colors hover:text-foreground";
 
     if (link.isAnchor && isHome) {
       return (
         <a
           key={link.label}
           href={resolvedHref}
-          className="text-muted-foreground transition hover:text-primary"
-          onClick={(event) => {
-            event.preventDefault();
+          className={baseClass}
+          onClick={(e) => {
+            e.preventDefault();
             scrollToAnchor(link.href);
             closeMobileMenu();
           }}
@@ -82,7 +69,7 @@ export function MarketingNavbar({ sticky = true }: MarketingNavbarProps) {
       <Link
         key={link.label}
         to={resolvedHref}
-        className="text-muted-foreground transition hover:text-primary"
+        className={baseClass}
         onClick={closeMobileMenu}
       >
         {link.label}
@@ -90,67 +77,90 @@ export function MarketingNavbar({ sticky = true }: MarketingNavbarProps) {
     );
   };
 
-  const handleLogoClick = () => {
-    closeMobileMenu();
-    if (location.pathname === "/") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
-
   return (
-    <header className={wrapperClasses.join(" ")}>
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-2 text-lg font-semibold" onClick={handleLogoClick}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
-            <Logo size="md" />
-          </div>
-          <span>{BRAND_NAME}</span>
-        </Link>
-        <nav className="hidden items-center gap-8 text-sm font-medium lg:flex">
-          {navLinks.map(renderNavLink)}
-        </nav>
-        <div className="hidden items-center gap-3 lg:flex">
-          <Button variant="ghost" asChild>
-            <Link to="/login" onClick={closeMobileMenu}>
-              Log in
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link to="/register" onClick={closeMobileMenu}>
-              Launch console
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="lg:hidden"
-          onClick={() => setIsMobileMenuOpen((open) => !open)}
-          aria-label="Toggle menu"
-        >
-          {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
-      </div>
-      {isMobileMenuOpen && (
-        <div className="border-t border-border/60 bg-background/95 px-4 pb-6 pt-3 lg:hidden">
-          <div className="flex flex-col gap-4 text-sm font-medium">
-            {navLinks.map(renderNavLink)}
-          </div>
-          <div className="mt-6 flex flex-col gap-3">
-            <Button variant="ghost" asChild className="justify-start">
+    <header
+      className={`${sticky ? "sticky top-0 z-40" : ""} w-full`}
+    >
+      <div className="mx-auto max-w-7xl px-4 pt-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between rounded-2xl border border-border/50 bg-background/80 px-4 py-3 shadow-lg shadow-black/[0.03] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+          <Link
+            to="/"
+            className="flex items-center gap-2.5 text-lg font-semibold transition-transform hover:scale-[1.02]"
+            onClick={handleLogoClick}
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20">
+              <Logo size="sm" />
+            </div>
+            <span className="tracking-tight">{BRAND_NAME}</span>
+          </Link>
+
+          <nav className="hidden items-center gap-1 lg:flex">
+            {navLinks.map((link) => (
+              <div key={link.label} className="px-3 py-1.5">
+                {renderNavLink(link)}
+              </div>
+            ))}
+          </nav>
+
+          <div className="hidden items-center gap-2 lg:flex">
+            <Button variant="ghost" size="sm" asChild>
               <Link to="/login" onClick={closeMobileMenu}>
                 Log in
               </Link>
             </Button>
-            <Button asChild onClick={closeMobileMenu}>
-              <Link to="/register">
+            <Button size="sm" className="home-btn-glow" asChild>
+              <Link to="/register" onClick={closeMobileMenu}>
                 Launch console
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Link>
             </Button>
           </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setIsMobileMenuOpen((o) => !o)}
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </Button>
         </div>
-      )}
+      </div>
+
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden lg:hidden"
+          >
+            <div className="mx-auto max-w-7xl px-4 pb-4 pt-2 sm:px-6 lg:px-8">
+              <div className="rounded-2xl border border-border/50 bg-background/95 px-4 pb-5 pt-3 backdrop-blur-xl">
+                <div className="flex flex-col gap-3 text-sm font-medium">
+                  {navLinks.map(renderNavLink)}
+                </div>
+                <div className="mt-5 flex flex-col gap-2 border-t border-border/40 pt-4">
+                  <Button variant="ghost" asChild className="justify-start">
+                    <Link to="/login" onClick={closeMobileMenu}>
+                      Log in
+                    </Link>
+                  </Button>
+                  <Button asChild onClick={closeMobileMenu}>
+                    <Link to="/register">Launch console</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

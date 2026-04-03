@@ -1,19 +1,14 @@
-/* Globe theme colors - derived from --primary in ParticleGlobe.tsx.
-   These CSS vars are kept for potential future use but are no longer
-   the primary way the globe gets its colors. */
+/* ================================================================================
+   HOME PAGE STYLES
+   ================================================================================ */
+
+/* --- Grid & Pattern Backgrounds --- */
 
 .bg-grid-pattern {
   background-image:
     linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
     linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
   background-size: 24px 24px;
-}
-
-.home-aurora {
-  background:
-    radial-gradient(56rem 28rem at 10% -10%, hsl(var(--primary) / 0.14), transparent 70%),
-    radial-gradient(44rem 26rem at 88% 8%, hsl(var(--primary) / 0.1), transparent 72%),
-    linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)) 55%, hsl(var(--muted) / 0.22));
 }
 
 .home-grid-mask {
@@ -24,6 +19,145 @@
   mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0.2), transparent);
   opacity: 0.55;
 }
+
+/* --- Aurora & Hero Backgrounds --- */
+
+.home-aurora {
+  background:
+    radial-gradient(56rem 28rem at 10% -10%, hsl(var(--primary) / 0.14), transparent 70%),
+    radial-gradient(44rem 26rem at 88% 8%, hsl(var(--primary) / 0.1), transparent 72%),
+    linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)) 55%, hsl(var(--muted) / 0.22));
+}
+
+.home-hero-radial {
+  background: radial-gradient(circle at 50% -20%, hsl(var(--primary) / 0.15) 0%, transparent 70%);
+}
+
+/* --- Floating Gradient Orbs --- */
+
+.home-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.home-orb--1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, hsl(var(--primary) / 0.18), transparent 70%);
+  top: -15%;
+  left: -8%;
+  animation: float-orb-1 18s ease-in-out infinite;
+}
+
+.home-orb--2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, hsl(var(--primary) / 0.12), transparent 70%);
+  top: 10%;
+  right: -5%;
+  animation: float-orb-2 22s ease-in-out infinite;
+}
+
+.home-orb--3 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, hsl(var(--primary) / 0.1), transparent 70%);
+  bottom: -10%;
+  left: 30%;
+  animation: float-orb-3 20s ease-in-out infinite;
+}
+
+@keyframes float-orb-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, 30px) scale(1.05); }
+  66% { transform: translate(-20px, -15px) scale(0.95); }
+}
+
+@keyframes float-orb-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-35px, 20px) scale(0.95); }
+  66% { transform: translate(25px, -25px) scale(1.05); }
+}
+
+@keyframes float-orb-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.08); }
+  66% { transform: translate(-25px, 15px) scale(0.92); }
+}
+
+/* --- Globe Glow Pulse --- */
+
+.home-globe-glow {
+  position: absolute;
+  inset: -40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, hsl(var(--primary) / 0.08), transparent 65%);
+  animation: globe-pulse 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes globe-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+/* --- Shimmer Badge Animation --- */
+
+.home-shimmer-badge {
+  position: relative;
+  overflow: hidden;
+}
+
+.home-shimmer-badge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--primary) / 0.15),
+    transparent
+  );
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  50% { left: 150%; }
+  100% { left: 150%; }
+}
+
+/* --- Marquee (Trust Strip) --- */
+
+.home-marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+.home-marquee__track {
+  display: flex;
+  gap: 2rem;
+  width: max-content;
+  animation: marquee 30s linear infinite;
+}
+
+.home-marquee__track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* --- Glow Effects --- */
 
 .home-panel-glow::before {
   content: "";
@@ -36,29 +170,31 @@
   z-index: -1;
 }
 
+.home-glow-text {
+  text-shadow: 0 0 32px hsl(var(--primary) / 0.4);
+}
+
+/* --- CTA Shell --- */
+
 .home-cta-shell {
   background:
     linear-gradient(130deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.88) 48%, hsl(var(--primary) / 0.12) 100%);
 }
 
-.home-glow-text {
-  text-shadow: 0 0 32px hsl(var(--primary) / 0.4);
-}
-
-.home-hero-radial {
-  background: radial-gradient(circle at 50% -20%, hsl(var(--primary) / 0.15) 0%, transparent 70%);
-}
+/* --- Card Styles --- */
 
 .home-feature-card {
-  background: linear-gradient(180deg, hsl(var(--card) / 0.4) 0%, hsl(var(--background) / 0.4) 100%);
+  background: linear-gradient(180deg, hsl(var(--card) / 0.5) 0%, hsl(var(--background) / 0.5) 100%);
   backdrop-filter: blur(12px);
   border: 1px solid hsl(var(--border) / 0.4);
-  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .home-feature-card:hover {
   border-color: hsl(var(--primary) / 0.5);
-  box-shadow: 0 8px 32px -8px hsl(var(--primary) / 0.15);
+  box-shadow:
+    0 8px 32px -8px hsl(var(--primary) / 0.15),
+    0 0 0 1px hsl(var(--primary) / 0.1);
   transform: translateY(-4px);
 }
 
@@ -81,6 +217,26 @@
   );
   border: 1px solid hsl(var(--border) / 0.55);
 }
+
+/* --- Bento Card Gradient Top Border --- */
+
+.home-gradient-border-top {
+  position: relative;
+  overflow: hidden;
+}
+
+.home-gradient-border-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.8) 50%, transparent 100%);
+  opacity: 0.7;
+}
+
+/* --- Animated Border --- */
 
 .home-animated-border {
   position: relative;
@@ -108,7 +264,62 @@
   100% { background-position: 0% 0%; }
 }
 
-/* Mobile Optimizations */
+/* --- FAQ Accordion Active Border --- */
+
+.home-faq-item[data-state="open"] {
+  border-left: 2px solid hsl(var(--primary));
+}
+
+/* --- Timeline Connector --- */
+
+.home-timeline-connector {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    hsl(var(--primary) / 0.3) 0px,
+    hsl(var(--primary) / 0.3) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+  transform: translateY(-50%);
+}
+
+/* --- Button Glow --- */
+
+.home-btn-glow {
+  box-shadow: 0 0 20px -4px hsl(var(--primary) / 0.35);
+  transition: box-shadow 0.3s ease;
+}
+
+.home-btn-glow:hover {
+  box-shadow: 0 0 30px -4px hsl(var(--primary) / 0.5);
+}
+
+/* --- Testimonial Decorative Quote --- */
+
+.home-testimonial-quote {
+  position: relative;
+}
+
+.home-testimonial-quote::before {
+  content: '\201C';
+  position: absolute;
+  top: -20px;
+  left: -5px;
+  font-size: 6rem;
+  line-height: 1;
+  font-family: Georgia, serif;
+  color: hsl(var(--primary) / 0.06);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* --- Mobile Optimizations --- */
+
 @media (max-width: 768px) {
   .bg-grid-pattern {
     background-size: 16px 16px;
@@ -125,35 +336,53 @@
     filter: blur(16px);
   }
 
-  /* Reduce motion on mobile for better performance */
-  @media (prefers-reduced-motion: reduce) {
-    * {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
+  .home-orb {
+    filter: blur(60px);
+    opacity: 0.6;
   }
 
-  /* Touch-friendly hover states */
+  .home-orb--1 { width: 300px; height: 300px; }
+  .home-orb--2 { width: 250px; height: 250px; }
+  .home-orb--3 { width: 200px; height: 200px; }
+
+  .home-marquee__track {
+    animation-duration: 20s;
+  }
+
   .touch-manipulation {
     touch-action: manipulation;
   }
 
-  /* Better scroll performance */
   .scroll-smooth {
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
   }
 }
 
-/* Performance optimizations */
+/* --- Reduced Motion --- */
+
+@media (prefers-reduced-motion: reduce) {
+  .home-orb,
+  .home-globe-glow,
+  .home-shimmer-badge::after,
+  .home-marquee__track,
+  .home-animated-border::after {
+    animation: none !important;
+  }
+
+  .home-feature-card {
+    transition: none !important;
+  }
+}
+
+/* --- Performance --- */
+
 .gpu-accelerated {
   transform: translateZ(0);
   backface-visibility: hidden;
   perspective: 1000px;
 }
 
-/* Better image handling */
 .responsive-image {
   max-width: 100%;
   height: auto;
@@ -164,10 +393,6 @@
    PARTICLE GLOBE STYLES
    ================================================================================ */
 
-/* Note: Markers are now rendered as Three.js sprites for performance.
-   Globe colors are derived from --primary CSS variable dynamically. */
-
-/* Hero section globe container */
 .hero-globe-container {
   position: relative;
   width: 100%;
