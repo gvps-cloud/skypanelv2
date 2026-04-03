@@ -12,12 +12,14 @@ node_modules
 dist
 dist-ssr
 *.local
+
+
+# Openclaw/MaxClaw
 *.openclaw
 .openclaw/
-
-~/.cline
-
-# Local memory files
+BOOTSTRAP.md
+HOSTING_PANEL_BLUEPRINT.md
+# Openclaw/MaxClaw Local memory files
 memory/
 HEARTBEAT.md
 IDENTITY.md
@@ -25,6 +27,11 @@ MEMORY.md
 SOUL.md
 TOOLS.md
 USER.md
+
+# cline
+~/.cline
+
+
 *.remember
 # Editor directories and files
 .vscode/*
