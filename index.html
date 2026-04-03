@@ -9,14 +9,6 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Loading...</title>
     <script type="module">
-      const env = import.meta.env ?? {};
-      const candidates = [env['COMPANY-NAME'], env.COMPANY_NAME, env.VITE_COMPANY_NAME];
-      const companyName = candidates
-        .map((value) => (typeof value === 'string' ? value.trim() : ''))
-        .find((value) => value.length > 0) || 'GVPSCloud';
-      document.title = `${companyName} | Cloud`;
-    </script>
-    <script type="module">
       if (import.meta.hot?.on) {
         import.meta.hot.on('vite:error', (error) => {
           if (error.err) {
@@ -25,6 +17,84 @@
             )
           }
         })
+      }
+    </script>
+    <!-- APP_RUNTIME_HEAD -->
+    <script type="module">
+      const runtimeConfig = window.__APP_RUNTIME_CONFIG__ || {};
+      const env = import.meta.env ?? {};
+      const truthyValues = new Set(["1", "true", "yes", "on"]);
+      const falsyValues = new Set(["0", "false", "no", "off"]);
+
+      const sanitizeString = (value) =>
+        typeof value === "string" ? value.trim() : "";
+
+      const readString = (...values) =>
+        values.map(sanitizeString).find((value) => value.length > 0) || "";
+
+      const readBoolean = (fallback, ...values) => {
+        for (const value of values) {
+          if (typeof value === "boolean") {
+            return value;
+          }
+
+          const normalizedValue = sanitizeString(value).toLowerCase();
+          if (!normalizedValue) {
+            continue;
+          }
+
+          if (truthyValues.has(normalizedValue)) {
+            return true;
+          }
+
+          if (falsyValues.has(normalizedValue)) {
+            return false;
+          }
+        }
+
+        return fallback;
+      };
+
+      const scriptId = "gvps-rybbit-script";
+      const scriptSrc = readString(
+        runtimeConfig.VITE_RYBBIT_SCRIPT_URL,
+        runtimeConfig.VITE_TRACKING_SCRIPT_URL,
+        env.VITE_RYBBIT_SCRIPT_URL,
+        env.VITE_TRACKING_SCRIPT_URL,
+      );
+      const siteId = readString(
+        runtimeConfig.VITE_RYBBIT_SITE_ID,
+        env.VITE_RYBBIT_SITE_ID,
+      );
+
+      if (scriptSrc && siteId && !document.getElementById(scriptId)) {
+        const script = document.createElement("script");
+        script.id = scriptId;
+        script.src = scriptSrc;
+        script.defer = true;
+        script.dataset.siteId = siteId;
+
+        if (
+          readBoolean(
+            true,
+            runtimeConfig.VITE_RYBBIT_TRACK_ERRORS,
+            env.VITE_RYBBIT_TRACK_ERRORS,
+          )
+        ) {
+          script.dataset.trackErrors = "true";
+        }
+
+        if (
+          readBoolean(
+            true,
+            runtimeConfig.VITE_RYBBIT_SESSION_REPLAY,
+            env.VITE_RYBBIT_SESSION_REPLAY,
+          )
+        ) {
+          script.dataset.sessionReplay = "true";
+        }
+
+        document.head.appendChild(script);
       }
     </script>
     <script>
