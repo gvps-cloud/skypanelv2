@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { motion } from 'framer-motion';
-import { Globe, MapPin } from 'lucide-react';
 import { latLongToVector3, REGION_COORDINATES_3D } from '@/lib/regionCoordinates';
 
 interface RegionData {
@@ -1165,25 +1164,6 @@ export default function ParticleGlobe({
         </div>
       )}
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: isLoaded ? 1 : 0, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="absolute bottom-4 left-4 flex items-center gap-2 rounded-full border border-border/50 bg-background/80 px-4 py-2 backdrop-blur-sm"
-      >
-        <Globe className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium">{regions.length} Regions</span>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: isLoaded ? 1 : 0 }}
-        transition={{ delay: 1 }}
-        className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full border border-border/50 bg-background/80 px-4 py-2 backdrop-blur-sm"
-      >
-        <MapPin className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Click a region</span>
-      </motion.div>
     </div>
   );
 }

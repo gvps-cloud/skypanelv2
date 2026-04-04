@@ -16,7 +16,7 @@
     linear-gradient(to right, hsl(var(--border) / 0.32) 1px, transparent 1px),
     linear-gradient(to bottom, hsl(var(--border) / 0.32) 1px, transparent 1px);
   background-size: 34px 34px;
-  mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0.2), transparent);
+  mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
   opacity: 0.55;
 }
 

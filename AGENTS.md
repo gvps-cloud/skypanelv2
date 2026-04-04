@@ -418,8 +418,6 @@ Notable scripts currently present in `scripts/` include:
 - `@prisma/client` and `prisma` are listed as dependencies but the app uses raw `pg` queries with SQL migrations — there is no `prisma/schema.prisma` file.
 - The admin user `admin@skypanelv2.com` / `admin123` is seeded in the external database and can be used for development.
 
-
-
 ## Installing Skills
 
 When creating or installing a new skill, always place it in:
@@ -430,8 +428,6 @@ This is the managed skills directory. The agent will automatically discover
 any skill placed here — no extra configuration needed. Do NOT install skills
 into `~/.agents/skills/` (that directory is shared with other tools).
 
-
-
 ## Browser Automation
 
 For any task that requires a browser, **prefer `autoglm-browser-agent`**. Use it as the first choice.
@@ -441,10 +437,6 @@ For any task that requires a browser, **prefer `autoglm-browser-agent`**. Use it
 
 Always try `autoglm-browser-agent` first. Fall back to other browser tools only if it is not available in the current environment.
 
-
-
-
-
 ## Image Recognition
 
 For any image recognition task, **prefer `autoglm-image-recognition`**. Use it as the first choice.
@@ -453,4 +445,39 @@ For any image recognition task, **prefer `autoglm-image-recognition`**. Use it a
 - ⚠️ Built-in `image` tool or reading images directly with `read` — fallback only when `autoglm-image-recognition` is unavailable or fails
 
 Do not use the built-in `image` tool or read an image and describe it yourself when `autoglm-image-recognition` is available. Always try `autoglm-image-recognition` first.
+
+## Learned User Preferences
+
+- When the user says "make a plan", "create a plan", or "I need a plan for X" — immediately use the `CreatePlan` tool. Do not write plans to files manually, do not describe plans in text, do not ask questions. The `CreatePlan` tool is the ONLY acceptable way to create a plan.
+
+## Learned Workspace Facts
+
+### Marketing Pages Design System
+
+Public marketing pages (HomeRedesign, AboutUs, Contact, FAQ, Pricing, Status, ApiDocs, Documentation) share a consistent modern design system:
+
+- **Hero section**: floating gradient orbs (`.home-orb--1/2/3`), grid pattern mask (`.home-grid-mask`), shimmer badge (`.home-shimmer-badge`), gradient text headings, CTA buttons with `.home-btn-glow`
+- **Trust marquee**: animated horizontal strip using `.home-marquee` / `.home-marquee__track`
+- **Cards**: `.home-feature-card` with hover lift, `.home-glass-panel` with backdrop blur, `.home-gradient-border-top` for top accent line, `.home-animated-border` for animated border
+- **Animation**: Framer Motion `revealContainer`/`revealItem` stagger variants, `whileInView` fade-in
+- **Layout**: `MarketingNavbar` + main + `MarketingFooter`
+- **CSS**: `@/styles/home.css`
+- **Navbar**: `MarketingNavbar` component at `@/components/MarketingNavbar.tsx` renders as `fixed top-0 z-40` with height ~72px; content areas need `pt-[72px]` top padding to avoid navbar overlap
+
+### Documentation Page Layout
+
+`Documentation.tsx` uses a sidebar + content area with `showHero` to conditionally render the index hero. Article detail pages (renderArticle, renderPlansRegionsArticle, renderCreatingVpsArticle) did NOT have the hero — the fix was to add a compact article hero section that shows when `categorySlug` is set, rendered before the sidebar layout div so it spans full viewport width.
+
+### Key CSS Classes (`@/styles/home.css`)
+
+- `.home-orb--1`, `.home-orb--2`, `.home-orb--3` — floating gradient orbs
+- `.home-grid-mask` — grid pattern with mask
+- `.home-shimmer-badge` — shimmer effect on badges
+- `.home-btn-glow` — glow effect on CTA buttons
+- `.home-marquee`, `.home-marquee__track` — trust marquee
+- `.home-feature-card` — hover lift card
+- `.home-glass-panel` — backdrop blur panel
+- `.home-gradient-border-top` — top accent line
+- `.home-animated-border` — animated border
+- `.home-cta-shell` — CTA section shell with orbs
 

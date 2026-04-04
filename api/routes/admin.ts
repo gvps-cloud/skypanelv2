@@ -1386,7 +1386,7 @@ router.get(
     try {
       const result = await query(
         `SELECT id, name, type, active, display_order, configuration,
-                created_at, updated_at
+                allowed_regions, created_at, updated_at
            FROM service_providers
        ORDER BY display_order ASC NULLS LAST, created_at DESC`,
       );

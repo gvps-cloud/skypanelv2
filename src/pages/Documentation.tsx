@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import DOMPurify from "dompurify";
+import type { ReactNode } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   BookOpen,
   Search,
@@ -20,16 +22,18 @@ import {
   Cpu,
   Wifi,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 
+import "@/styles/home.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { BRAND_NAME } from "../lib/brand";
-import PublicLayout from "@/components/PublicLayout";
 import { apiClient } from "@/lib/api";
 import type {
   DocumentationCategoriesResponse,
@@ -38,8 +42,32 @@ import type {
 } from "@/types/documentation";
 import ApiReference from "@/components/docs/ApiReference";
 import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
+import MarketingNavbar from "@/components/MarketingNavbar";
+import MarketingFooter from "@/components/MarketingFooter";
 
-// ── Plans & Regions constants ─────────────────────────────────────────────────
+/* ─── Trust Items ────────────────────────────────────────────────── */
+
+const trustItems = [
+  { icon: BookOpen, label: "Step-by-Step Guides" },
+  { icon: Code, label: "API Reference" },
+  { icon: FileText, label: "Code Samples" },
+  { icon: Rocket, label: "Video Tutorials" },
+  { icon: User, label: "Community Forum" },
+  { icon: Sparkles, label: "Quick Start" },
+  { icon: Globe, label: "Best Practices" },
+  { icon: Wifi, label: "24/7 Support" },
+];
+
+const revealItem = {
+  hidden: { opacity: 0, y: 16 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  },
+};
+
+/* ── Plans & Regions constants ─────────────────────────────────────────────────*/
 
 const DEFAULT_CATEGORY_META = {
   nanode:      { label: "Nanode",         order: 0 },
@@ -51,7 +79,7 @@ const DEFAULT_CATEGORY_META = {
   accelerated: { label: "Accelerated",    order: 6 },
 } as const;
 
-// ── Plans & Regions types ───────────────────────────────────────────────────
+/* ── Plans & Regions types ───────────────────────────────────────────────────*/
 
 interface VpsPlan {
   id: number | string;
@@ -126,7 +154,7 @@ function renderDocHtml(raw: string | null | undefined): string {
   return DOMPurify.sanitize(replaced, { USE_PROFILES: { html: true } });
 }
 
-// ── Sidebar ──────────────────────────────────────────────────────────────────
+/* ── Sidebar ────────────────────────────────────────────────────────────────*/
 
 function Sidebar({
   categories,
@@ -160,11 +188,15 @@ function Sidebar({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Logo / title */}
+      {/* Logo / title with gradient icon box */}
       <div className="px-5 pt-5 pb-4">
-        <Link to="/docs" className="flex items-center gap-2.5 group" onClick={() => onNavigate("/docs")}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <BookOpen className="h-4 w-4" />
+        <Link
+          to="/docs"
+          className="flex items-center gap-2.5 group"
+          onClick={() => onNavigate("/docs")}
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20 shrink-0">
+            <BookOpen className="h-4 w-4 text-primary" />
           </div>
           <span className="font-semibold text-sm tracking-tight">Docs</span>
         </Link>
@@ -253,17 +285,19 @@ function Sidebar({
   );
 }
 
-// ── Breadcrumb ───────────────────────────────────────────────────────────────
+/* ── Breadcrumb ───────────────────────────────────────────────────────────────*/
 
 function Breadcrumb({
   category,
   article,
+  className = "mb-6",
 }: {
   category?: { name: string; slug: string };
   article?: string;
+  className?: string;
 }) {
   return (
-    <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6">
+    <nav className={`flex items-center gap-1.5 text-sm text-muted-foreground ${className}`}>
       <Link to="/docs" className="hover:text-foreground transition-colors">
         Docs
       </Link>
@@ -288,7 +322,68 @@ function Breadcrumb({
   );
 }
 
-// ── Main Page ────────────────────────────────────────────────────────────────
+/* ── Main Page ────────────────────────────────────────────────────────────────*/
+
+function DocsHero({
+  compact,
+  category,
+  article,
+  title,
+  description,
+}: {
+  compact?: boolean;
+  category?: { name: string; slug: string };
+  article?: string;
+  title: ReactNode;
+  description: string;
+}) {
+  const wrapperSpacing = compact
+    ? "relative mx-auto max-w-7xl px-4 pb-10 pt-16 sm:px-6 lg:px-8 lg:pb-12 lg:pt-20"
+    : "relative mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 lg:px-8 lg:pb-16 lg:pt-24";
+  const titleClass = compact
+    ? "text-3xl font-medium leading-[1.08] tracking-tight sm:text-4xl lg:text-5xl"
+    : "text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl 2xl:text-7xl";
+  const descriptionClass = compact
+    ? "max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg"
+    : "max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl";
+
+  return (
+    <section className="relative overflow-hidden border-b border-border/40">
+      <div className="home-orb home-orb--1" aria-hidden="true" />
+      <div className="home-orb home-orb--2" aria-hidden="true" />
+      <div className="home-orb home-orb--3" aria-hidden="true" />
+      <div className="home-grid-mask absolute inset-0" aria-hidden="true" />
+
+      <div className={wrapperSpacing}>
+        <motion.div
+          initial={{ opacity: 0, y: compact ? 18 : 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65 }}
+          className={compact ? "space-y-4" : "space-y-6"}
+        >
+          <div className={compact ? "space-y-4" : "space-y-5"}>
+            <Badge
+              variant="outline"
+              className="home-shimmer-badge w-fit rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
+            >
+              <Sparkles className="mr-2 h-3.5 w-3.5" />
+              Documentation
+            </Badge>
+
+            {(category || article) && (
+              <Breadcrumb category={category} article={article} className={compact ? "mb-4" : "mb-6"} />
+            )}
+
+            <div className="space-y-4">
+              <h1 className={titleClass}>{title}</h1>
+              <p className={descriptionClass}>{description}</p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
 
 export default function Documentation() {
   const { categorySlug, articleSlug } = useParams<{
@@ -423,7 +518,7 @@ export default function Documentation() {
     [categorySlug, categories]
   );
 
-  // ── Render: Index (no category selected) ─────────────────────────────────
+  /* ── Render: Index (no category selected) ─────────────────────────────────*/
 
   const renderIndex = () => (
     <div className="max-w-3xl">
@@ -441,11 +536,11 @@ export default function Documentation() {
             <Link
               key={cat.id}
               to={`/docs/${cat.slug}`}
-              className="group rounded-xl border bg-card p-5 transition-all hover:shadow-md hover:border-primary/40"
+              className="group home-feature-card"
             >
-              <div className="flex items-start gap-3.5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
-                  <Icon className="h-5 w-5" />
+              <div className="flex items-start gap-3.5 p-5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20 group-hover:from-primary/25 group-hover:to-primary/10 transition-all">
+                  <Icon className="h-5 w-5 text-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <h2 className="font-semibold mb-1 group-hover:text-primary transition-colors">
@@ -466,22 +561,29 @@ export default function Documentation() {
     </div>
   );
 
-  // ── Render: Category view ────────────────────────────────────────────────
+  /* ── Render: Category view ────────────────────────────────────────────────*/
 
   const renderCategory = (cat: DocumentationCategoryWithArticles) => (
-    <div className="max-w-3xl">
-      <Breadcrumb category={{ name: cat.name, slug: cat.slug }} />
-
-      <div className="mb-8">
-        <div className="flex items-center gap-2.5 mb-2">
-          {(() => {
-            const Icon = getCategoryIcon(cat.icon);
-            return <Icon className="h-6 w-6 text-primary" />;
-          })()}
-          <h1 className="text-2xl font-bold tracking-tight">{cat.name}</h1>
-        </div>
-        {cat.description && <p className="text-muted-foreground">{cat.description}</p>}
-      </div>
+    <div className="max-w-3xl space-y-6">
+      <motion.div variants={revealItem} initial="hidden" animate="show">
+        <Card className="home-gradient-border-top home-glass-panel overflow-hidden">
+          <CardContent className="p-6">
+            <Breadcrumb category={{ name: cat.name, slug: cat.slug }} />
+            <div className="flex items-start gap-4 mt-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
+                {(() => {
+                  const Icon = getCategoryIcon(cat.icon);
+                  return <Icon className="h-6 w-6 text-primary" />;
+                })()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{cat.name}</h1>
+                {cat.description && <p className="text-muted-foreground mt-1">{cat.description}</p>}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {!cat.articles || cat.articles.length === 0 ? (
         <div className="rounded-xl border bg-muted/30 py-12 text-center">
@@ -494,9 +596,11 @@ export default function Documentation() {
             <Link
               key={article.id}
               to={`/docs/${cat.slug}/${article.slug}`}
-              className="group flex items-center gap-3 rounded-lg border p-4 transition-all hover:bg-accent hover:border-primary/30"
+              className="group home-feature-card flex items-center gap-3 p-4"
             >
-              <FileText className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
+                <FileText className="h-4 w-4" />
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm group-hover:text-primary transition-colors">
                   {article.title}
@@ -513,9 +617,9 @@ export default function Documentation() {
     </div>
   );
 
-  // ── Render: Plans & Regions article (dynamic data) ───────────────────────
+  /* ── Render: Plans & Regions article (dynamic data) ───────────────────────*/
 
-  // ── Helpers for Plans & Regions ──────────────────────────────────────────
+  /* ── Helpers for Plans & Regions ──────────────────────────────────────────*/
 
   const getCategoryLabel = useCallback((category: string): string => {
     const mapping = enabledCategoryMappings.find(
@@ -575,7 +679,7 @@ export default function Documentation() {
     return "bg-red-500 text-white dark:text-white";
   };
 
-  // ── Shared plan table renderer ────────────────────────────────────────────
+  /* ── Shared plan table renderer ────────────────────────────────────────────*/
 
   const renderPlanTable = (plans: typeof vpsPlans) => (
     <div className="overflow-x-auto rounded-lg border">
@@ -614,7 +718,7 @@ export default function Documentation() {
     </div>
   );
 
-  // ── Render: Creating Your First VPS article (dynamic plans) ──────────────
+  /* ── Render: Creating Your First VPS article (dynamic plans) ──────────────*/
 
   const renderCreatingVpsArticle = (article: DocumentationArticleWithFiles) => {
     const MARKER = "<!-- VPS_PLANS_TABLE -->";
@@ -623,15 +727,23 @@ export default function Documentation() {
       : ["", ""];
 
     return (
-      <article className="max-w-3xl">
-        <Breadcrumb
-          category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
-          article={article.title}
-        />
-        <h1 className="text-2xl font-bold tracking-tight mb-3">{article.title}</h1>
-        {article.summary && (
-          <p className="text-muted-foreground text-lg mb-8">{article.summary}</p>
-        )}
+      <article className="max-w-3xl space-y-6">
+        <motion.div variants={revealItem} initial="hidden" animate="show">
+          <Card className="home-gradient-border-top home-glass-panel overflow-hidden">
+            <CardContent className="p-6">
+              <Breadcrumb
+                category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
+                article={article.title}
+              />
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-3 mb-3">
+                {article.title}
+              </h1>
+              {article.summary && (
+                <p className="text-lg text-muted-foreground mb-6">{article.summary}</p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Content before the plans table marker */}
         {parts[0] && (
@@ -685,48 +797,57 @@ export default function Documentation() {
 
         {/* File attachments */}
         {article.files && article.files.length > 0 && (
-          <div className="mt-10 border-t pt-6">
-            <h3 className="text-sm font-semibold mb-3">Attachments</h3>
-            <div className="space-y-2">
-              {article.files.map((file) => (
-                <a
-                  key={file.id}
-                  href={`/api/documentation/files/${file.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent transition-colors"
-                >
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
-                  <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
-                  <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              Attachments
+            </h3>
+            {article.files.map((file) => (
+              <a
+                key={file.id}
+                href={`/api/documentation/files/${file.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="home-feature-card flex items-center gap-3 p-4"
+              >
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
+                <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
+                <Download className="h-3.5 w-3.5 text-muted-foreground" />
+              </a>
+            ))}
           </div>
         )}
       </article>
     );
   };
 
-  // ── Render: Plans & Regions article ──────────────────────────────────────
+  /* ── Render: Plans & Regions article ──────────────────────────────────────*/
 
   const renderPlansRegionsArticle = (article: DocumentationArticleWithFiles) => {
 
     return (
-      <article className="max-w-3xl">
-        <Breadcrumb
-          category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
-          article={article.title}
-        />
-        <h1 className="text-2xl font-bold tracking-tight mb-3">{article.title}</h1>
-        {article.summary && (
-          <p className="text-muted-foreground text-lg mb-8">{article.summary}</p>
-        )}
+      <article className="max-w-3xl space-y-6">
+        <motion.div variants={revealItem} initial="hidden" animate="show">
+          <Card className="home-gradient-border-top home-glass-panel overflow-hidden">
+            <CardContent className="p-6">
+              <Breadcrumb
+                category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
+                article={article.title}
+              />
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-3 mb-3">
+                {article.title}
+              </h1>
+              {article.summary && (
+                <p className="text-lg text-muted-foreground">{article.summary}</p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {article.content && (
           <div
-            className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm mb-10"
+            className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm"
             dangerouslySetInnerHTML={{
               __html: renderDocHtml(article.content),
             }}
@@ -734,14 +855,16 @@ export default function Documentation() {
         )}
 
         {/* ── Plan Tiers grouped by type_class ──────────────────────── */}
-        <div className="mb-10">
-          <h2 className="text-xl font-semibold tracking-tight mb-1 flex items-center gap-2">
-            <Server className="h-5 w-5 text-primary" />
-            Plan Tiers
-          </h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Available VPS plans configured by your administrator.
-          </p>
+        <div className="space-y-4">
+          <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 p-4 mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+                <Cpu className="h-4 w-4 text-primary" />
+              </div>
+              <h2 className="text-lg font-semibold">Plan Tiers</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">Available VPS plans configured by your administrator.</p>
+          </div>
 
           {loadingPlansRegions ? (
             <div className="space-y-3">
@@ -772,37 +895,38 @@ export default function Documentation() {
         </div>
 
         {/* ── Regions with inline speed test ────────────────────────── */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
-              <Globe className="h-5 w-5 text-primary" />
-              Regions
-            </h2>
-            {publicRegions.some((r) => r.speedTestUrl) && (
-              <Button
-                size="sm"
-                variant="default"
-                onClick={testAllDocsRegions}
-                disabled={docsTestingAll}
-                className="h-8 text-xs"
-              >
-                {docsTestingAll ? (
-                  <>
-                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                    Testing All...
-                  </>
-                ) : (
-                  <>
-                    <Wifi className="mr-1.5 h-3 w-3" />
-                    Test All Regions
-                  </>
-                )}
-              </Button>
-            )}
+        <div className="space-y-4">
+          <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 p-4 mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+                <Globe className="h-4 w-4 text-primary" />
+              </div>
+              <h2 className="text-lg font-semibold">Regions</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">Available data center locations. Test latency from your browser.</p>
           </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            Available data center locations. Test latency from your browser.
-          </p>
+
+          {publicRegions.some((r) => r.speedTestUrl) && (
+            <Button
+              size="sm"
+              variant="default"
+              onClick={testAllDocsRegions}
+              disabled={docsTestingAll}
+              className="h-8 text-xs"
+            >
+              {docsTestingAll ? (
+                <>
+                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                  Testing All...
+                </>
+              ) : (
+                <>
+                  <Wifi className="mr-1.5 h-3 w-3" />
+                  Test All Regions
+                </>
+              )}
+            </Button>
+          )}
 
           {loadingPlansRegions ? (
             <div className="space-y-3">
@@ -824,7 +948,7 @@ export default function Documentation() {
                 return (
                   <div
                     key={region.id}
-                    className="flex flex-col gap-2 rounded-lg border p-3 bg-card"
+                    className="home-feature-card flex flex-col gap-2 p-4"
                   >
                     <div className="flex items-center gap-3">
                       <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -878,43 +1002,51 @@ export default function Documentation() {
 
         {/* File attachments */}
         {article.files && article.files.length > 0 && (
-          <div className="mt-10 border-t pt-6">
-            <h3 className="text-sm font-semibold mb-3">Attachments</h3>
-            <div className="space-y-2">
-              {article.files.map((file) => (
-                <a
-                  key={file.id}
-                  href={`/api/documentation/files/${file.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent transition-colors"
-                >
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
-                  <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
-                  <Download className="h-3.5 w-3.5 text-muted-foreground" />
-                </a>
-              ))}
-            </div>
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              Attachments
+            </h3>
+            {article.files.map((file) => (
+              <a
+                key={file.id}
+                href={`/api/documentation/files/${file.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="home-feature-card flex items-center gap-3 p-4"
+              >
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
+                <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
+                <Download className="h-3.5 w-3.5 text-muted-foreground" />
+              </a>
+            ))}
           </div>
         )}
       </article>
     );
   };
 
-  // ── Render: Article view ─────────────────────────────────────────────────
+  /* ── Render: Article view ─────────────────────────────────────────────────*/
 
   const renderArticle = (article: DocumentationArticleWithFiles) => (
-    <article className="max-w-3xl">
-      <Breadcrumb
-        category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
-        article={article.title}
-      />
-
-      <h1 className="text-2xl font-bold tracking-tight mb-3">{article.title}</h1>
-      {article.summary && (
-        <p className="text-muted-foreground text-lg mb-8">{article.summary}</p>
-      )}
+    <article className="max-w-3xl space-y-6">
+      <motion.div variants={revealItem} initial="hidden" animate="show">
+        <Card className="home-gradient-border-top home-glass-panel overflow-hidden">
+          <CardContent className="p-6">
+            <Breadcrumb
+              category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
+              article={article.title}
+            />
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-3 mb-3">
+              {article.title}
+            </h1>
+            {article.summary && (
+              <p className="text-lg text-muted-foreground">{article.summary}</p>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* HTML content */}
       <div
@@ -926,30 +1058,31 @@ export default function Documentation() {
 
       {/* File attachments */}
       {article.files && article.files.length > 0 && (
-        <div className="mt-10 border-t pt-6">
-          <h3 className="text-sm font-semibold mb-3">Attachments</h3>
-          <div className="space-y-2">
-            {article.files.map((file) => (
-              <a
-                key={file.id}
-                href={`/api/documentation/files/${file.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent transition-colors"
-              >
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
-                <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
-                <Download className="h-3.5 w-3.5 text-muted-foreground" />
-              </a>
-            ))}
-          </div>
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            Attachments
+          </h3>
+          {article.files.map((file) => (
+            <a
+              key={file.id}
+              href={`/api/documentation/files/${file.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="home-feature-card flex items-center gap-3 p-4"
+            >
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
+              <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
+              <Download className="h-3.5 w-3.5 text-muted-foreground" />
+            </a>
+          ))}
         </div>
       )}
     </article>
   );
 
-  // ── Render: Loading / Error ──────────────────────────────────────────────
+  /* ── Render: Loading / Error ──────────────────────────────────────────────*/
 
   const renderLoading = () => (
     <div className="max-w-3xl space-y-4 animate-pulse">
@@ -962,7 +1095,7 @@ export default function Documentation() {
     </div>
   );
 
-  // ── Main layout ──────────────────────────────────────────────────────────
+  /* ── Main layout ──────────────────────────────────────────────────────────*/
 
   const sidebarProps = {
     categories,
@@ -1017,49 +1150,113 @@ export default function Documentation() {
     renderIndex()
   );
 
+  const showHero = !categorySlug && !articleSlug;
+  const compactHeroCategory = selectedArticle?.category
+    ? { name: selectedArticle.category.name, slug: selectedArticle.category.slug }
+    : currentCategory
+      ? { name: currentCategory.name, slug: currentCategory.slug }
+      : undefined;
+  const compactHeroTitle = selectedArticle?.title || currentCategory?.name || "Documentation";
+  const compactHeroDescription =
+    selectedArticle?.summary ||
+    currentCategory?.description ||
+    `Guides, tutorials, and API reference to help you get the most out of ${BRAND_NAME}.`;
+
   return (
-    <PublicLayout>
-      <div className="flex min-h-[calc(100vh-4rem)]">
-        {/* Desktop sidebar */}
-        <aside className="hidden lg:flex w-64 xl:w-72 shrink-0 border-r bg-muted/20">
-          <div className="sticky top-16 w-full max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
-            <Sidebar {...sidebarProps} />
-          </div>
-        </aside>
+    <div className="min-h-screen bg-background text-foreground">
+      <MarketingNavbar />
 
-        {/* Main content */}
-        <main className="flex-1 min-w-0">
-          {/* Mobile top bar */}
-          <div className="lg:hidden sticky top-16 z-20 flex items-center gap-2 border-b bg-background/95 backdrop-blur px-4 h-12">
-            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-72">
-                <Sidebar {...sidebarProps} />
-              </SheetContent>
-            </Sheet>
-            <div className="flex items-center gap-1.5 text-sm min-w-0">
-              {currentCategory && (
-                <>
-                  <Link to="/docs" className="text-muted-foreground hover:text-foreground">
-                    Docs
-                  </Link>
-                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                </>
-              )}
-              <span className="truncate font-medium">
-                {selectedArticle?.title || currentCategory?.name || "Documentation"}
-              </span>
+      <main>
+        {/* ═══════════════════════ HERO ══════════════════════════ */}
+        {showHero ? (
+          <DocsHero
+            title={(
+              <>
+                Everything you need to
+                <span className="block font-bold bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text text-transparent">
+                  get started
+                </span>
+              </>
+            )}
+            description={`Guides, tutorials, and API reference to help you get the most out of ${BRAND_NAME}.`}
+          />
+        ) : (
+          <DocsHero
+            compact
+            category={compactHeroCategory}
+            article={articleSlug ? compactHeroTitle : undefined}
+            title={compactHeroTitle}
+            description={compactHeroDescription}
+          />
+        )}
+
+        {/* ═══════════════════════ TRUST MARQUEE ═══════════════════════════════ */}
+        {showHero && (
+          <section className="border-b border-border/40 bg-muted/20 py-5">
+            <div className="home-marquee">
+              <div className="home-marquee__track">
+                {[...trustItems, ...trustItems].map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground"
+                  >
+                    <item.icon className="h-4 w-4 text-primary/60" />
+                    <span className="whitespace-nowrap font-medium">
+                      {item.label}
+                    </span>
+                    <span className="ml-4 h-1 w-1 rounded-full bg-border" />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </section>
+        )}
 
-          {/* Content */}
-          <div className="px-6 py-8 lg:px-10 lg:py-10">{content}</div>
-        </main>
-      </div>
-    </PublicLayout>
+        {/* ═══════════════════════ CONTENT AREA ════════════════════════════════ */}
+        <div className="flex min-h-[calc(100vh-4rem)]">
+          {/* Desktop sidebar */}
+          <aside className="hidden lg:flex w-64 xl:w-72 shrink-0 border-r bg-muted/20">
+            <div className="sticky top-16 w-full max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+              <Sidebar {...sidebarProps} />
+            </div>
+          </aside>
+
+          {/* Main content */}
+          <main className="flex-1 min-w-0">
+            {/* Mobile top bar */}
+            <div className="lg:hidden sticky top-16 z-20 flex items-center gap-2 border-b bg-background/95 backdrop-blur px-4 h-12">
+              <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-72">
+                  <Sidebar {...sidebarProps} />
+                </SheetContent>
+              </Sheet>
+              <div className="flex items-center gap-1.5 text-sm min-w-0">
+                {currentCategory && (
+                  <>
+                    <Link to="/docs" className="text-muted-foreground hover:text-foreground">
+                      Docs
+                    </Link>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  </>
+                )}
+                <span className="truncate font-medium">
+                  {selectedArticle?.title || currentCategory?.name || "Documentation"}
+                </span>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 py-8 lg:px-10 lg:py-10">{content}</div>
+          </main>
+        </div>
+      </main>
+
+      <MarketingFooter />
+    </div>
   );
 }
