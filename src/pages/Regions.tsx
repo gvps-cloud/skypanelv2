@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { MapPin, Wifi, Loader2, Globe } from "lucide-react";
+import { MapPin, Wifi, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import PublicLayout from "@/components/PublicLayout";
 import { BRAND_NAME } from "@/lib/brand";
-import { LeafletMap, GlobeMap } from "@/components/regions";
+import { LeafletMap } from "@/components/regions";
 
 interface Region {
   id: string;
@@ -42,8 +42,6 @@ export default function Regions() {
   const [latencyState, setLatencyState] = useState<LatencyState>({});
   const [isTestingAll, setIsTestingAll] = useState(false);
   const [showMapView, setShowMapView] = useState(true);
-  const [mapType, setMapType] = useState<'leaflet' | 'globe'>('globe');
-  const [testingRegionId, setTestingRegionId] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [resultPage, setResultPage] = useState(0);
   const currentPageRef = useRef(0);
@@ -91,15 +89,12 @@ export default function Regions() {
     setIsTestingAll(true);
     setShowMapView(true);
     setSelectedRegion(null);
-    setTestingRegionId(null);
     const eligible = regions.filter((r) => r.speedTestUrl);
 
     for (let idx = 0; idx < eligible.length; idx++) {
       const region = eligible[idx];
 
-      // Track which region is being tested (for 3D globe highlight)
-      setTestingRegionId(region.id);
-      // Also set selected region to trigger globe rotation
+      // Track which region is being tested
       setSelectedRegion(region.id);
 
       const targetPage = Math.floor(idx / RESULTS_PER_PAGE);
@@ -127,7 +122,6 @@ export default function Regions() {
 
     setIsTestingAll(false);
     setSelectedRegion(null);
-    setTestingRegionId(null);
     setResultPage(0);
     currentPageRef.current = 0;
   }, [regions, measureLatency, setLatency]);
@@ -169,7 +163,7 @@ export default function Regions() {
 
   return (
     <PublicLayout>
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-4 pt-24 pb-8 max-w-7xl">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold tracking-tight mb-3">Global Regions</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -203,18 +197,6 @@ export default function Regions() {
                   <MapPin className="mr-2 h-3.5 w-3.5" />
                   {showMapView ? "List View" : "Map View"}
                 </Button>
-                {showMapView && (
-                  <Button
-                    size="sm"
-                    variant={mapType === "globe" ? "default" : "outline"}
-                    onClick={() => setMapType(mapType === "leaflet" ? "globe" : "leaflet")}
-                    className="h-8"
-                    title="Toggle between 2D map and 3D globe"
-                  >
-                    <Globe className="mr-2 h-3.5 w-3.5" />
-                    {mapType === "leaflet" ? "3D Globe" : "2D Map"}
-                  </Button>
-                )}
                 <Button
                   size="sm"
                   variant="default"
@@ -242,9 +224,7 @@ export default function Regions() {
                 <Card className="shadow-sm">
                   <CardContent className="p-4">
                     <div className="mb-3 flex items-center justify-between">
-                      <h2 className="font-semibold">
-                        {mapType === "leaflet" ? "Interactive Map" : "3D Globe"}
-                      </h2>
+                      <h2 className="font-semibold">Interactive Map</h2>
                       <div className="flex items-center gap-2 text-xs">
                         <span className="inline-flex items-center rounded-full bg-green-500 px-2 py-1 text-white">&lt;100ms</span>
                         <span className="inline-flex items-center rounded-full bg-yellow-500 px-2 py-1 text-black">100-199ms</span>
@@ -253,24 +233,13 @@ export default function Regions() {
                       </div>
                     </div>
                     <div className="relative h-[520px] rounded-md overflow-hidden border border-border">
-                      {mapType === 'leaflet' ? (
-                        <LeafletMap
-                          regions={regions}
-                          latencyState={latencyState}
-                          selectedRegion={selectedRegion}
-                          onRegionClick={handleRegionClick}
-                          onRegionTest={testRegion}
-                        />
-                      ) : (
-                        <GlobeMap
-                          regions={regions}
-                          latencyState={latencyState}
-                          selectedRegion={selectedRegion}
-                          testingRegionId={testingRegionId}
-                          onRegionClick={handleRegionClick}
-                          onRegionTest={testRegion}
-                        />
-                      )}
+                      <LeafletMap
+                        regions={regions}
+                        latencyState={latencyState}
+                        selectedRegion={selectedRegion}
+                        onRegionClick={handleRegionClick}
+                        onRegionTest={testRegion}
+                      />
                     </div>
                     <div className="mt-3 text-xs text-muted-foreground">
                       Tip: Click a region marker to see details and run latency tests
