@@ -64,7 +64,7 @@ function toLegacyTemplateId(providerId: string, upstreamImageId: string): string
 
 function normalizeImageTemplate(
   image: any,
-  providerId: string,
+  _providerId: string,
 ): {
   id: string;
   label: string;
@@ -126,7 +126,7 @@ async function resolveImageForProvider(
   return requested;
 }
 
-async function loadActiveProviderToken(
+async function _loadActiveProviderToken(
   providerType: "linode",
 ): Promise<string | null> {
   const providerInfo = await getProviderTokenByType(providerType);
@@ -148,46 +148,6 @@ async function loadProviderTokenById(
 
   const providerRow = providerResult.rows[0];
   return normalizeProviderToken(providerRow.id, providerRow.api_key_encrypted);
-}
-
-async function resolveProviderTokenOrRespond(
-  res: Response,
-  providerType: "linode",
-  providerId?: string,
-): Promise<string | null> {
-  try {
-    const token = providerId
-      ? await loadProviderTokenById(providerId, providerType)
-      : await loadActiveProviderToken(providerType);
-
-    if (!token) {
-      const isSpecificProvider = Boolean(providerId);
-      res.status(503).json({
-        error: {
-          code: isSpecificProvider
-            ? "PROVIDER_INACTIVE"
-            : "MISSING_CREDENTIALS",
-          message: isSpecificProvider
-            ? `Selected Linode provider is not configured or inactive.`
-            : `Linode provider is not configured or inactive.`,
-          provider: providerType,
-        },
-      });
-      return null;
-    }
-
-    return token;
-  } catch (err) {
-    console.error(`${providerType} provider token error:`, err);
-    res.status(500).json({
-      error: {
-        code: "TOKEN_DECRYPT_FAILED",
-        message: "Failed to load Linode provider credentials.",
-        provider: providerType,
-      },
-    });
-    return null;
-  }
 }
 
 router.get("/networking/config", async (_req: Request, res: Response) => {

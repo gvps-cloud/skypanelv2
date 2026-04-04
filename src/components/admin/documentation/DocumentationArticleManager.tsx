@@ -561,7 +561,7 @@ export default function DocumentationArticleManager() {
         is_active: data.article.is_active,
       });
       setShowEditDialog(true);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load article");
     }
   };

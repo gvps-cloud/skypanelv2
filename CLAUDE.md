@@ -2,11 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Important**: Always read [`AGENTS.md`](./AGENTS.md) alongside this file. AGENTS.md documents the current state of the repository and provides practical guidance for coding agents. This file (CLAUDE.md) provides Claude Code-specific development instructions and deeper architectural context.
+> **Important**: Always read `[AGENTS.md](./AGENTS.md)` alongside this file. AGENTS.md documents the current state of the repository and provides practical guidance for coding agents. This file (CLAUDE.md) provides Claude Code-specific development instructions and deeper architectural context.
 
 ## Development Commands
 
 ### Core Development
+
 - `npm run dev` - Start concurrent frontend (Vite) and backend (nodemon) development servers
 - `npm run dev-up` - Kill ports 3001/5173/8000 and start development servers (preferred for clean startup)
 - `npm run client:dev` - Frontend only (Vite dev server on port 5173)
@@ -17,25 +18,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run preview` - Preview production build locally
 
 ### API Documentation
+
 - `npm run docs:api:sync` - Sync API documentation (auto-runs via pre* hooks on `dev`, `client:dev`, and `build`)
 - `npm run docs:api:audit` - Audit and validate API documentation coverage
 
 ### Security
+
 - `npm run audit:security` - Run npm audit with high severity filter
 - `npm run scan:code` - Run semgrep static analysis
 - `npm run test:security` - Run security tests with Vitest
 - `npm run verify:security` - Run all security checks (audit + scan + test)
 
 ### Testing
+
 > **Note**: Check `package.json` before assuming test scripts exist. The repo includes Vitest, React Testing Library, Supertest, and Playwright but test scripts may not always be present.
 
 ### Database Management
+
 - `npm run db:fresh` - Reset database and run all migrations (WARNING: destroys all data - use only in development)
 - `npm run db:reset` - Interactive database reset with confirmation
 - `npm run db:reset:confirm` - Reset database without prompt
-- `npm run seed:admin` - Create default admin user (admin@skypanelv2.com / admin123)
+- `npm run seed:admin` - Create default admin user ([admin@skypanelv2.com](mailto:admin@skypanelv2.com) / admin123)
 
 ### Production Deployment
+
 - `npm run start` - Launch production Express server + Vite preview
 - `npm run pm2:start` - Build and start with PM2 process manager
 - `npm run pm2:reload` - Reload PM2 processes gracefully
@@ -43,6 +49,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run pm2:list` - List PM2 processes
 
 ### Utilities
+
 - `npm run kill-ports` - Kill processes on ports 3001, 5173, and 8000
 - `npm run pwa:icons` - Generate PWA icons
 
@@ -55,6 +62,7 @@ SkyPanelV2 is a full-stack cloud service reseller billing panel with multi-tenan
 3. **Admin dashboard** — User management, billing ops, platform settings, provider config, impersonation
 
 ### Frontend (`src/`)
+
 - **React 18** SPA with TypeScript and Vite
 - **shadcn/ui** component library with Tailwind CSS (Radix UI primitives)
 - **TanStack Query** for server state management with optimistic updates (30s staleTime, 1 retry, refetchOnWindowFocus)
@@ -72,6 +80,7 @@ SkyPanelV2 is a full-stack cloud service reseller billing panel with multi-tenan
 - **qrcode** for 2FA QR code generation using otplib
 
 ### Backend (`api/`)
+
 - **Express 4** REST API with TypeScript ESM modules
 - **PostgreSQL** database with UUID primary keys, JSONB columns, triggers, and `LISTEN/NOTIFY`
 - **JWT authentication** with role-based access (admin/user) and HttpOnly cookie storage
@@ -88,6 +97,7 @@ SkyPanelV2 is a full-stack cloud service reseller billing panel with multi-tenan
 - **Row-level security** on `user_api_keys` table for API key protection
 
 ### Key Features
+
 - **Multi-tenant organizations** with role-based access control and custom roles stored in JSONB permissions
 - **Linode VPS provisioning** via `IProviderService` abstraction layer with region filtering
 - **Automated hourly billing** with wallet-based prepaid system and insufficient balance handling
@@ -104,6 +114,7 @@ SkyPanelV2 is a full-stack cloud service reseller billing panel with multi-tenan
 Copy `.env.example` to `.env` and configure.
 
 ### Required for Development
+
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/skypanelv2
 JWT_SECRET=your-super-secret-jwt-key-here
@@ -112,6 +123,7 @@ ENCRYPTION_KEY=your-32-character-encryption-key
 ```
 
 ### External Services
+
 ```bash
 # Cloud Provider (Linode/Akamai)
 LINODE_API_TOKEN=your-linode-api-token
@@ -156,11 +168,13 @@ BACKUP_RETENTION_DAYS=30
 ```
 
 ### Rate Limiting Configuration
+
 Rate limits are configurable via environment variables. Default values are set in `.env.example` and include tiered limits for anonymous, authenticated, and admin users. Per-user overrides are stored in the `user_rate_limit_overrides` table.
 
 ## Database Schema
 
 ### Core Tables
+
 - `users` - User accounts with authentication, 2FA, preferences, active_organization_id
 - `organizations` - Multi-tenant organization management
 - `organization_members` - Organization membership with role_id FK
@@ -186,11 +200,13 @@ Rate limits are configurable via environment variables. Default values are set i
 - `vps_egress_hourly_readings` - Hourly transfer usage readings
 
 ### Database Migrations
+
 SQL migrations are in the `migrations/` directory (47 total: 001–047, sequential). Apply pending migrations with `node scripts/run-migration.js`.
 
 ## API Routes
 
 ### Core Routes (`/api/`)
+
 - `/api/auth` - Authentication (login, register, 2FA, password reset)
 - `/api/vps` - VPS instance management, providers, plans, images, actions
 - `/api/organizations` - Organization CRUD, members, invitations, roles
@@ -201,6 +217,7 @@ SQL migrations are in the `migrations/` directory (47 total: 001–047, sequenti
 - `/api/egress` - Egress credit management, purchase flow, usage readings
 
 ### Admin Routes (`/api/admin/`)
+
 - `/api/admin` - User management, stats, impersonation
 - `/api/admin/platform` - Platform settings CRUD
 - `/api/admin/billing` - Billing management and oversight
@@ -211,6 +228,7 @@ SQL migrations are in the `migrations/` directory (47 total: 001–047, sequenti
 - `/api/admin/category-mappings` - VPS category white-labeling
 
 ### Content & Feed Routes
+
 - `/api/activity` - User activity feed (SSE endpoint for real-time)
 - `/api/activities` - Activity logging
 - `/api/notifications` - Notification management (SSE stream, mark read)
@@ -223,6 +241,7 @@ SQL migrations are in the `migrations/` directory (47 total: 001–047, sequenti
 ## Services
 
 ### Core Services (`api/services/`)
+
 - `authService` - JWT token management and authentication logic
 - `linodeService` - Linode/Akamai REST API wrapper with caching
 - `billingService` - Hourly VPS billing engine (wallet deductions)
@@ -236,6 +255,7 @@ SQL migrations are in the `migrations/` directory (47 total: 001–047, sequenti
 - `notificationService` - PostgreSQL LISTEN/NOTIFY → EventEmitter singleton for real-time push
 
 ### Provider Services (`api/services/providers/`)
+
 - `IProviderService` - Interface contract for all provider implementations
 - `BaseProviderService` - Shared provider logic and caching
 - `LinodeProviderService` - Linode-specific implementation
@@ -244,7 +264,9 @@ SQL migrations are in the `migrations/` directory (47 total: 001–047, sequenti
 ## Key Service Patterns
 
 ### Database Operations
+
 Use `api/lib/database.ts` helpers:
+
 ```typescript
 import { query, transaction } from '../lib/database.js';
 
@@ -258,9 +280,11 @@ const result = await transaction(async (client) => {
 ```
 
 ### Authentication Middleware
+
 Protected routes use JWT authentication middleware that sets `req.user` with `{ userId, role, email }`.
 
 ### Provider Token Resolution
+
 ```typescript
 import { normalizeProviderToken } from '../lib/providerTokens.js';
 const token = await normalizeProviderToken(providerId);
@@ -268,7 +292,9 @@ const provider = ProviderFactory.create('linode', token);
 ```
 
 ### Multi-Tenant Data Isolation
+
 **Critical**: All resource queries MUST be scoped to `organization_id` to prevent cross-organization data leakage. This includes:
+
 - Direct queries in services
 - Query builder usage
 - Raw SQL queries (avoid when possible)
@@ -276,12 +302,15 @@ const provider = ProviderFactory.create('linode', token);
 - Join operations
 
 ### Real-Time Architecture
+
 PostgreSQL `LISTEN/NOTIFY` → `notificationService` EventEmitter → SSE endpoint (`/api/notifications`) for real-time updates including:
+
 - Activity feed notifications
 - Billing alerts
 - System announcements
 
 ### Background Services
+
 1. **Hourly Billing**: Runs every 60 minutes from `server.ts` (not `billingCronService`)
 2. **Billing Reminders**: Runs every 24 hours from `services/billingCronService.ts` for low-balance notifications
 3. **Egress Monitoring**: Runs hourly from server scheduler to track transfer usage and deduct credits
@@ -289,6 +318,7 @@ PostgreSQL `LISTEN/NOTIFY` → `notificationService` EventEmitter → SSE endpoi
 ## Security Architecture
 
 ### Data Protection
+
 - **Passwords**: bcrypt hashing with salt
 - **SSH credentials**: AES-256-GCM encryption via `SSH_CRED_SECRET`
 - **Provider API tokens**: AES-256-GCM encryption via `ENCRYPTION_KEY` with key versioning support
@@ -297,6 +327,7 @@ PostgreSQL `LISTEN/NOTIFY` → `notificationService` EventEmitter → SSE endpoi
 - **Secrets Management**: Separate encryption keys for different data types (credentials vs tokens)
 
 ### Access Control
+
 - **Role-based access control**: Admin vs user roles with organization-scoped data access
 - **Organization-based data isolation**: All resource queries scoped to `organization_id` (enforced via middleware and service layer)
 - **Custom organization roles**: Granular JSONB permissions stored in `organization_roles` table
@@ -305,6 +336,7 @@ PostgreSQL `LISTEN/NOTIFY` → `notificationService` EventEmitter → SSE endpoi
 - **API Keys**: Row-level security on `user_api_keys` table with encryption and usage tracking
 
 ### Rate Limiting
+
 - **Tiered limits by user type**:
   - Anonymous: 1000 requests/15min
   - Authenticated: 5000 requests/15min
@@ -336,3 +368,4 @@ PostgreSQL `LISTEN/NOTIFY` → `notificationService` EventEmitter → SSE endpoi
 - **Egress credit zero handling**: Automatic VPS suspension when credits reach zero (handled in egress services)
 - **Wallet-based billing**: Prepaid system requires sufficient balance before billing cycle processing
 - **Site logo/favicon**: Single source of truth is `public/favicon.svg` — the `Logo` component (`src/components/Logo.tsx`) renders it as an `<img>` tag used by navbar, sidebar, and footer. `index.html` links it as the browser favicon. To update icons, replace `favicon.svg` and regenerate raster variants via [realfavicongenerator.net](https://realfavicongenerator.net/)
+

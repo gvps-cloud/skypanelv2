@@ -3,6 +3,9 @@
  *
  * Provides differentiated rate limiting based on user authentication status
  * with proper IP detection and comprehensive logging.
+ *
+ * SECURITY NOTE: Development mode bypasses rate limiting for certain endpoints.
+ * Ensure NODE_ENV is set to 'production' in production deployments.
  */
 
 import { Request, Response, NextFunction } from "express";
@@ -530,6 +533,7 @@ export async function smartRateLimit(
     }
 
     // In development mode, bypass rate limiting for critical endpoints
+    // SECURITY: Only bypass if NODE_ENV is explicitly set to development
     const isDevelopment = process.env.NODE_ENV === "development";
     const exemptEndpoints = [
       "/api/notifications/",
@@ -553,6 +557,12 @@ export async function smartRateLimit(
     const rateLimitKey = `${endpointType}:${baseKey}`;
 
     if (isDevelopment && isExemptEndpoint) {
+      // SECURITY WARNING: Rate limiting bypassed in development
+      // Log at warn level to make this visible in development logs
+      console.warn(
+        `[RateLimit:BYPASS:DEV] Endpoint ${requestPath} bypassed rate limiting in development mode. ` +
+        `User: ${authenticatedUserId || 'anonymous'}, Path: ${requestPath}`
+      );
       // Skip rate limiting entirely for critical endpoints in development
       // Still track the request for metrics visibility
       const currentCount = requestCounter.increment(

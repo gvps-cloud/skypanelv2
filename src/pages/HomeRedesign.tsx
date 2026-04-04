@@ -580,6 +580,8 @@ export default function HomeRedesign() {
                 regions={regionsData}
                 onRegionSelect={setSelectedRegion}
                 selectedRegion={selectedRegion}
+                displayMode="pixel"
+                disableClick={true}
               />
               <GlobeRegionPanel
                 region={selectedRegion}

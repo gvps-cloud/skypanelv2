@@ -1,13 +1,13 @@
 # SkyPanelV2
 
-[![zread](https://img.shields.io/badge/Ask_Zread-_.svg?style=flat&color=00b0aa&labelColor=000000&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTQuOTYxNTYgMS42MDAxSDIuMjQxNTZDMS44ODgxIDEuNjAwMSAxLjYwMTU2IDEuODg2NjQgMS42MDE1NiAyLjI0MDFWNC45NjAxQzEuNjAxNTYgNS4zMTM1NiAxLjg4ODEgNS42MDAxIDIuMjQxNTYgNS42MDAxSDQuOTYxNTZDNS4zMTUwMiA1LjYwMDEgNS42MDE1NiA1LjMxMzU2IDUuNjAxNTYgNC45NjAxVjIuMjQwMUM1LjYwMTU2IDEuODg2NjQgNS4zMTUwMiAxLjYwMDEgNC45NjE1NiAxLjYwMDFaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00Ljk2MTU2IDEwLjM5OTlIMi4yNDE1NkMxLjg4ODEgMTAuMzk5OSAxLjYwMTU2IDEwLjY4NjQgMS42MDE1NiAxMS4wMzk5VjEzLjc1OTlDMS42MDE1NiAxNC4xMTM0IDEuODg4MSAxNC4zOTk5IDIuMjQxNTYgMTQuMzk5OUg0Ljk2MTU2QzUuMzE1MDIgMTQuMzk5OSA1LjYwMTU2IDE0LjExMzQgNS42MDE1NiAxMy43NTk5VjExLjAzOTlDNS42MDE1NiAxMC42ODY0IDUuMzE1MDIgMTAuMzk5OSA0Ljk2MTU2IDEwLjM5OTlaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik0xMy43NTg0IDEuNjAwMUgxMS4wMzg0QzEwLjY4NSAxLjYwMDEgMTAuMzk4NCAxLjg4NjY0IDEwLjM5ODQgMi4yNDAxVjQuOTYwMUMxMC4zOTg0IDUuMzEzNTYgMTAuNjg1IDUuNjAwMSAxMS4wMzg0IDUuNjAwMUgxMy43NTg0QzE0LjExMTkgNS42MDAxIDE0LjM5ODQgNS4zMTM1NiAxNC4zOTg0IDQuOTYwMVYyLjI0MDFDMTQuMzk4NCAxLjg4NjY0IDE0LjExMTkgMS42MDAxIDEzLjc1ODQgMS42MDAxWiIgZmlsbD0iI2ZmZiIvPgo8cGF0aCBkPSJNNCAxMkwxMiA0TDQgMTJaIiBmaWxsPSIjZmZmIi8%2BCjxwYXRoIGQ9Ik00IDEyTDEyIDQiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4K&logoColor=ffffff)](https://zread.ai/gvps-cloud/skypanelv2)
-[![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/gvps-cloud/skypanelv2?utm_source=oss&utm_medium=github&utm_campaign=gvps-cloud%2Fskypanelv2&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)](https://coderabbit.ai)
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)](https://react.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-43853D?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)](https://expressjs.com/)
+[zread](https://zread.ai/gvps-cloud/skypanelv2)
+[CodeRabbit Pull Request Reviews](https://coderabbit.ai)
+[TypeScript](https://www.typescriptlang.org/)
+[React](https://react.dev/)
+[Node.js](https://nodejs.org/)
+[Vite](https://vitejs.dev/)
+[PostgreSQL](https://www.postgresql.org/)
+[Express](https://expressjs.com/)
 
 ## 🚀 GVPS Cloud Internal Management Platform
 
@@ -15,7 +15,7 @@
 
 > **⚠️ Internal Use Only**: This is a proprietary business system for gvpscloud operations. This documentation is intended for our internal development team and authorized personnel only.
 
-> **📖 Agent & AI References**: See [`AGENTS.md`](./AGENTS.md) for coding agent guidance and [`CLAUDE.md`](./CLAUDE.md) for Claude Code-specific development instructions.
+> **📖 Agent & AI References**: See `[AGENTS.md](./AGENTS.md)` for coding agent guidance and `[CLAUDE.md](./CLAUDE.md)` for Claude Code-specific development instructions.
 
 ---
 
@@ -43,11 +43,13 @@
 
 SkyPanelV2 is gvps-cloud's complete business operations platform for managing our Linode VPS reselling business. The platform is split into three distinct product surfaces:
 
-| Surface | Description | Users |
-|---------|-------------|-------|
-| **Public Marketing** | Home, pricing, FAQ, about, contact, status, legal pages | Anonymous visitors |
-| **Customer Portal** | Dashboard, VPS management, billing, support, SSH console, organizations | Authenticated users |
-| **Admin Dashboard** | User management, billing ops, platform settings, provider config, impersonation | Admin users |
+
+| Surface              | Description                                                                     | Users               |
+| -------------------- | ------------------------------------------------------------------------------- | ------------------- |
+| **Public Marketing** | Home, pricing, FAQ, about, contact, status, legal pages                         | Anonymous visitors  |
+| **Customer Portal**  | Dashboard, VPS management, billing, support, SSH console, organizations         | Authenticated users |
+| **Admin Dashboard**  | User management, billing ops, platform settings, provider config, impersonation | Admin users         |
+
 
 ### Revenue Model
 
@@ -272,21 +274,23 @@ PAYMENT & WALLET FLOW
 
 ### Technology Stack
 
-| Technology | Purpose |
-|-----------|---------|
-| **React 18** | Component-based UI framework |
-| **TypeScript** | Type-safe development |
-| **Vite** | Build tool and HMR dev server |
-| **React Router v7** | Client-side routing with route guards |
-| **TanStack Query** | Server state management with caching & optimistic updates |
-| **Zustand** | Lightweight client state management |
-| **shadcn/ui** | Accessible component library (Radix UI primitives) |
-| **Tailwind CSS** | Utility-first styling |
-| **React Hook Form + Zod** | Form validation with schema-based validation |
-| **Framer Motion** | Animations and transitions |
-| **Recharts** | Data visualization and charts |
-| **xterm.js** | Browser-based terminal emulator |
-| **cmdk** | Command palette (Ctrl/Cmd + K) |
+
+| Technology                | Purpose                                                   |
+| ------------------------- | --------------------------------------------------------- |
+| **React 18**              | Component-based UI framework                              |
+| **TypeScript**            | Type-safe development                                     |
+| **Vite**                  | Build tool and HMR dev server                             |
+| **React Router v7**       | Client-side routing with route guards                     |
+| **TanStack Query**        | Server state management with caching & optimistic updates |
+| **Zustand**               | Lightweight client state management                       |
+| **shadcn/ui**             | Accessible component library (Radix UI primitives)        |
+| **Tailwind CSS**          | Utility-first styling                                     |
+| **React Hook Form + Zod** | Form validation with schema-based validation              |
+| **Framer Motion**         | Animations and transitions                                |
+| **Recharts**              | Data visualization and charts                             |
+| **xterm.js**              | Browser-based terminal emulator                           |
+| **cmdk**                  | Command palette (Ctrl/Cmd + K)                            |
+
 
 ### Route Map
 
@@ -334,17 +338,19 @@ QueryClientProvider (TanStack Query)
 
 ### Key Frontend Components
 
-| Directory | Contents |
-|-----------|----------|
-| `src/components/ui/` | Base shadcn/ui primitives (Button, Dialog, Input, Table, etc.) |
-| `src/components/admin/` | Admin dashboard panels (UserManagement, VPSPlanWizard, CategoryManager, RateLimitMonitoring, etc.) |
-| `src/components/VPS/` | VPS creation wizard steps, SSH terminal, provider/region selectors, backup config |
-| `src/components/billing/` | Payment forms, transaction history, invoice views, PurchaseEgressCreditsDialog |
-| `src/components/support/` | Ticket creation, conversation threads, status management |
-| `src/components/organizations/` | Org management, member lists, invitation flows |
-| `src/components/settings/` | User profile, 2FA setup, API key management |
-| `src/components/Dashboard/` | Dashboard widgets, stats cards, activity summaries |
-| `src/components/layouts/` | Page layout wrappers |
+
+| Directory                       | Contents                                                                                           |
+| ------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `src/components/ui/`            | Base shadcn/ui primitives (Button, Dialog, Input, Table, etc.)                                     |
+| `src/components/admin/`         | Admin dashboard panels (UserManagement, VPSPlanWizard, CategoryManager, RateLimitMonitoring, etc.) |
+| `src/components/VPS/`           | VPS creation wizard steps, SSH terminal, provider/region selectors, backup config                  |
+| `src/components/billing/`       | Payment forms, transaction history, invoice views, PurchaseEgressCreditsDialog                     |
+| `src/components/support/`       | Ticket creation, conversation threads, status management                                           |
+| `src/components/organizations/` | Org management, member lists, invitation flows                                                     |
+| `src/components/settings/`      | User profile, 2FA setup, API key management                                                        |
+| `src/components/Dashboard/`     | Dashboard widgets, stats cards, activity summaries                                                 |
+| `src/components/layouts/`       | Page layout wrappers                                                                               |
+
 
 ---
 
@@ -352,19 +358,21 @@ QueryClientProvider (TanStack Query)
 
 ### Technology Stack
 
-| Technology | Purpose |
-|-----------|---------|
-| **Express 4** | HTTP framework with middleware pipeline |
-| **TypeScript (ESM)** | Type-safe backend with ES module imports |
-| **PostgreSQL** | Relational database with UUID PKs, JSONB, triggers |
-| **JWT (jsonwebtoken)** | Stateless authentication tokens |
-| **bcryptjs** | Password hashing |
-| **ssh2** | SSH protocol client for terminal bridge |
-| **ws** | WebSocket server for SSH bridge |
-| **Helmet** | Security headers |
-| **express-rate-limit** | Tiered rate limiting |
-| **Handlebars** | Email template rendering |
-| **nodemailer + Resend** | Email delivery with provider fallback |
+
+| Technology              | Purpose                                            |
+| ----------------------- | -------------------------------------------------- |
+| **Express 4**           | HTTP framework with middleware pipeline            |
+| **TypeScript (ESM)**    | Type-safe backend with ES module imports           |
+| **PostgreSQL**          | Relational database with UUID PKs, JSONB, triggers |
+| **JWT (jsonwebtoken)**  | Stateless authentication tokens                    |
+| **bcryptjs**            | Password hashing                                   |
+| **ssh2**                | SSH protocol client for terminal bridge            |
+| **ws**                  | WebSocket server for SSH bridge                    |
+| **Helmet**              | Security headers                                   |
+| **express-rate-limit**  | Tiered rate limiting                               |
+| **Handlebars**          | Email template rendering                           |
+| **nodemailer + Resend** | Email delivery with provider fallback              |
+
 
 ### API Route Map
 
@@ -388,6 +396,7 @@ Admin Surface
 ```
 
 **Core Routes:**
+
 - `/api/auth` — login, register, 2FA, password reset
 - `/api/vps` — CRUD, actions, providers, plans, images
 - `/api/payments` — PayPal orders, wallet, capture
@@ -397,18 +406,21 @@ Admin Surface
 - `/api/invoices` — list, detail, PDF
 
 **Activity & Notifications:**
+
 - `/api/activity` — user activity feed
 - `/api/activities` — activity logging
 - `/api/notifications` — SSE stream, mark read
 
 **Content & Config:**
+
 - `/api/faq` — public FAQ content
 - `/api/contact` — contact form submission
 - `/api/theme` — theme presets
 - `/api/pricing` — public pricing data
 - `/api/health` — health check
 
-**Admin Routes (`/api/admin/*`):**
+**Admin Routes (`/api/admin/`*):**
+
 - `/api/admin` — users, stats, impersonation
 - `/api/admin/platform` — platform settings
 - `/api/admin/billing` — billing management
@@ -548,26 +560,28 @@ Relationship highlights
 
 The database schema is managed through **27 sequential SQL migrations** in the `migrations/` directory:
 
-| Migration | Description |
-|-----------|-------------|
-| `001` | Initial schema — users, orgs, wallets, VPS, tickets, plans, payments, providers, activity logs, billing cycles, SSH keys, FAQ, contact, platform settings |
-| `002` | Relax activity_logs constraint |
-| `003` | Remove legacy container artifacts |
-| `004` | Add VPS notes |
-| `005` | Drop PaaS tables |
-| `007` | Add 2FA columns to users |
-| `008` | Add VPS plan type/class and regions |
-| `009` | Add VPS category mappings (white-label) |
-| `010–011` | Add VPS reference and snapshot to support tickets |
-| `012–016` | Organization roles, invitations, activity feed, role assignments, default role seeding |
-| `017–018` | Billing view permission adjustments |
-| `019` | Add `created_by` to VPS instances |
-| `020` | Add `active_organization` to users |
-| `021` | Create email templates table |
-| `022` | Normalize theme preset default |
-| `023` | Add billing view to admin role |
-| `024–025` | Migrate SSH keys to organization scope, add `created_by` |
-| `026–027` | Network transfer billing, remove transfer multiplier |
+
+| Migration | Description                                                                                                                                               |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `001`     | Initial schema — users, orgs, wallets, VPS, tickets, plans, payments, providers, activity logs, billing cycles, SSH keys, FAQ, contact, platform settings |
+| `002`     | Relax activity_logs constraint                                                                                                                            |
+| `003`     | Remove legacy container artifacts                                                                                                                         |
+| `004`     | Add VPS notes                                                                                                                                             |
+| `005`     | Drop PaaS tables                                                                                                                                          |
+| `007`     | Add 2FA columns to users                                                                                                                                  |
+| `008`     | Add VPS plan type/class and regions                                                                                                                       |
+| `009`     | Add VPS category mappings (white-label)                                                                                                                   |
+| `010–011` | Add VPS reference and snapshot to support tickets                                                                                                         |
+| `012–016` | Organization roles, invitations, activity feed, role assignments, default role seeding                                                                    |
+| `017–018` | Billing view permission adjustments                                                                                                                       |
+| `019`     | Add `created_by` to VPS instances                                                                                                                         |
+| `020`     | Add `active_organization` to users                                                                                                                        |
+| `021`     | Create email templates table                                                                                                                              |
+| `022`     | Normalize theme preset default                                                                                                                            |
+| `023`     | Add billing view to admin role                                                                                                                            |
+| `024–025` | Migrate SSH keys to organization scope, add `created_by`                                                                                                  |
+| `026–027` | Network transfer billing, remove transfer multiplier                                                                                                      |
+
 
 ---
 
@@ -669,11 +683,13 @@ Access Control Layers
 
 ### Rate Limiting Tiers
 
-| Tier | Default Max Requests | Window |
-|------|---------------------|--------|
-| **Anonymous** | 1,000 | 15 minutes |
-| **Authenticated** | 5,000 | 15 minutes |
-| **Admin** | 10,000 | 15 minutes |
+
+| Tier              | Default Max Requests | Window     |
+| ----------------- | -------------------- | ---------- |
+| **Anonymous**     | 1,000                | 15 minutes |
+| **Authenticated** | 5,000                | 15 minutes |
+| **Admin**         | 10,000               | 15 minutes |
+
 
 All tiers are configurable via environment variables. Per-user overrides can be set by admins via the `user_rate_limit_overrides` table.
 
@@ -683,21 +699,25 @@ All tiers are configurable via environment variables. Per-user overrides can be 
 
 ### Prerequisites
 
-| Requirement | Version | Notes |
-|------------|---------|-------|
-| **Node.js** | 22.22.0 | See `.nvmrc` |
-| **npm** | 9+ | Bundled with Node.js |
-| **PostgreSQL** | 12+ | Local or cloud (Neon, Supabase, etc.) |
-| **Git** | Latest | For cloning |
+
+| Requirement    | Version | Notes                                 |
+| -------------- | ------- | ------------------------------------- |
+| **Node.js**    | 22.22.0 | See `.nvmrc`                          |
+| **npm**        | 9+      | Bundled with Node.js                  |
+| **PostgreSQL** | 12+     | Local or cloud (Neon, Supabase, etc.) |
+| **Git**        | Latest  | For cloning                           |
+
 
 ### Required API Keys
 
-| Service | Purpose | Where to Get |
-|---------|---------|-------------|
-| **Linode API Token** | VPS infrastructure | [Linode Cloud Manager](https://cloud.linode.com/profile/tokens) |
-| **PayPal Client ID & Secret** | Payment processing | [PayPal Developer](https://developer.paypal.com/) |
-| **Resend API Key** *(at least one email provider required)* | Email delivery | [Resend Dashboard](https://resend.com/) |
-| **SMTP Credentials** *(at least one email provider required)* | Email delivery (fallback) | Your SMTP provider |
+
+| Service                                                       | Purpose                   | Where to Get                                                    |
+| ------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------- |
+| **Linode API Token**                                          | VPS infrastructure        | [Linode Cloud Manager](https://cloud.linode.com/profile/tokens) |
+| **PayPal Client ID & Secret**                                 | Payment processing        | [PayPal Developer](https://developer.paypal.com/)               |
+| **Resend API Key** *(at least one email provider required)*   | Email delivery            | [Resend Dashboard](https://resend.com/)                         |
+| **SMTP Credentials** *(at least one email provider required)* | Email delivery (fallback) | Your SMTP provider                                              |
+
 
 ### Quick Start
 
@@ -757,37 +777,42 @@ RDNS_BASE_DOMAIN=ip.rev.yourdomain.com
 ```
 
 > ⚠️ **Branding**: After setting the env vars above, run `node scripts/seed-branding.js` to update the database with your brand name in documentation articles, FAQ items, contact methods, and networking config. Migrations use generic placeholders; this script replaces them with your configured values.
-> For the complete environment variable reference, see [`repo-docs/ENVIRONMENT_VARIABLES.md`](./repo-docs/ENVIRONMENT_VARIABLES.md) and [`.env.example`](./.env.example).
+> For the complete environment variable reference, see `[repo-docs/ENVIRONMENT_VARIABLES.md](./repo-docs/ENVIRONMENT_VARIABLES.md)` and `[.env.example](./.env.example)`.
 
 ### Icons & Logo
 
-The site icon and logo are sourced from a single file: **`public/favicon.svg`**. This SVG is used everywhere:
+The site icon and logo are sourced from a single file: `**public/favicon.svg`**. This SVG is used everywhere:
 
-| Usage | Location |
-|-------|----------|
-| Browser tab favicon | `index.html` → `<link rel="icon" href="/favicon.svg">` |
-| Public navbar logo | `src/components/MarketingNavbar.tsx` → `<Logo>` |
-| Dashboard sidebar logo | `src/components/AppSidebar.tsx` → `<Logo>` |
-| Footer logo | `src/components/MarketingFooter.tsx` → `<Logo>` |
+
+| Usage                  | Location                                               |
+| ---------------------- | ------------------------------------------------------ |
+| Browser tab favicon    | `index.html` → `<link rel="icon" href="/favicon.svg">` |
+| Public navbar logo     | `src/components/MarketingNavbar.tsx` → `<Logo>`        |
+| Dashboard sidebar logo | `src/components/AppSidebar.tsx` → `<Logo>`             |
+| Footer logo            | `src/components/MarketingFooter.tsx` → `<Logo>`        |
+
 
 The `Logo` component (`src/components/Logo.tsx`) renders an `<img>` tag pointing to `/favicon.svg`, so all surfaces stay in sync automatically.
 
 **To change the icon:**
+
 1. Replace `public/favicon.svg` with your new SVG
 2. Regenerate raster icons using [realfavicongenerator.net](https://realfavicongenerator.net/) — upload your SVG and download the full icon package
 3. Place the generated files in `public/` (`favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png`, etc.)
 4. Update `public/site.webmanifest` if icon filenames change
 
-See [`PWA_SETUP.md`](./PWA_SETUP.md) for additional PWA-specific icon requirements (192×192 and 512×512 PNGs).
+See `[PWA_SETUP.md](./PWA_SETUP.md)` for additional PWA-specific icon requirements (192×192 and 512×512 PNGs).
 
 ### Default Admin Credentials
 
 Credentials are configurable via `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` environment variables (set in `.env`).
 
-| Field | Default |
-|-------|---------|
-| Email | `admin@example.com` |
-| Password | `Admin123#` |
+
+| Field    | Default             |
+| -------- | ------------------- |
+| Email    | `admin@example.com` |
+| Password | `Admin123#`         |
+
 
 ### Development Commands
 
@@ -849,21 +874,23 @@ Backend integrations from skypanelv2-api:
 ### Production Checklist
 
 #### Security
-- [ ] Strong `JWT_SECRET` (32+ characters, randomly generated)
-- [ ] Unique `SSH_CRED_SECRET` and `ENCRYPTION_KEY`
-- [ ] Secure database password
-- [ ] HTTPS/SSL configured via Caddy
-- [ ] PayPal **live** credentials (not sandbox)
-- [ ] `NODE_ENV=production`
-- [ ] Rate limiting configured appropriately
-- [ ] Database backups enabled
+
+- Strong `JWT_SECRET` (32+ characters, randomly generated)
+- Unique `SSH_CRED_SECRET` and `ENCRYPTION_KEY`
+- Secure database password
+- HTTPS/SSL configured via Caddy
+- PayPal **live** credentials (not sandbox)
+- `NODE_ENV=production`
+- Rate limiting configured appropriately
+- Database backups enabled
 
 #### Configuration
-- [ ] Linode production API token
-- [ ] Production SMTP/Resend credentials
-- [ ] `CLIENT_URL` set to production domain
-- [ ] CORS origins configured for production domain
-- [ ] `TRUST_PROXY=1` (single reverse proxy) or `2` (Cloudflare + proxy)
+
+- Linode production API token
+- Production SMTP/Resend credentials
+- `CLIENT_URL` set to production domain
+- CORS origins configured for production domain
+- `TRUST_PROXY=1` (single reverse proxy) or `2` (Cloudflare + proxy)
 
 ### Deployment with PM2
 
@@ -919,22 +946,26 @@ npm run pm2:reload
 
 ### Test Stack
 
-| Tool | Purpose |
-|------|---------|
-| **Vitest** | Unit and integration test runner |
-| **React Testing Library** | Component testing with jsdom |
-| **Supertest** | HTTP API endpoint testing |
-| **Playwright** | End-to-end browser testing |
-| **fast-check** | Property-based testing |
+
+| Tool                      | Purpose                          |
+| ------------------------- | -------------------------------- |
+| **Vitest**                | Unit and integration test runner |
+| **React Testing Library** | Component testing with jsdom     |
+| **Supertest**             | HTTP API endpoint testing        |
+| **Playwright**            | End-to-end browser testing       |
+| **fast-check**            | Property-based testing           |
+
 
 ### Test Locations
 
-| Location | Type |
-|----------|------|
-| `src/**/*.test.tsx` | Frontend component tests (co-located) |
-| `api/services/*.test.ts` | Backend service tests |
-| `api/tests/` | Backend API tests |
-| `tests/e2e/` | Playwright E2E tests |
+
+| Location                 | Type                                  |
+| ------------------------ | ------------------------------------- |
+| `src/**/*.test.tsx`      | Frontend component tests (co-located) |
+| `api/services/*.test.ts` | Backend service tests                 |
+| `api/tests/`             | Backend API tests                     |
+| `tests/e2e/`             | Playwright E2E tests                  |
+
 
 ### Running Tests
 
@@ -1139,41 +1170,47 @@ skypanelv2/
 
 ### Internal References
 
-| Document | Description |
-|----------|-------------|
-| [`AGENTS.md`](./AGENTS.md) | Coding agent guidelines — current app state, structure, patterns, and practical guidance |
-| [`CLAUDE.md`](./CLAUDE.md) | Claude Code reference — commands, architecture, schema, services, middleware, patterns |
-| [`repo-docs/ENVIRONMENT_VARIABLES.md`](./repo-docs/ENVIRONMENT_VARIABLES.md) | Complete environment variable reference |
-| [`repo-docs/ADMIN_COMPONENTS.md`](./repo-docs/ADMIN_COMPONENTS.md) | Admin dashboard component reference |
-| [`repo-docs/ADMIN_TROUBLESHOOTING.md`](./repo-docs/ADMIN_TROUBLESHOOTING.md) | Admin troubleshooting guide |
-| [`api/services/providers/ARCHITECTURE.md`](./api/services/providers/ARCHITECTURE.md) | Provider service architecture (Linode) |
-| [`api/services/providers/README.md`](./api/services/providers/README.md) | Provider service documentation |
-| [`api/services/providers/CACHING.md`](./api/services/providers/CACHING.md) | Provider caching strategy |
-| [`api/services/providers/API_DOCUMENTATION.md`](./api/services/providers/API_DOCUMENTATION.md) | Provider API documentation |
-| [`scripts/README.md`](./scripts/README.md) | Utility scripts reference |
+
+| Document                                                                                       | Description                                                                              |
+| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `[AGENTS.md](./AGENTS.md)`                                                                     | Coding agent guidelines — current app state, structure, patterns, and practical guidance |
+| `[CLAUDE.md](./CLAUDE.md)`                                                                     | Claude Code reference — commands, architecture, schema, services, middleware, patterns   |
+| `[repo-docs/ENVIRONMENT_VARIABLES.md](./repo-docs/ENVIRONMENT_VARIABLES.md)`                   | Complete environment variable reference                                                  |
+| `[repo-docs/ADMIN_COMPONENTS.md](./repo-docs/ADMIN_COMPONENTS.md)`                             | Admin dashboard component reference                                                      |
+| `[repo-docs/ADMIN_TROUBLESHOOTING.md](./repo-docs/ADMIN_TROUBLESHOOTING.md)`                   | Admin troubleshooting guide                                                              |
+| `[api/services/providers/ARCHITECTURE.md](./api/services/providers/ARCHITECTURE.md)`           | Provider service architecture (Linode)                                                   |
+| `[api/services/providers/README.md](./api/services/providers/README.md)`                       | Provider service documentation                                                           |
+| `[api/services/providers/CACHING.md](./api/services/providers/CACHING.md)`                     | Provider caching strategy                                                                |
+| `[api/services/providers/API_DOCUMENTATION.md](./api/services/providers/API_DOCUMENTATION.md)` | Provider API documentation                                                               |
+| `[scripts/README.md](./scripts/README.md)`                                                     | Utility scripts reference                                                                |
+
 
 ### Key Architectural Patterns
 
-| Pattern | Implementation |
-|---------|---------------|
-| **Service Layer** | Business logic in `api/services/`, HTTP handling in `api/routes/` |
-| **Database Helper** | All queries via `api/lib/database.ts` (`query()`, `transaction()`) |
-| **Provider Abstraction** | `IProviderService` interface → `ProviderFactory` → `LinodeProviderService` |
-| **React Context** | Global state via `AuthContext`, `ThemeContext`, `ImpersonationContext`, `BreadcrumbContext` |
-| **TanStack Query** | Server state with caching, optimistic updates, and automatic refetching |
-| **Multi-Tenant Isolation** | All resource queries scoped to `organization_id` |
-| **Protected Routes** | Frontend route guards (`ProtectedRoute`, `AdminRoute`, `PublicRoute`) backed by JWT middleware |
-| **Real-Time Events** | PG triggers → `LISTEN/NOTIFY` → `NotificationService` EventEmitter → SSE |
+
+| Pattern                    | Implementation                                                                                 |
+| -------------------------- | ---------------------------------------------------------------------------------------------- |
+| **Service Layer**          | Business logic in `api/services/`, HTTP handling in `api/routes/`                              |
+| **Database Helper**        | All queries via `api/lib/database.ts` (`query()`, `transaction()`)                             |
+| **Provider Abstraction**   | `IProviderService` interface → `ProviderFactory` → `LinodeProviderService`                     |
+| **React Context**          | Global state via `AuthContext`, `ThemeContext`, `ImpersonationContext`, `BreadcrumbContext`    |
+| **TanStack Query**         | Server state with caching, optimistic updates, and automatic refetching                        |
+| **Multi-Tenant Isolation** | All resource queries scoped to `organization_id`                                               |
+| **Protected Routes**       | Frontend route guards (`ProtectedRoute`, `AdminRoute`, `PublicRoute`) backed by JWT middleware |
+| **Real-Time Events**       | PG triggers → `LISTEN/NOTIFY` → `NotificationService` EventEmitter → SSE                       |
+
 
 ---
 
 ## 📞 Internal Contacts
 
-| Team | Responsibilities |
-|------|-----------------|
+
+| Team            | Responsibilities                                              |
+| --------------- | ------------------------------------------------------------- |
 | **Development** | Technical issues, bug reports, feature requests, code reviews |
-| **Operations** | Production deployment, monitoring, database management |
-| **Support** | Customer issues, billing inquiries, VPS provisioning support |
+| **Operations**  | Production deployment, monitoring, database management        |
+| **Support**     | Customer issues, billing inquiries, VPS provisioning support  |
+
 
 ---
 

@@ -72,7 +72,7 @@ export async function checkProviderTokens(): Promise<{
           tokenPreview,
         };
 
-        console.log(`✅ Linode: Token configured and decrypted successfully (${tokenPreview})`);
+        console.log(`✅ Linode: Token configured and decrypted successfully`);
       } catch (error: any) {
         result.linode = {
           configured: true,
@@ -157,7 +157,7 @@ export async function runDiagnostics(): Promise<void> {
     "  Linode:",
     tokenStatus.linode.configured
       ? tokenStatus.linode.valid
-        ? `✅ Valid (${tokenStatus.linode.tokenPreview})`
+        ? "✅ Valid"
         : `❌ Invalid: ${tokenStatus.linode.error}`
       : "⚠️ Not configured"
   );

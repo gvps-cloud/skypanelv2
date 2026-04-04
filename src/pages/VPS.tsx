@@ -18,10 +18,6 @@ import {
   Trash2,
   RotateCcw,
   Server,
-  Cpu,
-  HardDrive,
-  Network,
-  MemoryStick,
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -264,8 +260,8 @@ const VPS: React.FC = () => {
   const [createRegionsLoading, setCreateRegionsLoading] = useState(false);
   const [createRegionsError, setCreateRegionsError] = useState<string | null>(null);
   const [categorySearch, setCategorySearch] = useState("");
-  const [regionSearch, setRegionSearch] = useState("");
-  const [planSearch, setPlanSearch] = useState("");
+  const [regionSearch] = useState("");
+  const [planSearch] = useState("");
   const [selectedStackScript, setSelectedStackScript] = useState<any | null>(
     null,
   );
@@ -1903,9 +1899,6 @@ const VPS: React.FC = () => {
   );
 
   const selectedType = providerPlans.find((type) => type.id === createForm.type);
-  const planHelperText = selectedType
-    ? `Selected plan: ${selectedType.label.replace(/\s+-\s+\$[\d,.]+\/mo$/i, "")}`
-    : "Search and choose a plan for the selected region.";
   const normalizedRegionSearch = regionSearch.trim().toLowerCase();
   const filteredCreateRegionOptions = useMemo(
     () =>
@@ -1931,7 +1924,8 @@ const VPS: React.FC = () => {
     (region) => region.id === createForm.region,
   );
   const normalizedPlanSearch = planSearch.trim().toLowerCase();
-  const filteredPlanOptions = useMemo(
+  // Keep for potential future use
+  const _filteredPlanOptions = useMemo(
     () =>
       planOptions.filter((option) => {
         if (!normalizedPlanSearch) {

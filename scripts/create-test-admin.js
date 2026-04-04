@@ -50,7 +50,11 @@ async function createTestAdmin() {
     }
 
     console.log(`📧 Email: ${email}`);
+    // SECURITY: Never log passwords - only show masked placeholder
     console.log('🔑 Password: [hidden]\n');
+    // Log that password was provided via CLI without revealing it
+    const passwordSource = args.some(a => a.includes('--password')) ? 'CLI argument' : 'environment/default';
+    console.log(`   (Password provided via ${passwordSource})\n`);
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -159,7 +163,11 @@ async function createTestAdmin() {
     }
 
   } catch (error) {
-    console.error('❌ Error creating admin user:', error);
+    // Sanitize error output to prevent password leakage
+    const sanitizedError = error.message.includes(password)
+      ? error.message.replace(password, '[REDACTED]')
+      : error.message;
+    console.error('❌ Error creating admin user:', sanitizedError);
   } finally {
     await pool.end();
   }

@@ -136,7 +136,6 @@ export function RegionMultiSelect({
   selectedRegionIds,
   onRegionToggle,
   onClearAll,
-  loading = false,
   disabled = false,
   className,
 }: RegionMultiSelectProps) {
@@ -184,8 +183,8 @@ export function RegionMultiSelect({
     return filtered;
   }, [groupedRegions, searchQuery]);
 
-  // Get selected regions for display
-  const selectedRegions = useMemo(() => {
+  // Get selected regions for display (kept for potential future use)
+  const _selectedRegions = useMemo(() => {
     return regions.filter((r) => selectedRegionIds.includes(r.id));
   }, [regions, selectedRegionIds]);
 

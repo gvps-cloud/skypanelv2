@@ -90,7 +90,7 @@ function calculateSpiderPositions(
 export function useSpiderfy(
   regions: RegionWithCoords[],
   zoom: number,
-  selectedRegion: string | null
+  _selectedRegion: string | null
 ) {
   const [spiderfiedCluster, setSpiderfiedCluster] = useState<string[] | null>(null);
 
@@ -165,7 +165,7 @@ export function useSpiderfy(
       // Optionally collapse on zoom change
       // setSpiderfiedCluster(null);
     }
-  }, [zoom]);
+  }, [zoom, spiderfiedCluster]);
 
   return {
     getSpiderfyData,

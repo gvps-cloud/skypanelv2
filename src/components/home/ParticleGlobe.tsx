@@ -18,10 +18,28 @@ interface RegionData {
   capabilities?: string[];
 }
 
+interface LatencyState {
+  [regionId: string]: {
+    loading: boolean;
+    latency?: number;
+    error?: boolean;
+    avg?: number;
+    min?: number;
+    max?: number;
+  };
+}
+
 interface ParticleGlobeProps {
   regions: RegionData[];
   onRegionSelect: (region: RegionData | null) => void;
   selectedRegion: RegionData | null;
+  latencyState?: LatencyState;
+  testingRegionId?: string | null;
+  /** Display mode: 'flag' shows country flag icons with latency badges (for Regions page),
+   *  'pixel' shows simple glowing dots (for homepage) */
+  displayMode?: 'pixel' | 'flag';
+  /** Disables click-to-select behavior on markers */
+  disableClick?: boolean;
 }
 
 interface GlobeThemeColors {
@@ -34,7 +52,7 @@ interface GlobeThemeColors {
   atmosphereRGB: [number, number, number];
 }
 
-type MarkerVisualState = 'default' | 'hovered' | 'selected';
+type MarkerDisplayState = 'default' | 'hovered' | 'selected' | 'testing';
 
 const PARTICLE_COUNT = 4000;
 const ATMOSPHERE_RADIUS = 1.65;
@@ -42,6 +60,51 @@ const GLOBE_RADIUS = 1.5;
 const CONTINENT_RADIUS = 1.48;
 const BASE_ROTATION_SPEED = 0.001;
 const HOVER_ROTATION_SPEED = 0.00035;
+
+// Flag image cache for 3D globe markers
+const flagImageCache = new Map<string, HTMLImageElement>();
+const flagLoadingPromises = new Map<string, Promise<HTMLImageElement | null>>();
+
+/**
+ * Load a flag image from hatscripts.github.io/circle-flags
+ */
+function loadFlagImage(countryCode: string): Promise<HTMLImageElement | null> {
+  if (flagImageCache.has(countryCode)) {
+    return Promise.resolve(flagImageCache.get(countryCode)!);
+  }
+
+  if (flagLoadingPromises.has(countryCode)) {
+    return flagLoadingPromises.get(countryCode)!;
+  }
+
+  const promise = new Promise<HTMLImageElement | null>((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      flagImageCache.set(countryCode, img);
+      resolve(img);
+    };
+    img.onerror = () => {
+      resolve(null);
+    };
+    img.src = `https://hatscripts.github.io/circle-flags/flags/${countryCode}.svg`;
+  });
+
+  flagLoadingPromises.set(countryCode, promise);
+  return promise;
+}
+
+/**
+ * Preload all flag images for regions
+ * Uses region.country (ISO code) for flag lookups
+ */
+function preloadFlagImages(regions: RegionData[]): void {
+  regions.forEach((region) => {
+    // region.country is the ISO country code from the API (e.g., "US", "GB", "NL")
+    const countryCode = region.country?.toLowerCase() || 'us';
+    loadFlagImage(countryCode);
+  });
+}
 
 const parseHslCssVar = (
   style: CSSStyleDeclaration,
@@ -90,10 +153,31 @@ export const resolveThemeColors = (): GlobeThemeColors => {
   };
 };
 
-function createMarkerTexture(color: string, state: MarkerVisualState): THREE.CanvasTexture {
-  const isHovered = state === 'hovered';
-  const isSelected = state === 'selected';
-  const size = isHovered || isSelected ? 128 : 64;
+// Get latency color
+function getLatencyColor(latency: number | undefined): string {
+  if (latency === undefined) return '#6366f1'; // default indigo
+  if (latency < 100) return '#22c55e'; // green
+  if (latency < 200) return '#eab308'; // yellow
+  if (latency < 300) return '#f97316'; // orange
+  return '#ef4444'; // red
+}
+
+// Create flag icon texture with optional latency badge
+// If flagImage is provided, it will be drawn inside a circular clip
+// mode 'pixel' draws simple glowing dots for homepage
+// mode 'flag' draws country flags with latency badges for Regions page
+function createFlagIconTexture(
+  countryCode: string,
+  state: MarkerDisplayState,
+  latency: number | undefined,
+  isTesting: boolean,
+  markerColor: string,
+  selectedColor: string,
+  animationPhase: number = 0,
+  flagImage: HTMLImageElement | null = null,
+  mode: 'pixel' | 'flag' = 'flag'
+): THREE.CanvasTexture {
+  const size = state === 'hovered' || state === 'selected' || isTesting ? 128 : 80;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -103,32 +187,155 @@ function createMarkerTexture(color: string, state: MarkerVisualState): THREE.Can
   }
 
   const center = size / 2;
-  const outerGradient = ctx.createRadialGradient(center, center, 0, center, center, center);
+  const iconRadius = size * 0.35;
 
-  if (isSelected) {
-    outerGradient.addColorStop(0, `${color}cc`);
-    outerGradient.addColorStop(0.5, `${color}88`);
-    outerGradient.addColorStop(1, `${color}00`);
-  } else if (isHovered) {
-    outerGradient.addColorStop(0, `${color}ee`);
-    outerGradient.addColorStop(0.4, `${color}88`);
-    outerGradient.addColorStop(1, `${color}00`);
-  } else {
-    outerGradient.addColorStop(0, `${color}dd`);
-    outerGradient.addColorStop(0.45, `${color}66`);
-    outerGradient.addColorStop(1, `${color}00`);
+  // Determine base color based on state
+  let baseColor = markerColor;
+  if (state === 'selected' || isTesting) {
+    baseColor = selectedColor;
   }
 
-  ctx.fillStyle = outerGradient;
-  ctx.fillRect(0, 0, size, size);
+  if (mode === 'pixel') {
+    // PIXEL MODE: Simple glowing dot for homepage
+    // Draw outer glow
+    const glowGradient = ctx.createRadialGradient(center, center, iconRadius * 0.3, center, center, iconRadius * 1.5);
+    glowGradient.addColorStop(0, baseColor);
+    glowGradient.addColorStop(1, `${baseColor}00`);
+    ctx.fillStyle = glowGradient;
+    ctx.beginPath();
+    ctx.arc(center, center, iconRadius * 1.5, 0, Math.PI * 2);
+    ctx.fill();
 
-  const dotRadius = isSelected ? center * 0.4 : isHovered ? center * 0.35 : center * 0.25;
-  ctx.beginPath();
-  ctx.arc(center, center, dotRadius, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
+    // Draw solid dot
+    ctx.beginPath();
+    ctx.arc(center, center, iconRadius * 0.4, 0, Math.PI * 2);
+    ctx.fillStyle = baseColor;
+    ctx.fill();
 
-  return new THREE.CanvasTexture(canvas);
+    // Add pulsing ring for testing state
+    if (isTesting) {
+      const pulseRadius = iconRadius * (0.6 + Math.sin(animationPhase) * 0.15);
+      ctx.beginPath();
+      ctx.arc(center, center, pulseRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.5 + Math.sin(animationPhase) * 0.3;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  } else {
+    // FLAG MODE: Country flag icons with latency badges (Regions page)
+    // Draw outer glow for selected/testing states
+    if (state === 'selected' || isTesting) {
+      const glowGradient = ctx.createRadialGradient(center, center, iconRadius * 0.8, center, center, iconRadius * 1.5);
+      const glowColor = isTesting ? '#3b82f6' : baseColor;
+      glowGradient.addColorStop(0, `${glowColor}88`);
+      glowGradient.addColorStop(1, `${glowColor}00`);
+      ctx.fillStyle = glowGradient;
+      ctx.fillRect(0, 0, size, size);
+    }
+
+    // Draw white circle background
+    ctx.beginPath();
+    ctx.arc(center, center, iconRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    // Draw border
+    ctx.strokeStyle = baseColor;
+    ctx.lineWidth = isTesting ? 4 : 3;
+    ctx.stroke();
+
+    // Clip to circle for flag image
+    ctx.beginPath();
+    ctx.arc(center, center, iconRadius - 4, 0, Math.PI * 2);
+    ctx.clip();
+
+    if (flagImage) {
+      // Draw actual flag image scaled to fit
+      const flagSize = (iconRadius - 4) * 2;
+      const flagX = center - (iconRadius - 4);
+      const flagY = center - (iconRadius - 4);
+      ctx.drawImage(flagImage, flagX, flagY, flagSize, flagSize);
+    } else {
+      // Fallback: draw simplified colored flag representation
+      const flagColor = getCountryFlagColor(countryCode);
+
+      // Draw flag background color
+      ctx.fillStyle = flagColor;
+      ctx.fillRect(center - iconRadius + 4, center - iconRadius + 4, (iconRadius - 4) * 2, (iconRadius - 4) * 2);
+
+      // Draw simplified flag pattern
+      ctx.fillStyle = getSecondaryFlagColor(countryCode);
+      ctx.fillRect(center - iconRadius + 4, center - iconRadius + 4, (iconRadius - 4) * 2, (iconRadius - 4) * 0.4);
+    }
+
+    ctx.restore();
+
+    // Draw latency badge or testing indicator
+    if (isTesting) {
+      // Draw pulsing ring for testing state
+      const pulseRadius = iconRadius * (1.3 + Math.sin(animationPhase) * 0.15);
+      ctx.beginPath();
+      ctx.arc(center, center, pulseRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.5 + Math.sin(animationPhase) * 0.3;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Draw "..." indicator below
+      ctx.fillStyle = '#3b82f6';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('...', center, center + iconRadius + 14);
+    } else if (latency !== undefined) {
+      // Draw latency badge
+      const latencyColor = getLatencyColor(latency);
+      const badgeWidth = 36;
+      const badgeHeight = 16;
+      const badgeY = center + iconRadius - 4;
+
+      // Badge background
+      ctx.fillStyle = latencyColor;
+      ctx.beginPath();
+      ctx.roundRect(center - badgeWidth / 2, badgeY - badgeHeight / 2, badgeWidth, badgeHeight, 8);
+      ctx.fill();
+
+      // Badge text
+      ctx.fillStyle = latencyColor === '#eab308' ? '#000' : '#fff';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${latency}`, center, badgeY);
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+// Get primary color for a country's flag
+function getCountryFlagColor(countryCode: string): string {
+  const colors: Record<string, string> = {
+    us: '#B22234', ca: '#FF0000', br: '#009B3A', gb: '#012169', nl: '#21468B',
+    de: '#000000', es: '#AA151B', it: '#009246', fr: '#ED2939', se: '#006AA7',
+    pl: '#FFFFFF', in: '#FF9933', jp: '#BC002D', sg: '#ED2939', id: '#FF0000',
+    au: '#00008B', kr: '#CD2E3A', hk: '#DE2910', tw: '#FE0000',
+  };
+  return colors[countryCode] || '#6366f1';
+}
+
+// Get secondary color for a country's flag
+function getSecondaryFlagColor(countryCode: string): string {
+  const colors: Record<string, string> = {
+    us: '#FFFFFF', ca: '#FFFFFF', br: '#FEDF00', gb: '#C8102E', nl: '#FFFFFF',
+    de: '#DD0000', es: '#F1BF00', it: '#FFFFFF', fr: '#FFFFFF', se: '#FECC00',
+    pl: '#DC143C', in: '#FFFFFF', jp: '#FFFFFF', sg: '#FFFFFF', id: '#FFFFFF',
+    au: '#FFFFFF', kr: '#0047A0', hk: '#FFFFFF', tw: '#FFFFFF',
+  };
+  return colors[countryCode] || '#818cf8';
 }
 
 const rotateVectorY = (vector: THREE.Vector3, rotation: number): THREE.Vector3 => {
@@ -145,11 +352,16 @@ const toThreeVector = (point: { x: number; y: number; z: number }) =>
   new THREE.Vector3(point.x, point.y, point.z);
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const getSpriteVisualState = (
+export const getSpriteDisplayState = (
   regionId: string,
   hoveredRegionId: string | null,
-  selectedRegionId: string | null
-): MarkerVisualState => {
+  selectedRegionId: string | null,
+  testingRegionId: string | null,
+  _latencyState: LatencyState | undefined
+): MarkerDisplayState => {
+  if (testingRegionId === regionId) {
+    return 'testing';
+  }
   if (selectedRegionId === regionId) {
     return 'selected';
   }
@@ -159,7 +371,15 @@ export const getSpriteVisualState = (
   return 'default';
 };
 
-export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion }: ParticleGlobeProps) {
+export default function ParticleGlobe({
+  regions,
+  onRegionSelect,
+  selectedRegion,
+  latencyState,
+  testingRegionId,
+  displayMode,
+  disableClick,
+}: ParticleGlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -178,16 +398,25 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
   const hoveredRegionRef = useRef<string | null>(null);
   const selectedRegionRef = useRef<string | null>(null);
   const themeColorsRef = useRef<GlobeThemeColors>(resolveThemeColors());
+  const animationPhaseRef = useRef(0);
+  const testingRegionIdRef = useRef<string | null>(null);
+  // Target rotation for focusing on testing/selected region
+  const targetRotationRef = useRef<number | null>(null);
+  const isAutoRotatingToTargetRef = useRef(false);
 
   const markerSpritesRef = useRef<Map<string, THREE.Sprite>>(new Map());
   const markerLocalPositionsRef = useRef<Map<string, THREE.Vector3>>(new Map());
-  const markerStateRef = useRef<Map<string, MarkerVisualState>>(new Map());
+  const markerStateRef = useRef<Map<string, MarkerDisplayState>>(new Map());
+  // Store country code for each region ID for flag lookups
+  const markerCountryCodeRef = useRef<Map<string, string>>(new Map());
+  // Store displayMode in ref for access inside animate loop
+  const displayModeRef = useRef<'pixel' | 'flag'>(displayMode || 'flag');
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
 
-  const applySpriteVisualState = useCallback(
-    (regionId: string, nextState: MarkerVisualState, forceTextureRefresh = false) => {
+  const applySpriteDisplayState = useCallback(
+    async (regionId: string, nextState: MarkerDisplayState, forceTextureRefresh = false) => {
       const sprite = markerSpritesRef.current.get(regionId);
       if (!sprite) {
         return;
@@ -198,27 +427,54 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
         return;
       }
 
-      const markerColor =
-        nextState === 'selected' ? themeColorsRef.current.selectedMarkerHex : themeColorsRef.current.markerHex;
+      // Get country code from stored mapping (set during rebuildMarkers)
+      const countryCode = markerCountryCodeRef.current.get(regionId) || 'us';
+
+      // Get latency info
+      const state = latencyState?.[regionId];
+      const isTesting = nextState === 'testing';
+      const latency = state?.latency;
+
+      const markerColor = themeColorsRef.current.markerHex;
+      const selectedColor = themeColorsRef.current.selectedMarkerHex;
+
       const material = sprite.material as THREE.SpriteMaterial;
       const previousMap = material.map;
-      const nextTexture = createMarkerTexture(markerColor, nextState);
+
+      // Only use flag image in flag mode
+      const flagImg = displayModeRef.current === 'flag' ? (flagImageCache.get(countryCode) || null) : null;
+
+      // Create new flag texture
+      const nextTexture = createFlagIconTexture(
+        countryCode,
+        nextState,
+        latency,
+        isTesting,
+        markerColor,
+        selectedColor,
+        animationPhaseRef.current,
+        flagImg,
+        displayModeRef.current
+      );
 
       material.map = nextTexture;
       material.needsUpdate = true;
       previousMap?.dispose();
 
+      // Set scale based on state
       if (nextState === 'selected') {
-        sprite.scale.setScalar(0.18);
+        sprite.scale.setScalar(0.22);
+      } else if (nextState === 'testing') {
+        sprite.scale.setScalar(0.25);
       } else if (nextState === 'hovered') {
-        sprite.scale.setScalar(0.15);
+        sprite.scale.setScalar(0.18);
       } else {
-        sprite.scale.setScalar(0.1);
+        sprite.scale.setScalar(0.12);
       }
 
       markerStateRef.current.set(regionId, nextState);
     },
-    []
+    [latencyState]
   );
 
   const rebuildAtmosphere = useCallback((scene: THREE.Scene, atmosphereColor: THREE.Color) => {
@@ -423,7 +679,7 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
   }, []);
 
   const rebuildMarkers = useCallback(
-    (rotation: number) => {
+    (rotation: number, mode: 'pixel' | 'flag' = 'flag') => {
       const scene = sceneRef.current;
       if (!scene) {
         return;
@@ -437,6 +693,7 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
       markerSpritesRef.current.clear();
       markerLocalPositionsRef.current.clear();
       markerStateRef.current.clear();
+      markerCountryCodeRef.current.clear();
 
       for (const region of regions) {
         const coords = REGION_COORDINATES_3D[region.id];
@@ -448,12 +705,35 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
         );
         markerLocalPositionsRef.current.set(region.id, localPosition);
 
+        // Store country code for this region (from region.country ISO code)
+        const countryCode = region.country?.toLowerCase() || 'us';
+        markerCountryCodeRef.current.set(region.id, countryCode);
+
         const worldPosition = rotateVectorY(localPosition, rotation);
-        const state = getSpriteVisualState(region.id, hoveredRegionRef.current, selectedRegionRef.current);
-        const markerColor =
-          state === 'selected' ? themeColorsRef.current.selectedMarkerHex : themeColorsRef.current.markerHex;
+        const state = getSpriteDisplayState(
+          region.id,
+          hoveredRegionRef.current,
+          selectedRegionRef.current,
+          testingRegionIdRef.current,
+          latencyState
+        );
+        const latState = latencyState?.[region.id];
+        const markerColor = themeColorsRef.current.markerHex;
+        const selectedColor = themeColorsRef.current.selectedMarkerHex;
+        const flagImg = mode === 'flag' ? (flagImageCache.get(countryCode) || null) : null;
+
         const material = new THREE.SpriteMaterial({
-          map: createMarkerTexture(markerColor, state),
+          map: createFlagIconTexture(
+            countryCode,
+            state,
+            latState?.latency,
+            state === 'testing',
+            markerColor,
+            selectedColor,
+            animationPhaseRef.current,
+            flagImg,
+            mode
+          ),
           transparent: true,
           depthTest: false,
           blending: THREE.AdditiveBlending,
@@ -466,17 +746,17 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
         markerSpritesRef.current.set(region.id, sprite);
         markerStateRef.current.set(region.id, state);
 
-        if (state === 'selected') {
-          sprite.scale.setScalar(0.18);
+        if (state === 'selected' || state === 'testing') {
+          sprite.scale.setScalar(0.22);
         } else if (state === 'hovered') {
-          sprite.scale.setScalar(0.15);
+          sprite.scale.setScalar(0.18);
         } else {
-          sprite.scale.setScalar(0.1);
+          sprite.scale.setScalar(0.12);
         }
         scene.add(sprite);
       }
     },
-    [regions]
+    [regions, latencyState]
   );
 
   const refreshThemeVisuals = useCallback(() => {
@@ -503,10 +783,21 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
     rebuildContinents(scene, colors.continentRGB);
 
     markerSpritesRef.current.forEach((_sprite, regionId) => {
-      const state = getSpriteVisualState(regionId, hoveredRegionRef.current, selectedRegionRef.current);
-      applySpriteVisualState(regionId, state, true);
+      const state = getSpriteDisplayState(
+        regionId,
+        hoveredRegionRef.current,
+        selectedRegionRef.current,
+        testingRegionIdRef.current,
+        latencyState
+      );
+      applySpriteDisplayState(regionId, state, true);
     });
-  }, [applySpriteVisualState, rebuildAtmosphere, rebuildContinents, rebuildEarthTexture]);
+  }, [applySpriteDisplayState, rebuildAtmosphere, rebuildContinents, rebuildEarthTexture, latencyState]);
+
+  // Preload flag images when regions change
+  useEffect(() => {
+    preloadFlagImages(regions);
+  }, [regions]);
 
   useEffect(() => {
     selectedRegionRef.current = selectedRegion?.id ?? null;
@@ -515,6 +806,14 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
   useEffect(() => {
     hoveredRegionRef.current = hoveredRegion;
   }, [hoveredRegion]);
+
+  useEffect(() => {
+    testingRegionIdRef.current = testingRegionId ?? null;
+  }, [testingRegionId]);
+
+  useEffect(() => {
+    displayModeRef.current = displayMode || 'flag';
+  }, [displayMode]);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -561,15 +860,71 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
 
     rebuildAtmosphere(scene, colors.atmosphere);
     rebuildContinents(scene, colors.continentRGB);
-    rebuildMarkers(rotationRef.current);
+    rebuildMarkers(rotationRef.current, displayModeRef.current);
     setIsLoaded(true);
 
     const animate = () => {
       frameIdRef.current = requestAnimationFrame(animate);
 
-      const targetSpeed = hoveredRegionRef.current ? HOVER_ROTATION_SPEED : BASE_ROTATION_SPEED;
-      currentRotationSpeedRef.current += (targetSpeed - currentRotationSpeedRef.current) * 0.1;
-      rotationRef.current += currentRotationSpeedRef.current;
+      // Update animation phase for testing pulse
+      animationPhaseRef.current += 0.08;
+
+      // Update testing marker textures if needed
+      if (testingRegionIdRef.current && markerSpritesRef.current.has(testingRegionIdRef.current)) {
+        const sprite = markerSpritesRef.current.get(testingRegionIdRef.current);
+        const material = sprite?.material as THREE.SpriteMaterial;
+        if (sprite && material) {
+          const regionId = testingRegionIdRef.current;
+          const countryCode = markerCountryCodeRef.current.get(regionId) || 'us';
+          const latState = latencyState?.[regionId];
+          const markerColor = themeColorsRef.current.markerHex;
+          const selectedColor = themeColorsRef.current.selectedMarkerHex;
+          const flagImg = displayModeRef.current === 'flag' ? (flagImageCache.get(countryCode) || null) : null;
+
+          const nextTexture = createFlagIconTexture(
+            countryCode,
+            'testing',
+            latState?.latency,
+            true,
+            markerColor,
+            selectedColor,
+            animationPhaseRef.current,
+            flagImg,
+            displayModeRef.current
+          );
+          material.map?.dispose();
+          material.map = nextTexture;
+          material.needsUpdate = true;
+        }
+      }
+
+      // Handle target rotation (when testing/selected a region)
+      if (targetRotationRef.current !== null) {
+        const targetRot = targetRotationRef.current;
+        const currentRot = rotationRef.current;
+        const diff = targetRot - currentRot;
+        // Normalize diff to [-PI, PI]
+        const normalizedDiff = ((diff + Math.PI) % (Math.PI * 2)) - Math.PI;
+        const rotationStep = 0.03; // Smooth rotation speed
+
+        if (Math.abs(normalizedDiff) < 0.01) {
+          // Close enough, snap to target
+          rotationRef.current = targetRot;
+          targetRotationRef.current = null;
+          isAutoRotatingToTargetRef.current = false;
+          currentRotationSpeedRef.current = BASE_ROTATION_SPEED;
+        } else {
+          // Smoothly rotate toward target
+          const step = Math.sign(normalizedDiff) * Math.min(Math.abs(normalizedDiff), rotationStep);
+          rotationRef.current += step;
+        }
+      } else if (!isAutoRotatingToTargetRef.current) {
+        // Normal auto-rotation when not focusing on a target
+        const targetSpeed = hoveredRegionRef.current ? HOVER_ROTATION_SPEED : BASE_ROTATION_SPEED;
+        currentRotationSpeedRef.current += (targetSpeed - currentRotationSpeedRef.current) * 0.1;
+        rotationRef.current += currentRotationSpeedRef.current;
+      }
+
       const rotation = rotationRef.current;
 
       globe.rotation.y = rotation;
@@ -644,12 +999,8 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
       rootObserver.disconnect();
       styleObserver?.disconnect();
 
-      // Capture ref values at cleanup time to avoid stale references
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       const sprites = markerSpritesRef.current;
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       const localPositions = markerLocalPositionsRef.current;
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       const markerSt = markerStateRef.current;
       sprites.forEach((sprite) => {
         (sprite.material as THREE.SpriteMaterial).map?.dispose();
@@ -674,11 +1025,11 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
         container.removeChild(renderer.domElement);
       }
     };
-  }, [rebuildAtmosphere, rebuildContinents, rebuildEarthTexture, rebuildMarkers, refreshThemeVisuals]);
+  }, [rebuildAtmosphere, rebuildContinents, rebuildEarthTexture, rebuildMarkers, refreshThemeVisuals, regions, latencyState]);
 
   useEffect(() => {
-    rebuildMarkers(rotationRef.current);
-  }, [regions, rebuildMarkers]);
+    rebuildMarkers(rotationRef.current, displayModeRef.current);
+  }, [regions, rebuildMarkers, latencyState, displayModeRef.current]);
 
   useEffect(() => {
     const previousSelected = selectedRegionRef.current;
@@ -688,12 +1039,21 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
     if (previousSelected && previousSelected !== nextSelected) {
       const fallbackState =
         hoveredRegionRef.current === previousSelected ? 'hovered' : 'default';
-      applySpriteVisualState(previousSelected, fallbackState);
+      applySpriteDisplayState(previousSelected, fallbackState);
     }
     if (nextSelected) {
-      applySpriteVisualState(nextSelected, 'selected');
+      applySpriteDisplayState(nextSelected, 'selected');
+
+      // Calculate target rotation to face the selected region
+      const coords = REGION_COORDINATES_3D[nextSelected];
+      if (coords) {
+        // Point faces camera when alpha = theta + PI/2 where theta = (lon + 180) * PI/180
+        const targetRot = (coords.lon + 270) * (Math.PI / 180);
+        targetRotationRef.current = targetRot;
+        isAutoRotatingToTargetRef.current = true;
+      }
     }
-  }, [applySpriteVisualState, selectedRegion]);
+  }, [applySpriteDisplayState, selectedRegion]);
 
   useEffect(() => {
     const previousHovered = hoveredRegionRef.current;
@@ -701,12 +1061,38 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
     hoveredRegionRef.current = nextHovered;
 
     if (previousHovered && previousHovered !== selectedRegionRef.current) {
-      applySpriteVisualState(previousHovered, 'default');
+      applySpriteDisplayState(previousHovered, 'default');
     }
     if (nextHovered && nextHovered !== selectedRegionRef.current) {
-      applySpriteVisualState(nextHovered, 'hovered');
+      applySpriteDisplayState(nextHovered, 'hovered');
     }
-  }, [applySpriteVisualState, hoveredRegion]);
+  }, [applySpriteDisplayState, hoveredRegion]);
+
+  useEffect(() => {
+    const previousTesting = testingRegionIdRef.current;
+    const nextTesting = testingRegionId ?? null;
+
+    if (previousTesting && previousTesting !== nextTesting && previousTesting !== selectedRegionRef.current) {
+      applySpriteDisplayState(previousTesting, 'default');
+    }
+    if (nextTesting && nextTesting !== selectedRegionRef.current) {
+      applySpriteDisplayState(nextTesting, 'testing');
+
+      // Calculate target rotation to face the testing region
+      const coords = REGION_COORDINATES_3D[nextTesting];
+      if (coords) {
+        // Calculate the longitude rotation needed to face this region
+        // In latLongToVector3: theta = (lon + 180) * PI/180
+        // After Y rotation by alpha: z' = r*sin(phi)*sin(alpha - theta)
+        // Point faces camera (max z') when sin(alpha - theta) = 1
+        // So alpha - theta = PI/2, therefore: alpha = theta + PI/2
+        // = (lon + 180) * PI/180 + PI/2 = (lon + 270) * PI/180
+        const targetRot = (coords.lon + 270) * (Math.PI / 180);
+        targetRotationRef.current = targetRot;
+        isAutoRotatingToTargetRef.current = true;
+      }
+    }
+  }, [applySpriteDisplayState, testingRegionId]);
 
   const getIntersectedRegionId = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     const camera = cameraRef.current;
@@ -753,6 +1139,7 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
 
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
+      if (disableClick) return;
       const regionId = getIntersectedRegionId(event);
       if (!regionId) {
         onRegionSelect(null);
@@ -761,7 +1148,7 @@ export default function ParticleGlobe({ regions, onRegionSelect, selectedRegion 
       const region = regions.find((item) => item.id === regionId) ?? null;
       onRegionSelect(region);
     },
-    [getIntersectedRegionId, onRegionSelect, regions]
+    [disableClick, getIntersectedRegionId, onRegionSelect, regions]
   );
 
   return (

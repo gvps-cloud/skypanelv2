@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Globe, MoreHorizontal, Pencil, Trash2, RefreshCw, Plus, Search } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, RefreshCw, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import {
   listIPs,
@@ -58,12 +58,12 @@ export function IPAddressTable() {
     },
   });
 
-  const ips = ipResult?.data ?? [];
   const totalPages = ipResult?.pages ?? 1;
   const total = ipResult?.total ?? 0;
 
   // Filter IPs by search term
   const filteredIps = useMemo(() => {
+    const ips = ipResult?.data ?? [];
     if (!search.trim()) return ips;
     const term = search.toLowerCase();
     return ips.filter(
@@ -73,7 +73,7 @@ export function IPAddressTable() {
         ip.region.toLowerCase().includes(term) ||
         (ip.rdns?.toLowerCase().includes(term) ?? false)
     );
-  }, [ips, search]);
+  }, [ipResult?.data, search]);
 
   const deleteMutation = useMutation({
     mutationFn: (ip: IPAMIPAddress) => deleteIPAddress(ip.instanceId ?? "", ip.address),

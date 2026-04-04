@@ -1,17 +1,25 @@
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getSpriteVisualState, resolveThemeColors } from '@/components/home/ParticleGlobe';
+import { getSpriteDisplayState, resolveThemeColors } from '@/components/home/ParticleGlobe';
 
 describe('ParticleGlobe helpers', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
+  it('prefers testing state over selected/hovered state', () => {
+    expect(getSpriteDisplayState('us-east', 'us-east', 'us-east', 'us-east', undefined)).toBe('testing');
+    expect(getSpriteDisplayState('us-east', 'us-east', 'us-east', null, undefined)).toBe('selected');
+    expect(getSpriteDisplayState('us-east', 'us-east', null, null, undefined)).toBe('hovered');
+    expect(getSpriteDisplayState('us-east', null, null, null, undefined)).toBe('default');
+  });
+
   it('prefers selected state over hovered state', () => {
-    expect(getSpriteVisualState('us-east', 'us-east', 'us-east')).toBe('selected');
-    expect(getSpriteVisualState('us-east', 'us-east', null)).toBe('hovered');
-    expect(getSpriteVisualState('us-east', null, null)).toBe('default');
+    expect(getSpriteDisplayState('us-east', 'us-east', null, null, undefined)).toBe('selected');
+    expect(getSpriteDisplayState('us-east', 'us-east', 'us-east', null, undefined)).toBe('selected');
+    expect(getSpriteDisplayState('us-east', 'us-east', null, null, undefined)).toBe('hovered');
+    expect(getSpriteDisplayState('us-east', null, null, null, undefined)).toBe('default');
   });
 
   it('derives marker colors from CSS theme tokens', () => {

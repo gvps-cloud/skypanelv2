@@ -9,6 +9,16 @@ import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { shareIPs } from "@/services/ipamService";
 
+// IPv4 regex: matches valid IPv4 addresses
+const IPv4_REGEX = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+
+// IPv6 regex: matches valid IPv6 addresses (including compressed forms)
+const IPv6_REGEX = /^(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)$/;
+
+function isValidIPAddress(value: string): boolean {
+  return IPv4_REGEX.test(value) || IPv6_REGEX.test(value);
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 function getAuthHeaders(): HeadersInit {
@@ -72,6 +82,12 @@ export function IPSharePanel() {
       toast.error("Add at least one IP address");
       return;
     }
+    // Validate all IPs before submission
+    const invalidIPs = validIPs.filter((ip) => !isValidIPAddress(ip));
+    if (invalidIPs.length > 0) {
+      toast.error(`Invalid IP address(es): ${invalidIPs.join(", ")}`);
+      return;
+    }
     shareMutation.mutate({ instanceId, ips: validIPs });
   };
 
@@ -116,8 +132,11 @@ export function IPSharePanel() {
                   value={ip}
                   onChange={(e) => updateIP(index, e.target.value)}
                   placeholder="192.0.2.1 or 2600:3c01::"
-                  className="font-mono flex-1"
+                  className={`font-mono flex-1 ${ip && !isValidIPAddress(ip) ? "border-destructive" : ""}`}
                 />
+                {ip && !isValidIPAddress(ip) && (
+                  <p className="text-xs text-destructive">Invalid IP</p>
+                )}
                 {ips.length > 1 && (
                   <Button
                     variant="ghost"

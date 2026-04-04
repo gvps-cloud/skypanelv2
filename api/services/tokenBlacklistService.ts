@@ -345,9 +345,9 @@ export async function isRevoked(token: string): Promise<boolean> {
 
   } catch (error) {
     console.error('[Token blacklist] Failed to check revocation status:', error);
-    // Fail open - if we can't check, allow the token through
-    // JWT verification will still catch expired tokens
-    return false;
+    // Fail closed - if we cannot verify the token is NOT revoked, deny access
+    // This prevents revoked tokens from being accepted during Redis outages
+    return true;
   }
 }
 

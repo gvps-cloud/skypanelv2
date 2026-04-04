@@ -29,12 +29,10 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BRAND_NAME } from "@/lib/brand";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   type SectionDefinition,
-  type EndpointDefinition,
   methodStyles,
   formatJson,
   syncSectionsWithActiveRoutes,
@@ -43,7 +41,6 @@ import {
 } from "@/lib/apiDocsShared";
 import { ApiKeyInput } from "@/components/api-docs/ApiKeyInput";
 import { RequestBuilder } from "@/components/api-docs/RequestBuilder";
-import { ResponseViewer } from "@/components/api-docs/ResponseViewer";
 import { executeRequest, validateApiKey } from "@/lib/apiDocsTryIt";
 
 // Response state type

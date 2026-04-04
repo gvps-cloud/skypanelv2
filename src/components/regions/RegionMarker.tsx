@@ -3,8 +3,8 @@
  * Renders a map marker with country flag and region info card
  */
 
-import React, { useState, useMemo } from "react";
-import { MapPin, Loader2, AlertCircle } from "lucide-react";
+import React, { useState } from "react";
+import { MapPin } from "lucide-react";
 
 // Country code mapping for regions
 export const REGION_TO_COUNTRY: Record<string, string> = {
@@ -155,11 +155,11 @@ export const CountryFlag: React.FC<{ countryCode: string; size?: number; classNa
 
 export const RegionMarker: React.FC<RegionMarkerProps> = ({
   regionId,
-  regionLabel,
+  regionLabel: _regionLabel,
   country,
   latency,
-  minLatency,
-  maxLatency,
+  minLatency: _minLatency,
+  maxLatency: _maxLatency,
   loading = false,
   error = false,
   isSelected = false,
@@ -171,8 +171,8 @@ export const RegionMarker: React.FC<RegionMarkerProps> = ({
   size = "md",
 }) => {
   const countryCode = REGION_TO_COUNTRY[regionId] || (country?.toLowerCase().substring(0, 2));
-  const countryName = countryCode ? COUNTRY_NAMES[countryCode] || country : country;
-  
+  const _countryName = countryCode ? COUNTRY_NAMES[countryCode] || country : country;
+
   const sizeConfig = {
     sm: { flag: 16, padding: "p-1", text: "text-[7px]", badge: "text-[6px] px-1" },
     md: { flag: 20, padding: "p-1.5", text: "text-[9px]", badge: "text-[7px] px-1.5" },

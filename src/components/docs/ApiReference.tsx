@@ -33,7 +33,6 @@ import {
   syncSectionsWithActiveRoutes,
   buildBaseSections,
 } from "@/lib/apiDocsShared";
-import { ACTIVE_API_ROUTE_MANIFEST } from "@/lib/apiRouteManifest";
 
 // ── Rendering Helpers ──────────────────────────────────────────────────────
 
@@ -69,7 +68,7 @@ interface ApiReferenceProps {
   onBack?: () => void;
 }
 
-export default function ApiReference({ onBack }: ApiReferenceProps) {
+export default function ApiReference({ onBack: _onBack }: ApiReferenceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
 

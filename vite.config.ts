@@ -122,11 +122,10 @@ export default defineConfig(({ _mode }) => {
         timeout: 0, // Disable timeout for SSE connections
         proxyTimeout: 0, // Disable proxy timeout
         configure: (proxy, _options) => {
-          proxy.on("error", (err, _req, _res) => {
-            console.log("proxy error", err);
+          proxy.on("error", (_err, _req, _res) => {
+            // Silently handle proxy errors to avoid flooding logs
           });
           proxy.on("proxyReq", (proxyReq, req, _res) => {
-            console.log("Sending Request to the Target:", req.method, req.url);
             // For SSE connections, ensure proper headers
             if (req.url?.includes("/notifications/stream")) {
               proxyReq.setHeader("Accept", "text/event-stream");
@@ -134,11 +133,6 @@ export default defineConfig(({ _mode }) => {
             }
           });
           proxy.on("proxyRes", (proxyRes, req, _res) => {
-            console.log(
-              "Received Response from the Target:",
-              proxyRes.statusCode,
-              req.url,
-            );
             // For SSE connections, ensure proper headers are passed through
             if (req.url?.includes("/notifications/stream")) {
               proxyRes.headers["cache-control"] = "no-cache";

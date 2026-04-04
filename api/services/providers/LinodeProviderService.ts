@@ -43,8 +43,17 @@ export class LinodeProviderService extends BaseProviderService {
    * Override error handling to use Linode-specific normalization
    */
   protected handleApiError(error: any, context: string): never {
-    console.error(`[linode] ${context}:`, error);
-    const normalizedError = normalizeLinodeError(error, 'linode');
+    // Log only safe error properties to prevent token exfiltration
+    const safeError = {
+      code: error?.code,
+      message: error?.message,
+      statusCode: error?.statusCode,
+      status: error?.status,
+      url: error?.url,
+      method: error?.method,
+    };
+    console.error(`[linode] ${context}:`, safeError);
+    const normalizedError = normalizeLinodeError(safeError, 'linode');
     throw normalizedError;
   }
 

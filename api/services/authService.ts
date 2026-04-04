@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
-import { randomInt } from 'crypto';
+import { randomBytes } from 'crypto';
 import { query, transaction } from '../lib/database.js';
 import { config } from '../config/index.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -25,11 +25,13 @@ export interface LoginData {
   code?: string; // 2FA code
 }
 
-const RESET_CODE_LENGTH = 8;
-
+/**
+ * Generates a cryptographically secure password reset token.
+ * Uses 128 bits of entropy (32 hex characters) meeting OWASP requirements
+ * for authentication secrets (minimum 64 bits, recommended 128+ bits).
+ */
 function generatePasswordResetCode(): string {
-  const maxValue = 10 ** RESET_CODE_LENGTH;
-  return randomInt(0, maxValue).toString().padStart(RESET_CODE_LENGTH, '0');
+  return randomBytes(16).toString('hex');
 }
 
 /**
@@ -334,8 +336,7 @@ export class AuthService {
       // Log password reset request for security monitoring
       console.info('Password reset requested for email:', {
         email: email.toLowerCase(),
-        timestamp: new Date().toISOString(),
-        codeLength: RESET_CODE_LENGTH
+        timestamp: new Date().toISOString()
       });
 
       const result = await query(
@@ -412,8 +413,9 @@ export class AuthService {
       const normalizedToken = token.trim();
       const normalizedEmail = email.toLowerCase().trim();
 
-      if (!/^\d{8}$/.test(normalizedToken)) {
-        throw new Error('Reset code must be exactly 8 digits');
+      // Validate token is a 32-character hex string (128 bits of entropy from randomBytes(16))
+      if (!/^[a-f0-9]{32}$/i.test(normalizedToken)) {
+        throw new Error('Invalid reset token format');
       }
 
       // Log password reset attempt for security monitoring

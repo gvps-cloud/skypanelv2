@@ -328,7 +328,7 @@ router.post('/', [
     let fingerprint: string;
     try {
       fingerprint = generateFingerprint(publicKey);
-    } catch (error: any) {
+    } catch {
       res.status(400).json({
         error: 'Invalid SSH public key format',
         code: ErrorCodes.SSH_KEY_INVALID

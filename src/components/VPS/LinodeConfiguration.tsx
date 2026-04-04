@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Loader2, Eye, EyeOff, Key, Shield, AlertTriangle } from 'lucide-react';
+import { Eye, EyeOff, Shield } from 'lucide-react';
 import { SSHKeyAccordionSelect } from './SSHKeyAccordionSelect';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

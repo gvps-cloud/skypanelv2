@@ -84,8 +84,10 @@ function getKeyConfig(type: 'ssh' | 'provider'): KeyConfig {
  */
 function deriveKey(secret: string): Buffer {
   if (!secret || secret.length < 16) {
-    const fallback = (config.JWT_SECRET || 'skypanelv2-dev-secret').padEnd(32, '0');
-    return crypto.createHash('sha256').update(fallback).digest();
+    throw new Error(
+      'Encryption key must be at least 16 characters. ' +
+      'Ensure SSH_CRED_SECRET or PROVIDER_TOKEN_SECRET is properly configured.'
+    );
   }
   return crypto.createHash('sha256').update(secret).digest();
 }

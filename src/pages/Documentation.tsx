@@ -16,12 +16,8 @@ import {
   CreditCard,
   Server,
   Code,
-  LayoutGrid,
   Globe,
   Cpu,
-  HardDrive,
-  Database,
-  DollarSign,
   Wifi,
   Loader2,
 } from "lucide-react";
@@ -42,6 +38,18 @@ import type {
 } from "@/types/documentation";
 import ApiReference from "@/components/docs/ApiReference";
 import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
+
+// ── Plans & Regions constants ─────────────────────────────────────────────────
+
+const DEFAULT_CATEGORY_META = {
+  nanode:      { label: "Nanode",         order: 0 },
+  standard:    { label: "Standard",       order: 1 },
+  dedicated:   { label: "Dedicated CPU",  order: 2 },
+  premium:     { label: "Premium",        order: 3 },
+  highmem:     { label: "High Memory",    order: 4 },
+  gpu:         { label: "GPU",            order: 5 },
+  accelerated: { label: "Accelerated",    order: 6 },
+} as const;
 
 // ── Plans & Regions types ───────────────────────────────────────────────────
 
@@ -508,16 +516,6 @@ export default function Documentation() {
   // ── Render: Plans & Regions article (dynamic data) ───────────────────────
 
   // ── Helpers for Plans & Regions ──────────────────────────────────────────
-
-  const DEFAULT_CATEGORY_META: Record<string, { label: string; order: number }> = {
-    nanode:      { label: "Nanode",         order: 0 },
-    standard:    { label: "Standard",       order: 1 },
-    dedicated:   { label: "Dedicated CPU",  order: 2 },
-    premium:     { label: "Premium",        order: 3 },
-    highmem:     { label: "High Memory",    order: 4 },
-    gpu:         { label: "GPU",            order: 5 },
-    accelerated: { label: "Accelerated",    order: 6 },
-  };
 
   const getCategoryLabel = useCallback((category: string): string => {
     const mapping = enabledCategoryMappings.find(

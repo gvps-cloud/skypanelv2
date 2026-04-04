@@ -99,14 +99,23 @@ export abstract class BaseProviderService implements IProviderService {
    * }
    */
   protected handleApiError(error: any, context: string): never {
-    console.error(`[${this.providerType}] ${context}:`, error);
+    // Log only safe error properties to prevent token exfiltration
+    const safeError = {
+      code: error?.code,
+      message: error?.message,
+      statusCode: error?.statusCode,
+      status: error?.status,
+      url: error?.url,
+      method: error?.method,
+    };
+    console.error(`[${this.providerType}] ${context}:`, safeError);
 
     if (error instanceof Error) {
       throw this.createError(
         'API_ERROR',
         error.message,
         undefined,
-        error
+        safeError
       );
     }
 
@@ -114,7 +123,7 @@ export abstract class BaseProviderService implements IProviderService {
       'UNKNOWN_ERROR',
       'An unknown error occurred',
       undefined,
-      error
+      safeError
     );
   }
 

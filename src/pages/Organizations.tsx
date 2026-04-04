@@ -101,9 +101,10 @@ const Organizations: React.FC = () => {
     purchaseHistory: any[];
   } | null>(null);
   const [creditsLoading, setCreditsLoading] = useState(false);
-  const [creditPacks, setCreditPacks] = useState<any[]>([]);
-  const [packsLoading, setPacksLoading] = useState(false);
-  const [billingLoading, setBillingLoading] = useState(false);
+  // These state variables are set but never read - intentionally kept for potential future use
+  const [_creditPacks, setCreditPacks] = useState<any[]>([]);
+  const [_packsLoading, setPacksLoading] = useState(false);
+  const [_billingLoading, setBillingLoading] = useState(false);
   const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
   const { token, user, switchOrganization } = useAuth();
   const navigate = useNavigate();

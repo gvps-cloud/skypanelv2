@@ -6,9 +6,41 @@
 
 import { Router, type Request, type Response } from 'express';
 import { body, param, query as queryValidator, validationResult } from 'express-validator';
+import { isIP } from 'net';
 import { authenticateToken, requireAdmin } from '../../middleware/auth.js';
 import { query } from '../../lib/database.js';
 import * as ipService from '../../services/ipService.js';
+
+// Custom validator for IP addresses (IPv4 and IPv6)
+function isValidIP(value: string): boolean {
+  return isIP(value) !== 0;
+}
+
+// Valid firewall rule actions and protocols
+const FIREWALL_ACTIONS = ['ACCEPT', 'DROP'];
+const FIREWALL_PROTOCOLS = ['tcp', 'udp', 'icmp', 'all', 'ipv6', 'icmpv6'];
+
+// Validate a single firewall rule object
+function isValidFirewallRule(rule: any): boolean {
+  if (!rule || typeof rule !== 'object') return false;
+  if (!FIREWALL_ACTIONS.includes(rule.action)) return false;
+  if (rule.protocol && !FIREWALL_PROTOCOLS.includes(rule.protocol)) return false;
+  // ports should be a string if present
+  if (rule.ports !== undefined && typeof rule.ports !== 'string') return false;
+  return true;
+}
+
+// Custom validator for firewall rules array
+function isValidFirewallRulesArray(value: any): boolean {
+  if (!Array.isArray(value)) return false;
+  return value.every((rule) => isValidFirewallRule(rule));
+}
+
+// Custom validator for firewall tags array
+function isValidTagsArray(value: any): boolean {
+  if (!Array.isArray(value)) return false;
+  return value.every((tag) => typeof tag === 'string' && tag.length <= 50);
+}
 
 const router = Router();
 router.use(authenticateToken, requireAdmin);
@@ -64,7 +96,7 @@ router.get('/ips',
 
 // Get single IP
 router.get('/ips/:address',
-  param('address').isString().trim().notEmpty(),
+  param('address').isString().trim().notEmpty().custom(isValidIP),
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -111,7 +143,7 @@ router.post('/ips',
 // Delete IP
 router.delete('/ips/:instanceId/:address',
   param('instanceId').isString().trim().notEmpty(),
-  param('address').isString().trim().notEmpty(),
+  param('address').isString().trim().notEmpty().custom(isValidIP),
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -132,7 +164,7 @@ router.delete('/ips/:instanceId/:address',
 // Assign IPs between instances
 router.post('/ips/assign',
   body('assignments').isArray({ min: 1 }),
-  body('assignments.*.address').isString().trim().notEmpty(),
+  body('assignments.*.address').isString().trim().notEmpty().custom(isValidIP),
   body('assignments.*.instanceId').isString().trim().notEmpty(),
   body('region').isString().trim().notEmpty(),
   async (req: Request, res: Response) => {
@@ -175,7 +207,7 @@ router.post('/ips/share',
 
 // Update IP reverse DNS
 router.put('/ips/:address/rdns',
-  param('address').isString().trim().notEmpty(),
+  param('address').isString().trim().notEmpty().custom(isValidIP),
   body('rdns').optional({ nullable: true }).isString(),
   async (req: Request, res: Response) => {
     try {
@@ -319,13 +351,13 @@ router.get('/firewalls', async (_req: Request, res: Response) => {
 
 // Create firewall
 router.post('/firewalls',
-  body('label').isString().trim().notEmpty(),
+  body('label').isString().trim().notEmpty().isLength({ max: 100 }),
   body('rules').isObject(),
   body('rules.inbound_policy').isIn(['ACCEPT', 'DROP']),
   body('rules.outbound_policy').isIn(['ACCEPT', 'DROP']),
-  body('rules.inbound').optional().isArray(),
-  body('rules.outbound').optional().isArray(),
-  body('tags').optional().isArray(),
+  body('rules.inbound').optional().isArray().custom(isValidFirewallRulesArray),
+  body('rules.outbound').optional().isArray().custom(isValidFirewallRulesArray),
+  body('tags').optional().isArray().custom(isValidTagsArray),
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -440,8 +472,8 @@ router.put('/firewalls/:id/rules',
   param('id').isInt({ min: 1 }),
   body('inbound_policy').isIn(['ACCEPT', 'DROP']),
   body('outbound_policy').isIn(['ACCEPT', 'DROP']),
-  body('inbound').optional().isArray(),
-  body('outbound').optional().isArray(),
+  body('inbound').optional().isArray().custom(isValidFirewallRulesArray),
+  body('outbound').optional().isArray().custom(isValidFirewallRulesArray),
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -533,6 +565,8 @@ router.delete('/firewalls/:id/devices/:deviceId',
 
 // Get firewall history
 router.get('/firewalls/:id/history',
+  authenticateToken,
+  requireAdmin,
   param('id').isInt({ min: 1 }),
   async (req: Request, res: Response) => {
     try {
@@ -556,7 +590,10 @@ router.get('/firewalls/:id/history',
 // ── Firewall Settings ──
 
 // Get firewall settings
-router.get('/firewall-settings', async (_req: Request, res: Response) => {
+router.get('/firewall-settings',
+  authenticateToken,
+  requireAdmin,
+  async (_req: Request, res: Response) => {
   try {
     const settings = await ipService.getFirewallSettings();
     res.json({ success: true, data: settings });
@@ -568,6 +605,8 @@ router.get('/firewall-settings', async (_req: Request, res: Response) => {
 
 // Update firewall settings
 router.put('/firewall-settings',
+  authenticateToken,
+  requireAdmin,
   body('default_firewall_ids').optional().isObject(),
   async (req: Request, res: Response) => {
     try {
@@ -589,7 +628,10 @@ router.put('/firewall-settings',
 // ── Firewall Templates ──
 
 // List firewall templates
-router.get('/firewall-templates', async (_req: Request, res: Response) => {
+router.get('/firewall-templates',
+  authenticateToken,
+  requireAdmin,
+  async (_req: Request, res: Response) => {
   try {
     const templates = await ipService.listFirewallTemplates();
     res.json({ success: true, data: templates });

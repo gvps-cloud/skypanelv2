@@ -19,7 +19,7 @@ import {
   getFirewallDevices, attachFirewallDevice, detachFirewallDevice,
   getFirewallSettings, listFirewallTemplates,
   type IPAMFirewall, type IPAMFirewallRule, type IPAMFirewallRules,
-  type IPAMFirewallDevice, type FirewallAction, type FirewallProtocol,
+  type IPAMFirewallDevice, type FirewallAction,
   type IPAMFirewallTemplate, type IPAMFirewallSettings,
 } from "@/services/ipamService";
 

@@ -9,6 +9,16 @@ import { ArrowRight, Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { assignIPs } from "@/services/ipamService";
 
+// IPv4 regex: matches valid IPv4 addresses
+const IPv4_REGEX = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+
+// IPv6 regex: matches valid IPv6 addresses (including compressed forms)
+const IPv6_REGEX = /^(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}|:(?::[0-9a-fA-F]{1,4}){1,7}|::)$/;
+
+function isValidIPAddress(value: string): boolean {
+  return IPv4_REGEX.test(value) || IPv6_REGEX.test(value);
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 function getAuthHeaders(): HeadersInit {
@@ -191,8 +201,11 @@ export function IPAssignPanel() {
                   value={row.address}
                   onChange={(e) => updateRow(index, "address", e.target.value)}
                   placeholder="192.0.2.1"
-                  className="font-mono"
+                  className={`font-mono ${row.address && !isValidIPAddress(row.address) ? "border-destructive" : ""}`}
                 />
+                {row.address && !isValidIPAddress(row.address) && (
+                  <p className="text-xs text-destructive">Enter a valid IPv4 or IPv6 address</p>
+                )}
               </div>
               <ArrowRight className="h-4 w-4 text-muted-foreground mb-3" />
               <div className="flex-1 space-y-2">

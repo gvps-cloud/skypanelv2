@@ -182,7 +182,7 @@ export function SSHKeyAccordionSelect({
               </div>
             ) : (
               <div className="border-b border-border last:border-b-0">
-                {filteredKeys.map((key, index) => {
+                {filteredKeys.map((key) => {
                   const isSelected = selectedKeyIds.includes(String(key.id));
 
                   return (

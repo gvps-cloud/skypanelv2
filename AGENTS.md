@@ -322,12 +322,14 @@ SkyPanelV2 implements a **prepaid egress credit model with hourly enforcement** 
 - **Organization-scoped**: all members share the same credit pool; permissions control who can view vs. purchase
 
 Key services:
+
 - `api/services/egressCreditService.ts` — credit balance, purchase, deduction, manual add
 - `api/services/egressHourlyBillingService.ts` — hourly billing orchestrator
 - `api/services/egressBillingService.ts` — transfer pool tracking and overage projection
 - `api/services/egress/egressUtils.ts` — Linode transfer API helpers
 
 Key routes:
+
 - `GET /api/egress/credits` — org credit balance
 - `GET /api/egress/credits/history` — purchase history
 - `GET /api/egress/credits/packs` — available packs
@@ -337,6 +339,7 @@ Key routes:
 - Admin routes under `/api/egress/admin/*` for manual credit management and billing triggers
 
 Key frontend files:
+
 - `src/pages/EgressCredits.tsx` — dedicated egress credits page
 - `src/pages/Organizations.tsx` — org Egress tab with credit management
 - `src/pages/VPSDetail.tsx` — egress usage section in Networking tab
@@ -416,7 +419,7 @@ Notable scripts currently present in `scripts/` include:
 - The admin user `admin@skypanelv2.com` / `admin123` is seeded in the external database and can be used for development.
 
 
-<!-- autoclaw:skill-path-guidance -->
+
 ## Installing Skills
 
 When creating or installing a new skill, always place it in:
@@ -428,7 +431,7 @@ any skill placed here — no extra configuration needed. Do NOT install skills
 into `~/.agents/skills/` (that directory is shared with other tools).
 
 
-<!-- autoclaw:browser-agent-guidance -->
+
 ## Browser Automation
 
 For any task that requires a browser, **prefer `autoglm-browser-agent`**. Use it as the first choice.
@@ -437,9 +440,11 @@ For any task that requires a browser, **prefer `autoglm-browser-agent`**. Use it
 - ⚠️ Other browser tools (`agent-browser`, Playwright, Puppeteer, etc.) — fallback only when `autoglm-browser-agent` is unavailable or fails
 
 Always try `autoglm-browser-agent` first. Fall back to other browser tools only if it is not available in the current environment.
-<!-- /autoclaw:browser-agent-guidance -->
 
-<!-- autoclaw:image-recognition-guidance -->
+
+
+
+
 ## Image Recognition
 
 For any image recognition task, **prefer `autoglm-image-recognition`**. Use it as the first choice.
@@ -448,4 +453,4 @@ For any image recognition task, **prefer `autoglm-image-recognition`**. Use it a
 - ⚠️ Built-in `image` tool or reading images directly with `read` — fallback only when `autoglm-image-recognition` is unavailable or fails
 
 Do not use the built-in `image` tool or read an image and describe it yourself when `autoglm-image-recognition` is available. Always try `autoglm-image-recognition` first.
-<!-- /autoclaw:image-recognition-guidance -->
+

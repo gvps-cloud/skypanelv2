@@ -1385,7 +1385,10 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const result = await query(
-        "SELECT * FROM service_providers ORDER BY display_order ASC NULLS LAST, created_at DESC",
+        `SELECT id, name, type, active, display_order, configuration,
+                created_at, updated_at
+           FROM service_providers
+       ORDER BY display_order ASC NULLS LAST, created_at DESC`,
       );
 
       // Enhance providers with validation status and last API call from configuration
@@ -1437,7 +1440,8 @@ router.post(
       const result = await query(
         `INSERT INTO service_providers (name, type, api_key_encrypted, active, display_order)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
+         RETURNING id, name, type, active, display_order, configuration,
+                   created_at, updated_at`,
         [name, type, encryptedApiKey, active, nextOrder],
       );
 
@@ -1541,7 +1545,9 @@ router.put(
       const result = await query(
         `UPDATE service_providers SET ${updates.join(
           ", ",
-        )} WHERE id = $${paramCount} RETURNING *`,
+        )} WHERE id = $${paramCount}
+          RETURNING id, name, type, active, display_order, configuration,
+                    created_at, updated_at`,
         values,
       );
 

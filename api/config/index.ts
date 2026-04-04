@@ -242,31 +242,6 @@ function getConfig(): Config {
     BETTERUPTIME_STATUS_PAGE_ID: process.env.BETTERUPTIME_STATUS_PAGE_ID?.trim() || undefined,
   };
 
-  // Debug logging
-  console.log('Config loaded:', {
-
-    hasPayPalClientId: !!config.PAYPAL_CLIENT_ID,
-    hasPayPalClientSecret: !!config.PAYPAL_CLIENT_SECRET,
-    paypalMode: config.PAYPAL_MODE,
-    hasSmtpCredentials: !!config.SMTP_USERNAME && !!config.SMTP_PASSWORD,
-    hasResendKey: !!config.RESEND_API_KEY,
-    hasFromEmail: !!config.FROM_EMAIL,
-    emailProviderPriority: config.EMAIL_PROVIDER_PRIORITY,
-    smtp: {
-      host: config.SMTP_HOST,
-      port: config.SMTP_PORT,
-      secure: config.SMTP_SECURE,
-      requireTLS: config.SMTP_REQUIRE_TLS
-    },
-    rateLimiting: {
-      anonymous: `${config.rateLimiting.anonymousMaxRequests}/${config.rateLimiting.anonymousWindowMs}ms`,
-
-      authenticated: `${config.rateLimiting.authenticatedMaxRequests}/${config.rateLimiting.authenticatedWindowMs}ms`,
-      admin: `${config.rateLimiting.adminMaxRequests}/${config.rateLimiting.adminWindowMs}ms`,
-      trustProxy: config.rateLimiting.trustProxy
-    },
-    companyBrandName: config.COMPANY_BRAND_NAME
-  });
 
   return config;
 }

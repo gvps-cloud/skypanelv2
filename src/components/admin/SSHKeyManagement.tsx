@@ -2,7 +2,7 @@
  * Admin SSH Key Management Component
  * Allows admins to view and manage SSH keys across all organizations
  */
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   Key,
@@ -21,7 +21,6 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api';
@@ -121,7 +120,7 @@ const CopyButton: React.FC<{ text: string; label: string }> = ({ text, label }) 
       setCopied(true);
       toast.success(`${label} copied to clipboard`);
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch {
       toast.error('Failed to copy to clipboard');
     }
   };
