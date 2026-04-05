@@ -6,9 +6,6 @@
     "snyk-secure-development": {
       "enabled": true
     },
-    "neon-postgres": {
-      "enabled": true
-    },
     "prisma": {
       "enabled": true
     },

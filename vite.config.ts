@@ -1,8 +1,21 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { VitePWA } from 'vite-plugin-pwa';
 import type { Plugin } from 'vite';
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getApiUrlPattern(clientUrl: string): RegExp {
+  try {
+    const origin = new URL(clientUrl).origin;
+    return new RegExp(`^${escapeRegExp(origin)}/api/`, "i");
+  } catch {
+    return /^https:\/\/gvps\.cloud\/api\//i;
+  }
+}
 
 // Plugin to remove mock data from all source files in production builds
 function removeMockData(): Plugin {
@@ -40,9 +53,14 @@ function removeMockData(): Plugin {
 }
 
 // https://vite.dev/config/
-export default defineConfig(({ _mode }) => {
-  // Load env file based on mode
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
   const companyName = process.env.VITE_COMPANY_NAME || process.env.COMPANY_NAME || process.env.COMPANY_BRAND_NAME || 'GVPSCloud';
+  const clientUrl =
+    env.CLIENT_URL ||
+    process.env.CLIENT_URL ||
+    "http://localhost:5173";
+  const apiUrlPattern = getApiUrlPattern(clientUrl);
   
   return {
     resolve: {
@@ -87,9 +105,10 @@ export default defineConfig(({ _mode }) => {
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB limit
+        navigateFallback: null, // Disable fallback for API routes
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\./i,
+            urlPattern: apiUrlPattern,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',

@@ -127,6 +127,7 @@ function buildRuntimeHeadMarkup(): string {
     process.env.VITE_TRACKING_SCRIPT_URL,
   );
   const siteId = readEnvString(process.env.VITE_RYBBIT_SITE_ID);
+  const apiKey = readEnvString(process.env.VITE_RYBBIT_API_KEY);
   const trackErrors = readEnvBoolean(process.env.VITE_RYBBIT_TRACK_ERRORS, true);
   const sessionReplay = readEnvBoolean(process.env.VITE_RYBBIT_SESSION_REPLAY, true);
 
@@ -134,6 +135,7 @@ function buildRuntimeHeadMarkup(): string {
     VITE_RYBBIT_SCRIPT_URL: scriptSrc,
     VITE_TRACKING_SCRIPT_URL: readEnvString(process.env.VITE_TRACKING_SCRIPT_URL),
     VITE_RYBBIT_SITE_ID: siteId,
+    VITE_RYBBIT_API_KEY: apiKey,
     VITE_RYBBIT_TRACK_ERRORS: trackErrors,
     VITE_RYBBIT_SESSION_REPLAY: sessionReplay,
   };
@@ -149,6 +151,10 @@ function buildRuntimeHeadMarkup(): string {
       `src="${escapeHtml(scriptSrc)}"`,
       `data-site-id="${escapeHtml(siteId)}"`,
     ];
+
+    if (apiKey) {
+      attrs.push(`data-api-key="${escapeHtml(apiKey)}"`);
+    }
 
     if (trackErrors) {
       attrs.push(`data-track-errors="true"`);

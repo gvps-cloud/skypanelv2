@@ -38,6 +38,7 @@ const helmetConfig = {
         'https://cdn.jsdelivr.net', // Status page: world map GeoJSON
         'https://*.linode.com', // Status page: live region latency checks (covers both speedtest.CITY.linode.com and CITY.speedtest.linode.com formats)
         'https://api.linode.com', // Status page: public region data
+        'https://*.sslip.io', // Rybbit analytics
         'ws://localhost:*',
         'wss://localhost:*',
       ],
@@ -52,7 +53,7 @@ const helmetConfig = {
       scriptSrc: [
         "'self'",
         "'unsafe-inline'",
-        // Removed 'unsafe-eval' for production hardening. React production builds do not require it.
+        'https://*.sslip.io', // Rybbit analytics - wildcard to support any sslip.io subdomain
       ],
       scriptSrcAttr: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'"], // Required for inline styles (React/Tailwind)

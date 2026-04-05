@@ -66,6 +66,10 @@
         runtimeConfig.VITE_RYBBIT_SITE_ID,
         env.VITE_RYBBIT_SITE_ID,
       );
+      const apiKey = readString(
+        runtimeConfig.VITE_RYBBIT_API_KEY,
+        env.VITE_RYBBIT_API_KEY,
+      );
 
       if (scriptSrc && siteId && !document.getElementById(scriptId)) {
         const script = document.createElement("script");
@@ -73,6 +77,10 @@
         script.src = scriptSrc;
         script.defer = true;
         script.dataset.siteId = siteId;
+
+        if (apiKey) {
+          script.dataset.apiKey = apiKey;
+        }
 
         if (
           readBoolean(
