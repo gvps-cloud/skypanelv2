@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { motion, type Variants } from "framer-motion";
 import {
   AlertTriangle,
@@ -23,7 +24,13 @@ import {
 import "@/styles/home.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Status as StatusDot } from "@/components/ui/status";
 import MarketingNavbar from "@/components/MarketingNavbar";
@@ -143,16 +150,24 @@ interface BetterStackStatusReport {
 export default function Status() {
   const [services, setServices] = useState<ServiceComponent[]>([]);
   const [activeIncidents, setActiveIncidents] = useState<Incident[]>([]);
-  const [lastUpdated, setLastUpdated] = useState<string>(() => new Date().toLocaleTimeString());
+  const [lastUpdated, setLastUpdated] = useState<string>(() =>
+    new Date().toLocaleTimeString(),
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Better Stack state
   const [bsMonitors, setBsMonitors] = useState<BetterStackMonitor[]>([]);
-  const [bsActiveIncidents, setBsActiveIncidents] = useState<BetterStackIncident[]>([]);
-  const [bsIncidentsHistory, setBsIncidentsHistory] = useState<BetterStackIncident[]>([]);
-  const [bsStatusReports, setBsStatusReports] = useState<BetterStackStatusReport[]>([]);
+  const [bsActiveIncidents, setBsActiveIncidents] = useState<
+    BetterStackIncident[]
+  >([]);
+  const [bsIncidentsHistory, setBsIncidentsHistory] = useState<
+    BetterStackIncident[]
+  >([]);
+  const [bsStatusReports, setBsStatusReports] = useState<
+    BetterStackStatusReport[]
+  >([]);
   const [bsConfigured, setBsConfigured] = useState(false);
   const [bsCachedAt, setBsCachedAt] = useState<string | null>(null);
   const [bsStale, setBsStale] = useState(false);
@@ -218,7 +233,7 @@ export default function Status() {
                 description: `${getAvailabilityLabel(monitor.availability)} availability`,
                 availability: monitor.availability,
                 statusHistory: monitor.statusHistory,
-              })
+              }),
             );
             setServices([...liveServices, ...monitorServices]);
           }
@@ -231,7 +246,9 @@ export default function Status() {
       }
     } catch (err) {
       console.error("Failed to fetch live data:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch live data");
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch live data",
+      );
 
       const fallbackServices: ServiceComponent[] = [
         {
@@ -283,9 +300,7 @@ export default function Status() {
     };
 
     return (
-      <Badge variant={variants[status] as any}>
-        {getStatusLabel(status)}
-      </Badge>
+      <Badge variant={variants[status] as any}>{getStatusLabel(status)}</Badge>
     );
   };
 
@@ -328,10 +343,13 @@ export default function Status() {
 
   const getServiceIcon = (name: string) => {
     const n = name.toLowerCase();
-    if (n.includes("api") || n.includes("rest") || n.includes("http")) return Network;
-    if (n.includes("database") || n.includes("db") || n.includes("sql")) return ServerCog;
+    if (n.includes("api") || n.includes("rest") || n.includes("http"))
+      return Network;
+    if (n.includes("database") || n.includes("db") || n.includes("sql"))
+      return ServerCog;
     if (n.includes("dns")) return ActivitySquare;
-    if (n.includes("email") || n.includes("mail") || n.includes("smtp")) return Headphones;
+    if (n.includes("email") || n.includes("mail") || n.includes("smtp"))
+      return Headphones;
     return Shield;
   };
 
@@ -433,7 +451,7 @@ export default function Status() {
         </section>
 
         {/* ═══════════════════════ TRUST MARQUEE ═══════════════════════ */}
-        <section className="border-b border-border/40 bg-muted/20 py-5">
+        <section className="border-b border-border/40 bg-muted/20 py-6">
           <div className="home-marquee">
             <div className="home-marquee__track">
               {[...trustItems, ...trustItems].map((item, i) => (
@@ -453,7 +471,7 @@ export default function Status() {
         </section>
 
         {/* ═══════════════════════ MAIN CONTENT ═════════════════════════ */}
-        <section className="py-16 sm:py-20">
+        <section className="py-24 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="space-y-16">
               {/* Error Banner */}
@@ -494,7 +512,9 @@ export default function Status() {
                                 <CardTitle>{incident.title}</CardTitle>
                                 <CardDescription className="mt-2">
                                   Started:{" "}
-                                  {new Date(incident.startTime).toLocaleString()}
+                                  {new Date(
+                                    incident.startTime,
+                                  ).toLocaleString()}
                                 </CardDescription>
                               </div>
                               {getStatusBadge(incident.status)}
@@ -525,7 +545,7 @@ export default function Status() {
               {bsConfigured &&
                 (bsActiveIncidents.length > 0 ||
                   bsStatusReports.filter(
-                    (r) => r.aggregateState !== "operational"
+                    (r) => r.aggregateState !== "operational",
                   ).length > 0) && (
                   <motion.div variants={revealItem}>
                     <section className="space-y-4">
@@ -537,7 +557,7 @@ export default function Status() {
                         <Badge variant="destructive" className="ml-auto">
                           {bsActiveIncidents.length +
                             bsStatusReports.filter(
-                              (r) => r.aggregateState !== "operational"
+                              (r) => r.aggregateState !== "operational",
                             ).length}{" "}
                           active
                         </Badge>
@@ -553,12 +573,16 @@ export default function Status() {
                                 <div className="flex-1 min-w-0">
                                   <CardTitle className="flex items-center gap-2">
                                     <AlertTriangle className="h-4 w-4 text-orange-500 flex-shrink-0" />
-                                    <span className="truncate">{incident.name}</span>
+                                    <span className="truncate">
+                                      {incident.name}
+                                    </span>
                                   </CardTitle>
                                   <CardDescription className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
                                     <span>
                                       Started:{" "}
-                                      {new Date(incident.startedAt).toLocaleString()}
+                                      {new Date(
+                                        incident.startedAt,
+                                      ).toLocaleString()}
                                     </span>
                                     {incident.cause && (
                                       <span className="text-orange-600 dark:text-orange-400">
@@ -615,12 +639,12 @@ export default function Status() {
                                       <span>
                                         {report.endsAt
                                           ? `${new Date(
-                                              report.startsAt
+                                              report.startsAt,
                                             ).toLocaleString()} — ${new Date(
-                                              report.endsAt
+                                              report.endsAt,
                                             ).toLocaleString()}`
                                           : `Started: ${new Date(
-                                              report.startsAt
+                                              report.startsAt,
                                             ).toLocaleString()}`}
                                       </span>
                                       <Badge
@@ -635,18 +659,20 @@ export default function Status() {
                                     variant={
                                       report.aggregateState === "downtime"
                                         ? "destructive"
-                                        : report.aggregateState === "maintenance"
-                                        ? "outline"
-                                        : "secondary"
+                                        : report.aggregateState ===
+                                            "maintenance"
+                                          ? "outline"
+                                          : "secondary"
                                     }
                                   >
                                     {report.aggregateState === "downtime"
                                       ? "Downtime"
                                       : report.aggregateState === "degraded"
-                                      ? "Degraded"
-                                      : report.aggregateState === "maintenance"
-                                      ? "Maintenance"
-                                      : "Operational"}
+                                        ? "Degraded"
+                                        : report.aggregateState ===
+                                            "maintenance"
+                                          ? "Maintenance"
+                                          : "Operational"}
                                   </Badge>
                                 </div>
                               </CardHeader>
@@ -658,7 +684,7 @@ export default function Status() {
                                       setExpandedIncident(
                                         expandedIncident === report.id
                                           ? null
-                                          : report.id
+                                          : report.id,
                                       )
                                     }
                                   >
@@ -668,7 +694,9 @@ export default function Status() {
                                       <ChevronDown className="h-4 w-4" />
                                     )}
                                     {report.statusUpdates.length} update
-                                    {report.statusUpdates.length !== 1 ? "s" : ""}
+                                    {report.statusUpdates.length !== 1
+                                      ? "s"
+                                      : ""}
                                   </div>
                                   {expandedIncident === report.id && (
                                     <div className="mt-3 space-y-3 border-l-2 border-muted pl-4">
@@ -680,7 +708,7 @@ export default function Status() {
                                           <div className="absolute -left-[1.35rem] top-1.5 h-2 w-2 rounded-full bg-muted-foreground" />
                                           <div className="text-xs text-muted-foreground mb-1">
                                             {new Date(
-                                              update.createdAt
+                                              update.createdAt,
                                             ).toLocaleString()}
                                             {update.author &&
                                               ` · ${update.author}`}
@@ -744,13 +772,14 @@ export default function Status() {
                             .sort(
                               (a, b) =>
                                 new Date(b.startedAt).getTime() -
-                                new Date(a.startedAt).getTime()
+                                new Date(a.startedAt).getTime(),
                             )
                             .slice(0, 20)
                             .map((incident) => {
                               const start = new Date(incident.startedAt);
                               const end = new Date(incident.resolvedAt!);
-                              const durationMs = end.getTime() - start.getTime();
+                              const durationMs =
+                                end.getTime() - start.getTime();
                               return (
                                 <div
                                   key={incident.id}
@@ -809,7 +838,9 @@ export default function Status() {
               <motion.div variants={revealItem}>
                 <section className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-semibold">Service components</h2>
+                    <h2 className="text-2xl font-semibold">
+                      Service components
+                    </h2>
                     <Badge variant="secondary">
                       Monitoring every 60 seconds
                     </Badge>
@@ -840,7 +871,9 @@ export default function Status() {
                                 <service.icon className="h-6 w-6 text-primary" />
                               </div>
                               <div className="space-y-1">
-                                <h3 className="font-semibold">{service.name}</h3>
+                                <h3 className="font-semibold">
+                                  {service.name}
+                                </h3>
                                 <p className="text-sm text-muted-foreground">
                                   {service.description}
                                 </p>
@@ -869,8 +902,8 @@ export default function Status() {
                                               day.status === "operational"
                                                 ? "bg-green-500"
                                                 : day.status === "degraded"
-                                                ? "bg-yellow-500"
-                                                : "bg-red-500"
+                                                  ? "bg-yellow-500"
+                                                  : "bg-red-500"
                                             }`}
                                             title={`${day.day}: ${day.status}${
                                               day.downtimeDuration > 0
@@ -898,10 +931,10 @@ export default function Status() {
                                   service.status === "operational"
                                     ? "running"
                                     : service.status === "degraded"
-                                    ? "warning"
-                                    : service.status === "maintenance"
-                                    ? "loading"
-                                    : "error"
+                                      ? "warning"
+                                      : service.status === "maintenance"
+                                        ? "loading"
+                                        : "error"
                                 }
                                 label={getStatusLabel(service.status)}
                                 showPing={service.status === "operational"}
@@ -926,29 +959,47 @@ export default function Status() {
                   <div className="grid gap-6 md:grid-cols-3">
                     <Card className="home-feature-card">
                       <CardHeader>
-                        <CardTitle className="text-base">VPS Infrastructure</CardTitle>
+                        <CardTitle className="text-base">
+                          VPS Infrastructure
+                        </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2">
-                        <div className="text-3xl font-semibold text-green-600 dark:text-green-400">99.9%</div>
-                        <p className="text-xs text-muted-foreground">Target uptime for compute resources</p>
+                        <div className="text-3xl font-semibold text-green-600 dark:text-green-400">
+                          99.9%
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Target uptime for compute resources
+                        </p>
                       </CardContent>
                     </Card>
                     <Card className="home-feature-card">
                       <CardHeader>
-                        <CardTitle className="text-base">Network Availability</CardTitle>
+                        <CardTitle className="text-base">
+                          Network Availability
+                        </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2">
-                        <div className="text-3xl font-semibold text-green-600 dark:text-green-400">99.95%</div>
-                        <p className="text-xs text-muted-foreground">Global network backbone guarantee</p>
+                        <div className="text-3xl font-semibold text-green-600 dark:text-green-400">
+                          99.95%
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Global network backbone guarantee
+                        </p>
                       </CardContent>
                     </Card>
                     <Card className="home-feature-card">
                       <CardHeader>
-                        <CardTitle className="text-base">Support Response</CardTitle>
+                        <CardTitle className="text-base">
+                          Support Response
+                        </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2">
-                        <div className="text-3xl font-semibold text-primary">&lt; 1hr</div>
-                        <p className="text-xs text-muted-foreground">Average initial response time</p>
+                        <div className="text-3xl font-semibold text-primary">
+                          &lt; 1hr
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Average initial response time
+                        </p>
                       </CardContent>
                     </Card>
                   </div>
@@ -959,18 +1010,23 @@ export default function Status() {
               <motion.div variants={revealItem}>
                 <Card className="home-gradient-border-top home-glass-panel">
                   <CardContent className="space-y-4 px-6 py-8">
-                    <h3 className="text-lg font-semibold text-foreground">About this page</h3>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      About this page
+                    </h3>
                     <p className="text-sm text-muted-foreground leading-6">
                       {bsConfigured
                         ? "Service availability is monitored every 60 seconds via Better Stack probes from multiple global regions. Incidents are reported automatically and supplemented with manual updates from our operations team."
-                        : "Monitoring updates every 60 seconds using probes from multiple regions. Major incidents trigger real-time notifications for customers subscribed to alerts."}
-                      {" "}For historical reports or compliance requests, contact our support team.
+                        : "Monitoring updates every 60 seconds using probes from multiple regions. Major incidents trigger real-time notifications for customers subscribed to alerts."}{" "}
+                      For historical reports or compliance requests, contact our
+                      support team.
                     </p>
                     <div className="flex flex-wrap gap-3 text-xs uppercase tracking-wide text-muted-foreground/80">
                       <Badge variant="secondary">Real-time metrics</Badge>
                       <Badge variant="secondary">Multi-region checks</Badge>
                       <Badge variant="secondary">Transparent history</Badge>
-                      {bsConfigured && <Badge variant="secondary">Better Stack</Badge>}
+                      {bsConfigured && (
+                        <Badge variant="secondary">Better Stack</Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -979,6 +1035,97 @@ export default function Status() {
           </div>
         </section>
       </main>
+
+      {/* ═══════════════════════ CTA ═════════════════════════════════ */}
+      <section className="border-y border-border/40 bg-muted/20 py-20 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="home-cta-shell relative overflow-hidden rounded-3xl border border-border/50 px-6 py-16 text-center sm:px-12 shadow-2xl">
+            {/* Floating orbs */}
+            <div
+              className="home-orb absolute w-[300px] h-[300px] -top-[100px] -left-[80px] opacity-40"
+              style={{
+                background:
+                  "radial-gradient(circle, hsl(var(--primary) / 0.15), transparent 70%)",
+                filter: "blur(60px)",
+                animation: "float-orb-1 16s ease-in-out infinite",
+              }}
+              aria-hidden="true"
+            />
+            <div
+              className="home-orb absolute w-[250px] h-[250px] -bottom-[80px] -right-[60px] opacity-40"
+              style={{
+                background:
+                  "radial-gradient(circle, hsl(var(--primary) / 0.12), transparent 70%)",
+                filter: "blur(60px)",
+                animation: "float-orb-2 20s ease-in-out infinite",
+              }}
+              aria-hidden="true"
+            />
+
+            <div className="relative z-10 grid gap-8 lg:grid-cols-2 lg:text-left">
+              {/* Left CTA */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="space-y-4"
+              >
+                <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+                  Ready to deploy with confidence?
+                </h2>
+                <p className="mx-auto max-w-xl text-lg text-muted-foreground lg:mx-0">
+                  Monitor your infrastructure in real-time and scale across
+                  regions with transparent, predictable billing.
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row lg:justify-start">
+                  <Button
+                    size="lg"
+                    className="h-12 px-8 text-base home-btn-glow"
+                    asChild
+                  >
+                    <Link to="/register">Get started</Link>
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="h-12 px-8 text-base border border-border/40"
+                    asChild
+                  >
+                    <Link to="/contact">Talk to sales</Link>
+                  </Button>
+                </div>
+              </motion.div>
+
+              {/* Right feature pills */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="flex flex-wrap items-start gap-3 lg:pt-4"
+              >
+                {[
+                  "99.9% uptime SLA",
+                  "Real-time monitoring",
+                  "24/7 support",
+                  "Auto-scaling",
+                  "Hourly billing",
+                  "Global regions",
+                ].map((tag) => (
+                  <div
+                    key={tag}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.06] px-3.5 py-1.5 text-sm font-medium text-primary"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    {tag}
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <MarketingFooter />
     </div>

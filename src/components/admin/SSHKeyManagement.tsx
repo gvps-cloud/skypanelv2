@@ -428,7 +428,7 @@ export const SSHKeyManagement: React.FC = () => {
             </div>
             <div className="bg-background/50 backdrop-blur-sm rounded-lg p-4 border">
               <div className="flex items-center gap-2">
-                <Server className="h-5 w-5 text-green-500" />
+                <Server className="h-5 w-5 text-primary" />
                 <span className="text-sm font-medium text-muted-foreground">Synced to Upstream</span>
               </div>
               <p className="text-2xl font-bold mt-1">
@@ -437,7 +437,7 @@ export const SSHKeyManagement: React.FC = () => {
             </div>
             <div className="bg-background/50 backdrop-blur-sm rounded-lg p-4 border">
               <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-blue-500" />
+                <Building2 className="h-5 w-5 text-primary" />
                 <span className="text-sm font-medium text-muted-foreground">Organizations</span>
               </div>
               <p className="text-2xl font-bold mt-1">
