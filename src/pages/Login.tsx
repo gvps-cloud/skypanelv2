@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Eye, EyeOff, LogIn } from "lucide-react";
+import { motion } from "framer-motion";
 
+import "@/styles/auth.css";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +38,6 @@ export default function Login() {
       }
 
       toast.success("Login successful!");
-      // Check for post-login redirect URL
       const redirectUrl = sessionStorage.getItem('postLoginRedirect');
       if (redirectUrl && redirectUrl.startsWith('/') && !redirectUrl.startsWith('//')) {
         sessionStorage.removeItem('postLoginRedirect');
@@ -54,125 +54,154 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/40 px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="mb-4 text-sm">
-          <Link to="/" className="text-muted-foreground hover:text-primary/80">
-            ← Back to home
-          </Link>
-        </div>
-        <Card className="shadow-lg">
-          <CardHeader className="space-y-4 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <LogIn className="h-6 w-6" />
+    <div className="auth-page">
+      <div className="auth-page__grid" />
+      <div className="auth-page__orb-left" />
+      <div className="auth-page__orb-right" />
+      <div className="auth-page__orb-bottom" />
+
+      <motion.div
+        className="auth-content"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
+      >
+        <Link to="/" className="auth-back-link">
+          ← Back to home
+        </Link>
+
+        <div className="auth-card">
+          <div className="auth-card__header">
+            <div className="auth-card__icon-wrap">
+              <LogIn className="h-5 w-5" />
             </div>
-            <div className="space-y-2">
-              <CardTitle className="text-3xl font-semibold">Welcome back</CardTitle>
-              <CardDescription>{`Sign in to your ${BRAND_NAME} account`}</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="space-y-4">
-                {show2FA ? (
-                  <div className="space-y-1">
-                    <Label htmlFor="2fa-code">Two-Factor Authentication Code</Label>
+            <h1 className="auth-card__title">Welcome back</h1>
+            <p className="auth-card__subtitle">
+              Sign in to your {BRAND_NAME} account
+            </p>
+          </div>
+
+          <div className="auth-card__body">
+            <form className="auth-form" onSubmit={handleSubmit}>
+              {show2FA ? (
+                <>
+                  <div className="auth-form__group">
+                    <Label htmlFor="2fa-code" className="auth-form__label">
+                      Two-Factor Authentication Code
+                    </Label>
                     <Input
                       id="2fa-code"
                       name="code"
                       type="text"
+                      inputMode="numeric"
                       autoComplete="one-time-code"
                       required={show2FA}
                       value={twoFactorCode}
                       placeholder="Enter 6-digit code"
                       onChange={(e) => setTwoFactorCode(e.target.value)}
+                      className="auth-input"
                       autoFocus
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Enter the code from your authenticator app.
                     </p>
                   </div>
-                ) : (
-                  <>
-                    <div className="space-y-1">
-                      <Label htmlFor="email">Email address</Label>
+                </>
+              ) : (
+                <>
+                  <div className="auth-form__group">
+                    <Label htmlFor="email" className="auth-form__label">
+                      Email address
+                    </Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      placeholder="you@example.com"
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="auth-input"
+                    />
+                  </div>
+
+                  <div className="auth-form__group">
+                    <Label htmlFor="password" className="auth-form__label">
+                      Password
+                    </Label>
+                    <div className="auth-form__input-wrap">
                       <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
                         required
-                        value={email}
-                        placeholder="Enter your email"
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={password}
+                        placeholder="Your password"
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="auth-input"
                       />
+                      <button
+                        type="button"
+                        className="auth-form__password-toggle"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
                     </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="password">Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="password"
-                          name="password"
-                          type={showPassword ? "text" : "password"}
-                          autoComplete="current-password"
-                          required
-                          value={password}
-                          placeholder="Enter your password"
-                          onChange={(e) => setPassword(e.target.value)}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                  </div>
+                </>
+              )}
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Checkbox
-                    id="remember-me"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
-                  />
-                  Remember me
-                </label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm font-medium text-primary hover:text-primary/80"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              {!show2FA && (
+                <div className="auth-row">
+                  <label className="auth-row__remember">
+                    <Checkbox
+                      id="remember-me"
+                      checked={rememberMe}
+                      onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
+                    />
+                    Remember me
+                  </label>
+                  <Link to="/forgot-password" className="auth-row__forgot">
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button
+                type="submit"
+                className="auth-submit-btn"
+                disabled={loading}
+              >
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                     Signing in…
                   </span>
+                ) : show2FA ? (
+                  "Verify code"
                 ) : (
                   "Sign in"
                 )}
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-muted-foreground">
+            <div className="auth-footer">
               Don&apos;t have an account?{" "}
-              <Link to="/register" className="font-medium text-primary hover:text-primary/80">
+              <Link to="/register" className="auth-footer__link">
                 Sign up
               </Link>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

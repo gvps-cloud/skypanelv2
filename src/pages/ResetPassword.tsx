@@ -1,23 +1,29 @@
-import React, { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { Eye, EyeOff, KeyRound } from 'lucide-react';
+import React, { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { CheckCircle2, Eye, EyeOff, KeyRound } from "lucide-react";
+import { motion } from "framer-motion";
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp';
+import "@/styles/auth.css";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
 
 const RESET_CODE_LENGTH = 8;
 
 export default function ResetPassword() {
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('');
-  const [resetCode, setResetCode] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -30,56 +36,56 @@ export default function ResetPassword() {
     const midpoint = Math.floor(slots.length / 2);
     return [
       <InputOTPGroup key="group-1">{slots.slice(0, midpoint)}</InputOTPGroup>,
-      <InputOTPGroup key="group-2">{slots.slice(midpoint)}</InputOTPGroup>
+      <InputOTPGroup key="group-2">{slots.slice(midpoint)}</InputOTPGroup>,
     ];
   }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!email || !email.includes('@')) {
-      toast.error('Please enter a valid email address.');
+    if (!email || !email.includes("@")) {
+      toast.error("Please enter a valid email address.");
       return;
     }
 
     if (resetCode.length !== RESET_CODE_LENGTH) {
-      toast.error('Please enter the full reset code.');
+      toast.error("Please enter the full reset code.");
       return;
     }
 
     if (password.length < 8) {
-      toast.error('Password must be at least 8 characters long.');
+      toast.error("Password must be at least 8 characters long.");
       return;
     }
 
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match.');
+      toast.error("Passwords do not match.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, token: resetCode, password })
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, token: resetCode, password }),
       });
 
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        const message = data?.error || 'Failed to reset password';
+        const message = data?.error || "Failed to reset password";
         throw new Error(message);
       }
 
-      toast.success('Password reset successfully. You can now sign in.');
+      toast.success("Password reset successfully. You can now sign in.");
       setCompleted(true);
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-      setResetCode('');
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setResetCode("");
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to reset password';
+      const message = error instanceof Error ? error.message : "Failed to reset password";
       toast.error(message);
     } finally {
       setLoading(false);
@@ -87,67 +93,86 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/40 px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="mb-4 text-sm">
-          <Link to="/" className="text-muted-foreground hover:text-primary/80">
-            ← Back to home
-          </Link>
-        </div>
-        <Card className="shadow-lg">
-          <CardHeader className="space-y-4 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <KeyRound className="h-6 w-6" />
+    <div className="auth-page">
+      <div className="auth-page__grid" />
+      <div className="auth-page__orb-left" />
+      <div className="auth-page__orb-right" />
+      <div className="auth-page__orb-bottom" />
+
+      <motion.div
+        className="auth-content"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
+      >
+        <Link to="/" className="auth-back-link">
+          ← Back to home
+        </Link>
+
+        <div className="auth-card">
+          <div className="auth-card__header">
+            <div className="auth-card__icon-wrap">
+              <KeyRound className="h-5 w-5" />
             </div>
-            <div className="space-y-2">
-              <CardTitle className="text-3xl font-semibold">Set a new password</CardTitle>
-              <CardDescription>
-                {completed
-                  ? 'Your password has been updated successfully.'
-                  : 'Enter your email address, the 8-digit reset code from your email, and choose a new password.'}
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
+            <h1 className="auth-card__title">Set a new password</h1>
+            <p className="auth-card__subtitle">
+              {completed
+                ? "Your password has been updated successfully."
+                : "Enter your email and the 8-digit reset code from your inbox."}
+            </p>
+          </div>
+
+          <div className="auth-card__body">
             {completed ? (
-              <div className="space-y-6 text-center">
-                <p className="text-sm text-muted-foreground">
+              <div className="auth-success">
+                <div className="auth-success__icon">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <p className="auth-success__title">All done!</p>
+                <p className="auth-success__desc">
                   You can now sign in with your new password.
                 </p>
-                <Button className="w-full" onClick={() => navigate('/login')}>
+                <Button
+                  className="auth-submit-btn w-full"
+                  onClick={() => navigate("/login")}
+                >
                   Go to sign in
                 </Button>
               </div>
             ) : (
-              <form className="space-y-6" onSubmit={handleSubmit}>
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="email">Email address</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={email}
-                      placeholder="Enter your email address"
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={loading}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Enter the email where you received the reset code.
-                    </p>
-                  </div>
+              <form className="auth-form" onSubmit={handleSubmit}>
+                <div className="auth-form__group">
+                  <Label htmlFor="email" className="auth-form__label">
+                    Email address
+                  </Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    placeholder="you@example.com"
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="auth-input"
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter the email where you received the reset code.
+                  </p>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="reset-code">Reset code</Label>
+                <div className="auth-form__group">
+                  <Label htmlFor="reset-code" className="auth-form__label">
+                    Reset code
+                  </Label>
+                  <div className="auth-otp-wrap">
                     <InputOTP
                       id="reset-code"
                       maxLength={RESET_CODE_LENGTH}
                       value={resetCode}
                       onChange={(value) => {
-                        // Keep the client-side input aligned with the server's 8-digit code format.
-                        const sanitized = value.replace(/\D/g, '');
+                        const sanitized = value.replace(/\D/g, "");
                         setResetCode(sanitized.slice(0, RESET_CODE_LENGTH));
                       }}
                     >
@@ -155,84 +180,100 @@ export default function ResetPassword() {
                       <InputOTPSeparator />
                       {otpGroups[1]}
                     </InputOTP>
-                    <p className="text-xs text-muted-foreground">
-                      The code expires in one hour. Paste is supported.
-                    </p>
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The code expires in one hour. Paste is supported.
+                  </p>
+                </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor="password">New password</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        autoComplete="new-password"
-                        onChange={(event) => setPassword(event.target.value)}
-                        placeholder="Enter a strong password"
-                        required
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground"
-                        onClick={() => setShowPassword((prev) => !prev)}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label htmlFor="confirm-password">Confirm password</Label>
-                    <div className="relative">
-                      <Input
-                        id="confirm-password"
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        value={confirmPassword}
-                        autoComplete="new-password"
-                        onChange={(event) => setConfirmPassword(event.target.value)}
-                        placeholder="Re-enter your password"
-                        required
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground"
-                        onClick={() => setShowConfirmPassword((prev) => !prev)}
-                      >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                    </div>
+                <div className="auth-form__group">
+                  <Label htmlFor="password" className="auth-form__label">
+                    New password
+                  </Label>
+                  <div className="auth-form__input-wrap">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      autoComplete="new-password"
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="At least 8 characters"
+                      required
+                      className="auth-input"
+                    />
+                    <button
+                      type="button"
+                      className="auth-form__password-toggle"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <div className="auth-form__group">
+                  <Label htmlFor="confirm-password" className="auth-form__label">
+                    Confirm password
+                  </Label>
+                  <div className="auth-form__input-wrap">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      autoComplete="new-password"
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      placeholder="Re-enter your password"
+                      required
+                      className="auth-input"
+                    />
+                    <button
+                      type="button"
+                      className="auth-form__password-toggle"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="auth-submit-btn"
+                  disabled={loading}
+                >
                   {loading ? (
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                       Updating password…
                     </span>
                   ) : (
-                    'Update password'
+                    "Update password"
                   )}
                 </Button>
               </form>
             )}
 
             {!completed && (
-              <div className="mt-6 text-center text-sm text-muted-foreground">
-                Remembered your password?{' '}
-                <Link to="/login" className="font-medium text-primary hover:text-primary/80">
+              <div className="auth-footer">
+                Remembered your password?{" "}
+                <Link to="/login" className="auth-footer__link">
                   Sign in
                 </Link>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
