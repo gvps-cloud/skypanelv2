@@ -7,13 +7,18 @@ export interface RateLimitConfig {
   anonymousWindowMs: number;
   anonymousMaxRequests: number;
 
-  // Authenticated user limits  
+  // Authenticated user limits
   authenticatedWindowMs: number;
   authenticatedMaxRequests: number;
 
   // Admin user limits
   adminWindowMs: number;
   adminMaxRequests: number;
+
+  // Password reset rate limits (stricter than general limits)
+  passwordResetWindowMs: number;
+  passwordResetMaxRequests: number;
+  passwordResetSkipInDevelopment: boolean;
 
   // Trust proxy configuration
   trustProxy: boolean | string | number;
@@ -66,8 +71,8 @@ function parseTrustProxy(value?: string): boolean | string | number {
   if (!value) return true; // Default to true for development
 
   // Handle boolean values
-  if (value.toLowerCase() === 'true') return true;
-  if (value.toLowerCase() === 'false') return false;
+  if (value.toLowerCase() === "true") return true;
+  if (value.toLowerCase() === "false") return false;
 
   // Handle numeric values (number of hops)
   const numValue = parseInt(value, 10);
@@ -80,7 +85,10 @@ function parseTrustProxy(value?: string): boolean | string | number {
 /**
  * Validate and parse rate limiting configuration
  */
-function parseBoolean(value: string | undefined, defaultValue: boolean): boolean {
+function parseBoolean(
+  value: string | undefined,
+  defaultValue: boolean,
+): boolean {
   if (value === undefined) {
     return defaultValue;
   }
@@ -105,7 +113,9 @@ function parseEmailProviderPriority(value?: string): EmailProvider[] {
   const parsed = value
     .split(",")
     .map((entry) => entry.trim().toLowerCase())
-    .filter((entry): entry is EmailProvider => allowed.has(entry as EmailProvider));
+    .filter((entry): entry is EmailProvider =>
+      allowed.has(entry as EmailProvider),
+    );
 
   const deduped: EmailProvider[] = [];
   for (const provider of parsed) {
@@ -120,16 +130,45 @@ function parseEmailProviderPriority(value?: string): EmailProvider[] {
 function parseRateLimitConfig(): RateLimitConfig {
   const config: RateLimitConfig = {
     // Anonymous user limits (default: 1000 requests per 15 minutes)
-    anonymousWindowMs: parseInt(process.env.RATE_LIMIT_ANONYMOUS_WINDOW_MS || '900000', 10),
-    anonymousMaxRequests: parseInt(process.env.RATE_LIMIT_ANONYMOUS_MAX || '1000', 10),
+    anonymousWindowMs: parseInt(
+      process.env.RATE_LIMIT_ANONYMOUS_WINDOW_MS || "900000",
+      10,
+    ),
+    anonymousMaxRequests: parseInt(
+      process.env.RATE_LIMIT_ANONYMOUS_MAX || "1000",
+      10,
+    ),
 
     // Authenticated user limits (default: 5000 requests per 15 minutes)
-    authenticatedWindowMs: parseInt(process.env.RATE_LIMIT_AUTHENTICATED_WINDOW_MS || '900000', 10),
-    authenticatedMaxRequests: parseInt(process.env.RATE_LIMIT_AUTHENTICATED_MAX || '5000', 10),
+    authenticatedWindowMs: parseInt(
+      process.env.RATE_LIMIT_AUTHENTICATED_WINDOW_MS || "900000",
+      10,
+    ),
+    authenticatedMaxRequests: parseInt(
+      process.env.RATE_LIMIT_AUTHENTICATED_MAX || "5000",
+      10,
+    ),
 
     // Admin user limits (default: 10000 requests per 15 minutes)
-    adminWindowMs: parseInt(process.env.RATE_LIMIT_ADMIN_WINDOW_MS || '900000', 10),
-    adminMaxRequests: parseInt(process.env.RATE_LIMIT_ADMIN_MAX || '10000', 10),
+    adminWindowMs: parseInt(
+      process.env.RATE_LIMIT_ADMIN_WINDOW_MS || "900000",
+      10,
+    ),
+    adminMaxRequests: parseInt(process.env.RATE_LIMIT_ADMIN_MAX || "10000", 10),
+
+    // Password reset rate limits (default: 3 attempts per 1 hour)
+    passwordResetWindowMs: parseInt(
+      process.env.RATE_LIMIT_PASSWORD_RESET_WINDOW_MS || "3600000",
+      10,
+    ),
+    passwordResetMaxRequests: parseInt(
+      process.env.RATE_LIMIT_PASSWORD_RESET_MAX || "3",
+      10,
+    ),
+    passwordResetSkipInDevelopment: parseBoolean(
+      process.env.RATE_LIMIT_PASSWORD_RESET_SKIP_IN_DEV,
+      false,
+    ),
 
     // Trust proxy configuration
     trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
@@ -138,42 +177,51 @@ function parseRateLimitConfig(): RateLimitConfig {
   // Validate rate limiting configuration
   const validationErrors: string[] = [];
 
-  if (config.anonymousWindowMs < 60000) { // Minimum 1 minute
-    validationErrors.push('RATE_LIMIT_ANONYMOUS_WINDOW_MS must be at least 60000 (1 minute)');
+  if (config.anonymousWindowMs < 60000) {
+    // Minimum 1 minute
+    validationErrors.push(
+      "RATE_LIMIT_ANONYMOUS_WINDOW_MS must be at least 60000 (1 minute)",
+    );
   }
 
   if (config.authenticatedWindowMs < 60000) {
-    validationErrors.push('RATE_LIMIT_AUTHENTICATED_WINDOW_MS must be at least 60000 (1 minute)');
+    validationErrors.push(
+      "RATE_LIMIT_AUTHENTICATED_WINDOW_MS must be at least 60000 (1 minute)",
+    );
   }
 
   if (config.adminWindowMs < 60000) {
-    validationErrors.push('RATE_LIMIT_ADMIN_WINDOW_MS must be at least 60000 (1 minute)');
+    validationErrors.push(
+      "RATE_LIMIT_ADMIN_WINDOW_MS must be at least 60000 (1 minute)",
+    );
   }
 
   if (config.anonymousMaxRequests < 1) {
-    validationErrors.push('RATE_LIMIT_ANONYMOUS_MAX must be at least 1');
+    validationErrors.push("RATE_LIMIT_ANONYMOUS_MAX must be at least 1");
   }
 
   if (config.authenticatedMaxRequests < 1) {
-    validationErrors.push('RATE_LIMIT_AUTHENTICATED_MAX must be at least 1');
+    validationErrors.push("RATE_LIMIT_AUTHENTICATED_MAX must be at least 1");
   }
 
   if (config.adminMaxRequests < 1) {
-    validationErrors.push('RATE_LIMIT_ADMIN_MAX must be at least 1');
+    validationErrors.push("RATE_LIMIT_ADMIN_MAX must be at least 1");
   }
 
   // Log validation errors but use defaults
   if (validationErrors.length > 0) {
-    console.warn('Rate limiting configuration validation warnings:');
-    validationErrors.forEach(error => console.warn(`  - ${error}`));
-    console.warn('Using default values for invalid configurations.');
+    console.warn("Rate limiting configuration validation warnings:");
+    validationErrors.forEach((error) => console.warn(`  - ${error}`));
+    console.warn("Using default values for invalid configurations.");
 
     // Reset to defaults if invalid
     if (config.anonymousWindowMs < 60000) config.anonymousWindowMs = 900000;
-    if (config.authenticatedWindowMs < 60000) config.authenticatedWindowMs = 900000;
+    if (config.authenticatedWindowMs < 60000)
+      config.authenticatedWindowMs = 900000;
     if (config.adminWindowMs < 60000) config.adminWindowMs = 900000;
     if (config.anonymousMaxRequests < 1) config.anonymousMaxRequests = 1000;
-    if (config.authenticatedMaxRequests < 1) config.authenticatedMaxRequests = 5000;
+    if (config.authenticatedMaxRequests < 1)
+      config.authenticatedMaxRequests = 5000;
     if (config.adminMaxRequests < 1) config.adminMaxRequests = 10000;
   }
 
@@ -194,25 +242,33 @@ function getConfig(): Config {
   );
 
   const config = {
-    PORT: parseInt(process.env.PORT || '3001', 10),
+    PORT: parseInt(process.env.PORT || "3001", 10),
 
-    NODE_ENV: process.env.NODE_ENV || 'development',
+    NODE_ENV: process.env.NODE_ENV || "development",
     // JWT_SECRET: No hardcoded fallback - validation will catch missing/placeholder values
     // In development, generate a temporary key; in production, must be set via env
-    JWT_SECRET: process.env.JWT_SECRET || (process.env.NODE_ENV === 'development' 
-      ? 'dev-only-jwt-secret-do-not-use-in-production-32ch' 
-      : ''),
-    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
-    DATABASE_URL: process.env.DATABASE_URL || '',
-    CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
+    JWT_SECRET:
+      process.env.JWT_SECRET ||
+      (process.env.NODE_ENV === "development"
+        ? "dev-only-jwt-secret-do-not-use-in-production-32ch"
+        : ""),
+    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
+    DATABASE_URL: process.env.DATABASE_URL || "",
+    CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173",
     // Legacy rate limiting (deprecated, kept for backward compatibility)
-    RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
-    RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+    RATE_LIMIT_WINDOW_MS: parseInt(
+      process.env.RATE_LIMIT_WINDOW_MS || "900000",
+      10,
+    ),
+    RATE_LIMIT_MAX_REQUESTS: parseInt(
+      process.env.RATE_LIMIT_MAX_REQUESTS || "100",
+      10,
+    ),
     // Enhanced rate limiting configuration
     rateLimiting: rateLimitingConfig,
-    PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID || '',
-    PAYPAL_CLIENT_SECRET: process.env.PAYPAL_CLIENT_SECRET || '',
-    PAYPAL_MODE: process.env.PAYPAL_MODE || 'sandbox',
+    PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID || "",
+    PAYPAL_CLIENT_SECRET: process.env.PAYPAL_CLIENT_SECRET || "",
+    PAYPAL_MODE: process.env.PAYPAL_MODE || "sandbox",
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     EMAIL_PROVIDER_PRIORITY: emailProviderPriority,
     SMTP_HOST: process.env.SMTP_HOST,
@@ -232,16 +288,18 @@ function getConfig(): Config {
       process.env.VITE_COMPANY_NAME?.trim() ||
       process.env.COMPANY_NAME?.trim() ||
       process.env.COMPANY_BRAND_NAME?.trim() ||
-      'SkyPanelV2',
+      "SkyPanelV2",
     RDNS_BASE_DOMAIN:
-      process.env.RDNS_BASE_DOMAIN?.trim() || 'ip.rev.example.com',
-    VPS_TAG: process.env.VPS_TAG?.trim() || 'skypanelv2',
-    corsOrigins: (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map(url => url.trim()),
+      process.env.RDNS_BASE_DOMAIN?.trim() || "ip.rev.example.com",
+    VPS_TAG: process.env.VPS_TAG?.trim() || "skypanelv2",
+    corsOrigins: (process.env.CLIENT_URL || "http://localhost:5173")
+      .split(",")
+      .map((url) => url.trim()),
     // Better Stack / Better Uptime (optional)
     BETTERUPTIME_API_KEY: process.env.BETTERUPTIME_API_KEY?.trim() || undefined,
-    BETTERUPTIME_STATUS_PAGE_ID: process.env.BETTERUPTIME_STATUS_PAGE_ID?.trim() || undefined,
+    BETTERUPTIME_STATUS_PAGE_ID:
+      process.env.BETTERUPTIME_STATUS_PAGE_ID?.trim() || undefined,
   };
-
 
   return config;
 }
@@ -250,59 +308,101 @@ function getConfig(): Config {
 export const config = new Proxy({} as Config, {
   get(target, prop: keyof Config) {
     return getConfig()[prop];
-  }
+  },
 });
 
 /**
  * Validate rate limiting configuration values
  */
-export function validateRateLimitConfig(rateLimitConfig: RateLimitConfig): { isValid: boolean; errors: string[] } {
+export function validateRateLimitConfig(rateLimitConfig: RateLimitConfig): {
+  isValid: boolean;
+  errors: string[];
+} {
   const errors: string[] = [];
 
   // Validate window times (minimum 1 minute, maximum 24 hours)
   const minWindow = 60000; // 1 minute
   const maxWindow = 86400000; // 24 hours
 
-  if (rateLimitConfig.anonymousWindowMs < minWindow || rateLimitConfig.anonymousWindowMs > maxWindow) {
-    errors.push(`Anonymous window must be between ${minWindow} and ${maxWindow} ms`);
+  if (
+    rateLimitConfig.anonymousWindowMs < minWindow ||
+    rateLimitConfig.anonymousWindowMs > maxWindow
+  ) {
+    errors.push(
+      `Anonymous window must be between ${minWindow} and ${maxWindow} ms`,
+    );
   }
 
-  if (rateLimitConfig.authenticatedWindowMs < minWindow || rateLimitConfig.authenticatedWindowMs > maxWindow) {
-    errors.push(`Authenticated window must be between ${minWindow} and ${maxWindow} ms`);
+  if (
+    rateLimitConfig.authenticatedWindowMs < minWindow ||
+    rateLimitConfig.authenticatedWindowMs > maxWindow
+  ) {
+    errors.push(
+      `Authenticated window must be between ${minWindow} and ${maxWindow} ms`,
+    );
   }
 
-  if (rateLimitConfig.adminWindowMs < minWindow || rateLimitConfig.adminWindowMs > maxWindow) {
-    errors.push(`Admin window must be between ${minWindow} and ${maxWindow} ms`);
+  if (
+    rateLimitConfig.adminWindowMs < minWindow ||
+    rateLimitConfig.adminWindowMs > maxWindow
+  ) {
+    errors.push(
+      `Admin window must be between ${minWindow} and ${maxWindow} ms`,
+    );
   }
 
   // Validate request limits (minimum 1, maximum 10000)
   const minRequests = 1;
   const maxRequests = 10000;
 
-  if (rateLimitConfig.anonymousMaxRequests < minRequests || rateLimitConfig.anonymousMaxRequests > maxRequests) {
-    errors.push(`Anonymous max requests must be between ${minRequests} and ${maxRequests}`);
+  if (
+    rateLimitConfig.anonymousMaxRequests < minRequests ||
+    rateLimitConfig.anonymousMaxRequests > maxRequests
+  ) {
+    errors.push(
+      `Anonymous max requests must be between ${minRequests} and ${maxRequests}`,
+    );
   }
 
-  if (rateLimitConfig.authenticatedMaxRequests < minRequests || rateLimitConfig.authenticatedMaxRequests > maxRequests) {
-    errors.push(`Authenticated max requests must be between ${minRequests} and ${maxRequests}`);
+  if (
+    rateLimitConfig.authenticatedMaxRequests < minRequests ||
+    rateLimitConfig.authenticatedMaxRequests > maxRequests
+  ) {
+    errors.push(
+      `Authenticated max requests must be between ${minRequests} and ${maxRequests}`,
+    );
   }
 
-  if (rateLimitConfig.adminMaxRequests < minRequests || rateLimitConfig.adminMaxRequests > maxRequests) {
-    errors.push(`Admin max requests must be between ${minRequests} and ${maxRequests}`);
+  if (
+    rateLimitConfig.adminMaxRequests < minRequests ||
+    rateLimitConfig.adminMaxRequests > maxRequests
+  ) {
+    errors.push(
+      `Admin max requests must be between ${minRequests} and ${maxRequests}`,
+    );
   }
 
   // Validate logical hierarchy (admin >= authenticated >= anonymous)
-  if (rateLimitConfig.authenticatedMaxRequests < rateLimitConfig.anonymousMaxRequests) {
-    errors.push('Authenticated user limits should be higher than or equal to anonymous user limits');
+  if (
+    rateLimitConfig.authenticatedMaxRequests <
+    rateLimitConfig.anonymousMaxRequests
+  ) {
+    errors.push(
+      "Authenticated user limits should be higher than or equal to anonymous user limits",
+    );
   }
 
-  if (rateLimitConfig.adminMaxRequests < rateLimitConfig.authenticatedMaxRequests) {
-    errors.push('Admin user limits should be higher than or equal to authenticated user limits');
+  if (
+    rateLimitConfig.adminMaxRequests < rateLimitConfig.authenticatedMaxRequests
+  ) {
+    errors.push(
+      "Admin user limits should be higher than or equal to authenticated user limits",
+    );
   }
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -314,7 +414,11 @@ export function validateRateLimitConfig(rateLimitConfig: RateLimitConfig): { isV
  * @param minLength - Minimum required length (default: 32)
  * @returns Object with isValid flag and error message if invalid
  */
-function validateSecretLength(secretName: string, secret: string | undefined, minLength: number = 32): { isValid: boolean; error?: string } {
+function validateSecretLength(
+  secretName: string,
+  secret: string | undefined,
+  minLength: number = 32,
+): { isValid: boolean; error?: string } {
   if (!secret) {
     return {
       isValid: false,
@@ -331,12 +435,12 @@ function validateSecretLength(secretName: string, secret: string | undefined, mi
 
   // Check for obvious placeholder values
   const placeholders = [
-    'your-super-secret-jwt-key',
-    'your-32-character-encryption-key',
-    'change-in-production',
-    'your-linode-api-token',
-    'your-paypal-client-id',
-    'your-paypal-client-secret',
+    "your-super-secret-jwt-key",
+    "your-32-character-encryption-key",
+    "change-in-production",
+    "your-linode-api-token",
+    "your-paypal-client-id",
+    "your-paypal-client-secret",
   ];
 
   for (const placeholder of placeholders) {
@@ -355,77 +459,108 @@ export function validateConfig(): void {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  const isProduction = process.env.NODE_ENV === 'production';
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isProduction = process.env.NODE_ENV === "production";
+  const isDevelopment = process.env.NODE_ENV === "development";
 
   // ========== CRITICAL SECRETS (Required in Production) ==========
   const productionSecrets = [
-    { name: 'DATABASE_URL', value: process.env.DATABASE_URL, minLength: 10 },
-    { name: 'JWT_SECRET', value: process.env.JWT_SECRET, minLength: 32 },
-    { name: 'SSH_CRED_SECRET', value: process.env.SSH_CRED_SECRET, minLength: 32 },
-    { name: 'LINODE_API_TOKEN', value: process.env.LINODE_API_TOKEN, minLength: 40 },
-    { name: 'PAYPAL_CLIENT_SECRET', value: process.env.PAYPAL_CLIENT_SECRET, minLength: 20 },
+    { name: "DATABASE_URL", value: process.env.DATABASE_URL, minLength: 10 },
+    { name: "JWT_SECRET", value: process.env.JWT_SECRET, minLength: 32 },
+    {
+      name: "SSH_CRED_SECRET",
+      value: process.env.SSH_CRED_SECRET,
+      minLength: 32,
+    },
+    {
+      name: "LINODE_API_TOKEN",
+      value: process.env.LINODE_API_TOKEN,
+      minLength: 40,
+    },
+    {
+      name: "PAYPAL_CLIENT_SECRET",
+      value: process.env.PAYPAL_CLIENT_SECRET,
+      minLength: 20,
+    },
   ];
 
   for (const secret of productionSecrets) {
     if (isProduction) {
-      const validation = validateSecretLength(secret.name, secret.value, secret.minLength);
+      const validation = validateSecretLength(
+        secret.name,
+        secret.value,
+        secret.minLength,
+      );
       if (!validation.isValid) {
         errors.push(validation.error!);
       }
     } else {
       // In development, just warn if missing
       if (!secret.value) {
-        warnings.push(`${secret.name} is not set (recommended for development)`);
+        warnings.push(
+          `${secret.name} is not set (recommended for development)`,
+        );
       }
     }
   }
 
   // Validate NODE_ENV consistency
-  if (isProduction && process.env.NODE_ENV !== 'production') {
-    errors.push('NODE_ENV is set to production but configuration validation failed');
+  if (isProduction && process.env.NODE_ENV !== "production") {
+    errors.push(
+      "NODE_ENV is set to production but configuration validation failed",
+    );
   }
 
-  if (isDevelopment && process.env.NODE_ENV === 'production') {
-    errors.push('NODE_ENV=production but environment appears to be development. Check your configuration.');
+  if (isDevelopment && process.env.NODE_ENV === "production") {
+    errors.push(
+      "NODE_ENV=production but environment appears to be development. Check your configuration.",
+    );
   }
 
   // Validate PAYPAL_CLIENT_ID in production
   if (isProduction) {
     const paypalClientId = process.env.PAYPAL_CLIENT_ID;
     if (!paypalClientId || paypalClientId.length < 10) {
-      errors.push('PAYPAL_CLIENT_ID must be set and valid in production');
+      errors.push("PAYPAL_CLIENT_ID must be set and valid in production");
     }
   }
 
   // Validate PROVIDER_TOKEN_SECRET if set (should be at least 32 chars)
   const providerTokenSecret = process.env.PROVIDER_TOKEN_SECRET;
   if (providerTokenSecret && providerTokenSecret.length < 32) {
-    warnings.push('PROVIDER_TOKEN_SECRET should be at least 32 characters for security');
+    warnings.push(
+      "PROVIDER_TOKEN_SECRET should be at least 32 characters for security",
+    );
   }
 
   // Check for legacy JWT secret placeholder in production
-  if (isProduction && config.JWT_SECRET === 'your-super-secret-jwt-key-change-in-production') {
-    errors.push('JWT_SECRET must be changed from the default placeholder value in production');
+  if (
+    isProduction &&
+    config.JWT_SECRET === "your-super-secret-jwt-key-change-in-production"
+  ) {
+    errors.push(
+      "JWT_SECRET must be changed from the default placeholder value in production",
+    );
   }
 
   // ========== RATE LIMITING VALIDATION ==========
   const rateLimitValidation = validateRateLimitConfig(config.rateLimiting);
   if (!rateLimitValidation.isValid) {
-    warnings.push('Rate limiting configuration issues detected:');
-    rateLimitValidation.errors.forEach(error => warnings.push(`  - ${error}`));
+    warnings.push("Rate limiting configuration issues detected:");
+    rateLimitValidation.errors.forEach((error) =>
+      warnings.push(`  - ${error}`),
+    );
   }
 
   // ========== REPORT VALIDATION RESULTS ==========
   if (errors.length > 0) {
-    console.error('========================================');
-    console.error('CONFIGURATION VALIDATION FAILED');
-    console.error('========================================');
-    errors.forEach(error => console.error(`✗ ${error}`));
-    console.error('========================================');
-    console.error('Please fix these errors before starting the server.');
-    console.error('Check your .env file and environment variables.');
-    console.error('========================================');
+    console.error("========================================");
+    console.error("CONFIGURATION VALIDATION FAILED");
+    console.error("========================================");
+    errors.forEach((error) => console.error(`✗ ${error}`));
+    console.error("========================================");
+    console.error("Please fix these errors before starting the server.");
+    console.error("Check your .env file and environment variables.");
+    console.error("========================================");
 
     // In production, exit on critical errors
     if (isProduction) {
@@ -434,16 +569,18 @@ export function validateConfig(): void {
   }
 
   if (warnings.length > 0) {
-    console.warn('========================================');
-    console.warn('Configuration Warnings');
-    console.warn('========================================');
-    warnings.forEach(warning => console.warn(`⚠ ${warning}`));
-    console.warn('========================================');
-    console.warn('These warnings should be addressed for optimal security and functionality.');
-    console.warn('========================================');
+    console.warn("========================================");
+    console.warn("Configuration Warnings");
+    console.warn("========================================");
+    warnings.forEach((warning) => console.warn(`⚠ ${warning}`));
+    console.warn("========================================");
+    console.warn(
+      "These warnings should be addressed for optimal security and functionality.",
+    );
+    console.warn("========================================");
   }
 
   if (errors.length === 0 && warnings.length === 0) {
-    console.log('✓ Configuration validated successfully');
+    console.log("✓ Configuration validated successfully");
   }
 }

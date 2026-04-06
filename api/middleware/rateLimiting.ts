@@ -175,25 +175,25 @@ export function getUserType(req: Request): UserType {
  */
 export function isDashboardEndpoint(path: string): boolean {
   const dashboardPatterns = [
-    '/api/auth/me',
-    '/api/auth/refresh',
-    '/api/notifications/',
-    '/api/health',
-    '/api/admin/users/search',
-    '/api/organizations',
-    '/api/vps',
-    '/api/ssh-keys',
-    '/api/support',
-    '/api/billing',
-    '/api/activities',
-    '/api/admin',
-    '/api/account',
-    '/api/profile',
-    '/api/settings',
-    '/api/dashboard',
+    "/api/auth/me",
+    "/api/auth/refresh",
+    "/api/notifications/",
+    "/api/health",
+    "/api/admin/users/search",
+    "/api/organizations",
+    "/api/vps",
+    "/api/ssh-keys",
+    "/api/support",
+    "/api/billing",
+    "/api/activities",
+    "/api/admin",
+    "/api/account",
+    "/api/profile",
+    "/api/settings",
+    "/api/dashboard",
   ];
 
-  return dashboardPatterns.some(pattern => path.startsWith(pattern));
+  return dashboardPatterns.some((pattern) => path.startsWith(pattern));
 }
 
 function getAuthenticatedUserId(req: Request): string | undefined {
@@ -278,7 +278,7 @@ function buildOverrideLimiter(
   userType: UserType,
   override: RateLimitOverride,
   userId: string,
-  endpointType: 'dashboard' | 'api' = 'api',
+  endpointType: "dashboard" | "api" = "api",
 ): RateLimitRequestHandler {
   const handler = createCustomHandler(userType, {
     limit: override.maxRequests,
@@ -307,7 +307,7 @@ function getOverrideLimiter(
   userType: UserType,
   override: RateLimitOverride,
   userId: string,
-  endpointType: 'dashboard' | 'api' = 'api',
+  endpointType: "dashboard" | "api" = "api",
 ): RateLimitRequestHandler {
   const cacheKey = `${endpointType}:${userType}:${userId}`;
   const cached = overrideLimiterCache.get(cacheKey);
@@ -321,7 +321,12 @@ function getOverrideLimiter(
     return cached.limiter;
   }
 
-  const limiter = buildOverrideLimiter(userType, override, userId, endpointType);
+  const limiter = buildOverrideLimiter(
+    userType,
+    override,
+    userId,
+    endpointType,
+  );
   overrideLimiterCache.set(cacheKey, {
     limiter,
     limit: override.maxRequests,
@@ -412,9 +417,9 @@ export function createCustomHandler(
     }
 
     // Determine endpoint type for metrics
-    const requestPath = req.originalUrl.split('?')[0];
+    const requestPath = req.originalUrl.split("?")[0];
     const isDashboard = isDashboardEndpoint(requestPath);
-    const endpointType = isDashboard ? 'dashboard' : 'api';
+    const endpointType = isDashboard ? "dashboard" : "api";
 
     // Record metrics event for monitoring and analysis
     recordRateLimitEvent(
@@ -463,12 +468,12 @@ export function createCustomHandler(
  */
 export function createRateLimiter(
   userType: UserType,
-  endpointType: 'dashboard' | 'api' = 'api'
+  endpointType: "dashboard" | "api" = "api",
 ): RateLimitRequestHandler {
   const { windowMs, limit } = getBaseLimitConfig(userType);
 
   // Apply 50x multiplier for dashboard endpoints
-  const effectiveLimit = endpointType === 'dashboard' ? limit * 50 : limit;
+  const effectiveLimit = endpointType === "dashboard" ? limit * 50 : limit;
 
   return rateLimit({
     windowMs,
@@ -497,7 +502,10 @@ const adminLimiter = createRateLimiter("admin", "api");
 
 // Pre-create rate limiters for dashboard endpoints
 const anonymousDashboardLimiter = createRateLimiter("anonymous", "dashboard");
-const authenticatedDashboardLimiter = createRateLimiter("authenticated", "dashboard");
+const authenticatedDashboardLimiter = createRateLimiter(
+  "authenticated",
+  "dashboard",
+);
 const adminDashboardLimiter = createRateLimiter("admin", "dashboard");
 
 /**
@@ -549,7 +557,7 @@ export async function smartRateLimit(
 
     // Determine endpoint type for separate rate limit buckets
     const isDashboard = isDashboardEndpoint(requestPath);
-    const endpointType = isDashboard ? 'dashboard' : 'api';
+    const endpointType = isDashboard ? "dashboard" : "api";
 
     // Determine endpoint type and generate rate limit key with prefix
     // This ensures dashboard and external API requests use separate rate limit buckets
@@ -561,7 +569,7 @@ export async function smartRateLimit(
       // Log at warn level to make this visible in development logs
       console.warn(
         `[RateLimit:BYPASS:DEV] Endpoint ${requestPath} bypassed rate limiting in development mode. ` +
-        `User: ${authenticatedUserId || 'anonymous'}, Path: ${requestPath}`
+          `User: ${authenticatedUserId || "anonymous"}, Path: ${requestPath}`,
       );
       // Skip rate limiting entirely for critical endpoints in development
       // Still track the request for metrics visibility
@@ -587,11 +595,16 @@ export async function smartRateLimit(
     if (override) {
       effectiveLimit = override.maxRequests;
       effectiveWindowMs = override.windowMs;
-      limiter = getOverrideLimiter(userType, override, authenticatedUserId!, endpointType);
+      limiter = getOverrideLimiter(
+        userType,
+        override,
+        authenticatedUserId!,
+        endpointType,
+      );
     } else {
       // Select the appropriate limiter based on endpoint type and user type
       const isDashboard = isDashboardEndpoint(requestPath);
-      
+
       if (isDashboard) {
         switch (userType) {
           case "admin":
@@ -769,9 +782,10 @@ export const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts per window
   message: {
-    error: 'Too many login attempts',
-    message: 'You have made too many login attempts. Please try again later or reset your password if you have forgotten it.',
-    retryAfter: 900 // 15 minutes in seconds
+    error: "Too many login attempts",
+    message:
+      "You have made too many login attempts. Please try again later or reset your password if you have forgotten it.",
+    retryAfter: 900, // 15 minutes in seconds
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -790,37 +804,58 @@ export const loginRateLimiter = rateLimit({
       enableLogging: true,
     });
 
-    console.warn('Login rate limit exceeded:', {
+    console.warn("Login rate limit exceeded:", {
       ip: ipResult.ip,
-      userAgent: req.headers['user-agent'],
+      userAgent: req.headers["user-agent"],
       path: req.path,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     res.status(429).json({
-      error: 'Too many login attempts',
-      message: 'You have made too many login attempts. Please try again later or reset your password if you have forgotten it.',
-      retryAfter: 900
+      error: "Too many login attempts",
+      message:
+        "You have made too many login attempts. Please try again later or reset your password if you have forgotten it.",
+      retryAfter: 900,
     });
-  }
+  },
 });
 
 /**
  * Password reset rate limiter
- * Limits: 3 attempts per IP address per hour
+ * Limits: Configurable via RATE_LIMIT_PASSWORD_RESET_* env variables
+ * Defaults: 3 attempts per IP address per hour
  * This prevents email flooding and enumeration attacks
+ *
+ * In development mode, limits are multiplied by 100x for easier testing
  */
 export const passwordResetRateLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // 3 attempts per window
+  // Calculate window based on config
+  windowMs: config.rateLimiting.passwordResetWindowMs,
+
+  // Calculate max requests based on config and development mode
+  max:
+    config.NODE_ENV === "development"
+      ? config.rateLimiting.passwordResetMaxRequests * 100 // 100x multiplier in development
+      : config.rateLimiting.passwordResetMaxRequests,
+
   message: {
-    error: 'Too many password reset attempts',
-    message: 'You have made too many password reset requests. Please try again later.',
-    retryAfter: 3600 // 1 hour in seconds
+    error: "Too many password reset attempts",
+    message:
+      "You have made too many password reset requests. Please try again later.",
+    retryAfter: Math.ceil(config.rateLimiting.passwordResetWindowMs / 1000), // Convert to seconds
   },
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
+
+  // Skip the limiter entirely in development if configured
+  skip: (_req: Request) => {
+    return (
+      config.NODE_ENV === "development" &&
+      config.rateLimiting.passwordResetSkipInDevelopment
+    );
+  },
+
   keyGenerator: (req: Request) => {
     // Use IP address as the key for password reset attempts
     const ipResult = getClientIP(req, {
@@ -835,27 +870,36 @@ export const passwordResetRateLimiter = rateLimit({
       enableLogging: true,
     });
 
-    console.warn('Password reset rate limit exceeded:', {
+    console.warn("Password reset rate limit exceeded:", {
       ip: ipResult.ip,
-      userAgent: req.headers['user-agent'],
+      userAgent: req.headers["user-agent"],
       path: req.path,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      maxRequests:
+        config.NODE_ENV === "development"
+          ? config.rateLimiting.passwordResetMaxRequests * 100
+          : config.rateLimiting.passwordResetMaxRequests,
+      windowMs: config.rateLimiting.passwordResetWindowMs,
     });
 
     res.status(429).json({
-      error: 'Too many password reset attempts',
-      message: 'You have made too many password reset requests. Please try again later.',
-      retryAfter: 3600
+      error: "Too many password reset attempts",
+      message:
+        "You have made too many password reset requests. Please try again later.",
+      retryAfter: Math.ceil(config.rateLimiting.passwordResetWindowMs / 1000),
     });
-  }
+  },
 });
 
 // Production rate limit warning
-if (process.env.NODE_ENV === 'production') {
-  const totalLimit = (config.rateLimiting.anonymousMaxRequests || 0) + 
-                     (config.rateLimiting.authenticatedMaxRequests || 0) + 
-                     (config.rateLimiting.adminMaxRequests || 0);
+if (process.env.NODE_ENV === "production") {
+  const totalLimit =
+    (config.rateLimiting.anonymousMaxRequests || 0) +
+    (config.rateLimiting.authenticatedMaxRequests || 0) +
+    (config.rateLimiting.adminMaxRequests || 0);
   if (totalLimit > 100000) {
-    console.warn('[Security Warning] Rate limits are effectively disabled in production (>100k total). Please review your configuration.');
+    console.warn(
+      "[Security Warning] Rate limits are effectively disabled in production (>100k total). Please review your configuration.",
+    );
   }
 }

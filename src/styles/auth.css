@@ -378,6 +378,15 @@
   justify-content: center;
 }
 
+/* Remove default gap from the OTP container and inner groups */
+.auth-otp-wrap > div {
+  gap: 0.5rem;
+}
+
+.auth-otp-wrap > div > div {
+  gap: 0;
+}
+
 /* Override the default slot borders to create a seamless contiguous OTP box */
 .auth-otp-wrap [data-slot="input-otp-slot"] {
   border-radius: 0;
@@ -390,19 +399,17 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease, z-index 0s;
 }
 
-.auth-otp-wrap [data-slot="input-otp-slot"]:first-child {
+/* First slot of the first group — left rounded corners only */
+.auth-otp-wrap > div > div:first-of-type > [data-slot="input-otp-slot"]:first-child {
   margin-left: 0;
   border-top-left-radius: 0.5rem;
   border-bottom-left-radius: 0.5rem;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
 }
 
-.auth-otp-wrap [data-slot="input-otp-slot"]:last-child {
+/* Last slot of the last group — right rounded corners only */
+.auth-otp-wrap > div > div:last-of-type > [data-slot="input-otp-slot"]:last-child {
   border-top-right-radius: 0.5rem;
   border-bottom-right-radius: 0.5rem;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
 }
 
 .auth-otp-wrap [data-slot="input-otp-slot"][data-active="true"] {
@@ -411,13 +418,14 @@
   z-index: 1;
 }
 
-/* Separator styling */
-.auth-otp-wrap .separator {
+/* Separator styling (targets the InputOTPSeparator div) */
+.auth-otp-wrap > div > .text-muted-foreground {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 1.5rem;
-  color: hsl(var(--muted-foreground));
+  padding-left: 0;
+  padding-right: 0;
   flex-shrink: 0;
 }
 
