@@ -1220,8 +1220,6 @@ const Admin: React.FC = () => {
     );
   }, [egressHistory, allowedRegionSet]);
 
-  // Filter plan types by category - REMOVED unused filteredPlanTypes
-  // const filteredPlanTypes = useMemo(...)
 
   const filteredAvailableStackscripts = useMemo(() => {
     const searchTerm = stackscriptSearch.trim().toLowerCase();
