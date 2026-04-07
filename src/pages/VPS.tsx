@@ -766,6 +766,7 @@ const VPS: React.FC = () => {
   }, [selectedStackScript, providerImages, createForm.image, setCreateForm]);
 
   const loadVPSPlans = useCallback(async () => {
+    if (!token) return;
     try {
       let plansUrl = "/api/vps/plans";
 
@@ -776,6 +777,7 @@ const VPS: React.FC = () => {
 
       const res = await fetch(plansUrl, {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       const plansPayload = await res.json();
       if (!res.ok) throw new Error(plansPayload.error || "Failed to load VPS plans");
@@ -854,7 +856,7 @@ const VPS: React.FC = () => {
   }, [token, createForm.provider_id, createForm.region, createForm.type_class]);
 
   const loadProviderImages = useCallback(async () => {
-    if (!createForm.provider_id) {
+    if (!token || !createForm.provider_id) {
       setProviderImages([]);
       return;
     }
@@ -862,7 +864,8 @@ const VPS: React.FC = () => {
       const res = await fetch(
         `/api/vps/images?provider_id=${encodeURIComponent(createForm.provider_id)}`,
         {
-        headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
         },
       );
       const payload = await res.json();
@@ -875,10 +878,12 @@ const VPS: React.FC = () => {
   }, [token, createForm.provider_id]);
 
   const loadProviderStackScripts = useCallback(async () => {
+    if (!token) return;
     try {
       // Load admin-configured StackScripts for 1-Click deployments
       const res = await fetch("/api/vps/stackscripts?configured=true", {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       const payload = await res.json();
       if (!res.ok)

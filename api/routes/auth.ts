@@ -464,7 +464,11 @@ router.get(
         return;
       }
 
-      res.json({ user: req.user });
+      // Issue a fresh token so clients that authenticated via cookie can
+      // populate their in-memory token state (needed for Bearer-header callers).
+      const result = await AuthService.refreshToken(req.user.id);
+      res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions());
+      res.json({ user: result.user, token: result.token });
     } catch (error: any) {
       console.error("Get user error:", error);
       res.status(500).json({ error: "Failed to get user information" });

@@ -246,6 +246,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           if (data?.user) {
             setUser(data.user);
             localStorage.setItem("auth_user", JSON.stringify(data.user));
+            // /me now returns a fresh token so Bearer-header callers work.
+            if (typeof data.token === "string" && data.token.length > 0) {
+              setToken(data.token);
+              localStorage.setItem("auth_token", data.token);
+            }
           }
         })
         .catch(() => {
