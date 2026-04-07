@@ -1,5 +1,5 @@
 import { query } from '../lib/database.js';
-// import { emailService } from './emailService.js';
+import * as emailService from './emailService.js';
 
 export class BillingCronService {
   private static intervalId: NodeJS.Timeout | null = null;
@@ -48,12 +48,12 @@ export class BillingCronService {
         
         console.log(`[Billing Reminder] Low balance for ${row.email} (${row.balance} ${row.currency}). Active services found.`);
         
-        // TODO: Integrate with EmailService
-        // await emailService.sendTemplate('low_balance', row.email, {
-        //   name: row.name,
-        //   balance: row.balance,
-        //   currency: row.currency
-        // });
+        // Integrate with EmailService
+        await emailService.sendTemplate('low_balance', row.email, {
+          name: row.name,
+          balance: row.balance,
+          currency: row.currency
+        });
       }
       
     } catch (error) {

@@ -186,6 +186,15 @@ export async function sendWelcomeEmail(
   await sendEmail({ to, subject, html, text });
 }
 
+export async function sendTemplate(
+  templateName: string,
+  to: string,
+  data: Record<string, any>,
+): Promise<void> {
+  const { subject, html, text } = await renderTemplate(templateName, data);
+  await sendEmail({ to, subject, html, text });
+}
+
 export interface InvitationEmailData {
   organizationName: string;
   inviterName: string;
