@@ -22,6 +22,105 @@ export interface AuthenticatedRequest extends Request {
   organizationId?: string;
 }
 
+/**
+ * Resolve organization context for a user (JWT and API key auth).
+ * Order: X-Organization-ID (if member) → active_organization_id (if still member; clears DB if stale)
+ * → first membership → owned org → auto-create (non-admin only).
+ */
+export async function resolveOrganizationIdForUser(options: {
+  userId: string;
+  email: string;
+  role: string;
+  activeOrganizationId: string | null | undefined;
+  headerOrgId: string | undefined;
+}): Promise<string | undefined> {
+  const { userId, email, role, activeOrganizationId, headerOrgId } = options;
+  let organizationId: string | undefined;
+
+  try {
+    if (headerOrgId) {
+      const orgResult = await query(
+        'SELECT organization_id FROM organization_members WHERE user_id = $1 AND organization_id = $2',
+        [userId, headerOrgId]
+      );
+      if (orgResult.rows.length > 0) {
+        organizationId = orgResult.rows[0].organization_id;
+      }
+    }
+
+    if (!organizationId && activeOrganizationId) {
+      const activeOrgResult = await query(
+        'SELECT organization_id FROM organization_members WHERE user_id = $1 AND organization_id = $2',
+        [userId, activeOrganizationId]
+      );
+      if (activeOrgResult.rows[0]) {
+        organizationId = activeOrganizationId;
+      } else {
+        console.warn('User is no longer a member of active organization, clearing it:', {
+          userId,
+          activeOrgId: activeOrganizationId
+        });
+        await query(
+          'UPDATE users SET active_organization_id = NULL WHERE id = $1',
+          [userId]
+        );
+      }
+    }
+
+    if (!organizationId) {
+      const orgResult = await query(
+        'SELECT organization_id FROM organization_members WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [userId]
+      );
+      organizationId = orgResult.rows[0]?.organization_id;
+    }
+  } catch {
+    console.warn('organization_members table not found, skipping organization lookup');
+  }
+
+  if (!organizationId) {
+    try {
+      const ownerOrg = await query(
+        'SELECT id FROM organizations WHERE owner_id = $1 ORDER BY created_at DESC LIMIT 1',
+        [userId]
+      );
+      if (ownerOrg.rows[0]) {
+        organizationId = ownerOrg.rows[0].id;
+      }
+    } catch {
+      console.warn('organizations lookup failed for owner fallback');
+    }
+  }
+
+  if (!organizationId && role !== 'admin') {
+    try {
+      const newOrg = await query(
+        `INSERT INTO organizations (name, slug, owner_id, created_at, updated_at)
+         VALUES ($1, $2, $3, NOW(), NOW())
+         RETURNING id`,
+        [
+          `${email}'s Organization`,
+          email.split('@')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+          userId
+        ]
+      );
+      organizationId = newOrg.rows[0].id;
+      console.log('Created automatic organization for user:', { userId, organizationId });
+
+      await query(
+        `INSERT INTO organization_members (organization_id, user_id, role, created_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (organization_id, user_id) DO NOTHING`,
+        [organizationId, userId, 'owner']
+      );
+    } catch (orgCreateError) {
+      console.error('Failed to create automatic organization:', orgCreateError);
+    }
+  }
+
+  return organizationId;
+}
+
 export const authenticateToken = async (
   req: AuthenticatedRequest,
   res: Response,
@@ -86,111 +185,14 @@ export const authenticateToken = async (
 
     const user = userResult.rows[0];
 
-    // Get user's organization (if organization_members table exists)
-    let orgMember = null;
-    let organizationId: string | undefined;
-    let activeOrgMember = null;
-
-    try {
-      // Check for X-Organization-ID header (takes precedence)
-      const requestedOrgId = req.headers['x-organization-id'] as string;
-      
-      if (requestedOrgId) {
-        // Validate membership for requested organization
-        const orgResult = await query(
-          'SELECT organization_id FROM organization_members WHERE user_id = $1 AND organization_id = $2',
-          [user.id, requestedOrgId]
-        );
-        if (orgResult.rows.length > 0) {
-          organizationId = orgResult.rows[0].organization_id;
-        }
-      }
-
-      // Use active_organization_id from database if no header override
-      if (!organizationId && user.active_organization_id) {
-        // Verify user is still a member of the active organization
-        const activeOrgResult = await query(
-          'SELECT organization_id FROM organization_members WHERE user_id = $1 AND organization_id = $2',
-          [user.id, user.active_organization_id]
-        );
-        activeOrgMember = activeOrgResult.rows[0] || null;
-        
-        if (activeOrgMember) {
-          organizationId = user.active_organization_id;
-        } else {
-          console.warn('User is no longer a member of active organization, clearing it:', {
-            userId: user.id,
-            activeOrgId: user.active_organization_id
-          });
-          // User is no longer a member of their active organization - clear it
-          await query(
-            'UPDATE users SET active_organization_id = NULL WHERE id = $1',
-            [user.id]
-          );
-        }
-      }
-
-      // Fallback to first organization membership if no active org set
-      if (!organizationId) {
-        const orgResult = await query(
-          'SELECT organization_id FROM organization_members WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1',
-          [user.id]
-        );
-        orgMember = orgResult.rows[0] || null;
-        organizationId = orgMember?.organization_id;
-      }
-    } catch {
-      // Table might not exist yet, continue without error
-      console.warn('organization_members table not found, skipping organization lookup');
-    }
-
-    // Fallback: use organization owned by the user if no membership
-    if (!organizationId) {
-      try {
-        const ownerOrg = await query(
-          'SELECT id FROM organizations WHERE owner_id = $1 ORDER BY created_at DESC LIMIT 1',
-          [user.id]
-        );
-        if (ownerOrg.rows[0]) {
-          organizationId = ownerOrg.rows[0].id;
-        }
-      } catch {
-        console.warn('organizations lookup failed for owner fallback');
-      }
-    }
-
-    // Admins should not receive an automatic organization because their
-    // billing and resource views should be scoped explicitly. Leaving them
-    // without a default org prevents accidental data leakage from other
-    // customers.  The `requireOrganization` middleware will still block
-    // org-specific endpoints for admins unless they explicitly switch context.
-    if (!organizationId && user.role !== 'admin') {
-      try {
-        const newOrg = await query(
-          `INSERT INTO organizations (name, slug, owner_id, created_at, updated_at)
-           VALUES ($1, $2, $3, NOW(), NOW())
-           RETURNING id`,
-          [
-            `${user.email}'s Organization`,
-            user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-'),
-            user.id
-          ]
-        );
-        organizationId = newOrg.rows[0].id;
-        console.log('Created automatic organization for user:', { userId: user.id, organizationId });
-
-        // Add user to organization members
-        await query(
-          `INSERT INTO organization_members (organization_id, user_id, role, created_at)
-           VALUES ($1, $2, $3, NOW())
-           ON CONFLICT (organization_id, user_id) DO NOTHING`,
-          [organizationId, user.id, 'owner']
-        );
-      } catch (orgCreateError) {
-        console.error('Failed to create automatic organization:', orgCreateError);
-        // Continue without organization - this will be handled by requireOrganization middleware
-      }
-    }
+    const requestedOrgId = req.headers['x-organization-id'] as string | undefined;
+    const organizationId = await resolveOrganizationIdForUser({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      activeOrganizationId: user.active_organization_id,
+      headerOrgId: requestedOrgId
+    });
 
     req.user = {
       id: user.id,

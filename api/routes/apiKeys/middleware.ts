@@ -30,6 +30,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { query } from '../../lib/database.js';
+import { resolveOrganizationIdForUser } from '../../middleware/auth.js';
 import { hashApiKey, validateApiKeyFormat } from '../../lib/secureRandom.js';
 
 /**
@@ -93,7 +94,7 @@ async function validateApiKey(apiKey: string): Promise<{
   email: string;
   role: string;
   name: string | null;
-  organizationId: string | null;
+  activeOrganizationId: string | null;
   apiKeyId: string;
   permissions: Record<string, string[]>;
 } | null> {
@@ -151,7 +152,7 @@ async function validateApiKey(apiKey: string): Promise<{
     email: keyData.email,
     role: keyData.role,
     name: keyData.name,
-    organizationId: keyData.active_organization_id,
+    activeOrganizationId: keyData.active_organization_id ?? null,
     apiKeyId: keyData.api_key_id,
     permissions: keyData.permissions || {},
   };
@@ -223,17 +224,26 @@ export const authenticateApiKey = async (
       keyData.userId,
     ]);
 
+    const headerOrgId = req.headers['x-organization-id'] as string | undefined;
+    const resolvedOrgId = await resolveOrganizationIdForUser({
+      userId: keyData.userId,
+      email: keyData.email,
+      role: keyData.role,
+      activeOrganizationId: keyData.activeOrganizationId,
+      headerOrgId,
+    });
+
     // Set req.user for downstream middleware
     req.user = {
       id: keyData.userId,
       email: keyData.email,
       role: keyData.role,
       name: keyData.name || undefined,
-      organizationId: keyData.organizationId || undefined,
+      organizationId: resolvedOrgId,
       isApiKey: true, // Flag to indicate API key authentication
     };
     req.userId = keyData.userId;
-    req.organizationId = keyData.organizationId || undefined;
+    req.organizationId = resolvedOrgId;
     (req as any).apiKeyId = keyData.apiKeyId;
 
     // Update last_used_at timestamp asynchronously

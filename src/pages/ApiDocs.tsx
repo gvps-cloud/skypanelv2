@@ -150,6 +150,7 @@ export default function ApiDocs() {
         "/api/notifications",
         "/api/ssh-keys",
         "/api/organizations",
+        "/api/egress",
       ];
       return orgScopedPrefixes.some((prefix) => fullPath.startsWith(prefix));
     },
@@ -203,10 +204,14 @@ export default function ApiDocs() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [sections]);
 
-  // Validate API key
+  // Validate API key (and capture default org from /api/auth/me when empty)
   const handleValidateApiKey = useCallback(async (key: string) => {
-    return validateApiKey(key);
-  }, []);
+    const result = await validateApiKey(key);
+    if (result.valid && result.organizationId && !organizationId.trim()) {
+      setOrganizationId(result.organizationId);
+    }
+    return result;
+  }, [organizationId]);
 
   // Execute API request - stores response per-endpoint for inline display
   const handleExecuteRequest = useCallback(async (
