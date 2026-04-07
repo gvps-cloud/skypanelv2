@@ -357,6 +357,7 @@ const PricingPage: React.FC = () => {
               </Card>
             ) : (
               <motion.div
+                key={activeCategory}
                 variants={revealContainer}
                 initial="hidden"
                 whileInView="show"
