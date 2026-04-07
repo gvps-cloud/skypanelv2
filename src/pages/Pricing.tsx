@@ -212,7 +212,7 @@ const PricingPage: React.FC = () => {
     <div className="min-h-screen bg-background text-foreground">
       <MarketingNavbar />
 
-      <main className="pt-[72px]">
+      <main>
         {/* â”€â”€â”€ HERO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <section className="relative overflow-hidden border-b border-border/40">
           <div className="home-orb home-orb--1" aria-hidden="true" />

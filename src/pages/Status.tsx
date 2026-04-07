@@ -357,7 +357,7 @@ export default function Status() {
     <div className="min-h-screen bg-background text-foreground">
       <MarketingNavbar />
 
-      <main className="pt-[72px]">
+      <main>
         {/* ═══════════════════════════ HERO ═══════════════════════════ */}
         <section className="relative overflow-hidden border-b border-border/40">
           {/* Floating orbs */}
