@@ -115,7 +115,9 @@ export async function executeRequest(options: ExecuteRequestOptions): Promise<Ex
 /**
  * Validate an API key by making a test request
  */
-export async function validateApiKey(apiKey: string): Promise<{ valid: boolean; error?: string }> {
+export async function validateApiKey(
+  apiKey: string,
+): Promise<{ valid: boolean; error?: string; organizationId?: string }> {
   if (!apiKey || !apiKey.startsWith("sk_live_")) {
     return { valid: false, error: "Invalid API key format. Must start with sk_live_" };
   }
@@ -136,7 +138,14 @@ export async function validateApiKey(apiKey: string): Promise<{ valid: boolean; 
     }
 
     if (response.status === 200) {
-      return { valid: true };
+      try {
+        const body = (await response.json()) as { user?: { organizationId?: string | null } };
+        const organizationId =
+          typeof body.user?.organizationId === "string" ? body.user.organizationId : undefined;
+        return { valid: true, organizationId };
+      } catch {
+        return { valid: true };
+      }
     }
 
     // Other status codes might indicate server issues, but key might still be valid

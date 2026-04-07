@@ -11,7 +11,7 @@ const API_KEY_PREFIX = "sk_live_";
 interface ApiKeyInputProps {
   apiKey: string;
   onApiKeyChange: (key: string) => void;
-  onValidate: (key: string) => Promise<{ valid: boolean; error?: string }>;
+  onValidate: (key: string) => Promise<{ valid: boolean; error?: string; organizationId?: string }>;
 }
 
 export function ApiKeyInput({ apiKey, onApiKeyChange, onValidate }: ApiKeyInputProps) {
