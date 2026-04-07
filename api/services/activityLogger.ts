@@ -1,6 +1,7 @@
 import { Request } from "express";
 import { query } from "../lib/database.js";
 import { getIP } from "../lib/ipDetection.js";
+import { ValidationPatterns } from "../lib/validation.js";
 import { sendActivityNotificationEmail } from "./activityEmailService.js";
 
 export interface ActivityPayload {
@@ -259,7 +260,7 @@ export async function logRateLimitEvent(
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         // Fix: Only pass userId if it's a valid UUID string, otherwise null for system events
-        userId && userId !== "undefined" && userId !== "null" ? userId : null,
+        userId && ValidationPatterns.uuid.test(userId) ? userId : null,
         organizationId,
         "rate_limit_violation",
         "api_request",
