@@ -826,7 +826,9 @@ export const loginRateLimiter = rateLimit({
  * Defaults: 3 attempts per IP address per hour
  * This prevents email flooding and enumeration attacks
  *
- * In development mode, limits are multiplied by 100x for easier testing
+ * In development mode:
+ * - Limits are automatically multiplied by 100x for easier testing
+ * - Can be completely disabled using RATE_LIMIT_PASSWORD_RESET_SKIP_IN_DEV=true
  */
 export const passwordResetRateLimiter = rateLimit({
   // Calculate window based on config

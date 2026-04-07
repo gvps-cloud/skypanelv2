@@ -400,6 +400,25 @@ export function validateRateLimitConfig(rateLimitConfig: RateLimitConfig): {
     );
   }
 
+  // Validate password reset limits
+  if (
+    rateLimitConfig.passwordResetWindowMs < minWindow ||
+    rateLimitConfig.passwordResetWindowMs > maxWindow
+  ) {
+    errors.push(
+      `Password reset window must be between ${minWindow} and ${maxWindow} ms`,
+    );
+  }
+
+  if (
+    rateLimitConfig.passwordResetMaxRequests < minRequests ||
+    rateLimitConfig.passwordResetMaxRequests > maxRequests
+  ) {
+    errors.push(
+      `Password reset max requests must be between ${minRequests} and ${maxRequests}`,
+    );
+  }
+
   return {
     isValid: errors.length === 0,
     errors,
