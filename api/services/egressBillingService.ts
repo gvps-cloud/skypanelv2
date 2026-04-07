@@ -305,32 +305,53 @@ export class EgressBillingService {
     const now = new Date().toISOString();
 
     await transaction(async (client) => {
+      if (regions.length === 0) return;
+
+      const values: any[] = [];
+      const placeholders: string[] = [];
+      let paramIndex = 1;
+
       for (const region of regions) {
         const category = getPricingCategory(region);
         const basePrice = getBasePriceForRegion(region);
         const scope = category === 'core' ? 'global' : 'region';
 
-        await client.query(
-          `INSERT INTO region_egress_pricing (
-             provider_type, region_id, region_label, pricing_scope, pricing_category,
-             base_price_per_gb, customer_rate_per_gb, source, sync_status, source_reference, synced_at, created_at, updated_at
-           )
-           VALUES ($1, $2, $3, $4, $5, $6, $6, 'akamai-techdocs', 'synced', $7, $8, $8, $8)
-           ON CONFLICT (provider_type, region_id)
-           DO UPDATE SET
-             region_label = EXCLUDED.region_label,
-             pricing_scope = EXCLUDED.pricing_scope,
-             pricing_category = EXCLUDED.pricing_category,
-             base_price_per_gb = EXCLUDED.base_price_per_gb,
-             customer_rate_per_gb = COALESCE(region_egress_pricing.customer_rate_per_gb, EXCLUDED.customer_rate_per_gb),
-             source = EXCLUDED.source,
-             sync_status = EXCLUDED.sync_status,
-             source_reference = EXCLUDED.source_reference,
-             synced_at = EXCLUDED.synced_at,
-             updated_at = EXCLUDED.updated_at`,
-          [providerType, region.id, region.label, scope, category, basePrice, DEFAULT_SOURCE_REFERENCE, now],
+        values.push(
+          providerType,
+          region.id,
+          region.label,
+          scope,
+          category,
+          basePrice,
+          DEFAULT_SOURCE_REFERENCE,
+          now,
+        );
+
+        placeholders.push(
+          `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex - 1}, 'akamai-techdocs', 'synced', $${paramIndex++}, $${paramIndex++}, $${paramIndex - 1}, $${paramIndex - 1})`,
         );
       }
+
+      await client.query(
+        `INSERT INTO region_egress_pricing (
+           provider_type, region_id, region_label, pricing_scope, pricing_category,
+           base_price_per_gb, customer_rate_per_gb, source, sync_status, source_reference, synced_at, created_at, updated_at
+         )
+         VALUES ${placeholders.join(', ')}
+         ON CONFLICT (provider_type, region_id)
+         DO UPDATE SET
+           region_label = EXCLUDED.region_label,
+           pricing_scope = EXCLUDED.pricing_scope,
+           pricing_category = EXCLUDED.pricing_category,
+           base_price_per_gb = EXCLUDED.base_price_per_gb,
+           customer_rate_per_gb = COALESCE(region_egress_pricing.customer_rate_per_gb, EXCLUDED.customer_rate_per_gb),
+           source = EXCLUDED.source,
+           sync_status = EXCLUDED.sync_status,
+           source_reference = EXCLUDED.source_reference,
+           synced_at = EXCLUDED.synced_at,
+           updated_at = EXCLUDED.updated_at`,
+        values,
+      );
     });
 
     return this.listRegionPricing(providerType);
