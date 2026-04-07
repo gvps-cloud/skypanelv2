@@ -4283,7 +4283,12 @@ router.put(
 
       if (email !== undefined) {
         updateFields.push(`email = $${paramIndex}`);
-        values.push(email.toLowerCase());
+        // IMPORTANT: Use email as-is from validation middleware
+        // The normalizeEmail() middleware in UserValidation.update handles all normalization
+        // This ensures consistent email normalization with the login endpoint
+        // Bug fix: Previously used email.toLowerCase() which caused login failures
+        // because normalizeEmail() applies additional transformations (Gmail dot removal, etc.)
+        values.push(email);
         paramIndex++;
       }
 
