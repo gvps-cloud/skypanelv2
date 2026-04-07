@@ -4,6 +4,7 @@
  * Used to ensure organization name uniqueness during registration
  */
 
+import crypto from 'crypto';
 import { query } from './database.js';
 
 // ~50 adjectives for variety
@@ -36,12 +37,22 @@ const animals = [
 
 /**
  * Generate a random adjective-animal suffix
- * @returns A hyphenated suffix like "swift-falcon"
+ *
+ * SECURITY NOTE: Uses crypto.randomInt() instead of Math.random()
+ * to ensure cryptographic security.
+ *
+ * @returns A hyphenated suffix like "swift-falcon-123"
  */
 export function generateAnimalSuffix(): string {
-  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const animal = animals[Math.floor(Math.random() * animals.length)];
-  return `${adjective}-${animal}`;
+  const adjectiveIndex = crypto.randomInt(0, adjectives.length);
+  const adjective = adjectives[adjectiveIndex];
+
+  const animalIndex = crypto.randomInt(0, animals.length);
+  const animal = animals[animalIndex];
+
+  const num = crypto.randomInt(100, 1000); // 100-999
+
+  return `${adjective}-${animal}-${num}`;
 }
 
 /**
