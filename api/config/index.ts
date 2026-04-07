@@ -279,12 +279,7 @@ function getConfig(): Config {
 
     NODE_ENV: process.env.NODE_ENV || "development",
     // JWT_SECRET: No hardcoded fallback - validation will catch missing/placeholder values
-    // In development, generate a temporary key; in production, must be set via env
-    JWT_SECRET:
-      process.env.JWT_SECRET ||
-      (process.env.NODE_ENV === "development"
-        ? "dev-only-jwt-secret-do-not-use-in-production-32ch"
-        : ""),
+    JWT_SECRET: process.env.JWT_SECRET || "",
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
     DATABASE_URL: process.env.DATABASE_URL || "",
     CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173",
