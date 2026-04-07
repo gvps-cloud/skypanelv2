@@ -32,11 +32,16 @@ describe("Support Types Utils", () => {
     });
 
     it("should return false for non-string inputs", () => {
-      expect(isReopenRequestMessage(null as any)).toBe(false);
-      expect(isReopenRequestMessage(undefined as any)).toBe(false);
-      expect(isReopenRequestMessage(123 as any)).toBe(false);
-      expect(isReopenRequestMessage({} as any)).toBe(false);
-      expect(isReopenRequestMessage([] as any)).toBe(false);
+      // @ts-expect-error Testing invalid runtime inputs
+      expect(isReopenRequestMessage(null)).toBe(false);
+      // @ts-expect-error Testing invalid runtime inputs
+      expect(isReopenRequestMessage(undefined)).toBe(false);
+      // @ts-expect-error Testing invalid runtime inputs
+      expect(isReopenRequestMessage(123)).toBe(false);
+      // @ts-expect-error Testing invalid runtime inputs
+      expect(isReopenRequestMessage({})).toBe(false);
+      // @ts-expect-error Testing invalid runtime inputs
+      expect(isReopenRequestMessage([])).toBe(false);
     });
   });
 
@@ -57,9 +62,15 @@ describe("Support Types Utils", () => {
       expect(formatTicketMessage("Please reopen this")).toBe("Please reopen this");
     });
 
+    it("should handle empty strings", () => {
+      expect(formatTicketMessage("")).toBe("");
+    });
+
     it("should safely return the input unchanged for non-string inputs", () => {
-      expect(formatTicketMessage(null as any)).toBe(null as any);
-      expect(formatTicketMessage(123 as any)).toBe(123 as any);
+      // @ts-expect-error Testing invalid runtime inputs
+      expect(formatTicketMessage(null)).toBe(null);
+      // @ts-expect-error Testing invalid runtime inputs
+      expect(formatTicketMessage(123)).toBe(123);
     });
   });
 });
