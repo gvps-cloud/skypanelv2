@@ -1,6 +1,7 @@
 import * as React from "react"
 import { ChevronRight, type LucideIcon } from "lucide-react"
 import { Link } from "react-router-dom"
+import { cn } from "@/lib/utils"
 
 import {
   Collapsible,
@@ -139,7 +140,9 @@ export function NavMain({
       <SidebarGroupLabel>{label}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
-          const isItemActive = item.isActive || item.items?.some((sub) => sub.isActive)
+          const hasActiveChild = item.items?.some((sub) => sub.isActive || sub.items?.some((nested) => nested.isActive)) ?? false
+          const isExactActive = Boolean(item.isActive)
+          const isItemActive = isExactActive || hasActiveChild
           const itemKey = item.url || item.title
           const persistedState = openGroups[itemKey]
           const openValue = isItemActive ? true : persistedState ?? false
@@ -151,7 +154,11 @@ export function NavMain({
                   // Collapsed state: Show popover with sub-items
                   <Popover>
                     <PopoverTrigger asChild>
-                      <SidebarMenuButton tooltip={item.title} isActive={isItemActive}>
+                      <SidebarMenuButton
+                        tooltip={item.title}
+                        isActive={isExactActive}
+                        className={cn(hasActiveChild && !isExactActive ? "bg-sidebar-accent/50 text-sidebar-accent-foreground" : "")}
+                      >
                         <item.icon />
                         <span>{item.title}</span>
                       </SidebarMenuButton>
@@ -172,7 +179,10 @@ export function NavMain({
                                   <Link
                                     key={nestedItem.title}
                                     to={nestedItem.url}
-                                    className="flex items-center rounded-md px-4 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                                    className={cn(
+                                      "flex items-center rounded-md px-4 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground",
+                                      nestedItem.isActive ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground"
+                                    )}
                                   >
                                     {nestedItem.title}
                                   </Link>
@@ -181,7 +191,10 @@ export function NavMain({
                             ) : (
                               <Link
                                 to={subItem.url}
-                                className="flex items-center rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+                                className={cn(
+                                  "flex items-center rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground",
+                                  subItem.isActive ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground"
+                                )}
                               >
                                 {subItem.title}
                               </Link>
@@ -200,7 +213,11 @@ export function NavMain({
                   >
                     <>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton tooltip={item.title} isActive={isItemActive}>
+                        <SidebarMenuButton
+                          tooltip={item.title}
+                          isActive={isExactActive}
+                          className={cn(hasActiveChild && !isExactActive ? "bg-sidebar-accent/50 text-sidebar-accent-foreground" : "")}
+                        >
                           <item.icon />
                           <span>{item.title}</span>
                         </SidebarMenuButton>

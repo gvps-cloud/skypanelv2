@@ -12,9 +12,8 @@ import {
   Megaphone,
   Search,
   Server,
-  ServerCog,
   Settings,
-  Users,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -61,44 +60,24 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       if (isAdminRoute) {
         const activeAnchor = currentHash || "dashboard";
 
-        // Organized admin navigation with groups
+        // Organized admin navigation with task-focused grouping.
         const adminGroups = [
           {
-            title: "Dashboard",
+            title: "Overview",
             icon: LayoutDashboard,
             url: `/admin`,
             isActive: activeAnchor === "dashboard" || !currentHash,
-          },
-          {
-            title: "Announcements",
-            icon: Megaphone,
-            url: `/admin#announcements`,
-            isActive: activeAnchor === "announcements",
-          },
-          {
-            title: "Support",
-            icon: LifeBuoy,
-            url: `/admin#support`,
-            isActive: activeAnchor === "support",
             items: [
-              { title: "Tickets", url: `/admin#support`, isActive: activeAnchor === "support" },
+              { title: "Dashboard", url: `/admin`, isActive: activeAnchor === "dashboard" || !currentHash },
             ],
           },
           {
-            title: "Infrastructure",
-            icon: ServerCog,
-            url: `/admin#servers`,
-            isActive: [
-              "servers",
-              "networking",
-              "stackscripts",
-              "providers",
-              "regions",
-              "vps-plans",
-              "category-mappings",
-              "ssh-keys",
-            ].includes(activeAnchor),
+            title: "Operations",
+            icon: LifeBuoy,
+            url: `/admin#support`,
+            isActive: ["support", "servers", "networking", "stackscripts", "providers", "regions", "vps-plans", "category-mappings", "ssh-keys"].includes(activeAnchor),
             items: [
+              { title: "Tickets", url: `/admin#support`, isActive: activeAnchor === "support" },
               { title: "Servers", url: `/admin#servers`, isActive: activeAnchor === "servers" },
               { title: "Networking", url: `/admin#networking`, isActive: activeAnchor === "networking" },
               { title: "StackScripts", url: `/admin#stackscripts`, isActive: activeAnchor === "stackscripts" },
@@ -110,29 +89,42 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             ],
           },
           {
-            title: "Platform Settings",
-            icon: Settings,
-            url: `/admin#platform`,
+            title: "Content & Communication",
+            icon: Megaphone,
+            url: `/admin#announcements`,
             isActive: [
-              "platform",
-              "theme",
+              "announcements",
               "faq-management",
               "documentation",
               "contact-management",
               "email-templates",
             ].includes(activeAnchor),
             items: [
-              { title: "Theme", url: `/admin#theme`, isActive: activeAnchor === "theme" },
+              { title: "Announcements", url: `/admin#announcements`, isActive: activeAnchor === "announcements" },
               { title: "FAQ Management", url: `/admin#faq-management`, isActive: activeAnchor === "faq-management" },
               { title: "Documentation", url: `/admin#documentation`, isActive: activeAnchor === "documentation" },
               { title: "Contact Management", url: `/admin#contact-management`, isActive: activeAnchor === "contact-management" },
               { title: "Email Templates", url: `/admin#email-templates`, isActive: activeAnchor === "email-templates" },
-              { title: "Rate Limiting", url: `/admin#rate-limiting`, isActive: activeAnchor === "rate-limiting" },
             ],
           },
           {
-            title: "User Management",
-            icon: Users,
+            title: "Platform Settings",
+            icon: Settings,
+            url: `/admin#platform`,
+            isActive: [
+              "platform",
+              "theme",
+              "rate-limiting",
+            ].includes(activeAnchor),
+            items: [
+              { title: "Theme", url: `/admin#theme`, isActive: activeAnchor === "theme" },
+              { title: "Rate Limiting", url: `/admin#rate-limiting`, isActive: activeAnchor === "rate-limiting" },
+              { title: "Platform Controls", url: `/admin#platform`, isActive: activeAnchor === "platform" },
+            ],
+          },
+          {
+            title: "Identity & Access",
+            icon: ShieldCheck,
             url: `/admin#user-management`,
             isActive: ["user-management", "organizations"].includes(activeAnchor),
             items: [
@@ -149,13 +141,13 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             ],
           },
           {
-            title: "Billing & Finance",
+            title: "Finance",
             icon: CreditCard,
             url: `/admin#billing`,
             isActive: ["billing", "egress-credits"].includes(activeAnchor),
             items: [
               {
-                title: "Finance",
+                title: "Billing Overview",
                 url: `/admin#billing`,
                 isActive: activeAnchor === "billing",
               },

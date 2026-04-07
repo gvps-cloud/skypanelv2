@@ -2,7 +2,7 @@
  * Admin Dashboard
  * Manage support tickets and VPS plans
  */
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { Suspense, lazy, useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
@@ -43,29 +43,9 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
-import { BillingDashboard } from "@/components/admin/billing/BillingDashboard";
 import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
-import { UserManagement } from "@/components/admin/UserManagement";
-import { SSHKeyManagement } from "@/components/admin/SSHKeyManagement";
-import { OrganizationManagement } from "@/components/admin/OrganizationManagement";
-import { EmailTemplatesManager } from "@/components/admin/email/EmailTemplatesManager";
-import { RateLimitMonitoring } from "@/components/admin/RateLimitMonitoring";
 import { CategoryManager } from "@/components/admin/CategoryManager";
-import { FAQItemManager } from "@/components/admin/FAQItemManager";
-import { UpdatesManager } from "@/components/admin/UpdatesManager";
-import { ContactCategoryManager } from "@/components/admin/ContactCategoryManager";
-import { ContactMethodManager } from "@/components/admin/ContactMethodManager";
-import PlatformAvailabilityManager from "@/components/admin/PlatformAvailabilityManager";
-import { CategoryMappingManager } from "@/components/admin/CategoryMappingManager";
-import { RegionAccessManager } from "@/components/admin/RegionAccessManager";
-import RegionLabelManager from "@/components/admin/RegionLabelManager";
-import { AdminSupportView } from "@/components/admin/AdminSupportView";
-import { VPSPlanWizard } from "@/components/admin/VPSPlanWizard";
-import EgressCreditManager from "@/components/admin/EgressCreditManager";
-import DocumentationManager from "@/components/admin/documentation/DocumentationManager";
-import { NetworkingDashboard } from "@/components/admin/networking/NetworkingDashboard";
-import { AnnouncementsManager } from "@/components/admin/AnnouncementsManager";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { SSHTerminal } from "@/components/VPS/SSHTerminal";
 import { useCategoryDisplayName } from "@/hooks/useCategoryMappings";
@@ -147,6 +127,83 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
+const BillingDashboard = lazy(async () => {
+  const mod = await import("@/components/admin/billing/BillingDashboard");
+  return { default: mod.BillingDashboard };
+});
+const UserManagement = lazy(async () => {
+  const mod = await import("@/components/admin/UserManagement");
+  return { default: mod.UserManagement };
+});
+const SSHKeyManagement = lazy(async () => {
+  const mod = await import("@/components/admin/SSHKeyManagement");
+  return { default: mod.SSHKeyManagement };
+});
+const OrganizationManagement = lazy(async () => {
+  const mod = await import("@/components/admin/OrganizationManagement");
+  return { default: mod.OrganizationManagement };
+});
+const EmailTemplatesManager = lazy(async () => {
+  const mod = await import("@/components/admin/email/EmailTemplatesManager");
+  return { default: mod.EmailTemplatesManager };
+});
+const RateLimitMonitoring = lazy(async () => {
+  const mod = await import("@/components/admin/RateLimitMonitoring");
+  return { default: mod.RateLimitMonitoring };
+});
+const FAQItemManager = lazy(async () => {
+  const mod = await import("@/components/admin/FAQItemManager");
+  return { default: mod.FAQItemManager };
+});
+const UpdatesManager = lazy(async () => {
+  const mod = await import("@/components/admin/UpdatesManager");
+  return { default: mod.UpdatesManager };
+});
+const ContactCategoryManager = lazy(async () => {
+  const mod = await import("@/components/admin/ContactCategoryManager");
+  return { default: mod.ContactCategoryManager };
+});
+const ContactMethodManager = lazy(async () => {
+  const mod = await import("@/components/admin/ContactMethodManager");
+  return { default: mod.ContactMethodManager };
+});
+const PlatformAvailabilityManager = lazy(
+  () => import("@/components/admin/PlatformAvailabilityManager"),
+);
+const CategoryMappingManager = lazy(async () => {
+  const mod = await import("@/components/admin/CategoryMappingManager");
+  return { default: mod.CategoryMappingManager };
+});
+const RegionAccessManager = lazy(async () => {
+  const mod = await import("@/components/admin/RegionAccessManager");
+  return { default: mod.RegionAccessManager };
+});
+const RegionLabelManager = lazy(
+  () => import("@/components/admin/RegionLabelManager"),
+);
+const AdminSupportView = lazy(async () => {
+  const mod = await import("@/components/admin/AdminSupportView");
+  return { default: mod.AdminSupportView };
+});
+const VPSPlanWizard = lazy(async () => {
+  const mod = await import("@/components/admin/VPSPlanWizard");
+  return { default: mod.VPSPlanWizard };
+});
+const EgressCreditManager = lazy(
+  () => import("@/components/admin/EgressCreditManager"),
+);
+const DocumentationManager = lazy(
+  () => import("@/components/admin/documentation/DocumentationManager"),
+);
+const NetworkingDashboard = lazy(async () => {
+  const mod = await import("@/components/admin/networking/NetworkingDashboard");
+  return { default: mod.NetworkingDashboard };
+});
+const AnnouncementsManager = lazy(async () => {
+  const mod = await import("@/components/admin/AnnouncementsManager");
+  return { default: mod.AnnouncementsManager };
+});
 
 type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
@@ -234,24 +291,35 @@ interface SectionPanelProps {
   className?: string;
 }
 
+const AdminSectionFallback: React.FC = () => (
+  <Card className="border-dashed">
+    <CardContent className="flex min-h-[160px] items-center justify-center text-sm text-muted-foreground">
+      Loading section...
+    </CardContent>
+  </Card>
+);
+
 const SectionPanel: React.FC<SectionPanelProps> = ({
   section,
   activeSection,
   children,
   className,
 }) => {
+  if (activeSection !== section) {
+    return null;
+  }
+
   return (
     <section
       id={section}
       aria-labelledby={`admin-section-${section}`}
       data-section={section}
       className={cn(
-        "space-y-6",
-        activeSection === section ? "block" : "hidden",
+        "space-y-6 rounded-xl border border-border/70 bg-card/20 p-5 sm:p-6 lg:p-7",
         className,
       )}
     >
-      {children}
+      <Suspense fallback={<AdminSectionFallback />}>{children}</Suspense>
     </section>
   );
 };
@@ -2450,313 +2518,159 @@ const Admin: React.FC = () => {
     urgentTickets,
   ]);
 
-  const liveProvisioningCount = provisioningServers;
+  const quickActions: Array<{ label: string; section: AdminSection }> = [
+    { label: "Support Queue", section: "support" },
+    { label: "Provisioning", section: "servers" },
+    { label: "Billing & Finance", section: "billing" },
+    { label: "User Management", section: "user-management" },
+    { label: "Organizations", section: "organizations" },
+    { label: "Email Templates", section: "email-templates" },
+  ];
+  const sectionGroups: Array<{ title: string; ids: AdminSection[] }> = [
+    { title: "Operations", ids: ["support", "servers", "vps-plans", "providers"] },
+    { title: "Configuration", ids: ["theme", "category-mappings", "announcements", "documentation"] },
+    { title: "Finance & Accounts", ids: ["billing", "egress-credits", "user-management", "organizations"] },
+  ];
 
   return (
-    <div className={isDashboardView ? "space-y-6" : "min-h-full"}>
+    <div className={isDashboardView ? "space-y-8" : "min-h-full"}>
       {isDashboardView ? (
         <>
-          {/* Clean Hero Section - matching dashboard style */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8">
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-5 sm:p-7 md:p-9">
             <div className="relative z-10">
-              <div className="mb-2">
-                <Badge
-                  variant="outline"
-                  className="mb-3 text-xs sm:text-sm border-primary/30 bg-primary/10 text-primary"
-                >
-                  Admin Panel
-                </Badge>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
+              <Badge
+                variant="outline"
+                className="mb-3 text-xs sm:text-sm border-primary/30 bg-primary/10 text-primary"
+              >
+                Admin Panel
+              </Badge>
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
                 {BRAND_NAME} Administration
               </h1>
-              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
-                Manage infrastructure, support tickets, and platform
-                configuration from a unified control panel.
+              <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+                Manage support operations, infrastructure, billing, and platform
+                configuration from a single workspace with clearer priorities.
               </p>
             </div>
-
-            {/* Background decoration */}
             <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
               <Settings className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
               <Shield className="absolute bottom-4 sm:bottom-10 right-8 sm:right-20 h-16 w-16 sm:h-24 sm:w-24 -rotate-6" />
             </div>
           </div>
 
-          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-            <Card className="h-full">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-lg font-semibold text-foreground">
-                  Platform Health
-                </CardTitle>
-                <CardDescription>
-                  Status at a glance across support, billing, and deployments.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg border border-border/80 bg-card/40 p-4">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Tickets
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold text-foreground">
-                      {openTicketCount}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Open • {urgentTickets} urgent • {inProgressTickets} in
-                      progress
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border/80 bg-card/40 p-4">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Servers
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold text-foreground">
-                      {activeServers}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {attentionServers} needing attention •{" "}
-                      {provisioningServers} provisioning
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border/80 bg-card/40 p-4">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Providers
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold text-foreground">
-                      {activeProviders}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {inactiveProviders} inactive integrations
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border/80 bg-card/40 p-4">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Billing
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold text-foreground">
-                      {formatCurrency(averagePlanMarkup || 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Avg plan markup • {activePlanCount} active plans
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-lg font-semibold text-foreground">
-                  Quick Links
-                </CardTitle>
-                <CardDescription>Jump to frequent admin tasks.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-col gap-2">
-                  <Button
-                    variant="outline"
-                    className="justify-between"
-                    onClick={() => handleTabChange("email-templates")}
-                  >
-                    Email Templates
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="justify-between"
-                    onClick={() => handleTabChange("billing")}
-                  >
-                    Billing & Finance
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="justify-between"
-                    onClick={() => handleTabChange("theme")}
-                  >
-                    Theme Manager
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="justify-between"
-                    onClick={() => handleTabChange("organizations")}
-                  >
-                    Organizations
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="justify-between"
-                    onClick={() => handleTabChange("user-management")}
-                  >
-                    User Management
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Key Metrics Grid - matching dashboard style */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Card className="overflow-hidden">
               <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Support Tickets
-                    </p>
-                    <p className="text-3xl font-bold tracking-tight">
-                      {formatCountValue(openTicketCount)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCountValue(urgentTickets)} urgent •{" "}
-                      {formatCountValue(inProgressTickets)} in progress
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <LifeBuoy className="h-6 w-6 text-foreground" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Active Servers
-                    </p>
-                    <p className="text-3xl font-bold tracking-tight">
-                      {formatCountValue(activeServers)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Across all providers
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-primary/10 p-3">
-                    <Server className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Provisioning
-                    </p>
-                    <p className="text-3xl font-bold tracking-tight">
-                      {formatCountValue(liveProvisioningCount)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Builds in progress
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-muted/50 p-3">
-                    <Clock className="h-6 w-6 text-foreground" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Admin Sections Grid */}
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="space-y-1">
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  Administration Sections
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Quick access to the core areas of {BRAND_NAME}.
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Support Tickets
                 </p>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {[
-                "email-templates",
-                "billing",
-                "organizations",
-                "user-management",
-                "theme",
-                "providers",
-                "servers",
-              ].map((id) => {
-                const panel = strategicPanels.find((p) => p.id === id);
-                if (!panel) return null;
-                const Icon = panel.icon;
-                const isActive = panel.id === activeTab;
+                <p className="mt-1 text-3xl font-bold tracking-tight">{formatCountValue(openTicketCount)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatCountValue(urgentTickets)} urgent and {formatCountValue(inProgressTickets)} in progress
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Active Servers
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">{formatCountValue(activeServers)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatCountValue(attentionServers)} attention and {formatCountValue(provisioningServers)} provisioning
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Active Providers
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">{formatCountValue(activeProviders)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatCountValue(inactiveProviders)} inactive integrations
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Avg Plan Markup
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">{formatCurrency(averagePlanMarkup || 0)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatCountValue(activePlanCount)} active plans
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
-                return (
-                  <Card
-                    key={panel.id}
-                    className={cn(
-                      "cursor-pointer transition-colors hover:bg-primary/5",
-                      isActive ? "ring-2 ring-primary" : "",
-                    )}
-                  >
-                    <CardContent
-                      className="p-6"
-                      onClick={() => handleTabChange(panel.id)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2 flex-1">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={cn(
-                                "rounded-lg p-2",
-                                isActive ? "bg-primary/10" : "bg-primary/5",
-                              )}
-                            >
-                              <Icon
-                                className={cn(
-                                  "h-5 w-5",
-                                  isActive ? "text-primary" : "text-primary/70",
-                                )}
-                              />
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">
-                                {panel.title}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {panel.description}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-                            {panel.summary.map((item) => (
-                              <div key={item.label} className="flex flex-col">
-                                <span className="text-xs uppercase tracking-wide">
-                                  {item.label}
-                                </span>
-                                <span className="font-semibold text-foreground">
-                                  {item.value}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Quick Actions</CardTitle>
+              <CardDescription>Open frequently used admin sections.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {quickActions.map((action) => (
+                <Button
+                  key={action.section}
+                  variant="outline"
+                  className="justify-between"
+                  onClick={() => handleTabChange(action.section)}
+                >
+                  {action.label}
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+
+          <div className="space-y-5">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                Administration Sections
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Jump directly into each operational area.
+              </p>
+            </div>
+            <div className="grid gap-4 xl:grid-cols-3">
+              {sectionGroups.map((group) => (
+                <Card key={group.title}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">{group.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {group.ids.map((id) => {
+                      const panel = strategicPanels.find((p) => p.id === id);
+                      if (!panel) return null;
+                      const Icon = panel.icon;
+                      return (
+                        <button
+                          key={panel.id}
+                          type="button"
                           onClick={() => handleTabChange(panel.id)}
+                          className="flex w-full items-start gap-3 rounded-lg border border-border/70 bg-card/40 p-3 text-left transition-colors hover:bg-accent"
                         >
-                          {panel.actionLabel || "Manage"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                          <span className="rounded-md bg-primary/10 p-2">
+                            <Icon className="h-4 w-4 text-primary" />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium text-foreground">{panel.title}</span>
+                            <span className="block text-xs text-muted-foreground">{panel.actionLabel}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </>
       ) : null}
 
       <div
-        className={isDashboardView ? "space-y-12" : "space-y-6 px-1 sm:px-0"}
+        className={isDashboardView ? "space-y-12" : "space-y-7 px-1 sm:px-0"}
       >
         <SectionPanel section="theme" activeSection={activeTab}>
           {/* Hero Section */}

@@ -552,13 +552,13 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'healthy':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-primary" />;
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+        return <AlertTriangle className="h-5 w-5 text-muted-foreground" />;
       case 'error':
-        return <AlertTriangle className="h-5 w-5 text-red-500" />;
+        return <AlertTriangle className="h-5 w-5 text-destructive" />;
       default:
-        return <Activity className="h-5 w-5 text-gray-500" />;
+        return <Activity className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
@@ -616,9 +616,9 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Shield className="h-6 w-6 text-muted-foreground" />
+          <Shield className="h-6 w-6 text-primary" />
           <div>
-            <h2 className="text-2xl font-semibold text-foreground">Rate Limiting Monitor</h2>
+            <h2 className="text-xl font-semibold leading-tight text-foreground sm:text-2xl">Rate Limiting Monitor</h2>
             <p className="text-sm text-muted-foreground">
               Real-time monitoring of API rate limiting effectiveness and system health
             </p>
@@ -662,7 +662,7 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
 
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
-            <TrendingUp className="h-5 w-5 text-blue-500" />
+            <TrendingUp className="h-5 w-5 text-primary" />
             <div>
               <p className="text-sm font-medium text-muted-foreground">Hit Rate</p>
               <p className="text-2xl font-bold">{formatPercentage(metrics.rateLimitHitRate)}</p>
@@ -675,7 +675,7 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
 
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
-            <Users className="h-5 w-5 text-green-500" />
+            <Users className="h-5 w-5 text-primary" />
             <div>
               <p className="text-sm font-medium text-muted-foreground">Total Requests</p>
               <p className="text-2xl font-bold">{formatNumber(metrics.totalRequests)}</p>
@@ -686,7 +686,7 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
 
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
-            <Clock className="h-5 w-5 text-purple-500" />
+            <Clock className="h-5 w-5 text-primary" />
             <div>
               <p className="text-sm font-medium text-muted-foreground">Window</p>
               <p className="text-2xl font-bold">{metrics.timeWindow}</p>
@@ -697,7 +697,7 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
 
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
-            <Activity className="h-5 w-5 text-orange-500" />
+            <Activity className="h-5 w-5 text-primary" />
             <div>
               <p className="text-sm font-medium text-muted-foreground">Active Overrides</p>
               <p className="text-2xl font-bold">{activeOverrides}</p>
@@ -813,7 +813,7 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
                 <ul className="space-y-2">
                   {metrics.configEffectiveness.recommendedAdjustments.map((recommendation, index) => (
                     <li key={index} className="flex items-start gap-2 text-sm">
-                      <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                      <AlertTriangle className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                       <span>{recommendation}</span>
                     </li>
                   ))}
@@ -838,7 +838,7 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Violations</span>
-                    <span className="font-medium text-red-600">{formatNumber(metrics.anonymousViolations)}</span>
+                    <span className="font-medium text-destructive">{formatNumber(metrics.anonymousViolations)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Configured Limit</span>
@@ -863,7 +863,7 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Violations</span>
-                    <span className="font-medium text-red-600">{formatNumber(metrics.authenticatedViolations)}</span>
+                    <span className="font-medium text-destructive">{formatNumber(metrics.authenticatedViolations)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Configured Limit</span>
@@ -888,7 +888,7 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Violations</span>
-                    <span className="font-medium text-red-600">{formatNumber(metrics.adminViolations)}</span>
+                    <span className="font-medium text-destructive">{formatNumber(metrics.adminViolations)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Configured Limit</span>
@@ -1069,14 +1069,14 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
               {(healthCheck.validation.errors.length > 0 || healthCheck.validation.warnings.length > 0) && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg text-red-600">Issues</CardTitle>
+                    <CardTitle className="text-lg text-destructive">Issues</CardTitle>
                     <CardDescription>Configuration problems that need attention</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
                       {[...healthCheck.validation.errors, ...healthCheck.validation.warnings].map((issue, index) => (
                         <li key={index} className="flex items-start gap-2 text-sm">
-                          <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                          <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                           <span>{issue}</span>
                         </li>
                       ))}
@@ -1088,14 +1088,14 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
               {healthCheck.validation.recommendations.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg text-blue-600">Recommendations</CardTitle>
+                    <CardTitle className="text-lg text-primary">Recommendations</CardTitle>
                     <CardDescription>Suggested improvements for better performance</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
                       {healthCheck.validation.recommendations.map((recommendation, index) => (
                         <li key={index} className="flex items-start gap-2 text-sm">
-                          <CheckCircle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <CheckCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                           <span>{recommendation}</span>
                         </li>
                       ))}
@@ -1218,7 +1218,7 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-red-500 hover:text-red-600"
+                                  className="text-destructive hover:text-destructive/80"
                                   disabled={deletingOverrideId === override.id}
                                 >
                                   Remove
