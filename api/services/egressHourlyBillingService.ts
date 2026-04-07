@@ -55,6 +55,7 @@ interface VPSForBilling {
   provider_instance_id: string;
   label: string;
   status: string;
+  transfer_included_gb: number;
 }
 
 /**
@@ -68,12 +69,24 @@ interface VPSForBilling {
 async function getActiveVPSInstances(): Promise<VPSForBilling[]> {
   try {
     const result = await query(`
-      SELECT id, organization_id, provider_instance_id, label, status
-      FROM vps_instances
-      WHERE provider_type = 'linode'
-        AND status IN ('running', 'provisioning', 'rebooting', 'migrating')
-        AND provider_instance_id IS NOT NULL
-      ORDER BY organization_id, id
+      SELECT
+        vi.id,
+        vi.organization_id,
+        vi.provider_instance_id,
+        vi.label,
+        vi.status,
+        COALESCE(
+          NULLIF(vp.specifications->>'transfer', '')::numeric,
+          NULLIF(vp.specifications->>'bandwidth', '')::numeric,
+          NULLIF(vp.specifications->>'transfer_gb', '')::numeric,
+          0
+        ) AS transfer_included_gb
+      FROM vps_instances vi
+      LEFT JOIN vps_plans vp ON (vp.id::text = vi.plan_id OR vp.provider_plan_id = vi.plan_id)
+      WHERE vi.provider_type = 'linode'
+        AND vi.status IN ('running', 'provisioning', 'rebooting', 'migrating')
+        AND vi.provider_instance_id IS NOT NULL
+      ORDER BY vi.organization_id, vi.id
     `);
 
     return result.rows.map((row) => ({
@@ -82,6 +95,7 @@ async function getActiveVPSInstances(): Promise<VPSForBilling[]> {
       provider_instance_id: row.provider_instance_id,
       label: row.label,
       status: row.status,
+      transfer_included_gb: Number(row.transfer_included_gb ?? 0),
     }));
   } catch (error) {
     console.error('Error getting active VPS instances for egress billing:', error);
@@ -114,6 +128,11 @@ async function processVPS(vps: VPSForBilling): Promise<{
     let deltaGb: number;
     let creditsDeductedGb: number;
 
+    // How many GB of this month's transfer exceed the plan's included allocation.
+    // Credits are only consumed for usage beyond the included threshold.
+    const includedGb = vps.transfer_included_gb;
+    const billableNow = Math.max(currentTransferGb - includedGb, 0);
+
     if (lastReading) {
       // Calculate delta from last reading
       const rawDelta = currentTransferGb - lastReading.transferUsedGb;
@@ -134,21 +153,40 @@ async function processVPS(vps: VPSForBilling): Promise<{
           `Using current reading as delta: ${currentTransferGb.toFixed(6)}GB`
         );
         deltaGb = currentTransferGb;
+        // On a month boundary the Linode counter resets, so billableNow is the full
+        // billable portion for the new month so far.
+        creditsDeductedGb = billableNow;
       } else {
         // Normal case: delta is the difference since last reading
         deltaGb = round(rawDelta, 6);
+        // Only charge credits for the portion of this delta that is beyond the
+        // plan-included threshold.  If the server has not yet exhausted its
+        // included allocation, billablePrev and/or billableNow will be 0.
+        const billablePrev = Math.max(lastReading.transferUsedGb - includedGb, 0);
+        creditsDeductedGb = round(Math.max(billableNow - billablePrev, 0), 6);
       }
-
-      creditsDeductedGb = deltaGb;
     } else {
-      // First reading ever for this VPS - use current transfer as initial delta
-      // This handles new VPS instances and any VPS that has never been billed
+      // First reading ever for this VPS - use current transfer as initial delta.
+      // Only charge credits for the portion that already exceeds included bandwidth.
       deltaGb = currentTransferGb;
-      creditsDeductedGb = deltaGb;
+      creditsDeductedGb = billableNow;
     }
 
-    // Skip if no delta (no new usage)
+    // Skip if no new usage at all
     if (deltaGb <= 0) {
+      return { billed: false, suspended: false };
+    }
+
+    // Skip credit deduction if the entire delta is within the plan-included allocation
+    if (creditsDeductedGb <= 0) {
+      await recordHourlyReading(
+        vps.id,
+        vps.organization_id,
+        providerInstanceId,
+        currentTransferGb,
+        deltaGb,
+        0,
+      );
       return { billed: false, suspended: false };
     }
 
@@ -281,13 +319,25 @@ export async function runHourlyEgressBillingForOrg(
   try {
     // Get active VPS instances for this organization
     const activeVPS = await query(`
-      SELECT id, organization_id, provider_instance_id, label, status
-      FROM vps_instances
-      WHERE organization_id = $1
-        AND provider_type = 'linode'
-        AND status IN ('running', 'provisioning', 'rebooting', 'migrating')
-        AND provider_instance_id IS NOT NULL
-      ORDER BY id
+      SELECT
+        vi.id,
+        vi.organization_id,
+        vi.provider_instance_id,
+        vi.label,
+        vi.status,
+        COALESCE(
+          NULLIF(vp.specifications->>'transfer', '')::numeric,
+          NULLIF(vp.specifications->>'bandwidth', '')::numeric,
+          NULLIF(vp.specifications->>'transfer_gb', '')::numeric,
+          0
+        ) AS transfer_included_gb
+      FROM vps_instances vi
+      LEFT JOIN vps_plans vp ON (vp.id::text = vi.plan_id OR vp.provider_plan_id = vi.plan_id)
+      WHERE vi.organization_id = $1
+        AND vi.provider_type = 'linode'
+        AND vi.status IN ('running', 'provisioning', 'rebooting', 'migrating')
+        AND vi.provider_instance_id IS NOT NULL
+      ORDER BY vi.id
     `, [organizationId]);
 
     if (activeVPS.rows.length === 0) {
@@ -305,6 +355,7 @@ export async function runHourlyEgressBillingForOrg(
         provider_instance_id: row.provider_instance_id,
         label: row.label,
         status: row.status,
+        transfer_included_gb: Number(row.transfer_included_gb ?? 0),
       };
 
       const vpsResult = await processVPS(vps);
