@@ -108,7 +108,10 @@ export default defineConfig(({ mode }) => {
         navigateFallback: null, // Disable fallback for API routes
         runtimeCaching: [
           {
-            urlPattern: apiUrlPattern,
+            // ONLY cache GET requests for API
+            urlPattern: ({ request, url }: { request: Request; url: URL }) => {
+              return request.method === 'GET' && url.pathname.startsWith('/api/');
+            },
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -116,6 +119,23 @@ export default defineConfig(({ mode }) => {
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 5 // 5 minutes
               },
+              cacheableResponse: {
+                statuses: [200] // Only cache valid 200 responses
+              }
+            }
+          },
+          // Cache third party cross-origin assets
+          {
+            urlPattern: ({ url }: { url: URL }) => [
+              'flagcdn.com',
+              'cdn.simpleicons.org',
+              'cdnjs.cloudflare.com',
+              'basemaps.cartocdn.com',
+              'cdn.jsdelivr.net'
+            ].some(domain => url.hostname.endsWith(domain)),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'third-party-assets',
               cacheableResponse: {
                 statuses: [0, 200]
               }

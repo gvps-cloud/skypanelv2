@@ -75,6 +75,15 @@ validateConfig();
 const app = express();
 app.set("trust proxy", config.rateLimiting.trustProxy);
 
+// Block leading space encoded path probes (/%20/)
+app.use((req, res, next) => {
+  const rawUrl = req.originalUrl || req.url;
+  if (rawUrl.startsWith('/%20/') || rawUrl.startsWith('/ ')) {
+    return res.sendStatus(403);
+  }
+  next();
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const clientBuildPath = path.resolve(__dirname, "../dist");
@@ -321,9 +330,11 @@ if (distExists) {
         if (
           normalizedPath.endsWith("/index.html") ||
           normalizedPath.endsWith("/sw.js") ||
-          normalizedPath.endsWith("/registerSW.js")
+          normalizedPath.endsWith("/registerSW.js") ||
+          /\/workbox-.+\.js$/.test(normalizedPath)
         ) {
           res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+          res.setHeader("Vary", "Accept-Encoding");
           return;
         }
 

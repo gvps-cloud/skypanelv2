@@ -38,6 +38,17 @@ if (import.meta.env.DEV) {
 
 document.title = `${BRAND_NAME} | Cloud`
 
+// Global handler for uncaught Workbox cache errors
+window.addEventListener('unhandledrejection', (event) => {
+  if (
+    event.reason instanceof Error &&
+    event.reason.message.includes('Cache.put')
+  ) {
+    // Silently ignore cache put errors - these are harmless network edge cases
+    event.preventDefault();
+  }
+});
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
