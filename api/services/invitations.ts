@@ -268,8 +268,8 @@ export class InvitationService {
         [invitationData.organization_id, userId]
       );
 
-      for (const member of membersResult.rows) {
-        await ActivityFeedService.createActivity({
+      if (membersResult.rows.length > 0) {
+        const activitiesToCreate = membersResult.rows.map(member => ({
           userId: member.user_id,
           organizationId: invitationData.organization_id,
           type: 'member_joined',
@@ -281,7 +281,9 @@ export class InvitationService {
             organizationName: invitationData.organization_name,
             roleName: invitationData.role_name
           }
-        });
+        }));
+
+        await ActivityFeedService.createActivities(activitiesToCreate);
       }
 
       return { organization_id: invitationData.organization_id };

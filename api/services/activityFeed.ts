@@ -45,6 +45,57 @@ export class ActivityFeedService {
     return result.rows[0];
   }
 
+  static async createActivities(activities: CreateActivityData[]): Promise<Activity[]> {
+    if (!activities || activities.length === 0) {
+      return [];
+    }
+
+    const now = new Date().toISOString();
+    const allInsertedActivities: Activity[] = [];
+
+    // Batch inserts to respect PostgreSQL parameter limits (max 65535 parameters)
+    // 9 parameters per activity -> max ~7281 activities per batch.
+    // We'll use 1000 for safety and performance.
+    const BATCH_SIZE = 1000;
+
+    for (let i = 0; i < activities.length; i += BATCH_SIZE) {
+      const batch = activities.slice(i, i + BATCH_SIZE);
+      const values: any[] = [];
+      const placeholders: string[] = [];
+
+      batch.forEach((activity, index) => {
+        const activityId = uuidv4();
+        const offset = index * 9;
+
+        placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9})`);
+
+        values.push(
+          activityId,
+          activity.userId,
+          activity.organizationId || null,
+          activity.type,
+          activity.title,
+          activity.description || null,
+          JSON.stringify(activity.data || {}),
+          false,
+          now
+        );
+      });
+
+      const result = await query(
+        `INSERT INTO activity_feed
+         (id, user_id, organization_id, type, title, description, data, is_read, created_at)
+         VALUES ${placeholders.join(', ')}
+         RETURNING *`,
+        values
+      );
+
+      allInsertedActivities.push(...result.rows);
+    }
+
+    return allInsertedActivities;
+  }
+
   static async getUserActivities(userId: string, unreadOnly = false): Promise<Activity[]> {
     const result = await query(
       `SELECT 
