@@ -28,6 +28,8 @@ interface RequestBuilderProps {
   endpoint: EndpointDefinition;
   apiBase: string;
   apiKey: string | null;
+  organizationId?: string;
+  requiresOrganization?: boolean;
   requiresAuth?: boolean;
   isAdmin?: boolean;
   endpointAdmin?: boolean;
@@ -45,6 +47,8 @@ export function RequestBuilder({
   endpoint,
   apiBase,
   apiKey,
+  organizationId,
+  requiresOrganization = false,
   requiresAuth = true,
   isAdmin = false,
   endpointAdmin = false,
@@ -75,6 +79,7 @@ export function RequestBuilder({
   const hasPathParams = pathParams.length > 0;
   const hasQueryParams = Object.keys(queryParams).length > 0;
   const isAdminBlocked = endpointAdmin && !isAdmin;
+  const missingOrganization = requiresOrganization && !organizationId;
 
   const methodStyle = methodStyles[endpoint.method] || methodStyles.DEFAULT;
 
@@ -123,6 +128,10 @@ export function RequestBuilder({
       toast.error("Please enter an API key first");
       return;
     }
+    if (missingOrganization) {
+      toast.error("This endpoint requires an Organization ID");
+      return;
+    }
 
     let parsedBody: unknown | undefined;
     if (hasBody && bodyText.trim()) {
@@ -140,11 +149,16 @@ export function RequestBuilder({
       body: parsedBody,
       params: queryParams,
     });
-  }, [isAdminBlocked, requiresAuth, apiKey, hasBody, bodyText, endpoint.method, fullUrl, queryParams, onExecute]);
+  }, [isAdminBlocked, requiresAuth, apiKey, missingOrganization, hasBody, bodyText, endpoint.method, fullUrl, queryParams, onExecute]);
 
   const handleCopyCurl = useCallback(async () => {
     const lines = [`curl -X ${endpoint.method} "${fullUrl}"`];
     lines.push('-H "X-API-Key: YOUR_API_KEY"');
+    if (requiresOrganization) {
+      lines.push(
+        `-H "X-Organization-ID: ${organizationId || "YOUR_ORGANIZATION_ID"}"`,
+      );
+    }
     if (hasBody && bodyText.trim()) {
       lines.push('-H "Content-Type: application/json"');
       lines.push(`-d '${bodyText}'`);
@@ -159,7 +173,7 @@ export function RequestBuilder({
     } catch {
       toast.error("Failed to copy");
     }
-  }, [endpoint.method, fullUrl, hasBody, bodyText]);
+  }, [endpoint.method, fullUrl, requiresOrganization, organizationId, hasBody, bodyText]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -168,7 +182,11 @@ export function RequestBuilder({
           variant="outline"
           size="sm"
           className="w-full mt-2"
-          disabled={isAdminBlocked || (requiresAuth && !apiKey)}
+            disabled={
+              isAdminBlocked ||
+              (requiresAuth && !apiKey) ||
+              missingOrganization
+            }
         >
           {isAdminBlocked ? (
             <>
@@ -259,7 +277,7 @@ export function RequestBuilder({
         <div className="flex gap-2">
           <Button
             onClick={handleExecute}
-            disabled={isLoading || (requiresAuth && !apiKey)}
+            disabled={isLoading || (requiresAuth && !apiKey) || missingOrganization}
             className="flex-1"
           >
             {isLoading ? (
@@ -286,6 +304,11 @@ export function RequestBuilder({
         {!apiKey && requiresAuth && (
           <p className="text-sm text-amber-600 dark:text-amber-500">
             ⚠️ This endpoint requires authentication. Please enter your API key above.
+          </p>
+        )}
+        {missingOrganization && (
+          <p className="text-sm text-amber-600 dark:text-amber-500">
+            ⚠️ This endpoint requires an organization context. Enter Organization ID above.
           </p>
         )}
 

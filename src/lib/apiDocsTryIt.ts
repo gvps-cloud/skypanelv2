@@ -9,6 +9,7 @@ export interface ExecuteRequestOptions {
   body?: unknown;
   params?: Record<string, string>;
   apiKey: string;
+  organizationId?: string;
 }
 
 export interface ExecuteRequestResult {
@@ -24,7 +25,7 @@ export interface ExecuteRequestResult {
  * Execute an API request with API key authentication
  */
 export async function executeRequest(options: ExecuteRequestOptions): Promise<ExecuteRequestResult> {
-  const { method, url, body, apiKey } = options;
+  const { method, url, body, apiKey, organizationId } = options;
   const startTime = performance.now();
 
   try {
@@ -34,6 +35,10 @@ export async function executeRequest(options: ExecuteRequestOptions): Promise<Ex
 
     if (apiKey) {
       headers["X-API-Key"] = apiKey;
+    }
+
+    if (organizationId) {
+      headers["X-Organization-ID"] = organizationId;
     }
 
     if (body) {

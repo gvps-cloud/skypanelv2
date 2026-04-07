@@ -225,6 +225,10 @@ export const syncSectionsWithActiveRoutes = (
   const unmatchedRoutes: ActiveRoute[] = [];
 
   for (const route of ACTIVE_API_ROUTE_MANIFEST) {
+    // Keep development-only debug endpoints out of production docs rendering.
+    if (import.meta.env.PROD && route.path === "/api/auth/debug/user") {
+      continue;
+    }
     const key = endpointKey(route.method, route.path);
     routeByKey.set(key, route);
 
@@ -362,6 +366,8 @@ export const buildCurlCommand = (base: string, endpoint: EndpointDefinition) => 
 };
 
 // ── Base Sections Builder ───────────────────────────────────────────────────
+
+const showDebugEndpoints = !import.meta.env.PROD;
 
 export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
       {
@@ -650,16 +656,21 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
               message: "2FA has been disabled",
             },
           },
-          {
-            method: "GET",
-            path: "/debug/user",
-            description: "Debug endpoint returning current user session details (development only).",
-            auth: true,
-            response: {
-              user: { id: "user_123", email: "admin@example.com" },
-              session: { createdAt: "2026-10-26T10:00:00Z" },
-            },
-          },
+          ...(showDebugEndpoints
+            ? [
+                {
+                  method: "GET" as const,
+                  path: "/debug/user",
+                  description:
+                    "Debug endpoint returning current user session details (development only).",
+                  auth: true,
+                  response: {
+                    user: { id: "user_123", email: "admin@example.com" },
+                    session: { createdAt: "2026-10-26T10:00:00Z" },
+                  },
+                },
+              ]
+            : []),
           {
             method: "DELETE",
             path: "/api-keys/:id",

@@ -37,8 +37,16 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { BRAND_NAME } from "@/lib/brand";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiClient } from "@/lib/api";
 import {
   type SectionDefinition,
   methodStyles,
@@ -103,6 +111,51 @@ export default function ApiDocs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [organizationId, setOrganizationId] = useState("");
+  const [userOrgs, setUserOrgs] = useState<Array<{ id: string; name: string }>>([]);
+  const [orgsFetchFailed, setOrgsFetchFailed] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    apiClient
+      .get<{ organizations: Array<{ id: string; name: string }> }>("/organizations")
+      .then((data) => {
+        const orgs = data.organizations ?? [];
+        setUserOrgs(orgs);
+        if (orgs.length === 1) {
+          setOrganizationId(orgs[0].id);
+        } else if (orgs.length > 1 && !organizationId) {
+          const activeMatch = orgs.find((o) => o.id === user.organizationId);
+          if (activeMatch) setOrganizationId(activeMatch.id);
+        }
+      })
+      .catch(() => {
+        setOrgsFetchFailed(true);
+        if (!organizationId && user.organizationId) {
+          setOrganizationId(user.organizationId);
+        }
+      });
+  // Only run once on mount when user becomes available.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const endpointRequiresOrganization = useCallback(
+    (fullPath: string): boolean => {
+      const orgScopedPrefixes = [
+        "/api/vps",
+        "/api/payments",
+        "/api/support",
+        "/api/invoices",
+        "/api/activity",
+        "/api/notifications",
+        "/api/ssh-keys",
+        "/api/organizations",
+      ];
+      return orgScopedPrefixes.some((prefix) => fullPath.startsWith(prefix));
+    },
+    [],
+  );
+
   // Per-endpoint response tracking - each endpoint has its own response displayed inline
   const [responses, setResponses] = useState<Map<string, ResponseState>>(new Map());
   const [executingEndpoint, setExecutingEndpoint] = useState<string | null>(null);
@@ -172,6 +225,7 @@ export default function ApiDocs() {
       const result = await executeRequest({
         ...request,
         apiKey,
+        organizationId: organizationId.trim() || undefined,
       });
 
       setResponses((prev) => {
@@ -211,7 +265,7 @@ export default function ApiDocs() {
     } finally {
       setExecutingEndpoint(null);
     }
-  }, [apiKey]);
+  }, [apiKey, organizationId]);
 
   const handleCopy = useCallback(async (value: string, label: string) => {
     try {
@@ -346,6 +400,34 @@ export default function ApiDocs() {
                   onApiKeyChange={setApiKey}
                   onValidate={handleValidateApiKey}
                 />
+                <div className="mt-4 space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Organization (required for org-scoped endpoints)
+                  </label>
+                  {orgsFetchFailed ? (
+                    <Input
+                      value={organizationId}
+                      onChange={(e) => setOrganizationId(e.target.value)}
+                      placeholder="org UUID"
+                    />
+                  ) : (
+                    <Select value={organizationId} onValueChange={setOrganizationId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an organization…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userOrgs.map((org) => (
+                          <SelectItem key={org.id} value={org.id}>
+                            {org.name}
+                            <span className="ml-2 text-xs text-muted-foreground font-mono">
+                              ({org.id.slice(0, 8)}…)
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -643,6 +725,10 @@ export default function ApiDocs() {
                               endpoint={endpoint}
                               apiBase={section.base}
                               apiKey={apiKey}
+                              organizationId={organizationId.trim() || undefined}
+                              requiresOrganization={endpointRequiresOrganization(
+                                `${section.base.replace(apiBase, "/api")}${endpoint.path}`,
+                              )}
                               requiresAuth={endpoint.auth}
                               isAdmin={isAdmin}
                               endpointAdmin={endpoint.admin}
