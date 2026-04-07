@@ -168,20 +168,7 @@ function extractJti(payload: any, token: string): string {
 }
 
 /**
- * Legacy JTI derivation (base64 substring) — only covers JWT header, same for all tokens.
- * Kept for backward compatibility during rolling deploys.
- * TODO: Remove after max token TTL has elapsed and tokens use real jti claims.
- */
-function extractLegacyJti(payload: any, token: string): string {
-  if (payload.jti) {
-    return payload.jti;
-  }
-  return Buffer.from(token).toString('base64').substring(0, 32);
-}
-
-/**
- * Get all JTI candidates for a token (both legacy and new).
- * Used during migration window for dual-key blacklist checks.
+ * Get all JTI candidates for a token.
  */
 function getJtiCandidates(payload: any, token: string): string[] {
   if (payload.jti) {
@@ -189,7 +176,6 @@ function getJtiCandidates(payload: any, token: string): string[] {
   }
   return [
     extractJti(payload, token),
-    extractLegacyJti(payload, token),
   ];
 }
 
