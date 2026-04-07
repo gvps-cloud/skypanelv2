@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { BRAND_NAME } from "../lib/brand";
+import { BRAND_NAME, BRAND_DOMAIN } from "../lib/brand";
 
 const lastUpdated = "October 20, 2025";
 
@@ -110,7 +110,7 @@ const sections = [
           <li><strong>Opt-out:</strong> Unsubscribe from marketing communications.</li>
           <li><strong>Objection:</strong> Object to certain processing activities.</li>
         </ul>
-        <p>Email privacy@{BRAND_NAME.toLowerCase()}.com to submit a request. We respond within 30 days.</p>
+        <p>Email privacy@{BRAND_DOMAIN} to submit a request. We respond within 30 days.</p>
       </>
     ),
   },
@@ -168,9 +168,9 @@ const sections = [
       <>
         <p>Questions or concerns? Reach out to our privacy team:</p>
         <p>
-          Email: privacy@{BRAND_NAME.toLowerCase()}.com<br />
+          Email: privacy@{BRAND_DOMAIN}<br />
           Address: 123 Cloud Street, Tech District, San Francisco, CA 94105<br />
-          Privacy Officer: privacy@{BRAND_NAME.toLowerCase()}.com
+          Privacy Officer: privacy@{BRAND_DOMAIN}
         </p>
       </>
     ),
@@ -189,7 +189,7 @@ const sections = [
     title: "15. CCPA Rights (California)",
     content: (
       <>
-        <p>California residents may request disclosure of personal information categories we collect, request deletion, and opt out of certain sharing. Submit requests via privacy@{BRAND_NAME.toLowerCase()}.com.</p>
+        <p>California residents may request disclosure of personal information categories we collect, request deletion, and opt out of certain sharing. Submit requests via privacy@{BRAND_DOMAIN}.</p>
       </>
     ),
   },
@@ -197,7 +197,7 @@ const sections = [
 
 export default function PrivacyPolicy() {
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-12">
+    <div className="container mx-auto max-w-6xl px-4 pb-12 pt-24">
       <div className="grid gap-10 lg:grid-cols-[2fr,1fr]">
         <div>
           <div className="space-y-4">
@@ -260,7 +260,7 @@ export default function PrivacyPolicy() {
                 <Lock className="h-4 w-4 text-primary" /> SSO and least-privilege access controls
               </div>
               <Separator />
-              <p>Want to report a security issue? Email <a href={`mailto:security@${BRAND_NAME.toLowerCase()}.com`} className="text-primary">security@{BRAND_NAME.toLowerCase()}.com</a>.</p>
+              <p>Want to report a security issue? Email <a href={`mailto:security@${BRAND_DOMAIN}`} className="text-primary">security@{BRAND_DOMAIN}</a>.</p>
             </CardContent>
           </Card>
 

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { BRAND_NAME } from "../lib/brand";
+import { BRAND_NAME, BRAND_DOMAIN } from "../lib/brand";
 
 const lastUpdated = "October 20, 2025";
 
@@ -176,7 +176,7 @@ const sections = [
       <>
         <p>For questions about these Terms, contact our legal team:</p>
         <p>
-          Email: legal@{BRAND_NAME.toLowerCase()}.com<br />
+          Email: legal@{BRAND_DOMAIN}<br />
           Address: 123 Cloud Street, Tech District, San Francisco, CA 94105
         </p>
       </>
@@ -186,7 +186,7 @@ const sections = [
 
 export default function TermsOfService() {
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-12">
+    <div className="container mx-auto max-w-6xl px-4 pb-12 pt-24">
       <div className="grid gap-10 lg:grid-cols-[2fr,1fr]">
         <div>
           <div className="space-y-4">
@@ -243,7 +243,7 @@ export default function TermsOfService() {
               </div>
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-primary" />
-                <a href={`mailto:legal@${BRAND_NAME.toLowerCase()}.com`} className="font-medium text-primary">legal@{BRAND_NAME.toLowerCase()}.com</a>
+                <a href={`mailto:legal@${BRAND_DOMAIN}`} className="font-medium text-primary">legal@{BRAND_DOMAIN}</a>
               </div>
               <Separator />
               <p>Looking for the previous version of these Terms? Email us and we&apos;ll send a copy.</p>

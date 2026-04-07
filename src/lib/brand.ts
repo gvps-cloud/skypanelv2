@@ -10,3 +10,9 @@ export const BRAND_NAME: string =
     .map((value) => (typeof value === 'string' ? value.trim() : ''))
     .find((value) => value.length > 0) ||
   'GVPSCloud';
+
+// Use BRAND_NAME as the email domain when it already contains a dot (e.g. "GVPS.Cloud" → "gvps.cloud"),
+// otherwise append ".com" (e.g. "GVPSCloud" → "gvpscloud.com").
+export const BRAND_DOMAIN: string = BRAND_NAME.includes('.')
+  ? BRAND_NAME.toLowerCase()
+  : `${BRAND_NAME.toLowerCase()}.com`;

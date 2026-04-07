@@ -48,6 +48,8 @@ import Admin from "./pages/Admin";
 import VPSDetail from "./pages/VPSDetail";
 import VpsSshConsole from "./pages/VpsSshConsole";
 import AppLayout from "./components/AppLayout";
+import PublicLayout from "./components/PublicLayout";
+import ScrollToTop from "./components/ScrollToTop";
 import ActivityPage from "./pages/Activity";
 import ApiDocs from "./pages/ApiDocs";
 import FAQ from "./pages/FAQ";
@@ -230,6 +232,7 @@ function AnnouncementBannerWrapper({ children }: { children: React.ReactNode }) 
 function AppRoutes() {
   return (
     <>
+      <ScrollToTop />
       <AutoLogoutSetup />
       <AnnouncementBannerWrapper>
       <Routes>
@@ -427,8 +430,8 @@ function AppRoutes() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/status" element={<Status />} />
         <Route path="/regions" element={<Regions />} />
-        <Route path="/terms" element={<TermsOfService />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<PublicLayout><TermsOfService /></PublicLayout>} />
+        <Route path="/privacy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
         <Route path="/organizations/invitations/:token" element={<AcceptInvitation />} />
         <Route path="/organizations/invitations/:token/accept" element={<AcceptInvitation />} />
         <Route path="/organizations/invitations/:token/decline" element={<AcceptInvitation />} />
