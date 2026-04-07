@@ -101,7 +101,7 @@ export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, [onHeightChange]);
+  }, [onHeightChange, announcements.length]);
 
   // Clean up CSS var when unmounted
   useEffect(() => {
