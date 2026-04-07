@@ -931,44 +931,50 @@ export class EgressBillingService {
     // Get live usage for the current month
     const pools = await this.getLiveUsage(billingMonth);
 
-    // Filter pools to only include items for this organization
-    const orgPools = pools.filter(pool =>
-      pool.items.some(item => item.organizationId === organizationId)
-    );
-
     // Aggregate totals across all pools for this organization
     let totalMeasuredUsageGb = 0;
     let totalBillableGb = 0;
     let totalAmount = 0;
+    let activePoolCount = 0;
+    let billingEnabledPoolCount = 0;
     const servers: OrganizationEgressServerCharge[] = [];
     const updatedAt = new Date().toISOString();
 
-    for (const pool of orgPools) {
-      // Get only the items for this organization from this pool
-      const orgItems = pool.items.filter(item => item.organizationId === organizationId);
+    for (const pool of pools) {
+      let poolHasOrgItem = false;
 
-      for (const item of orgItems) {
-        totalMeasuredUsageGb += item.measuredUsageGb;
-        totalBillableGb += item.allocatedBillableGb;
-        totalAmount += item.amount;
+      for (const item of pool.items) {
+        if (item.organizationId === organizationId) {
+          if (!poolHasOrgItem) {
+            poolHasOrgItem = true;
+            activePoolCount++;
+            if (pool.billingEnabled) {
+              billingEnabledPoolCount++;
+            }
+          }
 
-        // Add server-level breakdown for VPS instances
-        if (item.vpsInstanceId) {
-          servers.push({
-            billingMonth,
-            poolId: pool.poolId,
-            poolScope: pool.poolScope,
-            regionId: pool.regionId || null,
-            vpsInstanceId: item.vpsInstanceId,
-            providerInstanceId: item.providerInstanceId || null,
-            label: item.label || item.providerInstanceId || `VPS ${item.providerInstanceId || 'Unknown'}`,
-            measuredUsageGb: item.measuredUsageGb,
-            allocatedBillableGb: item.allocatedBillableGb,
-            unitPricePerGb: item.unitPricePerGb,
-            amount: item.amount,
-            status: 'projected', // Live data is always "projected"
-            updatedAt,
-          });
+          totalMeasuredUsageGb += item.measuredUsageGb;
+          totalBillableGb += item.allocatedBillableGb;
+          totalAmount += item.amount;
+
+          // Add server-level breakdown for VPS instances
+          if (item.vpsInstanceId) {
+            servers.push({
+              billingMonth,
+              poolId: pool.poolId,
+              poolScope: pool.poolScope,
+              regionId: pool.regionId || null,
+              vpsInstanceId: item.vpsInstanceId,
+              providerInstanceId: item.providerInstanceId || null,
+              label: item.label || item.providerInstanceId || `VPS ${item.providerInstanceId || 'Unknown'}`,
+              measuredUsageGb: item.measuredUsageGb,
+              allocatedBillableGb: item.allocatedBillableGb,
+              unitPricePerGb: item.unitPricePerGb,
+              amount: item.amount,
+              status: 'projected', // Live data is always "projected"
+              updatedAt,
+            });
+          }
         }
       }
     }
@@ -980,8 +986,8 @@ export class EgressBillingService {
         totalMeasuredUsageGb: round(totalMeasuredUsageGb, 6),
         totalBillableGb: round(totalBillableGb, 6),
         totalAmount: round(totalAmount, 6),
-        activePoolCount: orgPools.length,
-        billingEnabledPoolCount: orgPools.filter(p => p.billingEnabled).length,
+        activePoolCount,
+        billingEnabledPoolCount,
         updatedAt,
       },
       servers,
