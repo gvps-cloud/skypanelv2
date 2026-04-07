@@ -19,7 +19,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import fs from "fs";
+import cookieParser from "cookie-parser";
 import { enhancedHelmet } from "./middleware/security.js";
+import { requireHttpsMiddleware } from "./middleware/requireHttps.js";
+import { csrfProtection } from "./middleware/csrfProtection.js";
 import {
   smartRateLimit,
   addRateLimitHeaders,
@@ -62,6 +65,7 @@ import {
   startMetricsPersistence,
 } from "./services/rateLimitMetrics.js";
 import { BillingCronService } from "./services/billingCronService.js";
+import { sendSafeErrorResponse } from "./lib/errorHandling.js";
 
 // for esm mode
 
@@ -198,17 +202,40 @@ function renderClientIndexHtml(): string {
 }
 
 // Security middleware - use enhanced Helmet configuration with XSS protection
+app.use(requireHttpsMiddleware);
 app.use(enhancedHelmet);
 app.use(
   cors({
-    origin: config.corsOrigins,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (config.corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      console.warn("[Security] CORS rejected origin", { origin });
+      if (config.CORS_STRICT_MODE) {
+        // Do not raise an internal server error for rejected origins.
+        // Returning false cleanly omits CORS allow headers.
+        callback(null, false);
+        return;
+      }
+
+      callback(null, true);
+    },
     credentials: true,
   }),
 );
 
 // Body parsing
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/api", csrfProtection);
 
 // Rate limiting (API routes only)
 app.use("/api", addRateLimitHeaders);
@@ -264,12 +291,8 @@ app.use((error: Error, req: Request, res: Response, _next: NextFunction) => {
   void _next;
   // Log full error details server-side
   console.error("API error:", error);
-  const isDev = process.env.NODE_ENV !== "production";
-  res.status(500).json({
-    success: false,
-    error: isDev
-      ? error?.message || "Server internal error"
-      : "Server internal error",
+  sendSafeErrorResponse(res, error, 500, {
+    fallbackMessage: "Server internal error",
   });
 });
 
@@ -282,14 +305,47 @@ app.use((error: Error, req: Request, res: Response, _next: NextFunction) => {
  */
 const distExists = fs.existsSync(clientBuildPath);
 if (distExists) {
-  app.use(express.static(clientBuildPath, { index: false }));
+  app.use(
+    express.static(clientBuildPath, {
+      index: false,
+      setHeaders: (res, path) => {
+        const normalizedPath = path.replace(/\\/g, "/");
+
+        // Keep hashed build assets aggressively cached.
+        if (/\/assets\/.+-[A-Za-z0-9_-]+\.(js|css)$/.test(normalizedPath)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          return;
+        }
+
+        // Always revalidate entry files so dynamic imports point at current chunks.
+        if (
+          normalizedPath.endsWith("/index.html") ||
+          normalizedPath.endsWith("/sw.js") ||
+          normalizedPath.endsWith("/registerSW.js")
+        ) {
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+          return;
+        }
+
+        res.setHeader("Cache-Control", "public, max-age=3600");
+      },
+    }),
+  );
 
   app.get("*", (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api/")) {
       return next();
     }
 
+    // If a chunk/asset is missing, return 404 instead of falling back to index.html.
+    // This prevents module-loader failures from masquerading as app shell responses.
+    if (req.path.startsWith("/assets/")) {
+      res.status(404).type("text/plain").send("Asset not found");
+      return;
+    }
+
     try {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       res.type("html").send(renderClientIndexHtml());
     } catch (err) {
       next(err);

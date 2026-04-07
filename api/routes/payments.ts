@@ -13,6 +13,7 @@ import {
 import { PayPalService } from "../services/paypalService.js";
 import { BillingService } from "../services/billingService.js";
 import { authenticateToken, requireOrganization } from "../middleware/auth.js";
+import { billingMutationRateLimiter } from "../middleware/rateLimiting.js";
 import { query as dbQuery } from "../lib/database.js";
 import { config } from "../config/index.js";
 import { logActivity } from "../services/activityLogger.js";
@@ -73,6 +74,7 @@ router.get("/config", requireOrganization, (req: Request, res: Response) => {
  */
 router.post(
   "/create-payment",
+  billingMutationRateLimiter,
   [
     body("amount")
       .isFloat({ min: 0.01 })
@@ -170,6 +172,7 @@ router.post(
  */
 router.post(
   "/capture-payment/:orderId",
+  billingMutationRateLimiter,
   [param("orderId").isLength({ min: 1 }).withMessage("Order ID is required")],
   async (req: Request, res: Response) => {
     try {
@@ -339,6 +342,7 @@ router.get(
  */
 router.post(
   "/wallet/deduct",
+  billingMutationRateLimiter,
   [
     body("amount")
       .isFloat({ min: 0.01 })
@@ -648,6 +652,7 @@ router.get(
  */
 router.post(
   "/refund",
+  billingMutationRateLimiter,
   [
     body("email").isEmail().withMessage("Valid email is required"),
     body("amount")

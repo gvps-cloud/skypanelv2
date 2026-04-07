@@ -96,29 +96,10 @@ const isTokenExpired = (token: string): boolean => {
  * This supports both traditional localStorage auth and HttpOnly cookie auth
  */
 const getAuthToken = (): string | null => {
-  // First, try localStorage (existing implementation)
   const localToken = localStorage.getItem("auth_token");
   if (localToken && !isTokenExpired(localToken)) {
     return localToken;
   }
-
-  // Fallback: try to read from document.cookie
-  // Note: This only works for non-HttpOnly cookies
-  // HttpOnly cookies are sent automatically with requests
-  const cookies = document.cookie.split(";");
-  const authCookie = cookies.find((cookie) =>
-    cookie.trim().startsWith("auth_token=")
-  );
-
-  if (authCookie) {
-    const tokenValue = authCookie.split("=")[1]?.trim();
-    if (tokenValue && !isTokenExpired(tokenValue)) {
-      // Store in localStorage for consistency
-      localStorage.setItem("auth_token", tokenValue);
-      return tokenValue;
-    }
-  }
-
   return null;
 };
 
@@ -137,9 +118,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         await fetch("/api/auth/logout", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
+          credentials: "include",
         });
       } catch {
         // Continue with local cleanup even if server request fails
@@ -156,16 +138,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const refreshToken = async (currentToken?: string) => {
     try {
       const tokenToUse = currentToken || token;
-      if (!tokenToUse) {
-        throw new Error("No token available");
-      }
 
       const response = await fetch("/api/auth/refresh", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${tokenToUse}`,
           "Content-Type": "application/json",
+          ...(tokenToUse ? { Authorization: `Bearer ${tokenToUse}` } : {}),
         },
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -174,8 +154,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const data = await response.json();
 
-      setToken(data.token);
-      localStorage.setItem("auth_token", data.token);
+      if (typeof data.token === "string" && data.token.length > 0) {
+        setToken(data.token);
+        localStorage.setItem("auth_token", data.token);
+      }
 
       // Update user data if returned from refresh
       if (data.user) {
@@ -252,6 +234,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // We don't necessarily want to logout here if it's just a network blip,
         // but refreshToken already calls logout on error.
       });
+    } else {
+      fetch("/api/auth/me", { credentials: "include" })
+        .then(async (response) => {
+          if (!response.ok) {
+            return null;
+          }
+          return response.json();
+        })
+        .then((data) => {
+          if (data?.user) {
+            setUser(data.user);
+            localStorage.setItem("auth_user", JSON.stringify(data.user));
+          }
+        })
+        .catch(() => {
+          // Ignore unauthenticated restore failures
+        });
     }
 
     setLoading(false);
@@ -279,6 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({ email, password, code }),
       });
 
@@ -294,10 +294,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       setUser(data.user);
-      setToken(data.token);
+      setToken(data.token ?? null);
 
       // Store in localStorage
-      localStorage.setItem("auth_token", data.token);
+      if (data.token) {
+        localStorage.setItem("auth_token", data.token);
+      } else {
+        localStorage.removeItem("auth_token");
+      }
       localStorage.setItem("auth_user", JSON.stringify(data.user));
 
       return { success: true };
@@ -314,6 +318,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(data),
       });
 
@@ -325,10 +330,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const result = await response.json();
 
       setUser(result.user);
-      setToken(result.token);
+      setToken(result.token ?? null);
 
       // Store in localStorage
-      localStorage.setItem("auth_token", result.token);
+      if (result.token) {
+        localStorage.setItem("auth_token", result.token);
+      } else {
+        localStorage.removeItem("auth_token");
+      }
       localStorage.setItem("auth_user", JSON.stringify(result.user));
     } catch (error) {
       console.error("Registration error:", error);

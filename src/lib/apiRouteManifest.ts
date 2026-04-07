@@ -1263,20 +1263,20 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "GET",
     "path": "/api/health/config-validation",
-    "protected": false,
-    "admin": false
+    "protected": true,
+    "admin": true
   },
   {
     "method": "GET",
     "path": "/api/health/detailed",
-    "protected": false,
-    "admin": false
+    "protected": true,
+    "admin": true
   },
   {
     "method": "GET",
     "path": "/api/health/metrics",
-    "protected": false,
-    "admin": false
+    "protected": true,
+    "admin": true
   },
   {
     "method": "GET",
@@ -1287,8 +1287,8 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "GET",
     "path": "/api/health/rate-limiting",
-    "protected": false,
-    "admin": false
+    "protected": true,
+    "admin": true
   },
   {
     "method": "GET",

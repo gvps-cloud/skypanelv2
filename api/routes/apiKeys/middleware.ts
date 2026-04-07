@@ -55,7 +55,7 @@ export interface ApiKeyRequest extends Request {
  * Checks in order:
  * 1. X-API-Key header (primary)
  * 2. Authorization: Bearer <api-key> (fallback)
- * 3. apikey query parameter (last resort, not recommended)
+ * Query-string API keys are intentionally not supported for security reasons.
  *
  * @returns The API key string or null
  */
@@ -77,13 +77,6 @@ function extractApiKey(req: Request): string | null {
         return token;
       }
     }
-  }
-
-  // Check query parameter (NOT recommended, but supported)
-  const apiKeyQuery = req.query.apikey;
-  if (apiKeyQuery && typeof apiKeyQuery === 'string') {
-    console.warn('[Security] API key provided via query parameter. This is insecure as it may be logged in access logs. Please use the X-API-Key header instead.');
-    return apiKeyQuery.trim();
   }
 
   return null;
@@ -199,6 +192,13 @@ export const authenticateApiKey = async (
   next: NextFunction
 ) => {
   try {
+    if (typeof req.query.apikey === "string" && req.query.apikey.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Query-string API keys are not allowed. Use the X-API-Key header.",
+      });
+    }
+
     const apiKey = extractApiKey(req);
 
     if (!apiKey) {

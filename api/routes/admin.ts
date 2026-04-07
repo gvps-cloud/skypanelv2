@@ -47,12 +47,20 @@ import {
 } from "../lib/validation.js";
 import { EgressBillingService } from "../services/egressBillingService.js";
 import { tokenBlacklistService } from "../services/tokenBlacklistService.js";
+import { adminMutationRateLimiter } from "../middleware/rateLimiting.js";
 
 const router = express.Router();
 
 // Apply security middleware to all admin routes
 router.use(adminSecurityHeaders);
 router.use(requestSizeLimit(500)); // 500KB limit for admin operations
+router.use((req: Request, res: Response, next) => {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method.toUpperCase())) {
+    adminMutationRateLimiter(req, res, next);
+    return;
+  }
+  next();
+});
 
 // Enhanced Rate Limiting:
 // Admin routes automatically receive higher rate limits (1000 requests per 15 minutes)

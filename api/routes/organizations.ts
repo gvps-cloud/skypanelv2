@@ -14,8 +14,14 @@ import {
 } from '../services/egressCreditService.js';
 import { PayPalService } from '../services/paypalService.js';
 import { logActivity } from '../services/activityLogger.js';
+import { createCustomRateLimiter } from "../middleware/rateLimiting.js";
 
 const router = express.Router();
+const organizationMutationRateLimiter = createCustomRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  maxRequests: 80,
+  userType: "authenticated",
+});
 
 // Middleware to check if user is system admin or org admin/owner
 const requireOrgAccess = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -99,6 +105,13 @@ const checkOrganizationMembership = async (req: AuthenticatedRequest, res: Respo
 };
 
 router.use(authenticateToken);
+router.use((req, res, next) => {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method.toUpperCase())) {
+    organizationMutationRateLimiter(req, res, next);
+    return;
+  }
+  next();
+});
 
 // GET /resources - List resources across all organizations
 router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
