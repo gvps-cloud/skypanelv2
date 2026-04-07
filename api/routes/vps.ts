@@ -1471,8 +1471,7 @@ router.get("/providers/:providerId/ssh-keys", async (req: Request, res: Response
         .json({ error: "You do not have permission to view SSH keys" });
     }
 
-    // SECURITY FIX: Query local database with organization scoping
-    // instead of fetching ALL keys from Linode API (which would expose cross-org keys)
+    // Fetch SSH keys from local database (organization-scoped for security)
     const result = await query(
       `SELECT id, name, public_key, fingerprint, linode_key_id, created_at
        FROM user_ssh_keys
@@ -2870,60 +2869,55 @@ router.post("/", async (req: Request, res: Response) => {
           const resolvedKeys: string[] = [...directPublicKeys];
 
           if (requestedKeyIds.length > 0) {
-            if (providerApiToken) {
-              try {
-                const providerKeys =
-                  await linodeService.getSSHKeys(providerApiToken);
+            try {
+              // SECURITY FIX: Query local database with organization scoping
+              // instead of fetching ALL keys from provider API to prevent cross-org exposure
+              const dbKeys = await query(
+                `SELECT id, linode_key_id, public_key
+                 FROM user_ssh_keys
+                 WHERE organization_id = $1`,
+                [organizationId],
+              );
 
-                const keyLookup = new Map(
-                  providerKeys.map((providerKey: any) => [
-                    String(providerKey.id),
-                    String(providerKey.ssh_key || ""),
-                  ]),
-                );
+              const keyLookup = new Map();
+              for (const row of dbKeys.rows) {
+                if (row.id) keyLookup.set(String(row.id), row.public_key);
+                if (row.linode_key_id)
+                  keyLookup.set(String(row.linode_key_id), row.public_key);
+              }
 
-                for (const keyId of requestedKeyIds) {
-                  const matchedKey = keyLookup.get(keyId);
-                  if (matchedKey && matchedKey.trim().length > 0) {
-                    resolvedKeys.push(matchedKey.trim());
-                  } else {
-                    console.warn(
-                      "Selected Linode SSH key could not be resolved to a public key",
-                      {
-                        keyId,
-                        provider_id,
-                      },
-                    );
-                  }
-                }
-
-                if (
-                  resolvedKeys.length <
-                  directPublicKeys.length + requestedKeyIds.length
-                ) {
+              for (const keyId of requestedKeyIds) {
+                const matchedKey = keyLookup.get(keyId);
+                if (matchedKey && matchedKey.trim().length > 0) {
+                  resolvedKeys.push(matchedKey.trim());
+                } else {
                   console.warn(
-                    "Some Linode SSH keys were not resolved to public keys",
+                    "Selected SSH key could not be resolved to a public key for this organization",
                     {
-                      requested: requestedKeyIds,
-                      resolved: resolvedKeys.length,
+                      keyId,
+                      organizationId,
                     },
                   );
                 }
-              } catch (sshKeyErr) {
-                logError("Linode SSH key resolution", sshKeyErr, {
-                  organizationId,
-                  provider_id,
-                  requestedKeys: requestedKeyIds,
-                });
               }
-            } else {
-              console.warn(
-                "Linode provider API token unavailable; cannot resolve SSH key IDs",
-                {
-                  provider_id,
-                  requestedKeyIds,
-                },
-              );
+
+              if (
+                resolvedKeys.length <
+                directPublicKeys.length + requestedKeyIds.length
+              ) {
+                console.warn(
+                  "Some SSH keys were not resolved to public keys or do not belong to this organization",
+                  {
+                    requested: requestedKeyIds,
+                    resolved: resolvedKeys.length,
+                  },
+                );
+              }
+            } catch (sshKeyErr) {
+              logError("SSH key resolution", sshKeyErr, {
+                organizationId,
+                requestedKeys: requestedKeyIds,
+              });
             }
           }
 
@@ -3562,54 +3556,56 @@ router.post("/:id/rebuild", async (req: Request, res: Response) => {
       const resolvedKeys: string[] = [...directPublicKeys];
 
       if (requestedKeyIds.length > 0) {
-        // Load provider API token for SSH key resolution
-        let providerApiTokenForKeys: string | null = providerApiToken;
         try {
-          if (!providerApiTokenForKeys) {
-            const providerResult = await query(
-              "SELECT id, api_key_encrypted FROM service_providers WHERE id = $1 AND active = true LIMIT 1",
-              [row.provider_id],
-            );
-            if (providerResult.rows.length > 0) {
-              providerApiTokenForKeys = await normalizeProviderToken(
-                providerResult.rows[0].id,
-                providerResult.rows[0].api_key_encrypted,
+          // SECURITY FIX: Query local database with organization scoping
+          // instead of fetching ALL keys from provider API to prevent cross-org exposure
+          const dbKeys = await query(
+            `SELECT id, linode_key_id, public_key
+             FROM user_ssh_keys
+             WHERE organization_id = $1`,
+            [organizationId],
+          );
+
+          const keyLookup = new Map();
+          for (const dbRow of dbKeys.rows) {
+            if (dbRow.id) keyLookup.set(String(dbRow.id), dbRow.public_key);
+            if (dbRow.linode_key_id)
+              keyLookup.set(String(dbRow.linode_key_id), dbRow.public_key);
+          }
+
+          for (const keyId of requestedKeyIds) {
+            const matchedKey = keyLookup.get(keyId);
+            if (matchedKey && matchedKey.trim().length > 0) {
+              resolvedKeys.push(matchedKey.trim());
+            } else {
+              console.warn(
+                "Selected SSH key could not be resolved for rebuild in this organization",
+                {
+                  keyId,
+                  organizationId,
+                  vpsId: id,
+                },
               );
             }
           }
-        } catch (tokenErr) {
-          console.warn("Failed to load provider token for SSH key resolution:", tokenErr);
-        }
 
-        if (providerApiTokenForKeys) {
-          try {
-            const providerKeys =
-              await linodeService.getSSHKeys(providerApiTokenForKeys);
-            const keyLookup = new Map(
-              providerKeys.map((providerKey: any) => [
-                String(providerKey.id),
-                String(providerKey.ssh_key || ""),
-              ]),
+          if (
+            resolvedKeys.length <
+            directPublicKeys.length + requestedKeyIds.length
+          ) {
+            console.warn(
+              "Some SSH keys were not resolved to public keys or do not belong to this organization during rebuild",
+              {
+                requested: requestedKeyIds,
+                resolved: resolvedKeys.length,
+              },
             );
-
-            for (const keyId of requestedKeyIds) {
-              const matchedKey = keyLookup.get(keyId);
-              if (matchedKey && matchedKey.trim().length > 0) {
-                resolvedKeys.push(matchedKey.trim());
-              } else {
-                console.warn(
-                  "Selected SSH key could not be resolved for rebuild",
-                  { keyId, provider_id: row.provider_id },
-                );
-              }
-            }
-          } catch (sshKeyErr) {
-            logError("SSH key resolution during rebuild", sshKeyErr, {
-              organizationId,
-              provider_id: row.provider_id,
-              requestedKeys: requestedKeyIds,
-            });
           }
+        } catch (sshKeyErr) {
+          logError("SSH key resolution during rebuild", sshKeyErr, {
+            organizationId,
+            requestedKeys: requestedKeyIds,
+          });
         }
       }
 
