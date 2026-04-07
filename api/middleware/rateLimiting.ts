@@ -10,7 +10,9 @@
 
 import { Request, Response, NextFunction } from "express";
 import rateLimit, { RateLimitRequestHandler } from "express-rate-limit";
+import { RedisStore } from "rate-limit-redis";
 import jwt from "jsonwebtoken";
+import Redis from "ioredis";
 import { config } from "../config/index.js";
 import { getClientIP } from "../lib/ipDetection.js";
 import { logRateLimitEvent } from "../services/activityLogger.js";
@@ -22,6 +24,60 @@ import {
 import type { AuthenticatedRequest } from "./auth.js";
 
 export type UserType = "anonymous" | "authenticated" | "admin";
+
+let redisClient: Redis | null = null;
+let redisStoreUnavailableLogged = false;
+
+function getRedisClient(): Redis | null {
+  if (redisClient) {
+    return redisClient;
+  }
+
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    return null;
+  }
+
+  try {
+    redisClient = new Redis(redisUrl, {
+      password: process.env.REDIS_PASSWORD,
+      maxRetriesPerRequest: 2,
+      enableReadyCheck: true,
+      lazyConnect: true,
+      connectTimeout: 5000,
+      commandTimeout: 3000,
+    });
+    redisClient.on("error", (error) => {
+      if (!redisStoreUnavailableLogged) {
+        console.error("[RateLimit] Redis store unavailable, using in-memory fallback", error);
+        redisStoreUnavailableLogged = true;
+      }
+    });
+    redisClient.on("ready", () => {
+      redisStoreUnavailableLogged = false;
+    });
+    return redisClient;
+  } catch (error) {
+    console.error("[RateLimit] Failed to initialize Redis client, using in-memory fallback", error);
+    return null;
+  }
+}
+
+function createDistributedStore(prefix: string): RedisStore | undefined {
+  const client = getRedisClient();
+  if (!client) {
+    return undefined;
+  }
+
+  return new RedisStore({
+    sendCommand: (async (...args: string[]) => {
+      const [command, ...rest] = args;
+      const result = await client.call(command, ...rest);
+      return result as any;
+    }) as any,
+    prefix,
+  });
+}
 
 /**
  * In-memory request counter for tracking actual request counts per key
@@ -300,6 +356,7 @@ function buildOverrideLimiter(
     skipSuccessfulRequests: false,
     skipFailedRequests: false,
     skip: (req: Request) => req.method === "OPTIONS",
+    store: createDistributedStore("rl:override:"),
   });
 }
 
@@ -492,6 +549,7 @@ export function createRateLimiter(
     skipSuccessfulRequests: false,
     skipFailedRequests: false,
     skip: (req: Request) => req.method === "OPTIONS",
+    store: createDistributedStore(`rl:${endpointType}:${userType}:`),
   });
 }
 
@@ -688,6 +746,7 @@ export function createCustomRateLimiter(
     skipSuccessfulRequests,
     skipFailedRequests,
     skip: (req: Request) => req.method === "OPTIONS",
+    store: createDistributedStore(`rl:custom:${userType}:`),
     // Rate limit reached logging is handled in the custom handler
   });
 }
@@ -818,6 +877,7 @@ export const loginRateLimiter = rateLimit({
       retryAfter: 900,
     });
   },
+  store: createDistributedStore("rl:login:"),
 });
 
 /**
@@ -891,6 +951,25 @@ export const passwordResetRateLimiter = rateLimit({
       retryAfter: Math.ceil(config.rateLimiting.passwordResetWindowMs / 1000),
     });
   },
+  store: createDistributedStore("rl:password-reset:"),
+});
+
+export const apiKeyMutationRateLimiter = createCustomRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 20,
+  userType: "authenticated",
+});
+
+export const billingMutationRateLimiter = createCustomRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  maxRequests: 30,
+  userType: "authenticated",
+});
+
+export const adminMutationRateLimiter = createCustomRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  maxRequests: 120,
+  userType: "admin",
 });
 
 // Production rate limit warning

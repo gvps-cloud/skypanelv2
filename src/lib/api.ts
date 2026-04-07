@@ -124,8 +124,19 @@ export interface PaymentTransactionDetail {
 }
 
 class PaymentService {
+  private getCsrfToken(): string | null {
+    const cookie = document.cookie
+      .split(";")
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith("csrf_token="));
+    if (!cookie) {
+      return null;
+    }
+    const value = cookie.split("=")[1];
+    return value ? decodeURIComponent(value) : null;
+  }
+
   private getAuthHeaders(): HeadersInit {
-    const token = localStorage.getItem("auth_token");
     const userStr = localStorage.getItem("auth_user");
     let organizationId: string | undefined;
     
@@ -138,9 +149,10 @@ class PaymentService {
       }
     }
 
+    const csrfToken = this.getCsrfToken();
     return {
       "Content-Type": "application/json",
-      Authorization: token ? `Bearer ${token}` : "",
+      ...(csrfToken && { "X-CSRF-Token": csrfToken }),
       ...(organizationId && { "X-Organization-ID": organizationId }),
     };
   }
@@ -153,6 +165,7 @@ class PaymentService {
       const response = await fetch(`${API_BASE_URL}/payments/create-payment`, {
         method: "POST",
         headers: this.getAuthHeaders(),
+        credentials: "include",
         body: JSON.stringify(paymentIntent),
       });
 
@@ -189,6 +202,7 @@ class PaymentService {
         {
           method: "POST",
           headers: this.getAuthHeaders(),
+          credentials: "include",
         }
       );
 
@@ -226,6 +240,7 @@ class PaymentService {
       const response = await fetch(`${API_BASE_URL}/payments/config`, {
         method: "GET",
         headers: this.getAuthHeaders(),
+        credentials: "include",
       });
 
       const data = await response.json();
@@ -294,6 +309,7 @@ class PaymentService {
         {
           method: "POST",
           headers: this.getAuthHeaders(),
+          credentials: "include",
           body: JSON.stringify({ reason }),
         }
       );
@@ -325,6 +341,7 @@ class PaymentService {
       const response = await fetch(`${API_BASE_URL}/payments/wallet/balance`, {
         method: "GET",
         headers: this.getAuthHeaders(),
+        credentials: "include",
       });
 
       const data = await response.json();
@@ -359,6 +376,7 @@ class PaymentService {
         {
           method: "GET",
           headers: this.getAuthHeaders(),
+          credentials: "include",
         }
       );
 
@@ -474,6 +492,7 @@ class PaymentService {
         {
           method: "GET",
           headers: this.getAuthHeaders(),
+          credentials: "include",
         }
       );
 
@@ -535,6 +554,7 @@ class PaymentService {
         {
           method: "GET",
           headers: this.getAuthHeaders(),
+          credentials: "include",
         }
       );
 
@@ -593,6 +613,7 @@ class PaymentService {
         {
           method: "POST",
           headers: this.getAuthHeaders(),
+          credentials: "include",
         }
       );
 
@@ -632,6 +653,7 @@ class PaymentService {
       const response = await fetch(`${API_BASE_URL}/payments/refund`, {
         method: "POST",
         headers: this.getAuthHeaders(),
+        credentials: "include",
         body: JSON.stringify({
           email,
           amount,
@@ -684,6 +706,7 @@ class PaymentService {
         {
           method: "GET",
           headers: this.getAuthHeaders(),
+          credentials: "include",
         }
       );
 
@@ -712,8 +735,19 @@ export const paymentService = new PaymentService();
  * Handles authentication, JSON parsing, and error handling
  */
 class ApiClient {
+  private getCsrfToken(): string | null {
+    const cookie = document.cookie
+      .split(";")
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith("csrf_token="));
+    if (!cookie) {
+      return null;
+    }
+    const value = cookie.split("=")[1];
+    return value ? decodeURIComponent(value) : null;
+  }
+
   private getAuthHeaders(): HeadersInit {
-    const token = localStorage.getItem("auth_token");
     const userStr = localStorage.getItem("auth_user");
     let organizationId: string | undefined;
     
@@ -726,9 +760,10 @@ class ApiClient {
       }
     }
 
+    const csrfToken = this.getCsrfToken();
     return {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(csrfToken && { "X-CSRF-Token": csrfToken }),
       ...(organizationId && { "X-Organization-ID": organizationId }),
     };
   }
@@ -787,6 +822,7 @@ class ApiClient {
     const response = await fetch(url, {
       method: "GET",
       headers: this.getAuthHeaders(),
+      credentials: "include",
     });
     return this.handleResponse<T>(response);
   }
@@ -796,6 +832,7 @@ class ApiClient {
     const response = await fetch(url, {
       method: "POST",
       headers: this.getAuthHeaders(),
+      credentials: "include",
       body: data ? JSON.stringify(data) : undefined,
     });
     return this.handleResponse<T>(response);
@@ -806,6 +843,7 @@ class ApiClient {
     const response = await fetch(url, {
       method: "PUT",
       headers: this.getAuthHeaders(),
+      credentials: "include",
       body: data ? JSON.stringify(data) : undefined,
     });
     return this.handleResponse<T>(response);
@@ -816,6 +854,7 @@ class ApiClient {
     const response = await fetch(url, {
       method: "PATCH",
       headers: this.getAuthHeaders(),
+      credentials: "include",
       body: data ? JSON.stringify(data) : undefined,
     });
     return this.handleResponse<T>(response);
@@ -826,6 +865,7 @@ class ApiClient {
     const response = await fetch(url, {
       method: "DELETE",
       headers: this.getAuthHeaders(),
+      credentials: "include",
       body: body ? JSON.stringify(body) : undefined,
     });
     return this.handleResponse<T>(response);

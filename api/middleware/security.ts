@@ -23,6 +23,21 @@ import helmet from 'helmet';
  * - frame-ancestors 'none': Prevent page from being embedded in frames (clickjacking protection)
  * - upgrade-insecure-requests: Automatically upgrade HTTP to HTTPS
  */
+const isProduction = process.env.NODE_ENV === "production";
+const connectSrc = [
+  "'self'",
+  "https://api.paypal.com",
+  "https://www.paypal.com",
+  "https://cdn.jsdelivr.net",
+  "https://*.linode.com",
+  "https://api.linode.com",
+  "https://*.sslip.io",
+  ...(isProduction ? [] : ["ws://localhost:*", "wss://localhost:*"]),
+];
+const imgSrc = ["'self'", "data:", "blob:", "https:", ...(isProduction ? [] : ["http://localhost:*"])];
+const scriptSrc = ["'self'", ...(isProduction ? [] : ["'unsafe-inline'"]), "https://*.sslip.io"];
+const styleSrc = ["'self'", ...(isProduction ? [] : ["'unsafe-inline'"])];
+
 const helmetConfig = {
   hidePoweredBy: true,
   // Content Security Policy - strict but allows React/Modern web apps to function
@@ -32,31 +47,19 @@ const helmetConfig = {
       baseUri: ["'self'"],
       blockAllMixedContent: [],
       connectSrc: [
-        "'self'",
-        'https://api.paypal.com',
-        'https://www.paypal.com',
-        'https://cdn.jsdelivr.net', // Status page: world map GeoJSON
-        'https://*.linode.com', // Status page: live region latency checks (covers both speedtest.CITY.linode.com and CITY.speedtest.linode.com formats)
-        'https://api.linode.com', // Status page: public region data
-        'https://*.sslip.io', // Rybbit analytics
-        'ws://localhost:*',
-        'wss://localhost:*',
+        ...connectSrc,
       ],
       fontSrc: ["'self'", 'data:'],
       formAction: ["'self'"],
       frameAncestors: ["'none'"],
       frameSrc: ["'self'", 'https://www.paypal.com'],
-      imgSrc: ["'self'", 'data:', 'blob:', 'https:', 'http://localhost:*'],
+      imgSrc: [...imgSrc],
       manifestSrc: ["'self'"],
       mediaSrc: ["'self'"],
       objectSrc: ["'none'"],
-      scriptSrc: [
-        "'self'",
-        "'unsafe-inline'",
-        'https://*.sslip.io', // Rybbit analytics - wildcard to support any sslip.io subdomain
-      ],
+      scriptSrc: [...scriptSrc],
       scriptSrcAttr: ["'none'"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // Required for inline styles (React/Tailwind)
+      styleSrc: [...styleSrc],
       upgradeInsecureRequests: [],
       workerSrc: ["'self'", 'blob:'],
     },

@@ -15,7 +15,12 @@ import { getCurrentMetrics } from "../services/rateLimitMetrics.js";
 import { config } from "../config/index.js";
 import { query } from "../lib/database.js";
 import { PlatformStatsService } from "../services/platformStatsService.js";
-import { optionalAuth, AuthenticatedRequest } from "../middleware/auth.js";
+import {
+  authenticateToken,
+  optionalAuth,
+  requireAdmin,
+  AuthenticatedRequest,
+} from "../middleware/auth.js";
 import { getBetterStackData } from "../services/betterStackService.js";
 
 const router = Router();
@@ -84,7 +89,7 @@ router.get("/status", async (req: Request, res: Response) => {
 /**
  * Comprehensive health check with rate limiting status
  */
-router.get("/detailed", (req: Request, res: Response) => {
+router.get("/detailed", authenticateToken, requireAdmin, (req: Request, res: Response) => {
   try {
     const rateLimitHealth = getRateLimitHealthCheck();
     const metrics = getCurrentMetrics(15); // Last 15 minutes
@@ -160,7 +165,11 @@ router.get("/detailed", (req: Request, res: Response) => {
 /**
  * Rate limiting specific health check
  */
-router.get("/rate-limiting", async (req: Request, res: Response) => {
+router.get(
+  "/rate-limiting",
+  authenticateToken,
+  requireAdmin,
+  async (req: Request, res: Response) => {
   try {
     const health = getRateLimitHealthCheck();
     const validation = validateRateLimitConfiguration();
@@ -219,14 +228,10 @@ router.get("/rate-limiting", async (req: Request, res: Response) => {
       overrides: overrides.map((override) => ({
         id: override.id,
         userId: override.userId,
-        userEmail: override.userEmail,
-        userName: override.userName,
         maxRequests: override.maxRequests,
         windowMs: override.windowMs,
         reason: override.reason,
         createdBy: override.createdBy,
-        createdByEmail: override.createdByEmail,
-        createdByName: override.createdByName,
         expiresAt: override.expiresAt ? override.expiresAt.toISOString() : null,
         createdAt: override.createdAt.toISOString(),
         updatedAt: override.updatedAt.toISOString(),
@@ -246,12 +251,13 @@ router.get("/rate-limiting", async (req: Request, res: Response) => {
           : "Internal server error",
     });
   }
-});
+  },
+);
 
 /**
  * Rate limiting metrics endpoint
  */
-router.get("/metrics", (req: Request, res: Response) => {
+router.get("/metrics", authenticateToken, requireAdmin, (req: Request, res: Response) => {
   try {
     const windowMinutes = parseInt(req.query.window as string) || 15;
 
@@ -308,7 +314,11 @@ router.get("/metrics", (req: Request, res: Response) => {
 /**
  * Configuration validation endpoint (for admin use)
  */
-router.get("/config-validation", (req: Request, res: Response) => {
+router.get(
+  "/config-validation",
+  authenticateToken,
+  requireAdmin,
+  (req: Request, res: Response) => {
   try {
     const validation = validateRateLimitConfiguration();
 
@@ -335,7 +345,8 @@ router.get("/config-validation", (req: Request, res: Response) => {
           : "Internal server error",
     });
   }
-});
+  },
+);
 
 /**
  * VPS Infrastructure Statistics Endpoint

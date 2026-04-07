@@ -2,7 +2,7 @@
  * Authentication API routes
  * Handle user registration, login, token management, etc.
  */
-import { Router, type Request, type Response } from "express";
+import { Router, type CookieOptions, type Request, type Response } from "express";
 import { body, validationResult } from "express-validator";
 import { AuthService } from "../services/authService.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
@@ -12,10 +12,27 @@ import { mergeNotificationPreferences } from "../services/userNotificationPrefer
 import { bruteForceProtectionService } from "../services/bruteForceProtectionService.js";
 import { tokenBlacklistService } from "../services/tokenBlacklistService.js";
 import { getClientIP } from "../lib/ipDetection.js";
-import { loginRateLimiter, passwordResetRateLimiter } from "../middleware/rateLimiting.js";
+import {
+  apiKeyMutationRateLimiter,
+  loginRateLimiter,
+  passwordResetRateLimiter,
+} from "../middleware/rateLimiting.js";
 import { generateApiKey, hashApiKey } from "../lib/secureRandom.js";
+import { toSafeErrorMessage } from "../lib/errorHandling.js";
 
 const router = Router();
+const AUTH_COOKIE_NAME = "auth_token";
+
+function getAuthCookieOptions(): CookieOptions {
+  const isProduction = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "lax" : "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  };
+}
 
 /**
  * User Registration
@@ -69,7 +86,7 @@ router.post(
       });
     } catch (error: any) {
       console.error("Registration error:", error);
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: toSafeErrorMessage(error, "Registration failed") });
     }
   },
 );
@@ -160,6 +177,7 @@ router.post(
           console.error('Failed to log login activity:', logError);
         }
 
+        res.cookie(AUTH_COOKIE_NAME, loginResult.token, getAuthCookieOptions());
         res.json({
           message: "Login successful",
           user: loginResult.user,
@@ -273,6 +291,10 @@ router.post(
           console.error('Failed to log logout activity:', logError);
         }
       }
+      res.clearCookie(AUTH_COOKIE_NAME, {
+        ...getAuthCookieOptions(),
+        maxAge: undefined,
+      });
       res.json({ message: "Logout successful" });
     } catch (error: any) {
       console.error("Logout error:", error);
@@ -419,11 +441,11 @@ router.post(
       }
 
       const result = await AuthService.refreshToken(req.user.id);
-
+      res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions());
       res.json(result);
     } catch (error: any) {
       console.error("Token refresh error:", error);
-      res.status(401).json({ error: error.message });
+      res.status(401).json({ error: toSafeErrorMessage(error, "Token refresh failed") });
     }
   },
 );
@@ -458,6 +480,11 @@ router.get(
   "/debug/user",
   authenticateToken,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (process.env.NODE_ENV === "production") {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+
     try {
       // Test basic user lookup
       const userResult = await query("SELECT * FROM users WHERE id = $1", [
@@ -789,6 +816,7 @@ router.get(
 router.post(
   "/api-keys",
   authenticateToken,
+  apiKeyMutationRateLimiter,
   [
     body("name")
       .isString()
@@ -979,6 +1007,7 @@ router.post(
 router.delete(
   "/api-keys/:id",
   authenticateToken,
+  apiKeyMutationRateLimiter,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       if (!req.user) {

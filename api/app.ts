@@ -19,7 +19,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import fs from "fs";
+import cookieParser from "cookie-parser";
 import { enhancedHelmet } from "./middleware/security.js";
+import { requireHttpsMiddleware } from "./middleware/requireHttps.js";
+import { csrfProtection } from "./middleware/csrfProtection.js";
 import {
   smartRateLimit,
   addRateLimitHeaders,
@@ -62,6 +65,7 @@ import {
   startMetricsPersistence,
 } from "./services/rateLimitMetrics.js";
 import { BillingCronService } from "./services/billingCronService.js";
+import { sendSafeErrorResponse } from "./lib/errorHandling.js";
 
 // for esm mode
 
@@ -198,17 +202,40 @@ function renderClientIndexHtml(): string {
 }
 
 // Security middleware - use enhanced Helmet configuration with XSS protection
+app.use(requireHttpsMiddleware);
 app.use(enhancedHelmet);
 app.use(
   cors({
-    origin: config.corsOrigins,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (config.corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      console.warn("[Security] CORS rejected origin", { origin });
+      if (config.CORS_STRICT_MODE) {
+        // Do not raise an internal server error for rejected origins.
+        // Returning false cleanly omits CORS allow headers.
+        callback(null, false);
+        return;
+      }
+
+      callback(null, true);
+    },
     credentials: true,
   }),
 );
 
 // Body parsing
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/api", csrfProtection);
 
 // Rate limiting (API routes only)
 app.use("/api", addRateLimitHeaders);
@@ -264,12 +291,8 @@ app.use((error: Error, req: Request, res: Response, _next: NextFunction) => {
   void _next;
   // Log full error details server-side
   console.error("API error:", error);
-  const isDev = process.env.NODE_ENV !== "production";
-  res.status(500).json({
-    success: false,
-    error: isDev
-      ? error?.message || "Server internal error"
-      : "Server internal error",
+  sendSafeErrorResponse(res, error, 500, {
+    fallbackMessage: "Server internal error",
   });
 });
 

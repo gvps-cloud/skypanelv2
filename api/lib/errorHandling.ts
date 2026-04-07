@@ -10,6 +10,11 @@ export interface StructuredError {
   statusCode: number;
 }
 
+interface SafeErrorResponseOptions {
+  fallbackMessage?: string;
+  includeDetailsInDev?: boolean;
+}
+
 /**
  * Error codes for consistent error handling
  */
@@ -342,4 +347,38 @@ export function asyncHandler(
   return (req: any, res: any, next: any) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
+}
+
+export function toSafeErrorMessage(
+  error: unknown,
+  fallbackMessage: string = "Request failed",
+): string {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
+
+export function sendSafeErrorResponse(
+  res: any,
+  error: unknown,
+  statusCode: number = 500,
+  options: SafeErrorResponseOptions = {},
+): void {
+  const isDev = process.env.NODE_ENV !== "production";
+  const fallbackMessage = options.fallbackMessage ?? "Server internal error";
+  const includeDetailsInDev = options.includeDetailsInDev ?? false;
+  const safeMessage = toSafeErrorMessage(error, fallbackMessage);
+
+  const responseBody: Record<string, unknown> = {
+    success: false,
+    error: isDev ? safeMessage : fallbackMessage,
+  };
+
+  if (isDev && includeDetailsInDev && error instanceof Error) {
+    responseBody.details = error.stack;
+  }
+
+  res.status(statusCode).json(responseBody);
 }

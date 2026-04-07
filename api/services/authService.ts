@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
-import { randomBytes } from 'crypto';
+import { randomInt } from 'crypto';
 import { query, transaction } from '../lib/database.js';
 import { config } from '../config/index.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -31,7 +31,7 @@ export interface LoginData {
  * for authentication secrets (minimum 64 bits, recommended 128+ bits).
  */
 function generatePasswordResetCode(): string {
-  return randomBytes(16).toString('hex');
+  return randomInt(0, 10 ** 8).toString().padStart(8, "0");
 }
 
 /**
@@ -413,8 +413,11 @@ export class AuthService {
       const normalizedToken = token.trim();
       const normalizedEmail = email.toLowerCase().trim();
 
-      // Validate token is a 32-character hex string (128 bits of entropy from randomBytes(16))
-      if (!/^[a-f0-9]{32}$/i.test(normalizedToken)) {
+      // Accept both current 8-digit numeric codes and legacy 32-char hex tokens.
+      // This preserves backward compatibility for in-flight reset links/codes.
+      const isNumericCode = /^\d{8}$/.test(normalizedToken);
+      const isLegacyHexToken = /^[a-f0-9]{32}$/i.test(normalizedToken);
+      if (!isNumericCode && !isLegacyHexToken) {
         throw new Error('Invalid reset token format');
       }
 

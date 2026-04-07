@@ -62,6 +62,7 @@ export interface Config {
   // Better Stack / Better Uptime integration
   BETTERUPTIME_API_KEY?: string;
   BETTERUPTIME_STATUS_PAGE_ID?: string;
+  CORS_STRICT_MODE: boolean;
 }
 
 /**
@@ -125,6 +126,38 @@ function parseEmailProviderPriority(value?: string): EmailProvider[] {
   }
 
   return deduped.length > 0 ? deduped : defaultOrder;
+}
+
+function parseCorsOrigins(value?: string): string[] {
+  const localDevOrigins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://localhost:5173",
+    "https://127.0.0.1:5173",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "https://localhost:3001",
+    "https://127.0.0.1:3001",
+  ];
+
+  const parsed = (value || localDevOrigins.join(","))
+    .split(",")
+    .map((url) => url.trim())
+    .filter((url) => url.length > 0);
+
+  const deduped = new Set(parsed);
+
+  // In development, always include common local origins to prevent accidental lockouts
+  // when CLIENT_URL is set to a remote/prod URL.
+  if (process.env.NODE_ENV !== "production") {
+    localDevOrigins.forEach((origin) => deduped.add(origin));
+  }
+
+  if (deduped.size === 0) {
+    return localDevOrigins;
+  }
+
+  return Array.from(deduped);
 }
 
 function parseRateLimitConfig(): RateLimitConfig {
@@ -292,13 +325,15 @@ function getConfig(): Config {
     RDNS_BASE_DOMAIN:
       process.env.RDNS_BASE_DOMAIN?.trim() || "ip.rev.example.com",
     VPS_TAG: process.env.VPS_TAG?.trim() || "skypanelv2",
-    corsOrigins: (process.env.CLIENT_URL || "http://localhost:5173")
-      .split(",")
-      .map((url) => url.trim()),
+    corsOrigins: parseCorsOrigins(process.env.CLIENT_URL),
     // Better Stack / Better Uptime (optional)
     BETTERUPTIME_API_KEY: process.env.BETTERUPTIME_API_KEY?.trim() || undefined,
     BETTERUPTIME_STATUS_PAGE_ID:
       process.env.BETTERUPTIME_STATUS_PAGE_ID?.trim() || undefined,
+    CORS_STRICT_MODE: parseBoolean(
+      process.env.CORS_STRICT_MODE,
+      process.env.NODE_ENV === "production",
+    ),
   };
 
   return config;

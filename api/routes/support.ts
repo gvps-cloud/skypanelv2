@@ -5,8 +5,21 @@ import { query, pool } from "../lib/database.js";
 import { logActivity } from "../services/activityLogger.js";
 import { RoleService } from "../services/roles.js";
 import { tokenBlacklistService } from "../services/tokenBlacklistService.js";
+import { createCustomRateLimiter } from "../middleware/rateLimiting.js";
 
 const router = express.Router();
+const supportMutationRateLimiter = createCustomRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  maxRequests: 90,
+  userType: "authenticated",
+});
+router.use((req: Request, res: Response, next) => {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method.toUpperCase())) {
+    supportMutationRateLimiter(req, res, next);
+    return;
+  }
+  next();
+});
 
 const isMissingTableError = (err: any): boolean => {
   const msg = (err?.message || "").toLowerCase();
