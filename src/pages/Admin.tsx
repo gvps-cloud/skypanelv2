@@ -231,6 +231,15 @@ type AdminSection =
   | "billing"
   | "email-templates";
 
+type AdminNetworkingTab =
+  | "rdns"
+  | "ips"
+  | "ipv6"
+  | "vlans"
+  | "firewalls"
+  | "assign"
+  | "share";
+
 const ADMIN_SECTIONS: AdminSection[] = [
   "dashboard",
   "announcements",
@@ -257,6 +266,19 @@ const ADMIN_SECTIONS: AdminSection[] = [
 ];
 
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
+const DEFAULT_NETWORKING_TAB: AdminNetworkingTab = "rdns";
+const ADMIN_NETWORKING_TABS: AdminNetworkingTab[] = [
+  "rdns",
+  "ips",
+  "ipv6",
+  "vlans",
+  "firewalls",
+  "assign",
+  "share",
+];
+
+const isAdminNetworkingTab = (value: string | null): value is AdminNetworkingTab =>
+  value !== null && ADMIN_NETWORKING_TABS.includes(value as AdminNetworkingTab);
 
 interface StrategicPanel {
   id: AdminSection;
@@ -1000,7 +1022,8 @@ const Admin: React.FC = () => {
   }, []);
 
   // Networking rDNS state
-  const [networkingTab, setNetworkingTab] = useState<"rdns" | "ips" | "ipv6" | "vlans" | "firewalls" | "assign" | "share">("rdns");
+  const [networkingTab, setNetworkingTab] =
+    useState<AdminNetworkingTab>(DEFAULT_NETWORKING_TAB);
   const [rdnsBaseDomain, setRdnsBaseDomain] = useState<string>("");
   const [rdnsLoading, setRdnsLoading] = useState<boolean>(false);
   const [rdnsSaving, setRdnsSaving] = useState<boolean>(false);
@@ -1092,6 +1115,43 @@ const Admin: React.FC = () => {
     },
     [activeTab, updateAdminHash],
   );
+
+  const handleNetworkingTabChange = useCallback(
+    (value: string) => {
+      if (!isAdminNetworkingTab(value)) {
+        return;
+      }
+
+      setNetworkingTab(value);
+
+      const params = new URLSearchParams(location.search);
+      params.set("netTab", value);
+      const nextSearch = `?${params.toString()}`;
+      if (location.hash !== "#networking" || location.search !== nextSearch) {
+        navigate(
+          { pathname: "/admin", hash: "#networking", search: nextSearch },
+          { replace: true },
+        );
+      }
+    },
+    [location.hash, location.search, navigate],
+  );
+
+  useEffect(() => {
+    if (activeTab !== "networking") {
+      return;
+    }
+
+    const searchParams = new URLSearchParams(location.search);
+    const requestedTab = searchParams.get("netTab");
+    const normalizedTab = isAdminNetworkingTab(requestedTab)
+      ? requestedTab
+      : DEFAULT_NETWORKING_TAB;
+
+    if (networkingTab !== normalizedTab) {
+      setNetworkingTab(normalizedTab);
+    }
+  }, [activeTab, location.search, networkingTab]);
 
   useEffect(() => {
     if (!pendingFocusUserId || activeTab !== "user-management") {
@@ -4747,9 +4807,7 @@ const Admin: React.FC = () => {
             <CardContent>
               <Tabs
                 value={networkingTab}
-                onValueChange={(value) =>
-                  setNetworkingTab(value as typeof networkingTab)
-                }
+                onValueChange={handleNetworkingTabChange}
               >
                 <TabsList className="flex-wrap">
                   <TabsTrigger value="rdns">Reverse DNS</TabsTrigger>

@@ -183,6 +183,16 @@ interface AppLayoutProps {
   children: React.ReactNode;
 }
 
+interface CommandNavigationItem {
+  icon: LucideIcon;
+  label: string;
+  href: string;
+  shortcut?: string;
+  shortcutKey?: string;
+  requiresShift?: boolean;
+  requiresAlt?: boolean;
+}
+
 // Separate component for breadcrumb navigation that uses the context
 const BreadcrumbNavigation: React.FC = () => {
   const location = useLocation();
@@ -219,6 +229,7 @@ const BreadcrumbNavigation: React.FC = () => {
 };
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+  const location = useLocation();
   const navigate = useNavigate();
   const { token, user } = useAuth();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -227,6 +238,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isAdmin = useMemo(
     () => (user?.role || "").toLowerCase() === "admin",
     [user?.role],
+  );
+  const isAdminRoute = useMemo(
+    () => location.pathname.startsWith("/admin"),
+    [location.pathname],
   );
 
   // State for VPS and related search data
@@ -476,7 +491,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, []);
 
   // Navigation items for command search
-  const navigationItems = useMemo(
+  const userNavigationItems = useMemo<CommandNavigationItem[]>(
     () => [
       {
         icon: Home,
@@ -543,6 +558,278 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       },
     ],
     [isMac],
+  );
+
+  const adminNavigationItems = useMemo<CommandNavigationItem[]>(
+    () => [
+      {
+        icon: Home,
+        label: "Admin Dashboard",
+        href: "/admin#dashboard",
+        shortcut: isMac ? "⌥D" : "Alt+D",
+        shortcutKey: "d",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: LifeBuoy,
+        label: "Support Tickets",
+        href: "/admin#support",
+        shortcut: isMac ? "⌥U" : "Alt+U",
+        shortcutKey: "u",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Server,
+        label: "Servers",
+        href: "/admin#servers",
+        shortcut: isMac ? "⌥S" : "Alt+S",
+        shortcutKey: "s",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Activity,
+        label: "Networking",
+        href: "/admin#networking",
+        shortcut: isMac ? "⌥N" : "Alt+N",
+        shortcutKey: "n",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Activity,
+        label: "Reverse DNS",
+        href: "/admin?netTab=rdns#networking",
+        shortcut: isMac ? "⌥⇧N" : "Alt+Shift+N",
+        shortcutKey: "n",
+        requiresShift: true,
+        requiresAlt: true,
+      },
+      {
+        icon: Activity,
+        label: "IP Addresses",
+        href: "/admin?netTab=ips#networking",
+        shortcut: isMac ? "⌥I" : "Alt+I",
+        shortcutKey: "i",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Activity,
+        label: "IPv6",
+        href: "/admin?netTab=ipv6#networking",
+        shortcut: isMac ? "⌥6" : "Alt+6",
+        shortcutKey: "6",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Activity,
+        label: "VLANs",
+        href: "/admin?netTab=vlans#networking",
+        shortcut: isMac ? "⌥W" : "Alt+W",
+        shortcutKey: "w",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Activity,
+        label: "Firewalls",
+        href: "/admin?netTab=firewalls#networking",
+        shortcut: isMac ? "⌥H" : "Alt+H",
+        shortcutKey: "h",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Activity,
+        label: "Assign IPs",
+        href: "/admin?netTab=assign#networking",
+        shortcut: isMac ? "⌥⇧I" : "Alt+Shift+I",
+        shortcutKey: "i",
+        requiresShift: true,
+        requiresAlt: true,
+      },
+      {
+        icon: Activity,
+        label: "Share IPs",
+        href: "/admin?netTab=share#networking",
+        shortcut: isMac ? "⌥⇧H" : "Alt+Shift+H",
+        shortcutKey: "h",
+        requiresShift: true,
+        requiresAlt: true,
+      },
+      {
+        icon: FileText,
+        label: "VPS Plans",
+        href: "/admin#vps-plans",
+        shortcut: isMac ? "⌥P" : "Alt+P",
+        shortcutKey: "p",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Key,
+        label: "SSH Keys",
+        href: "/admin#ssh-keys",
+        shortcut: isMac ? "⌥K" : "Alt+K",
+        shortcutKey: "k",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: MessageCircle,
+        label: "Announcements",
+        href: "/admin#announcements",
+        shortcut: isMac ? "⌥A" : "Alt+A",
+        shortcutKey: "a",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: MessageCircle,
+        label: "FAQ Management",
+        href: "/admin#faq-management",
+        shortcut: isMac ? "⌥F" : "Alt+F",
+        shortcutKey: "f",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: FileText,
+        label: "Documentation",
+        href: "/admin#documentation",
+        shortcut: isMac ? "⌥⇧D" : "Alt+Shift+D",
+        shortcutKey: "d",
+        requiresShift: true,
+        requiresAlt: true,
+      },
+      {
+        icon: MessageCircle,
+        label: "Contact Management",
+        href: "/admin#contact-management",
+        shortcut: isMac ? "⌥C" : "Alt+C",
+        shortcutKey: "c",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: FileText,
+        label: "Email Templates",
+        href: "/admin#email-templates",
+        shortcut: isMac ? "⌥E" : "Alt+E",
+        shortcutKey: "e",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Settings,
+        label: "Theme",
+        href: "/admin#theme",
+        shortcut: isMac ? "⌥T" : "Alt+T",
+        shortcutKey: "t",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Activity,
+        label: "Rate Limiting",
+        href: "/admin#rate-limiting",
+        shortcut: isMac ? "⌥R" : "Alt+R",
+        shortcutKey: "r",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Settings,
+        label: "Platform Controls",
+        href: "/admin#platform",
+        shortcut: isMac ? "⌥⇧P" : "Alt+Shift+P",
+        shortcutKey: "p",
+        requiresShift: true,
+        requiresAlt: true,
+      },
+      {
+        icon: Users,
+        label: "User Management",
+        href: "/admin#user-management",
+        shortcut: isMac ? "⌥M" : "Alt+M",
+        shortcutKey: "m",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Users,
+        label: "Organizations",
+        href: "/admin#organizations",
+        shortcut: isMac ? "⌥O" : "Alt+O",
+        shortcutKey: "o",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: CreditCard,
+        label: "Billing Overview",
+        href: "/admin#billing",
+        shortcut: isMac ? "⌥B" : "Alt+B",
+        shortcutKey: "b",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: CreditCard,
+        label: "Egress Credits",
+        href: "/admin#egress-credits",
+        shortcut: isMac ? "⌥G" : "Alt+G",
+        shortcutKey: "g",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Server,
+        label: "StackScripts",
+        href: "/admin#stackscripts",
+        shortcut: isMac ? "⌥⇧S" : "Alt+Shift+S",
+        shortcutKey: "s",
+        requiresShift: true,
+        requiresAlt: true,
+      },
+      {
+        icon: Server,
+        label: "Providers",
+        href: "/admin#providers",
+        shortcut: isMac ? "⌥V" : "Alt+V",
+        shortcutKey: "v",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Server,
+        label: "Regions",
+        href: "/admin#regions",
+        shortcut: isMac ? "⌥⇧R" : "Alt+Shift+R",
+        shortcutKey: "r",
+        requiresShift: true,
+        requiresAlt: true,
+      },
+      {
+        icon: Server,
+        label: "Category Mappings",
+        href: "/admin#category-mappings",
+        shortcut: isMac ? "⌥Y" : "Alt+Y",
+        shortcutKey: "y",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+    ],
+    [isMac],
+  );
+
+  const navigationItems = useMemo<CommandNavigationItem[]>(
+    () => (isAdminRoute ? adminNavigationItems : userNavigationItems),
+    [isAdminRoute, adminNavigationItems, userNavigationItems],
   );
 
   const actionItems = useMemo(
@@ -650,7 +937,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       };
 
       const match = navigationItems.find(
-        (item) => item.shortcutKey === pressedKey && matchesModifiers(item),
+        (item) =>
+          item.shortcutKey &&
+          item.shortcutKey === pressedKey &&
+          matchesModifiers(item),
       );
       if (match) {
         event.preventDefault();

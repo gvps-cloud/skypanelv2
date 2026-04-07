@@ -63,13 +63,10 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
         // Organized admin navigation with task-focused grouping.
         const adminGroups = [
           {
-            title: "Overview",
+            title: "Dashboard",
             icon: LayoutDashboard,
             url: `/admin`,
             isActive: activeAnchor === "dashboard" || !currentHash,
-            items: [
-              { title: "Dashboard", url: `/admin`, isActive: activeAnchor === "dashboard" || !currentHash },
-            ],
           },
           {
             title: "Operations",
