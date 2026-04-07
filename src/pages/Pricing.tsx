@@ -423,9 +423,10 @@ const PricingPage: React.FC = () => {
                               <div className="flex items-center gap-3">
                                 <ArrowDownUp className="h-4 w-4 text-primary" />
                                 <span className="text-sm">
-                                  {specs.transfer_gb || specs.bandwidth_gb
-                                    ? `${specs.transfer_gb || specs.bandwidth_gb}GB`
-                                    : `${Math.round(specs.transfer / 1024)}GB`} Transfer
+                                  {(() => {
+                                    const gb = specs.transfer_gb || specs.bandwidth_gb || specs.transfer;
+                                    return gb >= 1000 ? `${gb / 1000} TB` : `${gb} GB`;
+                                  })()} Transfer
                                 </span>
                               </div>
                             )}

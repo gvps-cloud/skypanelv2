@@ -180,7 +180,7 @@ export function PlanSummary({ plan }: { plan: VPSPlan | null }) {
         {Math.round(plan.disk / 1024)} GB Storage
       </div>
       <div className="rounded-full border border-border/70 bg-muted/40 px-3 py-1 text-xs font-medium">
-        {plan.transfer} GB Transfer
+        {plan.transfer >= 1000 ? `${plan.transfer / 1000} TB` : `${plan.transfer} GB`} Transfer
       </div>
     </div>
   );

@@ -1882,7 +1882,7 @@ const VPS: React.FC = () => {
       filteredProviderPlans.map((plan) => ({
         value: plan.id,
         label: plan.label,
-        description: `${plan.vcpus} vCPU • ${formatSelectedPlanMemory(plan.memory)} RAM • ${Math.round(plan.disk / 1024)} GB storage • ${plan.transfer} GB transfer`,
+        description: `${plan.vcpus} vCPU • ${formatSelectedPlanMemory(plan.memory)} RAM • ${Math.round(plan.disk / 1024)} GB storage • ${plan.transfer >= 1000 ? `${plan.transfer / 1000} TB` : `${plan.transfer} GB`} transfer`,
         meta: `${formatCurrency(plan.price.monthly)} / mo`,
         keywords: [
           plan.id,
