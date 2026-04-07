@@ -21,6 +21,7 @@ import {
   GripVertical,
   HelpCircle,
   LifeBuoy,
+  Megaphone,
   Palette,
   Play,
   Plus,
@@ -64,6 +65,7 @@ import { VPSPlanWizard } from "@/components/admin/VPSPlanWizard";
 import EgressCreditManager from "@/components/admin/EgressCreditManager";
 import DocumentationManager from "@/components/admin/documentation/DocumentationManager";
 import { NetworkingDashboard } from "@/components/admin/networking/NetworkingDashboard";
+import { AnnouncementsManager } from "@/components/admin/AnnouncementsManager";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { SSHTerminal } from "@/components/VPS/SSHTerminal";
 import { useCategoryDisplayName } from "@/hooks/useCategoryMappings";
@@ -150,6 +152,7 @@ type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
 type AdminSection =
   | "dashboard"
+  | "announcements"
   | "support"
   | "vps-plans"
   | "category-mappings"
@@ -173,6 +176,7 @@ type AdminSection =
 
 const ADMIN_SECTIONS: AdminSection[] = [
   "dashboard",
+  "announcements",
   "support",
   "vps-plans",
   "category-mappings",
@@ -2417,6 +2421,18 @@ const Admin: React.FC = () => {
         ],
         actionLabel: "Edit templates",
       },
+      {
+        id: "announcements",
+        title: "Announcements",
+        description: "Broadcast messages across the platform to specific audiences.",
+        icon: Megaphone,
+        accent: "text-blue-600",
+        summary: [
+          { label: "Broadcast", value: "Messages" },
+          { label: "Target", value: "Audiences" },
+        ],
+        actionLabel: "Manage announcements",
+      },
     ];
   }, [
     activePlanCount,
@@ -4184,6 +4200,10 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="email-templates" activeSection={activeTab}>
           <EmailTemplatesManager />
+        </SectionPanel>
+
+        <SectionPanel section="announcements" activeSection={activeTab}>
+          <AnnouncementsManager token={token || ""} />
         </SectionPanel>
 
         {/* Legacy application sections removed */}

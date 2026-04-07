@@ -6,7 +6,7 @@
  */
 
 import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import pg from 'pg';
 import dotenv from 'dotenv';
@@ -55,8 +55,8 @@ async function applySingleMigration() {
     const migrationPath = join(migrationsDir, migrationName);
 
     // Ensure the resolved path is within the migrations directory
-    const resolvedPath = require('path').resolve(migrationPath);
-    const resolvedMigrationsDir = require('path').resolve(migrationsDir);
+    const resolvedPath = resolve(migrationPath);
+    const resolvedMigrationsDir = resolve(migrationsDir);
     if (!resolvedPath.startsWith(resolvedMigrationsDir)) {
       console.error('❌ Invalid migration path: path traversal detected');
       process.exit(1);

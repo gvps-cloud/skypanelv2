@@ -16,7 +16,8 @@ import {
 import { ImpersonationBanner } from "./components/admin/ImpersonationBanner";
 import { ImpersonationLoadingOverlay } from "./components/admin/ImpersonationLoadingOverlay";
 import { setupAutoLogout } from "@/lib/api";
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { AnnouncementBanner } from "./components/AnnouncementBanner";
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -100,9 +101,7 @@ function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
           message={startingMessage}
         />
       )}
-      <div style={{ paddingTop: isImpersonating ? "60px" : "0" }}>
-        {children}
-      </div>
+      {children}
     </>
   );
 }
@@ -205,10 +204,34 @@ function AutoLogoutSetup() {
   return null;
 }
 
+function AnnouncementBannerWrapper({ children }: { children: React.ReactNode }) {
+  const { isImpersonating } = useImpersonation();
+  const [bannerHeight, setBannerHeight] = useState(0);
+  const impersonationHeight = isImpersonating ? 60 : 0;
+  const totalOffset = impersonationHeight + bannerHeight;
+
+  const handleHeightChange = useCallback((height: number) => {
+    setBannerHeight(height);
+  }, []);
+
+  return (
+    <>
+      <AnnouncementBanner
+        topOffset={impersonationHeight}
+        onHeightChange={handleHeightChange}
+      />
+      <div style={{ paddingTop: totalOffset > 0 ? `${totalOffset}px` : "0" }}>
+        {children}
+      </div>
+    </>
+  );
+}
+
 function AppRoutes() {
   return (
     <>
       <AutoLogoutSetup />
+      <AnnouncementBannerWrapper>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route
@@ -411,6 +434,7 @@ function AppRoutes() {
         <Route path="/organizations/invitations/:token/decline" element={<AcceptInvitation />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </AnnouncementBannerWrapper>
     </>
   );
 }

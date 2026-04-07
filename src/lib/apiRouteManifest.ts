@@ -68,6 +68,36 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/admin/announcements",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/announcements",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/announcements/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/announcements/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/announcements/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
     "path": "/api/admin/billing/invoices",
     "protected": true,
     "admin": true
@@ -965,6 +995,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "path": "/api/admin/users/search",
     "protected": true,
     "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/announcements",
+    "protected": false,
+    "admin": false
   },
   {
     "method": "POST",

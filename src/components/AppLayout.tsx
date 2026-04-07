@@ -709,7 +709,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <AppSidebar onOpenCommand={() => setCommandOpen(true)} />
       <SidebarInset>
         {/* Two-Tier Navigation Header */}
-        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b transition-[width,height] ease-linear">
+        <header className="sticky z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b transition-[width,height] ease-linear" style={{ top: 'var(--announcement-banner-height, 0px)' }}>
           <div className="flex h-14 sm:h-16 shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-0">
             <div className="flex items-center gap-2">
               <SidebarTrigger

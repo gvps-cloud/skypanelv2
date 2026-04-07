@@ -9,6 +9,7 @@ import {
   Key,
   LayoutDashboard,
   LifeBuoy,
+  Megaphone,
   Search,
   Server,
   ServerCog,
@@ -67,6 +68,12 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             icon: LayoutDashboard,
             url: `/admin`,
             isActive: activeAnchor === "dashboard" || !currentHash,
+          },
+          {
+            title: "Announcements",
+            icon: Megaphone,
+            url: `/admin#announcements`,
+            isActive: activeAnchor === "announcements",
           },
           {
             title: "Support",

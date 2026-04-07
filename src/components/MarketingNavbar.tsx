@@ -159,7 +159,7 @@ export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
   }, [openDropdown]);
 
   return (
-    <div className={`${sticky ? "fixed top-0 left-0 right-0 z-40" : ""} pointer-events-none mx-auto max-w-7xl px-4 pt-3 sm:px-6 lg:px-8`}>
+    <div className={`${sticky ? "fixed left-0 right-0 z-40" : ""} pointer-events-none mx-auto max-w-7xl px-4 pt-3 sm:px-6 lg:px-8`} style={sticky ? { top: 'var(--announcement-banner-height, 0px)' } : undefined}>
       <div className="pointer-events-auto flex items-center justify-between rounded-2xl border border-border/50 bg-background/80 px-4 py-3 shadow-lg shadow-black/[0.03] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <Link
           to="/"
