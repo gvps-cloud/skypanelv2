@@ -4667,7 +4667,7 @@ router.get("/:id/networking/ipv6-rdns-records", async (req: Request, res: Respon
     }
 
     // Fetch all account IPs and filter to those in instance ranges with RDNS set
-    let records: Array<{ address: string; rdns: string }> = [];
+    const records: Array<{ address: string; rdns: string }> = [];
     try {
       const accountIPs = await linodeService.getAccountNetworkingIPs();
       const ipList = accountIPs?.data ?? [];

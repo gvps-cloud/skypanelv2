@@ -131,38 +131,95 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
     );
     orgs = result.rows;
 
-    const resources = await Promise.all(orgs.map(async (org) => {
-      // Get user's permissions for this org
+    const orgIds = orgs.map((o: any) => o.id);
+
+    const allMembers = new Map();
+    const allVps = new Map();
+    const allTickets = new Map();
+    const allSshKeys = new Map();
+
+    if (orgIds.length > 0) {
+      const [membersResult, vpsResult, ticketResult, sshKeyResult] = await Promise.all([
+        query(
+          `SELECT om.organization_id, om.role_id, r.permissions, om.role as legacy_role
+           FROM organization_members om
+           LEFT JOIN organization_roles r ON om.role_id = r.id
+           WHERE om.organization_id = ANY($1) AND om.user_id = $2`,
+          [orgIds, user.id]
+        ),
+        query(
+          `SELECT * FROM (
+             SELECT v.organization_id, v.id, v.label, v.status, v.ip_address, v.plan_id, v.created_at, v.configuration,
+                    p.name as plan_name,
+                    ROW_NUMBER() OVER(PARTITION BY v.organization_id ORDER BY v.created_at DESC) as rn
+             FROM vps_instances v
+             LEFT JOIN LATERAL (
+               SELECT name
+               FROM vps_plans p
+               WHERE p.id::text = v.plan_id OR p.provider_plan_id = v.plan_id
+               ORDER BY (p.id::text = v.plan_id)::int DESC, p.created_at DESC
+               LIMIT 1
+             ) p ON true
+             WHERE v.organization_id = ANY($1)
+           ) t WHERE rn <= 5
+           ORDER BY organization_id, rn ASC`,
+          [orgIds]
+        ),
+        query(
+          `SELECT * FROM (
+             SELECT id, organization_id, subject, status, priority, category, created_at,
+                    ROW_NUMBER() OVER(PARTITION BY organization_id ORDER BY created_at DESC) as rn
+             FROM support_tickets
+             WHERE organization_id = ANY($1)
+           ) t WHERE rn <= 5
+           ORDER BY organization_id, rn ASC`,
+          [orgIds]
+        ),
+        query(
+          `SELECT * FROM (
+             SELECT id, organization_id, name, fingerprint, linode_key_id, created_at, updated_at,
+                    ROW_NUMBER() OVER(PARTITION BY organization_id ORDER BY created_at DESC) as rn
+             FROM user_ssh_keys
+             WHERE organization_id = ANY($1)
+           ) t WHERE rn <= 5
+           ORDER BY organization_id, rn ASC`,
+          [orgIds]
+        )
+      ]);
+
+      membersResult.rows.forEach(m => allMembers.set(m.organization_id, m));
+      vpsResult.rows.forEach(v => {
+        const arr = allVps.get(v.organization_id) || [];
+        const { rn, organization_id, ...vpsData } = v;
+        arr.push(vpsData);
+        allVps.set(v.organization_id, arr);
+      });
+      ticketResult.rows.forEach(t => {
+        const arr = allTickets.get(t.organization_id) || [];
+        const { rn, organization_id, ...ticketData } = t;
+        arr.push(ticketData);
+        allTickets.set(t.organization_id, arr);
+      });
+      sshKeyResult.rows.forEach(s => {
+        const arr = allSshKeys.get(s.organization_id) || [];
+        const { rn, organization_id, ...sshData } = s;
+        arr.push(sshData);
+        allSshKeys.set(s.organization_id, arr);
+      });
+    }
+
+    const resources = orgs.map((org: any) => {
       const permissions = {
-        vps_view: false,
-        vps_create: false,
-        vps_delete: false,
-        vps_manage: false,
-        ssh_keys_view: false,
-        ssh_keys_manage: false,
-        tickets_view: false,
-        tickets_create: false,
-        tickets_manage: false,
-        billing_view: false,
-        billing_manage: false,
-        egress_view: false,
-        egress_manage: false,
-        members_manage: false,
-        settings_manage: false
+        vps_view: false, vps_create: false, vps_delete: false, vps_manage: false,
+        ssh_keys_view: false, ssh_keys_manage: false, tickets_view: false,
+        tickets_create: false, tickets_manage: false, billing_view: false,
+        billing_manage: false, egress_view: false, egress_manage: false,
+        members_manage: false, settings_manage: false
       };
 
-      const memberResult = await query(
-        `SELECT om.role_id, r.permissions, om.role as legacy_role
-         FROM organization_members om
-         LEFT JOIN organization_roles r ON om.role_id = r.id
-         WHERE om.organization_id = $1 AND om.user_id = $2`,
-        [org.id, user.id]
-      );
-
-      if (memberResult.rows.length > 0) {
-        const member = memberResult.rows[0];
+      const member = allMembers.get(org.id);
+      if (member) {
         
-        // Add permissions from role
         if (member.permissions) {
           const perms = Array.isArray(member.permissions) 
             ? member.permissions 
@@ -173,7 +230,6 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
           });
         }
 
-        // Fallback for legacy roles if no granular permissions
         if (member.legacy_role === 'owner') {
           Object.keys(permissions).forEach(key => (permissions as any)[key] = true);
         } else if (member.legacy_role === 'admin') {
@@ -190,60 +246,15 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
         }
       }
 
-      // Fetch resources if authorized
-      let vpsInstances: any[] = [];
-      let sshKeys: any[] = [];
-      let tickets: any[] = [];
-
-      if (permissions.vps_view) {
-        const vpsResult = await query(
-          `SELECT v.id, v.label, v.status, v.ip_address, v.plan_id, v.created_at, v.configuration, p.name as plan_name
-           FROM vps_instances v
-           LEFT JOIN LATERAL (
-             SELECT name
-             FROM vps_plans p
-             WHERE p.id::text = v.plan_id OR p.provider_plan_id = v.plan_id
-             ORDER BY (p.id::text = v.plan_id)::int DESC, p.created_at DESC
-             LIMIT 1
-           ) p ON true
-           WHERE v.organization_id = $1 
-           ORDER BY v.created_at DESC LIMIT 5`,
-          [org.id]
-        );
-        vpsInstances = vpsResult.rows;
-      }
-
-      if (permissions.tickets_view) {
-        const ticketResult = await query(
-          `SELECT id, subject, status, priority, category, created_at 
-           FROM support_tickets 
-           WHERE organization_id = $1 
-           ORDER BY created_at DESC LIMIT 5`,
-          [org.id]
-        );
-        tickets = ticketResult.rows;
-      }
-
-      if (permissions.ssh_keys_view) {
-        const sshKeyResult = await query(
-          `SELECT id, name, fingerprint, linode_key_id, created_at, updated_at
-           FROM user_ssh_keys
-           WHERE organization_id = $1
-           ORDER BY created_at DESC LIMIT 5`,
-          [org.id]
-        );
-        sshKeys = sshKeyResult.rows;
-      }
-
       return {
         organization_id: org.id,
         organization_name: org.name,
         permissions,
-        vps_instances: vpsInstances,
-        ssh_keys: sshKeys,
-        tickets
+        vps_instances: permissions.vps_view ? (allVps.get(org.id) || []) : [],
+        ssh_keys: permissions.ssh_keys_view ? (allSshKeys.get(org.id) || []) : [],
+        tickets: permissions.tickets_view ? (allTickets.get(org.id) || []) : []
       };
-    }));
+    });
 
     res.json({ resources });
   } catch (error) {
@@ -589,36 +600,36 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     );
     const orgs = result.rows;
 
-    const enrichedOrgs = await Promise.all(orgs.map(async (org) => {
-      const vpsCount = await query(
-        'SELECT COUNT(*) as count FROM vps_instances WHERE organization_id = $1',
-        [org.id]
-      );
-      
-      const ticketCount = await query(
-        'SELECT COUNT(*) as count FROM support_tickets WHERE organization_id = $1',
-        [org.id]
-      );
+    // Batch query counts for all returned orgs to avoid N+1 queries
+    const orgIds = orgs.map((o: any) => o.id);
 
-      const sshKeyCount = await query(
-        'SELECT COUNT(*) as count FROM user_ssh_keys WHERE organization_id = $1',
-        [org.id]
-      );
+    const vpsCountsMap = new Map();
+    const ticketCountsMap = new Map();
+    const sshKeyCountsMap = new Map();
+    const memberCountsMap = new Map();
 
-      const memberCount = await query(
-        'SELECT COUNT(*) as count FROM organization_members WHERE organization_id = $1',
-        [org.id]
-      );
+    if (orgIds.length > 0) {
+      const [vpsCounts, ticketCounts, sshKeyCounts, memberCounts] = await Promise.all([
+        query('SELECT organization_id, COUNT(*) as count FROM vps_instances WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds]),
+        query('SELECT organization_id, COUNT(*) as count FROM support_tickets WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds]),
+        query('SELECT organization_id, COUNT(*) as count FROM user_ssh_keys WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds]),
+        query('SELECT organization_id, COUNT(*) as count FROM organization_members WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds])
+      ]);
 
-      return {
-        ...org,
-        stats: {
-          vps_count: parseInt(vpsCount.rows[0].count),
-          ticket_count: parseInt(ticketCount.rows[0].count),
-          ssh_key_count: parseInt(sshKeyCount.rows[0].count),
-          member_count: parseInt(memberCount.rows[0].count)
-        }
-      };
+      vpsCounts.rows.forEach(row => vpsCountsMap.set(row.organization_id, parseInt(row.count)));
+      ticketCounts.rows.forEach(row => ticketCountsMap.set(row.organization_id, parseInt(row.count)));
+      sshKeyCounts.rows.forEach(row => sshKeyCountsMap.set(row.organization_id, parseInt(row.count)));
+      memberCounts.rows.forEach(row => memberCountsMap.set(row.organization_id, parseInt(row.count)));
+    }
+
+    const enrichedOrgs = orgs.map((org: any) => ({
+      ...org,
+      stats: {
+        vps_count: vpsCountsMap.has(org.id) ? vpsCountsMap.get(org.id) : 0,
+        ticket_count: ticketCountsMap.has(org.id) ? ticketCountsMap.get(org.id) : 0,
+        ssh_key_count: sshKeyCountsMap.has(org.id) ? sshKeyCountsMap.get(org.id) : 0,
+        member_count: memberCountsMap.has(org.id) ? memberCountsMap.get(org.id) : 0
+      }
     }));
 
     res.json({ 
