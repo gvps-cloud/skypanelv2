@@ -1,5 +1,86 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { formatValidationErrors, formatBusinessLogicError, formatServerError } from './validation';
+import { formatValidationErrors, formatBusinessLogicError, formatServerError, ValidationPatterns } from './validation';
+
+describe('ValidationPatterns', () => {
+  describe('email', () => {
+    it('should match valid emails', () => {
+      expect(ValidationPatterns.email.test('test@example.com')).toBe(true);
+      expect(ValidationPatterns.email.test('user.name+tag@domain.co.uk')).toBe(true);
+    });
+
+    it('should reject invalid emails', () => {
+      expect(ValidationPatterns.email.test('invalid-email')).toBe(false);
+      expect(ValidationPatterns.email.test('@domain.com')).toBe(false);
+      expect(ValidationPatterns.email.test('test@')).toBe(false);
+      expect(ValidationPatterns.email.test('test@domain')).toBe(false);
+    });
+  });
+
+  describe('slug', () => {
+    it('should match valid slugs', () => {
+      expect(ValidationPatterns.slug.test('valid-slug-123')).toBe(true);
+      expect(ValidationPatterns.slug.test('slug')).toBe(true);
+      expect(ValidationPatterns.slug.test('123-456')).toBe(true);
+    });
+
+    it('should reject invalid slugs', () => {
+      expect(ValidationPatterns.slug.test('Invalid-Slug')).toBe(false);
+      expect(ValidationPatterns.slug.test('slug with spaces')).toBe(false);
+      expect(ValidationPatterns.slug.test('slug_with_underscores')).toBe(false);
+      expect(ValidationPatterns.slug.test('slug!@#')).toBe(false);
+    });
+  });
+
+  describe('phone', () => {
+    it('should match valid phone numbers', () => {
+      expect(ValidationPatterns.phone.test('+1234567890')).toBe(true);
+      expect(ValidationPatterns.phone.test('1234567890')).toBe(true);
+      expect(ValidationPatterns.phone.test('1')).toBe(true);
+      expect(ValidationPatterns.phone.test('+123456789012345')).toBe(true);
+    });
+
+    it('should reject invalid phone numbers', () => {
+      expect(ValidationPatterns.phone.test('phone')).toBe(false);
+      expect(ValidationPatterns.phone.test('++123')).toBe(false);
+      expect(ValidationPatterns.phone.test('123-456-7890')).toBe(false);
+      expect(ValidationPatterns.phone.test('123 456 7890')).toBe(false);
+      expect(ValidationPatterns.phone.test('+12345678901234567')).toBe(false); // Too long
+    });
+  });
+
+  describe('timezone', () => {
+    it('should match valid timezones', () => {
+      expect(ValidationPatterns.timezone.test('America/New_York')).toBe(true);
+      expect(ValidationPatterns.timezone.test('Europe/London')).toBe(true);
+      expect(ValidationPatterns.timezone.test('Asia/Tokyo')).toBe(true);
+      expect(ValidationPatterns.timezone.test('UTC/GMT')).toBe(true);
+    });
+
+    it('should reject invalid timezones', () => {
+      expect(ValidationPatterns.timezone.test('Invalid')).toBe(false);
+      expect(ValidationPatterns.timezone.test('America/New York')).toBe(false);
+      expect(ValidationPatterns.timezone.test('Europe/London/Extra')).toBe(false);
+      expect(ValidationPatterns.timezone.test('America-New_York')).toBe(false);
+    });
+  });
+
+  describe('uuid', () => {
+    it('should match valid UUIDs', () => {
+      expect(ValidationPatterns.uuid.test('123e4567-e89b-12d3-a456-426614174000')).toBe(true);
+      expect(ValidationPatterns.uuid.test('550e8400-e29b-41d4-a716-446655440000')).toBe(true);
+      expect(ValidationPatterns.uuid.test('6ba7b810-9dad-11d1-80b4-00c04fd430c8')).toBe(true); // v1
+      expect(ValidationPatterns.uuid.test('00000000-0000-4000-8000-000000000000')).toBe(true); // v4 specific edge
+    });
+
+    it('should reject invalid UUIDs', () => {
+      expect(ValidationPatterns.uuid.test('123e4567-e89b-12d3-a456-42661417400')).toBe(false); // Too short
+      expect(ValidationPatterns.uuid.test('123e4567-e89b-12d3-a456-4266141740000')).toBe(false); // Too long
+      expect(ValidationPatterns.uuid.test('invalid-uuid-string')).toBe(false);
+      expect(ValidationPatterns.uuid.test('123e4567-e89b-02d3-a456-426614174000')).toBe(false); // Invalid version
+      expect(ValidationPatterns.uuid.test('123e4567-e89b-12d3-7456-426614174000')).toBe(false); // Invalid variant
+    });
+  });
+});
 
 describe('formatValidationErrors', () => {
   beforeEach(() => {
@@ -130,6 +211,68 @@ describe('formatValidationErrors', () => {
     formatValidationErrors(originalErrors);
 
     expect(originalErrors).toEqual(originalErrorsCopy);
+  });
+});
+
+describe('formatBusinessLogicError', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-01T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should format a basic business logic error', () => {
+    const result = formatBusinessLogicError('Resource not found');
+
+    expect(result).toEqual({
+      error: 'Resource not found',
+      code: 'BUSINESS_LOGIC_ERROR',
+      timestamp: '2024-01-01T12:00:00.000Z'
+    });
+  });
+
+  it('should accept a custom error code', () => {
+    const result = formatBusinessLogicError('Payment declined', 'PAYMENT_ERROR');
+
+    expect(result).toEqual({
+      error: 'Payment declined',
+      code: 'PAYMENT_ERROR',
+      timestamp: '2024-01-01T12:00:00.000Z'
+    });
+  });
+});
+
+describe('formatServerError', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-01T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should format a basic server error', () => {
+    const result = formatServerError('Database connection failed');
+
+    expect(result).toEqual({
+      error: 'Database connection failed',
+      code: 'INTERNAL_SERVER_ERROR',
+      timestamp: '2024-01-01T12:00:00.000Z'
+    });
+  });
+
+  it('should accept a custom error code', () => {
+    const result = formatServerError('Redis timeout', 'CACHE_TIMEOUT');
+
+    expect(result).toEqual({
+      error: 'Redis timeout',
+      code: 'CACHE_TIMEOUT',
+      timestamp: '2024-01-01T12:00:00.000Z'
+    });
   });
 });
 
