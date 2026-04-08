@@ -97,8 +97,8 @@ function generateFingerprint(publicKey: string): string {
   }
   const keyData = parts[1];
   const keyBuffer = Buffer.from(keyData, 'base64');
-  const hash = crypto.createHash('md5').update(keyBuffer).digest('hex');
-  return hash.match(/.{2}/g)?.join(':') || hash;
+  const hash = crypto.createHash('sha256').update(keyBuffer).digest('base64');
+  return `SHA256:${hash.replace(/=+$/, '')}`;
 }
 
 /**
