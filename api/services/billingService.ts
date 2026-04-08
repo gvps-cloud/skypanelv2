@@ -154,32 +154,40 @@ export class BillingService {
       const activeInstances = await this.getActiveVPSInstances();
       console.log(`📊 Found ${activeInstances.length} active VPS instances to process`);
 
-      for (const instance of activeInstances) {
-        try {
-          const billingOutcome = await this.billVPSInstance(instance);
-          if (!billingOutcome.success) {
-            result.failedInstances.push(instance.id);
-            result.errors.push(`Failed to bill VPS ${instance.label} (${instance.id})`);
-            console.error(`❌ Failed to bill VPS ${instance.label} (${instance.id})`);
-            continue;
-          }
+      // Process instances in batches to avoid overwhelming the database/APIs
+      const BATCH_SIZE = 50;
+      for (let i = 0; i < activeInstances.length; i += BATCH_SIZE) {
+        const batch = activeInstances.slice(i, i + BATCH_SIZE);
 
-          if (billingOutcome.hoursCharged === 0) {
-            console.log(`⏭️ No billable hours yet for VPS ${instance.label} (${instance.id}); skipping.`);
-            continue;
-          }
+        await Promise.all(
+          batch.map(async (instance) => {
+            try {
+              const billingOutcome = await this.billVPSInstance(instance);
+              if (!billingOutcome.success) {
+                result.failedInstances.push(instance.id);
+                result.errors.push(`Failed to bill VPS ${instance.label} (${instance.id})`);
+                console.error(`❌ Failed to bill VPS ${instance.label} (${instance.id})`);
+                return;
+              }
 
-          result.billedInstances++;
-          result.totalAmount += billingOutcome.amountCharged;
-          result.totalHours += billingOutcome.hoursCharged;
-          console.log(
-            `✅ Successfully billed VPS ${instance.label} (${instance.id}) - ${billingOutcome.hoursCharged}h @ $${instance.hourlyRate.toFixed(4)}/h (charged $${billingOutcome.amountCharged.toFixed(4)})`
-          );
-        } catch (error) {
-          result.failedInstances.push(instance.id);
-          result.errors.push(`Error billing VPS ${instance.label}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          console.error(`❌ Error billing VPS ${instance.label}:`, error);
-        }
+              if (billingOutcome.hoursCharged === 0) {
+                console.log(`⏭️ No billable hours yet for VPS ${instance.label} (${instance.id}); skipping.`);
+                return;
+              }
+
+              result.billedInstances++;
+              result.totalAmount += billingOutcome.amountCharged;
+              result.totalHours += billingOutcome.hoursCharged;
+              console.log(
+                `✅ Successfully billed VPS ${instance.label} (${instance.id}) - ${billingOutcome.hoursCharged}h @ $${instance.hourlyRate.toFixed(4)}/h (charged $${billingOutcome.amountCharged.toFixed(4)})`
+              );
+            } catch (error) {
+              result.failedInstances.push(instance.id);
+              result.errors.push(`Error billing VPS ${instance.label}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              console.error(`❌ Error billing VPS ${instance.label}:`, error);
+            }
+          })
+        );
       }
 
       if (result.failedInstances.length > 0) {
