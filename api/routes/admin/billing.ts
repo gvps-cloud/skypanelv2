@@ -5,6 +5,7 @@ import { authenticateToken, requireAdmin } from '../../middleware/auth.js';
 import { query } from '../../lib/database.js';
 import { logActivity } from '../../services/activityLogger.js';
 import { InvoiceService } from '../../services/invoiceService.js';
+import { sendAccountNotificationEmail } from '../../services/emailService.js';
 
 const router = express.Router();
 
@@ -416,9 +417,20 @@ router.post('/transactions',
         metadata
       }, req);
 
-      // 4. Send Email (TODO: Implement email service integration)
+      // 4. Send Email
       if (sendEmail) {
-        // await EmailService.sendBillingAdjustmentNotification(userId, ...);
+        const userResult = await query('SELECT email, name FROM users WHERE id = $1', [userId]);
+        if (userResult.rows.length > 0 && userResult.rows[0].email) {
+          const user = userResult.rows[0];
+          await sendAccountNotificationEmail({
+            to: user.email,
+            name: user.name,
+            category: 'billing',
+            title: 'Billing Adjustment',
+            message: `An administrator has adjusted your balance by ${finalAmount} USD. Reason: ${description}. Your new balance is ${parseFloat(newBalance)} USD.`,
+            eventType: 'billing.adjustment'
+          });
+        }
       }
 
       res.json({
