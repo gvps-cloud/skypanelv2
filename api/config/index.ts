@@ -62,7 +62,6 @@ export interface Config {
   // Better Stack / Better Uptime integration
   BETTERUPTIME_API_KEY?: string;
   BETTERUPTIME_STATUS_PAGE_ID?: string;
-  CORS_STRICT_MODE: boolean;
 }
 
 /**
@@ -325,10 +324,6 @@ function getConfig(): Config {
     BETTERUPTIME_API_KEY: process.env.BETTERUPTIME_API_KEY?.trim() || undefined,
     BETTERUPTIME_STATUS_PAGE_ID:
       process.env.BETTERUPTIME_STATUS_PAGE_ID?.trim() || undefined,
-    CORS_STRICT_MODE: parseBoolean(
-      process.env.CORS_STRICT_MODE,
-      process.env.NODE_ENV === "production",
-    ),
   };
 
   return config;

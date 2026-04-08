@@ -227,14 +227,9 @@ app.use(
       }
 
       console.warn("[Security] CORS rejected origin", { origin });
-      if (config.CORS_STRICT_MODE) {
-        // Do not raise an internal server error for rejected origins.
-        // Returning false cleanly omits CORS allow headers.
-        callback(null, false);
-        return;
-      }
-
-      callback(null, true);
+      // Do not raise an internal server error for rejected origins.
+      // Returning false cleanly omits CORS allow headers.
+      callback(null, false);
     },
     credentials: true,
   }),
