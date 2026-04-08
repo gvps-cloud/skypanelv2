@@ -19,10 +19,10 @@ describe("Support Types Utilities", () => {
     });
 
     it("should handle non-string inputs gracefully", () => {
-      // @ts-expect-error Testing invalid runtime inputs
-      expect(isReopenRequestMessage(null)).toBe(false);
-      // @ts-expect-error Testing invalid runtime inputs
-      expect(isReopenRequestMessage(undefined)).toBe(false);
+      // Testing invalid runtime inputs
+      expect(isReopenRequestMessage(null as any)).toBe(false);
+      // Testing invalid runtime inputs
+      expect(isReopenRequestMessage(undefined as any)).toBe(false);
       // @ts-expect-error Testing invalid runtime inputs
       expect(isReopenRequestMessage(123)).toBe(false);
       // @ts-expect-error Testing invalid runtime inputs
