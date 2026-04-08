@@ -161,9 +161,6 @@ export default function PlatformAvailabilityManager() {
                               checked={schedule.is_open}
                               onCheckedChange={(checked) => handleToggleDay(day.value, checked)}
                             />
-                            <span className="text-sm text-muted-foreground">
-                              {schedule.is_open ? 'Open' : 'Closed'}
-                            </span>
                           </div>
                         </td>
                         <td className="p-3">
@@ -175,7 +172,7 @@ export default function PlatformAvailabilityManager() {
                               className="max-w-md"
                             />
                           ) : (
-                            <span className="text-sm text-muted-foreground">Closed</span>
+                            <span className="text-sm text-muted-foreground">-</span>
                           )}
                         </td>
                       </tr>

@@ -1777,6 +1777,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
+    "method": "GET",
+    "path": "/api/vps/:id/networking/ipv6-rdns-records",
+    "protected": true,
+    "admin": false
+  },
+  {
     "method": "POST",
     "path": "/api/vps/:id/networking/rdns",
     "protected": true,
@@ -1809,6 +1815,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "POST",
     "path": "/api/vps/:id/shutdown",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/vps/:id/watchdog",
     "protected": true,
     "admin": false
   },

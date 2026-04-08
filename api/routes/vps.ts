@@ -2490,6 +2490,7 @@ router.get("/:id", async (req: Request, res: Response) => {
               created: providerDetail.created,
               updated: providerDetail.updated,
               specs: providerDetail.specs,
+              watchdog_enabled: providerDetail.watchdog_enabled ?? null,
             }
           : null,
         metrics,
@@ -4391,6 +4392,45 @@ router.post("/:id/firewalls/detach", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Expand a compressed IPv6 address to its full 8-group representation.
+ * Returns null if the input cannot be parsed as IPv6.
+ */
+function expandIPv6(address: string): bigint | null {
+  try {
+    // Strip any CIDR notation
+    const bare = address.split("/")[0].trim();
+    // Handle :: expansion
+    const halves = bare.split("::");
+    if (halves.length > 2) return null;
+    const left = halves[0] ? halves[0].split(":") : [];
+    const right = halves[1] ? halves[1].split(":") : [];
+    const missing = 8 - left.length - right.length;
+    const groups = [
+      ...left,
+      ...Array(missing).fill("0"),
+      ...right,
+    ];
+    if (groups.length !== 8) return null;
+    let result = BigInt(0);
+    for (const g of groups) {
+      result = (result << BigInt(16)) | BigInt(parseInt(g || "0", 16));
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+/** Returns true if candidateAddress falls within rangeBase/prefixLen */
+function ipv6AddressInRange(candidateAddress: string, rangeBase: string, prefixLen: number): boolean {
+  const candidate = expandIPv6(candidateAddress);
+  const base = expandIPv6(rangeBase);
+  if (candidate === null || base === null) return false;
+  const mask = prefixLen === 0 ? BigInt(0) : (~BigInt(0) << BigInt(128 - prefixLen)) & ((BigInt(1) << BigInt(128)) - BigInt(1));
+  return (candidate & mask) === (base & mask);
+}
+
 router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
   try {
     const { address, rdns } = (req.body || {}) as {
@@ -4448,31 +4488,85 @@ router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
         .json({ error: "Instance is missing provider reference" });
     }
 
+    const isIPv6 = normalizedAddress.includes(":");
+
     try {
       const ipPayload =
         await linodeService.getLinodeInstanceIPs(providerInstanceId);
-      const ipv4Sets =
-        ipPayload?.ipv4 && typeof ipPayload.ipv4 === "object"
-          ? Object.values(ipPayload.ipv4)
-          : [];
-      const flattened = Array.isArray(ipv4Sets)
-        ? (ipv4Sets as unknown[]).reduce<string[]>((acc, value) => {
-            if (Array.isArray(value)) {
-              value.forEach((entry) => {
-                const addr = (entry as any)?.address;
-                if (typeof addr === "string") {
-                  acc.push(addr);
-                }
-              });
-            }
-            return acc;
-          }, [])
-        : [];
 
-      if (!flattened.includes(normalizedAddress)) {
-        return res
-          .status(400)
-          .json({ error: "Address not assigned to this instance" });
+      if (isIPv6) {
+        // Verify the IPv6 address belongs to one of the instance's assigned IPv6 addresses/ranges
+        const ipv6 = ipPayload?.ipv6 as Record<string, any> | undefined;
+        let ipv6Owned = false;
+
+        // Check SLAAC address
+        if (ipv6?.slaac?.address === normalizedAddress) {
+          ipv6Owned = true;
+        }
+
+        // Check link-local
+        if (!ipv6Owned && ipv6?.link_local?.address === normalizedAddress) {
+          ipv6Owned = true;
+        }
+
+        // Check global ranges
+        if (!ipv6Owned && Array.isArray(ipv6?.global)) {
+          for (const entry of ipv6.global) {
+            if (
+              typeof entry?.range === "string" &&
+              typeof entry?.prefix === "number" &&
+              ipv6AddressInRange(normalizedAddress, entry.range, entry.prefix)
+            ) {
+              ipv6Owned = true;
+              break;
+            }
+          }
+        }
+
+        // Check named ranges
+        if (!ipv6Owned && Array.isArray(ipv6?.ranges)) {
+          for (const entry of ipv6.ranges) {
+            if (
+              typeof entry?.range === "string" &&
+              typeof entry?.prefix === "number" &&
+              ipv6AddressInRange(normalizedAddress, entry.range, entry.prefix)
+            ) {
+              ipv6Owned = true;
+              break;
+            }
+          }
+        }
+
+        if (!ipv6Owned) {
+          return res
+            .status(400)
+            .json({ error: "IPv6 address not assigned to this instance" });
+        }
+      } else {
+        // IPv4 ownership check (existing logic)
+        const ipv4Sets =
+          ipPayload?.ipv4 && typeof ipPayload.ipv4 === "object"
+            ? Object.values(ipPayload.ipv4)
+            : [];
+        const flattened = Array.isArray(ipv4Sets)
+          ? (ipv4Sets as unknown[]).reduce<string[]>((acc, value) => {
+              if (Array.isArray(value)) {
+                value.forEach((entry) => {
+                  const addr = (entry as any)?.address;
+                  if (typeof addr === "string") {
+                    acc.push(addr);
+                  }
+                });
+              }
+              return acc;
+            }, [])
+          : [];
+
+        if (!flattened.includes(normalizedAddress)) {
+          return res
+            .status(400)
+            .json({ error: "Address not assigned to this instance" });
+        }
       }
     } catch (addressErr) {
       console.warn(
@@ -4504,7 +4598,98 @@ router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
     res.json({ success: true, rdns: rdnsValue });
   } catch (err: any) {
     console.error("VPS rDNS update error:", err);
-    res.status(500).json({ error: err.message || "Failed to update rDNS" });
+    // Forward validation errors from Linode as 400 instead of 500
+    const message = err.message || "Failed to update rDNS";
+    const isValidationError = /forward dns|not found|invalid|must be/i.test(message);
+    res.status(isValidationError ? 400 : 500).json({ error: message });
+  }
+});
+
+// Get IPv6 RDNS records for ranges assigned to this instance
+router.get("/:id/networking/ipv6-rdns-records", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const userId = user.id;
+    const userRole = user.role;
+    const organizationId = user.organizationId;
+
+    if (userRole !== "admin") {
+      const hasPermission = await RoleService.checkPermission(userId, organizationId, "vps_manage");
+      if (!hasPermission) {
+        return res.status(403).json({ error: "Insufficient permissions", required: "vps_manage" });
+      }
+    }
+
+    let rowRes;
+    if (userRole === "admin") {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
+    if (rowRes.rows.length === 0) {
+      return res.status(404).json({ error: "Instance not found" });
+    }
+
+    const row = rowRes.rows[0];
+    const providerInstanceId = Number(row.provider_instance_id);
+    if (!Number.isFinite(providerInstanceId)) {
+      return res.status(400).json({ error: "Instance is missing provider reference" });
+    }
+
+    // Get instance IPs to know which IPv6 ranges are assigned
+    const ipPayload = await linodeService.getLinodeInstanceIPs(providerInstanceId);
+    const ipv6 = ipPayload?.ipv6 as Record<string, any> | undefined;
+
+    // Collect all IPv6 ranges assigned to this instance
+    const ranges: Array<{ range: string; prefix: number }> = [];
+    if (Array.isArray(ipv6?.global)) {
+      for (const entry of ipv6.global) {
+        if (typeof entry?.range === "string" && typeof entry?.prefix === "number") {
+          ranges.push({ range: entry.range, prefix: entry.prefix });
+        }
+      }
+    }
+    if (Array.isArray(ipv6?.ranges)) {
+      for (const entry of ipv6.ranges) {
+        if (typeof entry?.range === "string" && typeof entry?.prefix === "number") {
+          ranges.push({ range: entry.range, prefix: entry.prefix });
+        }
+      }
+    }
+
+    if (ranges.length === 0) {
+      return res.json({ records: [] });
+    }
+
+    // Fetch all account IPs and filter to those in instance ranges with RDNS set
+    let records: Array<{ address: string; rdns: string }> = [];
+    try {
+      const accountIPs = await linodeService.getAccountNetworkingIPs();
+      const ipList = accountIPs?.data ?? [];
+      for (const ip of ipList) {
+        if (!ip.address || !ip.rdns) continue;
+        if (!ip.address.includes(":")) continue; // IPv6 only
+        if (ip.rdns.includes(".ip.linodeusercontent.com")) continue; // skip default
+        for (const r of ranges) {
+          if (ipv6AddressInRange(ip.address, r.range, r.prefix)) {
+            records.push({ address: ip.address, rdns: ip.rdns });
+            break;
+          }
+        }
+      }
+    } catch (fetchErr) {
+      console.warn("Failed to fetch account IPs for IPv6 RDNS records:", fetchErr);
+    }
+
+    res.json({ records });
+  } catch (err: any) {
+    console.error("IPv6 RDNS records fetch error:", err);
+    res.status(500).json({ error: err.message || "Failed to fetch IPv6 RDNS records" });
   }
 });
 
@@ -4617,6 +4802,94 @@ router.put("/:id/hostname", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("VPS hostname update error:", err);
     res.status(500).json({ error: err.message || "Failed to update hostname" });
+  }
+});
+
+// Update watchdog (Lassie) setting
+router.put("/:id/watchdog", async (req: Request, res: Response) => {
+  try {
+    const { watchdog_enabled } = (req.body || {}) as { watchdog_enabled?: unknown };
+
+    if (typeof watchdog_enabled !== "boolean") {
+      return res.status(400).json({ error: "watchdog_enabled must be a boolean" });
+    }
+
+    const { id } = req.params;
+    const user = (req as any).user;
+    const userId = user.id;
+    const userRole = user.role;
+    const organizationId = user.organizationId;
+
+    // Check vps_manage permission for non-admin users
+    if (userRole !== "admin") {
+      const hasVpsManagePermission = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        "vps_manage",
+      );
+
+      if (!hasVpsManagePermission) {
+        return res.status(403).json({
+          error: "Insufficient permissions",
+          required: "vps_manage",
+        });
+      }
+    }
+
+    let rowRes;
+    if (userRole === "admin") {
+      rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
+    } else {
+      rowRes = await query(
+        "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+        [id, organizationId],
+      );
+    }
+
+    if (rowRes.rows.length === 0) {
+      return res.status(404).json({ error: "Instance not found" });
+    }
+
+    const row = rowRes.rows[0];
+    const providerInstanceId = Number(row.provider_instance_id);
+    if (!Number.isFinite(providerInstanceId)) {
+      return res
+        .status(400)
+        .json({ error: "Instance is missing provider reference" });
+    }
+
+    // Update watchdog via Linode API
+    await linodeService.updateLinodeInstance(providerInstanceId, {
+      watchdog_enabled,
+    });
+
+    // Log watchdog update activity
+    try {
+      await logActivity(
+        {
+          userId: user.id,
+          organizationId: user.organizationId,
+          eventType: "vps.watchdog.update",
+          entityType: "vps",
+          entityId: String(id),
+          message: `${watchdog_enabled ? "Enabled" : "Disabled"} Shutdown Watchdog (Lassie) for VPS '${row.label}'`,
+          status: "success",
+          metadata: { watchdog_enabled },
+        },
+        req as any,
+      );
+    } catch (logErr) {
+      console.warn("Failed to log vps.watchdog.update activity:", logErr);
+    }
+
+    res.json({
+      success: true,
+      watchdog_enabled,
+      message: `Shutdown Watchdog ${watchdog_enabled ? "enabled" : "disabled"} successfully`,
+    });
+  } catch (err: any) {
+    console.error("VPS watchdog update error:", err);
+    res.status(500).json({ error: err.message || "Failed to update watchdog setting" });
   }
 });
 

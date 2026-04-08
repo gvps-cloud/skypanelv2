@@ -647,14 +647,13 @@ export const RateLimitMonitoring: React.FC<RateLimitMonitoringProps> = ({ token 
   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
-            {getStatusIcon(healthCheck.status)}
+            <Activity className="h-5 w-5 text-primary" />
             <div>
               <p className="text-sm font-medium text-muted-foreground">System Status</p>
               <div className="flex items-center gap-2">
-                <p className="text-2xl font-bold capitalize">{healthCheck.status}</p>
-                <Badge variant={getStatusBadgeVariant(healthCheck.status)} className="text-xs">
+                <p className={`text-2xl font-bold capitalize ${healthCheck.status === 'error' ? 'text-destructive' : healthCheck.status === 'warning' ? 'text-yellow-500' : 'text-primary'}`}>
                   {healthCheck.status}
-                </Badge>
+                </p>
               </div>
             </div>
           </CardContent>

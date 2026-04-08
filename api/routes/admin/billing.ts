@@ -56,6 +56,25 @@ router.get('/stats', async (req: Request, res: Response) => {
       ORDER BY month ASC
     `);
 
+    // Ensure we always have 6 months of data, even if empty
+    const last6Months = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      last6Months.push(`${year}-${month}`);
+    }
+
+    const monthlyRevenueMap = new Map<string, number>();
+    last6Months.forEach(m => monthlyRevenueMap.set(m, 0));
+
+    monthlyRevenueResult.rows.forEach(row => {
+      if (monthlyRevenueMap.has(row.month)) {
+        monthlyRevenueMap.set(row.month, parseFloat(row.total));
+      }
+    });
+
     res.json({
       success: true,
       stats: {
@@ -63,9 +82,9 @@ router.get('/stats', async (req: Request, res: Response) => {
         totalWalletBalance: parseFloat(walletBalanceResult.rows[0]?.total || '0'),
         totalTransactions: parseInt(transactionCountResult.rows[0]?.total || '0'),
         lowBalanceCount: parseInt(lowBalanceResult.rows[0]?.total || '0'),
-        monthlyRevenue: monthlyRevenueResult.rows.map(row => ({
-          month: row.month,
-          amount: parseFloat(row.total)
+        monthlyRevenue: last6Months.map(month => ({
+          month,
+          amount: monthlyRevenueMap.get(month)
         }))
       }
     });

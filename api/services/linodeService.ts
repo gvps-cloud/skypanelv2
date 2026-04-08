@@ -2040,6 +2040,26 @@ class LinodeService {
     }
   }
 
+  async getAccountNetworkingIPs(): Promise<{ data: Array<{ address: string; rdns: string | null; type: string }> }> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+      const response = await fetch(`${this.baseUrl}/networking/ips?page_size=500`, {
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      const data = await response.json();
+      return data as { data: Array<{ address: string; rdns: string | null; type: string }> };
+    } catch (error) {
+      console.error('Error fetching account networking IPs:', error);
+      throw error;
+    }
+  }
+
   async updateIPAddressReverseDNS(address: string, rdns: string | null): Promise<Record<string, unknown>> {
     try {
       if (!this.apiToken) {

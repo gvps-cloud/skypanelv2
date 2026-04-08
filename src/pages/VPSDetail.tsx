@@ -33,6 +33,10 @@ import {
   Loader2,
   ShoppingCart,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
@@ -276,7 +280,8 @@ type TabId =
   | "activity"
   | "firewall"
   | "metrics"
-  | "ssh";
+  | "ssh"
+  | "notes";
 
 interface TabDefinition {
   id: TabId;
@@ -321,6 +326,7 @@ interface ProviderInfo {
     disk: number;
     transfer: number;
   };
+  watchdog_enabled?: boolean | null;
 }
 
 interface VpsInstanceDetail {
@@ -481,10 +487,7 @@ const classifyProviderIpv4 = (
 };
 
 // Helper function to determine if rDNS should be displayed for white-labeling
-const shouldDisplayRdns = (
-  rdns: string | null,
-  baseDomain: string,
-): boolean => {
+const shouldDisplayRdns = (rdns: string | null): boolean => {
   if (!rdns || rdns.trim().length === 0) {
     return false;
   }
@@ -494,8 +497,8 @@ const shouldDisplayRdns = (
     return false;
   }
 
-  // Only show custom rDNS that contains our configured branded domain
-  return rdns.includes(`.${baseDomain}`);
+  // Show any custom rDNS the user has explicitly configured
+  return true;
 };
 
 const statusActionLabel: Record<"boot" | "shutdown" | "reboot", string> = {
@@ -666,6 +669,9 @@ const VPSDetail: React.FC = () => {
   const [hostnameSaving, setHostnameSaving] = useState<boolean>(false);
   const [hostnameError, setHostnameError] = useState<string>("");
 
+  // Watchdog toggle state
+  const [watchdogSaving, setWatchdogSaving] = useState<boolean>(false);
+
   // Notes state
   const [notesValue, setNotesValue] = useState<string>("");
   const [notesEditing, setNotesEditing] = useState<boolean>(false);
@@ -674,6 +680,33 @@ const VPSDetail: React.FC = () => {
   // rDNS base domain configuration
   const [rdnsBaseDomain, setRdnsBaseDomain] =
     useState<string>("ip.rev.example.com");
+
+  // IPv6 RDNS dialog state
+  const [ipv6RdnsDialog, setIpv6RdnsDialog] = useState<{
+    open: boolean;
+    rangeBase: string;
+    prefix: number;
+    ipAddress: string;
+    domain: string;
+    saving: boolean;
+    deletingAddress: string | null;
+    existingRecords: Array<{ address: string; rdns: string }>;
+    loadingRecords: boolean;
+    recordsFilter: string;
+    recordsPage: number;
+  }>({
+    open: false,
+    rangeBase: "",
+    prefix: 64,
+    ipAddress: "",
+    domain: "",
+    saving: false,
+    deletingAddress: null,
+    existingRecords: [],
+    loadingRecords: false,
+    recordsFilter: "",
+    recordsPage: 0,
+  });
 
   // Egress credits state
   const [egressBalance, setEgressBalance] = useState<number | null>(null);
@@ -711,6 +744,8 @@ const VPSDetail: React.FC = () => {
     }
 
     tabs.push({ id: "ssh", label: "SSH", icon: TerminalIcon });
+
+    tabs.push({ id: "notes", label: "Notes", icon: FileText });
 
     return tabs;
   }, [detail?.providerType]);
@@ -1786,6 +1821,130 @@ const VPSDetail: React.FC = () => {
     [detail, loadData, rdnsEditor, token],
   );
 
+  // IPv6 RDNS dialog functions
+  const openIpv6RdnsDialog = useCallback(
+    async (rangeBase: string, prefix: number) => {
+      const defaultAddress = rangeBase.endsWith("::")
+        ? `${rangeBase}1`
+        : `${rangeBase}::1`;
+      setIpv6RdnsDialog({
+        open: true,
+        rangeBase,
+        prefix,
+        ipAddress: defaultAddress,
+        domain: "",
+        saving: false,
+        deletingAddress: null,
+        existingRecords: [],
+        loadingRecords: true,
+        recordsFilter: "",
+        recordsPage: 0,
+      });
+      if (!detail) return;
+      try {
+        const response = await fetch(
+          `/api/vps/${detail.id}/networking/ipv6-rdns-records`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (response.ok) {
+          const payload = await response.json();
+          setIpv6RdnsDialog((prev) => ({
+            ...prev,
+            existingRecords: payload.records ?? [],
+            loadingRecords: false,
+          }));
+        } else {
+          setIpv6RdnsDialog((prev) => ({ ...prev, loadingRecords: false }));
+        }
+      } catch {
+        setIpv6RdnsDialog((prev) => ({ ...prev, loadingRecords: false }));
+      }
+    },
+    [detail, token],
+  );
+
+  const saveIpv6Rdns = useCallback(async () => {
+    if (!detail) return;
+    const { ipAddress, domain } = ipv6RdnsDialog;
+    if (!ipAddress.trim()) {
+      toast.error("An IPv6 address is required");
+      return;
+    }
+    setIpv6RdnsDialog((prev) => ({ ...prev, saving: true }));
+    try {
+      const response = await fetch(`/api/vps/${detail.id}/networking/rdns`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          address: ipAddress.trim(),
+          rdns: domain.trim().length > 0 ? domain.trim() : null,
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error || "Failed to update reverse DNS");
+      }
+      toast.success("Reverse DNS updated");
+      setIpv6RdnsDialog((prev) => ({
+        ...prev,
+        saving: false,
+        existingRecords: domain.trim()
+          ? [
+              ...prev.existingRecords.filter((r) => r.address !== ipAddress.trim()),
+              { address: ipAddress.trim(), rdns: domain.trim() },
+            ]
+          : prev.existingRecords.filter((r) => r.address !== ipAddress.trim()),
+        domain: "",
+      }));
+      await loadData({ silent: true });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to update reverse DNS";
+      toast.error(message);
+      setIpv6RdnsDialog((prev) => ({ ...prev, saving: false }));
+    }
+  }, [detail, ipv6RdnsDialog, loadData, token]);
+
+  const clearIpv6RdnsRecord = useCallback(
+    async (address: string) => {
+      if (!detail) return;
+      setIpv6RdnsDialog((prev) => ({ ...prev, deletingAddress: address }));
+      try {
+        const response = await fetch(`/api/vps/${detail.id}/networking/rdns`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ address, rdns: null }),
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.error || "Failed to clear reverse DNS");
+        }
+        toast.success("Reverse DNS cleared");
+        setIpv6RdnsDialog((prev) => ({
+          ...prev,
+          deletingAddress: null,
+          existingRecords: prev.existingRecords.filter(
+            (r) => r.address !== address,
+          ),
+          recordsPage: 0,
+        }));
+        await loadData({ silent: true });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to clear reverse DNS";
+        toast.error(message);
+        setIpv6RdnsDialog((prev) => ({ ...prev, deletingAddress: null }));
+      }
+    },
+    [detail, loadData, token],
+  );
+
   // Hostname editing functions
   const validateHostname = useCallback((hostname: string): string => {
     if (!hostname.trim()) {
@@ -1861,6 +2020,56 @@ const VPSDetail: React.FC = () => {
       setHostnameSaving(false);
     }
   }, [detail, hostnameValue, validateHostname, token, loadData]);
+
+  // Toggle watchdog (Lassie) setting
+  const toggleWatchdog = useCallback(async (enabled: boolean) => {
+    if (!detail?.id || !token) return;
+
+    setWatchdogSaving(true);
+    // Optimistic update
+    setDetail((prev) => {
+      if (!prev || !prev.provider) return prev;
+      return {
+        ...prev,
+        provider: { ...prev.provider, watchdog_enabled: enabled },
+      };
+    });
+
+    try {
+      const response = await fetch(`/api/vps/${detail.id}/watchdog`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ watchdog_enabled: enabled }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          (payload as { error?: string }).error || "Failed to update watchdog setting",
+        );
+      }
+
+      toast.success(`Shutdown Watchdog ${enabled ? "enabled" : "disabled"}`);
+    } catch (err) {
+      console.error("Watchdog update failed:", err);
+      // Revert optimistic update on failure
+      setDetail((prev) => {
+        if (!prev || !prev.provider) return prev;
+        return {
+          ...prev,
+          provider: { ...prev.provider, watchdog_enabled: !enabled },
+        };
+      });
+      const message =
+        err instanceof Error ? err.message : "Failed to update watchdog setting";
+      toast.error(message);
+    } finally {
+      setWatchdogSaving(false);
+    }
+  }, [detail?.id, token]);
 
   // Save notes function
   const saveNotes = useCallback(async () => {
@@ -2246,7 +2455,7 @@ const VPSDetail: React.FC = () => {
                         <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
                           <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
                             <span>vCPUs</span>
-                            <Cpu className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+                            <Cpu className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-primary dark:text-primary" />
                           </div>
                           <p className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-semibold text-foreground">
                             {detail?.plan.specs.vcpus ?? 0}
@@ -2255,7 +2464,7 @@ const VPSDetail: React.FC = () => {
                         <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
                           <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
                             <span>Memory</span>
-                            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-500" />
+                            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-primary dark:text-primary" />
                           </div>
                           <p className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-semibold text-foreground">
                             {formatMemory(detail?.plan.specs.memory ?? 0)}
@@ -2264,7 +2473,7 @@ const VPSDetail: React.FC = () => {
                         <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
                           <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
                             <span>Storage</span>
-                            <HardDrive className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
+                            <HardDrive className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-primary dark:text-primary" />
                           </div>
                           <p className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-semibold text-foreground">
                             {formatStorage(detail?.plan.specs.disk ?? 0)}
@@ -2273,7 +2482,7 @@ const VPSDetail: React.FC = () => {
                         <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
                           <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
                             <span>Transfer</span>
-                            <Network className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-500" />
+                            <Network className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-primary dark:text-primary" />
                           </div>
                           <p className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-semibold text-foreground">
                             {formatTransferAllowance(
@@ -2388,96 +2597,145 @@ const VPSDetail: React.FC = () => {
                   </div>
                 </section>
 
-                {/* Notes Section */}
-                <section className="rounded-2xl border bg-card shadow-sm">
-                  <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
-                          <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                          <span>Notes</span>
-                        </h2>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                          Add personal notes about this server for your
-                          reference.
-                        </p>
-                      </div>
-                      {!notesEditing && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setNotesEditing(true)}
-                          className="gap-2"
+                {/* Watchdog section — Linode only */}
+                {(detail.providerType === "linode" || !detail.providerType) && (
+                  <section className="rounded-2xl border border bg-card shadow-sm">
+                    <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6 border">
+                      <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
+                        <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                        <span>Shutdown Watchdog</span>
+                      </h2>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                        Lassie monitors your server and automatically reboots it if it powers off unexpectedly.
+                      </p>
+                    </div>
+                    <div className="px-6 sm:px-8 py-5 sm:py-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            Shutdown Watchdog (Lassie)
+                          </p>
+                          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                            Automatically reboots your server if it powers off without a shutdown job. Lassie stops retrying after 5 boot attempts within 15 minutes.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={detail.provider?.watchdog_enabled ?? false}
+                          onClick={() => toggleWatchdog(!(detail.provider?.watchdog_enabled ?? false))}
+                          disabled={watchdogSaving || isTransitionalState(detail.status)}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                            (detail.provider?.watchdog_enabled ?? false) ? "bg-primary" : "bg-muted"
+                          }`}
                         >
-                          <Edit2 className="h-3.5 w-3.5" />
-                          {detail?.notes ? "Edit" : "Add Notes"}
-                        </Button>
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                              (detail.provider?.watchdog_enabled ?? false) ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      {watchdogSaving && (
+                        <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                          Saving…
+                        </p>
                       )}
                     </div>
-                  </div>
-                  <div className="px-6 sm:px-8 py-6">
-                    {notesEditing ? (
-                      <div className="space-y-4">
-                        <Textarea
-                          value={notesValue}
-                          onChange={(e) => setNotesValue(e.target.value)}
-                          placeholder="Write your notes here... (e.g., server purpose, configuration details, reminders)"
-                          className="min-h-[150px] resize-y"
-                          disabled={notesSaving}
-                          maxLength={10000}
-                        />
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-muted-foreground">
-                            {notesValue.length.toLocaleString()} / 10,000
-                            characters
-                          </p>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={cancelEditingNotes}
-                              disabled={notesSaving}
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={saveNotes}
-                              disabled={notesSaving}
-                              className="gap-2"
-                            >
-                              {notesSaving ? (
-                                <>
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  Saving...
-                                </>
-                              ) : (
-                                <>
-                                  <Save className="h-3.5 w-3.5" />
-                                  Save Notes
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : detail?.notes ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <p className="whitespace-pre-wrap text-sm text-foreground leading-relaxed">
-                          {detail.notes}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                        <p className="text-sm text-muted-foreground">
-                          No notes yet. Click "Add Notes" to add some.
-                        </p>
-                      </div>
+                  </section>
+                )}
+              </>
+            )}
+
+            {activeTab === "notes" && (
+              <section className="rounded-2xl border bg-card shadow-sm">
+                <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
+                        <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                        <span>Notes</span>
+                      </h2>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                        Add personal notes about this server for your reference.
+                      </p>
+                    </div>
+                    {!notesEditing && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setNotesEditing(true)}
+                        className="gap-2"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                        {detail?.notes ? "Edit" : "Add Notes"}
+                      </Button>
                     )}
                   </div>
-                </section>
-              </>
+                </div>
+                <div className="px-6 sm:px-8 py-6">
+                  {notesEditing ? (
+                    <div className="space-y-4">
+                      <Textarea
+                        value={notesValue}
+                        onChange={(e) => setNotesValue(e.target.value)}
+                        placeholder="Write your notes here... (e.g., server purpose, configuration details, reminders)"
+                        className="min-h-[150px] resize-y"
+                        disabled={notesSaving}
+                        maxLength={10000}
+                      />
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          {notesValue.length.toLocaleString()} / 10,000
+                          characters
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={cancelEditingNotes}
+                            disabled={notesSaving}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={saveNotes}
+                            disabled={notesSaving}
+                            className="gap-2"
+                          >
+                            {notesSaving ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="h-3.5 w-3.5" />
+                                Save Notes
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : detail?.notes ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <p className="whitespace-pre-wrap text-sm text-foreground leading-relaxed">
+                        {detail.notes}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">
+                        No notes yet. Click "Add Notes" to add some.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </section>
             )}
 
             {activeTab === "backups" && (
@@ -3131,14 +3389,12 @@ const VPSDetail: React.FC = () => {
                                             rDNS:{" "}
                                             {shouldDisplayRdns(
                                               currentValue,
-                                              rdnsBaseDomain,
                                             )
                                               ? currentValue
                                               : "Setting up..."}
                                           </span>
                                           {shouldDisplayRdns(
                                             currentValue,
-                                            rdnsBaseDomain,
                                           ) ? (
                                             <button
                                               type="button"
@@ -3373,9 +3629,26 @@ const VPSDetail: React.FC = () => {
                                     key={`global-${index}`}
                                     className="flex flex-col gap-1 rounded-lg bg-muted/50 px-3 py-2 bg-background/60"
                                   >
-                                    <span className="font-semibold text-foreground ">
-                                      {range.range ?? "—"}/{range.prefix ?? "—"}
-                                    </span>
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="font-semibold text-foreground">
+                                        {range.range ?? "—"}/{range.prefix ?? "—"}
+                                      </span>
+                                      {rdnsEditable && range.range && range.prefix != null && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            openIpv6RdnsDialog(
+                                              range.range!,
+                                              range.prefix!,
+                                            )
+                                          }
+                                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                        >
+                                          <Edit2 className="h-3 w-3" />
+                                          Edit rDNS
+                                        </button>
+                                      )}
+                                    </div>
                                     <span>
                                       {range.region ?? "Region unknown"}
                                     </span>
@@ -3398,9 +3671,26 @@ const VPSDetail: React.FC = () => {
                                     key={`range-${index}`}
                                     className="flex flex-col gap-1 rounded-lg bg-muted/50 px-3 py-2 bg-background/60"
                                   >
-                                    <span className="font-semibold text-foreground ">
-                                      {range.range ?? "—"}/{range.prefix ?? "—"}
-                                    </span>
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="font-semibold text-foreground">
+                                        {range.range ?? "—"}/{range.prefix ?? "—"}
+                                      </span>
+                                      {rdnsEditable && range.range && range.prefix != null && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            openIpv6RdnsDialog(
+                                              range.range!,
+                                              range.prefix!,
+                                            )
+                                          }
+                                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                        >
+                                          <Edit2 className="h-3 w-3" />
+                                          Edit rDNS
+                                        </button>
+                                      )}
+                                    </div>
                                     <span>
                                       {range.region ?? "Region unknown"}
                                     </span>
@@ -4293,7 +4583,7 @@ const VPSDetail: React.FC = () => {
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-muted-foreground">IPv4 rDNS</span>
                     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-                      {shouldDisplayRdns(primaryIpv4Rdns, rdnsBaseDomain) ? (
+                      {shouldDisplayRdns(primaryIpv4Rdns) ? (
                         <>
                           <span
                             className="max-w-full truncate font-medium text-foreground sm:max-w-[220px] sm:text-right"
@@ -4713,6 +5003,253 @@ const VPSDetail: React.FC = () => {
                 </>
               ) : (
                 "Rebuild Server"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* IPv6 Reverse DNS Dialog */}
+      <Dialog
+        open={ipv6RdnsDialog.open}
+        onOpenChange={(open) => {
+          if (!ipv6RdnsDialog.saving) {
+            setIpv6RdnsDialog((prev) => ({ ...prev, open }));
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Reverse DNS</DialogTitle>
+            <DialogDescription>
+              Set a custom reverse DNS record for an IPv6 address within{" "}
+              <span className="font-mono text-foreground">
+                {ipv6RdnsDialog.rangeBase}/{ipv6RdnsDialog.prefix}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="ipv6-rdns-address">Enter an IPv6 address</Label>
+              <Input
+                id="ipv6-rdns-address"
+                value={ipv6RdnsDialog.ipAddress}
+                onChange={(e) =>
+                  setIpv6RdnsDialog((prev) => ({
+                    ...prev,
+                    ipAddress: e.target.value,
+                  }))
+                }
+                placeholder={`${ipv6RdnsDialog.rangeBase}1`}
+                className="font-mono text-sm"
+                disabled={ipv6RdnsDialog.saving}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ipv6-rdns-domain">Enter a domain name</Label>
+              <Input
+                id="ipv6-rdns-domain"
+                value={ipv6RdnsDialog.domain}
+                onChange={(e) =>
+                  setIpv6RdnsDialog((prev) => ({
+                    ...prev,
+                    domain: e.target.value,
+                  }))
+                }
+                placeholder="mail.example.com"
+                disabled={ipv6RdnsDialog.saving}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave this field blank to clear rDNS
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Records may take up to 24 hours to propagate.
+            </p>
+            {(ipv6RdnsDialog.loadingRecords ||
+              ipv6RdnsDialog.existingRecords.length > 0) && (() => {
+                const PAGE_SIZE = 5;
+                const filtered = ipv6RdnsDialog.existingRecords.filter(
+                  (r) =>
+                    ipv6RdnsDialog.recordsFilter.trim() === "" ||
+                    r.address
+                      .toLowerCase()
+                      .includes(
+                        ipv6RdnsDialog.recordsFilter.trim().toLowerCase(),
+                      ) ||
+                    r.rdns
+                      .toLowerCase()
+                      .includes(
+                        ipv6RdnsDialog.recordsFilter.trim().toLowerCase(),
+                      ),
+                );
+                const totalPages = Math.max(
+                  1,
+                  Math.ceil(filtered.length / PAGE_SIZE),
+                );
+                const page = Math.min(
+                  ipv6RdnsDialog.recordsPage,
+                  totalPages - 1,
+                );
+                const pageRecords = filtered.slice(
+                  page * PAGE_SIZE,
+                  page * PAGE_SIZE + PAGE_SIZE,
+                );
+                return (
+                  <div className="border-t border-border pt-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-foreground">
+                        Existing Records
+                        {!ipv6RdnsDialog.loadingRecords && (
+                          <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                            ({filtered.length}
+                            {ipv6RdnsDialog.recordsFilter ? " filtered" : ""})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {ipv6RdnsDialog.loadingRecords ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Loading records…
+                      </div>
+                    ) : (
+                      <>
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                          <Input
+                            value={ipv6RdnsDialog.recordsFilter}
+                            onChange={(e) =>
+                              setIpv6RdnsDialog((prev) => ({
+                                ...prev,
+                                recordsFilter: e.target.value,
+                                recordsPage: 0,
+                              }))
+                            }
+                            placeholder="Filter by address or domain…"
+                            className="pl-8 h-8 text-xs"
+                          />
+                        </div>
+                        {pageRecords.length === 0 ? (
+                          <p className="text-xs text-muted-foreground py-2">
+                            No records match your filter.
+                          </p>
+                        ) : (
+                          <ul className="space-y-1.5">
+                            {pageRecords.map((record) => {
+                              const isDeleting =
+                                ipv6RdnsDialog.deletingAddress ===
+                                record.address;
+                              return (
+                                <li
+                                  key={record.address}
+                                  className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs group"
+                                >
+                                  <button
+                                    type="button"
+                                    className="flex flex-col gap-0.5 text-left min-w-0 flex-1 hover:opacity-80 transition-opacity"
+                                    title="Click to edit this record"
+                                    onClick={() =>
+                                      setIpv6RdnsDialog((prev) => ({
+                                        ...prev,
+                                        ipAddress: record.address,
+                                        domain: record.rdns,
+                                      }))
+                                    }
+                                  >
+                                    <span className="font-mono font-semibold text-foreground truncate block">
+                                      {record.address}
+                                    </span>
+                                    <span className="text-muted-foreground truncate block">
+                                      {record.rdns}
+                                    </span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    title="Clear rDNS for this address"
+                                    disabled={
+                                      isDeleting ||
+                                      ipv6RdnsDialog.saving ||
+                                      ipv6RdnsDialog.deletingAddress !== null
+                                    }
+                                    onClick={() =>
+                                      clearIpv6RdnsRecord(record.address)
+                                    }
+                                    className="flex-shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md border border-border text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:border-destructive hover:text-destructive focus:outline-none focus:opacity-100 disabled:pointer-events-none disabled:opacity-40"
+                                  >
+                                    {isDeleting ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-3 w-3" />
+                                    )}
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-xs text-muted-foreground">
+                              Page {page + 1} of {totalPages}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                disabled={page === 0}
+                                onClick={() =>
+                                  setIpv6RdnsDialog((prev) => ({
+                                    ...prev,
+                                    recordsPage: prev.recordsPage - 1,
+                                  }))
+                                }
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+                              >
+                                <ChevronLeft className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={page >= totalPages - 1}
+                                onClick={() =>
+                                  setIpv6RdnsDialog((prev) => ({
+                                    ...prev,
+                                    recordsPage: prev.recordsPage + 1,
+                                  }))
+                                }
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+                              >
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setIpv6RdnsDialog((prev) => ({ ...prev, open: false }))
+              }
+              disabled={ipv6RdnsDialog.saving}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={saveIpv6Rdns}
+              disabled={ipv6RdnsDialog.saving || !ipv6RdnsDialog.ipAddress.trim()}
+            >
+              {ipv6RdnsDialog.saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save"
               )}
             </Button>
           </DialogFooter>
