@@ -126,7 +126,7 @@ describe('Cryptographic utilities', () => {
       const plaintext = 'hello world';
       const mockIv = Buffer.from('123456789012'); // 12 bytes
       const cryptoModule = await import('crypto');
-      const randomBytesSpy = vi.spyOn(cryptoModule.default, 'randomBytes').mockReturnValue(mockIv);
+      const randomBytesSpy = vi.spyOn(cryptoModule.default, 'randomBytes').mockReturnValue(mockIv as any);
 
       const encrypted = encryptSecret(plaintext, 'ssh');
       const decodedString = Buffer.from(encrypted, 'base64').toString('utf8');
