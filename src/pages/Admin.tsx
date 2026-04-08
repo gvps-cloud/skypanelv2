@@ -149,7 +149,7 @@ const EmailTemplatesManager = lazy(async () => {
   return { default: mod.EmailTemplatesManager };
 });
 const RateLimitMonitoring = lazy(async () => {
-  const mod = await import("@/components/admin/RateLimitMonitoring");
+  const mod = await import("@/components/admin/rate-limit-monitoring");
   return { default: mod.RateLimitMonitoring };
 });
 const FAQItemManager = lazy(async () => {
@@ -3909,7 +3909,7 @@ const Admin: React.FC = () => {
             </div>
           </div>
 
-          <RateLimitMonitoring token={token || ""} />
+          <RateLimitMonitoring />
         </SectionPanel>
 
         <SectionPanel section="faq-management" activeSection={activeTab}>

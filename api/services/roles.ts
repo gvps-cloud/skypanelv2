@@ -225,16 +225,33 @@ export class RoleService {
     await transaction(async (client) => {
       const now = new Date().toISOString();
 
-      for (const [roleName, permissions] of Object.entries(PREDEFINED_ROLES)) {
-        const roleId = uuidv4();
+      const roleEntries = Object.entries(PREDEFINED_ROLES);
+      const values: unknown[] = [];
+      const placeholders: string[] = [];
+      const PARAMS_PER_ROW = 7;
 
-        await client.query(
-          `INSERT INTO organization_roles (id, organization_id, name, permissions, is_custom, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           ON CONFLICT (organization_id, name) DO NOTHING`,
-          [roleId, organizationId, roleName, JSON.stringify(permissions), false, now, now]
+      roleEntries.forEach(([roleName, permissions], index) => {
+        const offset = index * PARAMS_PER_ROW;
+        placeholders.push(
+          `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7})`
         );
-      }
+        values.push(
+          uuidv4(),
+          organizationId,
+          roleName,
+          JSON.stringify(permissions),
+          false,
+          now,
+          now
+        );
+      });
+
+      await client.query(
+        `INSERT INTO organization_roles (id, organization_id, name, permissions, is_custom, created_at, updated_at)
+         VALUES ${placeholders.join(', ')}
+         ON CONFLICT (organization_id, name) DO NOTHING`,
+        values
+      );
 
       const viewerRole = await client.query(
         `SELECT id FROM organization_roles WHERE organization_id = $1 AND name = 'viewer'`,

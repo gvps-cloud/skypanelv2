@@ -79,31 +79,3 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
     </div>
   );
 };
-
-export const SimpleProgressBar: React.FC<{
-  progress: number;
-  className?: string;
-  showPercentage?: boolean;
-}> = ({ progress, className, showPercentage = false }) => {
-  const clampedProgress = Math.max(0, Math.min(100, progress));
-  
-  return (
-    <div className={cn("space-y-2", className)}>
-      {showPercentage && (
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Progress</span>
-          <span className="font-medium">{Math.round(clampedProgress)}%</span>
-        </div>
-      )}
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className={cn(
-            "h-full bg-primary transition-all duration-500 ease-out",
-            "animate-in slide-in-from-left-full"
-          )}
-          style={{ width: `${clampedProgress}%` }}
-        />
-      </div>
-    </div>
-  );
-};

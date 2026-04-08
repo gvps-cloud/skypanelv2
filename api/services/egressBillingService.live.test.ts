@@ -2,6 +2,7 @@
  * Tests for EgressBillingService live organization overview
  */
 
+import { randomUUID } from 'node:crypto';
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { Pool } from 'pg';
 import { EgressBillingService } from './egressBillingService';
@@ -13,52 +14,46 @@ describe('EgressBillingService - getOrganizationOverview Live Data', () => {
   let testVpsId: string;
 
   beforeAll(async () => {
-    // Set up test database connection
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
     });
 
-    // Create test organization
-    const orgResult = await pool.query(
-      `INSERT INTO organizations (id, name, slug, owner_id, settings, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-       RETURNING id`,
-      ['test-egress-org-' + Date.now(), 'Test Egress Org', 'test-egress-org', 'test-user-id', {}]
-    );
-    testOrgId = orgResult.rows[0].id;
-
-    // Create test user
-    const userResult = await pool.query(
+    testUserId = randomUUID();
+    const userEmail = `egress-live-${testUserId}@example.test`;
+    await pool.query(
       `INSERT INTO users (id, email, name, role, password_hash, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-       RETURNING id`,
-      ['test-egress-user-' + Date.now(), 'test@example.com', 'Test User', 'user', 'hash']
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+      [testUserId, userEmail, 'Test User', 'user', 'hash']
     );
-    testUserId = userResult.rows[0].id;
 
-    // Create test VPS instance
-    const vpsResult = await pool.query(
+    testOrgId = randomUUID();
+    const orgSlug = `egress-live-org-${testOrgId.slice(0, 8)}`;
+    await pool.query(
+      `INSERT INTO organizations (id, name, slug, owner_id, settings, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+      [testOrgId, 'Test Egress Org', orgSlug, testUserId, {}]
+    );
+
+    testVpsId = randomUUID();
+    await pool.query(
       `INSERT INTO vps_instances (id, organization_id, provider_instance_id, label, status, configuration, plan_id, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-       RETURNING id`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
       [
-        'test-egress-vps-' + Date.now(),
+        testVpsId,
         testOrgId,
-        12345,
+        'egress-test-linode-12345',
         'Test VPS',
         'running',
         { region: 'us-east' },
-        'test-plan'
+        'test-plan',
       ]
     );
-    testVpsId = vpsResult.rows[0].id;
   });
 
   afterAll(async () => {
-    // Clean up test data
     await pool.query('DELETE FROM vps_instances WHERE id = $1', [testVpsId]);
-    await pool.query('DELETE FROM users WHERE id = $1', [testUserId]);
     await pool.query('DELETE FROM organizations WHERE id = $1', [testOrgId]);
+    await pool.query('DELETE FROM users WHERE id = $1', [testUserId]);
     await pool.end();
   });
 
@@ -107,26 +102,28 @@ describe('EgressBillingService - getOrganizationOverview Live Data', () => {
       lastMonth.setMonth(lastMonth.getMonth() - 1);
       const historicalMonth = lastMonth.toISOString().slice(0, 7);
 
-      // Insert some historical billing data
+      const cycleId = randomUUID();
       await pool.query(
-        `INSERT INTO organization_egress_billing_cycles
-         (id, organization_id, billing_month, pool_id, pool_scope, region_id,
-          total_measured_usage_gb, allocated_pool_quota_gb, allocated_billable_gb,
-          unit_price_per_gb, total_amount, status, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())`,
+        `INSERT INTO organization_egress_billing_cycles (
+           id, billing_month, pool_id, pool_scope, region_id, organization_id,
+           total_measured_usage_gb, allocated_pool_usage_gb, allocated_pool_quota_gb,
+           allocated_billable_gb, unit_price_per_gb, total_amount, status, metadata,
+           created_at, updated_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10, $11, $12, '{}'::jsonb, NOW(), NOW())`,
         [
-          'test-cycle-' + Date.now(),
-          testOrgId,
+          cycleId,
           historicalMonth + '-01',
-          'global',
+          'global-transfer',
           'global',
           null,
+          testOrgId,
           100.5,
           0,
           50.25,
           0.05,
           2.51,
-          'billed'
+          'billed',
         ]
       );
 
@@ -140,14 +137,19 @@ describe('EgressBillingService - getOrganizationOverview Live Data', () => {
     });
 
     it('should filter live data to specific organization', async () => {
-      // Create another organization to verify isolation
-      const otherOrgResult = await pool.query(
-        `INSERT INTO organizations (id, name, slug, owner_id, settings, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-         RETURNING id`,
-        ['other-egress-org-' + Date.now(), 'Other Egress Org', 'other-egress-org', 'test-user-id', {}]
+      const otherUserId = randomUUID();
+      await pool.query(
+        `INSERT INTO users (id, email, name, role, password_hash, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+        [otherUserId, `egress-live-other-${otherUserId}@example.test`, 'Other User', 'user', 'hash']
       );
-      const otherOrgId = otherOrgResult.rows[0].id;
+      const otherOrgId = randomUUID();
+      const otherSlug = `egress-live-other-${otherOrgId.slice(0, 8)}`;
+      await pool.query(
+        `INSERT INTO organizations (id, name, slug, owner_id, settings, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+        [otherOrgId, 'Other Egress Org', otherSlug, otherUserId, {}]
+      );
 
       try {
         // Get overview for test organization
@@ -165,20 +167,26 @@ describe('EgressBillingService - getOrganizationOverview Live Data', () => {
         expect(testOrgOverview.organizationId).not.toBe(otherOrgOverview.organizationId);
       } finally {
         await pool.query('DELETE FROM organizations WHERE id = $1', [otherOrgId]);
+        await pool.query('DELETE FROM users WHERE id = $1', [otherUserId]);
       }
     });
   });
 
   describe('getOrganizationOverviewLive edge cases', () => {
     it('should handle organization with no VPS instances', async () => {
-      // Create org with no VPS
-      const emptyOrgResult = await pool.query(
-        `INSERT INTO organizations (id, name, slug, owner_id, settings, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-         RETURNING id`,
-        ['empty-egress-org-' + Date.now(), 'Empty Egress Org', 'empty-egress-org', 'test-user-id', {}]
+      const emptyOwnerId = randomUUID();
+      await pool.query(
+        `INSERT INTO users (id, email, name, role, password_hash, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+        [emptyOwnerId, `egress-live-empty-${emptyOwnerId}@example.test`, 'Empty Org User', 'user', 'hash']
       );
-      const emptyOrgId = emptyOrgResult.rows[0].id;
+      const emptyOrgId = randomUUID();
+      const emptySlug = `egress-live-empty-${emptyOrgId.slice(0, 8)}`;
+      await pool.query(
+        `INSERT INTO organizations (id, name, slug, owner_id, settings, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+        [emptyOrgId, 'Empty Egress Org', emptySlug, emptyOwnerId, {}]
+      );
 
       try {
         const overview = await EgressBillingService.getOrganizationOverview(emptyOrgId);
@@ -191,15 +199,21 @@ describe('EgressBillingService - getOrganizationOverview Live Data', () => {
         expect(overview.servers).toEqual([]);
       } finally {
         await pool.query('DELETE FROM organizations WHERE id = $1', [emptyOrgId]);
+        await pool.query('DELETE FROM users WHERE id = $1', [emptyOwnerId]);
       }
     });
 
-    it('should handle invalid organization ID gracefully', async () => {
-      const invalidOrgId = '00000000-0000-0000-0000-000000000000';
+    it('should return empty overview for non-existent organization UUID', async () => {
+      const missingOrgId = '00000000-0000-0000-0000-000000000000';
 
-      // Should throw error for invalid org
-      await expect(EgressBillingService.getOrganizationOverview(invalidOrgId))
-        .rejects.toThrow();
+      const overview = await EgressBillingService.getOrganizationOverview(missingOrgId);
+
+      expect(overview.organizationId).toBe(missingOrgId);
+      expect(overview.projectedTotals.totalMeasuredUsageGb).toBe(0);
+      expect(overview.projectedTotals.totalBillableGb).toBe(0);
+      expect(overview.projectedTotals.totalAmount).toBe(0);
+      expect(overview.servers).toEqual([]);
+      expect(overview.recentCycles).toEqual([]);
     });
   });
 });

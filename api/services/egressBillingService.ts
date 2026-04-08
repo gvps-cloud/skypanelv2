@@ -1223,6 +1223,23 @@ export class EgressBillingService {
       await client.query('DELETE FROM organization_egress_billing_allocations WHERE billing_month = $1', [billingMonth]);
       await client.query('DELETE FROM organization_egress_billing_cycles WHERE billing_month = $1', [billingMonth]);
 
+      // Batch-fetch all VPS instance IDs once to avoid N+1 queries inside the loop
+      const allVpsIds = Array.from(new Set(
+        pools.flatMap(pool => pool.items)
+          .filter(item => item.vpsInstanceId)
+          .map(item => item.vpsInstanceId)
+      ));
+      const validVpsIds: Set<string> = new Set();
+      if (allVpsIds.length > 0) {
+        const vpsCheckResult = await client.query(
+          `SELECT id FROM vps_instances WHERE id = ANY($1::uuid[])`,
+          [allVpsIds]
+        );
+        for (const row of vpsCheckResult.rows) {
+          validVpsIds.add(String(row.id));
+        }
+      }
+
       for (const pool of pools) {
         let byOrg = pool._itemsByOrg;
         if (!byOrg) {
@@ -1235,20 +1252,6 @@ export class EgressBillingService {
         }
 
         for (const [organizationId, items] of byOrg.entries()) {
-          // Collect all unique vps_instance_ids and validate they exist in the database
-          const vpsInstanceIds = Array.from(new Set(
-            items.filter(item => item.vpsInstanceId).map(item => item.vpsInstanceId)
-          ));
-          
-          let validVpsIds: Set<string> = new Set();
-          if (vpsInstanceIds.length > 0) {
-            const vpsCheckResult = await client.query(
-              `SELECT id FROM vps_instances WHERE id = ANY($1::uuid[])`,
-              [vpsInstanceIds]
-            );
-            validVpsIds = new Set(vpsCheckResult.rows.map((row) => String(row.id)));
-          }
-
           // Replace vps_instance_id with NULL if the referenced VPS instance no longer exists
           const itemsWithValidVpsIds = items.map((item) => {
             if (item.vpsInstanceId && !validVpsIds.has(item.vpsInstanceId)) {
@@ -1296,35 +1299,45 @@ export class EgressBillingService {
           );
 
           const billingCycleId = cycleResult.rows[0]?.id;
-          for (const item of itemsWithValidVpsIds) {
+          if (itemsWithValidVpsIds.length > 0) {
+            const colsPerRow = 16;
+            const valueTuples = itemsWithValidVpsIds
+              .map((_, rowIdx) => {
+                const o = rowIdx * colsPerRow;
+                const ph = Array.from({ length: colsPerRow }, (_, j) => `$${o + j + 1}`).join(', ');
+                return `(${ph}, NOW(), NOW())`;
+              })
+              .join(', ');
+            const allocationValues = itemsWithValidVpsIds.flatMap((item) => [
+              billingCycleId,
+              billingMonth,
+              pool.poolId,
+              pool.poolScope,
+              pool.regionId,
+              organizationId,
+              item.vpsInstanceId,
+              item.providerInstanceId,
+              item.measuredUsageGb,
+              item.usageShare,
+              item.measuredUsageGb,
+              item.allocatedPoolQuotaGb,
+              item.allocatedBillableGb,
+              item.unitPricePerGb,
+              item.amount,
+              JSON.stringify({
+                label: item.label,
+                organization_name: item.organizationName,
+                region_id: item.regionId,
+              }),
+            ]);
             await client.query(
               `INSERT INTO organization_egress_billing_allocations (
                  billing_cycle_id, billing_month, pool_id, pool_scope, region_id, organization_id,
                  vps_instance_id, provider_instance_id, measured_usage_gb, usage_share,
                  allocated_pool_usage_gb, allocated_pool_quota_gb, allocated_billable_gb,
                  unit_price_per_gb, total_amount, metadata, created_at, updated_at
-               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $9, $11, $12, $13, $14, $15, NOW(), NOW())`,
-              [
-                billingCycleId,
-                billingMonth,
-                pool.poolId,
-                pool.poolScope,
-                pool.regionId,
-                organizationId,
-                item.vpsInstanceId,
-                item.providerInstanceId,
-                item.measuredUsageGb,
-                item.usageShare,
-                item.allocatedPoolQuotaGb,
-                item.allocatedBillableGb,
-                item.unitPricePerGb,
-                item.amount,
-                JSON.stringify({
-                  label: item.label,
-                  organization_name: item.organizationName,
-                  region_id: item.regionId,
-                }),
-              ],
+               ) VALUES ${valueTuples}`,
+              allocationValues,
             );
           }
         }

@@ -20,7 +20,9 @@ import { fileURLToPath } from "url";
 import cors from "cors";
 import fs from "fs";
 import cookieParser from "cookie-parser";
-import { enhancedHelmet } from "./middleware/security.js";
+import {
+  createSecurityMiddleware,
+} from "./middleware/security.js";
 import { requireHttpsMiddleware } from "./middleware/requireHttps.js";
 import { csrfProtection } from "./middleware/csrfProtection.js";
 import {
@@ -131,7 +133,7 @@ function readEnvBoolean(value: string | undefined, fallback: boolean): boolean {
   return fallback;
 }
 
-function buildRuntimeHeadMarkup(): string {
+function buildRuntimeHeadMarkup(nonce: string): string {
   const companyName = readEnvString(
     process.env.COMPANY_NAME,
     process.env.VITE_COMPANY_NAME,
@@ -156,8 +158,8 @@ function buildRuntimeHeadMarkup(): string {
   };
 
   const headParts = [
-    `<script>document.title = ${JSON.stringify(`${companyName} | Cloud`)};</script>`,
-    `<script>window.__APP_RUNTIME_CONFIG__ = ${JSON.stringify(runtimeConfig)};</script>`,
+    `<script nonce="${nonce}">document.title = ${JSON.stringify(`${companyName} | Cloud`)};</script>`,
+    `<script nonce="${nonce}">window.__APP_RUNTIME_CONFIG__ = ${JSON.stringify(runtimeConfig)};</script>`,
   ];
 
   if (scriptSrc && siteId) {
@@ -202,17 +204,23 @@ function getClientIndexTemplate(): string {
   return cachedClientIndexTemplate;
 }
 
-function renderClientIndexHtml(): string {
+function renderClientIndexHtml(nonce: string): string {
   const template = getClientIndexTemplate();
-  return template.replace(
-    "<!-- APP_RUNTIME_HEAD -->",
-    buildRuntimeHeadMarkup(),
-  );
+  return template
+    .replace(
+      "<!-- APP_RUNTIME_HEAD -->",
+      buildRuntimeHeadMarkup(nonce),
+    )
+    // Add nonce to all inline <script> tags in the template (those without src attribute)
+    .replace(
+      /(<script(?![^>]*\bsrc=)[^>]*)(>)/g,
+      `$1 nonce="${nonce}"$2`,
+    );
 }
 
-// Security middleware - use enhanced Helmet configuration with XSS protection
+// Security middleware - use enhanced Helmet configuration with nonce-based CSP
 app.use(requireHttpsMiddleware);
-app.use(enhancedHelmet);
+app.use(createSecurityMiddleware());
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -352,7 +360,7 @@ if (distExists) {
 
     try {
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      res.type("html").send(renderClientIndexHtml());
+      res.type("html").send(renderClientIndexHtml(res.locals.cspNonce ?? ""));
     } catch (err) {
       next(err);
     }

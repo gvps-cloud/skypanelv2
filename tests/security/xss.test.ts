@@ -19,13 +19,15 @@ import request from 'supertest';
 import express from 'express';
 import DOMPurify from 'dompurify';
 import { smartRateLimit } from '../../api/middleware/rateLimiting.js';
-import { enhancedHelmet } from '../../api/middleware/security.js';
+import {
+  createSecurityMiddleware,
+} from '../../api/middleware/security.js';
 
 // Mock Express app for testing security headers
 function createTestApp() {
   const app = express();
   app.use(express.json());
-  app.use(enhancedHelmet);
+  app.use(createSecurityMiddleware());
   app.use(smartRateLimit);
 
   // Test endpoint that returns user content
