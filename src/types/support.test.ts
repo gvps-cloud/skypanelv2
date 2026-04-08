@@ -5,25 +5,16 @@ import {
   REOPEN_REQUEST_PREFIX,
 } from "./support";
 
-describe("Support Types Utils", () => {
+describe("Support Types Utilities", () => {
   describe("isReopenRequestMessage", () => {
     it("should return true for a string that starts with the prefix", () => {
       expect(isReopenRequestMessage(`${REOPEN_REQUEST_PREFIX} Please reopen this`)).toBe(true);
-    });
-
-    it("should return true for the exact prefix string", () => {
       expect(isReopenRequestMessage(REOPEN_REQUEST_PREFIX)).toBe(true);
     });
 
-    it("should return false for a string containing the prefix not at the start", () => {
+    it("should return false for a string containing the prefix not at the start or without prefix", () => {
       expect(isReopenRequestMessage(`Hello ${REOPEN_REQUEST_PREFIX} Please reopen this`)).toBe(false);
-    });
-
-    it("should return false for a string without the prefix", () => {
-      expect(isReopenRequestMessage("Please reopen this")).toBe(false);
-    });
-
-    it("should return false for an empty string", () => {
+      expect(isReopenRequestMessage("Please reopen this ticket")).toBe(false);
       expect(isReopenRequestMessage("")).toBe(false);
     });
 
@@ -31,7 +22,7 @@ describe("Support Types Utils", () => {
       expect(isReopenRequestMessage("[reopen_request] Please reopen this")).toBe(false);
     });
 
-    it("should return false for non-string inputs", () => {
+    it("should handle non-string inputs gracefully", () => {
       // @ts-expect-error Testing invalid runtime inputs
       expect(isReopenRequestMessage(null)).toBe(false);
       // @ts-expect-error Testing invalid runtime inputs
@@ -46,20 +37,15 @@ describe("Support Types Utils", () => {
   });
 
   describe("formatTicketMessage", () => {
-    it("should return the trimmed message when the prefix is present at the start", () => {
-      expect(formatTicketMessage(`${REOPEN_REQUEST_PREFIX} Please reopen this`)).toBe("Please reopen this");
-    });
-
-    it("should return an empty string when the message is exactly the prefix", () => {
+    it("should remove the reopen prefix and trim the message", () => {
+      expect(formatTicketMessage(`${REOPEN_REQUEST_PREFIX} Please reopen this issue `)).toBe("Please reopen this issue");
+      expect(formatTicketMessage(`${REOPEN_REQUEST_PREFIX}Please reopen`)).toBe("Please reopen");
       expect(formatTicketMessage(REOPEN_REQUEST_PREFIX)).toBe("");
     });
 
-    it("should return the original string if the prefix is not at the start", () => {
-      expect(formatTicketMessage(`Hello ${REOPEN_REQUEST_PREFIX} Please reopen this`)).toBe(`Hello ${REOPEN_REQUEST_PREFIX} Please reopen this`);
-    });
-
-    it("should return the original string if there is no prefix", () => {
-      expect(formatTicketMessage("Please reopen this")).toBe("Please reopen this");
+    it("should return the original message if it does not contain the prefix at the start", () => {
+      expect(formatTicketMessage("Please reopen this issue")).toBe("Please reopen this issue");
+      expect(formatTicketMessage(`Hello ${REOPEN_REQUEST_PREFIX}`)).toBe(`Hello ${REOPEN_REQUEST_PREFIX}`);
     });
 
     it("should handle empty strings", () => {
