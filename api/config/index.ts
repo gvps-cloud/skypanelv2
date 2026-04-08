@@ -511,10 +511,15 @@ export function validateConfig(): void {
   const isProduction = process.env.NODE_ENV === "production";
   const isDevelopment = process.env.NODE_ENV === "development";
 
+  // ========== CRITICAL SECRETS (Required always) ==========
+  const jwtValidation = validateSecretLength("JWT_SECRET", process.env.JWT_SECRET, 32);
+  if (!jwtValidation.isValid) {
+    errors.push(jwtValidation.error!);
+  }
+
   // ========== CRITICAL SECRETS (Required in Production) ==========
   const productionSecrets = [
     { name: "DATABASE_URL", value: process.env.DATABASE_URL, minLength: 10 },
-    { name: "JWT_SECRET", value: process.env.JWT_SECRET, minLength: 32 },
     {
       name: "SSH_CRED_SECRET",
       value: process.env.SSH_CRED_SECRET,
@@ -581,13 +586,10 @@ export function validateConfig(): void {
     );
   }
 
-  // Check for legacy JWT secret placeholder in production
-  if (
-    isProduction &&
-    config.JWT_SECRET === "your-super-secret-jwt-key-change-in-production"
-  ) {
+  // Check for legacy JWT secret placeholder
+  if (config.JWT_SECRET === "your-super-secret-jwt-key-change-in-production") {
     errors.push(
-      "JWT_SECRET must be changed from the default placeholder value in production",
+      "JWT_SECRET must be changed from the default placeholder value",
     );
   }
 
