@@ -1820,16 +1820,22 @@ router.put(
           [id],
         );
 
-        if (mode === "custom") {
-          for (const region of requestedRegions) {
-            await query(
-              `INSERT INTO provider_region_overrides (provider_id, region)
-               VALUES ($1, $2)
-               ON CONFLICT (provider_id, region)
-               DO UPDATE SET updated_at = NOW()`,
-              [id, region],
-            );
-          }
+        if (mode === "custom" && requestedRegions.length > 0) {
+          const values: string[] = [];
+          const queryParams: any[] = [id];
+
+          requestedRegions.forEach((region, index) => {
+            queryParams.push(region);
+            values.push(`($1, $${index + 2})`);
+          });
+
+          await query(
+            `INSERT INTO provider_region_overrides (provider_id, region)
+             VALUES ${values.join(", ")}
+             ON CONFLICT (provider_id, region)
+             DO UPDATE SET updated_at = NOW()`,
+            queryParams,
+          );
         }
 
         await query(
