@@ -53,6 +53,7 @@ export interface PoolAllocationPreview {
   totalAllocatedQuotaGb: number;
   totalAllocatedBillableGb: number;
   items: PoolAllocationItem[];
+  _itemsByOrg?: Map<string, PoolAllocationItem[]>;
 }
 
 export interface EgressBillingHistoryRecord {
@@ -962,40 +963,39 @@ export class EgressBillingService {
     const updatedAt = new Date().toISOString();
 
     for (const pool of pools) {
-      let poolHasOrgItem = false;
+      const orgItems = pool._itemsByOrg
+        ? (pool._itemsByOrg.get(organizationId) || [])
+        : pool.items.filter(item => item.organizationId === organizationId);
 
-      for (const item of pool.items) {
-        if (item.organizationId === organizationId) {
-          if (!poolHasOrgItem) {
-            poolHasOrgItem = true;
-            activePoolCount++;
-            if (pool.billingEnabled) {
-              billingEnabledPoolCount++;
-            }
-          }
+      if (orgItems.length > 0) {
+        activePoolCount++;
+        if (pool.billingEnabled) {
+          billingEnabledPoolCount++;
+        }
+      }
 
-          totalMeasuredUsageGb += item.measuredUsageGb;
-          totalBillableGb += item.allocatedBillableGb;
-          totalAmount += item.amount;
+      for (const item of orgItems) {
+        totalMeasuredUsageGb += item.measuredUsageGb;
+        totalBillableGb += item.allocatedBillableGb;
+        totalAmount += item.amount;
 
-          // Add server-level breakdown for VPS instances
-          if (item.vpsInstanceId) {
-            servers.push({
-              billingMonth,
-              poolId: pool.poolId,
-              poolScope: pool.poolScope,
-              regionId: pool.regionId || null,
-              vpsInstanceId: item.vpsInstanceId,
-              providerInstanceId: item.providerInstanceId || null,
-              label: item.label || item.providerInstanceId || `VPS ${item.providerInstanceId || 'Unknown'}`,
-              measuredUsageGb: item.measuredUsageGb,
-              allocatedBillableGb: item.allocatedBillableGb,
-              unitPricePerGb: item.unitPricePerGb,
-              amount: item.amount,
-              status: 'projected', // Live data is always "projected"
-              updatedAt,
-            });
-          }
+        // Add server-level breakdown for VPS instances
+        if (item.vpsInstanceId) {
+          servers.push({
+            billingMonth,
+            poolId: pool.poolId,
+            poolScope: pool.poolScope,
+            regionId: pool.regionId || null,
+            vpsInstanceId: item.vpsInstanceId,
+            providerInstanceId: item.providerInstanceId || null,
+            label: item.label || item.providerInstanceId || `VPS ${item.providerInstanceId || 'Unknown'}`,
+            measuredUsageGb: item.measuredUsageGb,
+            allocatedBillableGb: item.allocatedBillableGb,
+            unitPricePerGb: item.unitPricePerGb,
+            amount: item.amount,
+            status: 'projected', // Live data is always "projected"
+            updatedAt,
+          });
         }
       }
     }
@@ -1187,6 +1187,13 @@ export class EgressBillingService {
         };
       });
 
+      const itemsByOrg = new Map<string, PoolAllocationItem[]>();
+      for (const item of items) {
+        const existing = itemsByOrg.get(item.organizationId) || [];
+        existing.push(item);
+        itemsByOrg.set(item.organizationId, existing);
+      }
+
       pools.push({
         poolId,
         poolScope,
@@ -1204,6 +1211,7 @@ export class EgressBillingService {
         totalAllocatedQuotaGb: round(items.reduce((sum, item) => sum + item.allocatedPoolQuotaGb, 0), 6),
         totalAllocatedBillableGb: round(items.reduce((sum, item) => sum + item.allocatedBillableGb, 0), 6),
         items,
+        _itemsByOrg: itemsByOrg,
       });
     }
 
@@ -1216,11 +1224,14 @@ export class EgressBillingService {
       await client.query('DELETE FROM organization_egress_billing_cycles WHERE billing_month = $1', [billingMonth]);
 
       for (const pool of pools) {
-        const byOrg = new Map<string, PoolAllocationItem[]>();
-        for (const item of pool.items) {
-          const existing = byOrg.get(item.organizationId) || [];
-          existing.push(item);
-          byOrg.set(item.organizationId, existing);
+        let byOrg = pool._itemsByOrg;
+        if (!byOrg) {
+          byOrg = new Map<string, PoolAllocationItem[]>();
+          for (const item of pool.items) {
+            const existing = byOrg.get(item.organizationId) || [];
+            existing.push(item);
+            byOrg.set(item.organizationId, existing);
+          }
         }
 
         for (const [organizationId, items] of byOrg.entries()) {
