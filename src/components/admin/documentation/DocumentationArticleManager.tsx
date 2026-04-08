@@ -182,15 +182,17 @@ function SortableRow({
             variant="ghost"
             size="icon"
             onClick={() => onEdit(article)}
+            aria-label="Edit article"
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="h-4 w-4" aria-hidden="true" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onDelete(article)}
+            aria-label="Delete article"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </TableCell>
@@ -785,8 +787,9 @@ export default function DocumentationArticleManager() {
                         variant="ghost"
                         size="icon"
                         onClick={() => removePendingFile(index)}
+                        aria-label="Remove pending file"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </div>
                   ))}
@@ -938,8 +941,9 @@ export default function DocumentationArticleManager() {
                         variant="ghost"
                         size="icon"
                         onClick={() => markFileForDeletion(file.id)}
+                        aria-label="Remove attached file"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </div>
                   ))}
@@ -980,8 +984,9 @@ export default function DocumentationArticleManager() {
                         variant="ghost"
                         size="icon"
                         onClick={() => removePendingFile(index)}
+                        aria-label="Remove pending file"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </div>
                   ))}
