@@ -164,7 +164,7 @@ export async function logActivity(
     const isRead = suppressNotification;
     const readAt = suppressNotification ? new Date().toISOString() : null;
     const normalizedUserId =
-      userId && userId !== "undefined" && userId !== "null" ? userId : null;
+      userId && ValidationPatterns.uuid.test(userId) ? userId : null;
     const occurredAt = new Date().toISOString();
 
     await ensureActivityLogsTable();
@@ -259,7 +259,6 @@ export async function logRateLimitEvent(
       `INSERT INTO activity_logs (user_id, organization_id, event_type, entity_type, entity_id, message, status, ip_address, user_agent, metadata)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
-        // Fix: Only pass userId if it's a valid UUID string, otherwise null for system events
         userId && ValidationPatterns.uuid.test(userId) ? userId : null,
         organizationId,
         "rate_limit_violation",
