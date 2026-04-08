@@ -102,6 +102,46 @@ describe('Cryptographic utilities', () => {
       expect(() => decryptSecret(tamperedEncrypted, 'ssh')).toThrow(/not available/);
       consoleSpy.mockRestore();
     });
+
+    it('should throw an error if the secret is less than 16 characters', () => {
+      vi.stubEnv('SSH_CRED_SECRET', 'short');
+      expect(() => encryptSecret('plaintext', 'ssh')).toThrow(/Encryption key must be at least 16 characters/);
+    });
+
+    it('should throw an error if decryption fails due to tampered ciphertext', () => {
+      const plaintext = 'secret';
+      const encrypted = encryptSecret(plaintext, 'ssh');
+
+      // Tamper with the ciphertext
+      const payload = JSON.parse(Buffer.from(encrypted, 'base64').toString('utf8'));
+      payload.ciphertext = Buffer.from('tampered data').toString('base64');
+      const tamperedEncrypted = Buffer.from(JSON.stringify(payload)).toString('base64');
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      expect(() => decryptSecret(tamperedEncrypted, 'ssh')).toThrow();
+      consoleSpy.mockRestore();
+    });
+
+    it('should correctly structure the encrypted payload and respect mocked IV', async () => {
+      const plaintext = 'hello world';
+      const mockIv = Buffer.from('123456789012'); // 12 bytes
+      const cryptoModule = await import('crypto');
+      const randomBytesSpy = vi.spyOn(cryptoModule.default, 'randomBytes').mockReturnValue(mockIv);
+
+      const encrypted = encryptSecret(plaintext, 'ssh');
+      const decodedString = Buffer.from(encrypted, 'base64').toString('utf8');
+      const payload = JSON.parse(decodedString);
+
+      expect(payload).toHaveProperty('keyVersion', 'current');
+      expect(payload).toHaveProperty('iv', mockIv.toString('base64'));
+      expect(payload).toHaveProperty('tag');
+      expect(payload).toHaveProperty('ciphertext');
+
+      expect(typeof payload.tag).toBe('string');
+      expect(typeof payload.ciphertext).toBe('string');
+
+      randomBytesSpy.mockRestore();
+    });
   });
 
   describe('key rotation (previous keys)', () => {
