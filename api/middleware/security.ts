@@ -38,7 +38,7 @@ const imgSrc = ["'self'", "data:", "blob:", "https:", ...(isProduction ? [] : ["
 // Production still needs inline script/style support because:
 // - index.html includes runtime/theme boot scripts
 // - several UI components/libraries set inline styles at runtime
-const scriptSrc = ["'self'", "'unsafe-inline'", "https://*.sslip.io"];
+const scriptSrc = ["'self'", (req: Request, res: Response) => `'nonce-${res.locals.nonce}'`, "https://*.sslip.io"];
 const styleSrc = ["'self'", "'unsafe-inline'"];
 
 const helmetConfig = {

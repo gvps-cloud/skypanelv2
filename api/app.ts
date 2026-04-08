@@ -19,6 +19,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import fs from "fs";
+import crypto from "crypto";
 import cookieParser from "cookie-parser";
 import { enhancedHelmet } from "./middleware/security.js";
 import { requireHttpsMiddleware } from "./middleware/requireHttps.js";
@@ -131,7 +132,7 @@ function readEnvBoolean(value: string | undefined, fallback: boolean): boolean {
   return fallback;
 }
 
-function buildRuntimeHeadMarkup(): string {
+function buildRuntimeHeadMarkup(nonce: string): string {
   const companyName = readEnvString(
     process.env.COMPANY_NAME,
     process.env.VITE_COMPANY_NAME,
@@ -156,8 +157,8 @@ function buildRuntimeHeadMarkup(): string {
   };
 
   const headParts = [
-    `<script>document.title = ${JSON.stringify(`${companyName} | Cloud`)};</script>`,
-    `<script>window.__APP_RUNTIME_CONFIG__ = ${JSON.stringify(runtimeConfig)};</script>`,
+    `<script nonce="${nonce}">document.title = ${JSON.stringify(`${companyName} | Cloud`)};</script>`,
+    `<script nonce="${nonce}">window.__APP_RUNTIME_CONFIG__ = ${JSON.stringify(runtimeConfig)};</script>`,
   ];
 
   if (scriptSrc && siteId) {
@@ -179,7 +180,7 @@ function buildRuntimeHeadMarkup(): string {
       attrs.push(`data-session-replay="true"`);
     }
 
-    headParts.push(`<script ${attrs.join(" ")} defer></script>`);
+    headParts.push(`<script nonce="${nonce}" ${attrs.join(" ")} defer></script>`);
   }
 
   return headParts.join("");
@@ -202,16 +203,23 @@ function getClientIndexTemplate(): string {
   return cachedClientIndexTemplate;
 }
 
-function renderClientIndexHtml(): string {
+function renderClientIndexHtml(nonce: string): string {
   const template = getClientIndexTemplate();
-  return template.replace(
+  return template.replace(/<script\b/g, `<script nonce="${nonce}"`).replace(
     "<!-- APP_RUNTIME_HEAD -->",
-    buildRuntimeHeadMarkup(),
+    buildRuntimeHeadMarkup(nonce),
   );
 }
 
 // Security middleware - use enhanced Helmet configuration with XSS protection
 app.use(requireHttpsMiddleware);
+
+// Generate a nonce for CSP
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.locals.nonce = crypto.randomBytes(16).toString("base64");
+  next();
+});
+
 app.use(enhancedHelmet);
 app.use(
   cors({
@@ -352,7 +360,7 @@ if (distExists) {
 
     try {
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      res.type("html").send(renderClientIndexHtml());
+      res.type("html").send(renderClientIndexHtml(res.locals.nonce));
     } catch (err) {
       next(err);
     }

@@ -25,6 +25,10 @@ import { enhancedHelmet } from '../../api/middleware/security.js';
 function createTestApp() {
   const app = express();
   app.use(express.json());
+  app.use((req, res, next) => {
+    res.locals.nonce = "testnonce1234567890";
+    next();
+  });
   app.use(enhancedHelmet);
   app.use(smartRateLimit);
 
@@ -250,14 +254,16 @@ describe('XSS Protection Tests', () => {
         const hasScriptSrc = csp.includes('script-src');
         expect(hasScriptSrc).toBe(true);
 
-        // Our config includes 'unsafe-inline' for React compatibility
+        // 'unsafe-inline' has been replaced by a nonce for React compatibility
         // 'unsafe-eval' has been removed for production hardening
         const hasUnsafeEval = csp.includes("'unsafe-eval'");
-        const hasUnsafeInline = csp.includes("'unsafe-inline'");
+        const hasUnsafeInline = csp.includes("script-src") && csp.split("script-src")[1].split(";")[0].includes("'unsafe-inline'");
+        const hasNonce = csp.includes("'nonce-");
 
-        // unsafe-eval should be false, unsafe-inline should be true
+        // unsafe-eval should be false, unsafe-inline should be false, and a nonce should be present
         expect(hasUnsafeEval).toBe(false);
-        expect(hasUnsafeInline).toBe(true);
+        expect(hasUnsafeInline).toBe(false);
+        expect(hasNonce).toBe(true);
       }
     });
 
