@@ -1,10 +1,14 @@
 import { Client } from 'pg';
 import { EventEmitter } from 'events';
+import { config } from '../config/index.js';
 
 export interface TicketNotificationPayload {
   ticket_id: string;
   [key: string]: unknown;
 }
+
+const BASE_RECONNECT_DELAY_MS = 1000;
+const MAX_RECONNECT_DELAY_MS = 30000;
 
 /**
  * Singleton service that maintains a single dedicated PostgreSQL LISTEN
@@ -27,7 +31,7 @@ class TicketNotificationService extends EventEmitter {
     }
 
     try {
-      const connectionString = process.env.DATABASE_URL;
+      const connectionString = config.DATABASE_URL;
       if (!connectionString) {
         throw new Error('DATABASE_URL is not defined');
       }
@@ -80,7 +84,7 @@ class TicketNotificationService extends EventEmitter {
 
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
+      const delay = Math.min(BASE_RECONNECT_DELAY_MS * Math.pow(2, this.reconnectAttempts - 1), MAX_RECONNECT_DELAY_MS);
       console.log(
         `TicketNotificationService reconnecting in ${delay}ms ` +
         `(attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
