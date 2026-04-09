@@ -377,6 +377,151 @@ Notable scripts currently present in `scripts/` include:
 - provider/data migration helpers
 - verification/debug helpers for admins, settings, plans, migrations, and schema state
 
+## Code Conventions
+
+### File Naming
+
+| File type | Convention | Example |
+|-----------|------------|---------|
+| Pages and components | PascalCase `.tsx` | `VPSDetail.tsx`, `BillingCard.tsx` |
+| Custom hooks | camelCase, prefixed with `use`, `.ts` | `useCategoryMappings.ts`, `useTheme.ts` |
+| Frontend services | camelCase `.ts` | `paymentService.ts`, `egressService.ts` |
+| Backend routes | camelCase `.ts` | `vps.ts`, `adminDocumentation.ts` |
+| Backend services | PascalCase class or camelCase singleton `.ts` | `billingService.ts`, `BillingService` class |
+| Migrations | Sequential `NNN_description.sql` (zero-padded to 3 digits) | `048_add_foo_table.sql` |
+
+> **Never modify an existing migration.** Add a new sequential file instead.
+
+### Frontend API Calls
+
+Use the native `fetch()` API — there is no shared apiClient wrapper. Construct URLs via `API_BASE_URL` declared in `src/lib/api.ts`:
+
+```typescript
+import { API_BASE_URL } from '@/lib/api';
+// or from service file: const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+const response = await fetch(`${API_BASE_URL}/endpoint`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(payload),
+});
+if (!response.ok) {
+  const err = await response.json().catch(() => ({}));
+  throw new Error(err.error || `HTTP ${response.status}`);
+}
+return response.json();
+```
+
+Get the JWT token from the `useAuth()` context hook (`src/contexts/AuthContext.tsx`).
+
+### TanStack Query Pattern
+
+Export a **query key factory** object from every hook file, then use it in `useQuery`, `useMutation`, and `invalidateQueries`:
+
+```typescript
+export const myResourceKeys = {
+  all: ['my-resource'] as const,
+  detail: (id: string) => ['my-resource', id] as const,
+};
+
+export function useMyResource(id: string) {
+  return useQuery({
+    queryKey: myResourceKeys.detail(id),
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/my-resource/${id}`, { ... });
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Request failed');
+      return data.item;
+    },
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useUpdateMyResource() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }) => { /* fetch call */ },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: myResourceKeys.all });
+      queryClient.invalidateQueries({ queryKey: myResourceKeys.detail(variables.id) });
+    },
+  });
+}
+```
+
+### Tailwind / className
+
+Use `cn()` from `@/lib/utils` for all conditional or composed class names:
+
+```typescript
+import { cn } from '@/lib/utils';
+<div className={cn('base-class', isActive && 'active-class', variant === 'ghost' && 'ghost-class')} />
+```
+
+### Backend: ESM Imports
+
+All local backend imports **require the `.js` extension** — this is mandatory with ESM modules:
+
+```typescript
+import { query } from '../lib/database.js';       // ✅
+import { authenticateToken } from '../middleware/auth.js'; // ✅
+import { query } from '../lib/database';           // ❌ breaks at runtime
+```
+
+### Backend: Config Access
+
+Import the `config` object from `api/config/index.ts`. **Never access `process.env` directly** in route or service files:
+
+```typescript
+import { config } from '../config/index.js';
+const token = config.LINODE_API_TOKEN; // ✅
+
+const token = process.env.LINODE_API_TOKEN; // ❌
+```
+
+### Backend: Route Auth Middleware
+
+For protected resource routes, apply auth middleware once at the router level rather than per-handler:
+
+```typescript
+const router = express.Router();
+router.use(authenticateToken, requireOrganization); // applies to all routes below
+```
+
+Admin routes use `requireAdmin` in place of (or in addition to) `requireOrganization`.
+
+### Backend: Error Response Shape
+
+All error responses follow this structure:
+
+```typescript
+// Validation errors (400)
+res.status(400).json({ error: 'Validation failed', errors: errors.array(), code: 'VALIDATION_ERROR', timestamp: new Date().toISOString() });
+
+// Business logic errors (4xx)
+res.status(404).json({ error: 'Resource not found' });
+
+// Linode/provider errors — use the helper
+import { handleProviderError } from '../lib/errorHandling.js';
+// handleProviderError(res, error, 'context message')
+```
+
+Use `handleProviderError()` from `api/lib/errorHandling.ts` in VPS routes rather than raw `catch` blocks.
+
+### Backend: Activity Logging
+
+Call `logActivity()` from `api/services/activityLogger.ts` for significant user-facing actions (VPS create/delete/rebuild, SSH session start, billing events):
+
+```typescript
+import { logActivity } from '../services/activityLogger.js';
+await logActivity(userId, organizationId, 'vps.created', `Created VPS ${label}`, { vpsId });
+```
+
 ## Practical Guidance for Agents
 
 - Check `package.json` before referencing scripts

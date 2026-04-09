@@ -27,15 +27,8 @@ async function syncEnvConfigToDatabase() {
     const row = existing.rows?.[0];
 
     if (row) {
-      if (row.rdns_base_domain !== envDomain) {
-        await query(
-          "UPDATE networking_config SET rdns_base_domain = $1, updated_at = NOW() WHERE id = $2",
-          [envDomain, row.id],
-        );
-        console.log(
-          `🔄 Synced RDNS_BASE_DOMAIN from .env: ${row.rdns_base_domain} → ${envDomain}`,
-        );
-      }
+      // A DB row exists — the admin's saved value is the source of truth.
+      // Do not overwrite it with the .env value on restart.
     } else {
       await query(
         "INSERT INTO networking_config (rdns_base_domain, created_at, updated_at) VALUES ($1, NOW(), NOW())",

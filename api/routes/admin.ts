@@ -2051,18 +2051,13 @@ router.get(
         "SELECT * FROM networking_config ORDER BY updated_at DESC LIMIT 1",
       );
       const networkingConfig = result.rows?.[0] || null;
-      // Always prefer the env value (source of truth on startup).
-      // The startup sync in server.ts keeps the DB row in sync, but this
-      // ensures correctness even if the sync hasn't run yet.
-      const envDomain = config.RDNS_BASE_DOMAIN?.trim();
-      if (networkingConfig && !envDomain) {
+      // DB is the source of truth. .env is only the bootstrap default
+      // when no row exists yet.
+      if (networkingConfig) {
         return res.json({ config: networkingConfig });
       }
-      if (networkingConfig && envDomain && networkingConfig.rdns_base_domain === envDomain) {
-        return res.json({ config: networkingConfig });
-      }
-      // Env differs from DB or no DB row — env wins
-      return res.json({ config: { ...networkingConfig, rdns_base_domain: envDomain || networkingConfig?.rdns_base_domain } });
+      // No DB row — fall back to env default
+      return res.json({ config: { rdns_base_domain: config.RDNS_BASE_DOMAIN } });
     } catch (err: any) {
       if (isMissingTableError(err)) {
         return res.json({
