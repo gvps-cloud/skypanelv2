@@ -2410,7 +2410,7 @@ class LinodeService {
       }
 
       const response = await fetch(
-        `${this.baseUrl}/networking/ips?page=${page}&page_size=${pageSize}`,
+        `${this.baseUrl}/networking/ips?page=${page}&page_size=${pageSize}&skip_ipv6_rdns=false`,
         { headers: this.getHeaders() }
       );
 
@@ -2623,6 +2623,38 @@ class LinodeService {
       return all;
     } catch (error) {
       console.error('Error listing IPv6 ranges:', error);
+      throw error;
+    }
+  }
+
+  async getIPv6Range(range: string): Promise<LinodeIPv6Range> {
+    try {
+      if (!this.apiToken) {
+        throw new Error('Linode API token not configured');
+      }
+
+      const response = await fetch(
+        `${this.baseUrl}/networking/ipv6/ranges/${encodeURIComponent(range)}`,
+        { headers: this.getHeaders() }
+      );
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
+      }
+
+      const payload = await response.json();
+      return {
+        range: payload?.range ?? range,
+        prefix: payload?.prefix ?? 64,
+        region: payload?.region ?? '',
+        route_target: payload?.route_target ?? null,
+        is_bgp: payload?.is_bgp ?? false,
+        linodes: Array.isArray(payload?.linodes) ? payload.linodes : [],
+        created: payload?.created ?? '',
+      };
+    } catch (error) {
+      console.error(`Error getting IPv6 range ${range}:`, error);
       throw error;
     }
   }

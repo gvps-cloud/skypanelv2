@@ -10,6 +10,7 @@ import { isIP } from 'net';
 import { authenticateToken, requireAdmin } from '../../middleware/auth.js';
 import { query } from '../../lib/database.js';
 import * as ipService from '../../services/ipService.js';
+import { linodeService } from '../../services/linodeService.js';
 
 // Custom validator for IP addresses (IPv4 and IPv6)
 function isValidIP(value: string): boolean {
@@ -44,6 +45,48 @@ function isValidTagsArray(value: any): boolean {
 
 const router = Router();
 router.use(authenticateToken, requireAdmin);
+
+function hasConcreteRdns(value: string | null | undefined): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+async function enrichVisibleIPv6Rdns(ips: any[]): Promise<any[]> {
+  return Promise.all(
+    ips.map(async (ip) => {
+      if (!ip || ip.type !== 'ipv6' || hasConcreteRdns(ip.rdns) || !ip.address) {
+        return ip;
+      }
+
+      try {
+        const detailed = await ipService.getIPAddress(ip.address);
+        return hasConcreteRdns(detailed?.rdns)
+          ? { ...ip, rdns: detailed.rdns }
+          : ip;
+      } catch (error) {
+        console.warn(`Failed to enrich IPv6 rDNS for ${ip.address}:`, error);
+        return ip;
+      }
+    })
+  );
+}
+
+function mapAdminIPv6Range(collectionRange: any, detailRange?: any) {
+  const instanceIds = Array.isArray(detailRange?.linodes)
+    ? detailRange.linodes.map(String)
+    : Array.isArray(collectionRange?.linodes)
+      ? collectionRange.linodes.map(String)
+      : [];
+
+  return {
+    range: collectionRange?.range ?? detailRange?.range ?? '',
+    instanceId: instanceIds[0] ?? null,
+    instanceIds,
+    routeTarget: collectionRange?.route_target ?? detailRange?.route_target ?? null,
+    region: collectionRange?.region ?? detailRange?.region ?? '',
+    prefixLength: collectionRange?.prefix ?? detailRange?.prefix ?? 64,
+    created: collectionRange?.created ?? detailRange?.created ?? '',
+  };
+}
 
 // ── IP Addresses ──
 
@@ -86,7 +129,8 @@ router.get('/ips',
       const total = allFiltered.length;
       const start = (page - 1) * pageSize;
       const paged = allFiltered.slice(start, start + pageSize);
-      res.json({ success: true, data: paged, pages: Math.ceil(total / pageSize) || 1, total });
+      const enriched = await enrichVisibleIPv6Rdns(paged);
+      res.json({ success: true, data: enriched, pages: Math.ceil(total / pageSize) || 1, total });
     } catch (error: any) {
       console.error('Error listing IPs:', error);
       res.status(500).json({ success: false, error: error.message || 'Failed to list IPs' });
@@ -242,13 +286,33 @@ router.get('/ipv6/pools', async (_req: Request, res: Response) => {
 // List IPv6 ranges
 router.get('/ipv6/ranges', async (_req: Request, res: Response) => {
   try {
-    const ranges = await ipService.listIPv6Ranges();
-    // Filter to only ranges routed to panel-created VPS instances
+    const ranges = await linodeService.listIPv6Ranges();
     const knownInstances = await query('SELECT DISTINCT provider_instance_id FROM vps_instances');
     const knownIds = new Set(knownInstances.rows.map((r: any) => String(r.provider_instance_id)));
-    const filtered = ranges.filter((range) =>
-      range.instanceIds && range.instanceIds.some((id) => knownIds.has(id))
+
+    const enriched = await Promise.all(
+      ranges.map(async (range) => {
+        try {
+          const detail = await linodeService.getIPv6Range(range.range);
+          return mapAdminIPv6Range(range, detail);
+        } catch (error) {
+          console.warn(`Failed to enrich IPv6 range ${range.range}:`, error);
+          return mapAdminIPv6Range(range);
+        }
+      })
     );
+
+    const filtered = enriched
+      .map((range) => {
+        const matchingInstanceIds = range.instanceIds.filter((id: string) => knownIds.has(id));
+        return {
+          ...range,
+          instanceIds: matchingInstanceIds,
+          instanceId: matchingInstanceIds[0] ?? null,
+        };
+      })
+      .filter((range) => range.instanceIds.length > 0);
+
     res.json({ success: true, data: filtered });
   } catch (error: any) {
     console.error('Error listing IPv6 ranges:', error);
