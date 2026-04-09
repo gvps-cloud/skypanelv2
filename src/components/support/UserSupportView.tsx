@@ -87,7 +87,8 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         setWalletBalance(data.balance);
       }
     } catch {
-      // Ignore background fetch error
+      // Ignore wallet balance fetch failures because this is only a
+      // non-critical background UI enhancement for the support view.
     }
   }, [authHeader]);
 
@@ -107,7 +108,8 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         );
       }
     } catch {
-      // Ignore background fetch error
+      // Ignore errors when fetching VPS instances for ticket creation because
+      // the create-ticket flow can still proceed without optional VPS options.
     }
   }, [authHeader]);
 
