@@ -8,10 +8,6 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { query, pool } from "../lib/database.js";
-import {
-  buildListenCommand,
-  buildUnlistenCommand,
-} from "../lib/postgresIdentifiers.js";
 import { linodeService } from "../services/linodeService.js";
 import { logActivity } from "../services/activityLogger.js";
 import {
@@ -693,7 +689,7 @@ router.patch(
         new_status: nextStatus,
       };
       try {
-        await query('SELECT pg_notify($1, $2)', [`ticket_${id}`, JSON.stringify(statusNotification)]);
+        await query('SELECT pg_notify($1, $2)', ['ticket_updates', JSON.stringify(statusNotification)]);
       } catch (notifyErr) {
         console.warn('[Admin] Ticket NOTIFY failed for ticket %s:', id, notifyErr);
       }
@@ -865,7 +861,7 @@ router.post(
         sender_name: "Support Team",
       };
       try {
-        await query('SELECT pg_notify($1, $2)', [`ticket_${id}`, JSON.stringify(notificationPayload)]);
+        await query('SELECT pg_notify($1, $2)', ['ticket_updates', JSON.stringify(notificationPayload)]);
       } catch (notifyErr) {
         console.warn('[Admin] Ticket NOTIFY failed for ticket %s:', id, notifyErr);
       }
@@ -5704,13 +5700,9 @@ router.get(
       // Send initial connection success
       res.write('data: {"type":"connected"}\n\n');
 
-      const channelName = `ticket_${id}`;
-      const listenCommand = buildListenCommand(channelName);
-      const unlistenCommand = buildUnlistenCommand(channelName);
-
       // Create PostgreSQL client for LISTEN
       const client = await pool.connect();
-      await client.query(listenCommand);
+      await client.query('LISTEN ticket_updates');
       let streamClosed = false;
       let heartbeat: NodeJS.Timeout | null = null;
       const closeStream = async (reason: string) => {
@@ -5724,7 +5716,7 @@ router.get(
         }
         client.removeListener("notification", notificationHandler);
         try {
-          await client.query(unlistenCommand);
+          await client.query('UNLISTEN ticket_updates');
         } catch (unlistenErr) {
           console.warn("Failed to unlisten admin ticket stream channel:", unlistenErr);
         } finally {
@@ -5748,8 +5740,15 @@ router.get(
           await closeStream("Token has been revoked");
           return;
         }
-        if (msg.channel === channelName && msg.payload) {
-          res.write(`data: ${msg.payload}\n\n`);
+        if (msg.channel === 'ticket_updates' && msg.payload) {
+          try {
+            const payload = JSON.parse(msg.payload);
+            if (payload.ticket_id === id) {
+              res.write(`data: ${msg.payload}\n\n`);
+            }
+          } catch (err) {
+            // ignore JSON parse errors
+          }
         }
       };
 
