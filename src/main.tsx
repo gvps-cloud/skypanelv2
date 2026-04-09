@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './lib/runtimeBootstrap'
 import App from './App'
 import './index.css'
 import { BRAND_NAME } from './lib/brand'
