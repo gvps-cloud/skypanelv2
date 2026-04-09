@@ -29,6 +29,11 @@ import {
   shouldFilterByAllowedRegions,
 } from "../lib/providerRegions.js";
 import { RoleService } from "../services/roles.js";
+import {
+  getPanelIpv6PrefixRangesForRdns,
+  ipv6AddressOwnedByLinodeInstance,
+  ipv6AddressInRange,
+} from "../lib/ipv6.js";
 import { EgressBillingService } from "../services/egressBillingService.js";
 const router = express.Router();
 
@@ -4392,45 +4397,6 @@ router.post("/:id/firewalls/detach", async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Expand a compressed IPv6 address to its full 8-group representation.
- * Returns null if the input cannot be parsed as IPv6.
- */
-function expandIPv6(address: string): bigint | null {
-  try {
-    // Strip any CIDR notation
-    const bare = address.split("/")[0].trim();
-    // Handle :: expansion
-    const halves = bare.split("::");
-    if (halves.length > 2) return null;
-    const left = halves[0] ? halves[0].split(":") : [];
-    const right = halves[1] ? halves[1].split(":") : [];
-    const missing = 8 - left.length - right.length;
-    const groups = [
-      ...left,
-      ...Array(missing).fill("0"),
-      ...right,
-    ];
-    if (groups.length !== 8) return null;
-    let result = BigInt(0);
-    for (const g of groups) {
-      result = (result << BigInt(16)) | BigInt(parseInt(g || "0", 16));
-    }
-    return result;
-  } catch {
-    return null;
-  }
-}
-
-/** Returns true if candidateAddress falls within rangeBase/prefixLen */
-function ipv6AddressInRange(candidateAddress: string, rangeBase: string, prefixLen: number): boolean {
-  const candidate = expandIPv6(candidateAddress);
-  const base = expandIPv6(rangeBase);
-  if (candidate === null || base === null) return false;
-  const mask = prefixLen === 0 ? BigInt(0) : (~BigInt(0) << BigInt(128 - prefixLen)) & ((BigInt(1) << BigInt(128)) - BigInt(1));
-  return (candidate & mask) === (base & mask);
-}
-
 router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
   try {
     const { address, rdns } = (req.body || {}) as {
@@ -4495,49 +4461,7 @@ router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
         await linodeService.getLinodeInstanceIPs(providerInstanceId);
 
       if (isIPv6) {
-        // Verify the IPv6 address belongs to one of the instance's assigned IPv6 addresses/ranges
-        const ipv6 = ipPayload?.ipv6 as Record<string, any> | undefined;
-        let ipv6Owned = false;
-
-        // Check SLAAC address
-        if (ipv6?.slaac?.address === normalizedAddress) {
-          ipv6Owned = true;
-        }
-
-        // Check link-local
-        if (!ipv6Owned && ipv6?.link_local?.address === normalizedAddress) {
-          ipv6Owned = true;
-        }
-
-        // Check global ranges
-        if (!ipv6Owned && Array.isArray(ipv6?.global)) {
-          for (const entry of ipv6.global) {
-            if (
-              typeof entry?.range === "string" &&
-              typeof entry?.prefix === "number" &&
-              ipv6AddressInRange(normalizedAddress, entry.range, entry.prefix)
-            ) {
-              ipv6Owned = true;
-              break;
-            }
-          }
-        }
-
-        // Check named ranges
-        if (!ipv6Owned && Array.isArray(ipv6?.ranges)) {
-          for (const entry of ipv6.ranges) {
-            if (
-              typeof entry?.range === "string" &&
-              typeof entry?.prefix === "number" &&
-              ipv6AddressInRange(normalizedAddress, entry.range, entry.prefix)
-            ) {
-              ipv6Owned = true;
-              break;
-            }
-          }
-        }
-
-        if (!ipv6Owned) {
+        if (!ipv6AddressOwnedByLinodeInstance(normalizedAddress, ipPayload)) {
           return res
             .status(400)
             .json({ error: "IPv6 address not assigned to this instance" });
@@ -4641,26 +4565,8 @@ router.get("/:id/networking/ipv6-rdns-records", async (req: Request, res: Respon
       return res.status(400).json({ error: "Instance is missing provider reference" });
     }
 
-    // Get instance IPs to know which IPv6 ranges are assigned
     const ipPayload = await linodeService.getLinodeInstanceIPs(providerInstanceId);
-    const ipv6 = ipPayload?.ipv6 as Record<string, any> | undefined;
-
-    // Collect all IPv6 ranges assigned to this instance
-    const ranges: Array<{ range: string; prefix: number }> = [];
-    if (Array.isArray(ipv6?.global)) {
-      for (const entry of ipv6.global) {
-        if (typeof entry?.range === "string" && typeof entry?.prefix === "number") {
-          ranges.push({ range: entry.range, prefix: entry.prefix });
-        }
-      }
-    }
-    if (Array.isArray(ipv6?.ranges)) {
-      for (const entry of ipv6.ranges) {
-        if (typeof entry?.range === "string" && typeof entry?.prefix === "number") {
-          ranges.push({ range: entry.range, prefix: entry.prefix });
-        }
-      }
-    }
+    const ranges = getPanelIpv6PrefixRangesForRdns(ipPayload);
 
     if (ranges.length === 0) {
       return res.json({ records: [] });
