@@ -56,6 +56,78 @@ function hasConcreteRdns(value: string | null | undefined): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+type AdminIPv6PrefixContext = {
+  range: string;
+  prefixLength: number;
+  region: string;
+  routeTarget: string | null;
+};
+
+function mapAdminIPv6PrefixContext(entry: any): AdminIPv6PrefixContext | null {
+  if (!entry || typeof entry !== 'object') return null;
+
+  const range = typeof entry.range === 'string' ? entry.range.trim() : '';
+  if (!range) return null;
+
+  const parsedPrefix =
+    typeof entry.prefix === 'number'
+      ? entry.prefix
+      : typeof entry.prefix === 'string'
+        ? Number(entry.prefix)
+        : NaN;
+  const prefixLength = Number.isFinite(parsedPrefix) ? Number(parsedPrefix) : 64;
+
+  return {
+    range,
+    prefixLength,
+    region: typeof entry.region === 'string' ? entry.region : '',
+    routeTarget:
+      typeof entry.route_target === 'string' && entry.route_target.trim().length > 0
+        ? entry.route_target
+        : null,
+  };
+}
+
+function getAdminIPv6PrefixContext(
+  ipPayload: { ipv6?: Record<string, unknown> } | null | undefined,
+): AdminIPv6PrefixContext[] {
+  const ipv6 = ipPayload?.ipv6 as Record<string, unknown> | undefined;
+  const collected: AdminIPv6PrefixContext[] = [];
+  const dedupe = new Set<string>();
+
+  const push = (prefix: AdminIPv6PrefixContext | null) => {
+    if (!prefix) return;
+    const key = `${prefix.range}|${prefix.prefixLength}`;
+    if (dedupe.has(key)) return;
+    dedupe.add(key);
+    collected.push(prefix);
+  };
+
+  for (const key of ['global', 'ranges'] as const) {
+    const value = ipv6?.[key];
+    if (!Array.isArray(value)) continue;
+    for (const entry of value) {
+      push(mapAdminIPv6PrefixContext(entry));
+    }
+  }
+
+  if (collected.length > 0) {
+    return collected;
+  }
+
+  // Fallback for payload shapes that only expose range/prefix pairs.
+  for (const prefix of getPanelIpv6PrefixRangesForRdns(ipPayload)) {
+    push({
+      range: prefix.range,
+      prefixLength: prefix.prefix,
+      region: '',
+      routeTarget: null,
+    });
+  }
+
+  return collected;
+}
+
 async function enrichVisibleIPv6Rdns(ips: any[]): Promise<any[]> {
   return Promise.all(
     ips.map(async (ip) => {
@@ -112,8 +184,25 @@ router.get('/ips',
       const pageSize = Number(req.query.pageSize) || 100;
 
       // Only show IPs belonging to VPS instances created in this panel
-      const knownInstances = await query('SELECT DISTINCT provider_instance_id FROM vps_instances');
+      const knownInstances = await query(
+        `SELECT id::text AS id, label, provider_instance_id::text AS provider_instance_id
+         FROM vps_instances
+         WHERE provider_instance_id IS NOT NULL`,
+      );
       const knownIds = new Set(knownInstances.rows.map((r: any) => String(r.provider_instance_id)));
+      const panelVpsByProviderId = new Map<
+        string,
+        { id: string; label: string }
+      >();
+      for (const row of knownInstances.rows) {
+        const providerId = String(row.provider_instance_id);
+        if (!panelVpsByProviderId.has(providerId)) {
+          panelVpsByProviderId.set(providerId, {
+            id: String(row.id),
+            label: String(row.label ?? ''),
+          });
+        }
+      }
 
       // Fetch pages from Linode to find panel-created IPs (cap at 10 pages to avoid slowness)
       const allFiltered: any[] = [];
@@ -135,7 +224,63 @@ router.get('/ips',
       const total = allFiltered.length;
       const start = (page - 1) * pageSize;
       const paged = allFiltered.slice(start, start + pageSize);
-      const enriched = await enrichVisibleIPv6Rdns(paged);
+      const rdnsEnriched = await enrichVisibleIPv6Rdns(paged);
+
+      const instanceIpCache = new Map<string, Promise<{ ipv6?: Record<string, unknown> } | null>>();
+      const getInstanceIpPayload = (instanceId: string) => {
+        if (!instanceIpCache.has(instanceId)) {
+          const providerId = Number(instanceId);
+          if (!Number.isFinite(providerId)) {
+            instanceIpCache.set(instanceId, Promise.resolve(null));
+          } else {
+            instanceIpCache.set(
+              instanceId,
+              Promise.resolve(linodeService.getLinodeInstanceIPs(providerId))
+                .catch((error) => {
+                  console.warn(`Failed to fetch IP payload for instance ${instanceId}:`, error);
+                  return null;
+                }),
+            );
+          }
+        }
+        return instanceIpCache.get(instanceId)!;
+      };
+
+      const enriched = await Promise.all(
+        rdnsEnriched.map(async (ip) => {
+          const instanceId = ip?.instanceId ? String(ip.instanceId) : null;
+          const panelVps = instanceId ? panelVpsByProviderId.get(instanceId) : undefined;
+
+          let payloadWithPanelInfo = ip;
+          if (panelVps) {
+            payloadWithPanelInfo = {
+              ...payloadWithPanelInfo,
+              vpsId: panelVps.id,
+              vpsLabel: panelVps.label,
+            };
+          }
+
+          if (ip?.type !== 'ipv6' || !instanceId) {
+            return payloadWithPanelInfo;
+          }
+
+          const ipPayload = await getInstanceIpPayload(instanceId);
+          if (!ipPayload) {
+            return payloadWithPanelInfo;
+          }
+
+          const ipv6Prefixes = getAdminIPv6PrefixContext(ipPayload);
+          if (ipv6Prefixes.length === 0) {
+            return payloadWithPanelInfo;
+          }
+
+          return {
+            ...payloadWithPanelInfo,
+            ipv6Prefixes,
+          };
+        }),
+      );
+
       res.json({ success: true, data: enriched, pages: Math.ceil(total / pageSize) || 1, total });
     } catch (error: any) {
       console.error('Error listing IPs:', error);

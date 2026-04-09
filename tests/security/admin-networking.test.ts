@@ -84,7 +84,7 @@ describe("admin networking routes", () => {
 
   it("enriches IPv6 rDNS from per-address detail when the list response is empty", async () => {
     mockQuery.mockResolvedValue({
-      rows: [{ provider_instance_id: "95646725" }],
+      rows: [{ id: "vps-1", label: "test-vps", provider_instance_id: "95646725" }],
     });
     mockListAllIPs.mockResolvedValue({
       data: [
@@ -115,7 +115,7 @@ describe("admin networking routes", () => {
 
   it("keeps IPv6 rDNS null when the detail response also has no value", async () => {
     mockQuery.mockResolvedValue({
-      rows: [{ provider_instance_id: "95646725" }],
+      rows: [{ id: "vps-1", label: "test-vps", provider_instance_id: "95646725" }],
     });
     mockListAllIPs.mockResolvedValue({
       data: [
@@ -141,6 +141,114 @@ describe("admin networking routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data[0].rdns).toBeNull();
+  });
+
+  it("includes IPv6 prefix context and VPS metadata in /ips rows when available", async () => {
+    mockQuery.mockResolvedValue({
+      rows: [{ id: "9455c0a2-d07d-496f-a7c4-1e53ac9d6047", label: "test-vps", provider_instance_id: "95646725" }],
+    });
+    mockListAllIPs.mockResolvedValue({
+      data: [
+        {
+          address: "2600:3c04::1000",
+          prefix: 64,
+          type: "ipv6",
+          public: true,
+          rdns: "mail.example.com",
+          instanceId: "95646725",
+          region: "ca-central",
+        },
+      ],
+      pages: 1,
+      total: 1,
+    });
+    mockGetLinodeInstanceIPs.mockResolvedValue({
+      ipv6: {
+        global: [
+          {
+            range: "2600:3c04:e001:364::",
+            prefix: 64,
+            region: "ca-central",
+            route_target: "2600:3c04::1",
+          },
+        ],
+      },
+    });
+
+    const response = await request(createApp()).get("/api/admin/networking/ips");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0].vpsId).toBe("9455c0a2-d07d-496f-a7c4-1e53ac9d6047");
+    expect(response.body.data[0].vpsLabel).toBe("test-vps");
+    expect(response.body.data[0].ipv6Prefixes).toEqual([
+      {
+        range: "2600:3c04:e001:364::",
+        prefixLength: 64,
+        region: "ca-central",
+        routeTarget: "2600:3c04::1",
+      },
+    ]);
+  });
+
+  it("returns IPv4 rows unchanged when no IPv6 prefix context applies", async () => {
+    mockQuery.mockResolvedValue({
+      rows: [{ id: "vps-1", label: "test-vps", provider_instance_id: "95646725" }],
+    });
+    mockListAllIPs.mockResolvedValue({
+      data: [
+        {
+          address: "139.177.199.181",
+          prefix: 24,
+          type: "ipv4",
+          public: true,
+          rdns: "host.example.com",
+          instanceId: "95646725",
+          region: "ca-central",
+        },
+      ],
+      pages: 1,
+      total: 1,
+    });
+
+    const response = await request(createApp()).get("/api/admin/networking/ips");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0].address).toBe("139.177.199.181");
+    expect(response.body.data[0].ipv6Prefixes).toBeUndefined();
+  });
+
+  it("safely falls back when instance IPv6 details are unavailable", async () => {
+    mockQuery.mockResolvedValue({
+      rows: [{ id: "vps-1", label: "test-vps", provider_instance_id: "95646725" }],
+    });
+    mockListAllIPs.mockResolvedValue({
+      data: [
+        {
+          address: "2600:3c04::2000",
+          prefix: 64,
+          type: "ipv6",
+          public: true,
+          rdns: "host.example.com",
+          instanceId: "95646725",
+          region: "ca-central",
+        },
+      ],
+      pages: 1,
+      total: 1,
+    });
+    mockGetLinodeInstanceIPs.mockRejectedValue(new Error("provider timeout"));
+
+    const response = await request(createApp()).get("/api/admin/networking/ips");
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0].address).toBe("2600:3c04::2000");
+    expect(response.body.data[0].ipv6Prefixes).toBeUndefined();
   });
 
   it("keeps panel-owned IPv6 ranges by deriving instanceIds from range detail", async () => {

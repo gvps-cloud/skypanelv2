@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -26,19 +26,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight, Loader2, RefreshCw, Search, Settings2, Trash2, Plus } from "lucide-react";
+import { Plus, RefreshCw, Settings2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  listIPv6Pools,
-  listIPv6Ranges,
   createIPv6Range,
   deleteIPv6Range,
-  getIPv6RangeRdnsRecords,
-  updateIPv6RangeRdns,
-  type IPAMIPv6Range,
+  listIPv6Pools,
+  listIPv6Ranges,
   type IPAMIPv6Pool,
-  type IPv6RangeRdnsVpsRow,
+  type IPAMIPv6Range,
 } from "@/services/ipamService";
+import { IPv6RangeRdnsEditor } from "./IPv6RangeRdnsEditor";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
@@ -59,35 +57,13 @@ interface VPSInstance {
 export function IPv6Manager() {
   const queryClient = useQueryClient();
 
-  // Create range dialog
   const [createOpen, setCreateOpen] = useState(false);
   const [prefixLength, setPrefixLength] = useState(64);
   const [instanceId, setInstanceId] = useState("");
-
-  // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [rdnsTarget, setRdnsTarget] = useState<IPAMIPv6Range | null>(null);
 
-  // IPv6 range sub-address rDNS (admin)
-  const [rdnsDialog, setRdnsDialog] = useState<{
-    open: boolean;
-    range: string;
-    prefixLength: number;
-    ipAddress: string;
-    domain: string;
-    saving: boolean;
-    deletingAddress: string | null;
-    existingRecords: Array<{ address: string; rdns: string }>;
-    loadingRecords: boolean;
-    recordsFilter: string;
-    recordsPage: number;
-    vpsInstances: IPv6RangeRdnsVpsRow[];
-  } | null>(null);
-
-  const {
-    data: ranges = [],
-    isLoading: rangesLoading,
-    refetch: refetchRanges,
-  } = useQuery<IPAMIPv6Range[]>({
+  const rangesQuery = useQuery<IPAMIPv6Range[]>({
     queryKey: ["admin", "networking", "ipv6-ranges"],
     queryFn: async () => {
       const result = await listIPv6Ranges();
@@ -96,11 +72,7 @@ export function IPv6Manager() {
     },
   });
 
-  const {
-    data: pools = [],
-    isLoading: poolsLoading,
-    refetch: refetchPools,
-  } = useQuery<IPAMIPv6Pool[]>({
+  const poolsQuery = useQuery<IPAMIPv6Pool[]>({
     queryKey: ["admin", "networking", "ipv6-pools"],
     queryFn: async () => {
       const result = await listIPv6Pools();
@@ -115,19 +87,17 @@ export function IPv6Manager() {
       const res = await fetch(`${API_BASE_URL}/admin/servers`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to load instances");
-      return (json.servers || []).map((s: any) => ({
-        id: s.id,
-        label: s.label,
-        provider_instance_id: s.provider_instance_id,
+      return (json.servers || []).map((server: any) => ({
+        id: server.id,
+        label: server.label,
+        provider_instance_id: server.provider_instance_id,
       }));
     },
   });
 
-  const loading = rangesLoading || poolsLoading;
-
   const createMutation = useMutation({
-    mutationFn: async (data: { prefixLength: number; instanceId?: string }) => {
-      const result = await createIPv6Range(data.prefixLength, data.instanceId);
+    mutationFn: async (payload: { prefixLength: number; instanceId?: string }) => {
+      const result = await createIPv6Range(payload.prefixLength, payload.instanceId);
       if (!result.success) throw new Error(result.error || "Failed to create IPv6 range");
       return result;
     },
@@ -137,8 +107,9 @@ export function IPv6Manager() {
       setInstanceId("");
       setPrefixLength(64);
       queryClient.invalidateQueries({ queryKey: ["admin", "networking", "ipv6-ranges"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "networking", "ips"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const deleteMutation = useMutation({
@@ -147,120 +118,35 @@ export function IPv6Manager() {
       toast.success("IPv6 range deleted");
       setDeleteTarget(null);
       queryClient.invalidateQueries({ queryKey: ["admin", "networking", "ipv6-ranges"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "networking", "ips"] });
     },
-    onError: (err: Error) => toast.error(err.message || "Failed to delete range"),
+    onError: (error: Error) => toast.error(error.message || "Failed to delete range"),
   });
 
+  const ranges = rangesQuery.data ?? [];
+  const pools = poolsQuery.data ?? [];
+  const loading = rangesQuery.isLoading || poolsQuery.isLoading;
+
+  const rangesError =
+    rangesQuery.error instanceof Error ? rangesQuery.error.message : null;
+  const poolsError =
+    poolsQuery.error instanceof Error ? poolsQuery.error.message : null;
+
   const handleRefresh = () => {
-    refetchRanges();
-    refetchPools();
+    rangesQuery.refetch();
+    poolsQuery.refetch();
   };
 
-  const openRangeRdnsDialog = async (range: string, prefixLength: number) => {
-    const defaultAddress = range.endsWith("::") ? `${range}1` : `${range}::1`;
-    setRdnsDialog({
-      open: true,
-      range,
-      prefixLength,
-      ipAddress: defaultAddress,
-      domain: "",
-      saving: false,
-      deletingAddress: null,
-      existingRecords: [],
-      loadingRecords: true,
-      recordsFilter: "",
-      recordsPage: 0,
-      vpsInstances: [],
-    });
-    try {
-      const result = await getIPv6RangeRdnsRecords(range, prefixLength);
-      if (!result.success || !result.data) {
-        throw new Error(result.error || "Failed to load rDNS records");
-      }
-      setRdnsDialog((prev) =>
-        prev && prev.range === range && prev.prefixLength === prefixLength
-          ? {
-              ...prev,
-              existingRecords: result.data!.records,
-              vpsInstances: result.data!.vpsInstances,
-              loadingRecords: false,
-            }
-          : prev,
-      );
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to load rDNS records";
-      toast.error(msg);
-      setRdnsDialog((prev) => (prev ? { ...prev, loadingRecords: false } : prev));
-    }
-  };
-
-  const saveRangeRdns = async () => {
-    if (!rdnsDialog) return;
-    const { range, prefixLength, ipAddress, domain } = rdnsDialog;
-    if (!ipAddress.trim()) {
-      toast.error("An IPv6 address is required");
-      return;
-    }
-    setRdnsDialog((prev) => (prev ? { ...prev, saving: true } : prev));
-    const trimmedAddr = ipAddress.trim();
-    const trimmedDomain = domain.trim();
-    const result = await updateIPv6RangeRdns(range, prefixLength, trimmedAddr, trimmedDomain.length > 0 ? trimmedDomain : null);
-    if (!result.success) {
-      toast.error(result.error || "Failed to update reverse DNS");
-      setRdnsDialog((prev) => (prev ? { ...prev, saving: false } : prev));
-      return;
-    }
-    toast.success("Reverse DNS updated");
-    setRdnsDialog((prev) =>
-      prev
-        ? {
-            ...prev,
-            saving: false,
-            domain: "",
-            existingRecords: trimmedDomain
-              ? [
-                  ...prev.existingRecords.filter((r) => r.address !== trimmedAddr),
-                  { address: trimmedAddr, rdns: trimmedDomain },
-                ]
-              : prev.existingRecords.filter((r) => r.address !== trimmedAddr),
-          }
-        : prev,
-    );
-  };
-
-  const clearRangeRdnsRecord = async (address: string) => {
-    if (!rdnsDialog) return;
-    setRdnsDialog((prev) => (prev ? { ...prev, deletingAddress: address } : prev));
-    const result = await updateIPv6RangeRdns(rdnsDialog.range, rdnsDialog.prefixLength, address, null);
-    if (!result.success) {
-      toast.error(result.error || "Failed to clear reverse DNS");
-      setRdnsDialog((prev) => (prev ? { ...prev, deletingAddress: null } : prev));
-      return;
-    }
-    toast.success("Reverse DNS cleared");
-    setRdnsDialog((prev) =>
-      prev
-        ? {
-            ...prev,
-            deletingAddress: null,
-            existingRecords: prev.existingRecords.filter((r) => r.address !== address),
-            recordsPage: 0,
-          }
-        : prev,
-    );
-  };
-
-  const renderRangeInstanceCell = (instanceId: string | null, instanceIds: string[]) => {
-    if (instanceIds.length > 0) {
-      const joined = instanceIds.join(", ");
+  const renderRangeInstanceCell = (instance: IPAMIPv6Range) => {
+    if (instance.instanceIds.length > 0) {
+      const joined = instance.instanceIds.join(", ");
       return (
         <span className="block max-w-[220px] truncate" title={joined}>
           {joined}
         </span>
       );
     }
-
-    return instanceId || <span className="text-muted-foreground">Unassigned</span>;
+    return instance.instanceId || <span className="text-muted-foreground">Unassigned</span>;
   };
 
   return (
@@ -279,11 +165,11 @@ export function IPv6Manager() {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-                <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+                <RefreshCw className={`mr-1 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
               <Button size="sm" onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="mr-1 h-4 w-4" />
                 Create Range
               </Button>
             </div>
@@ -305,34 +191,40 @@ export function IPv6Manager() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {loading ? (
+                    {rangesQuery.isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                          Loading...
+                        <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                          Loading IPv6 ranges...
+                        </TableCell>
+                      </TableRow>
+                    ) : rangesError ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-8 text-center text-destructive">
+                          {rangesError}
                         </TableCell>
                       </TableRow>
                     ) : ranges.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                           No IPv6 ranges found.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      ranges.map((r) => (
-                        <TableRow key={r.range}>
-                          <TableCell className="font-mono text-sm">{r.range}</TableCell>
+                      ranges.map((range) => (
+                        <TableRow key={`${range.range}-${range.prefixLength}`}>
+                          <TableCell className="font-mono text-sm">{range.range}</TableCell>
                           <TableCell>
-                            <Badge variant="secondary">/{r.prefixLength}</Badge>
+                            <Badge variant="secondary">/{range.prefixLength}</Badge>
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {renderRangeInstanceCell(r.instanceId, r.instanceIds)}
+                            {renderRangeInstanceCell(range)}
                           </TableCell>
-                          <TableCell className="text-sm">{r.region}</TableCell>
+                          <TableCell className="text-sm">{range.region}</TableCell>
                           <TableCell className="font-mono text-xs">
-                            {r.routeTarget || <span className="text-muted-foreground">-</span>}
+                            {range.routeTarget || <span className="text-muted-foreground">-</span>}
                           </TableCell>
                           <TableCell className="text-sm">
-                            {r.created ? new Date(r.created).toLocaleDateString() : "-"}
+                            {range.created ? new Date(range.created).toLocaleDateString() : "-"}
                           </TableCell>
                           <TableCell>
                             <div className="flex justify-end gap-1">
@@ -340,7 +232,7 @@ export function IPv6Manager() {
                                 variant="ghost"
                                 size="sm"
                                 title="Manage sub-address reverse DNS"
-                                onClick={() => openRangeRdnsDialog(r.range, r.prefixLength)}
+                                onClick={() => setRdnsTarget(range)}
                               >
                                 <Settings2 className="h-4 w-4" />
                               </Button>
@@ -349,7 +241,7 @@ export function IPv6Manager() {
                                 size="sm"
                                 className="text-destructive"
                                 title="Delete range"
-                                onClick={() => setDeleteTarget(r.range)}
+                                onClick={() => setDeleteTarget(range.range)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -372,7 +264,7 @@ export function IPv6Manager() {
               <p className="text-sm text-muted-foreground">{pools.length} pools (read-only)</p>
             </div>
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`mr-1 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
           </div>
@@ -390,29 +282,35 @@ export function IPv6Manager() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {loading ? (
+                    {poolsQuery.isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          Loading...
+                        <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                          Loading IPv6 pools...
+                        </TableCell>
+                      </TableRow>
+                    ) : poolsError ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="py-8 text-center text-destructive">
+                          {poolsError}
                         </TableCell>
                       </TableRow>
                     ) : pools.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
                           No IPv6 pools found.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      pools.map((p) => (
-                        <TableRow key={p.range}>
-                          <TableCell className="font-mono text-sm">{p.range}</TableCell>
+                      pools.map((pool) => (
+                        <TableRow key={`${pool.range}-${pool.prefixLength}`}>
+                          <TableCell className="font-mono text-sm">{pool.range}</TableCell>
                           <TableCell>
-                            <Badge variant="secondary">/{p.prefixLength}</Badge>
+                            <Badge variant="secondary">/{pool.prefixLength}</Badge>
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {p.instanceId || <span className="text-muted-foreground">-</span>}
+                            {pool.instanceId || <span className="text-muted-foreground">-</span>}
                           </TableCell>
-                          <TableCell className="text-sm">{p.region}</TableCell>
+                          <TableCell className="text-sm">{pool.region}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -424,13 +322,12 @@ export function IPv6Manager() {
         </TabsContent>
       </Tabs>
 
-      {/* Create Range Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create IPv6 Range</DialogTitle>
             <DialogDescription>
-              Allocate a new IPv6 range. Optionally assign to a VPS instance.
+              Allocate a new IPv6 range. Optionally assign it to a VPS instance.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -442,7 +339,7 @@ export function IPv6Manager() {
                 min={56}
                 max={64}
                 value={prefixLength}
-                onChange={(e) => setPrefixLength(Number(e.target.value))}
+                onChange={(event) => setPrefixLength(Number(event.target.value))}
               />
               <p className="text-xs text-muted-foreground">Between /56 and /64</p>
             </div>
@@ -453,9 +350,9 @@ export function IPv6Manager() {
                   <SelectValue placeholder="Select instance..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {instances.map((inst) => (
-                    <SelectItem key={inst.provider_instance_id} value={inst.provider_instance_id}>
-                      {inst.label} ({inst.provider_instance_id})
+                  {instances.map((instance) => (
+                    <SelectItem key={instance.provider_instance_id} value={instance.provider_instance_id}>
+                      {instance.label} ({instance.provider_instance_id})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -466,238 +363,54 @@ export function IPv6Manager() {
             <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={createMutation.isPending}>
               Cancel
             </Button>
-            <Button onClick={() => createMutation.mutate({ prefixLength, instanceId: instanceId || undefined })} disabled={createMutation.isPending}>
+            <Button
+              onClick={() => createMutation.mutate({ prefixLength, instanceId: instanceId || undefined })}
+              disabled={createMutation.isPending}
+            >
               {createMutation.isPending ? "Creating..." : "Create Range"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Admin IPv6 range rDNS (sub-addresses within /64, etc.) */}
-      <Dialog
-        open={!!rdnsDialog?.open}
-        onOpenChange={(open) => {
-          if (!open && !rdnsDialog?.saving) {
-            setRdnsDialog(null);
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          {rdnsDialog && (
+      <Dialog open={!!rdnsTarget} onOpenChange={(open) => !open && setRdnsTarget(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          {rdnsTarget ? (
             <>
               <DialogHeader>
                 <DialogTitle>IPv6 range reverse DNS</DialogTitle>
                 <DialogDescription>
-                  Set custom reverse DNS for addresses within{" "}
+                  Manage custom reverse DNS records for addresses within{" "}
                   <span className="font-mono text-foreground">
-                    {rdnsDialog.range}/{rdnsDialog.prefixLength}
+                    {rdnsTarget.range}/{rdnsTarget.prefixLength}
                   </span>
-                  . Only addresses assigned to the linked panel VPS can be updated.
+                  .
                 </DialogDescription>
               </DialogHeader>
-              {rdnsDialog.vpsInstances.length === 0 && !rdnsDialog.loadingRecords ? (
-                <p className="text-sm text-muted-foreground py-2">
-                  No panel VPS is linked to this range in Linode, or the range could not be loaded. Sub-address rDNS
-                  requires a VPS attached to the range.
-                </p>
-              ) : null}
-              {rdnsDialog.vpsInstances.length > 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Linked VPS:{" "}
-                  {rdnsDialog.vpsInstances.map((v) => `${v.label} (${v.provider_instance_id})`).join(", ")}
-                </p>
-              ) : null}
-              <div className="space-y-4 py-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="admin-ipv6-rdns-address">IPv6 address</Label>
-                  <Input
-                    id="admin-ipv6-rdns-address"
-                    value={rdnsDialog.ipAddress}
-                    onChange={(e) =>
-                      setRdnsDialog((prev) => (prev ? { ...prev, ipAddress: e.target.value } : prev))
-                    }
-                    placeholder={`${rdnsDialog.range}1`}
-                    className="font-mono text-sm"
-                    disabled={rdnsDialog.saving || rdnsDialog.vpsInstances.length === 0}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="admin-ipv6-rdns-domain">Domain name</Label>
-                  <Input
-                    id="admin-ipv6-rdns-domain"
-                    value={rdnsDialog.domain}
-                    onChange={(e) =>
-                      setRdnsDialog((prev) => (prev ? { ...prev, domain: e.target.value } : prev))
-                    }
-                    placeholder="mail.example.com"
-                    disabled={rdnsDialog.saving || rdnsDialog.vpsInstances.length === 0}
-                  />
-                  <p className="text-xs text-muted-foreground">Leave blank to clear rDNS for the address.</p>
-                </div>
-                {(rdnsDialog.loadingRecords || rdnsDialog.existingRecords.length > 0) && (() => {
-                  const PAGE_SIZE = 5;
-                  const filtered = rdnsDialog.existingRecords.filter(
-                    (rec) =>
-                      rdnsDialog.recordsFilter.trim() === "" ||
-                      rec.address.toLowerCase().includes(rdnsDialog.recordsFilter.trim().toLowerCase()) ||
-                      rec.rdns.toLowerCase().includes(rdnsDialog.recordsFilter.trim().toLowerCase()),
-                  );
-                  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-                  const page = Math.min(rdnsDialog.recordsPage, totalPages - 1);
-                  const pageRecords = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-                  return (
-                    <div className="border-t border-border pt-4 space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium text-foreground">
-                          Existing records
-                          {!rdnsDialog.loadingRecords && (
-                            <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                              ({filtered.length}
-                              {rdnsDialog.recordsFilter ? " filtered" : ""})
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      {rdnsDialog.loadingRecords ? (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          Loading records…
-                        </div>
-                      ) : (
-                        <>
-                          <div className="relative">
-                            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                            <Input
-                              value={rdnsDialog.recordsFilter}
-                              onChange={(e) =>
-                                setRdnsDialog((prev) =>
-                                  prev ? { ...prev, recordsFilter: e.target.value, recordsPage: 0 } : prev,
-                                )
-                              }
-                              placeholder="Filter by address or domain…"
-                              className="pl-8 h-8 text-xs"
-                            />
-                          </div>
-                          {pageRecords.length === 0 ? (
-                            <p className="text-xs text-muted-foreground py-2">No records match your filter.</p>
-                          ) : (
-                            <ul className="space-y-1.5 max-h-[220px] overflow-y-auto">
-                              {pageRecords.map((record) => {
-                                const isDeleting = rdnsDialog.deletingAddress === record.address;
-                                return (
-                                  <li
-                                    key={record.address}
-                                    className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs group"
-                                  >
-                                    <button
-                                      type="button"
-                                      className="flex flex-col gap-0.5 text-left min-w-0 flex-1 hover:opacity-80 transition-opacity"
-                                      title="Use this address"
-                                      onClick={() =>
-                                        setRdnsDialog((prev) =>
-                                          prev
-                                            ? { ...prev, ipAddress: record.address, domain: record.rdns }
-                                            : prev,
-                                        )
-                                      }
-                                    >
-                                      <span className="font-mono font-semibold text-foreground truncate block">
-                                        {record.address}
-                                      </span>
-                                      <span className="text-muted-foreground truncate block">{record.rdns}</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      title="Clear rDNS"
-                                      disabled={
-                                        isDeleting || rdnsDialog.saving || rdnsDialog.deletingAddress !== null
-                                      }
-                                      onClick={() => clearRangeRdnsRecord(record.address)}
-                                      className="flex-shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md border border-border text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:border-destructive hover:text-destructive focus:outline-none focus:opacity-100 disabled:pointer-events-none disabled:opacity-40"
-                                    >
-                                      {isDeleting ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                      ) : (
-                                        <Trash2 className="h-3 w-3" />
-                                      )}
-                                    </button>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          )}
-                          {totalPages > 1 && (
-                            <div className="flex items-center justify-between pt-1">
-                              <span className="text-xs text-muted-foreground">
-                                Page {page + 1} of {totalPages}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  disabled={page === 0}
-                                  onClick={() =>
-                                    setRdnsDialog((prev) =>
-                                      prev ? { ...prev, recordsPage: prev.recordsPage - 1 } : prev,
-                                    )
-                                  }
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
-                                >
-                                  <ChevronLeft className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={page >= totalPages - 1}
-                                  onClick={() =>
-                                    setRdnsDialog((prev) =>
-                                      prev ? { ...prev, recordsPage: prev.recordsPage + 1 } : prev,
-                                    )
-                                  }
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
-                                >
-                                  <ChevronRight className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
+              <IPv6RangeRdnsEditor
+                prefixes={[
+                  {
+                    range: rdnsTarget.range,
+                    prefixLength: rdnsTarget.prefixLength,
+                    region: rdnsTarget.region,
+                    routeTarget: rdnsTarget.routeTarget,
+                  },
+                ]}
+                onSaved={() => {
+                  queryClient.invalidateQueries({ queryKey: ["admin", "networking", "ips"] });
+                }}
+              />
               <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setRdnsDialog(null)}
-                  disabled={rdnsDialog.saving}
-                >
+                <Button variant="outline" onClick={() => setRdnsTarget(null)}>
                   Close
-                </Button>
-                <Button
-                  onClick={saveRangeRdns}
-                  disabled={
-                    rdnsDialog.saving ||
-                    !rdnsDialog.ipAddress.trim() ||
-                    rdnsDialog.vpsInstances.length === 0
-                  }
-                >
-                  {rdnsDialog.saving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving…
-                    </>
-                  ) : (
-                    "Save"
-                  )}
                 </Button>
               </DialogFooter>
             </>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
 
-      {/* Delete Range Dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete IPv6 Range</AlertDialogTitle>

@@ -17,6 +17,14 @@ export interface IPAMIPAddress {
   rdns: string | null;
   instanceId: string | null;
   region: string;
+  ipv6Prefixes?: Array<{
+    range: string;
+    prefixLength: number;
+    region: string;
+    routeTarget: string | null;
+  }>;
+  vpsId?: string;
+  vpsLabel?: string;
 }
 
 export interface IPAMIPv6Range {

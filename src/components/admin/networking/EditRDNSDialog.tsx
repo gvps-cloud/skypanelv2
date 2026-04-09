@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,12 @@ interface EditRDNSDialogProps {
 export function EditRDNSDialog({ open, onClose, address, currentRdns, onSaved }: EditRDNSDialogProps) {
   const [rdns, setRdns] = useState(currentRdns ?? "");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setRdns(currentRdns ?? "");
+    }
+  }, [address, currentRdns, open]);
 
   const handleSave = async () => {
     setSaving(true);

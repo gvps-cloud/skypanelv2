@@ -112,7 +112,7 @@ export function FirewallManager() {
       const res = await fetch(`${API_BASE_URL}/admin/servers`, { headers: getAuthHeaders() });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to fetch servers");
-      return json.data as Array<{ id: number; label: string; provider_instance_id: string }>;
+      return (json.servers || []) as Array<{ id: number; label: string; provider_instance_id: string }>;
     },
     enabled: attachDialogOpen,
   });
