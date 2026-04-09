@@ -8,6 +8,7 @@ import { BillingService } from "./services/billingService.js";
 import { EgressBillingService } from "./services/egressBillingService.js";
 import { EgressHourlyBillingService } from "./services/egressHourlyBillingService.js";
 import { notificationService } from "./services/notificationService.js";
+import { ticketNotificationService } from "./services/ticketNotificationService.js";
 import { query } from "./lib/database.js";
 import { config } from "./config/index.js";
 
@@ -54,6 +55,10 @@ const server = app.listen(PORT, () => {
 
   notificationService.start().catch((error) => {
     console.error("Failed to start notification service:", error);
+  });
+
+  ticketNotificationService.start().catch((error) => {
+    console.error("Failed to start ticket notification service:", error);
   });
 
   // Sync .env config (RDNS_BASE_DOMAIN, etc.) into database on startup
@@ -192,6 +197,7 @@ async function runHourlyEgressBilling(runType: "initial" | "scheduled") {
 process.on("SIGTERM", () => {
   console.log("SIGTERM signal received");
   void notificationService.stop();
+  void ticketNotificationService.stop();
   server.close(() => {
     console.log("Server closed");
     process.exit(0);
@@ -201,6 +207,7 @@ process.on("SIGTERM", () => {
 process.on("SIGINT", () => {
   console.log("SIGINT signal received");
   void notificationService.stop();
+  void ticketNotificationService.stop();
   server.close(() => {
     console.log("Server closed");
     process.exit(0);

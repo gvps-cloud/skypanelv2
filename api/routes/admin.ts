@@ -7,7 +7,7 @@ import { body, param, validationResult } from "express-validator";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
-import { query, pool } from "../lib/database.js";
+import { query } from "../lib/database.js";
 import { linodeService } from "../services/linodeService.js";
 import { logActivity } from "../services/activityLogger.js";
 import {
@@ -48,6 +48,7 @@ import {
 import { EgressBillingService } from "../services/egressBillingService.js";
 import { tokenBlacklistService } from "../services/tokenBlacklistService.js";
 import { adminMutationRateLimiter } from "../middleware/rateLimiting.js";
+import { ticketNotificationService } from "../services/ticketNotificationService.js";
 
 const router = express.Router();
 
@@ -5700,11 +5701,12 @@ router.get(
       // Send initial connection success
       res.write('data: {"type":"connected"}\n\n');
 
-      // Create PostgreSQL client for LISTEN
-      const client = await pool.connect();
-      await client.query('LISTEN ticket_updates');
+      // Subscribe to the shared ticket notification service (one DB connection
+      // shared across all SSE clients) instead of allocating a dedicated pg
+      // client per connection to prevent connection-pool exhaustion.
       let streamClosed = false;
       let heartbeat: NodeJS.Timeout | null = null;
+
       const closeStream = async (reason: string) => {
         if (streamClosed) {
           return;
@@ -5714,14 +5716,7 @@ router.get(
           clearInterval(heartbeat);
           heartbeat = null;
         }
-        client.removeListener("notification", notificationHandler);
-        try {
-          await client.query('UNLISTEN ticket_updates');
-        } catch (unlistenErr) {
-          console.warn("Failed to unlisten admin ticket stream channel:", unlistenErr);
-        } finally {
-          client.release();
-        }
+        ticketNotificationService.removeListener("ticket_update", notificationHandler);
         try {
           res.write(`event: error\ndata: ${JSON.stringify({ error: reason })}\n\n`);
         } catch {
@@ -5730,29 +5725,29 @@ router.get(
         res.end();
       };
 
-      // Handle notifications
-      const notificationHandler = async (msg: {
-        channel: string;
-        payload?: string;
-      }) => {
+      // Handle notifications: filter by ticket_id first, then check revocation
+      // only when we are actually about to write to the stream, to avoid a
+      // Redis round-trip for every ticket event across the entire app.
+      const notificationHandler = async (
+        payload: { ticket_id: string; [key: string]: unknown },
+        rawPayload: string,
+      ) => {
+        if (payload.ticket_id !== id) {
+          return;
+        }
         const revoked = await tokenBlacklistService.isRevoked(token);
         if (revoked) {
           await closeStream("Token has been revoked");
           return;
         }
-        if (msg.channel === 'ticket_updates' && msg.payload) {
-          try {
-            const payload = JSON.parse(msg.payload);
-            if (payload.ticket_id === id) {
-              res.write(`data: ${msg.payload}\n\n`);
-            }
-          } catch (err) {
-            // ignore JSON parse errors
-          }
+        try {
+          res.write(`data: ${rawPayload}\n\n`);
+        } catch {
+          // Client gone
         }
       };
 
-      client.on("notification", notificationHandler);
+      ticketNotificationService.on("ticket_update", notificationHandler);
 
       // Send heartbeat every 30 seconds
       heartbeat = setInterval(async () => {
@@ -5761,7 +5756,11 @@ router.get(
           await closeStream("Token has been revoked");
           return;
         }
-        res.write(": heartbeat\n\n");
+        try {
+          res.write(": heartbeat\n\n");
+        } catch {
+          await closeStream("Client disconnected");
+        }
       }, 30000);
 
       // Cleanup on client disconnect
