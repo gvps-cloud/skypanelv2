@@ -8,6 +8,10 @@ import { authenticateToken } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { query, pool } from "../lib/database.js";
+import {
+  buildListenCommand,
+  buildUnlistenCommand,
+} from "../lib/postgresIdentifiers.js";
 import { linodeService } from "../services/linodeService.js";
 import { logActivity } from "../services/activityLogger.js";
 import {
@@ -5700,15 +5704,13 @@ router.get(
       // Send initial connection success
       res.write('data: {"type":"connected"}\n\n');
 
+      const channelName = `ticket_${id}`;
+      const listenCommand = buildListenCommand(channelName);
+      const unlistenCommand = buildUnlistenCommand(channelName);
+
       // Create PostgreSQL client for LISTEN
       const client = await pool.connect();
-      const channelName = `ticket_${id}`;
-
-      // Validate channel name to prevent SQL injection since LISTEN doesn't support parameters
-      if (!/^[a-zA-Z0-9_-]+$/.test(channelName)) {
-        throw new Error("Invalid channel name");
-      }
-      await client.query(`LISTEN "${channelName}"`);
+      await client.query(listenCommand);
       let streamClosed = false;
       let heartbeat: NodeJS.Timeout | null = null;
       const closeStream = async (reason: string) => {
@@ -5722,9 +5724,7 @@ router.get(
         }
         client.removeListener("notification", notificationHandler);
         try {
-          if (/^[a-zA-Z0-9_-]+$/.test(channelName)) {
-            await client.query(`UNLISTEN "${channelName}"`);
-          }
+          await client.query(unlistenCommand);
         } catch (unlistenErr) {
           console.warn("Failed to unlisten admin ticket stream channel:", unlistenErr);
         } finally {
