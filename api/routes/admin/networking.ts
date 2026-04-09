@@ -11,6 +11,12 @@ import { authenticateToken, requireAdmin } from '../../middleware/auth.js';
 import { query } from '../../lib/database.js';
 import * as ipService from '../../services/ipService.js';
 import { linodeService } from '../../services/linodeService.js';
+import { logActivity } from '../../services/activityLogger.js';
+import {
+  getPanelIpv6PrefixRangesForRdns,
+  ipv6AddressInRange,
+  ipv6AddressOwnedByLinodeInstance,
+} from '../../lib/ipv6.js';
 
 // Custom validator for IP addresses (IPv4 and IPv6)
 function isValidIP(value: string): boolean {
@@ -364,6 +370,190 @@ router.delete('/ipv6/ranges/:range',
       res.status(500).json({ success: false, error: error.message || 'Failed to delete IPv6 range' });
     }
   }
+);
+
+/** Panel VPS rows attached to a Linode IPv6 range (for admin sub-address rDNS UI). */
+async function getPanelVpsForIPv6Range(range: string): Promise<
+  Array<{ id: string; label: string; provider_instance_id: string }>
+> {
+  const knownInstances = await query('SELECT DISTINCT provider_instance_id FROM vps_instances');
+  const knownIds = new Set(knownInstances.rows.map((r: any) => String(r.provider_instance_id)));
+
+  let detail: { linodes?: number[] };
+  try {
+    detail = await linodeService.getIPv6Range(range);
+  } catch {
+    return [];
+  }
+
+  const instanceIds = Array.isArray(detail?.linodes)
+    ? detail.linodes.map((id) => String(id)).filter((id) => knownIds.has(id))
+    : [];
+
+  if (instanceIds.length === 0) {
+    return [];
+  }
+
+  const rowRes = await query(
+    `SELECT id, label, provider_instance_id::text AS provider_instance_id
+     FROM vps_instances
+     WHERE provider_instance_id = ANY($1::text[])`,
+    [instanceIds],
+  );
+
+  return rowRes.rows.map((r: any) => ({
+    id: String(r.id),
+    label: String(r.label ?? ''),
+    provider_instance_id: String(r.provider_instance_id),
+  }));
+}
+
+// List custom IPv6 rDNS records within a range (same filtering as customer VPS IPv6 rDNS dialog)
+router.get(
+  '/ipv6/range-rdns-records',
+  queryValidator('range').isString().trim().notEmpty(),
+  queryValidator('prefix').isInt({ min: 0, max: 128 }),
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, errors: errors.array() });
+        return;
+      }
+
+      const range = String(req.query.range).trim();
+      const prefix = Number(req.query.prefix);
+
+      if (isIP(range) !== 6 && !range.includes(':')) {
+        res.status(400).json({ success: false, error: 'Invalid IPv6 range' });
+        return;
+      }
+
+      const vpsInstances = await getPanelVpsForIPv6Range(range);
+      if (vpsInstances.length === 0) {
+        res.json({ success: true, data: { records: [], vpsInstances: [] } });
+        return;
+      }
+
+      const records: Array<{ address: string; rdns: string }> = [];
+      try {
+        const accountIPs = await linodeService.getAccountNetworkingIPs();
+        const ipList = accountIPs?.data ?? [];
+        for (const ip of ipList) {
+          if (!ip.address || !ip.rdns) continue;
+          if (!ip.address.includes(':')) continue;
+          if (ip.rdns.includes('.ip.linodeusercontent.com')) continue;
+          if (ipv6AddressInRange(ip.address, range, prefix)) {
+            records.push({ address: ip.address, rdns: ip.rdns });
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Failed to fetch account IPs for admin IPv6 range rDNS:', fetchErr);
+      }
+
+      res.json({ success: true, data: { records, vpsInstances } });
+    } catch (error: any) {
+      console.error('Error listing IPv6 range rDNS records:', error);
+      res.status(500).json({ success: false, error: error.message || 'Failed to list IPv6 rDNS records' });
+    }
+  },
+);
+
+// Set or clear reverse DNS for an IPv6 address within a panel-managed range
+router.post(
+  '/ipv6/range-rdns',
+  body('range').isString().trim().notEmpty(),
+  body('prefix').isInt({ min: 0, max: 128 }),
+  body('address').isString().trim().notEmpty().custom(isValidIP),
+  body('rdns').optional({ nullable: true }).isString(),
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, errors: errors.array() });
+        return;
+      }
+
+      const range = req.body.range as string;
+      const prefix = Number(req.body.prefix);
+      const normalizedAddress = (req.body.address as string).trim();
+      const rdnsValue =
+        typeof req.body.rdns === 'string' && req.body.rdns.trim().length > 0
+          ? req.body.rdns.trim()
+          : null;
+
+      if (!normalizedAddress.includes(':')) {
+        res.status(400).json({ success: false, error: 'An IPv6 address is required' });
+        return;
+      }
+
+      if (!ipv6AddressInRange(normalizedAddress, range, prefix)) {
+        res.status(400).json({ success: false, error: 'IPv6 address is not within the specified range' });
+        return;
+      }
+
+      const vpsRows = await getPanelVpsForIPv6Range(range);
+      if (vpsRows.length === 0) {
+        res.status(404).json({ success: false, error: 'No panel VPS is attached to this IPv6 range' });
+        return;
+      }
+
+      let owningVps: { id: string; label: string; provider_instance_id: string } | null = null;
+      for (const row of vpsRows) {
+        const pid = Number(row.provider_instance_id);
+        if (!Number.isFinite(pid)) continue;
+        try {
+          const ipPayload = await linodeService.getLinodeInstanceIPs(pid);
+          if (ipv6AddressOwnedByLinodeInstance(normalizedAddress, ipPayload)) {
+            const prefixes = getPanelIpv6PrefixRangesForRdns(ipPayload);
+            const rangeMatches = prefixes.some((p) => p.range === range && p.prefix === prefix);
+            if (rangeMatches) {
+              owningVps = row;
+              break;
+            }
+          }
+        } catch (e) {
+          console.warn(`Failed to verify IPv6 ownership for instance ${pid}:`, e);
+        }
+      }
+
+      if (!owningVps) {
+        res.status(400).json({
+          success: false,
+          error: 'IPv6 address is not assigned to a panel VPS on this range',
+        });
+        return;
+      }
+
+      await linodeService.updateIPAddressReverseDNS(normalizedAddress, rdnsValue);
+
+      const user = (req as any).user;
+      try {
+        await logActivity(
+          {
+            userId: user.id,
+            organizationId: user.organizationId ?? null,
+            eventType: 'admin.network.ipv6_rdns',
+            entityType: 'vps',
+            entityId: owningVps.id,
+            message: `Admin updated rDNS for ${normalizedAddress} on VPS '${owningVps.label}'`,
+            status: 'success',
+            metadata: { ip: normalizedAddress, rdns: rdnsValue, ipv6Range: range, prefix },
+          },
+          req as any,
+        );
+      } catch (logErr) {
+        console.warn('Failed to log admin IPv6 rDNS activity:', logErr);
+      }
+
+      res.json({ success: true, rdns: rdnsValue });
+    } catch (error: any) {
+      console.error('Error updating admin IPv6 range rDNS:', error);
+      const message = error.message || 'Failed to update rDNS';
+      const isValidationError = /forward dns|not found|invalid|must be/i.test(message);
+      res.status(isValidationError ? 400 : 500).json({ success: false, error: message });
+    }
+  },
 );
 
 // ── VLANs ──

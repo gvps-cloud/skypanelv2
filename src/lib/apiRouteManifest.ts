@@ -619,6 +619,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": true
   },
   {
+    "method": "POST",
+    "path": "/api/admin/networking/ipv6/range-rdns",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/ipv6/range-rdns-records",
+    "protected": true,
+    "admin": true
+  },
+  {
     "method": "GET",
     "path": "/api/admin/networking/ipv6/ranges",
     "protected": true,

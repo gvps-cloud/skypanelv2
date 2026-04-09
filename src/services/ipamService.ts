@@ -239,6 +239,44 @@ export async function deleteIPv6Range(range: string) {
   return handleResponse<void>(res);
 }
 
+export interface IPv6RangeRdnsVpsRow {
+  id: string;
+  label: string;
+  provider_instance_id: string;
+}
+
+export interface IPv6RangeRdnsRecordsPayload {
+  records: Array<{ address: string; rdns: string }>;
+  vpsInstances: IPv6RangeRdnsVpsRow[];
+}
+
+export async function getIPv6RangeRdnsRecords(range: string, prefixLength: number) {
+  const params = new URLSearchParams({ range, prefix: String(prefixLength) });
+  const res = await fetch(
+    `${API_BASE_URL}/admin/networking/ipv6/range-rdns-records?${params.toString()}`,
+    { headers: getAuthHeaders() }
+  );
+  return handleResponse<IPv6RangeRdnsRecordsPayload>(res);
+}
+
+export async function updateIPv6RangeRdns(
+  range: string,
+  prefixLength: number,
+  address: string,
+  rdns: string | null
+) {
+  const res = await fetch(`${API_BASE_URL}/admin/networking/ipv6/range-rdns`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ range, prefix: prefixLength, address, rdns }),
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    return { success: false as const, error: json.error || "Request failed" };
+  }
+  return { success: true as const, rdns: json.rdns as string | null };
+}
+
 // ── VLANs ──
 
 export async function listVLANs() {
