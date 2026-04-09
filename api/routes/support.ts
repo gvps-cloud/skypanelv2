@@ -1229,7 +1229,7 @@ router.get(
       if (!/^[a-zA-Z0-9_-]+$/.test(channelName)) {
         throw new Error("Invalid channel name");
       }
-      await client.query(`LISTEN "${channelName}"`);
+      await client.query(`LISTEN ${client.escapeIdentifier(channelName)}`);
       let streamClosed = false;
       let heartbeat: NodeJS.Timeout | null = null;
       const closeStream = async (reason: string) => {
@@ -1244,7 +1244,7 @@ router.get(
         client.removeListener("notification", notificationHandler);
         try {
           if (/^[a-zA-Z0-9_-]+$/.test(channelName)) {
-            await client.query(`UNLISTEN "${channelName}"`);
+            await client.query(`UNLISTEN ${client.escapeIdentifier(channelName)}`);
           }
         } catch (unlistenErr) {
           console.warn("Failed to unlisten support stream channel:", unlistenErr);
