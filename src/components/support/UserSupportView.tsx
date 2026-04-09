@@ -86,8 +86,8 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
       if (res.ok && data.success) {
         setWalletBalance(data.balance);
       }
-    } catch (err) {
-      console.warn("Failed to fetch wallet balance", err);
+    } catch {
+      // Ignore background fetch error
     }
   }, [authHeader]);
 
@@ -106,8 +106,8 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
           data.instances.map((i: any) => ({ id: i.id, label: i.label }))
         );
       }
-    } catch (err) {
-      console.warn("Failed to fetch VPS instances for ticket creation", err);
+    } catch {
+      // Ignore background fetch error
     }
   }, [authHeader]);
 
