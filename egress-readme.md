@@ -332,15 +332,9 @@ All credit operations are logged to `activity_logs`:
 
 ## Migration Notes
 
-### Database Migration
+### Migration Notes
 
-```bash
-# Apply the egress credits system migration
-node scripts/apply-single-migration.js 030_add_egress_credits_system.sql
-
-# Or reset and run all migrations
-npm run db:fresh
-```
+Migration 030 (`migrations/030_add_egress_credits_system.sql`) introduced the core egress tables. Subsequent migrations (031–033) added configuration and permissions. The full migration history for egress spans migrations 025–033. The repo now has 51 total migrations (001–051, sequential).
 
 ### Default Configuration
 

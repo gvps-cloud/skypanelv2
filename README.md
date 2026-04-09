@@ -300,6 +300,8 @@ FRONTEND ROUTE MAP
 Public (no auth)
   /           /pricing    /faq        /about
   /contact    /status     /terms      /privacy
+  /docs       /docs/:categorySlug/:articleSlug
+  /regions
 
 Auth (redirect if logged in)
   /login      /register   /forgot-password   /reset-password
@@ -311,6 +313,7 @@ Protected (auth required)
   /billing                /billing/invoice/:id
   /billing/transaction/:id
   /billing/payment/success   /billing/payment/cancel
+  /egress-credits
   /support                /settings         /activity
   /api-docs
 
@@ -381,18 +384,21 @@ API ROUTE MAP (grouped)
 -----------------------------------------------------------------------------
 Core
   /api/auth, /api/vps, /api/payments, /api/organizations,
-  /api/support, /api/ssh-keys, /api/invoices
+  /api/support, /api/ssh-keys, /api/invoices, /api/egress, /api/api-keys
 
 Activity & Notifications
   /api/activity, /api/activities, /api/notifications
 
 Content & Configuration
-  /api/faq, /api/contact, /api/theme, /api/pricing, /api/health
+  /api/faq, /api/contact, /api/theme, /api/pricing, /api/health,
+  /api/documentation, /api/announcements
 
 Admin Surface
   /api/admin, /api/admin/platform, /api/admin/billing,
   /api/admin/email-templates, /api/admin/contact,
-  /api/admin/faq, /api/admin/github, /api/admin/category-mappings
+  /api/admin/faq, /api/admin/github, /api/admin/category-mappings,
+  /api/admin/ssh-keys, /api/admin/documentation,
+  /api/admin/networking, /api/admin/announcements
 ```
 
 **Core Routes:**
@@ -429,6 +435,10 @@ Admin Surface
 - `/api/admin/faq` — FAQ management
 - `/api/admin/github` — GitHub integration
 - `/api/admin/category-mappings` — white-label categories
+- `/api/admin/ssh-keys` — admin SSH key management
+- `/api/admin/documentation` — documentation article CRUD
+- `/api/admin/networking` — rDNS and IPv6 networking config
+- `/api/admin/announcements` — platform announcements
 
 ### Middleware Pipeline
 
@@ -558,29 +568,34 @@ Relationship highlights
 
 ### Migration History
 
-The database schema is managed through **27 sequential SQL migrations** in the `migrations/` directory:
+The database schema is managed through **51 sequential SQL migrations** in the `migrations/` directory:
 
 
-| Migration | Description                                                                                                                                               |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `001`     | Initial schema — users, orgs, wallets, VPS, tickets, plans, payments, providers, activity logs, billing cycles, SSH keys, FAQ, contact, platform settings |
-| `002`     | Relax activity_logs constraint                                                                                                                            |
-| `003`     | Remove legacy container artifacts                                                                                                                         |
-| `004`     | Add VPS notes                                                                                                                                             |
-| `005`     | Drop PaaS tables                                                                                                                                          |
-| `007`     | Add 2FA columns to users                                                                                                                                  |
-| `008`     | Add VPS plan type/class and regions                                                                                                                       |
-| `009`     | Add VPS category mappings (white-label)                                                                                                                   |
-| `010–011` | Add VPS reference and snapshot to support tickets                                                                                                         |
-| `012–016` | Organization roles, invitations, activity feed, role assignments, default role seeding                                                                    |
-| `017–018` | Billing view permission adjustments                                                                                                                       |
-| `019`     | Add `created_by` to VPS instances                                                                                                                         |
-| `020`     | Add `active_organization` to users                                                                                                                        |
-| `021`     | Create email templates table                                                                                                                              |
-| `022`     | Normalize theme preset default                                                                                                                            |
-| `023`     | Add billing view to admin role                                                                                                                            |
-| `024–025` | Migrate SSH keys to organization scope, add `created_by`                                                                                                  |
-| `026–027` | Network transfer billing, remove transfer multiplier                                                                                                      |
+| Migration | Description |
+| --------- | ----------- |
+| `001` | Initial schema — users, orgs, wallets, VPS, tickets, plans, payments, providers, activity logs, billing cycles, SSH keys, FAQ, contact, platform settings |
+| `002` | Relax activity_logs constraint |
+| `003` | Remove legacy container artifacts |
+| `004` | Add VPS notes |
+| `005` | Drop PaaS tables |
+| `006` | Add 2FA columns to users |
+| `007` | Add VPS plan type/class and regions |
+| `008` | Add VPS category mappings (white-label) |
+| `009–010` | Add VPS reference and snapshot to support tickets |
+| `011–015` | Organization roles, invitations, activity feed, role assignments, default role seeding |
+| `016–018` | Billing view permission adjustments, remove pending from payment_transactions, add created_by to VPS instances |
+| `019–022` | Active organization for users, email templates, theme preset normalization, billing view admin role |
+| `023–024` | Migrate SSH keys to org scope, add created_by |
+| `025–033` | Egress billing system — tables, pricing, credits, permissions, config, adjustments |
+| `034` | Region display labels |
+| `035` | Egress FAQ items |
+| `036–045` | Documentation system — creation, seeding, comprehensive docs, branding fixes, deduplication |
+| `046` | Scrub Linode references from documentation |
+| `047` | FAQ dedup and unique constraint |
+| `048` | Add RLS to billing/egress tables |
+| `049` | Fix org role migration for unknown roles |
+| `050` | Create announcements system |
+| `051` | Add low-balance email template |
 
 
 ---
@@ -689,8 +704,6 @@ Access Control Layers
 | **Anonymous**     | 1,000                | 15 minutes |
 | **Authenticated** | 5,000                | 15 minutes |
 | **Admin**         | 10,000               | 15 minutes |
-
-
 All tiers are configurable via environment variables. Per-user overrides can be set by admins via the `user_rate_limit_overrides` table.
 
 ---
@@ -1022,15 +1035,19 @@ skypanelv2/
 │   │   ├── auth.ts                   # JWT authentication (sets req.user)
 │   │   ├── permissions.ts            # Organization-based RBAC
 │   │   ├── rateLimiting.ts           # Tiered rate limiting + headers
-│   │   └── security.ts               # Helmet, CORS, security headers
+│   │   ├── security.ts               # Helmet, CORS, nonce-based CSP
+│   │   ├── csrfProtection.ts         # CSRF token middleware for API routes
+│   │   └── requireHttps.ts           # Force HTTPS in production
 │   ├── routes/
 │   │   ├── admin/                    # Admin-only route handlers
 │   │   │   ├── billing.ts            # Admin billing management
 │   │   │   ├── categoryMappings.ts   # White-label category CRUD
 │   │   │   ├── contact.ts            # Contact message management
 │   │   │   ├── emailTemplates.ts     # Email template CRUD
-│   │   │   └── platform.ts           # Platform settings
-│   │   ├── agent/                    # Agent/automation routes (reserved)
+│   │   │   ├── platform.ts           # Platform settings
+│   │   │   ├── sshKeys.ts            # Admin SSH key management
+│   │   │   ├── networking.ts         # rDNS and IPv6 config
+│   │   │   └── announcements.ts      # Platform announcements
 │   │   ├── auth.ts                   # Login, register, 2FA, password reset
 │   │   ├── vps.ts                    # VPS CRUD, actions, providers, plans
 │   │   ├── payments.ts               # PayPal order creation/capture
@@ -1048,7 +1065,11 @@ skypanelv2/
 │   │   ├── pricing.ts                # Public pricing data
 │   │   ├── theme.ts                  # Theme preset management
 │   │   ├── github.ts                 # GitHub integration
-│   │   └── health.ts                 # Health check endpoint
+│   │   ├── health.ts                 # Health check endpoint
+│   │   ├── documentation.ts          # Public documentation articles
+│   │   ├── adminDocumentation.ts     # Admin documentation CRUD
+│   │   ├── announcements.ts          # Public announcements
+│   │   └── apiKeys/                  # User API key routes
 │   └── services/
 │       ├── providers/                # Cloud provider abstraction
 │       │   ├── IProviderService.ts   # Provider interface contract
@@ -1059,7 +1080,12 @@ skypanelv2/
 │       ├── authService.ts            # JWT token management
 │       ├── billingService.ts         # Hourly billing engine
 │       ├── billingCronService.ts     # 24h billing reminder cron
-│       ├── transferBillingService.ts # Network transfer billing
+│       ├── egressBillingService.ts   # Transfer pool tracking (monthly)
+│       ├── egressCreditService.ts    # Pre-paid egress credit management
+│       ├── egressHourlyBillingService.ts # Hourly egress billing
+│       ├── betterStackService.ts     # Better Stack uptime integration
+│       ├── bruteForceProtectionService.ts # Brute force lockout
+│       ├── ipService.ts              # IP address management
 │       ├── linodeService.ts          # Linode REST API wrapper
 │       ├── paypalService.ts          # PayPal order/capture/wallet
 │       ├── emailService.ts           # Email with provider fallback
@@ -1079,6 +1105,7 @@ skypanelv2/
 │       ├── invitations.ts            # Organization invitation logic
 │       ├── roles.ts                  # Role/permission management
 │       ├── sshBridge.ts              # WebSocket SSH terminal bridge
+│       ├── tokenBlacklistService.ts  # JWT token blacklist
 │       ├── rateLimitMetrics.ts       # Rate limit metrics collection
 │       ├── rateLimitConfigValidator.ts # Rate limit config validation
 │       └── rateLimitOverrideService.ts # Per-user rate limit overrides
@@ -1137,7 +1164,7 @@ skypanelv2/
 │   ├── types/                        # TypeScript type definitions
 │   └── styles/                       # Page-specific CSS
 │
-├── migrations/                       # Sequential SQL migrations (001–027)
+├── migrations/                       # Sequential SQL migrations (001–051)
 ├── scripts/                          # Node.js utility scripts
 │   ├── run-migration.js              # Apply pending migrations
 │   ├── reset-database.js             # Interactive DB reset
@@ -1150,8 +1177,7 @@ skypanelv2/
 ├── repo-docs/                        # Internal documentation
 │   ├── ADMIN_COMPONENTS.md           # Admin component reference
 │   ├── ADMIN_TROUBLESHOOTING.md      # Admin troubleshooting guide
-│   ├── ENVIRONMENT_VARIABLES.md      # Complete env var reference
-│
+│   └── ENVIRONMENT_VARIABLES.md      # Complete env var reference
 ├── AGENTS.md                         # AI agent coding guidelines
 ├── CLAUDE.md                         # Claude Code development reference
 ├── ecosystem.config.cjs              # PM2 process configuration

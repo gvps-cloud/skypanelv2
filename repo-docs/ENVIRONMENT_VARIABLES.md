@@ -117,28 +117,36 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `RATE_LIMIT_ANONYMOUS_WINDOW_MS` | No | `900000` | Time window in milliseconds (15 minutes) |
-| `RATE_LIMIT_ANONYMOUS_MAX` | No | `200` | Maximum requests per window |
+| `RATE_LIMIT_ANONYMOUS_MAX` | No | `1000` | Maximum requests per window |
 
 ### Authenticated Users
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `RATE_LIMIT_AUTHENTICATED_WINDOW_MS` | No | `900000` | Time window in milliseconds (15 minutes) |
-| `RATE_LIMIT_AUTHENTICATED_MAX` | No | `500` | Maximum requests per window |
+| `RATE_LIMIT_AUTHENTICATED_MAX` | No | `5000` | Maximum requests per window |
 
 ### Admin Users
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `RATE_LIMIT_ADMIN_WINDOW_MS` | No | `900000` | Time window in milliseconds (15 minutes) |
-| `RATE_LIMIT_ADMIN_MAX` | No | `1000` | Maximum requests per window |
+| `RATE_LIMIT_ADMIN_MAX` | No | `10000` | Maximum requests per window |
 
-### Legacy Rate Limiting (Deprecated)
+### Password Reset Rate Limiting
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `RATE_LIMIT_WINDOW_MS` | No | `900000` | Legacy rate limit window (deprecated) |
-| `RATE_LIMIT_MAX_REQUESTS` | No | `100` | Legacy rate limit max (deprecated) |
+| `RATE_LIMIT_PASSWORD_RESET_WINDOW_MS` | No | `3600000` | Time window (1 hour) |
+| `RATE_LIMIT_PASSWORD_RESET_MAX` | No | `3` | Max password reset requests per window |
+| `RATE_LIMIT_PASSWORD_RESET_SKIP_IN_DEV` | No | `false` | Skip rate limit in development |
+
+## Networking & VPS Configuration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `RDNS_BASE_DOMAIN` | No | `ip.rev.example.com` | Base domain for VPS reverse DNS entries |
+| `VPS_TAG` | No | `skypanelv2` | Tag applied to all provisioned Linode VPS instances |
 
 ## File Upload Configuration
 
@@ -149,14 +157,23 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
 
 ## Monitoring & Analytics (Optional)
 
-### InfluxDB Integration
+### Better Stack (Uptime Monitoring)
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `INFLUXDB_URL` | No | - | InfluxDB instance URL |
-| `INFLUXDB_TOKEN` | No | - | InfluxDB authentication token |
-| `INFLUXDB_ORG` | No | `skypanelv2` | InfluxDB organization name |
-| `INFLUXDB_BUCKET` | No | `metrics` | InfluxDB bucket for metrics storage |
+| `BETTERUPTIME_API_KEY` | No | - | Better Stack API key for status monitors |
+| `BETTERUPTIME_STATUS_PAGE_ID` | No | - | Better Stack status page ID |
+
+### Rybbit Analytics (Optional)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_RYBBIT_SCRIPT_URL` | No | - | Rybbit analytics script URL (leave empty to disable) |
+| `VITE_RYBBIT_SITE_ID` | No | - | Rybbit site ID |
+| `VITE_RYBBIT_API_KEY` | No | - | Rybbit API key |
+| `VITE_RYBBIT_TRACK_ERRORS` | No | `true` | Enable JavaScript error tracking |
+| `VITE_RYBBIT_SESSION_REPLAY` | No | `true` | Enable session replay recording |
+| `VITE_TRACKING_SCRIPT_URL` | No | - | Generic tracking script URL fallback |
 
 ## Backup Configuration (Optional)
 
@@ -248,16 +265,17 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/skypanelv2_test
 Use these scripts to validate your configuration:
 
 ```bash
-# Test database connection
-node scripts/test-connection.js
+# Check admin users
+node scripts/check-admin-users.js
 
-# Test SMTP configuration
-node scripts/test-smtp.js
+# Check platform settings
+node scripts/check-platform-settings.js
 
-# Test billing workflow
-node scripts/test-hourly-billing.js
+# Check migration status
+node scripts/check-migration.js
 
-
+# Verify admin status
+node scripts/verify-admin-status.js
 ```
 
 ## Migration Notes
@@ -282,5 +300,4 @@ When upgrading SkyPanelV2, check for new environment variables:
 
 For additional help with environment configuration, see:
 - [Main README](../README.md)
-
-- [API Reference](./API_REFERENCE.md)
+- [.env.example](../.env.example)

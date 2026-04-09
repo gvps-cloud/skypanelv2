@@ -237,6 +237,9 @@ deploy/                 Deployment-related templates
 - `/api-docs`
 - `/egress-credits`
 
+- `/docs` — public documentation (matches `/docs/:categorySlug/:articleSlug`)
+- `/regions` — public regions map
+
 ### Admin Pages
 
 - `/admin`
@@ -277,6 +280,12 @@ The Express app currently registers these route groups:
 - `/api/pricing`
 - `/api/egress`
 - `/api/api-keys` - User API key management with row-level security
+- `/api/documentation` - Public documentation articles
+- `/api/announcements` - Public announcements
+- `/api/admin/ssh-keys` - Admin SSH key management
+- `/api/admin/documentation` - Admin documentation CRUD
+- `/api/admin/networking` - Admin networking config (rDNS, IPv6)
+- `/api/admin/announcements` - Admin announcements management
 
 Cross-cutting backend behavior includes:
 
@@ -347,7 +356,7 @@ Key frontend files:
 - `src/components/admin/EgressPackSettings.tsx` — admin pack pricing config
 - `src/services/egressService.ts` — frontend API client
 
-Database migrations 025–032 implement the egress system (tables: `organization_egress_credits`, `egress_credit_packs`, `vps_egress_hourly_readings`, etc.). Note: 47 migrations total (001–047, sequential).
+Database migrations 025–032 implement the egress system (tables: `organization_egress_credits`, `egress_credit_packs`, `vps_egress_hourly_readings`, etc.). Note: 51 migrations total (001–051, sequential).
 
 ## Testing Notes
 
@@ -372,8 +381,13 @@ Notable scripts currently present in `scripts/` include:
 - `update-admin-password.js`
 - `audit-api-docs.mjs`
 - `generate-ssh-secret.js`
+- `generate-encryption-key.js`
 - `generate-pwa-icons.js`
+- `seed-branding.js` — update DB branding (docs, FAQ, contact, rDNS) to match `.env`
 - `update-theme-to-mono.js`
+- `apply-single-migration.js` — apply a specific migration file
+- `apply-stackscript-migration.js`
+- `reseed-faq.js`
 - provider/data migration helpers
 - verification/debug helpers for admins, settings, plans, migrations, and schema state
 

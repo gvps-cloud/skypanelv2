@@ -14,12 +14,6 @@ Tests JWT token security, brute force protection, and password reset token stren
 - ✅ Password reset token strength (32-byte crypto random)
 - ✅ Enhanced password requirements validation
 
-**Security Principles Verified:**
-1. JWT tokens are blacklisted on logout to prevent reuse
-2. Brute force attacks are mitigated with exponential backoff
-3. Password reset tokens use cryptographically secure random bytes
-4. Password requirements enforce minimum strength standards
-
 ### 2. `xss.test.ts` - Cross-Site Scripting Protection Tests
 
 Tests XSS prevention through content sanitization and security headers.
@@ -29,12 +23,6 @@ Tests XSS prevention through content sanitization and security headers.
 - ✅ Content Security Policy (CSP) header presence
 - ✅ HTTP Strict Transport Security (HSTS) header
 - ✅ XSS protection headers
-
-**Security Principles Verified:**
-1. All user-generated content is sanitized before rendering
-2. CSP headers restrict script sources to prevent XSS
-3. HSTS ensures HTTPS-only connections
-4. XSS protection headers are properly configured
 
 ### 3. `apiKeys.test.ts` - API Key Security Tests
 
@@ -47,12 +35,57 @@ Tests API key generation, storage, and PostgreSQL Row-Level Security.
 - ✅ X-API-Key header authentication
 - ✅ PostgreSQL Row-Level Security (RLS) for `user_api_keys` table
 
-**Security Principles Verified:**
-1. API keys are generated with cryptographically secure random bytes
-2. Each API key is unique to prevent collisions
-3. API keys are hashed before storage (never plaintext)
-4. Authentication via X-API-Key header is secure
-5. PostgreSQL RLS ensures users can only access their own API keys
+### 4. `admin-networking.test.ts` - Admin Networking Security Tests
+
+Tests security of admin networking routes (rDNS, IPv6, IP management).
+
+**Coverage:**
+- ✅ Admin-only access enforcement on networking endpoints
+- ✅ Input validation and SQL injection prevention for IP/rDNS fields
+- ✅ Organization isolation for IP records
+
+### 5. `animalSuffix.test.ts` - Random Label Generation Tests
+
+Tests the `animalSuffix` utility used for generating random VPS/resource labels.
+
+**Coverage:**
+- ✅ Output entropy and uniqueness
+- ✅ No predictable patterns
+
+### 6. `api-hardening.test.ts` - General API Hardening Tests
+
+Tests broad API security hardening measures.
+
+**Coverage:**
+- ✅ Rate limiting header presence
+- ✅ Security headers (Helmet, CORS)
+- ✅ CSRF token enforcement on mutating endpoints
+- ✅ JSON body size limits
+
+### 7. `linode-provider-networking.test.ts` - Provider Networking Security Tests
+
+Tests security of provider-facing networking calls.
+
+**Coverage:**
+- ✅ Provider token isolation
+- ✅ rDNS update authorization
+- ✅ IPv6 range boundary validation
+
+### 8. `ssh-keys-isolation.test.ts` - SSH Key Isolation Tests
+
+Tests organization-scoped isolation for SSH key management.
+
+**Coverage:**
+- ✅ Users cannot access SSH keys from other organizations
+- ✅ Linode sync is scoped to the requesting org's provider
+
+### 9. `whitelabel-provider.test.ts` - White-Label Provider Tests
+
+Tests white-label category mapping and provider abstraction security.
+
+**Coverage:**
+- ✅ Category mappings cannot leak across organizations
+- ✅ Provider type is constrained to `linode`
 
 ## Running Security Tests
 

@@ -50,12 +50,12 @@ node scripts/migrate-vps-provider-data.js
 
 # Migrate backup pricing data (set default backup configuration)
 node scripts/migrate-backup-pricing-data.js
-```
 
-### Test Database Connection
+# Migrate VPS plan type/class data
+node scripts/migrate-vps-plan-type-class.js
 
-```bash
-node scripts/test-connection.js
+# Apply StackScript migration
+node scripts/apply-stackscript-migration.js
 ```
 
 ## Admin User Management
@@ -84,18 +84,22 @@ node scripts/update-admin-password.js --email admin@example.com --password newpa
 node scripts/check-admin-users.js
 ```
 
-## Testing & Utilities
+### Seed Default Branding
 
-### Test Hourly Billing
+After setting up environment variables, run this to update database content (docs, FAQ, contact info, rDNS) with your brand name:
 
 ```bash
-node scripts/test-hourly-billing.js
+node scripts/seed-branding.js
 ```
 
-### Test SMTP Configuration
+### Generate Encryption Keys
 
 ```bash
-node scripts/test-smtp.js
+# Generate SSH_CRED_SECRET
+node scripts/generate-ssh-secret.js
+
+# Generate ENCRYPTION_KEY
+node scripts/generate-encryption-key.js
 ```
 
 ## Common Development Workflows
@@ -111,13 +115,13 @@ npm run db:fresh
 # 2. Create your admin user (if not using default)
 node scripts/create-test-admin.js --email your@email.com --password yourpassword
 
+# Note: avoid special characters in the initial password; reset it via the dashboard afterwards.
 
-# 3. Start development servers
+# 3. Seed branding content
+node scripts/seed-branding.js
+
+# 4. Start development servers
 npm run dev
-```
-```md 
-you may not use special characters for this password you may reset it via the dashboard afterwards
-and allow the use of special character passwords.
 ```
 
 ### Fixing Encryption Key Issues
@@ -143,8 +147,8 @@ npm run db:reset:confirm
 # 2. Run migrations up to your new one
 node scripts/run-migration.js
 
-# 3. Verify the changes
-node scripts/test-connection.js
+# 3. Verify the migration applied
+node scripts/check-migration.js
 ```
 
 ## Environment Variables
@@ -177,7 +181,6 @@ node scripts/reset-database.js
 
 1. Check `DATABASE_URL` in `.env`
 2. Verify PostgreSQL is running
-3. Test connection: `node scripts/test-connection.js`
 
 ### Permission errors
 

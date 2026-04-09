@@ -21,6 +21,23 @@ AdminUserDetail
 ├── UserEditModal
 ├── UserDeleteDialog
 └── ImpersonationDialog
+
+Admin Dashboard Panels (src/components/admin/)
+├── UserManagement.tsx / UserManagementSkeleton.tsx
+├── VPSPlanWizard.tsx
+├── CategoryManager.tsx / CategoryMappingManager.tsx
+├── EgressCreditManager.tsx / EgressPackSettings.tsx
+├── AnnouncementsManager.tsx
+├── ContactCategoryManager.tsx / ContactMethodManager.tsx
+├── RegionAccessManager.tsx / RegionLabelManager.tsx
+├── PlatformAvailabilityManager.tsx
+├── FAQItemManager.tsx
+├── SSHKeyManagement.tsx
+├── AdminSupportView.tsx
+├── OrganizationManagement.tsx
+├── UpdatesManager.tsx
+├── ImpersonationBanner.tsx / ImpersonationLoadingOverlay.tsx
+└── AccessibilityEnhancer.tsx
 ```
 
 ## Organization Management Components
@@ -670,23 +687,14 @@ All components follow WCAG 2.1 AA guidelines:
 
 ### Unit Tests
 
-Each component has comprehensive unit tests:
+Each component has unit tests co-located or in the `tests/security/` directory:
 
 ```bash
-# Run component tests
-npm test src/components/admin/__tests__/
+# Run security-focused tests
+npx vitest run tests/security/
 
-# Run specific component test
-npm test OrganizationCreateModal.test.tsx
-```
-
-### Integration Tests
-
-API integration tests verify component behavior:
-
-```bash
-# Run API integration tests
-npm test api/tests/admin-organizations.test.ts
+# Run co-located component tests
+npx vitest run src/components/admin/
 ```
 
 ### E2E Tests
@@ -694,8 +702,8 @@ npm test api/tests/admin-organizations.test.ts
 End-to-end tests cover complete workflows:
 
 ```bash
-# Run E2E tests (when implemented)
-npm run test:e2e
+# Run E2E tests (Playwright)
+npx playwright test
 ```
 
 ## Troubleshooting

@@ -156,8 +156,8 @@ dangerouslySetInnerHTML={{
 
 ## Future Enhancements
 
-1. **Nonce-based CSP:** Consider implementing nonces for stricter script-src
-2. **Report-uri:** Add CSP violation reporting
+1. ~~**Nonce-based CSP:** Consider implementing nonces for stricter script-src~~ ✅ **Implemented** — `createSecurityMiddleware()` in `api/middleware/security.ts` generates per-request nonces for `script-src` and `style-src` directives.
+2. **Report-uri:** Add CSP violation reporting endpoint
 3. **Additional Sanitization:** Review other `dangerouslySetInnerHTML` uses
 4. **Subresource Integrity (SRI):** Add SRI hashes for external CDNs
 
@@ -187,5 +187,5 @@ All changes have been verified:
 - Maintains functionality while enhancing security
 
 ---
-*Implementation Date: 2025-03-24*
-*Agent: Agent 2 - XSS Protection Implementation*
+*Original Implementation: 2025-03-24 | Last Updated: 2026-04-09*
+*Nonce-based CSP added to `createSecurityMiddleware()` in a subsequent update.*

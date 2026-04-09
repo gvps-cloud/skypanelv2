@@ -9,7 +9,7 @@ See [AGENTS.md](../../AGENTS.md) for full context.
 ## Rules
 
 - **Never modify an existing migration file.** Once applied, they are immutable.
-- New migrations must be sequential, zero-padded to 3 digits: `048_description.sql`, `049_description.sql`, etc.
+- New migrations must be sequential, zero-padded to 3 digits: `052_description.sql`, `053_description.sql`, etc.
 - Check the highest existing number in `migrations/` before creating a new one.
 - Keep migrations additive and idempotent where possible (`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`).
 - Apply pending migrations with: `node scripts/run-migration.js`
@@ -17,7 +17,7 @@ See [AGENTS.md](../../AGENTS.md) for full context.
 
 ## Naming
 
-`NNN_short_snake_case_description.sql` — e.g., `048_add_user_preferences_table.sql`
+`NNN_short_snake_case_description.sql` — e.g., `052_add_user_preferences_table.sql`
 
 ## Schema Conventions
 

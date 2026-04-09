@@ -9,7 +9,12 @@ The provider service layer wraps Linode's REST API behind a small abstraction so
 | `IProviderService.ts` | Interface contract representing provider capabilities (create/list/get/etc). |
 | `ProviderFactory.ts` | Returns a `LinodeProviderService` instance with encrypted token handling. |
 | `LinodeProviderService.ts` | Implementation of `IProviderService` that proxies into `linodeService`. |
+| `BaseProviderService.ts` | Shared provider logic and in-memory caching base. |
 | `errorNormalizer.ts` | Converts Linode API errors into a consistent shape (`ProviderError`). |
+| `index.ts` | Re-exports for the provider layer. |
+| `ARCHITECTURE.md` | Higher-level provider architecture documentation. |
+| `CACHING.md` | Caching strategy for plans, images, marketplace apps, and regions. |
+| `API_DOCUMENTATION.md` | Linode-specific endpoint notes for admin and VPS routes. |
 
 ## Typical Flow
 
@@ -38,4 +43,4 @@ const instance = await provider.createInstance({
 });
 ```
 
-See `repo-docs/MULTI_PROVIDER_VPS.md` for a higher-level view of how plans, regions, and StackScripts feed into this layer.
+See `ARCHITECTURE.md` for a higher-level view of how plans, regions, and StackScripts feed into this layer.
