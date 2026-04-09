@@ -372,15 +372,19 @@ export class LinodeProviderService extends BaseProviderService {
 
     try {
       const ranges = await linodeService.listIPv6Ranges();
-      return ranges.map(range => ({
-        range: range.range,
-        instanceId: null,
-        instanceIds: (range.linodes || []).map(String),
-        routeTarget: range.route_target,
-        region: range.region,
-        prefixLength: range.prefix,
-        created: range.created,
-      }));
+      const enriched = await Promise.all(
+        ranges.map(async (range) => {
+          try {
+            const detail = await linodeService.getIPv6Range(range.range);
+            return this.normalizeIPv6Range(range, detail);
+          } catch (error) {
+            console.warn(`Failed to enrich provider IPv6 range ${range.range}:`, error);
+            return this.normalizeIPv6Range(range);
+          }
+        })
+      );
+
+      return enriched;
     } catch (error) {
       this.handleApiError(error, 'listIPv6Ranges');
     }
@@ -650,6 +654,24 @@ export class LinodeProviderService extends BaseProviderService {
       rdns: ip.rdns ?? null,
       instanceId: ip.linode_id != null ? String(ip.linode_id) : null,
       region: ip.region,
+    };
+  }
+
+  private normalizeIPv6Range(collectionRange: any, detailRange?: any): ProviderIPv6Range {
+    const instanceIds = Array.isArray(detailRange?.linodes)
+      ? detailRange.linodes.map(String)
+      : Array.isArray(collectionRange?.linodes)
+        ? collectionRange.linodes.map(String)
+        : [];
+
+    return {
+      range: collectionRange?.range ?? detailRange?.range ?? '',
+      instanceId: instanceIds[0] ?? null,
+      instanceIds,
+      routeTarget: collectionRange?.route_target ?? detailRange?.route_target ?? null,
+      region: collectionRange?.region ?? detailRange?.region ?? '',
+      prefixLength: collectionRange?.prefix ?? detailRange?.prefix ?? 64,
+      created: collectionRange?.created ?? detailRange?.created ?? '',
     };
   }
 

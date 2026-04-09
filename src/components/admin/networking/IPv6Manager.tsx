@@ -137,6 +137,19 @@ export function IPv6Manager() {
     refetchPools();
   };
 
+  const renderRangeInstanceCell = (instanceId: string | null, instanceIds: string[]) => {
+    if (instanceIds.length > 0) {
+      const joined = instanceIds.join(", ");
+      return (
+        <span className="block max-w-[220px] truncate" title={joined}>
+          {joined}
+        </span>
+      );
+    }
+
+    return instanceId || <span className="text-muted-foreground">Unassigned</span>;
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="ranges">
@@ -199,7 +212,7 @@ export function IPv6Manager() {
                             <Badge variant="secondary">/{r.prefixLength}</Badge>
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {r.instanceId || <span className="text-muted-foreground">Unassigned</span>}
+                            {renderRangeInstanceCell(r.instanceId, r.instanceIds)}
                           </TableCell>
                           <TableCell className="text-sm">{r.region}</TableCell>
                           <TableCell className="font-mono text-xs">
