@@ -63,20 +63,23 @@ const revealItem = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+    transition: {
+      duration: 0.4,
+      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+    },
   },
 };
 
 /* ── Plans & Regions constants ─────────────────────────────────────────────────*/
 
 const DEFAULT_CATEGORY_META = {
-  nanode:      { label: "Nanode",         order: 0 },
-  standard:    { label: "Standard",       order: 1 },
-  dedicated:   { label: "Dedicated CPU",  order: 2 },
-  premium:     { label: "Premium",        order: 3 },
-  highmem:     { label: "High Memory",    order: 4 },
-  gpu:         { label: "GPU",            order: 5 },
-  accelerated: { label: "Accelerated",    order: 6 },
+  nanode: { label: "Nanode", order: 0 },
+  standard: { label: "Standard", order: 1 },
+  dedicated: { label: "Dedicated CPU", order: 2 },
+  premium: { label: "Premium", order: 3 },
+  highmem: { label: "High Memory", order: 4 },
+  gpu: { label: "GPU", order: 5 },
+  accelerated: { label: "Accelerated", order: 6 },
 } as const;
 
 /* ── Plans & Regions types ───────────────────────────────────────────────────*/
@@ -127,7 +130,10 @@ function formatTransfer(gb: number): string {
   return `${gb} GB`;
 }
 
-const categoryIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+const categoryIconMap: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   Rocket,
   User,
   CreditCard,
@@ -151,7 +157,7 @@ function renderDocHtml(raw: string | null | undefined): string {
   if (!raw) return "";
   const platformUrl = window.location.origin;
   const replaced = raw.replace(/\{\{PLATFORM_URL\}\}/g, platformUrl);
-  return DOMPurify.sanitize(replaced, { USE_PROFILES: { html: true } });
+  return DOMPurify.sanitize(replaced);
 }
 
 /* ── Sidebar ────────────────────────────────────────────────────────────────*/
@@ -181,8 +187,8 @@ function Sidebar({
         (cat.articles || []).some(
           (a) =>
             a.title.toLowerCase().includes(q) ||
-            (a.summary || "").toLowerCase().includes(q)
-        )
+            (a.summary || "").toLowerCase().includes(q),
+        ),
     );
   }, [categories, searchQuery]);
 
@@ -243,8 +249,11 @@ function Sidebar({
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate flex-1">{cat.name}</span>
-                  <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-normal tabular-nums">
-                    {cat.article_count || (cat.articles?.length || 0)}
+                  <Badge
+                    variant="secondary"
+                    className="h-4 px-1.5 text-[10px] font-normal tabular-nums"
+                  >
+                    {cat.article_count || cat.articles?.length || 0}
                   </Badge>
                 </button>
 
@@ -253,11 +262,14 @@ function Sidebar({
                   <div className="ml-5 mt-0.5 space-y-0.5 border-l border-border/50 pl-3">
                     {cat.articles.map((article) => {
                       const isArticleActive =
-                        categorySlug === cat.slug && articleSlug === article.slug;
+                        categorySlug === cat.slug &&
+                        articleSlug === article.slug;
                       return (
                         <button
                           key={article.id}
-                          onClick={() => onNavigate(`/docs/${cat.slug}/${article.slug}`)}
+                          onClick={() =>
+                            onNavigate(`/docs/${cat.slug}/${article.slug}`)
+                          }
                           className={`w-full text-left rounded-md px-2 py-1 text-[13px] transition-colors ${
                             isArticleActive
                               ? "bg-accent text-accent-foreground font-medium"
@@ -297,7 +309,9 @@ function Breadcrumb({
   className?: string;
 }) {
   return (
-    <nav className={`flex items-center gap-1.5 text-sm text-muted-foreground ${className}`}>
+    <nav
+      className={`flex items-center gap-1.5 text-sm text-muted-foreground ${className}`}
+    >
       <Link to="/docs" className="hover:text-foreground transition-colors">
         Docs
       </Link>
@@ -371,7 +385,11 @@ function DocsHero({
             </Badge>
 
             {(category || article) && (
-              <Breadcrumb category={category} article={article} className={compact ? "mb-4" : "mb-6"} />
+              <Breadcrumb
+                category={category}
+                article={article}
+                className={compact ? "mb-4" : "mb-6"}
+              />
             )}
 
             <div className="space-y-4">
@@ -393,8 +411,11 @@ export default function Documentation() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [categories, setCategories] = useState<DocumentationCategoryWithArticles[]>([]);
-  const [selectedArticle, setSelectedArticle] = useState<DocumentationArticleWithFiles | null>(null);
+  const [categories, setCategories] = useState<
+    DocumentationCategoryWithArticles[]
+  >([]);
+  const [selectedArticle, setSelectedArticle] =
+    useState<DocumentationArticleWithFiles | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingArticle, setIsLoadingArticle] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -411,7 +432,7 @@ export default function Documentation() {
       navigate(path);
       setMobileOpen(false);
     },
-    [navigate]
+    [navigate],
   );
 
   // Fetch categories on mount
@@ -421,12 +442,14 @@ export default function Documentation() {
         setIsLoading(true);
         setError(null);
         const response = await apiClient.get<DocumentationCategoriesResponse>(
-          "/documentation/categories"
+          "/documentation/categories",
         );
         setCategories(response.categories || []);
       } catch (err) {
         console.error("Failed to fetch documentation categories:", err);
-        setError(err instanceof Error ? err.message : "Failed to load documentation");
+        setError(
+          err instanceof Error ? err.message : "Failed to load documentation",
+        );
       } finally {
         setIsLoading(false);
       }
@@ -443,12 +466,16 @@ export default function Documentation() {
 
     const fetchCategory = async () => {
       try {
-        const response = await apiClient.get<{ category: DocumentationCategoryWithArticles }>(
-          `/documentation/categories/${categorySlug}`
-        );
+        const response = await apiClient.get<{
+          category: DocumentationCategoryWithArticles;
+        }>(`/documentation/categories/${categorySlug}`);
         const cat = response.category;
         setCategories((prev) =>
-          prev.map((c) => (c.slug === categorySlug ? { ...c, articles: cat.articles || [] } : c))
+          prev.map((c) =>
+            c.slug === categorySlug
+              ? { ...c, articles: cat.articles || [] }
+              : c,
+          ),
         );
       } catch (err) {
         console.error("Failed to fetch category:", err);
@@ -469,8 +496,10 @@ export default function Documentation() {
       try {
         setIsLoadingArticle(true);
         setArticleNotFound(false);
-        const response = await apiClient.get<{ article: DocumentationArticleWithFiles }>(
-          `/documentation/articles/${articleSlug}?category_slug=${categorySlug}`
+        const response = await apiClient.get<{
+          article: DocumentationArticleWithFiles;
+        }>(
+          `/documentation/articles/${articleSlug}?category_slug=${categorySlug}`,
         );
         setSelectedArticle(response.article);
       } catch {
@@ -485,7 +514,11 @@ export default function Documentation() {
 
   // Fetch plans & regions for the plans-regions and creating-your-first-vps articles
   useEffect(() => {
-    if (articleSlug !== "plans-regions" && articleSlug !== "creating-your-first-vps") return;
+    if (
+      articleSlug !== "plans-regions" &&
+      articleSlug !== "creating-your-first-vps"
+    )
+      return;
 
     const fetchPlansAndRegions = async () => {
       try {
@@ -514,8 +547,11 @@ export default function Documentation() {
 
   // Derived state
   const currentCategory = useMemo(
-    () => (categorySlug ? categories.find((c) => c.slug === categorySlug) : undefined),
-    [categorySlug, categories]
+    () =>
+      categorySlug
+        ? categories.find((c) => c.slug === categorySlug)
+        : undefined,
+    [categorySlug, categories],
   );
 
   /* ── Render: Index (no category selected) ─────────────────────────────────*/
@@ -523,9 +559,12 @@ export default function Documentation() {
   const renderIndex = () => (
     <div className="max-w-3xl">
       <div className="mb-10">
-        <h1 className="text-3xl font-bold tracking-tight mb-3">Documentation</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-3">
+          Documentation
+        </h1>
         <p className="text-muted-foreground text-lg">
-          Guides, tutorials, and API reference to help you get the most out of {BRAND_NAME}.
+          Guides, tutorials, and API reference to help you get the most out of{" "}
+          {BRAND_NAME}.
         </p>
       </div>
 
@@ -547,10 +586,13 @@ export default function Documentation() {
                     {cat.name}
                   </h2>
                   {cat.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{cat.description}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {cat.description}
+                    </p>
                   )}
                   <p className="text-xs text-muted-foreground mt-2">
-                    {cat.article_count || 0} article{cat.article_count !== 1 ? "s" : ""}
+                    {cat.article_count || 0} article
+                    {cat.article_count !== 1 ? "s" : ""}
                   </p>
                 </div>
               </div>
@@ -577,8 +619,14 @@ export default function Documentation() {
                 })()}
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{cat.name}</h1>
-                {cat.description && <p className="text-muted-foreground mt-1">{cat.description}</p>}
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                  {cat.name}
+                </h1>
+                {cat.description && (
+                  <p className="text-muted-foreground mt-1">
+                    {cat.description}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -588,7 +636,9 @@ export default function Documentation() {
       {!cat.articles || cat.articles.length === 0 ? (
         <div className="rounded-xl border bg-muted/30 py-12 text-center">
           <FileText className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-          <p className="text-muted-foreground text-sm">No articles in this category yet.</p>
+          <p className="text-muted-foreground text-sm">
+            No articles in this category yet.
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -606,7 +656,9 @@ export default function Documentation() {
                   {article.title}
                 </p>
                 {article.summary && (
-                  <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">{article.summary}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
+                    {article.summary}
+                  </p>
                 )}
               </div>
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -621,16 +673,19 @@ export default function Documentation() {
 
   /* ── Helpers for Plans & Regions ──────────────────────────────────────────*/
 
-  const getCategoryLabel = useCallback((category: string): string => {
-    const mapping = enabledCategoryMappings.find(
-      (item) => item.original_category === category,
-    );
-    if (mapping?.custom_name) return mapping.custom_name;
-    return (
-      DEFAULT_CATEGORY_META[category]?.label ??
-      category.charAt(0).toUpperCase() + category.slice(1)
-    );
-  }, [enabledCategoryMappings]);
+  const getCategoryLabel = useCallback(
+    (category: string): string => {
+      const mapping = enabledCategoryMappings.find(
+        (item) => item.original_category === category,
+      );
+      if (mapping?.custom_name) return mapping.custom_name;
+      return (
+        DEFAULT_CATEGORY_META[category]?.label ??
+        category.charAt(0).toUpperCase() + category.slice(1)
+      );
+    },
+    [enabledCategoryMappings],
+  );
 
   const groupedPlans = useMemo(() => {
     const groups: Record<string, typeof vpsPlans> = {};
@@ -641,34 +696,59 @@ export default function Documentation() {
     }
     // Sort categories by display_order
     return Object.entries(groups).sort((a, b) => {
-      const mappingA = enabledCategoryMappings.find((m) => m.original_category === a[0]);
-      const mappingB = enabledCategoryMappings.find((m) => m.original_category === b[0]);
-      const orderA = mappingA?.display_order ?? DEFAULT_CATEGORY_META[a[0]]?.order ?? 99;
-      const orderB = mappingB?.display_order ?? DEFAULT_CATEGORY_META[b[0]]?.order ?? 99;
+      const mappingA = enabledCategoryMappings.find(
+        (m) => m.original_category === a[0],
+      );
+      const mappingB = enabledCategoryMappings.find(
+        (m) => m.original_category === b[0],
+      );
+      const orderA =
+        mappingA?.display_order ?? DEFAULT_CATEGORY_META[a[0]]?.order ?? 99;
+      const orderB =
+        mappingB?.display_order ?? DEFAULT_CATEGORY_META[b[0]]?.order ?? 99;
       return orderA - orderB;
     });
   }, [vpsPlans, enabledCategoryMappings]);
 
   // Latency state for inline speed testing (same approach as /status page)
-  const [docsLatencyState, setDocsLatencyState] = useState<Record<string, { loading: boolean; latency?: number; error?: boolean }>>({});
+  const [docsLatencyState, setDocsLatencyState] = useState<
+    Record<string, { loading: boolean; latency?: number; error?: boolean }>
+  >({});
   const [docsTestingAll, setDocsTestingAll] = useState(false);
 
-  const measureDocsLatency = useCallback(async (regionId: string, speedTestUrl: string) => {
-    setDocsLatencyState((prev) => ({ ...prev, [regionId]: { loading: true } }));
-    try {
-      const startTime = performance.now();
-      await fetch(`${speedTestUrl}?t=${Date.now()}`, { mode: "no-cors", cache: "no-store" });
-      const latency = Math.round(performance.now() - startTime);
-      setDocsLatencyState((prev) => ({ ...prev, [regionId]: { loading: false, latency } }));
-    } catch {
-      setDocsLatencyState((prev) => ({ ...prev, [regionId]: { loading: false, error: true } }));
-    }
-  }, []);
+  const measureDocsLatency = useCallback(
+    async (regionId: string, speedTestUrl: string) => {
+      setDocsLatencyState((prev) => ({
+        ...prev,
+        [regionId]: { loading: true },
+      }));
+      try {
+        const startTime = performance.now();
+        await fetch(`${speedTestUrl}?t=${Date.now()}`, {
+          mode: "no-cors",
+          cache: "no-store",
+        });
+        const latency = Math.round(performance.now() - startTime);
+        setDocsLatencyState((prev) => ({
+          ...prev,
+          [regionId]: { loading: false, latency },
+        }));
+      } catch {
+        setDocsLatencyState((prev) => ({
+          ...prev,
+          [regionId]: { loading: false, error: true },
+        }));
+      }
+    },
+    [],
+  );
 
   const testAllDocsRegions = useCallback(async () => {
     setDocsTestingAll(true);
     const withUrls = publicRegions.filter((r) => r.speedTestUrl);
-    await Promise.all(withUrls.map((r) => measureDocsLatency(r.id, r.speedTestUrl!)));
+    await Promise.all(
+      withUrls.map((r) => measureDocsLatency(r.id, r.speedTestUrl!)),
+    );
     setDocsTestingAll(false);
   }, [publicRegions, measureDocsLatency]);
 
@@ -700,16 +780,24 @@ export default function Documentation() {
             const vcpus = Number(specs.vcpus ?? specs.cpu_cores ?? 0);
             const memory = Number(specs.memory ?? specs.memory_gb ?? 0);
             const disk = Number(specs.disk ?? specs.storage_gb ?? 0);
-            const transfer = Number(specs.transfer ?? specs.transfer_gb ?? specs.bandwidth_gb ?? 0);
-            const price = Number(plan.base_price || 0) + Number(plan.markup_price || 0);
+            const transfer = Number(
+              specs.transfer ?? specs.transfer_gb ?? specs.bandwidth_gb ?? 0,
+            );
+            const price =
+              Number(plan.base_price || 0) + Number(plan.markup_price || 0);
             return (
-              <tr key={plan.id} className="border-b last:border-0 hover:bg-muted/30">
+              <tr
+                key={plan.id}
+                className="border-b last:border-0 hover:bg-muted/30"
+              >
                 <td className="px-4 py-3 font-medium">{plan.name}</td>
                 <td className="px-4 py-3">{vcpus}</td>
                 <td className="px-4 py-3">{formatMemory(memory)}</td>
                 <td className="px-4 py-3">{formatStorage(disk)}</td>
                 <td className="px-4 py-3">{formatTransfer(transfer)}</td>
-                <td className="px-4 py-3 text-right font-medium">${price.toFixed(2)}/mo</td>
+                <td className="px-4 py-3 text-right font-medium">
+                  ${price.toFixed(2)}/mo
+                </td>
               </tr>
             );
           })}
@@ -722,9 +810,7 @@ export default function Documentation() {
 
   const renderCreatingVpsArticle = (article: DocumentationArticleWithFiles) => {
     const MARKER = "<!-- VPS_PLANS_TABLE -->";
-    const parts = article.content
-      ? article.content.split(MARKER)
-      : ["", ""];
+    const parts = article.content ? article.content.split(MARKER) : ["", ""];
 
     return (
       <article className="max-w-3xl space-y-6">
@@ -732,14 +818,23 @@ export default function Documentation() {
           <Card className="home-gradient-border-top home-glass-panel overflow-hidden">
             <CardContent className="p-6">
               <Breadcrumb
-                category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
+                category={
+                  article.category
+                    ? {
+                        name: article.category.name,
+                        slug: article.category.slug,
+                      }
+                    : undefined
+                }
                 article={article.title}
               />
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-3 mb-3">
                 {article.title}
               </h1>
               {article.summary && (
-                <p className="text-lg text-muted-foreground mb-6">{article.summary}</p>
+                <p className="text-lg text-muted-foreground mb-6">
+                  {article.summary}
+                </p>
               )}
             </CardContent>
           </Card>
@@ -765,7 +860,9 @@ export default function Documentation() {
             </div>
           ) : vpsPlans.length === 0 ? (
             <div className="rounded-lg border bg-muted/30 py-8 text-center">
-              <p className="text-sm text-muted-foreground">No VPS plans are currently configured.</p>
+              <p className="text-sm text-muted-foreground">
+                No VPS plans are currently configured.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -773,7 +870,9 @@ export default function Documentation() {
                 <div key={typeClass}>
                   <div className="flex items-center gap-2 mb-2">
                     <Cpu className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold">{getCategoryLabel(typeClass)}</h3>
+                    <h3 className="text-sm font-semibold">
+                      {getCategoryLabel(typeClass)}
+                    </h3>
                     <Badge variant="secondary" className="text-[10px] px-1.5">
                       {plans.length} plan{plans.length !== 1 ? "s" : ""}
                     </Badge>
@@ -811,8 +910,12 @@ export default function Documentation() {
                 className="home-feature-card flex items-center gap-3 p-4"
               >
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
-                <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
+                <span className="text-sm font-medium truncate flex-1">
+                  {file.filename}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {formatFileSize(file.file_size)}
+                </span>
                 <Download className="h-3.5 w-3.5 text-muted-foreground" />
               </a>
             ))}
@@ -824,22 +927,32 @@ export default function Documentation() {
 
   /* ── Render: Plans & Regions article ──────────────────────────────────────*/
 
-  const renderPlansRegionsArticle = (article: DocumentationArticleWithFiles) => {
-
+  const renderPlansRegionsArticle = (
+    article: DocumentationArticleWithFiles,
+  ) => {
     return (
       <article className="max-w-3xl space-y-6">
         <motion.div variants={revealItem} initial="hidden" animate="show">
           <Card className="home-gradient-border-top home-glass-panel overflow-hidden">
             <CardContent className="p-6">
               <Breadcrumb
-                category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
+                category={
+                  article.category
+                    ? {
+                        name: article.category.name,
+                        slug: article.category.slug,
+                      }
+                    : undefined
+                }
                 article={article.title}
               />
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-3 mb-3">
                 {article.title}
               </h1>
               {article.summary && (
-                <p className="text-lg text-muted-foreground">{article.summary}</p>
+                <p className="text-lg text-muted-foreground">
+                  {article.summary}
+                </p>
               )}
             </CardContent>
           </Card>
@@ -863,7 +976,9 @@ export default function Documentation() {
               </div>
               <h2 className="text-lg font-semibold">Plan Tiers</h2>
             </div>
-            <p className="text-sm text-muted-foreground">Available VPS plans configured by your administrator.</p>
+            <p className="text-sm text-muted-foreground">
+              Available VPS plans configured by your administrator.
+            </p>
           </div>
 
           {loadingPlansRegions ? (
@@ -874,7 +989,9 @@ export default function Documentation() {
             </div>
           ) : vpsPlans.length === 0 ? (
             <div className="rounded-lg border bg-muted/30 py-8 text-center">
-              <p className="text-sm text-muted-foreground">No VPS plans are currently configured.</p>
+              <p className="text-sm text-muted-foreground">
+                No VPS plans are currently configured.
+              </p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -882,7 +999,9 @@ export default function Documentation() {
                 <div key={typeClass}>
                   <div className="flex items-center gap-2 mb-2">
                     <Cpu className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold">{getCategoryLabel(typeClass)}</h3>
+                    <h3 className="text-sm font-semibold">
+                      {getCategoryLabel(typeClass)}
+                    </h3>
                     <Badge variant="secondary" className="text-[10px] px-1.5">
                       {plans.length} plan{plans.length !== 1 ? "s" : ""}
                     </Badge>
@@ -903,7 +1022,9 @@ export default function Documentation() {
               </div>
               <h2 className="text-lg font-semibold">Regions</h2>
             </div>
-            <p className="text-sm text-muted-foreground">Available data center locations. Test latency from your browser.</p>
+            <p className="text-sm text-muted-foreground">
+              Available data center locations. Test latency from your browser.
+            </p>
           </div>
 
           {publicRegions.some((r) => r.speedTestUrl) && (
@@ -936,13 +1057,16 @@ export default function Documentation() {
             </div>
           ) : publicRegions.length === 0 ? (
             <div className="rounded-lg border bg-muted/30 py-8 text-center">
-              <p className="text-sm text-muted-foreground">No regions are currently configured.</p>
+              <p className="text-sm text-muted-foreground">
+                No regions are currently configured.
+              </p>
             </div>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {publicRegions.map((region) => {
                 const label = region.displayLabel || region.label;
-                const country = region.displayCountry || region.country?.toUpperCase() || "";
+                const country =
+                  region.displayCountry || region.country?.toUpperCase() || "";
                 const lat = docsLatencyState[region.id];
 
                 return (
@@ -959,12 +1083,19 @@ export default function Documentation() {
                         </p>
                       </div>
                       {lat?.latency !== undefined && (
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${getDocsLatencyBadgeClass(lat.latency)}`}>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${getDocsLatencyBadgeClass(lat.latency)}`}
+                        >
                           {lat.latency}ms
                         </span>
                       )}
                       {lat?.error && (
-                        <Badge variant="destructive" className="text-[10px] px-1.5">Failed</Badge>
+                        <Badge
+                          variant="destructive"
+                          className="text-[10px] px-1.5"
+                        >
+                          Failed
+                        </Badge>
                       )}
                     </div>
                     {region.speedTestUrl && (
@@ -972,7 +1103,9 @@ export default function Documentation() {
                         size="sm"
                         variant="outline"
                         className="w-full h-7 text-xs"
-                        onClick={() => measureDocsLatency(region.id, region.speedTestUrl!)}
+                        onClick={() =>
+                          measureDocsLatency(region.id, region.speedTestUrl!)
+                        }
                         disabled={lat?.loading || docsTestingAll}
                       >
                         {lat?.loading ? (
@@ -1016,8 +1149,12 @@ export default function Documentation() {
                 className="home-feature-card flex items-center gap-3 p-4"
               >
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
-                <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
+                <span className="text-sm font-medium truncate flex-1">
+                  {file.filename}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {formatFileSize(file.file_size)}
+                </span>
                 <Download className="h-3.5 w-3.5 text-muted-foreground" />
               </a>
             ))}
@@ -1035,7 +1172,11 @@ export default function Documentation() {
         <Card className="home-gradient-border-top home-glass-panel overflow-hidden">
           <CardContent className="p-6">
             <Breadcrumb
-              category={article.category ? { name: article.category.name, slug: article.category.slug } : undefined}
+              category={
+                article.category
+                  ? { name: article.category.name, slug: article.category.slug }
+                  : undefined
+              }
               article={article.title}
             />
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-3 mb-3">
@@ -1072,8 +1213,12 @@ export default function Documentation() {
               className="home-feature-card flex items-center gap-3 p-4"
             >
               <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium truncate flex-1">{file.filename}</span>
-              <span className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</span>
+              <span className="text-sm font-medium truncate flex-1">
+                {file.filename}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {formatFileSize(file.file_size)}
+              </span>
               <Download className="h-3.5 w-3.5 text-muted-foreground" />
             </a>
           ))}
@@ -1107,7 +1252,8 @@ export default function Documentation() {
   };
 
   // Check if this is the API Reference category
-  const isApiReferenceCategory = categorySlug === "api-reference" && !articleSlug;
+  const isApiReferenceCategory =
+    categorySlug === "api-reference" && !articleSlug;
 
   const content = isLoading ? (
     renderLoading()
@@ -1128,7 +1274,8 @@ export default function Documentation() {
       <AlertCircle className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
       <h2 className="text-lg font-semibold mb-1">Article not found</h2>
       <p className="text-sm text-muted-foreground mb-4">
-        The article you&apos;re looking for doesn&apos;t exist or has been removed.
+        The article you&apos;re looking for doesn&apos;t exist or has been
+        removed.
       </p>
       <Button variant="outline" onClick={() => handleNavigate("/docs")}>
         <ArrowLeft className="h-4 w-4 mr-2" />
@@ -1152,11 +1299,15 @@ export default function Documentation() {
 
   const showHero = !categorySlug && !articleSlug;
   const compactHeroCategory = selectedArticle?.category
-    ? { name: selectedArticle.category.name, slug: selectedArticle.category.slug }
+    ? {
+        name: selectedArticle.category.name,
+        slug: selectedArticle.category.slug,
+      }
     : currentCategory
       ? { name: currentCategory.name, slug: currentCategory.slug }
       : undefined;
-  const compactHeroTitle = selectedArticle?.title || currentCategory?.name || "Documentation";
+  const compactHeroTitle =
+    selectedArticle?.title || currentCategory?.name || "Documentation";
   const compactHeroDescription =
     selectedArticle?.summary ||
     currentCategory?.description ||
@@ -1170,14 +1321,14 @@ export default function Documentation() {
         {/* ═══════════════════════ HERO ══════════════════════════ */}
         {showHero ? (
           <DocsHero
-            title={(
+            title={
               <>
                 Everything you need to
                 <span className="block font-bold bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text text-transparent">
                   get started
                 </span>
               </>
-            )}
+            }
             description={`Guides, tutorials, and API reference to help you get the most out of ${BRAND_NAME}.`}
           />
         ) : (
@@ -1238,14 +1389,19 @@ export default function Documentation() {
               <div className="flex items-center gap-1.5 text-sm min-w-0">
                 {currentCategory && (
                   <>
-                    <Link to="/docs" className="text-muted-foreground hover:text-foreground">
+                    <Link
+                      to="/docs"
+                      className="text-muted-foreground hover:text-foreground"
+                    >
                       Docs
                     </Link>
                     <ChevronRight className="h-3 w-3 text-muted-foreground" />
                   </>
                 )}
                 <span className="truncate font-medium">
-                  {selectedArticle?.title || currentCategory?.name || "Documentation"}
+                  {selectedArticle?.title ||
+                    currentCategory?.name ||
+                    "Documentation"}
                 </span>
               </div>
             </div>

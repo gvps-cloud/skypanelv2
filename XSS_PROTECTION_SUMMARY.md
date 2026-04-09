@@ -68,9 +68,7 @@ dangerouslySetInnerHTML={{ __html: invoice.htmlContent }}
 
 // After:
 dangerouslySetInnerHTML={{
-  __html: DOMPurify.sanitize(invoice.htmlContent, {
-    USE_PROFILES: { html: true },
-  })
+  __html: DOMPurify.sanitize(invoice.htmlContent)
 }}
 ```
 
@@ -91,9 +89,7 @@ dangerouslySetInnerHTML={{ __html: previewContent.html }}
 
 // After:
 dangerouslySetInnerHTML={{
-  __html: DOMPurify.sanitize(previewContent.html, {
-    USE_PROFILES: { html: true },
-  }),
+  __html: DOMPurify.sanitize(previewContent.html),
 }}
 ```
 

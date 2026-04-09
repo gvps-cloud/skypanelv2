@@ -6,13 +6,18 @@
  * to prevent XSS attacks via malicious invoice content.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Download, ChevronLeft, Loader } from 'lucide-react';
-import DOMPurify from 'dompurify';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
+import React, { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Download, ChevronLeft, Loader } from "lucide-react";
+import DOMPurify from "dompurify";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from "@/components/ui/card";
 
 interface Invoice {
   id: string;
@@ -35,13 +40,13 @@ const InvoiceDetail: React.FC = () => {
 
   const loadInvoice = useCallback(async () => {
     if (!id) {
-      navigate('/billing');
+      navigate("/billing");
       return;
     }
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(`/api/invoices/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -50,11 +55,11 @@ const InvoiceDetail: React.FC = () => {
 
       if (!response.ok) {
         if (response.status === 404) {
-          toast.error('Invoice not found');
+          toast.error("Invoice not found");
         } else {
-          toast.error('Failed to load invoice');
+          toast.error("Failed to load invoice");
         }
-        navigate('/billing');
+        navigate("/billing");
         return;
       }
 
@@ -63,9 +68,9 @@ const InvoiceDetail: React.FC = () => {
         setInvoice(data.invoice);
       }
     } catch (error) {
-      console.error('Failed to load invoice:', error);
-      toast.error('Failed to load invoice');
-      navigate('/billing');
+      console.error("Failed to load invoice:", error);
+      toast.error("Failed to load invoice");
+      navigate("/billing");
     } finally {
       setLoading(false);
     }
@@ -80,7 +85,7 @@ const InvoiceDetail: React.FC = () => {
 
     setDownloading(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(`/api/invoices/${id}/download`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -88,17 +93,20 @@ const InvoiceDetail: React.FC = () => {
       });
 
       if (!response.ok) {
-        toast.error('Failed to download invoice');
+        toast.error("Failed to download invoice");
         return;
       }
 
       // Sanitize filename to prevent XSS
-      const sanitizeFilename = (name: string) => name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
-      const safeFilename = sanitizeFilename(`invoice-${invoice?.invoiceNumber || id}.html`);
+      const sanitizeFilename = (name: string) =>
+        name.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_");
+      const safeFilename = sanitizeFilename(
+        `invoice-${invoice?.invoiceNumber || id}.html`,
+      );
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = safeFilename;
       document.body.appendChild(link);
@@ -106,10 +114,10 @@ const InvoiceDetail: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      toast.success('Invoice downloaded successfully');
+      toast.success("Invoice downloaded successfully");
     } catch (error) {
-      console.error('Download error:', error);
-      toast.error('Failed to download invoice');
+      console.error("Download error:", error);
+      toast.error("Failed to download invoice");
     } finally {
       setDownloading(false);
     }
@@ -133,7 +141,7 @@ const InvoiceDetail: React.FC = () => {
       <>
         <div className="p-8">
           <div className="max-w-4xl mx-auto space-y-4">
-            <Button variant="ghost" onClick={() => navigate('/billing')}>
+            <Button variant="ghost" onClick={() => navigate("/billing")}>
               <ChevronLeft className="h-4 w-4 mr-2" />
               Back to Billing
             </Button>
@@ -154,13 +162,13 @@ const InvoiceDetail: React.FC = () => {
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={() => navigate('/billing')}>
+            <Button variant="ghost" onClick={() => navigate("/billing")}>
               <ChevronLeft className="h-4 w-4 mr-2" />
               Back to Billing
             </Button>
             <Button onClick={handleDownload} disabled={downloading}>
               <Download className="h-4 w-4 mr-2" />
-              {downloading ? 'Downloading...' : 'Download as HTML'}
+              {downloading ? "Downloading..." : "Download as HTML"}
             </Button>
           </div>
 
@@ -170,9 +178,7 @@ const InvoiceDetail: React.FC = () => {
               <div
                 className="prose prose-sm dark:prose-invert max-w-none"
                 dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(invoice.htmlContent, {
-                    USE_PROFILES: { html: true },
-                  })
+                  __html: DOMPurify.sanitize(invoice.htmlContent),
                 }}
               />
             </CardContent>
@@ -187,9 +193,7 @@ const InvoiceDetail: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-lg font-semibold">
-                  {invoice.invoiceNumber}
-                </p>
+                <p className="text-lg font-semibold">{invoice.invoiceNumber}</p>
               </CardContent>
             </Card>
             <Card>
@@ -212,10 +216,10 @@ const InvoiceDetail: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-lg font-semibold">
-                  {new Date(invoice.createdAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
+                  {new Date(invoice.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
                   })}
                 </p>
               </CardContent>

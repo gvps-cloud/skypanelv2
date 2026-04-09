@@ -204,6 +204,8 @@ const BreadcrumbNavigation: React.FC = () => {
     [location.pathname, dynamicOverrides],
   );
 
+  const isAdminRoute = location.pathname.startsWith("/admin");
+
   return (
     <div className="hidden md:block">
       <Breadcrumb>
@@ -215,7 +217,9 @@ const BreadcrumbNavigation: React.FC = () => {
                 {crumb.isActive || !crumb.href ? (
                   <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
                 ) : (
-                  <BreadcrumbLink href={crumb.href}>
+                  <BreadcrumbLink
+                    href={isAdminRoute && index === 0 ? "/admin" : crumb.href}
+                  >
                     {crumb.label}
                   </BreadcrumbLink>
                 )}

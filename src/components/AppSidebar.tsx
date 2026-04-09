@@ -3,12 +3,12 @@ import { Link, useLocation } from "react-router-dom";
 import {
   Activity,
   Building2,
+  Cog,
   CreditCard,
   BookOpen,
   FileText,
   Key,
   LayoutDashboard,
-  LifeBuoy,
   Megaphone,
   Search,
   Server,
@@ -70,7 +70,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           },
           {
             title: "Operations",
-            icon: LifeBuoy,
+            icon: Cog,
             url: `/admin#support`,
             isActive: ["support", "servers", "networking", "stackscripts", "providers", "regions", "vps-plans", "category-mappings", "ssh-keys"].includes(activeAnchor),
             items: [

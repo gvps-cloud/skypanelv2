@@ -234,7 +234,6 @@ type AdminSection =
 type AdminNetworkingTab =
   | "rdns"
   | "ips"
-  | "ipv6"
   | "vlans"
   | "firewalls"
   | "assign"
@@ -270,7 +269,6 @@ const DEFAULT_NETWORKING_TAB: AdminNetworkingTab = "rdns";
 const ADMIN_NETWORKING_TABS: AdminNetworkingTab[] = [
   "rdns",
   "ips",
-  "ipv6",
   "vlans",
   "firewalls",
   "assign",
@@ -4810,7 +4808,6 @@ const Admin: React.FC = () => {
                 <TabsList className="flex-wrap">
                   <TabsTrigger value="rdns">Reverse DNS</TabsTrigger>
                   <TabsTrigger value="ips">IP Addresses</TabsTrigger>
-                  <TabsTrigger value="ipv6">IPv6</TabsTrigger>
                   <TabsTrigger value="vlans">VLANs</TabsTrigger>
                   <TabsTrigger value="firewalls">Firewalls</TabsTrigger>
                   <TabsTrigger value="assign">Assign IPs</TabsTrigger>
@@ -4861,9 +4858,6 @@ const Admin: React.FC = () => {
 
                 <TabsContent value="ips" className="pt-6">
                   <NetworkingDashboard tab="ips" />
-                </TabsContent>
-                <TabsContent value="ipv6" className="pt-6">
-                  <NetworkingDashboard tab="ipv6" />
                 </TabsContent>
                 <TabsContent value="vlans" className="pt-6">
                   <NetworkingDashboard tab="vlans" />

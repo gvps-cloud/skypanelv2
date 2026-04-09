@@ -1,5 +1,4 @@
 import { IPAddressTable } from "./IPAddressTable";
-import { IPv6Manager } from "./IPv6Manager";
 import { VLANTable } from "./VLANTable";
 import { IPAssignPanel } from "./IPAssignPanel";
 import { IPSharePanel } from "./IPSharePanel";
@@ -13,8 +12,6 @@ export function NetworkingDashboard({ tab }: NetworkingDashboardProps) {
   switch (tab) {
     case "ips":
       return <IPAddressTable />;
-    case "ipv6":
-      return <IPv6Manager />;
     case "vlans":
       return <VLANTable />;
     case "firewalls":

@@ -276,7 +276,9 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
                 <p className="text-sm font-medium text-muted-foreground">
                   Subject
                 </p>
-                <p className="text-lg font-semibold">{previewContent.subject}</p>
+                <p className="text-lg font-semibold">
+                  {previewContent.subject}
+                </p>
               </div>
               <Tabs defaultValue="preview-html">
                 <TabsList>
@@ -289,9 +291,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
                 >
                   <div
                     dangerouslySetInnerHTML={{
-                      __html: DOMPurify.sanitize(previewContent.html, {
-                        USE_PROFILES: { html: true },
-                      }),
+                      __html: DOMPurify.sanitize(previewContent.html),
                     }}
                   />
                 </TabsContent>
