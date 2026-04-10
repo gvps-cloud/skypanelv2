@@ -1,6 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
+import {
+  AUTH_TOKEN_STORAGE_KEY,
+  AUTH_USER_STORAGE_KEY,
+  clearImpersonationSessionStorage,
+  getStoredImpersonationSession,
+  persistImpersonationSession,
+} from '@/lib/impersonationSession';
 
 interface ImpersonatedUser {
   id: string;
@@ -65,55 +72,31 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Initialize impersonation state from localStorage on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
+    const storedSession = getStoredImpersonationSession();
 
-    if (storedToken && storedUser) {
-      try {
-        // Decode JWT to check if it's an impersonation token
-        const tokenParts = storedToken.split('.');
-        if (tokenParts.length !== 3) {
-          return;
-        }
-
-        const base64Url = tokenParts[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(
-          atob(base64)
-            .split('')
-            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-            .join('')
-        );
-        const decoded = JSON.parse(jsonPayload);
-
-        if (decoded?.isImpersonating && decoded?.originalAdminId) {
-          const user = JSON.parse(storedUser);
-          
-          setState({
-            isImpersonating: true,
-            impersonatedUser: {
-              id: user.id,
-              name: user.name || (user.firstName ? `${user.firstName} ${user.lastName}` : user.email),
-              email: user.email,
-              role: user.role,
-              organizationId: user.organizationId
-            },
-            originalAdmin: {
-              id: decoded.originalAdminId,
-              email: 'Admin User', // We don't have the admin details in the token
-              name: 'Admin User'
-            },
-            impersonationToken: storedToken,
-            expiresAt: new Date(decoded.exp * 1000).toISOString(),
-          });
-        }
-      } catch (error) {
-        console.error('Error parsing impersonation token:', error);
-      }
+    if (storedSession) {
+      setState({
+        isImpersonating: true,
+        impersonatedUser: {
+          id: storedSession.user.id,
+          name: storedSession.user.name || (storedSession.user.firstName ? `${storedSession.user.firstName} ${storedSession.user.lastName || ''}`.trim() : storedSession.user.email),
+          email: storedSession.user.email,
+          role: storedSession.user.role,
+          organizationId: storedSession.user.organizationId
+        },
+        originalAdmin: {
+          id: storedSession.originalAdmin.id,
+          email: storedSession.originalAdmin.email,
+          name: storedSession.originalAdmin.name || storedSession.originalAdmin.email,
+        },
+        impersonationToken: storedSession.token,
+        expiresAt: storedSession.expiresAt,
+      });
     }
   }, []);
 
   const clearImpersonation = useCallback(() => {
+    clearImpersonationSessionStorage();
     setState({
       isImpersonating: false,
       impersonatedUser: null,
@@ -137,7 +120,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
     setStartingMessage('Validating permissions...');
     
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
       if (!token) {
         throw new Error('Not authenticated');
       }
@@ -200,8 +183,14 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       setStartingMessage('Updating session...');
 
       // Store the impersonation token and update auth state
-      localStorage.setItem('auth_token', data.impersonationToken);
-      localStorage.setItem('auth_user', JSON.stringify(data.user));
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, data.impersonationToken);
+      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(data.user));
+      persistImpersonationSession({
+        token: data.impersonationToken,
+        user: data.user,
+        originalAdmin: data.originalAdmin,
+        expiresAt: data.expiresAt,
+      });
 
       // Update impersonation state
       setState({
@@ -271,8 +260,9 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       // Restore admin token and user data
-      localStorage.setItem('auth_token', data.adminToken);
-      localStorage.setItem('auth_user', JSON.stringify(data.admin));
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, data.adminToken);
+      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(data.admin));
+      clearImpersonationSessionStorage();
 
       // Clear impersonation state
       setState({

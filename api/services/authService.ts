@@ -25,6 +25,12 @@ export interface LoginData {
   code?: string; // 2FA code
 }
 
+interface RefreshTokenOptions {
+  isImpersonating?: boolean;
+  originalAdminId?: string;
+  exp?: number;
+}
+
 /**
  * Generates a cryptographically secure password reset token.
  * Uses 128 bits of entropy (32 hex characters) meeting OWASP requirements
@@ -471,7 +477,7 @@ export class AuthService {
     }
   }
 
-  static async refreshToken(userId: string) {
+  static async refreshToken(userId: string, options: RefreshTokenOptions = {}) {
     try {
       const userResult = await query(
         'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled, active_organization_id FROM users WHERE id = $1',
@@ -529,11 +535,27 @@ export class AuthService {
         activeOrgRole = orgMember?.role;
       }
 
-      // Generate new JWT token (include role for rate limiting user type detection)
+      const tokenPayload: Record<string, unknown> = {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      };
+
+      let signOptions: SignOptions | undefined = {
+        expiresIn: config.JWT_EXPIRES_IN,
+      } as SignOptions;
+
+      if (options.isImpersonating && options.originalAdminId && options.exp) {
+        tokenPayload.isImpersonating = true;
+        tokenPayload.originalAdminId = options.originalAdminId;
+        tokenPayload.exp = options.exp;
+        signOptions = undefined;
+      }
+
       const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        tokenPayload,
         config.JWT_SECRET as Secret,
-        { expiresIn: config.JWT_EXPIRES_IN } as SignOptions
+        signOptions,
       );
 
       return {

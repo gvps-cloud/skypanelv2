@@ -235,13 +235,13 @@ const BreadcrumbNavigation: React.FC = () => {
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { token, user } = useAuth();
+  const { token, user, isImpersonating } = useAuth();
   const [commandOpen, setCommandOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
   const isAdmin = useMemo(
-    () => (user?.role || "").toLowerCase() === "admin",
-    [user?.role],
+    () => (user?.role || "").toLowerCase() === "admin" && !isImpersonating,
+    [isImpersonating, user?.role],
   );
   const isAdminRoute = useMemo(
     () => location.pathname.startsWith("/admin"),

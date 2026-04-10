@@ -17,6 +17,15 @@ export interface AuthenticatedRequest extends Request {
     organizationId?: string;
     preferences?: any;
     twoFactorEnabled?: boolean;
+    isImpersonating?: boolean;
+    originalAdminId?: string;
+  };
+  auth?: {
+    token: string;
+    exp?: number;
+    iat?: number;
+    isImpersonating: boolean;
+    originalAdminId?: string;
   };
   userId?: string;
   organizationId?: string;
@@ -205,7 +214,16 @@ export const authenticateToken = async (
       timezone: user.timezone,
       organizationId,
       preferences: user.preferences,
-      twoFactorEnabled: user.twoFactorEnabled
+      twoFactorEnabled: user.twoFactorEnabled,
+      isImpersonating: Boolean(decoded.isImpersonating),
+      originalAdminId: decoded.originalAdminId,
+    };
+    req.auth = {
+      token,
+      exp: decoded.exp,
+      iat: decoded.iat,
+      isImpersonating: Boolean(decoded.isImpersonating),
+      originalAdminId: decoded.originalAdminId,
     };
     (req as any).userId = user.id;
     (req as any).organizationId = organizationId;

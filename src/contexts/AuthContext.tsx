@@ -1,5 +1,17 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from "react";
+import {
+  AUTH_TOKEN_STORAGE_KEY,
+  AUTH_USER_STORAGE_KEY,
+  clearImpersonationSessionStorage,
+  decodeJwtPayload,
+  getStoredImpersonationSession,
+  hasImpersonationClaims,
+  isTokenExpired,
+  persistImpersonationSession,
+  type StoredOriginalAdmin,
+  type StoredSessionUser,
+} from "@/lib/impersonationSession";
 
 export interface User {
   id: string;
@@ -65,38 +77,13 @@ export const useAuth = () => {
   return context;
 };
 
-// Check if token is expired
-const isTokenExpired = (token: string): boolean => {
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(""),
-    );
-    const decoded = JSON.parse(jsonPayload);
-
-    if (decoded.exp) {
-      // JWT exp is in seconds, Date.now() is in milliseconds
-      const expirationTime = decoded.exp * 1000;
-      return Date.now() >= expirationTime;
-    }
-
-    return false;
-  } catch {
-    return true; // If we can't decode, assume expired
-  }
-};
-
 /**
  * Get authentication token from multiple sources
  * Priority: localStorage > cookies
  * This supports both traditional localStorage auth and HttpOnly cookie auth
  */
 const getAuthToken = (): string | null => {
-  const localToken = localStorage.getItem("auth_token");
+  const localToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
   if (localToken && !isTokenExpired(localToken)) {
     return localToken;
   }
@@ -110,6 +97,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isImpersonating, setIsImpersonating] = useState(false);
+
+  const syncImpersonationSession = (
+    nextToken: string | null,
+    nextUser: User | null,
+  ) => {
+    const impersonationActive = Boolean(nextToken && hasImpersonationClaims(nextToken));
+    setIsImpersonating(impersonationActive);
+
+    if (!nextToken || !nextUser || !impersonationActive) {
+      clearImpersonationSessionStorage();
+      return;
+    }
+
+    const payload = decodeJwtPayload(nextToken);
+    const existingSession = getStoredImpersonationSession();
+    const fallbackOriginalAdmin: StoredOriginalAdmin | null = payload?.originalAdminId
+      ? {
+          id: String(payload.originalAdminId),
+          email: existingSession?.originalAdmin.email || "Admin User",
+          name: existingSession?.originalAdmin.name || "Admin User",
+          firstName: existingSession?.originalAdmin.firstName,
+          lastName: existingSession?.originalAdmin.lastName,
+          role: existingSession?.originalAdmin.role || "admin",
+          organizationId: existingSession?.originalAdmin.organizationId,
+        }
+      : null;
+
+    if (!payload?.exp || !fallbackOriginalAdmin) {
+      clearImpersonationSessionStorage();
+      setIsImpersonating(false);
+      return;
+    }
+
+    persistImpersonationSession({
+      token: nextToken,
+      user: nextUser as StoredSessionUser,
+      originalAdmin: existingSession?.originalAdmin ?? fallbackOriginalAdmin,
+      expiresAt: existingSession?.expiresAt ?? new Date(payload.exp * 1000).toISOString(),
+    });
+  };
 
   const logout = async () => {
     // Notify server to blacklist the token
@@ -131,8 +158,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setUser(null);
     setToken(null);
     setIsImpersonating(false);
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+    clearImpersonationSessionStorage();
   };
 
   const refreshToken = async (currentToken?: string) => {
@@ -156,13 +184,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (typeof data.token === "string" && data.token.length > 0) {
         setToken(data.token);
-        localStorage.setItem("auth_token", data.token);
+        localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, data.token);
       }
 
       // Update user data if returned from refresh
       if (data.user) {
         setUser(data.user);
-        localStorage.setItem("auth_user", JSON.stringify(data.user));
+        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(data.user));
+      }
+
+      if (typeof data.token === "string" && data.token.length > 0) {
+        syncImpersonationSession(data.token, data.user ?? user);
+      } else {
+        syncImpersonationSession(null, null);
       }
     } catch (error) {
       console.error("Token refresh error:", error);
@@ -198,7 +232,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     // Check for existing token using multi-source token retrieval
     const storedToken = getAuthToken();
-    const storedUser = localStorage.getItem("auth_user");
+    const storedImpersonationSession = getStoredImpersonationSession();
+    const storedUser =
+      localStorage.getItem(AUTH_USER_STORAGE_KEY) ??
+      (storedImpersonationSession
+        ? JSON.stringify(storedImpersonationSession.user)
+        : null);
 
     if (storedToken && storedUser) {
       // Check if token is expired
@@ -212,20 +251,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
 
-      // Check if this is an impersonation token
-      try {
-        const base64Url = storedToken.split(".")[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        const jsonPayload = decodeURIComponent(
-          atob(base64)
-            .split("")
-            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-            .join(""),
-        );
-        const decoded = JSON.parse(jsonPayload);
-        setIsImpersonating(Boolean(decoded?.isImpersonating));
-      } catch {
-        setIsImpersonating(false);
+      if (storedImpersonationSession?.token === storedToken) {
+        setIsImpersonating(true);
+      } else {
+        setIsImpersonating(hasImpersonationClaims(storedToken));
       }
 
       // Automatically refresh user data (and ensure org membership) on load
@@ -245,12 +274,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         .then((data) => {
           if (data?.user) {
             setUser(data.user);
-            localStorage.setItem("auth_user", JSON.stringify(data.user));
+            localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(data.user));
             // /me now returns a fresh token so Bearer-header callers work.
             if (typeof data.token === "string" && data.token.length > 0) {
               setToken(data.token);
-              localStorage.setItem("auth_token", data.token);
+              localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, data.token);
             }
+            syncImpersonationSession(data.token ?? null, data.user);
           }
         })
         .catch(() => {
@@ -300,14 +330,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setUser(data.user);
       setToken(data.token ?? null);
+      setIsImpersonating(false);
+      clearImpersonationSessionStorage();
 
       // Store in localStorage
       if (data.token) {
-        localStorage.setItem("auth_token", data.token);
+        localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, data.token);
       } else {
-        localStorage.removeItem("auth_token");
+        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
       }
-      localStorage.setItem("auth_user", JSON.stringify(data.user));
+      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(data.user));
 
       return { success: true };
     } catch (error) {
@@ -336,14 +368,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setUser(result.user);
       setToken(result.token ?? null);
+      setIsImpersonating(false);
+      clearImpersonationSessionStorage();
 
       // Store in localStorage
       if (result.token) {
-        localStorage.setItem("auth_token", result.token);
+        localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, result.token);
       } else {
-        localStorage.removeItem("auth_token");
+        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
       }
-      localStorage.setItem("auth_user", JSON.stringify(result.user));
+      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(result.user));
     } catch (error) {
       console.error("Registration error:", error);
       throw error;
@@ -371,7 +405,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error(result.error || "Failed to update profile");
       }
       setUser(result.user);
-      localStorage.setItem("auth_user", JSON.stringify(result.user));
+      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(result.user));
+      syncImpersonationSession(token, result.user);
     } catch (error) {
       console.error("Update profile error:", error);
       throw error;
@@ -444,7 +479,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (user) {
         const updatedUser = { ...user, preferences: result.preferences };
         setUser(updatedUser);
-        localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(updatedUser));
       }
 
       return result.preferences;
@@ -551,7 +586,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (user) {
         const updatedUser = { ...user, twoFactorEnabled: true };
         setUser(updatedUser);
-        localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(updatedUser));
+        syncImpersonationSession(token, updatedUser);
       }
     } catch (error) {
       console.error("Verify 2FA error:", error);
@@ -576,7 +612,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (user) {
         const updatedUser = { ...user, twoFactorEnabled: false };
         setUser(updatedUser);
-        localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(updatedUser));
+        syncImpersonationSession(token, updatedUser);
       }
     } catch (error) {
       console.error("Disable 2FA error:", error);
@@ -608,7 +645,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // Update local state with the returned user object
         const updatedUser = data.user;
         setUser(updatedUser);
-        localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(updatedUser));
+        syncImpersonationSession(token, updatedUser);
       } catch (error) {
         console.error("Switch organization error:", error);
         throw error;

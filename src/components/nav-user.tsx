@@ -42,10 +42,10 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
-  const { logout } = useAuth()
+  const { logout, isImpersonating } = useAuth()
   const navigate = useNavigate()
 
-  const isAdmin = user.role === "admin"
+  const isAdmin = user.role === "admin" && !isImpersonating
 
   const handleLogout = () => {
     logout()

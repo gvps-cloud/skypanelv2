@@ -13,7 +13,6 @@ import {
   ImpersonationProvider,
   useImpersonation,
 } from "./contexts/ImpersonationContext";
-import { ImpersonationBanner } from "./components/admin/ImpersonationBanner";
 import { ImpersonationLoadingOverlay } from "./components/admin/ImpersonationLoadingOverlay";
 import { setupAutoLogout } from "@/lib/api";
 import { useEffect, useState, useCallback } from "react";
@@ -70,25 +69,15 @@ import AcceptInvitation from "./pages/AcceptInvitation";
 // Component to handle impersonation banner display
 function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
   const {
-    isImpersonating,
-    impersonatedUser,
-    exitImpersonation,
-    isExiting,
     isStarting,
     startingProgress,
     startingMessage,
     startingTargetUser,
+    impersonatedUser,
   } = useImpersonation();
 
   return (
     <>
-      {isImpersonating && impersonatedUser && (
-        <ImpersonationBanner
-          impersonatedUser={impersonatedUser}
-          onExitImpersonation={exitImpersonation}
-          isExiting={isExiting}
-        />
-      )}
       {isStarting && (
         <ImpersonationLoadingOverlay
           targetUser={
@@ -151,7 +140,7 @@ function StandaloneProtectedRoute({ children }: { children: React.ReactNode }) {
 
 // Admin Route Component (requires authenticated admin role)
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, isImpersonating } = useAuth();
 
   if (loading) {
     return (
@@ -165,7 +154,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role !== "admin") {
+  if (user.role !== "admin" || isImpersonating) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -207,10 +196,7 @@ function AutoLogoutSetup() {
 }
 
 function AnnouncementBannerWrapper({ children }: { children: React.ReactNode }) {
-  const { isImpersonating } = useImpersonation();
   const [bannerHeight, setBannerHeight] = useState(0);
-  const impersonationHeight = isImpersonating ? 60 : 0;
-  const totalOffset = impersonationHeight + bannerHeight;
 
   const handleHeightChange = useCallback((height: number) => {
     setBannerHeight(height);
@@ -219,10 +205,9 @@ function AnnouncementBannerWrapper({ children }: { children: React.ReactNode }) 
   return (
     <>
       <AnnouncementBanner
-        topOffset={impersonationHeight}
         onHeightChange={handleHeightChange}
       />
-      <div style={{ paddingTop: totalOffset > 0 ? `${totalOffset}px` : "0" }}>
+      <div style={{ paddingTop: bannerHeight > 0 ? `${bannerHeight}px` : "0" }}>
         {children}
       </div>
     </>

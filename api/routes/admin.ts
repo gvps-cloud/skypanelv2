@@ -2,7 +2,7 @@
  * Admin Routes for SkyPanelV2
  * Manage support tickets and VPS plans
  */
-import express, { Request, Response } from "express";
+import express, { type CookieOptions, Request, Response } from "express";
 import { body, param, validationResult } from "express-validator";
 import { authenticateToken } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/auth.js";
@@ -51,6 +51,19 @@ import { adminMutationRateLimiter } from "../middleware/rateLimiting.js";
 import { ticketNotificationService } from "../services/ticketNotificationService.js";
 
 const router = express.Router();
+
+const AUTH_COOKIE_NAME = "auth_token";
+
+function getAuthCookieOptions(): CookieOptions {
+  const isProduction = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "lax" : "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  };
+}
 
 // Apply security middleware to all admin routes
 router.use(adminSecurityHeaders);
@@ -3456,6 +3469,7 @@ router.post(
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
+      res.cookie(AUTH_COOKIE_NAME, impersonationToken, getAuthCookieOptions());
       res.json({
         impersonationToken,
         user: {
@@ -3620,6 +3634,7 @@ router.post(
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
+      res.cookie(AUTH_COOKIE_NAME, adminToken, getAuthCookieOptions());
       res.json({
         adminToken,
         admin: {

@@ -19,7 +19,9 @@ import {
 import { Logo } from "@/components/Logo";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { BRAND_NAME } from "@/lib/brand";
+import { ImpersonationSidebarPanel } from "@/components/ImpersonationSidebarPanel";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
@@ -34,6 +36,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar-context";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   onOpenCommand?: () => void;
@@ -41,7 +44,9 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 
 export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isImpersonating: authIsImpersonating } = useAuth();
+  const { state, isMobile } = useSidebar();
+  const { isImpersonating, impersonatedUser, exitImpersonation, isExiting } = useImpersonation();
 
   // Main navigation items
   const pathname = location.pathname;
@@ -53,7 +58,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const isSshKeysActive = pathname.startsWith("/ssh-keys");
   const isApiDocsActive = pathname.startsWith("/api-docs");
   const isDocsActive = pathname.startsWith("/docs");
-  const isAdminRoute = pathname.startsWith("/admin");
+  const isAdminRoute = pathname.startsWith("/admin") && !authIsImpersonating;
 
   const navMainItems = React.useMemo(
     () => {
@@ -305,6 +310,15 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
         ) : null}
       </SidebarContent>
       <SidebarFooter>
+        {isImpersonating && impersonatedUser ? (
+          <ImpersonationSidebarPanel
+            impersonatedUser={impersonatedUser}
+            onExitImpersonation={exitImpersonation}
+            isExiting={isExiting}
+            collapsed={!isMobile && state === "collapsed"}
+            mobile={isMobile}
+          />
+        ) : null}
         <NavUser user={userData} />
       </SidebarFooter>
     </Sidebar>

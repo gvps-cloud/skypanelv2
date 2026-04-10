@@ -440,7 +440,16 @@ router.post(
         return;
       }
 
-      const result = await AuthService.refreshToken(req.user.id);
+      const result = await AuthService.refreshToken(
+        req.user.id,
+        req.auth?.isImpersonating
+          ? {
+              isImpersonating: true,
+              originalAdminId: req.auth.originalAdminId,
+              exp: req.auth.exp,
+            }
+          : undefined,
+      );
       res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions());
       res.json(result);
     } catch (error: any) {
@@ -466,7 +475,16 @@ router.get(
 
       // Issue a fresh token so clients that authenticated via cookie can
       // populate their in-memory token state (needed for Bearer-header callers).
-      const result = await AuthService.refreshToken(req.user.id);
+      const result = await AuthService.refreshToken(
+        req.user.id,
+        req.auth?.isImpersonating
+          ? {
+              isImpersonating: true,
+              originalAdminId: req.auth.originalAdminId,
+              exp: req.auth.exp,
+            }
+          : undefined,
+      );
       res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions());
       res.json({ user: result.user, token: result.token });
     } catch (error: any) {
