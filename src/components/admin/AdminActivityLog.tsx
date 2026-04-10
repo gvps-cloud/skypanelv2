@@ -35,7 +35,7 @@ import { buildApiUrl } from "@/lib/api";
 
 interface AdminActivityRecord {
   id: string;
-  user_id: string;
+  user_id: string | null;
   user_role?: string | null;
   organization_id?: string | null;
   organization_name?: string | null;
@@ -624,10 +624,10 @@ const AdminActivityLog: React.FC = () => {
                                 <span className="cursor-help border-b border-dashed border-muted-foreground/50 pb-0.5 inline-block">
                                   {a.user_role ? (
                                     <span className="capitalize">
-                                      {a.user_role} ({a.user_id.substring(0, 8)}...)
+                                      {a.user_role} ({(a.user_id ?? 'unknown').substring(0, 8)}...)
                                     </span>
                                   ) : (
-                                    <span>User ({a.user_id.substring(0, 8)}...)</span>
+                                    <span>User ({(a.user_id ?? 'unknown').substring(0, 8)}...)</span>
                                   )}
                                 </span>
                               </TooltipTrigger>

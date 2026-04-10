@@ -51,6 +51,9 @@ const buildCspDirectives = () => {
         (req: Request, res: Response) =>
           `'nonce-${(res as any).locals.cspNonce}'`,
         "https://*.sslip.io",
+        // Hashes for the dark-mode anti-flash inline script in index.html
+        "'sha256-MSG2xchJN1qC+4Jk56/h7996tbE2FVQ4hQMQYC3ewWc='",
+        "'sha256-yqZYXtmLxRaOKX1dE/QElpGWJGCAbxmPF7dqT3XsdmQ='",
       ]
     : ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.sslip.io"];
   // style-src keeps 'unsafe-inline' because React sets inline styles at runtime
