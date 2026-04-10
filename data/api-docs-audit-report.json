@@ -1,213 +1,356 @@
 {
-  "generatedAt": "2026-03-30T21:50:17.761Z",
-  "actualCount": 290,
-  "actualProtectedCount": 261,
-  "docsCount": 279,
-  "docsProtectedCount": 251,
+  "generatedAt": "2026-04-10T20:48:22.093Z",
+  "actualCount": 319,
+  "actualProtectedCount": 292,
+  "docsCount": 278,
+  "docsProtectedCount": 249,
   "missingInDocs": [
+    {
+      "method": "GET",
+      "path": "/api/admin/activity",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\activity.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/activity/export",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\activity.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/activity/summary",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\activity.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/announcements",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\announcements.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/announcements",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\announcements.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/announcements/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\announcements.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/announcements/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\announcements.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/announcements/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\announcements.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewall-settings",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/networking/firewall-settings",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewall-templates",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewall-templates/:slug",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewalls",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/firewalls",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/networking/firewalls/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewalls/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/networking/firewalls/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewalls/:id/devices",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/firewalls/:id/devices",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/networking/firewalls/:id/devices/:deviceId",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewalls/:id/history",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewalls/:id/rules",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/networking/firewalls/:id/rules",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
     {
       "method": "GET",
       "path": "/api/admin/networking/ips",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/networking/ips",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/networking/ips/:address",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/networking/ips/:address/rdns",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/networking/ips/:instanceId/:address",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/networking/ips/assign",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/networking/ips/share",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/networking/ipv6/pools",
       "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/ipv6/range-rdns",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/ipv6/range-rdns-records",
+      "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/networking/ipv6/ranges",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/networking/ipv6/ranges",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/networking/ipv6/ranges/:range",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/networking/vlans",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/networking/vlans/:regionId/:label",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/announcements",
+      "protected": false,
+      "admin": false,
+      "source": "api\\routes\\announcements.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/debug/user",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\auth.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/organizations",
+      "protected": false,
+      "admin": false,
+      "source": "api\\routes\\health.ts"
     },
     {
       "method": "GET",
       "path": "/api/health/uptime",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/:id/networking/ipv6-rdns-records",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/vps/:id/watchdog",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\vps.ts"
     }
   ],
   "staleInDocs": [],
-  "authMismatches": [],
+  "authMismatches": [
+    {
+      "key": "GET /api/egress/usage/:vpsId/summary",
+      "actualProtected": true,
+      "docsProtected": false,
+      "section": "Egress & Network Billing"
+    },
+    {
+      "key": "GET /api/health/config-validation",
+      "actualProtected": true,
+      "docsProtected": false,
+      "section": "Platform Health"
+    },
+    {
+      "key": "GET /api/health/detailed",
+      "actualProtected": true,
+      "docsProtected": false,
+      "section": "Platform Health"
+    },
+    {
+      "key": "GET /api/health/metrics",
+      "actualProtected": true,
+      "docsProtected": false,
+      "section": "Platform Health"
+    },
+    {
+      "key": "GET /api/health/rate-limiting",
+      "actualProtected": true,
+      "docsProtected": false,
+      "section": "Platform Health"
+    }
+  ],
   "incompleteDocs": [
     {
-      "key": "POST /api/auth/refresh",
-      "section": "Authentication & Profile",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/auth/me",
-      "section": "Authentication & Profile",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "POST /api/auth/logout",
-      "section": "Authentication & Profile",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/auth/api-keys",
-      "section": "Authentication & Profile",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
       "key": "DELETE /api/auth/api-keys/:id",
       "section": "Authentication & Profile",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "POST /api/auth/2fa/setup",
-      "section": "Authentication & Profile",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/auth/debug/user",
-      "section": "Authentication & Profile",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/auth/api-keys/:id",
-      "section": "Authentication & Profile",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "POST /api/payments/capture-payment/:orderId",
-      "section": "Billing & Payments",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/payments/config",
-      "section": "Billing & Payments",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/payments/wallet/balance",
-      "section": "Billing & Payments",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/payments/transactions/:id",
-      "section": "Billing & Payments",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/payments/billing/summary",
-      "section": "Billing & Payments",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/invoices/:id",
-      "section": "Invoices & Financial Records",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/invoices/:id/download",
-      "section": "Invoices & Financial Records",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "POST /api/invoices/from-transaction/:transactionId",
-      "section": "Invoices & Financial Records",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "POST /api/invoices/from-billing-cycles",
-      "section": "Invoices & Financial Records",
       "issues": [
         "missing_body"
       ]
@@ -227,148 +370,8 @@
       ]
     },
     {
-      "key": "POST /api/vps/:id/boot",
-      "section": "VPS Provisioning & Lifecycle",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "POST /api/vps/:id/shutdown",
-      "section": "VPS Provisioning & Lifecycle",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "POST /api/vps/:id/reboot",
-      "section": "VPS Provisioning & Lifecycle",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/vps/:id/notes",
-      "section": "VPS Provisioning & Lifecycle",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/vps/uptime-summary",
-      "section": "VPS Provisioning & Lifecycle",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "POST /api/vps/:id/backups/enable",
-      "section": "VPS Provisioning & Lifecycle",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "POST /api/vps/:id/backups/disable",
-      "section": "VPS Provisioning & Lifecycle",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/vps/providers",
-      "section": "VPS Catalog & Integrations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/vps/providers/:providerId/regions",
-      "section": "VPS Catalog & Integrations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/vps/plans",
-      "section": "VPS Catalog & Integrations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/vps/apps",
-      "section": "VPS Catalog & Integrations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/vps/providers/:providerId/plans/:regionId",
-      "section": "VPS Catalog & Integrations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/vps/networking/config",
-      "section": "VPS Networking",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
       "key": "GET /api/ssh-keys",
       "section": "Organization SSH Keys",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/ssh-keys/:keyId",
-      "section": "Organization SSH Keys",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/egress/credits",
-      "section": "Egress & Network Billing",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/egress/credits/history",
-      "section": "Egress & Network Billing",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/egress/credits/packs",
-      "section": "Egress & Network Billing",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/egress/credits/wallet-balance",
-      "section": "Egress & Network Billing",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/egress/usage/:vpsId",
-      "section": "Egress & Network Billing",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/egress/usage/:vpsId/summary",
-      "section": "Egress & Network Billing",
       "issues": [
         "missing_params"
       ]
@@ -381,24 +384,9 @@
       ]
     },
     {
-      "key": "GET /api/organizations/all",
-      "section": "Organizations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/organizations/:id/members",
-      "section": "Organizations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
       "key": "DELETE /api/organizations/:id/members/:userId",
       "section": "Organizations",
       "issues": [
-        "missing_body",
         "missing_response"
       ]
     },
@@ -410,141 +398,8 @@
       ]
     },
     {
-      "key": "GET /api/organizations/:id/invitations",
-      "section": "Organizations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/organizations/:id/roles",
-      "section": "Organizations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/organizations/:id/roles/:roleId",
-      "section": "Organizations",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/organizations/resources",
-      "section": "Organizations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/organizations/invitations/:token",
-      "section": "Organizations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "POST /api/organizations/invitations/:token/accept",
-      "section": "Organizations",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "POST /api/organizations/invitations/:token/decline",
-      "section": "Organizations",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "DELETE /api/organizations/invitations/:id",
-      "section": "Organizations",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/organizations/:id/egress",
-      "section": "Organizations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/organizations/:id/egress/credits",
-      "section": "Organizations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/organizations/:id/egress/credits/packs",
-      "section": "Organizations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/activity/summary",
-      "section": "Activity & Audit Log",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
       "key": "DELETE /api/activities/:id",
       "section": "Activities Feed",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "PUT /api/activities/:id/read",
-      "section": "Activities Feed",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "PUT /api/activities/read-all",
-      "section": "Activities Feed",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/activities/unread-count",
-      "section": "Activities Feed",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/support/tickets",
-      "section": "Support Tickets",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/support/tickets/:id/replies",
-      "section": "Support Tickets",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/support/tickets/:id",
-      "section": "Support Tickets",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "DELETE /api/support/tickets/:id/replies/:replyId",
-      "section": "Support Tickets",
       "issues": [
         "missing_body"
       ]
@@ -554,41 +409,6 @@
       "section": "Notifications",
       "issues": [
         "missing_params"
-      ]
-    },
-    {
-      "key": "PATCH /api/notifications/:id/read",
-      "section": "Notifications",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "PATCH /api/notifications/read-all",
-      "section": "Notifications",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/users",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "POST /api/admin/users/:id/impersonate",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "POST /api/admin/impersonation/exit",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
       ]
     },
     {
@@ -606,311 +426,10 @@
       ]
     },
     {
-      "key": "GET /api/admin/faq/categories",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/faq/categories/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/faq/items",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/faq/items/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/faq/updates",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/faq/updates/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/contact/categories",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/contact/categories/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/contact/methods",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/contact/methods/:method_type",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
       "key": "GET /api/admin/providers",
       "section": "Admin Platform Management",
       "issues": [
         "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/providers/:id/regions",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/rate-limits/overrides",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/rate-limits/overrides/:userId",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/platform/availability",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/platform/region-labels",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/platform/region-labels/:regionId",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/platform/region-labels/:regionId",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/theme",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/billing/stats",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "POST /api/admin/billing/transactions/:transactionId/invoice",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/billing/invoices/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/billing/invoices/:id/download",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/category-mappings",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/category-mappings/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/category-mappings/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/category-mappings/enabled",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "POST /api/admin/category-mappings/sync",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/email-templates",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/email-templates/:name",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/github/commits",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/documentation/categories",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/documentation/categories/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/documentation/articles",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/documentation/articles/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/documentation/articles/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/documentation/files/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/ssh-keys",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/ssh-keys/:keyId",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/ssh-keys/:keyId",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/networking/rdns",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/organizations",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/organizations/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/organizations/:id/members/:userId",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
       ]
     },
     {
@@ -921,24 +440,10 @@
       ]
     },
     {
-      "key": "DELETE /api/admin/plans/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
       "key": "GET /api/admin/providers",
       "section": "Admin Platform Management",
       "issues": [
         "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/providers/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
       ]
     },
     {
@@ -949,34 +454,6 @@
       ]
     },
     {
-      "key": "POST /api/admin/providers/:id/validate",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/servers",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/stackscripts/configs",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/stackscripts/configs/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
       "key": "GET /api/admin/tickets/:id/replies",
       "section": "Admin Platform Management",
       "issues": [
@@ -984,112 +461,7 @@
       ]
     },
     {
-      "key": "GET /api/admin/upstream/plans",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/upstream/regions",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/upstream/stackscripts",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/users/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/users/:id/detail",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/users/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/egress/pricing",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "POST /api/admin/egress/pricing/sync",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/egress/live-usage",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
       "key": "GET /api/health",
-      "section": "Platform Health",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/health/status",
-      "section": "Platform Health",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/health/detailed",
-      "section": "Platform Health",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/health/stats",
-      "section": "Platform Health",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/health/platform-stats",
-      "section": "Platform Health",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/health/rate-limiting",
-      "section": "Platform Health",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/health/config-validation",
       "section": "Platform Health",
       "issues": [
         "missing_params"
@@ -1110,28 +482,7 @@
       ]
     },
     {
-      "key": "GET /api/faq/categories",
-      "section": "FAQ & Updates",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/faq/updates",
-      "section": "FAQ & Updates",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
       "key": "GET /api/pricing",
-      "section": "Pricing",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/pricing/public-regions",
       "section": "Pricing",
       "issues": [
         "missing_params"
@@ -1145,57 +496,8 @@
       ]
     },
     {
-      "key": "GET /api/pricing/vps",
-      "section": "Pricing",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
       "key": "GET /api/documentation/categories",
       "section": "Documentation",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/documentation/categories/:slug",
-      "section": "Documentation",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/documentation/articles/:slug",
-      "section": "Documentation",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/documentation/files/:id",
-      "section": "Documentation",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "POST /api/egress/admin/billing/run",
-      "section": "Admin Egress Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/egress/admin/credits/:orgId/balance",
-      "section": "Admin Egress Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/egress/admin/settings/packs",
-      "section": "Admin Egress Management",
       "issues": [
         "missing_params"
       ]
@@ -1206,1740 +508,2233 @@
       "method": "GET",
       "path": "/api/activities",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\activities.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/activities/:id",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\activities.ts"
     },
     {
       "method": "PUT",
       "path": "/api/activities/:id/read",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\activities.ts"
     },
     {
       "method": "GET",
       "path": "/api/activities/organization/:organizationId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\activities.ts"
     },
     {
       "method": "PUT",
       "path": "/api/activities/read-all",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\activities.ts"
     },
     {
       "method": "GET",
       "path": "/api/activities/unread-count",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\activities.ts"
     },
     {
       "method": "GET",
       "path": "/api/activity",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\activity.ts"
     },
     {
       "method": "GET",
       "path": "/api/activity/export",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\activity.ts"
     },
     {
       "method": "GET",
       "path": "/api/activity/recent",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\activity.ts"
     },
     {
       "method": "GET",
       "path": "/api/activity/summary",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\activity.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/activity",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\activity.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/activity/export",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\activity.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/activity/summary",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\activity.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/announcements",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\announcements.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/announcements",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\announcements.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/announcements/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\announcements.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/announcements/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\announcements.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/announcements/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\announcements.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/billing/invoices",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\billing.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/billing/invoices/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\billing.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/billing/invoices/:id/download",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\billing.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/billing/stats",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\billing.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/billing/transactions",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\billing.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/billing/transactions",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\billing.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/billing/transactions/:transactionId/invoice",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\billing.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/billing/users",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\billing.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/category-mappings",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\categoryMappings.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/category-mappings",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\categoryMappings.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/category-mappings/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\categoryMappings.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/category-mappings/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\categoryMappings.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/category-mappings/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\categoryMappings.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/category-mappings/enabled",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\admin\\categoryMappings.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/category-mappings/reorder",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\categoryMappings.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/category-mappings/sync",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\categoryMappings.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/contact/categories",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\contact.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/contact/categories",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\contact.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/contact/categories/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\contact.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/contact/categories/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\contact.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/contact/categories/reorder",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\contact.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/contact/methods",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\contact.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/contact/methods/:method_type",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\contact.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/contact/methods/:method_type",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\contact.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/documentation/articles",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/documentation/articles",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/documentation/articles/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/documentation/articles/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/documentation/articles/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/documentation/articles/:id/files",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/documentation/articles/reorder",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/documentation/categories",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/documentation/categories",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/documentation/categories/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/documentation/categories/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/documentation/categories/reorder",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/documentation/files/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminDocumentation.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/egress/execute",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/egress/history",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/egress/live-usage",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/egress/pricing",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/egress/pricing/:regionId",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/egress/pricing/sync",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/email-templates",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\emailTemplates.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/email-templates/:name",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\emailTemplates.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/email-templates/:name",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\emailTemplates.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/email-templates/preview",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\emailTemplates.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/faq/categories",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/faq/categories",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/faq/categories/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/faq/categories/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/faq/categories/reorder",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/faq/items",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/faq/items",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/faq/items/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/faq/items/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/faq/items/reorder",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/faq/updates",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/faq/updates",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/faq/updates/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/faq/updates/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/faq/updates/reorder",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\adminFaq.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/github/commits",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\github.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/impersonation/exit",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewall-settings",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/networking/firewall-settings",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewall-templates",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewall-templates/:slug",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewalls",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/firewalls",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/networking/firewalls/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewalls/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/networking/firewalls/:id",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewalls/:id/devices",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/firewalls/:id/devices",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/networking/firewalls/:id/devices/:deviceId",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewalls/:id/history",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/firewalls/:id/rules",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/networking/firewalls/:id/rules",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/networking/ips",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/networking/ips",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/networking/ips/:address",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/networking/ips/:address/rdns",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/networking/ips/:instanceId/:address",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/networking/ips/assign",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/networking/ips/share",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/networking/ipv6/pools",
       "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/networking/ipv6/range-rdns",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\admin\\networking.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/networking/ipv6/range-rdns-records",
+      "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/networking/ipv6/ranges",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/networking/ipv6/ranges",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/networking/ipv6/ranges/:range",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/networking/rdns",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/networking/rdns",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/networking/vlans",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/networking/vlans/:regionId/:label",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\networking.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/organizations",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/organizations",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/organizations/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/organizations/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/organizations/:id/members",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/organizations/:id/members/:userId",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/organizations/:id/members/:userId",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/plans",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/plans",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/plans/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/plans/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/platform/availability",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\platform.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/platform/availability",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\platform.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/platform/region-labels",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\platform.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/platform/region-labels/:regionId",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\platform.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/platform/region-labels/:regionId",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\platform.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/platform/region-labels/:regionId",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\platform.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/platform/region-labels/bulk",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\platform.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/providers",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/providers",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/providers/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/providers/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/providers/:id/regions",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/providers/:id/regions",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/providers/:id/validate",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/providers/reorder",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/rate-limits/overrides",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/rate-limits/overrides",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/rate-limits/overrides/:userId",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/servers",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/ssh-keys",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\sshKeys.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/ssh-keys",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\sshKeys.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/ssh-keys/:keyId",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\sshKeys.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/ssh-keys/:keyId",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin\\sshKeys.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/stackscripts/configs",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/stackscripts/configs",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/stackscripts/configs/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/stackscripts/configs/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/theme",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/theme",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/tickets",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/tickets/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/tickets/:id/replies",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/tickets/:id/replies",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PATCH",
       "path": "/api/admin/tickets/:id/status",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/tickets/:id/stream",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/upstream/plans",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/upstream/regions",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/upstream/stackscripts",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/users",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/admin/users/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/users/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "PUT",
       "path": "/api/admin/users/:id",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/users/:id/detail",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "POST",
       "path": "/api/admin/users/:id/impersonate",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
       "path": "/api/admin/users/search",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\admin.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/announcements",
+      "protected": false,
+      "admin": false,
+      "source": "api\\routes\\announcements.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/2fa/disable",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/2fa/setup",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/2fa/verify",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "GET",
       "path": "/api/auth/api-keys",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/api-keys",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/auth/api-keys/:id",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "GET",
       "path": "/api/auth/debug/user",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/forgot-password",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/login",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/logout",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "GET",
       "path": "/api/auth/me",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "PUT",
       "path": "/api/auth/password",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "PUT",
       "path": "/api/auth/preferences",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "PUT",
       "path": "/api/auth/profile",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/refresh",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/register",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/reset-password",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/switch-organization",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/verify-email",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/auth/verify-password",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\auth.ts"
     },
     {
       "method": "POST",
       "path": "/api/contact",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\contact.ts"
     },
     {
       "method": "GET",
       "path": "/api/contact/config",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\contact.ts"
     },
     {
       "method": "GET",
       "path": "/api/documentation/articles/:slug",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\documentation.ts"
     },
     {
       "method": "GET",
       "path": "/api/documentation/categories",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\documentation.ts"
     },
     {
       "method": "GET",
       "path": "/api/documentation/categories/:slug",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\documentation.ts"
     },
     {
       "method": "GET",
       "path": "/api/documentation/files/:id",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\documentation.ts"
     },
     {
       "method": "POST",
       "path": "/api/egress/admin/billing/run",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/egress/admin/credits/:orgId",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "POST",
       "path": "/api/egress/admin/credits/:orgId",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "GET",
       "path": "/api/egress/admin/credits/:orgId/balance",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "GET",
       "path": "/api/egress/admin/settings/packs",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "PUT",
       "path": "/api/egress/admin/settings/packs",
       "protected": true,
+      "admin": true,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "GET",
       "path": "/api/egress/credits",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "GET",
       "path": "/api/egress/credits/history",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "GET",
       "path": "/api/egress/credits/packs",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "POST",
       "path": "/api/egress/credits/purchase",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "POST",
       "path": "/api/egress/credits/purchase/wallet",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "GET",
       "path": "/api/egress/credits/wallet-balance",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "GET",
       "path": "/api/egress/usage/:vpsId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "GET",
       "path": "/api/egress/usage/:vpsId/summary",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\egress.ts"
     },
     {
       "method": "GET",
       "path": "/api/faq/categories",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\faq.ts"
     },
     {
       "method": "GET",
       "path": "/api/faq/updates",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\faq.ts"
     },
     {
       "method": "GET",
       "path": "/api/health",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\health.ts"
     },
     {
       "method": "GET",
       "path": "/api/health/config-validation",
-      "protected": false,
+      "protected": true,
+      "admin": true,
       "source": "api\\routes\\health.ts"
     },
     {
       "method": "GET",
       "path": "/api/health/detailed",
-      "protected": false,
+      "protected": true,
+      "admin": true,
       "source": "api\\routes\\health.ts"
     },
     {
       "method": "GET",
       "path": "/api/health/metrics",
+      "protected": true,
+      "admin": true,
+      "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/organizations",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\health.ts"
     },
     {
       "method": "GET",
       "path": "/api/health/platform-stats",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\health.ts"
     },
     {
       "method": "GET",
       "path": "/api/health/rate-limiting",
-      "protected": false,
+      "protected": true,
+      "admin": true,
       "source": "api\\routes\\health.ts"
     },
     {
       "method": "GET",
       "path": "/api/health/stats",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\health.ts"
     },
     {
       "method": "GET",
       "path": "/api/health/status",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\health.ts"
     },
     {
       "method": "GET",
       "path": "/api/health/uptime",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\health.ts"
     },
     {
       "method": "GET",
       "path": "/api/invoices",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\invoices.ts"
     },
     {
       "method": "GET",
       "path": "/api/invoices/:id",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\invoices.ts"
     },
     {
       "method": "GET",
       "path": "/api/invoices/:id/download",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\invoices.ts"
     },
     {
       "method": "POST",
       "path": "/api/invoices/from-billing-cycles",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\invoices.ts"
     },
     {
       "method": "POST",
       "path": "/api/invoices/from-transaction/:transactionId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\invoices.ts"
     },
     {
       "method": "POST",
       "path": "/api/invoices/from-transactions",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\invoices.ts"
     },
     {
       "method": "GET",
       "path": "/api/notifications",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\notifications.ts"
     },
     {
       "method": "PATCH",
       "path": "/api/notifications/:id/read",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\notifications.ts"
     },
     {
       "method": "PATCH",
       "path": "/api/notifications/read-all",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\notifications.ts"
     },
     {
       "method": "GET",
       "path": "/api/notifications/stream",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\notifications.ts"
     },
     {
       "method": "GET",
       "path": "/api/notifications/unread",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\notifications.ts"
     },
     {
       "method": "GET",
       "path": "/api/notifications/unread-count",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\notifications.ts"
     },
     {
       "method": "GET",
       "path": "/api/organizations",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "PUT",
       "path": "/api/organizations/:id",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "GET",
       "path": "/api/organizations/:id/egress",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "GET",
       "path": "/api/organizations/:id/egress/credits",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "GET",
       "path": "/api/organizations/:id/egress/credits/packs",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "POST",
       "path": "/api/organizations/:id/egress/credits/purchase",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "POST",
       "path": "/api/organizations/:id/egress/credits/purchase/complete",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "GET",
       "path": "/api/organizations/:id/invitations",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "GET",
       "path": "/api/organizations/:id/members",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "POST",
       "path": "/api/organizations/:id/members",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/organizations/:id/members/:userId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "PUT",
       "path": "/api/organizations/:id/members/:userId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "POST",
       "path": "/api/organizations/:id/members/invite",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "GET",
       "path": "/api/organizations/:id/roles",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "POST",
       "path": "/api/organizations/:id/roles",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/organizations/:id/roles/:roleId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "PUT",
       "path": "/api/organizations/:id/roles/:roleId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "GET",
       "path": "/api/organizations/all",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/organizations/invitations/:id",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "GET",
       "path": "/api/organizations/invitations/:token",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "POST",
       "path": "/api/organizations/invitations/:token/accept",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "POST",
       "path": "/api/organizations/invitations/:token/decline",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "GET",
       "path": "/api/organizations/resources",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\organizations.ts"
     },
     {
       "method": "GET",
       "path": "/api/payments/billing/summary",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\payments.ts"
     },
     {
       "method": "POST",
       "path": "/api/payments/capture-payment/:orderId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\payments.ts"
     },
     {
       "method": "GET",
       "path": "/api/payments/config",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\payments.ts"
     },
     {
       "method": "POST",
       "path": "/api/payments/create-payment",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\payments.ts"
     },
     {
       "method": "GET",
       "path": "/api/payments/history",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\payments.ts"
     },
     {
       "method": "POST",
       "path": "/api/payments/refund",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\payments.ts"
     },
     {
       "method": "GET",
       "path": "/api/payments/transactions/:id",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\payments.ts"
     },
     {
       "method": "GET",
       "path": "/api/payments/wallet/balance",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\payments.ts"
     },
     {
       "method": "POST",
       "path": "/api/payments/wallet/deduct",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\payments.ts"
     },
     {
       "method": "GET",
       "path": "/api/payments/wallet/transactions",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\payments.ts"
     },
     {
       "method": "GET",
       "path": "/api/pricing",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\pricing.ts"
     },
     {
       "method": "GET",
       "path": "/api/pricing/category-mappings",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\pricing.ts"
     },
     {
       "method": "GET",
       "path": "/api/pricing/public-regions",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\pricing.ts"
     },
     {
       "method": "GET",
       "path": "/api/pricing/vps",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\pricing.ts"
     },
     {
       "method": "GET",
       "path": "/api/ssh-keys",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\sshKeys.ts"
     },
     {
       "method": "POST",
       "path": "/api/ssh-keys",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\sshKeys.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/ssh-keys/:keyId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\sshKeys.ts"
     },
     {
       "method": "GET",
       "path": "/api/support/tickets",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "POST",
       "path": "/api/support/tickets",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/support/tickets/:id",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "PUT",
       "path": "/api/support/tickets/:id/assign",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "PUT",
       "path": "/api/support/tickets/:id/priority",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "POST",
       "path": "/api/support/tickets/:id/reopen-request",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "GET",
       "path": "/api/support/tickets/:id/replies",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "POST",
       "path": "/api/support/tickets/:id/replies",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/support/tickets/:id/replies/:replyId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "PUT",
       "path": "/api/support/tickets/:id/replies/:replyId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "PUT",
       "path": "/api/support/tickets/:id/status",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "GET",
       "path": "/api/support/tickets/:id/stream",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\support.ts"
     },
     {
       "method": "GET",
       "path": "/api/theme",
       "protected": false,
+      "admin": false,
       "source": "api\\routes\\theme.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "DELETE",
       "path": "/api/vps/:id",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/:id",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/backups/:backupId/restore",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/backups/disable",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/backups/enable",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/backups/schedule",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/backups/snapshot",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/boot",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/firewalls/attach",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/firewalls/detach",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "PUT",
       "path": "/api/vps/:id/hostname",
       "protected": true,
+      "admin": false,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vps/:id/networking/ipv6-rdns-records",
+      "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/networking/rdns",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/:id/notes",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "PUT",
       "path": "/api/vps/:id/notes",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/reboot",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/rebuild",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "POST",
       "path": "/api/vps/:id/shutdown",
       "protected": true,
+      "admin": false,
+      "source": "api\\routes\\vps.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/vps/:id/watchdog",
+      "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/apps",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/images",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/networking/config",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/plans",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/providers",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/providers/:providerId/plans/:regionId",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/providers/:providerId/regions",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/providers/:providerId/ssh-keys",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/stackscripts",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     },
     {
       "method": "GET",
       "path": "/api/vps/uptime-summary",
       "protected": true,
+      "admin": false,
       "source": "api\\routes\\vps.ts"
     }
   ],
@@ -2973,6 +2768,7 @@
       "relativePath": "/refresh",
       "path": "/api/auth/refresh",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -2983,6 +2779,7 @@
       "relativePath": "/me",
       "path": "/api/auth/me",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3004,6 +2801,7 @@
       "relativePath": "/logout",
       "path": "/api/auth/logout",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3047,6 +2845,7 @@
       "relativePath": "/api-keys",
       "path": "/api/auth/api-keys",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3068,6 +2867,7 @@
       "relativePath": "/api-keys/:id",
       "path": "/api/auth/api-keys/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3111,6 +2911,7 @@
       "relativePath": "/2fa/setup",
       "path": "/api/auth/2fa/setup",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3133,16 +2934,6 @@
       "path": "/api/auth/2fa/disable",
       "auth": true,
       "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "GET",
-      "relativePath": "/debug/user",
-      "path": "/api/auth/debug/user",
-      "auth": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3185,6 +2976,7 @@
       "relativePath": "/capture-payment/:orderId",
       "path": "/api/payments/capture-payment/:orderId",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3195,6 +2987,7 @@
       "relativePath": "/config",
       "path": "/api/payments/config",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3205,6 +2998,7 @@
       "relativePath": "/wallet/balance",
       "path": "/api/payments/wallet/balance",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3248,6 +3042,7 @@
       "relativePath": "/transactions/:id",
       "path": "/api/payments/transactions/:id",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3269,6 +3064,7 @@
       "relativePath": "/billing/summary",
       "path": "/api/payments/billing/summary",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3290,6 +3086,7 @@
       "relativePath": "/:id",
       "path": "/api/invoices/:id",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3300,6 +3097,7 @@
       "relativePath": "/:id/download",
       "path": "/api/invoices/:id/download",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3310,6 +3108,7 @@
       "relativePath": "/from-transaction/:transactionId",
       "path": "/api/invoices/from-transaction/:transactionId",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3331,6 +3130,7 @@
       "relativePath": "/from-billing-cycles",
       "path": "/api/invoices/from-billing-cycles",
       "auth": true,
+      "hasBody": true,
       "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
@@ -3373,6 +3173,7 @@
       "relativePath": "/:id/boot",
       "path": "/api/vps/:id/boot",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3383,6 +3184,7 @@
       "relativePath": "/:id/shutdown",
       "path": "/api/vps/:id/shutdown",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3393,6 +3195,7 @@
       "relativePath": "/:id/reboot",
       "path": "/api/vps/:id/reboot",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3425,6 +3228,7 @@
       "relativePath": "/:id/notes",
       "path": "/api/vps/:id/notes",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3446,6 +3250,7 @@
       "relativePath": "/uptime-summary",
       "path": "/api/vps/uptime-summary",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3467,6 +3272,7 @@
       "relativePath": "/:id/backups/enable",
       "path": "/api/vps/:id/backups/enable",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3477,6 +3283,7 @@
       "relativePath": "/:id/backups/disable",
       "path": "/api/vps/:id/backups/disable",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3542,6 +3349,7 @@
       "relativePath": "/providers",
       "path": "/api/vps/providers",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3552,6 +3360,7 @@
       "relativePath": "/providers/:providerId/regions",
       "path": "/api/vps/providers/:providerId/regions",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3562,6 +3371,7 @@
       "relativePath": "/plans",
       "path": "/api/vps/plans",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3605,6 +3415,7 @@
       "relativePath": "/apps",
       "path": "/api/vps/apps",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3615,6 +3426,7 @@
       "relativePath": "/providers/:providerId/plans/:regionId",
       "path": "/api/vps/providers/:providerId/plans/:regionId",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3625,6 +3437,7 @@
       "relativePath": "/networking/config",
       "path": "/api/vps/networking/config",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3667,6 +3480,7 @@
       "relativePath": "/:keyId",
       "path": "/api/ssh-keys/:keyId",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3677,6 +3491,7 @@
       "relativePath": "/credits",
       "path": "/api/egress/credits",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3687,6 +3502,7 @@
       "relativePath": "/credits/history",
       "path": "/api/egress/credits/history",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3697,6 +3513,7 @@
       "relativePath": "/credits/packs",
       "path": "/api/egress/credits/packs",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3718,6 +3535,7 @@
       "relativePath": "/credits/wallet-balance",
       "path": "/api/egress/credits/wallet-balance",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3739,6 +3557,7 @@
       "relativePath": "/usage/:vpsId",
       "path": "/api/egress/usage/:vpsId",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3748,7 +3567,8 @@
       "method": "GET",
       "relativePath": "/usage/:vpsId/summary",
       "path": "/api/egress/usage/:vpsId/summary",
-      "auth": true,
+      "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3769,6 +3589,7 @@
       "relativePath": "/all",
       "path": "/api/organizations/all",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3790,6 +3611,7 @@
       "relativePath": "/:id/members",
       "path": "/api/organizations/:id/members",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3811,6 +3633,7 @@
       "relativePath": "/:id/members/:userId",
       "path": "/api/organizations/:id/members/:userId",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": true
     },
@@ -3843,6 +3666,7 @@
       "relativePath": "/:id/invitations",
       "path": "/api/organizations/:id/invitations",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3853,6 +3677,7 @@
       "relativePath": "/:id/roles",
       "path": "/api/organizations/:id/roles",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3885,6 +3710,7 @@
       "relativePath": "/:id/roles/:roleId",
       "path": "/api/organizations/:id/roles/:roleId",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3895,6 +3721,7 @@
       "relativePath": "/resources",
       "path": "/api/organizations/resources",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3905,6 +3732,7 @@
       "relativePath": "/invitations/:token",
       "path": "/api/organizations/invitations/:token",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3915,6 +3743,7 @@
       "relativePath": "/invitations/:token/accept",
       "path": "/api/organizations/invitations/:token/accept",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3925,6 +3754,7 @@
       "relativePath": "/invitations/:token/decline",
       "path": "/api/organizations/invitations/:token/decline",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3935,6 +3765,7 @@
       "relativePath": "/invitations/:id",
       "path": "/api/organizations/invitations/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3945,6 +3776,7 @@
       "relativePath": "/:id/egress",
       "path": "/api/organizations/:id/egress",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3955,6 +3787,7 @@
       "relativePath": "/:id/egress/credits",
       "path": "/api/organizations/:id/egress/credits",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3965,6 +3798,7 @@
       "relativePath": "/:id/egress/credits/packs",
       "path": "/api/organizations/:id/egress/credits/packs",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4030,6 +3864,7 @@
       "relativePath": "/summary",
       "path": "/api/activity/summary",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4061,6 +3896,7 @@
       "relativePath": "/:id/read",
       "path": "/api/activities/:id/read",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4082,6 +3918,7 @@
       "relativePath": "/read-all",
       "path": "/api/activities/read-all",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4092,6 +3929,7 @@
       "relativePath": "/unread-count",
       "path": "/api/activities/unread-count",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4102,6 +3940,7 @@
       "relativePath": "/tickets",
       "path": "/api/support/tickets",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4123,6 +3962,7 @@
       "relativePath": "/tickets/:id/replies",
       "path": "/api/support/tickets/:id/replies",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4155,6 +3995,7 @@
       "relativePath": "/tickets/:id",
       "path": "/api/support/tickets/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4220,6 +4061,7 @@
       "relativePath": "/tickets/:id/replies/:replyId",
       "path": "/api/support/tickets/:id/replies/:replyId",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4262,6 +4104,7 @@
       "relativePath": "/:id/read",
       "path": "/api/notifications/:id/read",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4272,6 +4115,7 @@
       "relativePath": "/read-all",
       "path": "/api/notifications/read-all",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4293,6 +4137,7 @@
       "relativePath": "/users",
       "path": "/api/admin/users",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4314,6 +4159,7 @@
       "relativePath": "/users/:id/impersonate",
       "path": "/api/admin/users/:id/impersonate",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4324,6 +4170,7 @@
       "relativePath": "/impersonation/exit",
       "path": "/api/admin/impersonation/exit",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4376,6 +4223,7 @@
       "relativePath": "/faq/categories",
       "path": "/api/admin/faq/categories",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4408,6 +4256,7 @@
       "relativePath": "/faq/categories/:id",
       "path": "/api/admin/faq/categories/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4429,6 +4278,7 @@
       "relativePath": "/faq/items",
       "path": "/api/admin/faq/items",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4461,6 +4311,7 @@
       "relativePath": "/faq/items/:id",
       "path": "/api/admin/faq/items/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4482,6 +4333,7 @@
       "relativePath": "/faq/updates",
       "path": "/api/admin/faq/updates",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4514,6 +4366,7 @@
       "relativePath": "/faq/updates/:id",
       "path": "/api/admin/faq/updates/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4535,6 +4388,7 @@
       "relativePath": "/contact/categories",
       "path": "/api/admin/contact/categories",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4567,6 +4421,7 @@
       "relativePath": "/contact/categories/:id",
       "path": "/api/admin/contact/categories/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4588,6 +4443,7 @@
       "relativePath": "/contact/methods",
       "path": "/api/admin/contact/methods",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4609,6 +4465,7 @@
       "relativePath": "/contact/methods/:method_type",
       "path": "/api/admin/contact/methods/:method_type",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4629,6 +4486,7 @@
       "relativePath": "/providers/:id/regions",
       "path": "/api/admin/providers/:id/regions",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4639,6 +4497,7 @@
       "relativePath": "/rate-limits/overrides",
       "path": "/api/admin/rate-limits/overrides",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4660,6 +4519,7 @@
       "relativePath": "/rate-limits/overrides/:userId",
       "path": "/api/admin/rate-limits/overrides/:userId",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4670,6 +4530,7 @@
       "relativePath": "/platform/availability",
       "path": "/api/admin/platform/availability",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4691,6 +4552,7 @@
       "relativePath": "/platform/region-labels",
       "path": "/api/admin/platform/region-labels",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4701,6 +4563,7 @@
       "relativePath": "/platform/region-labels/:regionId",
       "path": "/api/admin/platform/region-labels/:regionId",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4722,6 +4585,7 @@
       "relativePath": "/platform/region-labels/:regionId",
       "path": "/api/admin/platform/region-labels/:regionId",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4743,6 +4607,7 @@
       "relativePath": "/theme",
       "path": "/api/admin/theme",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4764,6 +4629,7 @@
       "relativePath": "/billing/stats",
       "path": "/api/admin/billing/stats",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4796,6 +4662,7 @@
       "relativePath": "/billing/transactions/:transactionId/invoice",
       "path": "/api/admin/billing/transactions/:transactionId/invoice",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4828,6 +4695,7 @@
       "relativePath": "/billing/invoices/:id",
       "path": "/api/admin/billing/invoices/:id",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4838,6 +4706,7 @@
       "relativePath": "/billing/invoices/:id/download",
       "path": "/api/admin/billing/invoices/:id/download",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4848,6 +4717,7 @@
       "relativePath": "/category-mappings",
       "path": "/api/admin/category-mappings",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4869,6 +4739,7 @@
       "relativePath": "/category-mappings/:id",
       "path": "/api/admin/category-mappings/:id",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4890,6 +4761,7 @@
       "relativePath": "/category-mappings/:id",
       "path": "/api/admin/category-mappings/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4900,6 +4772,7 @@
       "relativePath": "/category-mappings/enabled",
       "path": "/api/admin/category-mappings/enabled",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4921,6 +4794,7 @@
       "relativePath": "/category-mappings/sync",
       "path": "/api/admin/category-mappings/sync",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4931,6 +4805,7 @@
       "relativePath": "/email-templates",
       "path": "/api/admin/email-templates",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4941,6 +4816,7 @@
       "relativePath": "/email-templates/:name",
       "path": "/api/admin/email-templates/:name",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4973,6 +4849,7 @@
       "relativePath": "/github/commits",
       "path": "/api/admin/github/commits",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4983,6 +4860,7 @@
       "relativePath": "/documentation/categories",
       "path": "/api/admin/documentation/categories",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5015,6 +4893,7 @@
       "relativePath": "/documentation/categories/:id",
       "path": "/api/admin/documentation/categories/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5036,6 +4915,7 @@
       "relativePath": "/documentation/articles",
       "path": "/api/admin/documentation/articles",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5057,6 +4937,7 @@
       "relativePath": "/documentation/articles/:id",
       "path": "/api/admin/documentation/articles/:id",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5078,6 +4959,7 @@
       "relativePath": "/documentation/articles/:id",
       "path": "/api/admin/documentation/articles/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5110,6 +4992,7 @@
       "relativePath": "/documentation/files/:id",
       "path": "/api/admin/documentation/files/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5120,6 +5003,7 @@
       "relativePath": "/ssh-keys",
       "path": "/api/admin/ssh-keys",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5130,6 +5014,7 @@
       "relativePath": "/ssh-keys/:keyId",
       "path": "/api/admin/ssh-keys/:keyId",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5151,6 +5036,7 @@
       "relativePath": "/ssh-keys/:keyId",
       "path": "/api/admin/ssh-keys/:keyId",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5161,6 +5047,7 @@
       "relativePath": "/networking/rdns",
       "path": "/api/admin/networking/rdns",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5182,6 +5069,7 @@
       "relativePath": "/organizations",
       "path": "/api/admin/organizations",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5214,6 +5102,7 @@
       "relativePath": "/organizations/:id",
       "path": "/api/admin/organizations/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5246,6 +5135,7 @@
       "relativePath": "/organizations/:id/members/:userId",
       "path": "/api/admin/organizations/:id/members/:userId",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5288,6 +5178,7 @@
       "relativePath": "/plans/:id",
       "path": "/api/admin/plans/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5330,6 +5221,7 @@
       "relativePath": "/providers/:id",
       "path": "/api/admin/providers/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5361,6 +5253,7 @@
       "relativePath": "/providers/:id/validate",
       "path": "/api/admin/providers/:id/validate",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5382,6 +5275,7 @@
       "relativePath": "/servers",
       "path": "/api/admin/servers",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5392,6 +5286,7 @@
       "relativePath": "/stackscripts/configs",
       "path": "/api/admin/stackscripts/configs",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5424,6 +5319,7 @@
       "relativePath": "/stackscripts/configs/:id",
       "path": "/api/admin/stackscripts/configs/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5455,6 +5351,7 @@
       "relativePath": "/upstream/plans",
       "path": "/api/admin/upstream/plans",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5465,6 +5362,7 @@
       "relativePath": "/upstream/regions",
       "path": "/api/admin/upstream/regions",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5475,6 +5373,7 @@
       "relativePath": "/upstream/stackscripts",
       "path": "/api/admin/upstream/stackscripts",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5485,6 +5384,7 @@
       "relativePath": "/users/:id",
       "path": "/api/admin/users/:id",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5495,6 +5395,7 @@
       "relativePath": "/users/:id/detail",
       "path": "/api/admin/users/:id/detail",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5516,6 +5417,7 @@
       "relativePath": "/users/:id",
       "path": "/api/admin/users/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5526,6 +5428,7 @@
       "relativePath": "/egress/pricing",
       "path": "/api/admin/egress/pricing",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5536,6 +5439,7 @@
       "relativePath": "/egress/pricing/sync",
       "path": "/api/admin/egress/pricing/sync",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5557,6 +5461,7 @@
       "relativePath": "/egress/live-usage",
       "path": "/api/admin/egress/live-usage",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5599,6 +5504,7 @@
       "relativePath": "/status",
       "path": "/api/health/status",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5609,6 +5515,7 @@
       "relativePath": "/detailed",
       "path": "/api/health/detailed",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5619,6 +5526,7 @@
       "relativePath": "/stats",
       "path": "/api/health/stats",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5629,6 +5537,7 @@
       "relativePath": "/platform-stats",
       "path": "/api/health/platform-stats",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5650,6 +5559,7 @@
       "relativePath": "/rate-limiting",
       "path": "/api/health/rate-limiting",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5660,6 +5570,7 @@
       "relativePath": "/config-validation",
       "path": "/api/health/config-validation",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5701,6 +5612,7 @@
       "relativePath": "/categories",
       "path": "/api/faq/categories",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5711,6 +5623,7 @@
       "relativePath": "/updates",
       "path": "/api/faq/updates",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5731,6 +5644,7 @@
       "relativePath": "/public-regions",
       "path": "/api/pricing/public-regions",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5751,6 +5665,7 @@
       "relativePath": "/vps",
       "path": "/api/pricing/vps",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5771,6 +5686,7 @@
       "relativePath": "/categories/:slug",
       "path": "/api/documentation/categories/:slug",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5781,6 +5697,7 @@
       "relativePath": "/articles/:slug",
       "path": "/api/documentation/articles/:slug",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5791,6 +5708,7 @@
       "relativePath": "/files/:id",
       "path": "/api/documentation/files/:id",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5801,6 +5719,7 @@
       "relativePath": "/billing/run",
       "path": "/api/egress/admin/billing/run",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5811,6 +5730,7 @@
       "relativePath": "/credits/:orgId/balance",
       "path": "/api/egress/admin/credits/:orgId/balance",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5843,6 +5763,7 @@
       "relativePath": "/settings/packs",
       "path": "/api/egress/admin/settings/packs",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },

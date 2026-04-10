@@ -14,17 +14,13 @@ import {
   Zap,
   Globe,
   Clock,
+  Play,
+  Terminal,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import "@/styles/home.css";
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -115,6 +111,19 @@ export default function ApiDocs() {
   const [userOrgs, setUserOrgs] = useState<Array<{ id: string; name: string }>>([]);
   const [orgsFetchFailed, setOrgsFetchFailed] = useState(false);
 
+  const baseSections = useMemo<SectionDefinition[]>(() => buildBaseSections(apiBase), [apiBase]);
+  const sections = useMemo(
+    () => syncSectionsWithActiveRoutes(baseSections, apiBase),
+    [baseSections, apiBase],
+  );
+
+  // Initialize active section
+  useEffect(() => {
+    if (!activeSection && sections.length > 0) {
+      setActiveSection(sections[0].title);
+    }
+  }, [sections, activeSection]);
+
   useEffect(() => {
     if (!user) return;
     apiClient
@@ -135,7 +144,6 @@ export default function ApiDocs() {
           setOrganizationId(user.organizationId);
         }
       });
-  // Only run once on mount when user becomes available.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
@@ -157,15 +165,8 @@ export default function ApiDocs() {
     [],
   );
 
-  // Per-endpoint response tracking - each endpoint has its own response displayed inline
   const [responses, setResponses] = useState<Map<string, ResponseState>>(new Map());
   const [executingEndpoint, setExecutingEndpoint] = useState<string | null>(null);
-
-  const baseSections = useMemo<SectionDefinition[]>(() => buildBaseSections(apiBase), [apiBase]);
-  const sections = useMemo(
-    () => syncSectionsWithActiveRoutes(baseSections, apiBase),
-    [baseSections, apiBase],
-  );
 
   const filteredSections = useMemo(() => {
     if (!searchQuery) return sections;
@@ -183,28 +184,13 @@ export default function ApiDocs() {
       .filter((section) => section.endpoints.length > 0);
   }, [sections, searchQuery]);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const sectionElements = sections.map((section) =>
-        document.getElementById(`section-${section.title}`),
-      );
-      const scrollPosition = window.scrollY + 100;
+  const activeSectionData = useMemo(() => {
+    if (searchQuery) {
+      return filteredSections;
+    }
+    return sections.filter((s) => s.title === activeSection);
+  }, [sections, filteredSections, activeSection, searchQuery]);
 
-      for (let i = sectionElements.length - 1; i >= 0; i--) {
-        const element = sectionElements[i];
-        if (element && element.offsetTop <= scrollPosition) {
-          setActiveSection(sections[i].title);
-          break;
-        }
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [sections]);
-
-  // Validate API key (and capture default org from /api/auth/me when empty)
   const handleValidateApiKey = useCallback(async (key: string) => {
     const result = await validateApiKey(key);
     if (result.valid && result.organizationId && !organizationId.trim()) {
@@ -213,13 +199,11 @@ export default function ApiDocs() {
     return result;
   }, [organizationId]);
 
-  // Execute API request - stores response per-endpoint for inline display
   const handleExecuteRequest = useCallback(async (
     endpointKey: string,
     request: { method: string; url: string; body?: unknown; params?: Record<string, string> }
   ) => {
     setExecutingEndpoint(endpointKey);
-    // Clear previous response for this endpoint
     setResponses((prev) => {
       const next = new Map(prev);
       next.set(endpointKey, { status: null, statusText: null, duration: null, data: null, error: null });
@@ -298,34 +282,23 @@ export default function ApiDocs() {
     [handleCopy],
   );
 
-  const handleScrollToSection = useCallback((title: string) => {
-    setActiveSection(title);
-    const anchor = document.getElementById(`section-${title}`);
-    if (anchor) {
-      const offset = 80;
-      const elementPosition = anchor.offsetTop - offset;
-      window.scrollTo({ top: elementPosition, behavior: "smooth" });
-    }
-  }, []);
-
   return (
-    <div className="relative">
+    <div className="relative bg-background min-h-screen">
       {/* ═══════════════════════════ HERO ═══════════════════════════ */}
       <section className="relative overflow-hidden border-b border-border/40">
-        {/* Floating orbs */}
         <div className="home-orb home-orb--1" aria-hidden="true" />
         <div className="home-orb home-orb--2" aria-hidden="true" />
         <div className="home-orb home-orb--3" aria-hidden="true" />
         <div className="home-grid-mask absolute inset-0" aria-hidden="true" />
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 lg:px-8 lg:pb-20 lg:pt-24">
+        <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 lg:px-8 lg:pb-20 lg:pt-24 text-center lg:text-left">
           <motion.div
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.65 }}
             className="space-y-6"
           >
-            <div className="space-y-5">
+            <div className="space-y-5 lg:max-w-2xl">
               <Badge
                 variant="outline"
                 className="home-shimmer-badge w-fit rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
@@ -334,34 +307,22 @@ export default function ApiDocs() {
                 API Reference
               </Badge>
 
-              <h1 className="text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl 2xl:text-7xl">
+              <h1 className="text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
                 <span className="block font-bold bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text text-transparent">
-                  {BRAND_NAME} API Documentation
+                  {BRAND_NAME} Developers
                 </span>
               </h1>
 
-              <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-                Complete reference for all backend endpoints. Test any endpoint directly from your browser using your API key — no cURL required.
+              <p className="text-lg leading-relaxed text-muted-foreground sm:text-xl">
+                Build your next integration using our comprehensive REST API. Test endpoints instantly from your browser.
               </p>
-            </div>
-
-            {/* Search */}
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search endpoints..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-11 text-base bg-card/80 backdrop-blur"
-              />
             </div>
           </motion.div>
         </div>
       </section>
 
       {/* ═══════════════════════ TRUST MARQUEE ═══════════════════════ */}
-      <section className="border-b border-border/40 bg-muted/20 py-5">
+      <section className="border-b border-border/40 bg-muted/20 py-4">
         <div className="home-marquee">
           <div className="home-marquee__track">
             {[...trustItems, ...trustItems].map((item, i) => (
@@ -378,354 +339,322 @@ export default function ApiDocs() {
         </div>
       </section>
 
-      {/* ═══════════════════ API DOCS CONTENT ════════════════════════ */}
-      <div className="space-y-6 pr-0 lg:pr-96">
+      {/* ═══════════════════ MAIN LAYOUT ════════════════════════ */}
+      <div className="relative mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 py-10 flex flex-col lg:flex-row gap-10">
+        
+        {/* LEFT SIDEBAR (Navigation & Config) */}
+        <aside className="w-full lg:w-[320px] shrink-0">
+          <div className="sticky top-[100px] space-y-6">
+            
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search endpoints..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-11 text-base bg-card shadow-sm border-border"
+              />
+            </div>
 
-        {/* API Key Input */}
-        <motion.div
-          variants={revealContainer}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-        >
-          <motion.div variants={revealItem}>
-            <Card className="home-gradient-border-top home-animated-border">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Key className="h-4 w-4" />
-                  Interactive Testing
-                </CardTitle>
-                <CardDescription>
-                  Enter your API key to test endpoints directly from this page.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ApiKeyInput
-                  apiKey={apiKey}
-                  onApiKeyChange={setApiKey}
-                  onValidate={handleValidateApiKey}
-                />
-                <div className="mt-4 space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    Organization (required for org-scoped endpoints)
-                  </label>
-                  {orgsFetchFailed ? (
-                    <Input
-                      value={organizationId}
-                      onChange={(e) => setOrganizationId(e.target.value)}
-                      placeholder="org UUID"
-                    />
-                  ) : (
-                    <Select value={organizationId} onValueChange={setOrganizationId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an organization…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userOrgs.map((org) => (
-                          <SelectItem key={org.id} value={org.id}>
-                            {org.name}
-                            <span className="ml-2 text-xs text-muted-foreground font-mono">
-                              ({org.id.slice(0, 8)}…)
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </motion.div>
-
-        {/* Stats */}
-        <motion.div
-          variants={revealContainer}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="grid gap-4 sm:grid-cols-3"
-        >
-          <motion.div variants={revealItem}>
-            <Card className="home-feature-card">
-              <CardContent className="space-y-1 p-6">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Server className="h-4 w-4 text-primary" />
-                  Endpoints
-                </div>
-                <p className="text-2xl font-bold mt-2">
-                  {sections.reduce((acc, s) => acc + s.endpoints.length, 0)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Across {sections.length} sections
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-          <motion.div variants={revealItem}>
-            <Card className="home-feature-card">
-              <CardContent className="space-y-1 p-6">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Lock className="h-4 w-4 text-amber-600" />
-                  Protected
-                </div>
-                <p className="text-2xl font-bold mt-2">
-                  {sections.reduce(
-                    (acc, s) =>
-                      acc + s.endpoints.filter((e) => e.auth).length,
-                    0,
-                  )}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Require authentication
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-          <motion.div variants={revealItem}>
-            <Card className="home-feature-card">
-              <CardContent className="space-y-1 p-6">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Code2 className="h-4 w-4 text-emerald-600" />
-                  Methods
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  GET, POST, PUT, PATCH, DELETE
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </motion.div>
-
-        {/* Main Content */}
-        <div className="flex gap-6">
-          {/* Fixed Sidebar */}
-          <aside className="hidden lg:block fixed right-4 top-[76px] w-80 z-40">
-            <Card className="home-gradient-border-top">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">
-                  Navigation
+            {/* Navigation Menu */}
+            <Card className="shadow-sm overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b py-4 px-5">
+                <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">
+                  API Sections
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[calc(100vh-12rem)]">
-                  <nav className="space-y-1">
-                    {filteredSections.map((section) => (
-                      <button
-                        key={section.title}
-                        onClick={() => handleScrollToSection(section.title)}
-                        className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${activeSection === section.title
-                          ? "bg-primary/10 font-medium text-primary"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              <CardContent className="p-0">
+                <ScrollArea className="h-[calc(100vh-280px)]">
+                  <nav className="p-3 space-y-1">
+                    {filteredSections.map((section) => {
+                      const isActive = activeSection === section.title && !searchQuery;
+                      return (
+                        <button
+                          key={section.title}
+                          onClick={() => {
+                            setSearchQuery("");
+                            setActiveSection(section.title);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-200 ${
+                            isActive
+                              ? "bg-primary/10 font-semibold text-primary shadow-sm"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
                           }`}
-                      >
-                        {section.icon}
-                        <span className="flex-1 text-left leading-tight">
-                          {section.title}
-                        </span>
-                        <Badge
-                          variant="secondary"
-                          className="h-5 min-w-5 px-1.5 text-xs"
                         >
-                          {section.endpoints.length}
-                        </Badge>
-                      </button>
-                    ))}
+                          <div className={isActive ? "text-primary" : "text-muted-foreground/70"}>
+                            {section.icon}
+                          </div>
+                          <span className="flex-1 text-left leading-tight">
+                            {section.title}
+                          </span>
+                          <Badge
+                            variant={isActive ? "default" : "secondary"}
+                            className="h-5 min-w-5 px-1.5 text-[10px] bg-background"
+                          >
+                            {section.endpoints.length}
+                          </Badge>
+                        </button>
+                      );
+                    })}
+                    {filteredSections.length === 0 && (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        No sections match your search.
+                      </div>
+                    )}
                   </nav>
                 </ScrollArea>
               </CardContent>
             </Card>
-          </aside>
+          </div>
+        </aside>
 
-          {/* Content Area */}
-          <div className="flex-1 space-y-8 min-w-0">
-            {filteredSections.length === 0 && (
-              <Card className="home-gradient-border-top">
-                <CardContent className="py-12 text-center">
-                  <Search className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                  <p className="mt-4 text-sm text-muted-foreground">
-                    No endpoints found matching "{searchQuery}"
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            {filteredSections.map((section) => (
-              <Card
-                key={section.title}
-                id={`section-${section.title}`}
-                className="home-gradient-border-top"
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                        {section.icon}
-                      </div>
-                      <div>
-                        <CardTitle className="text-xl">
-                          {section.title}
-                        </CardTitle>
-                        <CardDescription className="mt-1">
-                          {section.description}
-                        </CardDescription>
-                      </div>
+        {/* RIGHT CONTENT AREA */}
+        <div className="flex-1 min-w-0 pb-32">
+          
+          {/* Interactive Config Panel (Top of content) */}
+          <motion.div
+            variants={revealContainer}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="mb-10"
+          >
+            <motion.div variants={revealItem}>
+              <Card className="home-gradient-border-top home-animated-border shadow-md bg-card/60 backdrop-blur-sm">
+                <CardHeader className="pb-3 border-b border-border/40">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Terminal className="h-4 w-4 text-primary" />
+                    Interactive Try-It Configuration
+                  </CardTitle>
+                  <CardDescription>
+                    Configure your API Key to test endpoints directly from the documentation.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-5 bg-muted/10">
+                  <div className="grid lg:grid-cols-2 gap-6">
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 block">
+                        Authentication
+                      </label>
+                      <ApiKeyInput
+                        apiKey={apiKey}
+                        onApiKeyChange={setApiKey}
+                        onValidate={handleValidateApiKey}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 block">
+                        Organization Context
+                      </label>
+                      {orgsFetchFailed ? (
+                        <Input
+                          value={organizationId}
+                          onChange={(e) => setOrganizationId(e.target.value)}
+                          placeholder="Organization UUID"
+                          className="bg-background"
+                          autoComplete="off"
+                          data-1p-ignore
+                          spellCheck={false}
+                        />
+                      ) : (
+                        <Select value={organizationId} onValueChange={setOrganizationId}>
+                          <SelectTrigger className="bg-background">
+                            <SelectValue placeholder="Select an organization…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {userOrgs.map((org) => (
+                              <SelectItem key={org.id} value={org.id}>
+                                {org.name}
+                                <span className="ml-2 text-xs text-muted-foreground font-mono">
+                                  ({org.id.slice(0, 8)}…)
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <p className="text-[11px] text-muted-foreground mt-2">
+                        Required for endpoints that modify organization resources.
+                      </p>
                     </div>
                   </div>
-                  <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                    <code className="rounded bg-muted px-2 py-1 font-mono">
-                      {section.base}
-                    </code>
-                    <Badge variant="secondary" className="font-normal">
-                      {section.endpoints.length}{" "}
-                      {section.endpoints.length === 1 ? "endpoint" : "endpoints"}
-                    </Badge>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+
+          {/* Endpoints List */}
+          {activeSectionData.map((section) => (
+            <div key={section.title} className="mb-20">
+              <div className="mb-8 border-b pb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0">
+                    {section.icon}
                   </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <Accordion type="single" collapsible className="w-full">
-                    {section.endpoints.map((endpoint, index) => (
-                      <AccordionItem
-                        value={`${section.title}-${index}`}
-                        key={`${section.title}-${endpoint.path}-${index}`}
-                        className="border-b last:border-0"
-                      >
-                        <AccordionTrigger className="hover:no-underline">
-                          <div className="flex w-full items-center gap-3 text-left pr-4">
+                  <h2 className="text-3xl font-bold tracking-tight">{section.title}</h2>
+                </div>
+                <p className="text-muted-foreground text-lg max-w-3xl leading-relaxed mt-4">
+                  {section.description}
+                </p>
+                <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Base URL:</span>
+                  <code className="rounded-md bg-muted px-2.5 py-1 font-mono font-medium text-foreground">
+                    {section.base}
+                  </code>
+                </div>
+              </div>
+
+              <div className="space-y-12">
+                {section.endpoints.map((endpoint, index) => {
+                  const endpointKey = `${section.title}-${endpoint.path}-${index}`;
+                  return (
+                    <Card
+                      key={endpointKey}
+                      className="overflow-hidden shadow-sm border-border transition-all hover:shadow-md bg-card/40"
+                      id={`endpoint-${index}`}
+                    >
+                      <CardHeader className="bg-muted/30 border-b p-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-3 flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-3">
                             <Badge
-                              variant="outline"
-                              className={`min-w-[4.5rem] justify-center font-mono text-xs font-semibold ${methodStyles[endpoint.method] ??
-                                methodStyles.DEFAULT
-                                }`}
+                              className={`text-xs px-2.5 py-0.5 rounded-md shadow-sm ${
+                                methodStyles[endpoint.method] ?? methodStyles.DEFAULT
+                              }`}
                             >
                               {endpoint.method}
                             </Badge>
-                            <div className="flex flex-1 flex-col gap-1 min-w-0">
-                              <code className="font-semibold text-sm truncate">
-                                {endpoint.path}
-                              </code>
-                              <span className="text-xs text-muted-foreground line-clamp-1">
-                                {endpoint.description}
-                              </span>
-                            </div>
-                            {endpoint.auth && (
-                              <Lock className="h-4 w-4 text-amber-600 shrink-0" />
-                            )}
-                            {endpoint.admin && (
-                              <Shield className="h-4 w-4 text-red-600 shrink-0" />
-                            )}
+                            <code className="text-base sm:text-lg font-mono font-bold break-all">
+                              {endpoint.path}
+                            </code>
                           </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pt-4">
-                          <Tabs
-                            defaultValue={
-                              endpoint.body
-                                ? "request"
-                                : endpoint.response
-                                  ? "response"
-                                  : "curl"
-                            }
-                          >
-                            <TabsList className="grid w-full grid-cols-3 mb-4">
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {endpoint.description}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {endpoint.auth && (
+                            <Badge variant="outline" className="text-amber-600 bg-amber-500/5 border-amber-500/20">
+                              <Lock className="w-3 h-3 mr-1.5" /> Auth
+                            </Badge>
+                          )}
+                          {endpoint.admin && (
+                            <Badge variant="outline" className="text-red-600 bg-red-500/5 border-red-500/20">
+                              <Shield className="w-3 h-3 mr-1.5" /> Admin
+                            </Badge>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <Tabs
+                          defaultValue={endpoint.body ? "request" : endpoint.response ? "response" : "tryit"}
+                          className="w-full"
+                        >
+                          <div className="border-b bg-muted/10 px-2 sm:px-5">
+                            <TabsList className="bg-transparent h-12 p-0 space-x-6 sm:space-x-8 rounded-none">
                               {endpoint.body && (
-                                <TabsTrigger value="request">Request</TabsTrigger>
+                                <TabsTrigger
+                                  value="request"
+                                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-1 h-full font-medium"
+                                >
+                                  Request
+                                </TabsTrigger>
                               )}
                               {endpoint.response && (
-                                <TabsTrigger value="response">
+                                <TabsTrigger
+                                  value="response"
+                                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-1 h-full font-medium"
+                                >
                                   Response
                                 </TabsTrigger>
                               )}
-                              <TabsTrigger value="curl">cURL</TabsTrigger>
+                              <TabsTrigger
+                                value="curl"
+                                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-1 h-full font-medium"
+                              >
+                                cURL
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="tryit"
+                                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-1 h-full font-medium text-primary flex items-center gap-1.5"
+                              >
+                                <Play className="w-3.5 h-3.5 fill-current" /> Try It
+                              </TabsTrigger>
                             </TabsList>
-                            {endpoint.body && (
-                              <TabsContent value="request" className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <h4 className="text-sm font-semibold">
-                                    Request Body
-                                  </h4>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      handleCopyJson(
-                                        endpoint.body,
-                                        "Request body",
-                                      )
-                                    }
-                                  >
-                                    <Copy className="mr-2 h-3 w-3" /> Copy
-                                  </Button>
-                                </div>
-                                <ScrollArea className="max-h-96 rounded-lg border bg-muted/30 p-4">
-                                  <pre className="text-xs font-mono leading-relaxed">
-                                    {formatJson(endpoint.body)}
-                                  </pre>
-                                </ScrollArea>
-                              </TabsContent>
-                            )}
-                            {endpoint.response && (
-                              <TabsContent value="response" className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <h4 className="text-sm font-semibold">
-                                    Sample Response
-                                  </h4>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                      handleCopyJson(
-                                        endpoint.response,
-                                        "Response body",
-                                      )
-                                    }
-                                  >
-                                    <Copy className="mr-2 h-3 w-3" /> Copy
-                                  </Button>
-                                </div>
-                                <ScrollArea className="max-h-96 rounded-lg border bg-muted/30 p-4">
-                                  <pre className="text-xs font-mono leading-relaxed">
-                                    {formatJson(endpoint.response)}
-                                  </pre>
-                                </ScrollArea>
-                              </TabsContent>
-                            )}
-                            <TabsContent value="curl" className="space-y-3">
+                          </div>
+
+                          {endpoint.body && (
+                            <TabsContent value="request" className="m-0 p-5 space-y-4 bg-card">
                               <div className="flex items-center justify-between">
-                                <h4 className="text-sm font-semibold">
-                                  cURL Command
-                                </h4>
+                                <h4 className="text-sm font-semibold tracking-tight">Request Payload</h4>
                                 <Button
                                   size="sm"
-                                  variant="outline"
-                                  onClick={() =>
-                                    handleCopy(
-                                      buildCurlCommand(section.base, endpoint),
-                                      "cURL command",
-                                    )
-                                  }
+                                  variant="secondary"
+                                  className="h-7 text-xs"
+                                  onClick={() => handleCopyJson(endpoint.body, "Request body")}
                                 >
-                                  <Copy className="mr-2 h-3 w-3" /> Copy
+                                  <Copy className="mr-2 h-3 w-3" /> Copy JSON
                                 </Button>
                               </div>
-                              <ScrollArea className="max-h-96 rounded-lg border bg-muted/30 p-4">
+                              <ScrollArea className="max-h-[400px] rounded-lg border bg-[#0d1117] text-[#e6edf3] p-4">
                                 <pre className="text-xs font-mono leading-relaxed">
-                                  {buildCurlCommand(section.base, endpoint)}
+                                  {formatJson(endpoint.body)}
                                 </pre>
                               </ScrollArea>
-                              {endpoint.params && (
-                                <div className="rounded-lg bg-muted/50 p-3">
-                                  <p className="text-xs font-medium mb-2">
-                                    Query Parameters:
-                                  </p>
-                                  <pre className="text-xs text-muted-foreground font-mono">
-                                    {formatJson(endpoint.params)}
-                                  </pre>
-                                </div>
-                              )}
                             </TabsContent>
-                          </Tabs>
+                          )}
 
-                          {/* Try It Section */}
-                          <div className="mt-4 pt-4 border-t">
+                          {endpoint.response && (
+                            <TabsContent value="response" className="m-0 p-5 space-y-4 bg-card">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-semibold tracking-tight">Sample Response</h4>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-7 text-xs"
+                                  onClick={() => handleCopyJson(endpoint.response, "Response body")}
+                                >
+                                  <Copy className="mr-2 h-3 w-3" /> Copy JSON
+                                </Button>
+                              </div>
+                              <ScrollArea className="max-h-[400px] rounded-lg border bg-[#0d1117] text-[#e6edf3] p-4">
+                                <pre className="text-xs font-mono leading-relaxed">
+                                  {formatJson(endpoint.response)}
+                                </pre>
+                              </ScrollArea>
+                            </TabsContent>
+                          )}
+
+                          <TabsContent value="curl" className="m-0 p-5 space-y-4 bg-card">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-semibold tracking-tight">cURL Command</h4>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="h-7 text-xs"
+                                onClick={() => handleCopy(buildCurlCommand(section.base, endpoint), "cURL command")}
+                              >
+                                <Copy className="mr-2 h-3 w-3" /> Copy cURL
+                              </Button>
+                            </div>
+                            <ScrollArea className="max-h-[400px] rounded-lg border bg-[#0d1117] text-[#e6edf3] p-4">
+                              <pre className="text-xs font-mono leading-relaxed">
+                                {buildCurlCommand(section.base, endpoint)}
+                              </pre>
+                            </ScrollArea>
+                            {endpoint.params && (
+                              <div className="rounded-lg border bg-muted/30 p-4 mt-4">
+                                <p className="text-xs font-semibold mb-2">Query Parameters:</p>
+                                <pre className="text-xs text-muted-foreground font-mono">
+                                  {formatJson(endpoint.params)}
+                                </pre>
+                              </div>
+                            )}
+                          </TabsContent>
+
+                          <TabsContent value="tryit" className="m-0 p-5 bg-card/50">
                             <RequestBuilder
                               endpoint={endpoint}
                               apiBase={section.base}
@@ -737,24 +666,19 @@ export default function ApiDocs() {
                               requiresAuth={endpoint.auth}
                               isAdmin={isAdmin}
                               endpointAdmin={endpoint.admin}
-                              onExecute={(request) =>
-                                handleExecuteRequest(
-                                  `${section.title}-${endpoint.path}-${index}`,
-                                  request
-                                )
-                              }
-                              isLoading={executingEndpoint === `${section.title}-${endpoint.path}-${index}`}
-                              response={responses.get(`${section.title}-${endpoint.path}-${index}`)}
+                              onExecute={(request) => handleExecuteRequest(endpointKey, request)}
+                              isLoading={executingEndpoint === endpointKey}
+                              response={responses.get(endpointKey)}
                             />
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                          </TabsContent>
+                        </Tabs>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

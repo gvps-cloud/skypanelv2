@@ -176,159 +176,141 @@ export function RequestBuilder({
   }, [endpoint.method, fullUrl, requiresOrganization, organizationId, hasBody, bodyText]);
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full mt-2"
-            disabled={
-              isAdminBlocked ||
-              (requiresAuth && !apiKey) ||
-              missingOrganization
-            }
-        >
-          {isAdminBlocked ? (
-            <>
-              <ShieldAlert className="h-4 w-4 mr-2" />
-              Admin Access Required
-            </>
-          ) : (
-            <>
-              <Play className="h-4 w-4 mr-2" />
-              Try It
-            </>
-          )}
-        </Button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="mt-4 space-y-4">
-        {isAdminBlocked ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950 p-4 text-sm text-red-700 dark:text-red-400">
-            <div className="flex items-center gap-2 font-medium">
-              <ShieldAlert className="h-4 w-4" />
-              Admin Access Required
-            </div>
-            <p className="mt-1 text-red-600 dark:text-red-400/80">
-              This endpoint requires administrator privileges. Contact your platform admin for access.
-            </p>
+    <div className="space-y-4 animate-in fade-in duration-300">
+      {isAdminBlocked ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950 p-4 text-sm text-red-700 dark:text-red-400">
+          <div className="flex items-center gap-2 font-medium">
+            <ShieldAlert className="h-4 w-4" />
+            Admin Access Required
           </div>
-        ) : (
+          <p className="mt-1 text-red-600 dark:text-red-400/80">
+            This endpoint requires administrator privileges. Contact your platform admin for access.
+          </p>
+        </div>
+      ) : (
         <>
-        {/* Method and URL display */}
-        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-          <Badge className={methodStyle}>{endpoint.method}</Badge>
-          <code className="text-sm font-mono flex-1 break-all">{fullUrl}</code>
-        </div>
+          {/* Method and URL display */}
+          <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+            <Badge className={methodStyle}>{endpoint.method}</Badge>
+            <code className="text-sm font-mono flex-1 break-all">{fullUrl}</code>
+          </div>
 
-        {/* Path Parameters */}
-        {hasPathParams && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Path Parameters</Label>
-            <div className="grid gap-2">
-              {pathParams.map((param, index) => (
-                <div key={param.name} className="flex items-center gap-2">
-                  <code className="text-sm text-muted-foreground w-24">:{param.name}</code>
-                  <Input
-                    placeholder={`Enter ${param.name}`}
-                    value={param.value}
-                    onChange={(e) => handlePathParamChange(index, e.target.value)}
-                    className="flex-1"
-                  />
-                </div>
-              ))}
+          {/* Path Parameters */}
+          {hasPathParams && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Path Parameters</Label>
+              <div className="grid gap-2">
+                {pathParams.map((param, index) => (
+                  <div key={param.name} className="flex items-center gap-2">
+                    <code className="text-sm text-muted-foreground w-28 text-right">:{param.name}</code>
+                    <Input
+                      placeholder={`Enter ${param.name}`}
+                      value={param.value}
+                      onChange={(e) => handlePathParamChange(index, e.target.value)}
+                      className="flex-1"
+                      autoComplete="off"
+                      data-1p-ignore
+                      spellCheck={false}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Query Parameters */}
-        {hasQueryParams && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Query Parameters</Label>
-            <div className="grid gap-2">
-              {Object.entries(queryParams).map(([key, value]) => (
-                <div key={key} className="flex items-center gap-2">
-                  <code className="text-sm text-muted-foreground w-24">{key}</code>
-                  <Input
-                    placeholder={key}
-                    value={value}
-                    onChange={(e) => handleQueryParamChange(key, e.target.value)}
-                    className="flex-1"
-                  />
-                </div>
-              ))}
+          {/* Query Parameters */}
+          {hasQueryParams && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Query Parameters</Label>
+              <div className="grid gap-2">
+                {Object.entries(queryParams).map(([key, value]) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <code className="text-sm text-muted-foreground w-28 text-right">{key}</code>
+                    <Input
+                      placeholder={key}
+                      value={value}
+                      onChange={(e) => handleQueryParamChange(key, e.target.value)}
+                      className="flex-1"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Request Body */}
-        {hasBody && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Request Body (JSON)</Label>
-            <Textarea
-              placeholder='{"key": "value"}'
-              value={bodyText}
-              onChange={handleBodyChange}
-              className="font-mono text-sm min-h-[120px]"
-            />
-          </div>
-        )}
+          {/* Request Body */}
+          {hasBody && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Request Body (JSON)</Label>
+              <Textarea
+                placeholder='{"key": "value"}'
+                value={bodyText}
+                onChange={handleBodyChange}
+                className="font-mono text-sm min-h-[160px] resize-y"
+              />
+            </div>
+          )}
 
-        {/* Action buttons */}
-        <div className="flex gap-2">
-          <Button
-            onClick={handleExecute}
-            disabled={isLoading || (requiresAuth && !apiKey) || missingOrganization}
-            className="flex-1"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Executing...
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Execute Request
-              </>
+          {/* Action buttons */}
+          <div className="flex gap-3 pt-2">
+            <Button
+              onClick={handleExecute}
+              disabled={isLoading || (requiresAuth && !apiKey) || missingOrganization}
+              className="flex-1"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Executing...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2 fill-current" />
+                  Execute Request
+                </>
+              )}
+            </Button>
+            <Button variant="outline" onClick={handleCopyCurl} title="Copy cURL">
+              {copied ? (
+                <Check className="h-4 w-4 text-emerald-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+
+          {/* Warnings */}
+          <div className="space-y-1 mt-2">
+            {!apiKey && requiresAuth && (
+              <p className="text-xs font-medium flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
+                <ShieldAlert className="h-3.5 w-3.5" /> This endpoint requires authentication. Enter an API key in the configuration panel.
+              </p>
             )}
-          </Button>
-          <Button variant="outline" onClick={handleCopyCurl}>
-            {copied ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <Copy className="h-4 w-4" />
+            {missingOrganization && (
+              <p className="text-xs font-medium flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
+                <ShieldAlert className="h-3.5 w-3.5" /> This endpoint requires an Organization ID. Select one in the configuration panel.
+              </p>
             )}
-          </Button>
-        </div>
-
-        {!apiKey && requiresAuth && (
-          <p className="text-sm text-amber-600 dark:text-amber-500">
-            ⚠️ This endpoint requires authentication. Please enter your API key above.
-          </p>
-        )}
-        {missingOrganization && (
-          <p className="text-sm text-amber-600 dark:text-amber-500">
-            ⚠️ This endpoint requires an organization context. Enter Organization ID above.
-          </p>
-        )}
-
-        {/* Inline Response Viewer - shows response directly below the executed endpoint */}
-        {response && (response.status !== null || response.error) && (
-          <div className="mt-4 pt-4 border-t">
-            <h4 className="text-sm font-semibold mb-3">Response</h4>
-            <ResponseViewer
-              status={response.status}
-              statusText={response.statusText}
-              duration={response.duration}
-              data={response.data}
-              error={response.error}
-              headers={response.headers}
-            />
           </div>
-        )}
+
+          {/* Inline Response Viewer */}
+          {response && (response.status !== null || response.error) && (
+            <div className="mt-6 pt-6 border-t border-border">
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary" /> Response Result
+              </h4>
+              <ResponseViewer
+                status={response.status}
+                statusText={response.statusText}
+                duration={response.duration}
+                data={response.data}
+                error={response.error}
+                headers={response.headers}
+              />
+            </div>
+          )}
         </>
-        )}
-      </CollapsibleContent>
-    </Collapsible>
+      )}
+    </div>
   );
 }

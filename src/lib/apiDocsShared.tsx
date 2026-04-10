@@ -428,7 +428,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Refresh the JWT token for authenticated session.",
             auth: true,
-            response: {
+            
+            body: {}, response: {
               token: "new_jwt_token",
               user: {
                 id: "user_123",
@@ -441,7 +442,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/me",
             description: "Get currently authenticated user information.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               user: {
                 id: "user_123",
@@ -470,7 +472,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/logout",
             description: "End user session (client-side token removal).",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "Logged out successfully",
@@ -536,7 +539,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/api-keys",
             description: "List API keys scoped to the authenticated user.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               apiKeys: [
                 {
@@ -570,7 +574,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/api-keys/:id",
             description: "Revoke an API key immediately.",
-            auth: true,
+            
+            
+            body: {}, auth: true,
             response: {
               message: "API key revoked successfully",
             },
@@ -623,7 +629,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/2fa/setup",
             description: "Initialize 2FA setup and return QR code URI for authenticator apps.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               qrCodeUri: `otpauth://totp/${BRAND_NAME}:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=${BRAND_NAME}`,
@@ -725,7 +732,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Capture a PayPal payment after the customer approves the order.",
             auth: true,
-            response: {
+            
+            body: {}, response: {
               success: true,
               paymentId: "PAYID-MOCK123",
             },
@@ -736,7 +744,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Fetch the PayPal client configuration (client ID, mode, allowed funding sources).",
             auth: true,
-            response: {
+            
+            
+            params: {}, response: {
               success: true,
               config: {
                 clientId: "PAYPAL_CLIENT_ID",
@@ -754,7 +764,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Return the user's wallet balance used to provision VPS resources.",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               balance: 245.67,
               currency: "USD",
               updatedAt: "2026-10-26T15:00:00Z",
@@ -828,7 +839,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Detailed view of a single payment transaction used by the transaction drawer.",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               transaction: {
                 id: "txn_001",
                 amount: 100,
@@ -869,7 +881,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Aggregated spend metrics displayed on the billing overview cards.",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               success: true,
               summary: {
                 totalSpentThisMonth: 320.5,
@@ -894,6 +907,12 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "List invoices for the user with pagination information.",
             auth: true,
+            
+            
+            
+            
+            
+            
             params: { limit: 50, offset: 0 },
             response: {
               invoices: [
@@ -914,7 +933,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Retrieve a single invoice record for detailed display.",
             auth: true,
-            response: {
+            
+            
+            params: {}, response: {
               invoice: {
                 id: "inv_001",
                 invoiceNumber: "INV-2026-001",
@@ -938,7 +959,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Download the generated PDF for an invoice (requires authenticated fetch).",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               contentType: "application/pdf",
               body: "<binary stream>",
             },
@@ -949,7 +971,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Generate an invoice artifact from a historical payment transaction.",
             auth: true,
-            response: {
+            
+            body: {}, response: {
               success: true,
               invoiceId: "inv_001",
               invoiceNumber: "INV-2026-001",
@@ -975,7 +998,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Create invoice from VPS billing cycles with itemized backup costs.",
             auth: true,
-            params: { startDate: "2026-10-01", endDate: "2026-10-31" },
+            
+            body: {}, params: { startDate: "2026-10-01", endDate: "2026-10-31" },
             response: {
               success: true,
               invoiceId: "inv_003",
@@ -1095,7 +1119,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/:id/boot",
             description: "Power on a stopped VPS instance.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "VPS boot initiated",
@@ -1105,7 +1130,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/:id/shutdown",
             description: "Gracefully shut down a running VPS instance.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "VPS shutdown initiated",
@@ -1115,7 +1141,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/:id/reboot",
             description: "Reboot a VPS instance.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "VPS reboot initiated",
@@ -1145,6 +1172,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Delete a VPS instance (requires password confirmation).",
             auth: true,
+            
             body: {
               password: "Sup3rSecure!",
             },
@@ -1157,7 +1185,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/:id/notes",
             description: "Get notes/description for a VPS instance.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               notes: "Production web server",
             },
@@ -1182,7 +1211,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Get VPS uptime summary for billing calculations.",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               success: true,
               data: {
                 totalActiveHours: 985.4,
@@ -1215,7 +1245,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Enable provider-managed backups for the VPS instance.",
             auth: true,
-            response: {
+            
+            body: {}, response: {
               success: true,
               message: "Backups enabled",
             },
@@ -1224,7 +1255,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/:id/backups/disable",
             description: "Disable recurring backups on the VPS instance.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "Backups disabled",
@@ -1301,7 +1333,10 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "List configured cloud providers available to the tenant.",
             auth: true,
-            response: {
+            
+            
+            
+            params: {}, response: {
               providers: [{ id: "provider_001", name: "Primary Provider", type: "cloud" }],
             },
           },
@@ -1311,7 +1346,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Fetch regions for a specific provider, merged across admin-configured accounts.",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               regions: [
                 { id: "us-east", label: "Newark, NJ", country: "US" },
                 { id: "eu-west", label: "Frankfurt", country: "DE" },
@@ -1324,7 +1360,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "List VPS plans (CPU, RAM, disk, transfer, pricing) used on the create VPS screen.",
             auth: true,
-            response: {
+            
+            
+            params: {}, response: {
               plans: [
                 {
                   id: "g6-standard-2",
@@ -1391,7 +1429,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/apps",
             description: "Get available One-Click Apps for VPS deployment.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               apps: [
                 { id: "wordpress", name: "WordPress", description: "Popular CMS" },
@@ -1403,7 +1442,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/providers/:providerId/plans/:regionId",
             description: "Get available VPS plans for a specific provider and region combination.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               plans: [
                 { id: "g6-standard-1", label: "Nanode 1GB", available: true },
@@ -1425,7 +1465,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Return platform-wide networking defaults such as the base rDNS domain.",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               config: {
                 rdns_base_domain: "example.sky.network",
               },
@@ -1494,7 +1535,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/:keyId",
             description: "Remove an SSH key from the authenticated organization.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "SSH key 'Work Laptop' deleted successfully",
@@ -1515,7 +1557,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/credits",
             description: "Get current egress credit balance for the user's organization.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               credits: {
                 balance: 500,
@@ -1529,7 +1572,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/credits/history",
             description: "Get purchase history for egress credits.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               history: [
                 {
@@ -1545,7 +1589,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/credits/packs",
             description: "Get available egress credit packs for purchase.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               packs: [
                 { id: "pack_100gb", name: "100GB", amount: 100, price: 10 },
@@ -1575,7 +1620,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/credits/wallet-balance",
             description: "Get wallet balance available for egress credit purchase.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               balance: 245.67,
               currency: "USD",
@@ -1608,7 +1654,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/usage/:vpsId",
             description: "Get hourly egress usage readings for a specific VPS.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               readings: [
                 {
@@ -1624,7 +1671,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/usage/:vpsId/summary",
             description: "Get summarized egress usage for a VPS (totals, averages).",
-            auth: true,
+            params: {}, auth: true,
             response: {
               summary: {
                 vpsId: "vps_001",
@@ -1665,7 +1712,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/all",
             description: "List all organizations (admin/super-admin only).",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               organizations: [
                 {
@@ -1697,7 +1745,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/:id/members",
             description: "List members of an organization.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               members: [
                 {
@@ -1730,7 +1779,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/:id/members/:userId",
             description: "Remove a member from an organization.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
             },
@@ -1739,6 +1789,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "PUT",
             path: "/:id/members/:userId",
             description: "Update a member's role in an organization.",
+            
             auth: true,
             body: {
               role: "admin",
@@ -1770,7 +1821,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/:id/invitations",
             description: "List pending invitations for an organization.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               invitations: [
                 {
@@ -1786,7 +1838,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/:id/roles",
             description: "List available roles for an organization.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               roles: [
                 { id: "owner", name: "Owner", permissions: ["*"] },
@@ -1836,7 +1889,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/:id/roles/:roleId",
             description: "Delete a custom organization role.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               message: "Role deleted successfully",
             },
@@ -1845,7 +1899,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/resources",
             description: "Get aggregated resource usage across all organizations the user has access to.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               resources: {
                 vpsCount: 10,
@@ -1859,7 +1914,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/invitations/:token",
             description: "Get details of a pending invitation by token.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               invitation: {
                 id: "inv_001",
@@ -1873,7 +1929,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/invitations/:token/accept",
             description: "Accept an organization invitation.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "Invitation accepted",
@@ -1883,7 +1940,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/invitations/:token/decline",
             description: "Decline an organization invitation.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "Invitation declined",
@@ -1893,7 +1951,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/invitations/:id",
             description: "Cancel a pending invitation.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               message: "Invitation cancelled successfully",
             },
@@ -1902,7 +1961,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/:id/egress",
             description: "Get egress data for an organization.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               egress: {
                 totalUsed: 125.5,
@@ -1914,7 +1974,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/:id/egress/credits",
             description: "Get egress credit balance for an organization.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               credits: {
                 balance: 500,
@@ -1928,7 +1989,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/:id/egress/credits/packs",
             description: "Get available egress credit packs for purchase.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               packs: [
                 { id: "pack_100gb", name: "100GB", amount: 100, price: 10 },
@@ -2029,7 +2091,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/summary",
             description: "Get activity summary counts by type and status.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               summary: {
                 total: 150,
@@ -2083,7 +2146,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "PUT",
             path: "/:id/read",
             description: "Mark a specific activity item as read.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               message: "Activity marked as read",
             },
@@ -2111,7 +2175,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "PUT",
             path: "/read-all",
             description: "Mark all activity items as read for the authenticated user.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               message: "All activities marked as read",
             },
@@ -2120,7 +2185,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/unread-count",
             description: "Get the count of unread activity items for the authenticated user.",
-            auth: true,
+            
+            
+            params: {}, auth: true,
             response: {
               count: 5,
             },
@@ -2140,7 +2207,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "List support tickets created by the authenticated organization.",
             auth: true,
-            response: {
+            
+            
+            params: {}, response: {
               tickets: [
                 {
                   id: "ticket_001",
@@ -2180,7 +2249,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Fetch threaded replies for a ticket when opening the detail drawer.",
             auth: true,
-            response: {
+            
+            
+            params: {}, response: {
               replies: [
                 {
                   id: "reply_001",
@@ -2228,7 +2299,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/tickets/:id",
             description: "Delete a support ticket (admin or owner only).",
-            auth: true,
+            
+            
+            body: {}, auth: true,
             response: {
               message: "Ticket deleted successfully",
               ticket_id: "ticket_001",
@@ -2313,7 +2386,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/tickets/:id/replies/:replyId",
             description: "Delete a reply from a ticket.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               message: "Reply deleted successfully",
               reply_id: "reply_001",
@@ -2383,7 +2457,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "PATCH",
             path: "/:id/read",
             description: "Mark a notification as read after the user opens it.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "Notification marked as read",
@@ -2393,7 +2468,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "PATCH",
             path: "/read-all",
             description: "Mark every notification as read.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "3 notification(s) marked as read",
@@ -2429,7 +2505,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "List users in the tenant including role, status, and MFA state.",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               users: [
                 {
                   id: "user_123",
@@ -2463,7 +2540,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Start an impersonation session as the target user (admin only).",
             auth: true,
-            response: {
+            
+            body: {}, response: {
               success: true,
               token: "impersonation_jwt",
             },
@@ -2474,7 +2552,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "End an active impersonation session and restore the admin's identity.",
             auth: true,
-            response: {
+            
+            body: {}, response: {
               adminToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
               admin: {
                 id: "user_123",
@@ -2565,7 +2644,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "List FAQ categories surfaced on the public marketing site.",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               categories: [
                 {
                   id: "cat_general",
@@ -2613,7 +2693,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/faq/categories/:id",
             description: "Remove a category (questions must be moved first).",
-            auth: true,
+            
+            body: {}, auth: true,
             response: null,
           },
           {
@@ -2630,7 +2711,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/faq/items",
             description: "List FAQ entries and their content.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               items: [
                 {
@@ -2674,7 +2756,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/faq/items/:id",
             description: "Delete an FAQ item.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: null,
           },
           {
@@ -2693,7 +2776,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Changelog/updates entries surfaced on marketing pages.",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               updates: [
                 {
                   id: "update_001",
@@ -2734,7 +2818,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/faq/updates/:id",
             description: "Delete a changelog entry.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: null,
           },
           {
@@ -2753,7 +2838,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "List support contact categories (used on contact page).",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               categories: [{ id: "sales", label: "Sales", is_enabled: true }],
             },
           },
@@ -2789,7 +2875,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/contact/categories/:id",
             description: "Delete a contact category.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: null,
           },
           {
@@ -2818,7 +2905,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Retrieve available contact methods (email, phone, chat).",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               methods: {
                 email: { is_enabled: true, address: "support@example.com" },
                 phone: { is_enabled: false },
@@ -2840,7 +2928,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/contact/methods/:method_type",
             description: "Get a specific contact method configuration.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               method: { type: "email", is_enabled: true, address: "support@example.com" },
             },
@@ -2861,7 +2950,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Return provider regions with admin-specific metadata (availability, visibility).",
             auth: true,
-            response: {
+            
+            
+            params: {}, response: {
               regions: [{ id: "us-east", label: "Newark, NJ", enabled: true }],
             },
           },
@@ -2869,7 +2960,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/rate-limits/overrides",
             description: "List rate limit overrides applied to specific users.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               overrides: [{ userId: "user_123", window: 60, maxRequests: 120 }],
             },
@@ -2899,7 +2991,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/rate-limits/overrides/:userId",
             description: "Remove a rate limit override.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "Rate limit override deleted",
@@ -2911,7 +3004,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Return global maintenance mode / availability settings displayed on the status page.",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               availability: {
                 status: "operational",
                 message: "All systems operational",
@@ -2948,7 +3042,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/platform/region-labels",
             description: "Get custom display labels for provider regions (white-labeling).",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               regionLabels: [
                 { regionId: "us-east", label: "US East (Newark)", displayOrder: 1 },
@@ -2960,7 +3055,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/platform/region-labels/:regionId",
             description: "Get the custom label for a specific region.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               regionLabel: {
                 regionId: "us-east",
@@ -2988,7 +3084,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/platform/region-labels/:regionId",
             description: "Remove a custom region label (reverts to default).",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               message: "Region label removed",
@@ -3020,7 +3117,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Retrieve theming configuration (colors, logos) for the tenant.",
             auth: true,
-            response: {
+            
+            params: {}, response: {
               theme: {
                 primary: "#2563eb",
                 accent: "#9333ea",
@@ -3055,7 +3153,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/billing/stats",
             description: "Get billing statistics across all organizations.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               stats: {
                 totalRevenue: 45230.5,
@@ -3110,7 +3209,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/billing/transactions/:transactionId/invoice",
             description: "Generate an invoice from a billing transaction.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               invoiceId: "inv_001",
@@ -3175,7 +3275,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/billing/invoices/:id",
             description: "Get details of a specific invoice.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               invoice: {
                 id: "inv_001",
@@ -3189,7 +3290,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/billing/invoices/:id/download",
             description: "Download invoice PDF.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               contentType: "application/pdf",
               body: "<binary stream>",
@@ -3199,7 +3301,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/category-mappings",
             description: "List all VPS category mappings for white-labeling.",
-            auth: true,
+            
+            
+            params: {}, auth: true,
             response: {
               categoryMappings: [
                 { id: "cat_001", providerCategory: "Nanode 1GB", displayName: "Starter VPS", displayOrder: 1, isEnabled: true },
@@ -3218,7 +3322,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/category-mappings/:id",
             description: "Get a specific category mapping.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: { categoryMapping: { id: "cat_001", providerCategory: "Nanode 1GB", displayName: "Starter VPS" } },
           },
           {
@@ -3245,14 +3350,16 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/category-mappings/:id",
             description: "Delete a category mapping.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: null,
           },
           {
             method: "GET",
             path: "/category-mappings/enabled",
             description: "List only enabled category mappings.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: { categoryMappings: [{ id: "cat_001", displayName: "Starter VPS" }] },
           },
           {
@@ -3281,14 +3388,16 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/category-mappings/sync",
             description: "Sync category mappings from provider.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: { success: true, synced: 15 },
           },
           {
             method: "GET",
             path: "/email-templates",
             description: "List all email templates.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               templates: [{ name: "welcome", subject: `Welcome to ${BRAND_NAME}` }],
             },
@@ -3297,7 +3406,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/email-templates/:name",
             description: "Get a specific email template content.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               template: { name: "welcome", subject: `Welcome to ${BRAND_NAME}`, body: "<html>...</html>" },
             },
@@ -3331,7 +3441,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/github/commits",
             description: "Get recent commits from the platform GitHub repository.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               commits: [{ sha: "abc123", message: "Fix bug", author: "dev", date: "2026-10-26T10:00:00Z" }],
             },
@@ -3340,7 +3451,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/documentation/categories",
             description: "List all documentation categories.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               categories: [
                 { id: "cat_001", name: "Getting Started", slug: "getting-started", displayOrder: 1 },
@@ -3375,7 +3487,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/documentation/categories/:id",
             description: "Delete a documentation category.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: { success: true, message: "Category deleted" },
           },
           {
@@ -3390,7 +3503,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/documentation/articles",
             description: "List all documentation articles.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               articles: [
                 { id: "art_001", title: "Quick Start", slug: "quick-start", categoryId: "cat_001" },
@@ -3412,7 +3526,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/documentation/articles/:id",
             description: "Get a specific documentation article.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               article: { id: "art_001", title: "Quick Start", content: "Full content..." },
             },
@@ -3432,7 +3547,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/documentation/articles/:id",
             description: "Delete a documentation article.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: { success: true, message: "Article deleted" },
           },
           {
@@ -3458,14 +3574,16 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/documentation/files/:id",
             description: "Delete a file attachment.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: { success: true, message: "File deleted" },
           },
           {
             method: "GET",
             path: "/ssh-keys",
             description: "List all SSH keys across all organizations (admin view).",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               sshKeys: [
                 { id: "ssh_001", name: "Work Laptop", organizationId: "org_001", fingerprint: "SHA256:abcd..." },
@@ -3476,7 +3594,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/ssh-keys/:keyId",
             description: "Get details of a specific SSH key.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               sshKey: { id: "ssh_001", name: "Work Laptop", publicKey: "ssh-ed25519 AAAA...", organizationId: "org_001" },
             },
@@ -3496,14 +3615,16 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/ssh-keys/:keyId",
             description: "Delete an SSH key (admin override).",
-            auth: true,
+            
+            body: {}, auth: true,
             response: { success: true, message: "SSH key deleted" },
           },
           {
             method: "GET",
             path: "/networking/rdns",
             description: "Get platform-wide reverse DNS configuration.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               rdns: { baseDomain: "example.sky.network", enabled: true },
             },
@@ -3527,7 +3648,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/organizations",
             description: "List all organizations on the platform.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               organizations: [{ id: "org_001", name: "Acme Corp", memberCount: 5 }],
             },
@@ -3561,7 +3683,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/organizations/:id",
             description: "Delete an organization.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: null,
           },
           {
@@ -3596,7 +3719,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/organizations/:id/members/:userId",
             description: "Remove a member from an organization.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               message: "Member removed",
               memberId: "user_456",
@@ -3641,7 +3765,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/plans/:id",
             description: "Delete a VPS plan.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: null,
           },
           {
@@ -3684,7 +3809,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/providers/:id",
             description: "Remove a provider.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: null,
           },
           {
@@ -3713,7 +3839,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/providers/:id/validate",
             description: "Validate provider credentials.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: { valid: true, message: "Credentials are valid" },
           },
           {
@@ -3734,7 +3861,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/servers",
             description: "Get list of infrastructure servers.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               servers: [{ id: "srv_001", hostname: "node1", status: "online", provider: "provider_001" }],
             },
@@ -3743,7 +3871,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/stackscripts/configs",
             description: "List curated StackScript configurations.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               configs: [{ id: 12345, label: "LAMP Stack", description: "Linux Apache MySQL PHP" }],
             },
@@ -3777,7 +3906,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/stackscripts/configs/:id",
             description: "Delete a StackScript configuration.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: null,
           },
           {
@@ -3801,7 +3931,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/upstream/plans",
             description: "Fetch available plans from upstream provider.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               plans: [{ id: "g6-standard-1", label: "Nanode 1GB", price: { hourly: 0.0075 } }],
             },
@@ -3810,7 +3941,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/upstream/regions",
             description: "Fetch available regions from upstream provider.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               regions: [{ id: "us-east", label: "Newark, NJ" }],
             },
@@ -3819,7 +3951,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/upstream/stackscripts",
             description: "Fetch available StackScripts from upstream provider.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               stackscripts: [{ id: 12345, label: "My Script" }],
             },
@@ -3828,7 +3961,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/users/:id",
             description: "Get a specific user by ID.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               user: { id: "user_123", email: "user@example.com", role: "user", status: "active" },
             },
@@ -3837,7 +3971,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/users/:id/detail",
             description: "Get detailed user information including billing and VPS summary.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               user: {
                 id: "user_123",
@@ -3861,14 +3996,16 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/users/:id",
             description: "Delete a user account.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: null,
           },
           {
             method: "GET",
             path: "/egress/pricing",
             description: "Get current egress pricing configuration.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               pricing: { basePricePerGB: 0.01, regions: [{ id: "us-east", pricePerGB: 0.008 }] },
             },
@@ -3877,7 +4014,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/egress/pricing/sync",
             description: "Sync egress pricing from upstream provider.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: { success: true, synced: true },
           },
           {
@@ -3899,7 +4037,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/egress/live-usage",
             description: "Get live egress usage across all organizations.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               usage: [{ organizationId: "org_001", currentUsageGB: 125.5, poolQuotaGB: 1000 }],
             },
@@ -3946,7 +4085,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/status",
             description: "Public platform status with VPS counts.",
-            auth: false,
+            
+            params: {}, auth: false,
             response: {
               status: "operational",
               vpsStats: { running: 150, stopped: 20, provisioning: 5 },
@@ -3957,7 +4097,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/detailed",
             description: "Detailed health check with rate limiting info.",
-            auth: false,
+            
+            params: {}, auth: false,
             response: {
               health: "ok",
               rateLimiting: { status: "healthy" },
@@ -3967,7 +4108,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/stats",
             description: "VPS infrastructure metrics.",
-            auth: false,
+            
+            params: {}, auth: false,
             response: {
               totalInstances: 175,
               byStatus: { running: 150, stopped: 20 },
@@ -3977,7 +4119,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/platform-stats",
             description: "All-time platform statistics for about page.",
-            auth: false,
+            
+            params: {}, auth: false,
             response: {
               totalVPS: 500,
 
@@ -4004,7 +4147,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Detailed rate limit performance and current throttle states.",
             auth: false,
-            response: {
+            
+            params: {}, response: {
               activeRules: [
                 { route: "/api/vps", limit: 60, window: 60, current: 15 },
               ],
@@ -4014,7 +4158,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/config-validation",
             description: "Validate platform configuration and environment variables.",
-            auth: false,
+            
+            params: {}, auth: false,
             response: {
               valid: true,
               checks: [{ name: "database", status: "ok" }, { name: "redis", status: "ok" }],
@@ -4089,7 +4234,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/categories",
             description: "Get FAQ categories for the public marketing site.",
-            auth: false,
+            
+            
+            params: {}, auth: false,
             response: {
               categories: [
                 { id: "cat_001", name: "General", displayOrder: 1, itemCount: 10 },
@@ -4100,7 +4247,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/updates",
             description: "Get platform update changelog entries.",
-            auth: false,
+            
+            params: {}, auth: false,
             response: {
               updates: [
                 { id: "update_001", title: "New VPS Features", content: "Added backup scheduling", displayOrder: 1 },
@@ -4132,7 +4280,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/public-regions",
             description: "Get available public regions with pricing.",
-            auth: false,
+            
+            params: {}, auth: false,
             response: {
               regions: [
                 { id: "us-east", label: "Newark, NJ", country: "US", available: true },
@@ -4166,7 +4315,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/vps",
             description: "Get public VPS pricing information.",
-            auth: false,
+            
+            params: {}, auth: false,
             response: {
               plans: [
                 { id: "g6-standard-1", label: "Nanode 1GB", price: { monthly: 4.99 } },
@@ -4196,7 +4346,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/categories/:slug",
             description: "Get a specific documentation category by slug with articles.",
-            auth: false,
+            
+            params: {}, auth: false,
             response: {
               category: {
                 id: "cat_001",
@@ -4210,7 +4361,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/articles/:slug",
             description: "Get a specific documentation article by slug.",
-            auth: false,
+            
+            params: {}, auth: false,
             response: {
               article: {
                 id: "art_001",
@@ -4225,7 +4377,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/files/:id",
             description: "Download a documentation file attachment.",
-            auth: false,
+            
+            params: {}, auth: false,
             response: {
               contentType: "image/png",
               body: "<binary stream>",
@@ -4243,7 +4396,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/billing/run",
             description: "Manually trigger hourly egress billing run for all organizations.",
-            auth: true,
+            
+            body: {}, auth: true,
             response: {
               success: true,
               processed: 45,
@@ -4254,7 +4408,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/credits/:orgId/balance",
             description: "Get egress credit balance for a specific organization.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               organizationId: "org_001",
               balance: 500,
@@ -4289,7 +4444,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/settings/packs",
             description: "Get configured egress credit packs for purchase.",
-            auth: true,
+            
+            params: {}, auth: true,
             response: {
               packs: [
                 { id: "pack_100gb", name: "100GB", amount: 100, price: 10, pricePerGB: 0.10 },

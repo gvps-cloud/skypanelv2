@@ -109,6 +109,9 @@ export function ApiKeyInput({ apiKey, onApiKeyChange, onValidate }: ApiKeyInputP
             value={apiKey}
             onChange={handleKeyChange}
             className="pr-10 font-mono text-sm"
+            autoComplete="new-password"
+            data-1p-ignore
+            spellCheck={false}
           />
           <Button
             type="button"
