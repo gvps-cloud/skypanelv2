@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/popover";
 import {
   Activity,
+  Building2,
   CreditCard,
   FileText,
   HelpCircle,
@@ -58,6 +59,7 @@ import {
   Settings,
   Sun,
   Users,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 import { generateBreadcrumbs } from "@/lib/breadcrumbs";
@@ -516,6 +518,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         requiresAlt: true,
       },
       {
+        icon: Building2,
+        label: "Organizations",
+        href: "/organizations",
+        shortcut: isMac ? "⌥O" : "Alt+O",
+        shortcutKey: "o",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
         icon: Key,
         label: "SSH Keys",
         href: "/ssh-keys",
@@ -548,6 +559,24 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         href: "/support",
         shortcut: isMac ? "⌥U" : "Alt+U",
         shortcutKey: "u",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: BookOpen,
+        label: "API Docs",
+        href: "/api-docs",
+        shortcut: isMac ? "⌥P" : "Alt+P",
+        shortcutKey: "p",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: FileText,
+        label: "Documentation",
+        href: "/docs",
+        shortcut: isMac ? "⌥M" : "Alt+M",
+        shortcutKey: "m",
         requiresShift: false,
         requiresAlt: true,
       },
