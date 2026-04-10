@@ -401,18 +401,28 @@ function SocialProof() {
   });
 
   const orgInitials = useMemo(() => {
+    const fallbackInitials =
+      BRAND_NAME.trim().substring(0, 2).toUpperCase() || "??";
+
     if (orgData?.organizations?.length > 0) {
       return orgData.organizations
         .slice(0, 3)
         .map((org: { name: string }) => {
-          const words = org.name.split(' ');
-          const initials = words.length > 1
-            ? words[0][0] + words[1][0]
-            : org.name.substring(0, 2);
-          return initials.toUpperCase();
+          const name = (org.name || '').trim();
+
+          if (!name) {
+            return fallbackInitials;
+          }
+
+          const words = name.split(/\s+/).filter(Boolean);
+          if (words.length > 1 && words[0]?.[0] && words[1]?.[0]) {
+            return `${words[0][0]}${words[1][0]}`.toUpperCase();
+          }
+
+          return (name.substring(0, 2) || fallbackInitials).toUpperCase();
         });
     }
-    return [BRAND_NAME.substring(0, 2).toUpperCase()];
+    return [fallbackInitials];
   }, [orgData]);
 
   return (
@@ -1249,24 +1259,34 @@ export default function HomeRedesign() {
                 aria-hidden
               />
 
-              <SocialProof />
+              <div className="relative z-10 space-y-6">
+                <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+                  Ready to launch your server?
+                </h2>
+                <p className="mx-auto max-w-xl text-lg text-muted-foreground">
+                  Create your account, add funds, and deploy a high-performance
+                  Linux VPS in less than a minute.
+                </p>
 
-              <div className="flex flex-col justify-center gap-4 sm:flex-row">
-                <Button
-                  size="lg"
-                  className="h-12 px-8 text-base home-btn-glow"
-                  asChild
-                >
-                  <Link to="/register">Create Account</Link>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="h-12 px-8 text-base border border-border/40"
-                  asChild
-                >
-                  <Link to="/pricing">View Pricing</Link>
-                </Button>
+                <SocialProof />
+
+                <div className="flex flex-col justify-center gap-4 sm:flex-row">
+                  <Button
+                    size="lg"
+                    className="h-12 px-8 text-base home-btn-glow"
+                    asChild
+                  >
+                    <Link to="/register">Create Account</Link>
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="h-12 px-8 text-base border border-border/40"
+                    asChild
+                  >
+                    <Link to="/pricing">View Pricing</Link>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

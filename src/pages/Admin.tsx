@@ -1546,6 +1546,9 @@ const Admin: React.FC = () => {
       case "documentation":
         // Documentation manager handles its own data fetching
         break;
+      case "activity-log":
+        // Activity log handles its own data fetching
+        break;
       default:
         fetchTickets();
         break;

@@ -99,10 +99,24 @@ const AdminActivityLog: React.FC = () => {
       const res = await fetch(buildApiUrl("/api/admin/organizations"), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) {
-        const data = await res.json();
-        setOrganizations(data.organizations || []);
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type") || "";
+
+        if (contentType.includes("application/json")) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(
+            errorData.error || `Failed to fetch organizations: HTTP ${res.status}`
+          );
+        }
+
+        const errorText = await res.text().catch(() => "");
+        throw new Error(
+          errorText || `Failed to fetch organizations: HTTP ${res.status}`
+        );
       }
+
+      const data = await res.json();
+      setOrganizations(data.organizations || []);
     } catch (err) {
       console.error("Failed to fetch organizations:", err);
     }
@@ -119,10 +133,15 @@ const AdminActivityLog: React.FC = () => {
             buildApiUrl(`/api/admin/users/search?q=${encodeURIComponent(userSearch)}`),
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          if (res.ok) {
-            const data = await res.json();
-            setUserResults(data.users || []);
+          if (!res.ok) {
+            const errorText = await res.text().catch(() => "");
+            throw new Error(
+              errorText || `User search failed with status ${res.status}`
+            );
           }
+
+          const data = await res.json();
+          setUserResults(data.users || []);
         } catch (err) {
           console.error("Failed to search users:", err);
         }
@@ -215,6 +234,18 @@ const AdminActivityLog: React.FC = () => {
     const url = buildApiUrl(`/api/admin/activity/export?${params.toString()}`);
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then(async (res) => {
+        if (!res.ok) {
+          const contentType = res.headers.get("content-type") || "";
+
+          if (contentType.includes("application/json")) {
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.error || `Export failed with status ${res.status}`);
+          }
+
+          const errorText = await res.text().catch(() => "");
+          throw new Error(errorText || `Export failed with status ${res.status}`);
+        }
+
         const blob = await res.blob();
         const dlUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");

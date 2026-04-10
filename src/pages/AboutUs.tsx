@@ -290,7 +290,7 @@ export default function AboutUs() {
                         {[
                           {
                             label: "Total users",
-                            value: formatStat(stats?.users.regular),
+                            value: formatStat(stats?.users.total),
                           },
                           {
                             label: "VPS deployed",

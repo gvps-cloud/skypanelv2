@@ -5018,7 +5018,7 @@ const VPSDetail: React.FC = () => {
           }
         }}
       >
-        <DialogContent className="w-full max-w-lg sm:max-w-md overflow-y-auto max-h-[90dvh]">
+        <DialogContent className="w-full max-w-md sm:max-w-lg overflow-y-auto max-h-[90dvh]">
           <DialogHeader className="pb-2">
             <DialogTitle>Edit Reverse DNS</DialogTitle>
             <DialogDescription className="text-xs">

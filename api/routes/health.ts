@@ -457,18 +457,38 @@ router.get("/uptime", async (req: Request, res: Response) => {
 });
 
 /**
- * Public Organizations Endpoint
- * Returns anonymized organization names for homepage social proof.
- * No authentication required - only returns organization names.
+ * Organizations Endpoint
+ * Returns opted-in organization names for authenticated callers only.
+ * Unauthenticated callers receive an empty result set.
  */
-router.get("/organizations", async (req: Request, res: Response) => {
+router.get("/organizations", optionalAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const result = await query(`
+    if (!req.user) {
+      return res.status(200).json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        organizations: [],
+      });
+    }
+
+    const clauses = ["show_on_homepage = TRUE"];
+    const params: string[] = [];
+
+    if (req.user.organizationId) {
+      clauses.push(`id = $${params.length + 1}`);
+      params.push(req.user.organizationId);
+    }
+
+    const result = await query(
+      `
       SELECT name
       FROM organizations
+      WHERE ${clauses.join(" AND ")}
       ORDER BY created_at DESC
       LIMIT 10
-    `);
+    `,
+      params,
+    );
 
     res.status(200).json({
       success: true,

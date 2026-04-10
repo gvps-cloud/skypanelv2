@@ -4,6 +4,19 @@ import { query } from "../../lib/database.js";
 import { ensureActivityLogsTable } from "../../services/activityLogger.js";
 
 const router = express.Router();
+const MAX_EXPORT_ROWS = 10000;
+
+function sanitizeCsvCell(value: unknown): string {
+  const stringValue = String(value ?? "");
+  const firstNonWhitespaceChar = stringValue.trimStart()[0];
+  const neutralizedValue = ["=", "+", "-", "@"].includes(
+    firstNonWhitespaceChar,
+  )
+    ? `'${stringValue}`
+    : stringValue;
+
+  return `"${neutralizedValue.replace(/"/g, '""')}"`;
+}
 
 // All admin activity endpoints require auth + admin role
 router.use(authenticateToken, requireAdmin);
@@ -166,6 +179,8 @@ router.get("/export", async (req: Request, res: Response) => {
       paramIdx++;
     }
 
+    const exportLimit = MAX_EXPORT_ROWS;
+
     const sql = `
       SELECT a.created_at, a.user_id, a.organization_id, a.event_type,
              a.entity_type, a.entity_id, a.status, a.message, a.ip_address,
@@ -174,7 +189,10 @@ router.get("/export", async (req: Request, res: Response) => {
       LEFT JOIN organizations o ON a.organization_id = o.id
       WHERE ${clauses.join(" AND ")}
       ORDER BY a.created_at DESC
+      LIMIT $${paramIdx}
     `;
+
+    params.push(exportLimit);
 
     await ensureActivityLogsTable();
     const result = await query(sql, params);
@@ -196,12 +214,17 @@ router.get("/export", async (req: Request, res: Response) => {
           (r.message || "").replace(/\n/g, " "),
         ];
         return fields
-          .map((f) => '"' + String(f).replace(/"/g, '""') + '"')
+          .map((field) => sanitizeCsvCell(field))
           .join(",");
       })
       .join("\n");
 
     res.setHeader("Content-Type", "text/csv");
+    res.setHeader("X-Export-Row-Limit", String(exportLimit));
+    res.setHeader(
+      "X-Export-Truncated",
+      String((result.rows?.length || 0) >= exportLimit),
+    );
     res.setHeader(
       "Content-Disposition",
       'attachment; filename="admin_activity_export.csv"',
