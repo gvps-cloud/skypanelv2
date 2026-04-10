@@ -1,5 +1,6 @@
 import React from "react";
 import { render, fireEvent, screen } from "@testing-library/react";
+import { expect, it, vi } from "vitest";
 import { AccordionSelect } from "../AccordionSelect";
 
 // Minimal groups with many items to enable scrolling
@@ -13,8 +14,8 @@ const groups = {
   },
 };
 
-test("mouse wheel scrolls the dropdown list", async () => {
-  const handleSelect = jest.fn();
+it("mouse wheel scrolls the dropdown list", async () => {
+  const handleSelect = vi.fn();
   render(
     <AccordionSelect
       groups={groups}
@@ -30,7 +31,7 @@ test("mouse wheel scrolls the dropdown list", async () => {
 
   // The scroll container is the element with max-h-80 class
   const scrollContainer = document.querySelector(".max-h-80");
-  expect(scrollContainer).toBeInTheDocument();
+  expect(scrollContainer).not.toBeNull();
 
   // Initial scrollTop should be 0
   const initialTop = (scrollContainer as HTMLElement).scrollTop;
