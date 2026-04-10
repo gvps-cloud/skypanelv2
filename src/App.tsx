@@ -61,6 +61,8 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Pricing from "./pages/Pricing";
 import SSHKeys from "./pages/SSHKeys";
 import Documentation from "./pages/Documentation";
+import PersonalNotes from "./pages/PersonalNotes";
+import OrganizationNotes from "./pages/OrganizationNotes";
 
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import Organizations from "./pages/Organizations";
@@ -291,6 +293,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <SSHKeys />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notes/personal"
+          element={
+            <ProtectedRoute>
+              <PersonalNotes />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notes/organizations"
+          element={
+            <ProtectedRoute>
+              <OrganizationNotes />
             </ProtectedRoute>
           }
         />

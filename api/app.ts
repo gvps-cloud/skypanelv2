@@ -63,6 +63,7 @@ import adminDocumentationRoutes from "./routes/adminDocumentation.js";
 import adminNetworkingRoutes from "./routes/admin/networking.js";
 import adminAnnouncementsRoutes from "./routes/admin/announcements.js";
 import announcementsRoutes from "./routes/announcements.js";
+import notesRoutes from "./routes/notes.js";
 import {
   initializeMetricsCollection,
   startMetricsPersistence,
@@ -295,6 +296,7 @@ app.use("/api/admin/documentation", adminDocumentationRoutes);
 app.use("/api/admin/networking", adminNetworkingRoutes);
 app.use("/api/admin/announcements", adminAnnouncementsRoutes);
 app.use("/api/announcements", announcementsRoutes);
+app.use("/api", notesRoutes);
 
 // Health check routes are now handled by the dedicated health router
 

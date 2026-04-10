@@ -14,6 +14,7 @@ import {
   Server,
   Settings,
   ShieldCheck,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -56,6 +57,8 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const isActivityActive = pathname.startsWith("/activity");
   const isBillingActive = pathname.startsWith("/billing");
   const isSshKeysActive = pathname.startsWith("/ssh-keys");
+  const isPersonalNotesActive = pathname.startsWith("/notes/personal");
+  const isOrganizationNotesActive = pathname.startsWith("/notes/organizations");
   const isApiDocsActive = pathname.startsWith("/api-docs");
   const isDocsActive = pathname.startsWith("/docs");
   const isAdminRoute = pathname.startsWith("/admin") && !authIsImpersonating;
@@ -193,6 +196,18 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           isActive: pathname.startsWith("/organizations"),
         },
         {
+          title: "Personal Notes",
+          url: "/notes/personal",
+          icon: FileText,
+          isActive: isPersonalNotesActive,
+        },
+        {
+          title: "Organization Notes",
+          url: "/notes/organizations",
+          icon: Users,
+          isActive: isOrganizationNotesActive,
+        },
+        {
           title: "SSH Keys",
           url: "/ssh-keys",
           icon: Key,
@@ -235,6 +250,8 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       isApiDocsActive,
       isDashboardActive,
       isDocsActive,
+      isOrganizationNotesActive,
+      isPersonalNotesActive,
       isSshKeysActive,
       isVpsActive,
     ]

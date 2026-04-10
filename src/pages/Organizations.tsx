@@ -52,6 +52,7 @@ import Pagination from "@/components/ui/Pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TeamSettings from "@/components/settings/TeamSettings";
 import { OrganizationResourceTables } from "@/components/organizations/OrganizationResourceTables";
+import { OrganizationNotesSection } from "@/components/notes/OrganizationNotesSection";
 
 interface ViewMode {
   type: "all" | "organization";
@@ -1106,6 +1107,7 @@ const Organizations: React.FC = () => {
           <Tabs defaultValue="resources" className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="resources">Resources</TabsTrigger>
+              <TabsTrigger value="notes">Notes</TabsTrigger>
               <TabsTrigger value="egress">Egress</TabsTrigger>
               <TabsTrigger value="settings">Team Settings</TabsTrigger>
             </TabsList>
@@ -1148,6 +1150,13 @@ const Organizations: React.FC = () => {
                   No resources available for this organization
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="notes" className="space-y-6">
+              <OrganizationNotesSection
+                organizationId={selectedOrganization.id}
+                organizationName={selectedOrganization.name}
+              />
             </TabsContent>
 
             <TabsContent value="egress" className="space-y-6">

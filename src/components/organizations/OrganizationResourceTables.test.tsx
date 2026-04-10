@@ -42,6 +42,8 @@ const createResources = (): OrganizationResources => ({
     vps_create: true,
     vps_delete: false,
     vps_manage: false,
+    notes_view: true,
+    notes_manage: false,
     ssh_keys_view: true,
     ssh_keys_manage: false,
     tickets_view: true,

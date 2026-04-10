@@ -527,6 +527,16 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         requiresAlt: true,
       },
       {
+        icon: FileText,
+        label: "Personal Notes",
+        href: "/notes/personal",
+      },
+      {
+        icon: Users,
+        label: "Organization Notes",
+        href: "/notes/organizations",
+      },
+      {
         icon: Key,
         label: "SSH Keys",
         href: "/ssh-keys",

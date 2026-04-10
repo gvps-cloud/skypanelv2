@@ -6,6 +6,8 @@ export type Permission =
   | 'vps_create'
   | 'vps_delete'
   | 'vps_manage'
+  | 'notes_view'
+  | 'notes_manage'
   | 'ssh_keys_view'
   | 'ssh_keys_manage'
   | 'tickets_view'
@@ -42,6 +44,7 @@ export interface UpdateRoleData {
 const PREDEFINED_ROLES: Record<string, Permission[]> = {
   owner: [
     'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
+    'notes_view', 'notes_manage',
     'ssh_keys_view', 'ssh_keys_manage',
     'tickets_view', 'tickets_create', 'tickets_manage',
     'billing_view', 'billing_manage',
@@ -51,6 +54,7 @@ const PREDEFINED_ROLES: Record<string, Permission[]> = {
   ],
   admin: [
     'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
+    'notes_view', 'notes_manage',
     'ssh_keys_view', 'ssh_keys_manage',
     'tickets_view', 'tickets_create', 'tickets_manage',
     'billing_view',
@@ -59,13 +63,15 @@ const PREDEFINED_ROLES: Record<string, Permission[]> = {
   ],
   vps_manager: [
     'vps_view', 'vps_create', 'vps_manage',
+    'notes_view',
     'ssh_keys_view', 'ssh_keys_manage'
   ],
   support_agent: [
+    'notes_view',
     'tickets_view', 'tickets_create', 'tickets_manage'
   ],
   viewer: [
-    'vps_view', 'tickets_view'
+    'vps_view', 'notes_view', 'tickets_view'
   ]
 };
 

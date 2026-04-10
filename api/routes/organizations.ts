@@ -211,6 +211,7 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
     const resources = orgs.map((org: any) => {
       const permissions = {
         vps_view: false, vps_create: false, vps_delete: false, vps_manage: false,
+        notes_view: true, notes_manage: false,
         ssh_keys_view: false, ssh_keys_manage: false, tickets_view: false,
         tickets_create: false, tickets_manage: false, billing_view: false,
         billing_manage: false, egress_view: false, egress_manage: false,
@@ -234,13 +235,14 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
           Object.keys(permissions).forEach(key => (permissions as any)[key] = true);
         } else if (member.legacy_role === 'admin') {
           ['vps_view', 'vps_create', 'vps_delete', 'vps_manage',
+           'notes_view', 'notes_manage',
            'ssh_keys_view', 'ssh_keys_manage',
            'tickets_view', 'tickets_create', 'tickets_manage',
            'billing_view', 'egress_view', 'settings_manage'].forEach(p => {
              if (p in permissions) (permissions as any)[p] = true;
            });
         } else if (member.legacy_role === 'member') {
-          ['vps_view', 'tickets_view'].forEach(p => {
+          ['vps_view', 'notes_view', 'tickets_view'].forEach(p => {
              if (p in permissions) (permissions as any)[p] = true;
            });
         }
@@ -1263,6 +1265,7 @@ router.post('/:id/roles', requireOrgAccess, async (req: AuthenticatedRequest, re
 
   const validPermissions = [
     'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
+    'notes_view', 'notes_manage',
     'ssh_keys_view', 'ssh_keys_manage',
     'tickets_view', 'tickets_create', 'tickets_manage',
     'billing_view', 'billing_manage',
@@ -1324,6 +1327,7 @@ router.put('/:id/roles/:roleId', requireOrgAccess, async (req: AuthenticatedRequ
     if (permissions) {
       const validPermissions = [
         'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
+        'notes_view', 'notes_manage',
         'ssh_keys_view', 'ssh_keys_manage',
         'tickets_view', 'tickets_create', 'tickets_manage',
         'billing_view', 'billing_manage',

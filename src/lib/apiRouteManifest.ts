@@ -1382,6 +1382,42 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/notes/organizations",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/notes/personal",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/notes/personal",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/notes/personal/:noteId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/notes/personal/:noteId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/notes/personal/:noteId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/notifications",
     "protected": true,
     "admin": false
@@ -1491,6 +1527,36 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "POST",
     "path": "/api/organizations/:id/members/invite",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/organizations/:id/notes",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/organizations/:id/notes",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/organizations/:id/notes/:noteId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/organizations/:id/notes/:noteId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/organizations/:id/notes/:noteId",
     "protected": true,
     "admin": false
   },

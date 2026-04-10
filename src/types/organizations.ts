@@ -101,6 +101,8 @@ export interface OrganizationResources {
     vps_create: boolean;
     vps_delete: boolean;
     vps_manage: boolean;
+    notes_view: boolean;
+    notes_manage: boolean;
     ssh_keys_view: boolean;
     ssh_keys_manage: boolean;
     tickets_view: boolean;

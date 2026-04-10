@@ -33,6 +33,10 @@ const routeLabels: Record<string, string> = {
   "/support": "Support",
   "/settings": "Settings",
   "/activity": "Activity",
+  "/notes/personal": "Personal Notes",
+  "/notes/organizations": "Organization Notes",
+  "/organizations": "Organizations",
+  "/organizations/:id": "Organization Details",
   "/admin": "Admin",
   "/api-docs": "API Docs",
 };
