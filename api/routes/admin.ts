@@ -1192,14 +1192,12 @@ router.put(
 
         // Insert new regions if array is not empty
         if (regions.length > 0) {
-          for (const regionId of regions) {
-            await query(
-              `INSERT INTO vps_plan_regions (vps_plan_id, region_id)
-               VALUES ($1, $2)
-               ON CONFLICT (vps_plan_id, region_id) DO NOTHING`,
-              [id, regionId],
-            );
-          }
+          await query(
+            `INSERT INTO vps_plan_regions (vps_plan_id, region_id)
+             SELECT $1, unnest($2::text[])
+             ON CONFLICT (vps_plan_id, region_id) DO NOTHING`,
+            [id, regions],
+          );
         }
       }
 
@@ -1368,14 +1366,12 @@ router.post(
 
       // Insert regions if provided
       if (regions && regions.length > 0) {
-        for (const regionId of regions) {
-          await query(
-            `INSERT INTO vps_plan_regions (vps_plan_id, region_id)
-             VALUES ($1, $2)
-             ON CONFLICT (vps_plan_id, region_id) DO NOTHING`,
-            [newPlan.id, regionId],
-          );
-        }
+        await query(
+          `INSERT INTO vps_plan_regions (vps_plan_id, region_id)
+           SELECT $1, unnest($2::text[])
+           ON CONFLICT (vps_plan_id, region_id) DO NOTHING`,
+          [newPlan.id, regions],
+        );
       }
 
       res.status(201).json({ plan: newPlan });
