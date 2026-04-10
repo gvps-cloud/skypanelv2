@@ -5018,19 +5018,21 @@ const VPSDetail: React.FC = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="w-full max-w-lg sm:max-w-md overflow-y-auto max-h-[90dvh]">
+          <DialogHeader className="pb-2">
             <DialogTitle>Edit Reverse DNS</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               Set a custom reverse DNS record for an IPv6 address within{" "}
               <span className="font-mono text-foreground">
                 {ipv6RdnsDialog.rangeBase}/{ipv6RdnsDialog.prefix}
               </span>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="ipv6-rdns-address">Enter an IPv6 address</Label>
+
+          {/* Compact 2-column grid for inputs on sm+, stacked on mobile */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="ipv6-rdns-address" className="text-xs">IPv6 address</Label>
               <Input
                 id="ipv6-rdns-address"
                 value={ipv6RdnsDialog.ipAddress}
@@ -5041,12 +5043,12 @@ const VPSDetail: React.FC = () => {
                   }))
                 }
                 placeholder={`${ipv6RdnsDialog.rangeBase}1`}
-                className="font-mono text-sm"
+                className="font-mono text-xs h-8"
                 disabled={ipv6RdnsDialog.saving}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ipv6-rdns-domain">Enter a domain name</Label>
+            <div className="space-y-1">
+              <Label htmlFor="ipv6-rdns-domain" className="text-xs">Domain</Label>
               <Input
                 id="ipv6-rdns-domain"
                 value={ipv6RdnsDialog.domain}
@@ -5057,181 +5059,169 @@ const VPSDetail: React.FC = () => {
                   }))
                 }
                 placeholder="mail.example.com"
+                className="text-xs h-8"
                 disabled={ipv6RdnsDialog.saving}
               />
-              <p className="text-xs text-muted-foreground">
-                Leave this field blank to clear rDNS
-              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Records may take up to 24 hours to propagate.
-            </p>
-            {(ipv6RdnsDialog.loadingRecords ||
-              ipv6RdnsDialog.existingRecords.length > 0) && (() => {
-                const PAGE_SIZE = 5;
-                const filtered = ipv6RdnsDialog.existingRecords.filter(
-                  (r) =>
-                    ipv6RdnsDialog.recordsFilter.trim() === "" ||
-                    r.address
-                      .toLowerCase()
-                      .includes(
-                        ipv6RdnsDialog.recordsFilter.trim().toLowerCase(),
-                      ) ||
-                    r.rdns
-                      .toLowerCase()
-                      .includes(
-                        ipv6RdnsDialog.recordsFilter.trim().toLowerCase(),
-                      ),
-                );
-                const totalPages = Math.max(
-                  1,
-                  Math.ceil(filtered.length / PAGE_SIZE),
-                );
-                const page = Math.min(
-                  ipv6RdnsDialog.recordsPage,
-                  totalPages - 1,
-                );
-                const pageRecords = filtered.slice(
-                  page * PAGE_SIZE,
-                  page * PAGE_SIZE + PAGE_SIZE,
-                );
-                return (
-                  <div className="border-t border-border pt-4 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-foreground">
-                        Existing Records
-                        {!ipv6RdnsDialog.loadingRecords && (
-                          <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                            ({filtered.length}
-                            {ipv6RdnsDialog.recordsFilter ? " filtered" : ""})
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    {ipv6RdnsDialog.loadingRecords ? (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Loading records…
-                      </div>
-                    ) : (
-                      <>
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                          <Input
-                            value={ipv6RdnsDialog.recordsFilter}
-                            onChange={(e) =>
-                              setIpv6RdnsDialog((prev) => ({
-                                ...prev,
-                                recordsFilter: e.target.value,
-                                recordsPage: 0,
-                              }))
-                            }
-                            placeholder="Filter by address or domain…"
-                            className="pl-8 h-8 text-xs"
-                          />
-                        </div>
-                        {pageRecords.length === 0 ? (
-                          <p className="text-xs text-muted-foreground py-2">
-                            No records match your filter.
-                          </p>
-                        ) : (
-                          <ul className="space-y-1.5">
-                            {pageRecords.map((record) => {
-                              const isDeleting =
-                                ipv6RdnsDialog.deletingAddress ===
-                                record.address;
-                              return (
-                                <li
-                                  key={record.address}
-                                  className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs group"
-                                >
-                                  <button
-                                    type="button"
-                                    className="flex flex-col gap-0.5 text-left min-w-0 flex-1 hover:opacity-80 transition-opacity"
-                                    title="Click to edit this record"
-                                    onClick={() =>
-                                      setIpv6RdnsDialog((prev) => ({
-                                        ...prev,
-                                        ipAddress: record.address,
-                                        domain: record.rdns,
-                                      }))
-                                    }
-                                  >
-                                    <span className="font-mono font-semibold text-foreground truncate block">
-                                      {record.address}
-                                    </span>
-                                    <span className="text-muted-foreground truncate block">
-                                      {record.rdns}
-                                    </span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    title="Clear rDNS for this address"
-                                    disabled={
-                                      isDeleting ||
-                                      ipv6RdnsDialog.saving ||
-                                      ipv6RdnsDialog.deletingAddress !== null
-                                    }
-                                    onClick={() =>
-                                      clearIpv6RdnsRecord(record.address)
-                                    }
-                                    className="flex-shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md border border-border text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:border-destructive hover:text-destructive focus:outline-none focus:opacity-100 disabled:pointer-events-none disabled:opacity-40"
-                                  >
-                                    {isDeleting ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="h-3 w-3" />
-                                    )}
-                                  </button>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-                        {totalPages > 1 && (
-                          <div className="flex items-center justify-between pt-1">
-                            <span className="text-xs text-muted-foreground">
-                              Page {page + 1} of {totalPages}
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                disabled={page === 0}
-                                onClick={() =>
-                                  setIpv6RdnsDialog((prev) => ({
-                                    ...prev,
-                                    recordsPage: prev.recordsPage - 1,
-                                  }))
-                                }
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
-                              >
-                                <ChevronLeft className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                disabled={page >= totalPages - 1}
-                                onClick={() =>
-                                  setIpv6RdnsDialog((prev) => ({
-                                    ...prev,
-                                    recordsPage: prev.recordsPage + 1,
-                                  }))
-                                }
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
-                              >
-                                <ChevronRight className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                );
-              })()}
           </div>
-          <DialogFooter>
+
+          <p className="text-[10px] text-muted-foreground -mt-1">
+            Leave domain blank to clear rDNS. Records may take up to 24 hours to propagate.
+          </p>
+
+          {/* Existing Records — scrollable list with max height */}
+          {(ipv6RdnsDialog.loadingRecords ||
+            ipv6RdnsDialog.existingRecords.length > 0) && (() => {
+              const PAGE_SIZE = 4;
+              const filtered = ipv6RdnsDialog.existingRecords.filter(
+                (r) =>
+                  ipv6RdnsDialog.recordsFilter.trim() === "" ||
+                  r.address
+                    .toLowerCase()
+                    .includes(ipv6RdnsDialog.recordsFilter.trim().toLowerCase()) ||
+                  r.rdns
+                    .toLowerCase()
+                    .includes(ipv6RdnsDialog.recordsFilter.trim().toLowerCase()),
+              );
+              const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+              const page = Math.min(ipv6RdnsDialog.recordsPage, totalPages - 1);
+              const pageRecords = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+              return (
+                <div className="border-t border-border pt-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium text-foreground">
+                      Existing Records
+                      {!ipv6RdnsDialog.loadingRecords && (
+                        <span className="ml-1 text-xs font-normal text-muted-foreground">
+                          ({filtered.length})
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {ipv6RdnsDialog.loadingRecords ? (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Loading…
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        <Input
+                          value={ipv6RdnsDialog.recordsFilter}
+                          onChange={(e) =>
+                            setIpv6RdnsDialog((prev) => ({
+                              ...prev,
+                              recordsFilter: e.target.value,
+                              recordsPage: 0,
+                            }))
+                          }
+                          placeholder="Filter…"
+                          className="pl-7 h-7 text-xs"
+                        />
+                      </div>
+
+                      {pageRecords.length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-1">
+                          No records match your filter.
+                        </p>
+                      ) : (
+                        <ul className="space-y-1 max-h-40 overflow-y-auto">
+                          {pageRecords.map((record) => {
+                            const isDeleting = ipv6RdnsDialog.deletingAddress === record.address;
+                            return (
+                              <li
+                                key={record.address}
+                                className="flex items-center justify-between gap-2 rounded-md bg-muted/60 px-2 py-1.5 text-xs group"
+                              >
+                                <button
+                                  type="button"
+                                  className="flex flex-col gap-0.5 text-left min-w-0 flex-1 hover:opacity-75 transition-opacity"
+                                  title="Click to edit"
+                                  onClick={() =>
+                                    setIpv6RdnsDialog((prev) => ({
+                                      ...prev,
+                                      ipAddress: record.address,
+                                      domain: record.rdns,
+                                    }))
+                                  }
+                                >
+                                  <span className="font-mono font-medium text-foreground truncate block text-[10px]">
+                                    {record.address}
+                                  </span>
+                                  <span className="text-muted-foreground truncate block">
+                                    {record.rdns}
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Clear rDNS"
+                                  disabled={
+                                    isDeleting ||
+                                    ipv6RdnsDialog.saving ||
+                                    ipv6RdnsDialog.deletingAddress !== null
+                                  }
+                                  onClick={() => clearIpv6RdnsRecord(record.address)}
+                                  className="flex-shrink-0 inline-flex h-5 w-5 items-center justify-center rounded border border-border text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:border-destructive hover:text-destructive focus:outline-none focus:opacity-100 disabled:pointer-events-none disabled:opacity-40"
+                                >
+                                  {isDeleting ? (
+                                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-2.5 w-2.5" />
+                                  )}
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-between pt-0.5">
+                          <span className="text-[10px] text-muted-foreground">
+                            {page + 1}/{totalPages}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              disabled={page === 0}
+                              onClick={() =>
+                                setIpv6RdnsDialog((prev) => ({
+                                  ...prev,
+                                  recordsPage: prev.recordsPage - 1,
+                                }))
+                              }
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+                            >
+                              <ChevronLeft className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={page >= totalPages - 1}
+                              onClick={() =>
+                                setIpv6RdnsDialog((prev) => ({
+                                  ...prev,
+                                  recordsPage: prev.recordsPage + 1,
+                                }))
+                              }
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+                            >
+                              <ChevronRight className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+
+          <DialogFooter className="pt-1">
             <Button
               variant="outline"
+              size="sm"
               onClick={() =>
                 setIpv6RdnsDialog((prev) => ({ ...prev, open: false }))
               }
@@ -5240,12 +5230,13 @@ const VPSDetail: React.FC = () => {
               Close
             </Button>
             <Button
+              size="sm"
               onClick={saveIpv6Rdns}
               disabled={ipv6RdnsDialog.saving || !ipv6RdnsDialog.ipAddress.trim()}
             >
               {ipv6RdnsDialog.saving ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   Saving…
                 </>
               ) : (

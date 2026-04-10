@@ -1292,6 +1292,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/health/organizations",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/health/platform-stats",
     "protected": false,
     "admin": false
