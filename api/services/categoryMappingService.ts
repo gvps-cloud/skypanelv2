@@ -296,15 +296,26 @@ export const categoryMappingService = {
    * Reorder category mappings
    */
   async reorderCategoryMappings(ordering: { id: string; display_order: number }[]): Promise<void> {
+    if (!ordering || ordering.length === 0) {
+      return;
+    }
+
     await query('BEGIN', []);
 
     try {
-      for (const item of ordering) {
-        await query(
-          'UPDATE vps_category_mappings SET display_order = $1 WHERE id = $2',
-          [item.display_order, item.id]
-        );
-      }
+      const values = ordering.map((_, index) => {
+        return `($${index * 2 + 1}::integer, $${index * 2 + 2}::uuid)`;
+      }).join(', ');
+
+      const flatParams = ordering.flatMap(item => [item.display_order, item.id]);
+
+      await query(
+        `UPDATE vps_category_mappings as vcm
+         SET display_order = new_values.display_order
+         FROM (VALUES ${values}) AS new_values(display_order, id)
+         WHERE vcm.id = new_values.id`,
+        flatParams
+      );
 
       await query('COMMIT', []);
     } catch (error) {
