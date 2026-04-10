@@ -20,6 +20,7 @@ import {
   Star,
   MapPin,
   TrendingUp,
+  Database,
   type LucideIcon,
 } from "lucide-react";
 
@@ -240,6 +241,20 @@ const platformCards: PlatformCard[] = [
       "Fund your wallet and pay only for the hours you use. No hidden fees, no complicated contracts.",
     metric: "Hourly precision",
     span: "sm:col-span-2 xl:col-span-1",
+  },
+  {
+    icon: Database,
+    title: "Automated Backups",
+    description:
+      "Schedule daily or weekly backups with one click. Restore your server to any point in time.",
+    metric: "Point-in-time restore",
+  },
+  {
+    icon: Code2,
+    title: "REST API",
+    description:
+      "Manage your infrastructure programmatically. Full REST API with SDK support for automation and integration.",
+    metric: "Full API access",
   },
 ];
 
