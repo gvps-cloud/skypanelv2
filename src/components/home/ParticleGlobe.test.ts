@@ -16,7 +16,6 @@ describe('ParticleGlobe helpers', () => {
   });
 
   it('prefers selected state over hovered state', () => {
-    expect(getSpriteDisplayState('us-east', 'us-east', null, null, undefined)).toBe('selected');
     expect(getSpriteDisplayState('us-east', 'us-east', 'us-east', null, undefined)).toBe('selected');
     expect(getSpriteDisplayState('us-east', 'us-east', null, null, undefined)).toBe('hovered');
     expect(getSpriteDisplayState('us-east', null, null, null, undefined)).toBe('default');

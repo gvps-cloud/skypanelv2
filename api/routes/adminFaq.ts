@@ -291,12 +291,16 @@ router.post(
 
       // Update display_order for each category
       const now = new Date().toISOString();
-      for (const category of categories) {
-        await query(
-          'UPDATE faq_categories SET display_order = $1, updated_at = $2 WHERE id = $3',
-          [category.display_order, now, category.id]
-        );
-      }
+      const categoryIds = categories.map(c => c.id);
+      const categoryOrders = categories.map(c => c.display_order);
+
+      await query(
+        `UPDATE faq_categories
+         SET display_order = data.display_order, updated_at = $1
+         FROM (SELECT unnest($2::uuid[]) as id, unnest($3::integer[]) as display_order) AS data
+         WHERE faq_categories.id = data.id`,
+        [now, categoryIds, categoryOrders]
+      );
 
       // Log activity
       try {
@@ -644,12 +648,16 @@ router.post(
 
       // Update display_order for each item
       const now = new Date().toISOString();
-      for (const item of items) {
-        await query(
-          'UPDATE faq_items SET display_order = $1, updated_at = $2 WHERE id = $3',
-          [item.display_order, now, item.id]
-        );
-      }
+      const itemIds = items.map(i => i.id);
+      const itemOrders = items.map(i => i.display_order);
+
+      await query(
+        `UPDATE faq_items
+         SET display_order = data.display_order, updated_at = $1
+         FROM (SELECT unnest($2::uuid[]) as id, unnest($3::integer[]) as display_order) AS data
+         WHERE faq_items.id = data.id`,
+        [now, itemIds, itemOrders]
+      );
 
       // Log activity
       try {
@@ -962,12 +970,16 @@ router.post(
 
       // Update display_order for each update
       const now = new Date().toISOString();
-      for (const update of updates) {
-        await query(
-          'UPDATE faq_updates SET display_order = $1, updated_at = $2 WHERE id = $3',
-          [update.display_order, now, update.id]
-        );
-      }
+      const updateIds = updates.map(u => u.id);
+      const updateOrders = updates.map(u => u.display_order);
+
+      await query(
+        `UPDATE faq_updates
+         SET display_order = data.display_order, updated_at = $1
+         FROM (SELECT unnest($2::uuid[]) as id, unnest($3::integer[]) as display_order) AS data
+         WHERE faq_updates.id = data.id`,
+        [now, updateIds, updateOrders]
+      );
 
       // Log activity
       try {
