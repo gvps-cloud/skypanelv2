@@ -40,49 +40,47 @@ const enhancedPutHandler = async (req: AuthenticatedRequest, res: Response) => {
 
     console.log(`[Contact Method Update] Found existing method: ${existingResult.rows[0].title}`);
 
-    // Build dynamic update query
-    const updateFields: string[] = [];
-    const updateValues: any[] = [];
-    let paramIndex = 1;
-
     if (typeof title !== 'undefined') {
-      updateFields.push(`title = $${paramIndex++}`);
-      updateValues.push(title);
       console.log(`[Contact Method Update] Updating title to: ${title}`);
     }
     if (typeof description !== 'undefined') {
-      updateFields.push(`description = $${paramIndex++}`);
-      updateValues.push(description);
       console.log(`[Contact Method Update] Updating description`);
     }
     if (typeof is_active !== 'undefined') {
-      updateFields.push(`is_active = $${paramIndex++}`);
-      updateValues.push(is_active);
       console.log(`[Contact Method Update] Updating is_active to: ${is_active}`);
     }
     if (typeof config !== 'undefined') {
-      updateFields.push(`config = $${paramIndex++}`);
-      const configJson = JSON.stringify(config);
-      updateValues.push(configJson);
-      console.log(`[Contact Method Update] Updating config (${configJson.length} bytes):`, config);
+      console.log(`[Contact Method Update] Updating config:`, config);
     }
 
-    if (updateFields.length === 0) {
+    if (typeof title === 'undefined' && typeof description === 'undefined' && typeof is_active === 'undefined' && typeof config === 'undefined') {
       console.error(`[Contact Method Update] No fields to update for ${method_type}`);
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    updateFields.push(`updated_at = $${paramIndex++}`);
-    updateValues.push(new Date().toISOString());
-    updateValues.push(method_type);
-
-    console.log(`[Contact Method Update] Executing database update with ${updateFields.length} fields`);
+    console.log(`[Contact Method Update] Executing database update`);
     const updateResult = await query(
       `UPDATE contact_methods 
-       SET ${updateFields.join(', ')} 
-       WHERE method_type = $${paramIndex}
+       SET
+         title = CASE WHEN $1::boolean THEN $2 ELSE title END,
+         description = CASE WHEN $3::boolean THEN $4 ELSE description END,
+         is_active = CASE WHEN $5::boolean THEN $6::boolean ELSE is_active END,
+         config = CASE WHEN $7::boolean THEN $8::jsonb ELSE config END,
+         updated_at = $9
+       WHERE method_type = $10
        RETURNING id, method_type, title, description, is_active, config, created_at, updated_at`,
-      updateValues
+      [
+        typeof title !== 'undefined',
+        typeof title !== 'undefined' ? title : null,
+        typeof description !== 'undefined',
+        typeof description !== 'undefined' ? description : null,
+        typeof is_active !== 'undefined',
+        typeof is_active !== 'undefined' ? is_active : null,
+        typeof config !== 'undefined',
+        typeof config !== 'undefined' ? JSON.stringify(config) : null,
+        new Date().toISOString(),
+        method_type
+      ]
     );
 
     if (updateResult.rows.length === 0) {

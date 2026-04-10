@@ -161,39 +161,30 @@ router.put(
         }
       }
 
-      // Build dynamic update query
-      const updateFields: string[] = [];
-      const updateValues: any[] = [];
-      let paramIndex = 1;
-
-      if (typeof label !== 'undefined') {
-        updateFields.push(`label = $${paramIndex++}`);
-        updateValues.push(label);
-      }
-      if (typeof value !== 'undefined') {
-        updateFields.push(`value = $${paramIndex++}`);
-        updateValues.push(value);
-      }
-      if (typeof is_active !== 'undefined') {
-        updateFields.push(`is_active = $${paramIndex++}`);
-        updateValues.push(is_active);
-      }
-
-      if (updateFields.length === 0) {
+      if (typeof label === 'undefined' && typeof value === 'undefined' && typeof is_active === 'undefined') {
         res.status(400).json({ error: 'No fields to update' });
         return;
       }
 
-      updateFields.push(`updated_at = $${paramIndex++}`);
-      updateValues.push(new Date().toISOString());
-      updateValues.push(id);
-
       const updateResult = await query(
         `UPDATE contact_categories 
-         SET ${updateFields.join(', ')} 
-         WHERE id = $${paramIndex}
+         SET
+           label = CASE WHEN $1::boolean THEN $2 ELSE label END,
+           value = CASE WHEN $3::boolean THEN $4 ELSE value END,
+           is_active = CASE WHEN $5::boolean THEN $6::boolean ELSE is_active END,
+           updated_at = $7
+         WHERE id = $8
          RETURNING id, label, value, display_order, is_active, created_at, updated_at`,
-        updateValues
+        [
+          typeof label !== 'undefined',
+          typeof label !== 'undefined' ? label : null,
+          typeof value !== 'undefined',
+          typeof value !== 'undefined' ? value : null,
+          typeof is_active !== 'undefined',
+          typeof is_active !== 'undefined' ? is_active : null,
+          new Date().toISOString(),
+          id
+        ]
       );
 
       const updatedCategory = updateResult.rows[0];
@@ -538,43 +529,33 @@ router.put(
         return;
       }
 
-      // Build dynamic update query
-      const updateFields: string[] = [];
-      const updateValues: any[] = [];
-      let paramIndex = 1;
-
-      if (typeof title !== 'undefined') {
-        updateFields.push(`title = $${paramIndex++}`);
-        updateValues.push(title);
-      }
-      if (typeof description !== 'undefined') {
-        updateFields.push(`description = $${paramIndex++}`);
-        updateValues.push(description);
-      }
-      if (typeof is_active !== 'undefined') {
-        updateFields.push(`is_active = $${paramIndex++}`);
-        updateValues.push(is_active);
-      }
-      if (typeof config !== 'undefined') {
-        updateFields.push(`config = $${paramIndex++}`);
-        updateValues.push(JSON.stringify(config));
-      }
-
-      if (updateFields.length === 0) {
+      if (typeof title === 'undefined' && typeof description === 'undefined' && typeof is_active === 'undefined' && typeof config === 'undefined') {
         res.status(400).json({ error: 'No fields to update' });
         return;
       }
 
-      updateFields.push(`updated_at = $${paramIndex++}`);
-      updateValues.push(new Date().toISOString());
-      updateValues.push(method_type);
-
       const updateResult = await query(
         `UPDATE contact_methods 
-         SET ${updateFields.join(', ')} 
-         WHERE method_type = $${paramIndex}
+         SET
+           title = CASE WHEN $1::boolean THEN $2 ELSE title END,
+           description = CASE WHEN $3::boolean THEN $4 ELSE description END,
+           is_active = CASE WHEN $5::boolean THEN $6::boolean ELSE is_active END,
+           config = CASE WHEN $7::boolean THEN $8::jsonb ELSE config END,
+           updated_at = $9
+         WHERE method_type = $10
          RETURNING id, method_type, title, description, is_active, config, created_at, updated_at`,
-        updateValues
+        [
+          typeof title !== 'undefined',
+          typeof title !== 'undefined' ? title : null,
+          typeof description !== 'undefined',
+          typeof description !== 'undefined' ? description : null,
+          typeof is_active !== 'undefined',
+          typeof is_active !== 'undefined' ? is_active : null,
+          typeof config !== 'undefined',
+          typeof config !== 'undefined' ? JSON.stringify(config) : null,
+          new Date().toISOString(),
+          method_type
+        ]
       );
 
       const updatedMethod = updateResult.rows[0];
