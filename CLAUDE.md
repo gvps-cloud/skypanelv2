@@ -31,14 +31,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Testing
 
-> **Note**: Check `package.json` before assuming test scripts exist. The repo includes Vitest, React Testing Library, Supertest, and Playwright but test scripts may not always be present.
+> **Note**: There is no `npm test` script. Run `npx vitest run tests/security/` for the security test suite, or `npx vitest run` for all tests. The repo includes Vitest, React Testing Library, Supertest, and Playwright.
 
 ### Database Management
 
 - `npm run db:fresh` - Reset database and run all migrations (WARNING: destroys all data - use only in development)
 - `npm run db:reset` - Interactive database reset with confirmation
 - `npm run db:reset:confirm` - Reset database without prompt
-- `npm run seed:admin` - Create default admin user ([admin@skypanelv2.com](mailto:admin@skypanelv2.com) / admin123)
+- `npm run seed:admin` - Create default admin user
+- `node scripts/seed-branding.js` - Update database branding (docs, FAQ, contact, rDNS) to match .env
 
 ### Production Deployment
 
@@ -57,26 +58,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SkyPanelV2 is a full-stack cloud service reseller billing panel with multi-tenant organization support. It provides three distinct product surfaces:
 
-1. **Public marketing pages** — Home, pricing, FAQ, about, contact, status, legal
-2. **Authenticated customer portal** — Dashboard, VPS management, billing, support, SSH console, organizations
-3. **Admin dashboard** — User management, billing ops, platform settings, provider config, impersonation
+1. **Public marketing pages** — Home, pricing, FAQ, about, contact, status, legal, docs, regions
+2. **Authenticated customer portal** — Dashboard, VPS management, billing, support, SSH console, organizations, egress credits, API docs
+3. **Admin dashboard** — User management, billing ops, platform settings, provider config, impersonation, documentation, announcements, networking
 
 ### Frontend (`src/`)
 
 - **React 18** SPA with TypeScript and Vite
-- **shadcn/ui** component library with Tailwind CSS (Radix UI primitives)
+- **shadcn/ui** component library with Tailwind CSS (Radix UI primitives), configured via `components.json`
 - **TanStack Query** for server state management with optimistic updates (30s staleTime, 1 retry, refetchOnWindowFocus)
 - **Zustand** for client state management (selected stores for UI state)
 - **React Router v7** for routing with protected route guards:
   - `ProtectedRoute`: Auth required → AppLayout with sidebar
   - `StandaloneProtectedRoute`: Auth required → AppLayout without sidebar (SSH console)
-  - `AdminRoute`: Auth + `user.role === 'admin'` → AppLayout (admin dashboard)
+  - `AdminRoute`: Auth + `user.role === 'admin'` + not impersonating → AppLayout (admin dashboard)
   - `PublicRoute`: Redirects to `/dashboard` if already logged in
 - **React Hook Form + Zod** for form validation with schema-based validation
 - **Framer Motion** for animations with accessibility considerations
 - **Recharts** for data visualization with responsive containers
 - **xterm.js** for browser-based SSH terminal emulation with fit/addon packages
 - **cmdk** for command palette (Ctrl/Cmd + K) with persistent state
+- **TipTap** for rich text editing with code highlighting (lowlight)
 - **qrcode** for 2FA QR code generation using otplib
 
 ### Backend (`api/`)
@@ -85,16 +87,18 @@ SkyPanelV2 is a full-stack cloud service reseller billing panel with multi-tenan
 - **PostgreSQL** database with UUID primary keys, JSONB columns, triggers, and `LISTEN/NOTIFY`
 - **JWT authentication** with role-based access (admin/user) and HttpOnly cookie storage
 - **Rate limiting** with tiered configuration (anonymous/authenticated/admin) and per-user overrides stored in database
+- **CSRF protection** on `/api` routes
 - **Comprehensive middleware** stack:
-  - `security.ts`: Helmet, CORS, referrer policy, XSS protection
-  - `auth.ts`: JWT verification, token blacklist, organization validation
-  - `permissions.ts`: Role-based and organization membership checking
-  - `rateLimiting.ts`: Tiered limits with X-RateLimit headers and metrics
+  - `security.ts`: Helmet, CSP with nonce, CORS, referrer policy, XSS protection
+  - `auth.ts`: JWT verification, token blacklist, organization validation, impersonation context
+  - `permissions.ts`: Role-based and organization membership checking (single/any/all permission variants)
+  - `rateLimiting.ts`: Tiered limits with X-RateLimit headers, metrics, Redis support
 - **WebSocket server** for SSH bridge (ws + ssh2) providing browser-based terminal access
-- **Hourly billing scheduler** running on 60-minute intervals from `server.ts`
+- **Background schedulers** running on 60-minute intervals from `server.ts`
 - **Notification service** using PostgreSQL `LISTEN/NOTIFY` → EventEmitter → SSE for real-time updates
 - **Provider abstraction layer** (`IProviderService`) enabling multiple cloud providers
 - **Row-level security** on `user_api_keys` table for API key protection
+- **API key authentication** middleware that sets `req.user` when API key is provided
 
 ### Key Features
 
@@ -108,10 +112,31 @@ SkyPanelV2 is a full-stack cloud service reseller billing panel with multi-tenan
 - **Admin impersonation** for customer support with visual banner and audit logging
 - **Command palette** navigation with persistent state and frequent updates
 - **API documentation auto-sync** on build with validation
+- **Rich text documentation** system with categories and articles
+- **Platform announcements** with public banner display
+
+## TypeScript Configuration
+
+- **Path alias**: `@/*` → `./src/*` (configured in both `tsconfig.json` and `vite.config.ts`)
+- **Strict mode**: Disabled (`"strict": false`)
+- **Module system**: ESNext with ESM (backend requires `.js` extensions on local imports)
+- **Includes**: Both `src/` and `api/` directories
+- **No unused vars as error**: `noUnusedLocals` and `noUnusedParameters` are `false`
+- **Lint exceptions**: `@typescript-eslint/no-explicit-any` is off; unused vars emit warnings (not errors)
+
+## Build Pipeline (Vite)
+
+The Vite config (`vite.config.ts`) includes several important features:
+
+- **`removeMockData()` plugin**: Automatically strips mock emails, passwords, and API tokens from production builds
+- **PWA support**: `vite-plugin-pwa` with Workbox auto-update, 10MB file size limit, API caching (NetworkFirst, 5min)
+- **Dev proxy**: `/api/` proxies to `http://localhost:3001` with WebSocket and SSE support
+- **Environment prefix**: Only `VITE_` prefixed variables are exposed to the client bundle
+- **Host**: `0.0.0.0` for network access during development
 
 ## Environment Configuration
 
-Copy `.env.example` to `.env` and configure.
+Copy `.env.example` to `.env` and configure. See AGENTS.md for the complete list of available variables.
 
 ### Required for Development
 
@@ -122,61 +147,33 @@ SSH_CRED_SECRET=your-32-character-encryption-key
 ENCRYPTION_KEY=your-32-character-encryption-key
 ```
 
-### External Services
+### Additional Notable Variables
 
-```bash
-# Cloud Provider (Linode/Akamai)
-LINODE_API_TOKEN=your-linode-api-token
-LINODE_API_URL=https://api.linode.com/v4
-
-# Payment Processing
-PAYPAL_CLIENT_ID=your-paypal-client-id
-PAYPAL_CLIENT_SECRET=your-paypal-client-secret
-PAYPAL_MODE=sandbox
-
-# Email Services (provider priority order)
-EMAIL_PROVIDER_PRIORITY=resend,smtp
-RESEND_API_KEY=your-resend-api-key
-SMTP_HOST=mail.example.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_REQUIRE_TLS=true
-SMTP_USERNAME=smtp-user@example.com
-SMTP_PASSWORD=super-secure-password
-FROM_EMAIL=noreply@yourdomain.com
-FROM_NAME=SkyPANELv2
-CONTACT_FORM_RECIPIENT=support@yourdomain.com
-
-# Proxy Configuration
-TRUST_PROXY=true
-
-# Branding
-COMPANY_NAME=SkyPanelV2
-VITE_COMPANY_NAME=SkyPanelV2
-COMPANY_BRAND_NAME=SkyPanelV2
-
-# File Upload
-MAX_FILE_SIZE=10485760
-UPLOAD_PATH=./uploads
-
-# Optional Services
-REDIS_URL=redis://localhost:6379  # Redis caching (optional)
-REDIS_PASSWORD=your-redis-password
-GITHUB_TOKEN=your-github-token  # Optional GitHub integration
-BACKUP_STORAGE_PROVIDER=local  # Backup storage: local, s3, gcs
-BACKUP_RETENTION_DAYS=30
-```
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `NODE_ENV` | `development` | Runtime environment |
+| `PORT` | `3001` | API server port |
+| `CLIENT_URL` | `http://localhost:5173` | Frontend URL (CORS) |
+| `JWT_EXPIRES_IN` | `7d` | Token expiration |
+| `VPS_TAG` | `skypanelv2` | Tag applied to provisioned VPS instances |
+| `RDNS_BASE_DOMAIN` | — | Reverse DNS base domain |
+| `DEFAULT_ADMIN_EMAIL` | `admin@example.com` | Admin seed email override |
+| `DEFAULT_ADMIN_PASSWORD` | `Admin123#` | Admin seed password override |
+| `COMPANY_NAME` / `VITE_COMPANY_NAME` | `SkyPanelV2` | Brand name (server + client) |
+| `TRUST_PROXY` | `true` | Trust X-Forwarded-* headers |
 
 ### Rate Limiting Configuration
 
-Rate limits are configurable via environment variables. Default values are set in `.env.example` and include tiered limits for anonymous, authenticated, and admin users. Per-user overrides are stored in the `user_rate_limit_overrides` table.
+Rate limits are configurable via `RATE_LIMIT_*` environment variables with tiered defaults for anonymous (1000/15min), authenticated (5000/15min), and admin (10000/15min) users. Per-user overrides are stored in `user_rate_limit_overrides`. Development mode applies a 100x multiplier.
+
+Specialized limiters: `loginRateLimiter` (5/15min), `passwordResetRateLimiter` (configurable, 100x in dev), `apiKeyMutationRateLimiter`, `billingMutationRateLimiter`, `adminMutationRateLimiter`.
 
 ## Database Schema
 
 ### Core Tables
 
 - `users` - User accounts with authentication, 2FA, preferences, active_organization_id
-- `organizations` - Multi-tenant organization management
+- `organizations` - Multi-tenant organization management (with show_on_homepage flag)
 - `organization_members` - Organization membership with role_id FK
 - `organization_roles` - Custom roles with granular JSONB permissions
 - `organization_invitations` - Email-based organization invitations with token
@@ -201,7 +198,7 @@ Rate limits are configurable via environment variables. Default values are set i
 
 ### Database Migrations
 
-SQL migrations are in the `migrations/` directory (47 total: 001–047, sequential). Apply pending migrations with `node scripts/run-migration.js`.
+SQL migrations are in the `migrations/` directory (52 total: 001–052, sequential). Apply pending migrations with `node scripts/run-migration.js`. Each migration runs in a transaction with SHA256 checksum validation. **Never modify an existing migration** — add a new sequential file instead.
 
 ## API Routes
 
@@ -215,6 +212,9 @@ SQL migrations are in the `migrations/` directory (47 total: 001–047, sequenti
 - `/api/ssh-keys` - SSH key CRUD with Linode sync
 - `/api/invoices` - Invoice listing and detail
 - `/api/egress` - Egress credit management, purchase flow, usage readings
+- `/api/api-keys` - User API key management (with row-level security)
+- `/api/documentation` - Public documentation articles
+- `/api/announcements` - Public announcements
 
 ### Admin Routes (`/api/admin/`)
 
@@ -226,6 +226,11 @@ SQL migrations are in the `migrations/` directory (47 total: 001–047, sequenti
 - `/api/admin/faq` - FAQ category/item/update management
 - `/api/admin/github` - GitHub integration and update checking
 - `/api/admin/category-mappings` - VPS category white-labeling
+- `/api/admin/ssh-keys` - Admin SSH key management
+- `/api/admin/activity` - Admin activity log
+- `/api/admin/documentation` - Admin documentation CRUD
+- `/api/admin/networking` - Admin networking config (rDNS, IPv6)
+- `/api/admin/announcements` - Platform announcements management
 
 ### Content & Feed Routes
 
@@ -253,6 +258,7 @@ SQL migrations are in the `migrations/` directory (47 total: 001–047, sequenti
 - `emailTemplateService` - Handlebars-based email template rendering
 - `invoiceService` - Invoice generation and management
 - `notificationService` - PostgreSQL LISTEN/NOTIFY → EventEmitter singleton for real-time push
+- `activityLogger` - Activity logging with real-time PostgreSQL notification triggers
 
 ### Provider Services (`api/services/providers/`)
 
@@ -277,6 +283,39 @@ const result = await transaction(async (client) => {
   await client.query('INSERT INTO payment_transactions (...) VALUES (...)', [...]);
   return { success: true };
 });
+```
+
+### Frontend API Calls
+
+Use the `ApiClient` class from `src/lib/api.ts` (not raw `fetch()`). It handles CSRF token extraction, organization ID header injection, and auto-logout on 401:
+
+```typescript
+import { ApiClient } from '@/lib/api';
+const client = new ApiClient();
+const data = await client.get('/vps');
+```
+
+For quick one-off calls, use the `API_BASE_URL` constant:
+
+```typescript
+import { API_BASE_URL } from '@/lib/api';
+const response = await fetch(`${API_BASE_URL}/endpoint`, {
+  credentials: 'include',
+  headers: { 'Authorization': `Bearer ${token}` },
+});
+```
+
+Get the JWT token from the `useAuth()` context hook (`src/contexts/AuthContext.tsx`).
+
+### TanStack Query Pattern
+
+Export a **query key factory** object from every hook file, then use it in `useQuery`, `useMutation`, and `invalidateQueries`:
+
+```typescript
+export const myResourceKeys = {
+  all: ['my-resource'] as const,
+  detail: (id: string) => ['my-resource', id] as const,
+};
 ```
 
 ### Authentication Middleware
@@ -311,9 +350,16 @@ PostgreSQL `LISTEN/NOTIFY` → `notificationService` EventEmitter → SSE endpoi
 
 ### Background Services
 
-1. **Hourly Billing**: Runs every 60 minutes from `server.ts` (not `billingCronService`)
-2. **Billing Reminders**: Runs every 24 hours from `services/billingCronService.ts` for low-balance notifications
-3. **Egress Monitoring**: Runs hourly from server scheduler to track transfer usage and deduct credits
+Server startup (`api/server.ts`) initializes these recurring services:
+
+1. **Hourly VPS Billing**: `BillingService.runHourlyBilling()` — runs every 60 minutes
+2. **Hourly Egress Billing**: `EgressHourlyBillingService.runHourlyBilling()` — runs every 60 minutes
+3. **Monthly Egress Billing**: `EgressBillingService.executeLiveBilling()` — runs on the 1st of each month
+4. **24h Billing Reminders**: `BillingCronService` — runs every 24 hours for low-balance notifications
+5. **Notification Service**: PostgreSQL LISTEN/NOTIFY listener for real-time push
+6. **Ticket Notification Service**: Support ticket notification listener
+7. **SSH Bridge**: WebSocket server for browser-based terminal access
+8. **Metrics Collection**: Request metrics with periodic persistence
 
 ## Security Architecture
 
@@ -330,21 +376,20 @@ PostgreSQL `LISTEN/NOTIFY` → `notificationService` EventEmitter → SSE endpoi
 
 - **Role-based access control**: Admin vs user roles with organization-scoped data access
 - **Organization-based data isolation**: All resource queries scoped to `organization_id` (enforced via middleware and service layer)
-- **Custom organization roles**: Granular JSONB permissions stored in `organization_roles` table
+- **Custom organization roles**: Granular JSONB permissions stored in `organization_roles` table; use `RoleService.checkPermission()` for validation
 - **Admin impersonation**: `X-Impersonating` header swaps request context with visual banner and audit logging
 - **2FA Support**: TOTP-based two-factor authentication with QR code generation
 - **API Keys**: Row-level security on `user_api_keys` table with encryption and usage tracking
 
-### Rate Limiting
+## Theme System
 
-- **Tiered limits by user type**:
-  - Anonymous: 1000 requests/15min
-  - Authenticated: 5000 requests/15min
-  - Admin: 10000 requests/15min
-- **Development multipliers**: 100x higher limits in development mode
-- **Per-user override system**: Stored in `user_rate_limit_overrides` table with database persistence
-- **Specialized limiters**: Authentication endpoints (login: 5 attempts/15min, password reset: 3 attempts/hour)
-- **Logging and metrics**: Comprehensive tracking for debugging and observability
+Theme behavior spans frontend context/state and backend APIs — review both before changes.
+
+- **ThemeContext** (`src/contexts/ThemeContext.tsx`): 15 built-in presets (teal, mono, red, violet, emerald, amber, rose, blue, slate, orange, zinc, stone, aurora, midnight, sage) with dynamic loading from `/api/theme`
+- **Light/Dark mode**: Managed separately by `useTheme` hook (`src/hooks/useTheme.ts`) using `user-theme-preference` localStorage key; defaults to dark
+- **CSS Variables**: Each preset defines HSL tokens for both light and dark modes
+- **Persistence**: `skypanelv2:theme` localStorage key for preset selection
+- **Backend**: `/api/theme` endpoint returns theme configuration
 
 ## Important Notes for Agents
 
@@ -355,17 +400,29 @@ PostgreSQL `LISTEN/NOTIFY` → `notificationService` EventEmitter → SSE endpoi
 - **Email providers** are Resend and generic SMTP — see `api/config/index.ts`
 - **Billing runs hourly** from `server.ts`, not from `billingCronService` (which handles 24h reminder checks)
 - **Organization isolation** is critical — be careful with queries that could leak data across orgs (always verify `organization_id` scoping)
-- **Theme behavior** spans frontend context/state and backend APIs — review both before changes
-- **Default admin credentials**: Generated via `scripts/seed-admin.js` (not hardcoded)
+- **Default admin credentials**: Generated via `scripts/seed-admin.js` (not hardcoded); configurable via `DEFAULT_ADMIN_EMAIL`/`DEFAULT_ADMIN_PASSWORD` env vars
 - **Pre-commit hooks**: NEVER skip or disable — they protect against bad commits
 - **Database reset commands**: NEVER run — they destroy production data (`db:fresh`, `db:reset`, `db:reset:confirm`)
 - **Migration scripts**: Apply with `node scripts/run-migration.js` — never run destructive migrations manually
 - **TypeScript pathing**: Uses `vite-tsconfig-paths` plugin — check `tsconfig.json` for path mappings
-- **Environment validation**: Critical secrets validated at startup in `config/index.ts`
+- **Environment validation**: Critical secrets validated at startup in `config/index.ts` — import `config` object, never access `process.env` directly in route/service files
 - **Provider token normalization**: Always use `normalizeProviderToken()` before creating providers
 - **Organization role checking**: Use `RoleService` for granular permission validation
 - **Admin impersonation audit**: All impersonation actions are logged for compliance
 - **Egress credit zero handling**: Automatic VPS suspension when credits reach zero (handled in egress services)
 - **Wallet-based billing**: Prepaid system requires sufficient balance before billing cycle processing
 - **Site logo/favicon**: Single source of truth is `public/favicon.svg` — the `Logo` component (`src/components/Logo.tsx`) renders it as an `<img>` tag used by navbar, sidebar, and footer. `index.html` links it as the browser favicon. To update icons, replace `favicon.svg` and regenerate raster variants via [realfavicongenerator.net](https://realfavicongenerator.net/)
+- **Error handling**: Use `handleProviderError()` from `api/lib/errorHandling.ts` in VPS routes rather than raw `catch` blocks
+- **Activity logging**: Use `logActivity()` from `api/services/activityLogger.ts` for significant user-facing actions
+- **Tailwind classes**: Use `cn()` from `@/lib/utils` for conditional/composed class names
 
+## Development Gotchas
+
+- **`predev` / `preclient:dev` hooks** run `docs:api:sync` automatically — this is normal and takes a few seconds before the dev server starts
+- **Backend billing scheduler** starts on boot — log output about "0 instances billed" is expected with an empty VPS fleet
+- **No `npm test` script** — use `npx vitest run tests/security/` or `npx vitest run` directly
+- **Not Prisma**: The app uses raw `pg` queries with SQL migrations despite `@prisma/client` being in dependencies
+- **ESM imports**: All local backend imports require `.js` extensions — `import { query } from '../lib/database.js'` (not `../lib/database`)
+- **Route-level auth**: Apply `authenticateToken` at the router level, not per-handler: `router.use(authenticateToken, requireOrganization)`
+- **CSRF on API routes**: CSRF protection is applied to `/api` routes; include CSRF token from cookies in mutating requests
+- **Dark mode anti-flash**: `index.html` contains a script that applies `.dark` class before React loads to prevent flash of wrong theme
