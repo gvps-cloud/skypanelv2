@@ -456,4 +456,37 @@ router.get("/uptime", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Public Organizations Endpoint
+ * Returns anonymized organization names for homepage social proof.
+ * No authentication required - only returns organization names.
+ */
+router.get("/organizations", async (req: Request, res: Response) => {
+  try {
+    const result = await query(`
+      SELECT name
+      FROM organizations
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
+
+    res.status(200).json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      organizations: result.rows.map(r => ({ name: r.name }))
+    });
+  } catch (error) {
+    console.error("Organizations endpoint failed:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve organizations",
+      timestamp: new Date().toISOString(),
+      error:
+        process.env.NODE_ENV === "development"
+          ? (error as Error).message
+          : "Internal server error",
+    });
+  }
+});
+
 export default router;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import {
@@ -26,6 +27,7 @@ import {
 
 import "@/styles/home.css";
 import { BRAND_NAME } from "@/lib/brand";
+import { API_BASE_URL } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -384,6 +386,53 @@ const trustItems = [
   { icon: Globe2, label: "Global Regions" },
   { icon: Lock, label: "Encrypted at Rest" },
 ];
+
+/* ─── Social Proof Component ────────────────────────────────────── */
+
+function SocialProof() {
+  const { data: orgData } = useQuery({
+    queryKey: ['public-organizations'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/health/organizations`);
+      if (!res.ok) throw new Error('Failed to fetch');
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const orgInitials = useMemo(() => {
+    if (orgData?.organizations?.length > 0) {
+      return orgData.organizations
+        .slice(0, 3)
+        .map((org: { name: string }) => {
+          const words = org.name.split(' ');
+          const initials = words.length > 1
+            ? words[0][0] + words[1][0]
+            : org.name.substring(0, 2);
+          return initials.toUpperCase();
+        });
+    }
+    return [BRAND_NAME.substring(0, 2).toUpperCase()];
+  }, [orgData]);
+
+  return (
+    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+      <div className="flex -space-x-2">
+        {orgInitials.map((initials, i) => (
+          <div
+            key={i}
+            className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/30 to-primary/60 flex items-center justify-center ring-2 ring-background text-[9px] font-bold text-primary"
+          >
+            {initials}
+          </div>
+        ))}
+      </div>
+      <span>
+        Join teams already using {BRAND_NAME}
+      </span>
+    </div>
+  );
+}
 
 /* ─── Component ──────────────────────────────────────────────────── */
 
@@ -1200,49 +1249,24 @@ export default function HomeRedesign() {
                 aria-hidden
               />
 
-              <div className="relative z-10 space-y-6">
-                <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-                  Ready to launch your server?
-                </h2>
-                <p className="mx-auto max-w-xl text-lg text-muted-foreground">
-                  Create your account, add funds, and deploy a high-performance
-                  Linux VPS in less than a minute.
-                </p>
+              <SocialProof />
 
-                {/* Social proof */}
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <div className="flex -space-x-2">
-                    {["MC", "SW", "DR"].map((initials) => (
-                      <div
-                        key={initials}
-                        className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/30 to-primary/60 flex items-center justify-center ring-2 ring-background text-[9px] font-bold text-primary"
-                      >
-                        {initials}
-                      </div>
-                    ))}
-                  </div>
-                  <span>
-                    Join teams already using {BRAND_NAME}
-                  </span>
-                </div>
-
-                <div className="flex flex-col justify-center gap-4 sm:flex-row">
-                  <Button
-                    size="lg"
-                    className="h-12 px-8 text-base home-btn-glow"
-                    asChild
-                  >
-                    <Link to="/register">Create Account</Link>
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    className="h-12 px-8 text-base border border-border/40"
-                    asChild
-                  >
-                    <Link to="/pricing">View Pricing</Link>
-                  </Button>
-                </div>
+              <div className="flex flex-col justify-center gap-4 sm:flex-row">
+                <Button
+                  size="lg"
+                  className="h-12 px-8 text-base home-btn-glow"
+                  asChild
+                >
+                  <Link to="/register">Create Account</Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="h-12 px-8 text-base border border-border/40"
+                  asChild
+                >
+                  <Link to="/pricing">View Pricing</Link>
+                </Button>
               </div>
             </div>
           </div>
