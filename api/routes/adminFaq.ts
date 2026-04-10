@@ -291,12 +291,24 @@ router.post(
 
       // Update display_order for each category
       const now = new Date().toISOString();
+
+      const values: string[] = [];
+      const queryParams: any[] = [now];
+      let paramIndex = 2;
+
       for (const category of categories) {
-        await query(
-          'UPDATE faq_categories SET display_order = $1, updated_at = $2 WHERE id = $3',
-          [category.display_order, now, category.id]
-        );
+        values.push(`($${paramIndex}::uuid, $${paramIndex + 1}::integer)`);
+        queryParams.push(category.id, category.display_order);
+        paramIndex += 2;
       }
+
+      await query(
+        `UPDATE faq_categories AS c
+         SET display_order = v.display_order, updated_at = $1
+         FROM (VALUES ${values.join(', ')}) AS v(id, display_order)
+         WHERE c.id = v.id`,
+        queryParams
+      );
 
       // Log activity
       try {
