@@ -204,6 +204,10 @@ const AnnouncementsManager = lazy(async () => {
   const mod = await import("@/components/admin/AnnouncementsManager");
   return { default: mod.AnnouncementsManager };
 });
+const AdminActivityLog = lazy(async () => {
+  const mod = await import("@/components/admin/AdminActivityLog");
+  return { default: mod.AdminActivityLog };
+});
 
 type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
@@ -229,7 +233,8 @@ type AdminSection =
   | "egress-credits"
   | "contact-management"
   | "billing"
-  | "email-templates";
+  | "email-templates"
+  | "activity-log";
 
 type AdminNetworkingTab =
   | "rdns"
@@ -261,7 +266,8 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "platform",
   "contact-management",
   "billing",
-  "email-templates"
+  "email-templates",
+  "activity-log"
 ];
 
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
@@ -3849,6 +3855,10 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="ssh-keys" activeSection={activeTab}>
           <SSHKeyManagement />
+        </SectionPanel>
+
+        <SectionPanel section="activity-log" activeSection={activeTab}>
+          <AdminActivityLog />
         </SectionPanel>
 
         <SectionPanel section="egress-credits" activeSection={activeTab}>

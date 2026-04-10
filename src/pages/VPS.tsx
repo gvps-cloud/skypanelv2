@@ -447,110 +447,50 @@ const VPS: React.FC = () => {
     }
   }, [normalizeProviderType, token]);
 
-  const loadProviderRegions = useCallback(
-    async (providersList: ProviderOption[]) => {
-      if (providersList.length === 0) {
-        setRegionOptions([]);
-        return;
+  const loadPlatformRegions = useCallback(async () => {
+    try {
+      const response = await fetch("/api/pricing/public-regions");
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to load regions");
       }
 
-      const supportedTypes = new Set<ProviderType>(["linode"]);
-      const aggregate = new Map<
-        string,
-        {
-          label: string;
-          country?: string;
-        }
-      >();
+      const regions: RegionOption[] = (Array.isArray(data.regions)
+        ? data.regions
+        : []
+      )
+        .map((region: any) => {
+          if (!region || typeof region.id !== "string") return null;
+          const id = region.id.trim();
+          if (!id) return null;
+          return {
+            id,
+            label:
+              typeof region.label === "string" && region.label.trim()
+                ? region.label.trim()
+                : id,
+            country:
+              typeof region.country === "string" ? region.country : undefined,
+          };
+        })
+        .filter((r): r is RegionOption => r !== null);
 
-      const tasks = providersList
-        .filter((provider) => supportedTypes.has(provider.type))
-        .map(async (provider) => {
-          try {
-            const response = await fetch(
-              `/api/vps/providers/${provider.id}/regions`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              },
-            );
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) {
-              throw new Error(
-                data.error ||
-                  "Failed to load regions for the selected provider",
-              );
-            }
-
-            const regions = Array.isArray(data.regions) ? data.regions : [];
-            regions.forEach((region: any) => {
-              if (!region) return;
-              const slugRaw = typeof region.id === "string" ? region.id : "";
-              const slug = slugRaw.trim();
-              if (!slug) return;
-
-              const baseLabel =
-                typeof region.label === "string" &&
-                region.label.trim().length > 0
-                  ? region.label.trim()
-                  : slug;
-              const country =
-                typeof region.country === "string" ? region.country : "";
-
-              const existing = aggregate.get(slug);
-              if (existing) {
-                if (!existing.country && country) {
-                  existing.country = country;
-                }
-                if (!existing.label && baseLabel) {
-                  existing.label = baseLabel;
-                }
-              } else {
-                aggregate.set(slug, {
-                  label: baseLabel,
-                  country,
-                });
-              }
-            });
-          } catch (error) {
-            console.error(
-              `Failed to load regions for provider ${provider.id}`,
-              error,
-            );
-          }
-        });
-
-      if (tasks.length === 0) {
-        setRegionOptions([]);
-        return;
-      }
-
-      await Promise.allSettled(tasks);
-
-      const combined: RegionOption[] = Array.from(aggregate.entries()).map(
-        ([id, info]) => ({
-          id,
-          label: info.label,
-          country: info.country,
-        }),
-      );
-
-      combined.sort((a, b) => a.label.localeCompare(b.label));
-      setRegionOptions(combined);
-    },
-    [token],
-  );
+      regions.sort((a, b) => a.label.localeCompare(b.label));
+      setRegionOptions(regions);
+    } catch (error) {
+      console.error("Failed to load platform regions:", error);
+      setRegionOptions([]);
+    }
+  }, []);
 
   useEffect(() => {
     loadProviderOptions();
   }, [loadProviderOptions]);
 
   useEffect(() => {
-    if (providerOptions.length === 0) {
-      setRegionOptions([]);
-      return;
-    }
-    loadProviderRegions(providerOptions);
-  }, [providerOptions, loadProviderRegions]);
+    loadPlatformRegions();
+  }, [loadPlatformRegions]);
 
   useEffect(() => {
     if (providerOptions.length === 0) {

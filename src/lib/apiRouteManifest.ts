@@ -68,6 +68,24 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/admin/activity",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/activity/export",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/activity/summary",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
     "path": "/api/admin/announcements",
     "protected": true,
     "admin": true

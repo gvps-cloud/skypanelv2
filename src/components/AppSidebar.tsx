@@ -72,7 +72,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             title: "Operations",
             icon: Cog,
             url: `/admin#support`,
-            isActive: ["support", "servers", "networking", "stackscripts", "providers", "regions", "vps-plans", "category-mappings", "ssh-keys"].includes(activeAnchor),
+            isActive: ["support", "servers", "networking", "stackscripts", "providers", "regions", "vps-plans", "category-mappings", "ssh-keys", "activity-log"].includes(activeAnchor),
             items: [
               { title: "Tickets", url: `/admin#support`, isActive: activeAnchor === "support" },
               { title: "Servers", url: `/admin#servers`, isActive: activeAnchor === "servers" },
@@ -83,6 +83,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               { title: "VPS Plans", url: `/admin#vps-plans`, isActive: activeAnchor === "vps-plans" },
               { title: "Category Mappings", url: `/admin#category-mappings`, isActive: activeAnchor === "category-mappings" },
               { title: "SSH Keys", url: `/admin#ssh-keys`, isActive: activeAnchor === "ssh-keys" },
+              { title: "Activity Log", url: `/admin#activity-log`, isActive: activeAnchor === "activity-log" },
             ],
           },
           {
