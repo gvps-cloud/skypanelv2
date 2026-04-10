@@ -256,8 +256,13 @@ export function AccordionSelect({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-        <div className="max-h-80 overflow-y-auto">
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        align="start"
+        // Prevent the popover wrapper from swallowing wheel events so the inner scroll container can receive them
+        onWheel={(e) => e.stopPropagation()}
+      >
+        <div className="max-h-80 overflow-y-auto overflow-x-hidden overscroll-contain overscroll-y-contain touch-pan-y overscroll-behavior-y-contain touch-action-pan-y">
           {/* Search Input */}
           <div className="p-3 border-b sticky top-0 bg-background z-10">
             <div className="relative">
