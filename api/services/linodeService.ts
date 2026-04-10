@@ -1161,6 +1161,46 @@ class LinodeService {
   /**
    * Fetch all Linode instances for the account
    */
+  /**
+   * Fetch specific Linode instances by their IDs
+   */
+  async getLinodeInstancesByIds(instanceIds: number[]): Promise<LinodeInstance[]> {
+    if (!this.apiToken) {
+      throw new Error("Linode API token not configured");
+    }
+    if (instanceIds.length === 0) return [];
+
+    const instances: LinodeInstance[] = [];
+    const chunkSize = 100;
+
+    for (let i = 0; i < instanceIds.length; i += chunkSize) {
+      const chunk = instanceIds.slice(i, i + chunkSize);
+      const filter = { id: { "+in": chunk } };
+
+      try {
+        const response = await fetch(`${this.baseUrl}/linode/instances`, {
+          headers: {
+            ...this.getHeaders(),
+            "X-Filter": JSON.stringify(filter),
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data && Array.isArray(data.data)) {
+            instances.push(...data.data);
+          }
+        } else {
+          console.warn(`Failed to fetch linode instances chunk: ${response.status}`);
+        }
+      } catch (error) {
+        console.error("Error fetching Linode instances chunk:", error);
+      }
+    }
+
+    return instances;
+  }
+
   async getLinodeInstances(): Promise<LinodeInstance[]> {
     try {
       if (!this.apiToken) {

@@ -690,9 +690,16 @@ router.patch(
         new_status: nextStatus,
       };
       try {
-        await query('SELECT pg_notify($1, $2)', ['ticket_updates', JSON.stringify(statusNotification)]);
+        await query("SELECT pg_notify($1, $2)", [
+          "ticket_updates",
+          JSON.stringify(statusNotification),
+        ]);
       } catch (notifyErr) {
-        console.warn('[Admin] Ticket NOTIFY failed for ticket %s:', id, notifyErr);
+        console.warn(
+          "[Admin] Ticket NOTIFY failed for ticket %s:",
+          id,
+          notifyErr,
+        );
       }
 
       const userMessageByStatus: Record<
@@ -862,9 +869,16 @@ router.post(
         sender_name: "Support Team",
       };
       try {
-        await query('SELECT pg_notify($1, $2)', ['ticket_updates', JSON.stringify(notificationPayload)]);
+        await query("SELECT pg_notify($1, $2)", [
+          "ticket_updates",
+          JSON.stringify(notificationPayload),
+        ]);
       } catch (notifyErr) {
-        console.warn('[Admin] Ticket NOTIFY failed for ticket %s:', id, notifyErr);
+        console.warn(
+          "[Admin] Ticket NOTIFY failed for ticket %s:",
+          id,
+          notifyErr,
+        );
       }
 
       res.status(201).json({
@@ -2058,7 +2072,9 @@ router.get(
         return res.json({ config: networkingConfig });
       }
       // No DB row — fall back to env default
-      return res.json({ config: { rdns_base_domain: config.RDNS_BASE_DOMAIN } });
+      return res.json({
+        config: { rdns_base_domain: config.RDNS_BASE_DOMAIN },
+      });
     } catch (err: any) {
       if (isMissingTableError(err)) {
         return res.json({
@@ -2286,7 +2302,9 @@ router.put(
       });
 
       if (!pricing) {
-        return res.status(404).json({ error: "Egress pricing region not found" });
+        return res
+          .status(404)
+          .json({ error: "Egress pricing region not found" });
       }
 
       res.json({ pricing });
@@ -2573,6 +2591,41 @@ router.get(
 
       const linodeDetailCache = new Map<number, any>();
 
+      const linodeInstanceIds: number[] = rows
+        .map((row) => {
+          const resolvedProviderId: string | null = row.provider_id ?? null;
+          const providerMeta = resolvedProviderId
+            ? providerSecrets.get(resolvedProviderId)
+            : null;
+          const providerType = row.provider_type ?? providerMeta?.type ?? null;
+          return providerType === "linode"
+            ? Number(row.provider_instance_id)
+            : NaN;
+        })
+        .filter((id): id is number => Number.isFinite(id));
+
+      if (linodeInstanceIds.length > 0) {
+        try {
+          const uniqueIds = Array.from(new Set(linodeInstanceIds));
+          const instances =
+            await linodeService.getLinodeInstancesByIds(uniqueIds);
+          for (const instance of instances) {
+            linodeDetailCache.set(instance.id, instance);
+          }
+        } catch (err) {
+          console.warn(
+            "Admin servers: failed to pre-fetch Linode instances",
+            err,
+          );
+        }
+      }
+
+      const updatesToPerform: {
+        id: string;
+        status: string;
+        ip_address: string | null;
+      }[] = [];
+
       const enriched = await Promise.all(
         rows.map(async (row) => {
           const resolvedProviderId: string | null = row.provider_id ?? null;
@@ -2613,10 +2666,11 @@ router.get(
                     detail.status === "offline" ? "stopped" : detail.status;
 
                   if (normalizedStatus !== status || currentIp !== ipAddress) {
-                    await query(
-                      "UPDATE vps_instances SET status = $1, ip_address = $2, updated_at = NOW() WHERE id = $3",
-                      [normalizedStatus, currentIp, row.id],
-                    );
+                    updatesToPerform.push({
+                      id: row.id,
+                      status: normalizedStatus,
+                      ip_address: currentIp,
+                    });
                     status = normalizedStatus;
                     ipAddress = currentIp;
                   }
@@ -2664,6 +2718,36 @@ router.get(
           };
         }),
       );
+
+      if (updatesToPerform.length > 0) {
+        try {
+          const chunkSize = 1000;
+          for (let i = 0; i < updatesToPerform.length; i += chunkSize) {
+            const chunk = updatesToPerform.slice(i, i + chunkSize);
+            const valuesParams = chunk
+              .map(
+                (_, idx) =>
+                  `(${idx * 3 + 1}::uuid, ${idx * 3 + 2}::text, ${idx * 3 + 3}::text)`,
+              )
+              .join(", ");
+            const flatParams = chunk.flatMap((u) => [
+              u.id,
+              u.status,
+              u.ip_address,
+            ]);
+
+            await query(
+              `UPDATE vps_instances
+               SET status = v.status, ip_address = v.ip_address, updated_at = NOW()
+               FROM (VALUES ${valuesParams}) AS v(id, status, ip_address)
+               WHERE vps_instances.id = v.id`,
+              flatParams,
+            );
+          }
+        } catch (err) {
+          console.error("Admin servers: failed to perform bulk update", err);
+        }
+      }
 
       res.json({ servers: enriched });
     } catch (err: any) {
@@ -2747,7 +2831,7 @@ router.get(
            WHERE name ILIKE $1 OR slug ILIKE $1
            ORDER BY name
            LIMIT 20`,
-          [searchPattern]
+          [searchPattern],
         );
 
         return res.json({
@@ -2766,8 +2850,7 @@ router.get(
         query("SELECT COUNT(*)::INTEGER AS total FROM organization_members"),
       ]);
 
-      const totalOrganizations =
-        organizationCountResult.rows[0]?.total ?? 0;
+      const totalOrganizations = organizationCountResult.rows[0]?.total ?? 0;
       const totalMembers = memberCountResult.rows[0]?.total ?? 0;
       const totalPages =
         totalOrganizations === 0
@@ -4461,7 +4544,10 @@ router.post(
 
         const organization = orgResult.rows[0];
 
-        const ownerRole = await getOrganizationRoleByName(organization.id, "owner");
+        const ownerRole = await getOrganizationRoleByName(
+          organization.id,
+          "owner",
+        );
         if (!ownerRole) {
           throw new Error("Failed to resolve organization owner role");
         }
@@ -4503,7 +4589,9 @@ router.post(
           );
         }
 
-        const createdOrganization = await fetchAdminOrganizationById(organization.id);
+        const createdOrganization = await fetchAdminOrganizationById(
+          organization.id,
+        );
 
         res.status(201).json({
           organization: createdOrganization,
@@ -4897,17 +4985,22 @@ router.post(
       );
       const organization = orgResult.rows[0];
 
-      const selectedRole = await resolveOrganizationRoleSelection(organizationId, {
-        role,
-        roleId,
-      });
+      const selectedRole = await resolveOrganizationRoleSelection(
+        organizationId,
+        {
+          role,
+          roleId,
+        },
+      );
       if (!selectedRole) {
         res
           .status(400)
           .json(formatBusinessLogicError("Invalid role", "INVALID_ROLE"));
         return;
       }
-      const selectedLegacyRole = toLegacyOrganizationMemberRole(selectedRole.name);
+      const selectedLegacyRole = toLegacyOrganizationMemberRole(
+        selectedRole.name,
+      );
 
       const userResult = await query(
         "SELECT id, name, email, role as user_role FROM users WHERE id = $1",
@@ -4917,9 +5010,14 @@ router.post(
 
       // If adding as owner, handle ownership transfer
       if (selectedRole.name === "owner") {
-        const adminRole = await getOrganizationRoleByName(organizationId, "admin");
+        const adminRole = await getOrganizationRoleByName(
+          organizationId,
+          "admin",
+        );
         if (!adminRole) {
-          throw new Error("Failed to resolve admin role for ownership transfer");
+          throw new Error(
+            "Failed to resolve admin role for ownership transfer",
+          );
         }
 
         await query("BEGIN");
@@ -5101,23 +5199,33 @@ router.put(
       );
       const member = memberResult.rows[0];
 
-      const selectedRole = await resolveOrganizationRoleSelection(organizationId, {
-        role,
-        roleId,
-      });
+      const selectedRole = await resolveOrganizationRoleSelection(
+        organizationId,
+        {
+          role,
+          roleId,
+        },
+      );
       if (!selectedRole) {
         res
           .status(400)
           .json(formatBusinessLogicError("Invalid role", "INVALID_ROLE"));
         return;
       }
-      const selectedLegacyRole = toLegacyOrganizationMemberRole(selectedRole.name);
+      const selectedLegacyRole = toLegacyOrganizationMemberRole(
+        selectedRole.name,
+      );
 
       // If changing to owner, handle ownership transfer
       if (selectedRole.name === "owner") {
-        const adminRole = await getOrganizationRoleByName(organizationId, "admin");
+        const adminRole = await getOrganizationRoleByName(
+          organizationId,
+          "admin",
+        );
         if (!adminRole) {
-          throw new Error("Failed to resolve admin role for ownership transfer");
+          throw new Error(
+            "Failed to resolve admin role for ownership transfer",
+          );
         }
 
         await query("BEGIN");
@@ -5716,9 +5824,14 @@ router.get(
           clearInterval(heartbeat);
           heartbeat = null;
         }
-        ticketNotificationService.removeListener("ticket_update", notificationHandler);
+        ticketNotificationService.removeListener(
+          "ticket_update",
+          notificationHandler,
+        );
         try {
-          res.write(`event: error\ndata: ${JSON.stringify({ error: reason })}\n\n`);
+          res.write(
+            `event: error\ndata: ${JSON.stringify({ error: reason })}\n\n`,
+          );
         } catch {
           // no-op
         }
