@@ -109,36 +109,23 @@ router.put(
           return;
         }
 
-        // Update each schedule
-        const updatePromises = schedules.map(async ({ day_of_week, is_open, hours_text }) => {
-          const normalizedDay = day_of_week.toLowerCase();
-          
-          // Check if schedule exists for this day
-          const existingResult = await query(
-            'SELECT id FROM platform_availability WHERE day_of_week = $1',
-            [normalizedDay]
-          );
+        // Batch update schedules using UNNEST and UPSERT
+        const batchDays = schedules.map(s => s.day_of_week.toLowerCase());
+        const batchIsOpens = schedules.map(s => s.is_open);
+        const batchHoursTexts = schedules.map(s => s.hours_text);
+        const batchDisplayOrders = batchDays.map(d => VALID_DAYS.indexOf(d));
 
-          if (existingResult.rows.length > 0) {
-            // Update existing schedule
-            return query(
-              `UPDATE platform_availability 
-               SET is_open = $1, hours_text = $2, updated_at = $3 
-               WHERE day_of_week = $4`,
-              [is_open, hours_text, now, normalizedDay]
-            );
-          } else {
-            // Insert new schedule with appropriate display_order
-            const displayOrder = VALID_DAYS.indexOf(normalizedDay);
-            return query(
-              `INSERT INTO platform_availability (day_of_week, is_open, hours_text, display_order, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6)`,
-              [normalizedDay, is_open, hours_text, displayOrder, now, now]
-            );
-          }
-        });
-
-        await Promise.all(updatePromises);
+        await query(
+          `INSERT INTO platform_availability (day_of_week, is_open, hours_text, display_order, created_at, updated_at)
+           SELECT unnest_day, unnest_is_open, unnest_hours_text, unnest_display_order, $5::timestamptz, $5::timestamptz
+           FROM UNNEST($1::varchar[], $2::boolean[], $3::varchar[], $4::integer[]) AS t(unnest_day, unnest_is_open, unnest_hours_text, unnest_display_order)
+           ON CONFLICT (day_of_week)
+           DO UPDATE SET
+             is_open = EXCLUDED.is_open,
+             hours_text = EXCLUDED.hours_text,
+             updated_at = EXCLUDED.updated_at`,
+          [batchDays, batchIsOpens, batchHoursTexts, batchDisplayOrders, now]
+        );
 
         // Log activity
         if (req.user?.id) {
