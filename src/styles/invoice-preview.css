@@ -3,6 +3,28 @@
 }
 
 .dark .invoice-preview :is(
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    span,
+    div,
+    td,
+    th,
+    li,
+    small,
+    strong,
+    em,
+    blockquote,
+    code,
+    pre,
+    ol,
+    ul,
+    caption
+  ):is(
     [style^="color:#000"],
     [style^="color: #000"],
     [style*=";color:#000"],
