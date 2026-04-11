@@ -180,8 +180,16 @@ function renderPage(initialEntry = "/vps/vps-1") {
 }
 
 describe("VPSDetail tab routing", () => {
+  let verifyPasswordHandler: (init?: RequestInit) => Promise<Response>;
+
   beforeEach(() => {
-    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+    verifyPasswordHandler = async () =>
+      new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
 
       if (url === "/api/vps/vps-1") {
@@ -192,10 +200,7 @@ describe("VPSDetail tab routing", () => {
       }
 
       if (url === "/api/auth/verify-password") {
-        return new Response(JSON.stringify({ success: true }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return verifyPasswordHandler(init);
       }
 
       if (url === "/api/vps/networking/config") {
@@ -303,12 +308,70 @@ describe("VPSDetail tab routing", () => {
 
     expect(await screen.findByTestId("ssh-terminal")).toBeTruthy();
 
-    const tabSelect = document.querySelector("select");
-    expect(tabSelect).toBeTruthy();
+    const tabSelect = screen.getByRole("combobox", {
+      name: "Instance feature tabs",
+      hidden: true,
+    });
 
     fireEvent.change(tabSelect as HTMLSelectElement, {
       target: { value: "overview" },
     });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Confirm Password")).toBeNull();
+      expect(screen.queryByTestId("ssh-terminal")).toBeNull();
+      expect(screen.getByTestId("location-search").textContent).toBe("");
+    });
+  });
+
+  it("ignores completed password verification after leaving the ssh tab", async () => {
+    let resolveVerify: (() => void) | null = null;
+
+    verifyPasswordHandler = (init) =>
+      new Promise<Response>((resolve, reject) => {
+        const signal = init?.signal;
+        if (signal instanceof AbortSignal) {
+          signal.addEventListener(
+            "abort",
+            () => {
+              reject(new DOMException("Aborted", "AbortError"));
+            },
+            { once: true },
+          );
+        }
+
+        resolveVerify = () =>
+          resolve(
+            new Response(JSON.stringify({ success: true }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+      });
+
+    renderPage("/vps/vps-1?tab=ssh");
+
+    expect(await screen.findByText("SSH Console")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open SSH Console" }));
+    expect(await screen.findByText("Confirm Password")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "Sup3rSecure!" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm & Open" }));
+
+    fireEvent.change(
+      screen.getByRole("combobox", {
+        name: "Instance feature tabs",
+        hidden: true,
+      }),
+      {
+        target: { value: "overview" },
+      },
+    );
+
+    resolveVerify?.();
 
     await waitFor(() => {
       expect(screen.queryByText("Confirm Password")).toBeNull();

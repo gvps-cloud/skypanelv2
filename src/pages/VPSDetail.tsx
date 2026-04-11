@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import type { NavigateOptions } from "react-router-dom";
 import {
   type LucideIcon,
   ArrowLeft,
@@ -737,6 +738,7 @@ const VPSDetail: React.FC = () => {
   const [rebuildDiskEncryption, setRebuildDiskEncryption] = useState<string>("");
   const [rebuildMaintenancePolicy, setRebuildMaintenancePolicy] = useState<string>("");
   const [rebuildShowAdvanced, setRebuildShowAdvanced] = useState<boolean>(false);
+  const sshVerifyAbortRef = useRef<AbortController | null>(null);
   const tabDefinitions = useMemo<TabDefinition[]>(() => {
     const tabs: TabDefinition[] = [
       { id: "overview", label: "Overview", icon: Server },
@@ -765,9 +767,10 @@ const VPSDetail: React.FC = () => {
   const defaultTab = renderedTabIds[0] ?? "overview";
   const activeTab: TabId =
     isTabId(tabParam) && renderedTabIds.includes(tabParam) ? tabParam : defaultTab;
+  const activeTabRef = useRef<TabId>(activeTab);
 
   const setActiveTab = useCallback(
-    (tab: TabId) => {
+    (tab: TabId, options?: NavigateOptions) => {
       setSearchParams((currentParams) => {
         const nextParams = new URLSearchParams(currentParams);
         if (tab === "overview") {
@@ -776,7 +779,7 @@ const VPSDetail: React.FC = () => {
           nextParams.set("tab", tab);
         }
         return nextParams;
-      });
+      }, options);
     },
     [setSearchParams],
   );
@@ -784,15 +787,19 @@ const VPSDetail: React.FC = () => {
   useEffect(() => {
     if (!isTabId(tabParam)) {
       if (defaultTab !== "overview" || tabParam !== null) {
-        setActiveTab(defaultTab);
+        setActiveTab(defaultTab, { replace: true });
       }
       return;
     }
 
     if (!renderedTabIds.includes(tabParam)) {
-      setActiveTab(defaultTab);
+      setActiveTab(defaultTab, { replace: true });
     }
   }, [defaultTab, renderedTabIds, setActiveTab, tabParam]);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
 
   const openSshConsole = useCallback(() => {
     if (!detail?.id) {
@@ -803,6 +810,9 @@ const VPSDetail: React.FC = () => {
   }, [detail?.id]);
 
   const resetSshConfirmState = useCallback(() => {
+    sshVerifyAbortRef.current?.abort();
+    sshVerifyAbortRef.current = null;
+    setSshConfirmLoading(false);
     setSshConfirmPassword("");
     setSshConfirmError(null);
   }, []);
@@ -839,6 +849,10 @@ const VPSDetail: React.FC = () => {
     }
 
     setSshConfirmLoading(true);
+    const abortController = new AbortController();
+    sshVerifyAbortRef.current?.abort();
+    sshVerifyAbortRef.current = abortController;
+
     try {
       const response = await fetch("/api/auth/verify-password", {
         method: "POST",
@@ -846,6 +860,7 @@ const VPSDetail: React.FC = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        signal: abortController.signal,
         body: JSON.stringify({ password: sshConfirmPassword }),
       });
 
@@ -859,17 +874,32 @@ const VPSDetail: React.FC = () => {
         } catch (error) {
           console.warn("Failed to parse password verification response", error);
         }
-        setSshConfirmError(message);
+        if (!abortController.signal.aborted && activeTabRef.current === "ssh") {
+          setSshConfirmError(message);
+        }
+        return;
+      }
+
+      if (abortController.signal.aborted || activeTabRef.current !== "ssh") {
         return;
       }
 
       setSshConfirmOpen(false);
       resetSshConfirmState();
       openSshConsole();
-    } catch {
-      setSshConfirmError("Unable to verify password. Please try again.");
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
+      if (activeTabRef.current === "ssh") {
+        setSshConfirmError("Unable to verify password. Please try again.");
+      }
     } finally {
-      setSshConfirmLoading(false);
+      if (sshVerifyAbortRef.current === abortController) {
+        sshVerifyAbortRef.current = null;
+        setSshConfirmLoading(false);
+      }
     }
   }, [openSshConsole, resetSshConfirmState, sshConfirmPassword, token]);
 
@@ -2409,6 +2439,7 @@ const VPSDetail: React.FC = () => {
             {/* Mobile Dropdown (below lg breakpoint) */}
             <div className="lg:hidden">
               <select
+                aria-label="Instance feature tabs"
                 value={activeTab}
                 onChange={(e) => setActiveTab(e.target.value as TabId)}
                 className="w-full px-4 py-3.5 text-sm font-medium bg-card border border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary dark:focus:ring-primary dark:focus:border-primary text-foreground"

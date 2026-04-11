@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/hooks/useTheme";
 
 interface LogoProps {
   /**
@@ -23,14 +24,15 @@ const sizeMap = {
  */
 export function Logo({ size = "md", className }: LogoProps) {
   const dimension = sizeMap[size];
+  const { isDark } = useTheme();
 
   return (
     <img
-      src="/favicon.svg"
+      src="/favicon-96x96.png"
       alt="Logo"
       width={dimension}
       height={dimension}
-      className={cn("shrink-0", className)}
+      className={cn("shrink-0", isDark && "invert", className)}
     />
   );
 }
