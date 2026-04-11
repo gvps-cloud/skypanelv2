@@ -12,7 +12,6 @@ import { Download, ChevronLeft, Loader } from "lucide-react";
 import DOMPurify from "dompurify";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import "@/styles/invoice-preview.css";
 import {
   Card,
   CardContent,
@@ -177,7 +176,7 @@ const InvoiceDetail: React.FC = () => {
           <Card>
             <CardContent className="p-4 sm:p-8">
               <div
-                className="invoice-preview max-w-none overflow-x-auto"
+                className="invoice-preview max-w-none overflow-x-auto [&_.container]:max-w-full dark:[&_.container]:shadow-[0_0_0_1px_hsl(var(--border))]"
                 dangerouslySetInnerHTML={{
                   __html: DOMPurify.sanitize(invoice.htmlContent),
                 }}

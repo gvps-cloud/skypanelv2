@@ -1,7 +1,0 @@
-.invoice-preview .container {
-  max-width: 100%;
-}
-
-.dark .invoice-preview .container {
-  box-shadow: 0 0 0 1px hsl(var(--border));
-}
