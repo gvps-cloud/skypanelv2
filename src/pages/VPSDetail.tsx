@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   type LucideIcon,
   ArrowLeft,
@@ -75,6 +75,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Area, AreaChart, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ActiveHoursDisplay } from "@/components/VPS/ActiveHoursDisplay";
+import { SSHTerminal } from "@/components/VPS/SSHTerminal";
 import RebuildOSSelect from "@/components/VPS/RebuildOSSelect";
 import { egressService } from "@/services/egressService";
 import { Database } from "lucide-react";
@@ -282,6 +283,16 @@ type TabId =
   | "metrics"
   | "ssh"
   | "notes";
+
+const isTabId = (value: string | null): value is TabId =>
+  value === "overview" ||
+  value === "backups" ||
+  value === "networking" ||
+  value === "activity" ||
+  value === "firewall" ||
+  value === "metrics" ||
+  value === "ssh" ||
+  value === "notes";
 
 interface TabDefinition {
   id: TabId;
@@ -632,6 +643,7 @@ const BACKUP_WINDOW_CHOICES: Array<{ value: string; label: string }> = [
 
 const VPSDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const { token } = useAuth();
   const { setDynamicOverride, removeDynamicOverride } = useBreadcrumb();
 
@@ -642,8 +654,12 @@ const VPSDetail: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<
     "boot" | "shutdown" | "reboot" | null
   >(null);
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const tab = searchParams.get("tab");
+    return isTabId(tab) ? tab : "overview";
+  });
   const [sshConfirmOpen, setSshConfirmOpen] = useState(false);
+  const [sshConsoleOpen, setSshConsoleOpen] = useState(false);
   const [sshConfirmPassword, setSshConfirmPassword] = useState("");
   const [sshConfirmLoading, setSshConfirmLoading] = useState(false);
   const [sshConfirmError, setSshConfirmError] = useState<string | null>(null);
@@ -750,44 +766,22 @@ const VPSDetail: React.FC = () => {
     return tabs;
   }, [detail?.providerType]);
 
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (isTabId(tab)) {
+      setActiveTab(tab);
+      return;
+    }
+    setActiveTab("overview");
+  }, [searchParams]);
+
   const openSshConsole = useCallback(() => {
     if (!detail?.id) {
       toast.error("Instance ID unavailable. Please refresh and try again.");
       return;
     }
-
-    const targetUrl = new URL(`/vps/${detail.id}/ssh`, window.location.origin);
-    if (detail.label) {
-      targetUrl.searchParams.set("label", detail.label);
-    }
-
-    const viewportWidth = window.outerWidth || window.innerWidth || 1280;
-    const viewportHeight = window.outerHeight || window.innerHeight || 800;
-    const width = Math.min(Math.max(viewportWidth * 0.8, 960), 1440);
-    const height = Math.min(Math.max(viewportHeight * 0.85, 720), 960);
-    const baseLeft = window.screenX ?? window.screenLeft ?? 0;
-    const baseTop = window.screenY ?? window.screenTop ?? 0;
-    const left = baseLeft + Math.max((viewportWidth - width) / 2, 0);
-    const top = baseTop + Math.max((viewportHeight - height) / 2, 0);
-    const features = [
-      "popup=yes",
-      "noopener",
-      "noreferrer",
-      "scrollbars=no",
-      "resizable=yes",
-      `width=${Math.round(width)}`,
-      `height=${Math.round(height)}`,
-      `left=${Math.round(left)}`,
-      `top=${Math.round(top)}`,
-    ].join(",");
-
-    const handle = window.open(targetUrl.toString(), "_blank", features);
-    if (!handle) {
-      toast.error("Please allow pop-ups to launch the SSH console.");
-      return;
-    }
-    handle.focus();
-  }, [detail?.id, detail?.label]);
+    setSshConsoleOpen(true);
+  }, [detail?.id]);
 
   const resetSshConfirmState = useCallback(() => {
     setSshConfirmPassword("");
@@ -4470,9 +4464,8 @@ const VPSDetail: React.FC = () => {
                 </div>
                 <div className="px-6 py-5 space-y-4">
                   <p className="text-sm text-gray-600 text-muted-foreground">
-                    Launch the embedded SSH console in a dedicated window so you
-                    can keep managing other instance details while the session
-                    runs.
+                    Launch the SSH console directly in this page for a cleaner,
+                    safer workflow without browser pop-up windows.
                   </p>
                   <div className="flex flex-wrap items-center gap-3">
                     <button
@@ -4709,6 +4702,28 @@ const VPSDetail: React.FC = () => {
           </aside>
         </div>
       </div>
+      <Dialog open={sshConsoleOpen} onOpenChange={setSshConsoleOpen}>
+        <DialogContent className="max-w-[90vw] w-full h-[80vh] flex flex-col p-0 gap-0 bg-background border-border">
+          <DialogHeader className="px-4 py-2 border-b border-border/20 bg-muted/10 shrink-0">
+            <DialogTitle className="text-sm font-mono flex items-center gap-2 text-foreground">
+              <TerminalIcon className="h-4 w-4" />
+              SSH Console{" "}
+              {detail?.label ? (
+                <span className="opacity-50">:: {detail.label}</span>
+              ) : null}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden relative bg-background">
+            {detail?.id ? (
+              <SSHTerminal instanceId={detail.id} fitContainer={true} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                Instance ID unavailable. Please refresh and try again.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={sshConfirmOpen}
         onOpenChange={(open) => {

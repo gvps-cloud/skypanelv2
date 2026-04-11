@@ -308,7 +308,6 @@ Auth (redirect if logged in)
 
 Protected (auth required)
   /dashboard              /vps              /vps/:id
-  /vps/:id/ssh (standalone terminal)
   /ssh-keys               /organizations    /organizations/:id
   /billing                /billing/invoice/:id
   /billing/transaction/:id
@@ -324,7 +323,7 @@ Invitation
   /organizations/invitations/:token
 ```
 
-> ★ The SSH console route (`/vps/:id/ssh`) uses a **standalone** protected layout without the sidebar, rendering a full-screen terminal.
+> ★ SSH access now launches from the VPS detail page (`/vps/:id`, or deep-linked with `/vps/:id?tab=ssh`) using an in-page modal terminal.
 
 ### React Context Providers
 
@@ -1142,7 +1141,6 @@ skypanelv2/
 │   │   ├── Dashboard.tsx             # User dashboard
 │   │   ├── VPS.tsx                   # VPS list
 │   │   ├── VPSDetail.tsx             # VPS detail view
-│   │   ├── VpsSshConsole.tsx         # Full-screen SSH terminal
 │   │   ├── Billing.tsx               # Billing overview
 │   │   ├── Organizations.tsx         # Organization management
 │   │   └── ...                       # Other page components

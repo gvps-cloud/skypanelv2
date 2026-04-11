@@ -222,7 +222,7 @@ deploy/                 Deployment-related templates
 - `/dashboard`
 - `/vps`
 - `/vps/:id`
-- `/vps/:id/ssh`
+- `/vps/:id?tab=ssh` (deep link to SSH tab in VPS details)
 - `/ssh-keys`
 - `/organizations`
 - `/organizations/:id`
