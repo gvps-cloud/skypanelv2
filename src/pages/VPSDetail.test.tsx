@@ -141,6 +141,21 @@ const instanceResponse = {
   },
 };
 
+function createInstanceResponse(
+  overrides: Partial<(typeof instanceResponse)["instance"]> = {},
+) {
+  return {
+    instance: {
+      ...instanceResponse.instance,
+      ...overrides,
+      provider: {
+        ...instanceResponse.instance.provider,
+        ...(overrides.provider ?? {}),
+      },
+    },
+  };
+}
+
 function LocationProbe() {
   const location = useLocation();
   return <div data-testid="location-search">{location.search}</div>;
@@ -170,7 +185,14 @@ describe("VPSDetail tab routing", () => {
       const url = typeof input === "string" ? input : input.toString();
 
       if (url === "/api/vps/vps-1") {
-        return new Response(JSON.stringify(instanceResponse), {
+        return new Response(JSON.stringify(currentResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (url === "/api/auth/verify-password") {
+        return new Response(JSON.stringify({ success: true }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
@@ -197,6 +219,12 @@ describe("VPSDetail tab routing", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     fetchMock.mockReset();
+  });
+
+  let currentResponse = instanceResponse;
+
+  beforeEach(() => {
+    currentResponse = instanceResponse;
   });
 
   it("auto-opens password confirmation for ssh deep links", async () => {
@@ -227,6 +255,56 @@ describe("VPSDetail tab routing", () => {
     });
 
     await waitFor(() => {
+      expect(screen.getByTestId("location-search").textContent).toBe("");
+    });
+  });
+
+  it("normalizes hidden provider-gated tabs back to a rendered tab", async () => {
+    currentResponse = createInstanceResponse({
+      providerType: "aws",
+      provider: {
+        ...instanceResponse.instance.provider,
+        id: 2,
+        label: "aws-vps",
+      },
+    });
+
+    renderPage("/vps/vps-1?tab=metrics");
+
+    expect(await screen.findByText("Instance Feature Views")).toBeTruthy();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("location-search").textContent).toBe("");
+    });
+
+    const optionValues = Array.from(
+      screen.getByRole("combobox").querySelectorAll("option"),
+    ).map((option) => option.getAttribute("value"));
+    expect(optionValues).not.toContain("metrics");
+  });
+
+  it("closes SSH dialogs when navigation leaves the ssh tab", async () => {
+    renderPage("/vps/vps-1?tab=ssh");
+
+    expect(await screen.findByText("Confirm Password")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "Sup3rSecure!" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm & Open" }));
+
+    expect(await screen.findByTestId("ssh-terminal")).toBeTruthy();
+
+    const tabSelect = document.querySelector("select");
+    expect(tabSelect).toBeTruthy();
+
+    fireEvent.change(tabSelect as HTMLSelectElement, {
+      target: { value: "overview" },
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Confirm Password")).toBeNull();
+      expect(screen.queryByTestId("ssh-terminal")).toBeNull();
       expect(screen.getByTestId("location-search").textContent).toBe("");
     });
   });

@@ -465,7 +465,6 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             },
             response: {
               success: true,
-              message: "Password verified",
             },
           },
           {
@@ -1129,7 +1128,9 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             response: {
               type: "websocket-upgrade",
               events: [
-                { type: "data", message: "terminal stream bytes..." },
+                { type: "status", message: "ssh-ready" },
+                { type: "connected" },
+                { type: "output", data: "<terminal bytes>" },
                 { type: "close", message: "SSH ended" },
                 { type: "error", message: "SSH connect failed: <reason>" },
               ],

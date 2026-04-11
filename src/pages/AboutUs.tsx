@@ -172,25 +172,8 @@ export default function AboutUs() {
       ? value.toLocaleString()
       : "N/A";
 
-  const totalNonAdminUsers = (() => {
-    const regularUsers = stats?.users.regular;
-    if (typeof regularUsers === "number" && Number.isFinite(regularUsers)) {
-      return regularUsers;
-    }
-
-    const totalUsers = stats?.users.total;
-    const adminUsers = stats?.users.admins;
-    if (
-      typeof totalUsers === "number" &&
-      Number.isFinite(totalUsers) &&
-      typeof adminUsers === "number" &&
-      Number.isFinite(adminUsers)
-    ) {
-      return Math.max(totalUsers - adminUsers, 0);
-    }
-
-    return undefined;
-  })();
+  const totalNonAdminUsers =
+    typeof stats?.users.regular === "number" ? stats.users.regular : undefined;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -309,7 +292,7 @@ export default function AboutUs() {
                       <div className="grid gap-3">
                         {[
                           {
-                            label: "Total users",
+                            label: "Non-admin users",
                             value: formatStat(totalNonAdminUsers),
                           },
                           {

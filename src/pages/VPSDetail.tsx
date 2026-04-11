@@ -643,7 +643,6 @@ const VPSDetail: React.FC = () => {
   const { token } = useAuth();
   const { setDynamicOverride, removeDynamicOverride } = useBreadcrumb();
   const tabParam = searchParams.get("tab");
-  const activeTab: TabId = isTabId(tabParam) ? tabParam : "overview";
 
   const [detail, setDetail] = useState<VpsInstanceDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -761,6 +760,14 @@ const VPSDetail: React.FC = () => {
     return tabs;
   }, [detail?.providerType]);
 
+  const renderedTabIds = useMemo(
+    () => tabDefinitions.map((tab) => tab.id),
+    [tabDefinitions],
+  );
+  const defaultTab = renderedTabIds[0] ?? "overview";
+  const activeTab: TabId =
+    isTabId(tabParam) && renderedTabIds.includes(tabParam) ? tabParam : defaultTab;
+
   const setActiveTab = useCallback(
     (tab: TabId) => {
       setSearchParams((currentParams) => {
@@ -775,6 +782,19 @@ const VPSDetail: React.FC = () => {
     },
     [setSearchParams],
   );
+
+  useEffect(() => {
+    if (!isTabId(tabParam)) {
+      if (defaultTab !== "overview" || tabParam !== null) {
+        setActiveTab(defaultTab);
+      }
+      return;
+    }
+
+    if (!renderedTabIds.includes(tabParam)) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab, renderedTabIds, setActiveTab, tabParam]);
 
   const openSshConsole = useCallback(() => {
     if (!detail?.id) {
@@ -803,6 +823,10 @@ const VPSDetail: React.FC = () => {
   useEffect(() => {
     if (activeTab !== "ssh") {
       sshAutoOpenKeyRef.current = null;
+      setSshConfirmOpen(false);
+      setSshConsoleOpen(false);
+      resetSshConfirmState();
+      setSshConfirmLoading(false);
       return;
     }
 
@@ -821,6 +845,7 @@ const VPSDetail: React.FC = () => {
     activeTab,
     detail?.id,
     handleOpenSshRequest,
+    resetSshConfirmState,
     searchParams,
     sshConfirmOpen,
     sshConsoleOpen,
