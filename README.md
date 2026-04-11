@@ -205,6 +205,12 @@ SSH CONSOLE ACCESS FLOW
 11. Resizes: Browser sends { rows, cols } → WS server → SSH stream.setWindow()
 ```
 
+Current UX and security gating:
+
+- SSH is launched from `VPSDetail` (including deep-link `?tab=ssh`) in an in-page modal terminal.
+- Users must pass `POST /api/auth/verify-password` before the client opens the SSH modal.
+- The deprecated frontend route `/vps/:id/ssh` has been removed.
+
 ### Real-Time Notification Flow
 
 ```text

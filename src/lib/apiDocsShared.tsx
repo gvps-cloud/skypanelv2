@@ -458,7 +458,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "POST",
             path: "/verify-password",
             description:
-              "Verify user password before sensitive operations (SSH access, deletion).",
+              "Verify user password before sensitive operations (for example launching the VPS detail SSH modal or confirming destructive actions).",
             auth: true,
             body: {
               password: "Sup3rSecure!",
@@ -1113,6 +1113,26 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
                   },
                 },
               },
+            },
+          },
+          {
+            method: "GET",
+            path: "/:id/ssh",
+            description:
+              "Upgrade to a WebSocket SSH bridge for the selected VPS. Used by the in-app SSH modal launched from VPS detail.",
+            auth: true,
+            params: {
+              token: "jwt_token_here",
+              rows: 38,
+              cols: 120,
+            },
+            response: {
+              type: "websocket-upgrade",
+              events: [
+                { type: "data", message: "terminal stream bytes..." },
+                { type: "close", message: "SSH ended" },
+                { type: "error", message: "SSH connect failed: <reason>" },
+              ],
             },
           },
           {
