@@ -14,8 +14,7 @@
 .dark .invoice-preview :is(
     .invoice-meta-value,
     .totals-row,
-    .totals-row span,
-    .container table tbody td
+    .totals-row span
   ) {
   color: hsl(var(--foreground)) !important;
 }
@@ -34,7 +33,6 @@
 
 .dark .invoice-preview :is(
     .invoice-meta-label,
-    .company-info p,
     .footer,
     [style*="color: #666666"],
     [style*="color:#666666"]
@@ -43,11 +41,14 @@
 }
 
 .dark .invoice-preview :is(
-    .invoice-info p,
     [style*="color: #007bff"],
     [style*="color:#007bff"]
   ) {
   color: hsl(var(--primary)) !important;
+}
+
+.dark .invoice-preview :is(blockquote, code, pre, ol, ul) {
+  color: inherit;
 }
 
 .dark .invoice-preview .status-badge {
