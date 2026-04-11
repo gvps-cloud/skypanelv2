@@ -214,7 +214,9 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
     try {
       const httpTarget = buildApiUrl(`/vps/${instanceId}/ssh`, API_BASE_URL);
       const url = new URL(httpTarget, window.location.origin);
-      url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+      // Force secure websocket if window is HTTPS to prevent Mixed Content
+      const isHttps = url.protocol === 'https:' || window.location.protocol === 'https:';
+      url.protocol = isHttps ? 'wss:' : 'ws:';
       url.searchParams.set('token', token);
       url.searchParams.set('rows', String(rows));
       url.searchParams.set('cols', String(cols));
@@ -296,6 +298,31 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
     try { wsRef.current?.close(); } catch {}
     wsRef.current = null;
     setStatus('disconnected');
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        if (wsRef.current) {
+          // Send a clean close if still connected
+          if (wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.close(1000, 'Component unmounted');
+          } else {
+            wsRef.current.close();
+          }
+          wsRef.current = null;
+        }
+      } catch (err) {
+        // ignore
+      }
+      try {
+        if (termRef.current) {
+          termRef.current.dispose();
+          termRef.current = null;
+        }
+      } catch (err) {}
+    };
   }, []);
 
   const clear = useCallback(() => {
