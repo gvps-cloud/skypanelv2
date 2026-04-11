@@ -15,12 +15,22 @@
     .invoice-meta-value,
     .totals-row,
     .totals-row span,
-    .container td,
-    .container th,
+    .container tbody td,
+    .container thead th,
     .container h3,
+    .container blockquote,
+    .container code,
+    .container pre,
+    .container ol,
+    .container ul,
     .footer p:first-child
   ) {
   color: hsl(var(--foreground)) !important;
+}
+
+.dark .invoice-preview :is(.totals-row.total, .totals-row.total span) {
+  color: hsl(var(--primary)) !important;
+  border-color: hsl(var(--primary)) !important;
 }
 
 .dark .invoice-preview :is(
