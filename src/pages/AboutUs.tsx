@@ -172,6 +172,26 @@ export default function AboutUs() {
       ? value.toLocaleString()
       : "N/A";
 
+  const totalNonAdminUsers = (() => {
+    const regularUsers = stats?.users?.regular;
+    if (typeof regularUsers === "number" && Number.isFinite(regularUsers)) {
+      return regularUsers;
+    }
+
+    const totalUsers = stats?.users?.total;
+    const adminUsers = stats?.users?.admins;
+    if (
+      typeof totalUsers === "number" &&
+      Number.isFinite(totalUsers) &&
+      typeof adminUsers === "number" &&
+      Number.isFinite(adminUsers)
+    ) {
+      return Math.max(totalUsers - adminUsers, 0);
+    }
+
+    return undefined;
+  })();
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <MarketingNavbar />
@@ -290,7 +310,7 @@ export default function AboutUs() {
                         {[
                           {
                             label: "Total users",
-                            value: formatStat(stats?.users.total),
+                            value: formatStat(totalNonAdminUsers),
                           },
                           {
                             label: "VPS deployed",
