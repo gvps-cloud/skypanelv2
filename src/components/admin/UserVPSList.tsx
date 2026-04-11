@@ -136,7 +136,7 @@ export const UserVPSList: React.FC<UserVPSListProps> = ({ vpsInstances }) => {
                           size="sm"
                           asChild
                         >
-                          <Link to={`/vps/${vps.id}/ssh`}>
+                          <Link to={`/vps/${vps.id}?tab=ssh`}>
                             <Terminal className="h-4 w-4 mr-1" />
                             SSH
                           </Link>

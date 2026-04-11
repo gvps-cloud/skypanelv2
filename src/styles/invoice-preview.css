@@ -1,0 +1,31 @@
+.invoice-preview {
+  color: hsl(var(--foreground));
+}
+
+.dark .invoice-preview :is(
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    span,
+    div,
+    td,
+    th,
+    li,
+    small,
+    strong,
+    em
+  ) {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .invoice-preview a {
+  color: hsl(var(--primary)) !important;
+}
+
+.dark .invoice-preview :is(table, th, td, hr) {
+  border-color: hsl(var(--border)) !important;
+}

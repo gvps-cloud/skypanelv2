@@ -45,7 +45,6 @@ import Support from "./pages/Support";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import VPSDetail from "./pages/VPSDetail";
-import VpsSshConsole from "./pages/VpsSshConsole";
 import AppLayout from "./components/AppLayout";
 import PublicLayout from "./components/PublicLayout";
 import ScrollToTop from "./components/ScrollToTop";
@@ -120,24 +119,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       <AppLayout>{children}</AppLayout>
     </ImpersonationWrapper>
   );
-}
-
-function StandaloneProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <ImpersonationWrapper>{children}</ImpersonationWrapper>;
 }
 
 // Admin Route Component (requires authenticated admin role)
@@ -278,14 +259,6 @@ function AppRoutes() {
             <ProtectedRoute>
               <VPSDetail />
             </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/vps/:id/ssh"
-          element={
-            <StandaloneProtectedRoute>
-              <VpsSshConsole />
-            </StandaloneProtectedRoute>
           }
         />
         <Route

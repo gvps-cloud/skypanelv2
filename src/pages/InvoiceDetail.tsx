@@ -12,6 +12,7 @@ import { Download, ChevronLeft, Loader } from "lucide-react";
 import DOMPurify from "dompurify";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import "@/styles/invoice-preview.css";
 import {
   Card,
   CardContent,
@@ -176,7 +177,7 @@ const InvoiceDetail: React.FC = () => {
           <Card>
             <CardContent className="p-4 sm:p-8">
               <div
-                className="prose prose-sm dark:prose-invert max-w-none"
+                className="invoice-preview prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{
                   __html: DOMPurify.sanitize(invoice.htmlContent),
                 }}
