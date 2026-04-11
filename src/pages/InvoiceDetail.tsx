@@ -6,12 +6,13 @@
  * to prevent XSS attacks via malicious invoice content.
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Download, ChevronLeft, Loader } from "lucide-react";
 import DOMPurify from "dompurify";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/hooks/useTheme";
 import {
   Card,
   CardContent,
@@ -34,6 +35,7 @@ interface Invoice {
 const InvoiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isDark } = useTheme();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -123,6 +125,26 @@ const InvoiceDetail: React.FC = () => {
     }
   };
 
+  const previewHtml = useMemo(() => {
+    if (!invoice) {
+      return "";
+    }
+
+    if (!isDark) {
+      return invoice.htmlContent;
+    }
+
+    return invoice.htmlContent
+      .replaceAll("#ffffff", "hsl(var(--card))")
+      .replaceAll("#333333", "hsl(var(--foreground))")
+      .replaceAll("#666666", "hsl(var(--muted-foreground))")
+      .replaceAll("#f8f9fa", "hsl(var(--muted))")
+      .replaceAll("#e0e0e0", "hsl(var(--border))")
+      .replaceAll("#007bff", "hsl(var(--primary))")
+      .replaceAll("#e3f2fd", "hsl(var(--secondary))")
+      .replaceAll("#1976d2", "hsl(var(--secondary-foreground))");
+  }, [invoice, isDark]);
+
   if (loading) {
     return (
       <>
@@ -176,9 +198,9 @@ const InvoiceDetail: React.FC = () => {
           <Card>
             <CardContent className="p-4 sm:p-8">
               <div
-                className="invoice-preview max-w-none overflow-x-auto [&_.container]:max-w-full dark:[&_.container]:shadow-[0_0_0_1px_hsl(var(--border))]"
+                className="invoice-preview max-w-none overflow-x-auto text-foreground [&_.container]:max-w-full dark:[&_.container]:shadow-[0_0_0_1px_hsl(var(--border))]"
                 dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(invoice.htmlContent),
+                  __html: DOMPurify.sanitize(previewHtml),
                 }}
               />
             </CardContent>
