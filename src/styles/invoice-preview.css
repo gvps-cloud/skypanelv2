@@ -2,81 +2,69 @@
   color: hsl(var(--foreground));
 }
 
+.dark .invoice-preview .container {
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .invoice-preview :is(.invoice-meta, table thead) {
+  background: hsl(var(--secondary)) !important;
+}
+
 .dark .invoice-preview :is(
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6,
-    p,
-    span,
-    div,
-    td,
-    th,
-    li,
-    small,
-    strong,
-    em,
-    blockquote,
-    code,
-    pre,
-    ol,
-    ul,
-    caption
-  ):is(
-    [style^="color:#000"],
-    [style^="color: #000"],
-    [style*=";color:#000"],
-    [style*="; color:#000"],
-    [style^="color:#000000"],
-    [style^="color: #000000"],
-    [style*=";color:#000000"],
-    [style*="; color:#000000"],
-    [style^="color:#111"],
-    [style^="color: #111"],
-    [style*=";color:#111"],
-    [style*="; color:#111"],
-    [style^="color:#111111"],
-    [style^="color: #111111"],
-    [style*=";color:#111111"],
-    [style*="; color:#111111"],
-    [style^="color:#333"],
-    [style^="color: #333"],
-    [style*=";color:#333"],
-    [style*="; color:#333"],
-    [style^="color:#333333"],
-    [style^="color: #333333"],
-    [style*=";color:#333333"],
-    [style*="; color:#333333"],
-    [style^="color:black"],
-    [style^="color: black"],
-    [style*=";color:black"],
-    [style*="; color: black"],
-    [style^="color:rgb(0,0,0)"],
-    [style^="color: rgb(0, 0, 0)"],
-    [style*=";color:rgb(0,0,0)"],
-    [style*="; color: rgb(0, 0, 0)"],
-    [style^="color:rgb(17,17,17)"],
-    [style^="color: rgb(17, 17, 17)"],
-    [style*=";color:rgb(17,17,17)"],
-    [style*="; color: rgb(17, 17, 17)"],
-    [style^="color:rgb(51,51,51)"],
-    [style^="color: rgb(51, 51, 51)"],
-    [style*=";color:rgb(51,51,51)"],
-    [style*="; color: rgb(51, 51, 51)"],
-    [style^="color:rgba(0,0,0"],
-    [style^="color: rgba(0, 0, 0"],
-    [style*=";color:rgba(0,0,0"],
-    [style*="; color: rgba(0, 0, 0"]
+    .invoice-meta-value,
+    .totals-row,
+    .totals-row span,
+    .container td,
+    .container th,
+    .container h3,
+    .footer p:first-child
   ) {
   color: hsl(var(--foreground)) !important;
+}
+
+.dark .invoice-preview :is(
+    .invoice-meta-label,
+    .company-info p,
+    .footer,
+    .footer p:not(:first-child)
+  ) {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .invoice-preview .invoice-info p {
+  color: hsl(var(--primary)) !important;
+}
+
+.dark .invoice-preview .status-badge {
+  background: hsl(var(--secondary)) !important;
+  color: hsl(var(--secondary-foreground)) !important;
+}
+
+.dark .invoice-preview .status-badge.issued {
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+.dark .invoice-preview .status-badge.paid {
+  background: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.dark .invoice-preview .status-badge.draft {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .invoice-preview .status-badge.cancelled {
+  background: hsl(var(--destructive)) !important;
+  color: hsl(var(--destructive-foreground)) !important;
 }
 
 .dark .invoice-preview a {
   color: hsl(var(--primary)) !important;
 }
 
-.dark .invoice-preview :is(table, th, td, hr) {
+.dark .invoice-preview :is(table, th, td, hr, .footer, .totals-row) {
   border-color: hsl(var(--border)) !important;
 }
