@@ -598,8 +598,8 @@ export function VPSPlanWizard({
                 step="0.01"
                 min={0}
                 placeholder={selectedType?.backup_price_monthly
-                  ? `Default: $${(Number(selectedType.backup_price_monthly) || 0).toFixed(2)}`
-                  : "0.00"}
+                  ? `Default: $${(Number(selectedType.backup_price_monthly) || 0).toFixed(6)}`
+                  : "0.000000"}
                 value={newVPSPlan.backupPriceMonthly}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -615,7 +615,7 @@ export function VPSPlanWizard({
             </div>
             {selectedType?.backup_price_monthly && Number(selectedType.backup_price_monthly) > 0 && (
               <p className="text-xs text-muted-foreground">
-                Provider default: ${(Number(selectedType.backup_price_monthly) || 0).toFixed(2)}/mo
+                Provider default: ${(Number(selectedType.backup_price_monthly) || 0).toFixed(6)}/mo
               </p>
             )}
           </div>
@@ -767,15 +767,15 @@ export function VPSPlanWizard({
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Base Price</span>
-                <span>${(selectedType?.price.monthly || 0).toFixed(2)}/mo</span>
+                <span>${(selectedType?.price.monthly || 0).toFixed(6)}/mo</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Your Markup</span>
-                <span className="text-primary">+${newVPSPlan.markupPrice.toFixed(2)}</span>
+                <span className="text-primary">+${newVPSPlan.markupPrice.toFixed(6)}</span>
               </div>
               <div className="flex justify-between font-medium pt-2 border-t">
                 <span>Final Price</span>
-                <span className="text-lg text-primary">${finalPrice.toFixed(2)}/mo</span>
+                <span className="text-lg text-primary">${finalPrice.toFixed(6)}/mo</span>
               </div>
             </div>
 
@@ -785,16 +785,16 @@ export function VPSPlanWizard({
               <div className="text-sm font-medium">Backup Pricing</div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Base Backup</span>
-                <span>${(parseFloat(String(newVPSPlan.backupPriceMonthly)) || 0).toFixed(2)}/mo</span>
+                <span>${(parseFloat(String(newVPSPlan.backupPriceMonthly)) || 0).toFixed(6)}/mo</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Your Upcharge</span>
-                <span className="text-primary">+${(parseFloat(String(newVPSPlan.backupUpchargeMonthly)) || 0).toFixed(2)}</span>
+                <span className="text-primary">+${(parseFloat(String(newVPSPlan.backupUpchargeMonthly)) || 0).toFixed(6)}</span>
               </div>
               {backupTotal > 0 && (
                 <div className="flex justify-between text-sm pt-1 border-t border-dashed">
                   <span className="text-muted-foreground">Total Backup</span>
-                  <span className="font-medium">${backupTotal.toFixed(2)}/mo</span>
+                  <span className="font-medium">${backupTotal.toFixed(6)}/mo</span>
                 </div>
               )}
             </div>

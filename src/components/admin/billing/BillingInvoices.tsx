@@ -144,7 +144,7 @@ export const BillingInvoices: React.FC = () => {
                   </TableCell>
                   <TableCell>{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell>
-                    {inv.totalAmount.toFixed(2)} {inv.currency}
+                    {inv.totalAmount.toFixed(6)} {inv.currency}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

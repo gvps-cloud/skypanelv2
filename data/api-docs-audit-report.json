@@ -1,508 +1,21 @@
 {
-  "generatedAt": "2026-04-10T20:48:22.093Z",
-  "actualCount": 319,
-  "actualProtectedCount": 292,
-  "docsCount": 278,
-  "docsProtectedCount": 249,
+  "generatedAt": "2026-04-11T08:22:58.914Z",
+  "actualCount": 330,
+  "actualProtectedCount": 303,
+  "docsCount": 332,
+  "docsProtectedCount": 305,
   "missingInDocs": [
-    {
-      "method": "GET",
-      "path": "/api/admin/activity",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\activity.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/activity/export",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\activity.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/activity/summary",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\activity.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/announcements",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\announcements.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/announcements",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\announcements.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/announcements/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\announcements.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/announcements/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\announcements.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/announcements/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\announcements.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewall-settings",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/networking/firewall-settings",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewall-templates",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewall-templates/:slug",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewalls",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/firewalls",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/networking/firewalls/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewalls/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/networking/firewalls/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewalls/:id/devices",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/firewalls/:id/devices",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/networking/firewalls/:id/devices/:deviceId",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewalls/:id/history",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewalls/:id/rules",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/networking/firewalls/:id/rules",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/ips",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/ips",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/ips/:address",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/networking/ips/:address/rdns",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/networking/ips/:instanceId/:address",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/ips/assign",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/ips/share",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/ipv6/pools",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/ipv6/range-rdns",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/ipv6/range-rdns-records",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/ipv6/ranges",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/ipv6/ranges",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/networking/ipv6/ranges/:range",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/vlans",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/networking/vlans/:regionId/:label",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/announcements",
-      "protected": false,
-      "admin": false,
-      "source": "api\\routes\\announcements.ts"
-    },
     {
       "method": "GET",
       "path": "/api/auth/debug/user",
       "protected": true,
       "admin": false,
       "source": "api\\routes\\auth.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/health/organizations",
-      "protected": false,
-      "admin": false,
-      "source": "api\\routes\\health.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/health/uptime",
-      "protected": false,
-      "admin": false,
-      "source": "api\\routes\\health.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/:id/networking/ipv6-rdns-records",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/vps/:id/watchdog",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
     }
   ],
   "staleInDocs": [],
-  "authMismatches": [
-    {
-      "key": "GET /api/egress/usage/:vpsId/summary",
-      "actualProtected": true,
-      "docsProtected": false,
-      "section": "Egress & Network Billing"
-    },
-    {
-      "key": "GET /api/health/config-validation",
-      "actualProtected": true,
-      "docsProtected": false,
-      "section": "Platform Health"
-    },
-    {
-      "key": "GET /api/health/detailed",
-      "actualProtected": true,
-      "docsProtected": false,
-      "section": "Platform Health"
-    },
-    {
-      "key": "GET /api/health/metrics",
-      "actualProtected": true,
-      "docsProtected": false,
-      "section": "Platform Health"
-    },
-    {
-      "key": "GET /api/health/rate-limiting",
-      "actualProtected": true,
-      "docsProtected": false,
-      "section": "Platform Health"
-    }
-  ],
-  "incompleteDocs": [
-    {
-      "key": "DELETE /api/auth/api-keys/:id",
-      "section": "Authentication & Profile",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/vps",
-      "section": "VPS Provisioning & Lifecycle",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/vps/:id",
-      "section": "VPS Provisioning & Lifecycle",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/ssh-keys",
-      "section": "Organization SSH Keys",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/organizations",
-      "section": "Organizations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/organizations/:id/members/:userId",
-      "section": "Organizations",
-      "issues": [
-        "missing_response"
-      ]
-    },
-    {
-      "key": "PUT /api/organizations/:id/members/:userId",
-      "section": "Organizations",
-      "issues": [
-        "missing_response"
-      ]
-    },
-    {
-      "key": "DELETE /api/activities/:id",
-      "section": "Activities Feed",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/notifications/unread-count",
-      "section": "Notifications",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/tickets",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/tickets/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/admin/providers",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/plans",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/providers",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/providers/:id/regions",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/tickets/:id/replies",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/health",
-      "section": "Platform Health",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/theme",
-      "section": "Theme",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/contact/config",
-      "section": "Contact",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/pricing",
-      "section": "Pricing",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/pricing/category-mappings",
-      "section": "Pricing",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/documentation/categories",
-      "section": "Documentation",
-      "issues": [
-        "missing_params"
-      ]
-    }
-  ],
+  "authMismatches": [],
+  "incompleteDocs": [],
   "actualRoutes": [
     {
       "method": "GET",
@@ -2109,6 +1622,48 @@
     },
     {
       "method": "GET",
+      "path": "/api/notes/organizations",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\notes.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notes/personal",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\notes.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notes/personal",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\notes.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/notes/personal/:noteId",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\notes.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notes/personal/:noteId",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\notes.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/notes/personal/:noteId",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\notes.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/notifications",
       "protected": true,
       "admin": false,
@@ -2239,6 +1794,41 @@
       "protected": true,
       "admin": false,
       "source": "api\\routes\\organizations.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/organizations/:id/notes",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\notes.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/organizations/:id/notes",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\notes.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/organizations/:id/notes/:noteId",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\notes.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/organizations/:id/notes/:noteId",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\notes.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/organizations/:id/notes/:noteId",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\notes.ts"
     },
     {
       "method": "GET",
@@ -2944,6 +2534,7 @@
       "relativePath": "/api-keys/:id",
       "path": "/api/auth/api-keys/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3142,6 +2733,7 @@
       "relativePath": "/",
       "path": "/api/vps",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3163,6 +2755,7 @@
       "relativePath": "/:id",
       "path": "/api/vps/:id",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3343,6 +2936,17 @@
       "isPlaceholderResponse": false
     },
     {
+      "sectionTitle": "VPS Provisioning & Lifecycle",
+      "sectionBase": "/api/vps",
+      "method": "PUT",
+      "relativePath": "/:id/watchdog",
+      "path": "/api/vps/:id/watchdog",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
       "sectionTitle": "VPS Catalog & Integrations",
       "sectionBase": "/api/vps",
       "method": "GET",
@@ -3453,12 +3057,24 @@
       "isPlaceholderResponse": false
     },
     {
+      "sectionTitle": "VPS Networking",
+      "sectionBase": "/api/vps",
+      "method": "GET",
+      "relativePath": "/:id/networking/ipv6-rdns-records",
+      "path": "/api/vps/:id/networking/ipv6-rdns-records",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
       "sectionTitle": "Organization SSH Keys",
       "sectionBase": "/api/ssh-keys",
       "method": "GET",
       "relativePath": "/",
       "path": "/api/ssh-keys",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3567,7 +3183,7 @@
       "method": "GET",
       "relativePath": "/usage/:vpsId/summary",
       "path": "/api/egress/usage/:vpsId/summary",
-      "auth": false,
+      "auth": true,
       "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
@@ -3579,6 +3195,7 @@
       "relativePath": "/",
       "path": "/api/organizations",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -3635,7 +3252,7 @@
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": true
+      "isPlaceholderResponse": false
     },
     {
       "sectionTitle": "Organizations",
@@ -3646,7 +3263,7 @@
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": true
+      "isPlaceholderResponse": false
     },
     {
       "sectionTitle": "Organizations",
@@ -3825,6 +3442,127 @@
       "isPlaceholderResponse": false
     },
     {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "GET",
+      "relativePath": "/:id/notes",
+      "path": "/api/organizations/:id/notes",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "POST",
+      "relativePath": "/:id/notes",
+      "path": "/api/organizations/:id/notes",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "GET",
+      "relativePath": "/:id/notes/:noteId",
+      "path": "/api/organizations/:id/notes/:noteId",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "PUT",
+      "relativePath": "/:id/notes/:noteId",
+      "path": "/api/organizations/:id/notes/:noteId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "DELETE",
+      "relativePath": "/:id/notes/:noteId",
+      "path": "/api/organizations/:id/notes/:noteId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Personal Notes",
+      "sectionBase": "/api/notes",
+      "method": "GET",
+      "relativePath": "/personal",
+      "path": "/api/notes/personal",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Personal Notes",
+      "sectionBase": "/api/notes",
+      "method": "POST",
+      "relativePath": "/personal",
+      "path": "/api/notes/personal",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Personal Notes",
+      "sectionBase": "/api/notes",
+      "method": "GET",
+      "relativePath": "/personal/:noteId",
+      "path": "/api/notes/personal/:noteId",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Personal Notes",
+      "sectionBase": "/api/notes",
+      "method": "PUT",
+      "relativePath": "/personal/:noteId",
+      "path": "/api/notes/personal/:noteId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Personal Notes",
+      "sectionBase": "/api/notes",
+      "method": "DELETE",
+      "relativePath": "/personal/:noteId",
+      "path": "/api/notes/personal/:noteId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Personal Notes",
+      "sectionBase": "/api/notes",
+      "method": "GET",
+      "relativePath": "/organizations",
+      "path": "/api/notes/organizations",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
       "sectionTitle": "Activity & Audit Log",
       "sectionBase": "/api/activity",
       "method": "GET",
@@ -3886,6 +3624,7 @@
       "relativePath": "/:id",
       "path": "/api/activities/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4094,6 +3833,7 @@
       "relativePath": "/unread-count",
       "path": "/api/notifications/unread-count",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4181,6 +3921,7 @@
       "relativePath": "/tickets",
       "path": "/api/admin/tickets",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4213,6 +3954,7 @@
       "relativePath": "/tickets/:id",
       "path": "/api/admin/tickets/:id",
       "auth": true,
+      "hasBody": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -4476,6 +4218,7 @@
       "relativePath": "/providers",
       "path": "/api/admin/providers",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5146,6 +4889,7 @@
       "relativePath": "/plans",
       "path": "/api/admin/plans",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5189,6 +4933,7 @@
       "relativePath": "/providers",
       "path": "/api/admin/providers",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5232,6 +4977,7 @@
       "relativePath": "/providers/:id/regions",
       "path": "/api/admin/providers/:id/regions",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5330,6 +5076,7 @@
       "relativePath": "/tickets/:id/replies",
       "path": "/api/admin/tickets/:id/replies",
       "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5494,6 +5241,7 @@
       "relativePath": "/",
       "path": "/api/health",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5514,7 +5262,7 @@
       "method": "GET",
       "relativePath": "/detailed",
       "path": "/api/health/detailed",
-      "auth": false,
+      "auth": true,
       "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
@@ -5547,7 +5295,7 @@
       "method": "GET",
       "relativePath": "/metrics",
       "path": "/api/health/metrics",
-      "auth": false,
+      "auth": true,
       "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
@@ -5558,7 +5306,7 @@
       "method": "GET",
       "relativePath": "/rate-limiting",
       "path": "/api/health/rate-limiting",
-      "auth": false,
+      "auth": true,
       "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
@@ -5569,6 +5317,28 @@
       "method": "GET",
       "relativePath": "/config-validation",
       "path": "/api/health/config-validation",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/uptime",
+      "path": "/api/health/uptime",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/organizations",
+      "path": "/api/health/organizations",
       "auth": false,
       "hasParams": true,
       "hasResponse": true,
@@ -5581,6 +5351,7 @@
       "relativePath": "/",
       "path": "/api/theme",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5591,6 +5362,7 @@
       "relativePath": "/config",
       "path": "/api/contact/config",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5602,6 +5374,17 @@
       "path": "/api/contact",
       "auth": false,
       "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Announcements",
+      "sectionBase": "/api/announcements",
+      "method": "GET",
+      "relativePath": "/",
+      "path": "/api/announcements",
+      "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5634,6 +5417,7 @@
       "relativePath": "/",
       "path": "/api/pricing",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5655,6 +5439,7 @@
       "relativePath": "/category-mappings",
       "path": "/api/pricing/category-mappings",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5676,6 +5461,7 @@
       "relativePath": "/categories",
       "path": "/api/documentation/categories",
       "auth": false,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     },
@@ -5775,6 +5561,424 @@
       "path": "/api/egress/admin/settings/packs",
       "auth": true,
       "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Activity Log",
+      "sectionBase": "/api/admin/activity",
+      "method": "GET",
+      "relativePath": "/",
+      "path": "/api/admin/activity",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Activity Log",
+      "sectionBase": "/api/admin/activity",
+      "method": "GET",
+      "relativePath": "/export",
+      "path": "/api/admin/activity/export",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Activity Log",
+      "sectionBase": "/api/admin/activity",
+      "method": "GET",
+      "relativePath": "/summary",
+      "path": "/api/admin/activity/summary",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Announcements",
+      "sectionBase": "/api/admin/announcements",
+      "method": "GET",
+      "relativePath": "/",
+      "path": "/api/admin/announcements",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Announcements",
+      "sectionBase": "/api/admin/announcements",
+      "method": "GET",
+      "relativePath": "/:id",
+      "path": "/api/admin/announcements/:id",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Announcements",
+      "sectionBase": "/api/admin/announcements",
+      "method": "POST",
+      "relativePath": "/",
+      "path": "/api/admin/announcements",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Announcements",
+      "sectionBase": "/api/admin/announcements",
+      "method": "PUT",
+      "relativePath": "/:id",
+      "path": "/api/admin/announcements/:id",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Announcements",
+      "sectionBase": "/api/admin/announcements",
+      "method": "DELETE",
+      "relativePath": "/:id",
+      "path": "/api/admin/announcements/:id",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/ips",
+      "path": "/api/admin/networking/ips",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/ips/:address",
+      "path": "/api/admin/networking/ips/:address",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "POST",
+      "relativePath": "/ips",
+      "path": "/api/admin/networking/ips",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "DELETE",
+      "relativePath": "/ips/:instanceId/:address",
+      "path": "/api/admin/networking/ips/:instanceId/:address",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "POST",
+      "relativePath": "/ips/assign",
+      "path": "/api/admin/networking/ips/assign",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "POST",
+      "relativePath": "/ips/share",
+      "path": "/api/admin/networking/ips/share",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "PUT",
+      "relativePath": "/ips/:address/rdns",
+      "path": "/api/admin/networking/ips/:address/rdns",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/ipv6/pools",
+      "path": "/api/admin/networking/ipv6/pools",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/ipv6/ranges",
+      "path": "/api/admin/networking/ipv6/ranges",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "POST",
+      "relativePath": "/ipv6/ranges",
+      "path": "/api/admin/networking/ipv6/ranges",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "DELETE",
+      "relativePath": "/ipv6/ranges/:range",
+      "path": "/api/admin/networking/ipv6/ranges/:range",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/ipv6/range-rdns-records",
+      "path": "/api/admin/networking/ipv6/range-rdns-records",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "POST",
+      "relativePath": "/ipv6/range-rdns",
+      "path": "/api/admin/networking/ipv6/range-rdns",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/vlans",
+      "path": "/api/admin/networking/vlans",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "DELETE",
+      "relativePath": "/vlans/:regionId/:label",
+      "path": "/api/admin/networking/vlans/:regionId/:label",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/firewalls",
+      "path": "/api/admin/networking/firewalls",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "POST",
+      "relativePath": "/firewalls",
+      "path": "/api/admin/networking/firewalls",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/firewalls/:id",
+      "path": "/api/admin/networking/firewalls/:id",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "PUT",
+      "relativePath": "/firewalls/:id",
+      "path": "/api/admin/networking/firewalls/:id",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "DELETE",
+      "relativePath": "/firewalls/:id",
+      "path": "/api/admin/networking/firewalls/:id",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/firewalls/:id/rules",
+      "path": "/api/admin/networking/firewalls/:id/rules",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "PUT",
+      "relativePath": "/firewalls/:id/rules",
+      "path": "/api/admin/networking/firewalls/:id/rules",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/firewalls/:id/devices",
+      "path": "/api/admin/networking/firewalls/:id/devices",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "POST",
+      "relativePath": "/firewalls/:id/devices",
+      "path": "/api/admin/networking/firewalls/:id/devices",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "DELETE",
+      "relativePath": "/firewalls/:id/devices/:deviceId",
+      "path": "/api/admin/networking/firewalls/:id/devices/:deviceId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/firewalls/:id/history",
+      "path": "/api/admin/networking/firewalls/:id/history",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/firewall-settings",
+      "path": "/api/admin/networking/firewall-settings",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "PUT",
+      "relativePath": "/firewall-settings",
+      "path": "/api/admin/networking/firewall-settings",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/firewall-templates",
+      "path": "/api/admin/networking/firewall-templates",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false
+    },
+    {
+      "sectionTitle": "Admin Networking",
+      "sectionBase": "/api/admin/networking",
+      "method": "GET",
+      "relativePath": "/firewall-templates/:slug",
+      "path": "/api/admin/networking/firewall-templates/:slug",
+      "auth": true,
+      "hasParams": true,
       "hasResponse": true,
       "isPlaceholderResponse": false
     }

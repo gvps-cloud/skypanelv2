@@ -1080,7 +1080,7 @@ const Organizations: React.FC = () => {
                         Pool: {egressOverview.projectedTotals.activePoolCount ?? 0}
                       </Badge>
                       <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                        Cost: ${billingSummary?.monthlyEstimate?.toFixed(2) ?? '0.00'}
+                        Cost: ${billingSummary?.monthlyEstimate?.toFixed(6) ?? '0.000000'}
                       </Badge>
                     </>
                   )}
@@ -1415,7 +1415,7 @@ const Organizations: React.FC = () => {
                                         {purchase.creditsGb.toFixed(2)} GB
                                       </td>
                                       <td className="p-2 text-right font-mono">
-                                        ${purchase.amountPaid.toFixed(2)}
+                                        ${purchase.amountPaid.toFixed(6)}
                                       </td>
                                     </tr>
                                   ))}

@@ -228,7 +228,7 @@ export const BillingTransactions: React.FC = () => {
                   <TableCell>
                     <div className={cn("flex items-center font-medium", tx.amount > 0 ? "text-green-600" : "text-red-600")}>
                       {tx.amount > 0 ? <ArrowDownLeft className="mr-1 h-3 w-3" /> : <ArrowUpRight className="mr-1 h-3 w-3" />}
-                      {Math.abs(tx.amount).toFixed(2)} {tx.currency}
+                      {Math.abs(tx.amount).toFixed(6)} {tx.currency}
                     </div>
                   </TableCell>
                   <TableCell className="capitalize">{tx.payment_method?.replace('_', ' ') || tx.payment_provider}</TableCell>

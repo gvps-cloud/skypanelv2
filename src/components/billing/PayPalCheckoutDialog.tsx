@@ -110,7 +110,7 @@ export const PayPalCheckoutDialog: React.FC<PayPalCheckoutDialogProps> = ({
 
   const formattedAmount = React.useMemo(() => {
     if (amount === null || Number.isNaN(amount)) {
-      return '$0.00';
+      return '$0.000000';
     }
 
     const currencyCode = config?.currency ?? 'USD';
@@ -119,10 +119,12 @@ export const PayPalCheckoutDialog: React.FC<PayPalCheckoutDialogProps> = ({
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: currencyCode,
+        minimumFractionDigits: 6,
+        maximumFractionDigits: 6,
       }).format(amount);
     } catch (error) {
       console.error('Failed to format currency amount:', error);
-      return `$${amount.toFixed(2)}`;
+      return `$${amount.toFixed(6)}`;
     }
   }, [amount, config?.currency]);
 

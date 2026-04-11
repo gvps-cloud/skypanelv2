@@ -68,7 +68,7 @@ export const PurchaseEgressCreditsDialog: React.FC<PurchaseEgressCreditsDialogPr
     if (paymentMethod === 'wallet') {
       if (insufficientWallet) {
         setError(
-          `Insufficient wallet balance. Required: $${pack.price.toFixed(2)}, Available: $${walletBalanceCurrent.toFixed(2)}`
+          `Insufficient wallet balance. Required: $${pack.price.toFixed(6)}, Available: $${walletBalanceCurrent.toFixed(6)}`
         );
         return;
       }
@@ -194,7 +194,7 @@ export const PurchaseEgressCreditsDialog: React.FC<PurchaseEgressCreditsDialogPr
               </div>
               <div className="text-right">
                 <p className="text-lg font-bold text-foreground">
-                  ${pack.price.toFixed(2)}
+                  ${pack.price.toFixed(6)}
                 </p>
                 <p className="text-xs text-muted-foreground">USD</p>
               </div>
@@ -241,7 +241,7 @@ export const PurchaseEgressCreditsDialog: React.FC<PurchaseEgressCreditsDialogPr
                   <p className="text-sm text-muted-foreground">
                     Current balance:{' '}
                     <span className="font-medium text-foreground">
-                      ${walletBalanceCurrent.toFixed(2)} USD
+                      ${walletBalanceCurrent.toFixed(6)} USD
                     </span>
                   </p>
                 </div>
@@ -316,7 +316,7 @@ export const PurchaseEgressCreditsDialog: React.FC<PurchaseEgressCreditsDialogPr
                 Processing...
               </>
             ) : (
-              <>Purchase {pack ? `for $${pack.price.toFixed(2)}` : ''}</>
+              <>Purchase {pack ? `for $${pack.price.toFixed(6)}` : ''}</>
             )}
           </Button>
         </DialogFooter>

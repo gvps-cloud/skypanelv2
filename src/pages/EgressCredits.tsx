@@ -409,7 +409,7 @@ const EgressCredits: React.FC = () => {
                 </CardHeader>
                 <CardContent className="relative">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold">${pack.price.toFixed(2)}</span>
+                    <span className="text-2xl font-bold">${pack.price.toFixed(6)}</span>
                     <span className="text-gray-500 dark:text-gray-400">USD</span>
                   </div>
                   <Button
@@ -466,7 +466,7 @@ const EgressCredits: React.FC = () => {
                       <Badge variant="outline">{purchase.packId}</Badge>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      ${purchase.amountPaid.toFixed(2)}
+                      ${purchase.amountPaid.toFixed(6)}
                     </TableCell>
                     <TableCell className="text-right">
                       {formatGb(purchase.creditsGb)}

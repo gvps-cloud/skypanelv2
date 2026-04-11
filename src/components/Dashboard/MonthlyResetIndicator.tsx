@@ -106,7 +106,7 @@ export const MonthlyResetIndicator: React.FC<MonthlyResetIndicatorProps> = ({
             <div>{tooltipContent}</div>
             {monthlySpend > 0 && (
               <div className="text-muted-foreground">
-                Current month spending: ${monthlySpend.toFixed(2)}
+                Current month spending: ${monthlySpend.toFixed(6)}
               </div>
             )}
           </div>

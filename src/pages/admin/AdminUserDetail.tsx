@@ -536,10 +536,10 @@ const AdminUserDetail: React.FC = () => {
             <div className="rounded-lg border bg-card p-6">
               <h3 className="font-semibold mb-2">Wallet Balance</h3>
               <p className="text-3xl font-bold">
-                ${(billing?.wallet_balance || 0).toFixed(2)}
+                ${(billing?.wallet_balance || 0).toFixed(6)}
               </p>
               <p className="text-sm text-muted-foreground">
-                ${(billing?.monthly_spend || 0).toFixed(2)} this month
+                ${(billing?.monthly_spend || 0).toFixed(6)} this month
               </p>
             </div>
 
@@ -766,7 +766,7 @@ const AdminUserDetail: React.FC = () => {
                   </div>
                   <div>
                     <p className="font-medium">Wallet Balance</p>
-                    <p className="text-muted-foreground">${(billing?.wallet_balance || 0).toFixed(2)}</p>
+                    <p className="text-muted-foreground">${(billing?.wallet_balance || 0).toFixed(6)}</p>
                     {billing && billing.wallet_balance > 0 && (
                       <p className="text-xs text-destructive">Funds will be lost</p>
                     )}

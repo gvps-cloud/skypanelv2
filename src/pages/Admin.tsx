@@ -303,7 +303,7 @@ const formatCurrency = (value: number | null | undefined, currency = "USD") => {
     return formatCurrencyDisplay(value, { currency });
   } catch (error) {
     console.warn("Currency format failed", error);
-    return Number.isFinite(value) ? value.toFixed(2) : null;
+    return Number.isFinite(value) ? value.toFixed(6) : null;
   }
 };
 
@@ -3155,7 +3155,7 @@ const Admin: React.FC = () => {
                                       />
                                     ) : (
                                       <p className="text-sm font-medium">
-                                        ${Number(plan.base_price).toFixed(2)}
+                                        ${Number(plan.base_price).toFixed(6)}
                                       </p>
                                     )}
                                   </div>
@@ -3184,7 +3184,7 @@ const Admin: React.FC = () => {
                                       />
                                     ) : (
                                       <p className="text-sm font-medium">
-                                        ${Number(plan.markup_price).toFixed(2)}
+                                        ${Number(plan.markup_price).toFixed(6)}
                                       </p>
                                     )}
                                   </div>
@@ -3237,7 +3237,7 @@ const Admin: React.FC = () => {
                                             Number(
                                               plan.backup_upcharge_monthly || 0,
                                             )
-                                          ).toFixed(2)}
+                                          ).toFixed(6)}
                                           /mo
                                         </span>
                                       </p>
@@ -3536,7 +3536,7 @@ const Admin: React.FC = () => {
                                         ) : (
                                           <span className="text-sm text-muted-foreground">
                                             $
-                                            {Number(plan.base_price).toFixed(2)}
+                                            {Number(plan.base_price).toFixed(6)}
                                           </span>
                                         )}
                                       </TableCell>
@@ -3667,7 +3667,7 @@ const Admin: React.FC = () => {
                                                     (Number(
                                                       plan.backup_upcharge_monthly,
                                                     ) || 0)
-                                                  ).toFixed(2)}
+                                                  ).toFixed(6)}
                                                   /mo
                                                 </div>
                                                 <div className="text-xs text-muted-foreground">
@@ -3676,13 +3676,13 @@ const Admin: React.FC = () => {
                                                     Number(
                                                       plan.backup_price_monthly,
                                                     ) || 0
-                                                  ).toFixed(2)}{" "}
+                                                  ).toFixed(6)}{" "}
                                                   + Upcharge: $
                                                   {(
                                                     Number(
                                                       plan.backup_upcharge_monthly,
                                                     ) || 0
-                                                  ).toFixed(2)}
+                                                  ).toFixed(6)}
                                                 </div>
                                               </>
                                             ) : (

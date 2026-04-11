@@ -136,7 +136,7 @@ const formatCurrencyValue = (value: number, currency = "USD"): string => {
     return formatCurrencyDisplay(value, { currency });
   } catch (error) {
     console.warn("Currency formatting failed", error);
-    return Number.isFinite(value) ? value.toFixed(2) : "—";
+    return Number.isFinite(value) ? value.toFixed(6) : "—";
   }
 };
 

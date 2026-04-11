@@ -22,6 +22,8 @@ export function formatCurrency(
   const formatter = new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
+    minimumFractionDigits: 6,
+    maximumFractionDigits: 6,
   });
 
   if (amount === null || amount === undefined || Number.isNaN(amount)) {

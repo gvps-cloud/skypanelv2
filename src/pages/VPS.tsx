@@ -772,7 +772,7 @@ const VPS: React.FC = () => {
 
           return {
             id: String(plan.id),
-            label: `${plan.name} - $${totalPrice.toFixed(2)}/mo`,
+            label: `${plan.name} - $${totalPrice.toFixed(6)}/mo`,
             disk: disk,
             memory: memoryMb,
             vcpus: vcpus,
@@ -1528,7 +1528,7 @@ const VPS: React.FC = () => {
         mobileToast.error(
           `Insufficient wallet balance. Required: $${totalHourlyCost.toFixed(
             4,
-          )}/hour, Available: $${walletBalance?.balance.toFixed(2) || "0.00"}`,
+          )}/hour, Available: $${walletBalance?.balance.toFixed(6) || "0.000000"}`,
           {
             duration: 8000, // Longer duration for important financial information
           },
@@ -1656,7 +1656,7 @@ const VPS: React.FC = () => {
             `Insufficient wallet balance. You need $${
               payload.required?.toFixed(4) || "unknown"
             } but only have $${
-              payload.available?.toFixed(2) || "unknown"
+              payload.available?.toFixed(6) || "unknown"
             }. Please add funds to your wallet.`,
             {
               duration: 8000,
@@ -1713,10 +1713,9 @@ const VPS: React.FC = () => {
     }
   };
 
-  const activeMonthlySpend = useMemo(
+  const totalMonthlySpend = useMemo(
     () =>
       instances
-        .filter((instance) => instance.status === "running")
         .reduce((sum, instance) => sum + (instance.pricing?.monthly ?? 0), 0),
     [instances],
   );
@@ -2485,9 +2484,9 @@ const VPS: React.FC = () => {
                       Monthly Spend
                     </p>
                     <p className="text-2xl font-bold tracking-tight">
-                      {formatCurrency(activeMonthlySpend)}
+                      {formatCurrency(totalMonthlySpend)}
                     </p>
-                    <p className="text-xs text-muted-foreground">Active instance monthly cost</p>
+                    <p className="text-xs text-muted-foreground">Total instance monthly cost</p>
                   </div>
                 </CardContent>
               </Card>

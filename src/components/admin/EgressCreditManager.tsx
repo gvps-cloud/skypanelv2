@@ -484,7 +484,7 @@ const EgressCreditManager: React.FC = () => {
                                 {formatGb(purchase.creditsGb)}
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                                {purchase.reason || (purchase.adjustmentType === 'purchase' ? `$${purchase.amountPaid.toFixed(2)}` : '-')}
+                                {purchase.reason || (purchase.adjustmentType === 'purchase' ? `$${purchase.amountPaid.toFixed(6)}` : '-')}
                               </TableCell>
                             </TableRow>
                           ))}

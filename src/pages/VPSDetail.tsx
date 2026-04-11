@@ -78,6 +78,7 @@ import { ActiveHoursDisplay } from "@/components/VPS/ActiveHoursDisplay";
 import RebuildOSSelect from "@/components/VPS/RebuildOSSelect";
 import { egressService } from "@/services/egressService";
 import { Database } from "lucide-react";
+import SSHTerminal from "@/components/VPS/SSHTerminal";
 
 interface MetricPoint {
   timestamp: number;
@@ -442,8 +443,8 @@ const formatTransferAllowance = (transferGb: number): string => {
 };
 
 const formatCurrency = (value: number): string => {
-  if (!Number.isFinite(value) || value <= 0) return "$0.00";
-  return `$${value.toFixed(2)}`;
+  if (!Number.isFinite(value) || value <= 0) return "$0.000000";
+  return `$${value.toFixed(6)}`;
 };
 
 const formatPercent = (value: number): string =>
@@ -643,6 +644,7 @@ const VPSDetail: React.FC = () => {
     "boot" | "shutdown" | "reboot" | null
   >(null);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [sshModalOpen, setSshModalOpen] = useState(false);
   const [sshConfirmOpen, setSshConfirmOpen] = useState(false);
   const [sshConfirmPassword, setSshConfirmPassword] = useState("");
   const [sshConfirmLoading, setSshConfirmLoading] = useState(false);
@@ -750,45 +752,6 @@ const VPSDetail: React.FC = () => {
     return tabs;
   }, [detail?.providerType]);
 
-  const openSshConsole = useCallback(() => {
-    if (!detail?.id) {
-      toast.error("Instance ID unavailable. Please refresh and try again.");
-      return;
-    }
-
-    const targetUrl = new URL(`/vps/${detail.id}/ssh`, window.location.origin);
-    if (detail.label) {
-      targetUrl.searchParams.set("label", detail.label);
-    }
-
-    const viewportWidth = window.outerWidth || window.innerWidth || 1280;
-    const viewportHeight = window.outerHeight || window.innerHeight || 800;
-    const width = Math.min(Math.max(viewportWidth * 0.8, 960), 1440);
-    const height = Math.min(Math.max(viewportHeight * 0.85, 720), 960);
-    const baseLeft = window.screenX ?? window.screenLeft ?? 0;
-    const baseTop = window.screenY ?? window.screenTop ?? 0;
-    const left = baseLeft + Math.max((viewportWidth - width) / 2, 0);
-    const top = baseTop + Math.max((viewportHeight - height) / 2, 0);
-    const features = [
-      "popup=yes",
-      "noopener",
-      "noreferrer",
-      "scrollbars=no",
-      "resizable=yes",
-      `width=${Math.round(width)}`,
-      `height=${Math.round(height)}`,
-      `left=${Math.round(left)}`,
-      `top=${Math.round(top)}`,
-    ].join(",");
-
-    const handle = window.open(targetUrl.toString(), "_blank", features);
-    if (!handle) {
-      toast.error("Please allow pop-ups to launch the SSH console.");
-      return;
-    }
-    handle.focus();
-  }, [detail?.id, detail?.label]);
-
   const resetSshConfirmState = useCallback(() => {
     setSshConfirmPassword("");
     setSshConfirmError(null);
@@ -843,13 +806,13 @@ const VPSDetail: React.FC = () => {
 
       setSshConfirmOpen(false);
       resetSshConfirmState();
-      openSshConsole();
+      setSshModalOpen(true);
     } catch {
       setSshConfirmError("Unable to verify password. Please try again.");
     } finally {
       setSshConfirmLoading(false);
     }
-  }, [openSshConsole, resetSshConfirmState, sshConfirmPassword, token]);
+  }, [resetSshConfirmState, sshConfirmPassword, token]);
 
   const backupPricing = useMemo<BackupPricing | null>(() => {
     const planMonthlyRaw = detail?.plan?.pricing?.monthly;
@@ -5244,6 +5207,29 @@ const VPSDetail: React.FC = () => {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* SSH Console Modal */}
+      <Dialog open={sshModalOpen} onOpenChange={setSshModalOpen}>
+        <DialogContent className="max-w-[90vw] w-full h-[80vh] flex flex-col p-0 gap-0 bg-background border-border">
+          <DialogHeader className="px-4 py-2 border-b border-border/20 bg-muted/10 shrink-0">
+            <DialogTitle className="text-sm font-mono flex items-center gap-2 text-foreground">
+              <TerminalIcon className="h-4 w-4" />
+              SSH Console{" "}
+              {detail?.id && (
+                <span className="opacity-50">:: {detail?.label || detail?.id}</span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden relative bg-background">
+            {detail?.id && (
+              <SSHTerminal
+                instanceId={detail.id}
+                fitContainer={true}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

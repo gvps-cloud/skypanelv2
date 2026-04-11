@@ -60,7 +60,7 @@ export const BillingOverview: React.FC = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold">${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })}</div>
             <p className="text-xs text-muted-foreground">Lifetime revenue</p>
           </CardContent>
         </Card>
@@ -70,7 +70,7 @@ export const BillingOverview: React.FC = () => {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalWalletBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold">${stats.totalWalletBalance.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })}</div>
             <p className="text-xs text-muted-foreground">Total customer credit</p>
           </CardContent>
         </Card>

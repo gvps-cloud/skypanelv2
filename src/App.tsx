@@ -45,7 +45,6 @@ import Support from "./pages/Support";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import VPSDetail from "./pages/VPSDetail";
-import VpsSshConsole from "./pages/VpsSshConsole";
 import AppLayout from "./components/AppLayout";
 import PublicLayout from "./components/PublicLayout";
 import ScrollToTop from "./components/ScrollToTop";
@@ -278,14 +277,6 @@ function AppRoutes() {
             <ProtectedRoute>
               <VPSDetail />
             </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/vps/:id/ssh"
-          element={
-            <StandaloneProtectedRoute>
-              <VpsSshConsole />
-            </StandaloneProtectedRoute>
           }
         />
         <Route

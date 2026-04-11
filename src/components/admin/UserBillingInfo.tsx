@@ -74,6 +74,8 @@ export const UserBillingInfo: React.FC<UserBillingInfoProps> = ({ billing, userI
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
+      minimumFractionDigits: 6,
+      maximumFractionDigits: 6,
     }).format(amount);
   };
 

@@ -148,7 +148,7 @@ export const BillingClientList: React.FC = () => {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge variant={user.balance < 0 ? "destructive" : user.balance < 5 ? "secondary" : "default"} className={cn(user.balance >= 5 && "bg-green-600 hover:bg-green-700")}>
-                      ${user.balance.toFixed(2)} {user.currency || 'USD'}
+                      ${user.balance.toFixed(6)} {user.currency || 'USD'}
                     </Badge>
                   </TableCell>
                   <TableCell>{user.active_services}</TableCell>

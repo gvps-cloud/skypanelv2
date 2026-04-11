@@ -796,7 +796,7 @@ export default function Documentation() {
                 <td className="px-4 py-3">{formatStorage(disk)}</td>
                 <td className="px-4 py-3">{formatTransfer(transfer)}</td>
                 <td className="px-4 py-3 text-right font-medium">
-                  ${price.toFixed(2)}/mo
+                  ${price.toFixed(6)}/mo
                 </td>
               </tr>
             );

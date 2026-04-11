@@ -1,114 +1,9 @@
 {
-  "generatedAt": "2026-04-10T20:48:22.095Z",
-  "totalIncomplete": 22,
+  "generatedAt": "2026-04-11T08:09:19.752Z",
+  "totalIncomplete": 4,
   "endpoints": [
     {
-      "key": "DELETE /api/auth/api-keys/:id",
-      "section": "Authentication & Profile",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/vps",
-      "section": "VPS Provisioning & Lifecycle",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/vps/:id",
-      "section": "VPS Provisioning & Lifecycle",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/ssh-keys",
-      "section": "Organization SSH Keys",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/organizations",
-      "section": "Organizations",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/organizations/:id/members/:userId",
-      "section": "Organizations",
-      "issues": [
-        "missing_response"
-      ]
-    },
-    {
-      "key": "PUT /api/organizations/:id/members/:userId",
-      "section": "Organizations",
-      "issues": [
-        "missing_response"
-      ]
-    },
-    {
-      "key": "DELETE /api/activities/:id",
-      "section": "Activities Feed",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
-      "key": "GET /api/notifications/unread-count",
-      "section": "Notifications",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/tickets",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "DELETE /api/admin/tickets/:id",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_body"
-      ]
-    },
-    {
       "key": "GET /api/admin/providers",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/plans",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/providers",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/providers/:id/regions",
-      "section": "Admin Platform Management",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/admin/tickets/:id/replies",
       "section": "Admin Platform Management",
       "issues": [
         "missing_params"
@@ -131,27 +26,6 @@
     {
       "key": "GET /api/contact/config",
       "section": "Contact",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/pricing",
-      "section": "Pricing",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/pricing/category-mappings",
-      "section": "Pricing",
-      "issues": [
-        "missing_params"
-      ]
-    },
-    {
-      "key": "GET /api/documentation/categories",
-      "section": "Documentation",
       "issues": [
         "missing_params"
       ]

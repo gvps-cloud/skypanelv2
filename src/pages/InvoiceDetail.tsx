@@ -176,7 +176,7 @@ const InvoiceDetail: React.FC = () => {
           <Card>
             <CardContent className="p-4 sm:p-8">
               <div
-                className="prose prose-sm dark:prose-invert max-w-none"
+                className="prose prose-sm dark:prose-invert max-w-none dark:[&_p]:!text-foreground dark:[&_td]:!text-foreground dark:[&_th]:!text-foreground dark:[&_h1]:!text-foreground dark:[&_h2]:!text-foreground dark:[&_h3]:!text-foreground dark:[&_.invoice-meta-label]:!text-muted-foreground dark:[&_.invoice-meta-value]:!text-foreground"
                 dangerouslySetInnerHTML={{
                   __html: DOMPurify.sanitize(invoice.htmlContent),
                 }}

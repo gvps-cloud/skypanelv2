@@ -278,7 +278,7 @@ const EgressPackSettings: React.FC = () => {
   };
 
   const formatPrice = (price: number): string => {
-    return `$${price.toFixed(2)}`;
+    return `$${price.toFixed(6)}`;
   };
 
   return (

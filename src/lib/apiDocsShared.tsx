@@ -13,6 +13,8 @@ import {
   Server,
   Zap,
   BookOpen,
+  FileText,
+  Network,
 } from "lucide-react";
 import { ACTIVE_API_ROUTE_MANIFEST } from "@/lib/apiRouteManifest";
 import { BRAND_NAME } from "@/lib/brand";
@@ -683,6 +685,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/api-keys/:id",
             description: "Revoke a specific API key by its ID.",
             auth: true,
+            body: {},
             response: {
               message: "API key revoked successfully",
             },
@@ -1020,6 +1023,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "List VPS instances for the authenticated user with live metrics where available.",
             auth: true,
+            params: {},
             response: {
               instances: [
                 {
@@ -1076,6 +1080,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Fetch an enriched detail view including metrics, networking, backups, and provider metadata.",
             auth: true,
+            params: {},
             response: {
               instance: {
                 id: "vps_001",
@@ -1318,6 +1323,18 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
               message: "Firewall detached",
             },
           },
+          {
+            method: "PUT",
+            path: "/:id/watchdog",
+            description: "Enable or disable the Shutdown Watchdog (Lassie) for automatic VPS restart on crash.",
+            auth: true,
+            body: { watchdog_enabled: true },
+            response: {
+              success: true,
+              watchdog_enabled: true,
+              message: "Shutdown Watchdog enabled successfully",
+            },
+          },
         ],
       },
       {
@@ -1487,6 +1504,18 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
               message: "rDNS updated",
             },
           },
+          {
+            method: "GET",
+            path: "/:id/networking/ipv6-rdns-records",
+            description: "List custom IPv6 rDNS records for addresses within the VPS's assigned IPv6 prefix ranges.",
+            auth: true,
+            params: {},
+            response: {
+              records: [
+                { address: "2400:1111::1", rdns: "v6.example.sky.network" },
+              ],
+            },
+          },
         ],
       },
       {
@@ -1501,6 +1530,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/",
             description: "List SSH keys registered for the authenticated organization.",
             auth: true,
+            params: {},
             response: {
               keys: [
                 {
@@ -1697,15 +1727,24 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "List organizations the authenticated user belongs to.",
             auth: true,
+            params: { page: 1, limit: 12 },
             response: {
               organizations: [
                 {
                   id: "org_001",
                   name: "Acme Corp",
-                  role: "owner",
-                  createdAt: "2026-01-01T00:00:00Z",
+                  slug: "acme-corp",
+                  member_role: "owner",
+                  joined_at: "2026-01-01T00:00:00Z",
+                  stats: {
+                    vps_count: 3,
+                    ticket_count: 2,
+                    ssh_key_count: 5,
+                    member_count: 4,
+                  },
                 },
               ],
+              pagination: { page: 1, limit: 12, total: 1, totalPages: 1 },
             },
           },
           {
@@ -1779,23 +1818,23 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "DELETE",
             path: "/:id/members/:userId",
             description: "Remove a member from an organization.",
-            
+
             body: {}, auth: true,
             response: {
-              success: true,
+              message: "Member removed",
             },
           },
           {
             method: "PUT",
             path: "/:id/members/:userId",
             description: "Update a member's role in an organization.",
-            
+
             auth: true,
             body: {
               role: "admin",
             },
             response: {
-              success: true,
+              message: "Member role updated",
             },
           },
           {
@@ -2027,6 +2066,169 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
               },
             },
           },
+          {
+            method: "GET",
+            path: "/:id/notes",
+            description: "List all notes for an organization.",
+            auth: true,
+            params: {},
+            response: {
+              organization: { organizationId: "org_001", organizationName: "Acme Corp", canManage: true },
+              notes: [
+                {
+                  id: "note_002",
+                  scope: "organization",
+                  title: "Infra notes",
+                  content: "VPC configuration details",
+                  createdAt: "2026-01-01T00:00:00Z",
+                },
+              ],
+            },
+          },
+          {
+            method: "POST",
+            path: "/:id/notes",
+            description: "Create a new organization note.",
+            auth: true,
+            body: { title: "Infra notes", content: "VPC configuration details" },
+            response: {
+              organization: { organizationId: "org_001", organizationName: "Acme Corp", canManage: true },
+              note: { id: "note_002", scope: "organization", title: "Infra notes", content: "VPC configuration details" },
+            },
+          },
+          {
+            method: "GET",
+            path: "/:id/notes/:noteId",
+            description: "Get a specific organization note by ID.",
+            auth: true,
+            params: {},
+            response: {
+              organization: { organizationId: "org_001", organizationName: "Acme Corp", canManage: true },
+              note: { id: "note_002", title: "Infra notes", content: "VPC configuration details" },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/:id/notes/:noteId",
+            description: "Update an organization note.",
+            auth: true,
+            body: { title: "Updated title", content: "Updated content" },
+            response: {
+              organization: { organizationId: "org_001", organizationName: "Acme Corp", canManage: true },
+              note: { id: "note_002", title: "Updated title", content: "Updated content" },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/:id/notes/:noteId",
+            description: "Delete an organization note.",
+            auth: true,
+            body: {},
+            response: { success: true, message: "Note deleted" },
+          },
+        ],
+      },
+      {
+        title: "Personal Notes",
+        base: `${apiBase}/notes`,
+        description: "Personal and organization-scoped notes for annotating your workspace.",
+        icon: <FileText className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/personal",
+            description: "List all personal notes for the authenticated user.",
+            auth: true,
+            params: {},
+            response: {
+              notes: [
+                {
+                  id: "note_001",
+                  scope: "personal",
+                  title: "Deploy notes",
+                  content: "Remember to update env vars before deploy",
+                  createdAt: "2026-01-01T00:00:00Z",
+                  updatedAt: "2026-01-01T00:00:00Z",
+                },
+              ],
+            },
+          },
+          {
+            method: "POST",
+            path: "/personal",
+            description: "Create a new personal note.",
+            auth: true,
+            body: { title: "Deploy notes", content: "Remember to update env vars" },
+            response: {
+              note: {
+                id: "note_001",
+                scope: "personal",
+                title: "Deploy notes",
+                content: "Remember to update env vars",
+                createdAt: "2026-01-01T00:00:00Z",
+              },
+            },
+          },
+          {
+            method: "GET",
+            path: "/personal/:noteId",
+            description: "Get a specific personal note by ID.",
+            auth: true,
+            params: {},
+            response: {
+              note: {
+                id: "note_001",
+                scope: "personal",
+                title: "Deploy notes",
+                content: "Remember to update env vars",
+              },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/personal/:noteId",
+            description: "Update a personal note.",
+            auth: true,
+            body: { title: "Updated title", content: "Updated content" },
+            response: {
+              note: {
+                id: "note_001",
+                scope: "personal",
+                title: "Updated title",
+                content: "Updated content",
+                updatedAt: "2026-01-02T00:00:00Z",
+              },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/personal/:noteId",
+            description: "Delete a personal note.",
+            auth: true,
+            body: {},
+            response: { success: true, message: "Note deleted" },
+          },
+          {
+            method: "GET",
+            path: "/organizations",
+            description: "List notes across all organizations the user belongs to. Optionally filter by a specific organizationId query parameter.",
+            auth: true,
+            params: { organizationId: "org_001" },
+            response: {
+              organizations: [
+                { organizationId: "org_001", organizationName: "Acme Corp", canManage: true },
+              ],
+              notes: [
+                {
+                  id: "note_002",
+                  scope: "organization",
+                  organizationId: "org_001",
+                  title: "Infra notes",
+                  content: "VPC configuration details",
+                },
+              ],
+            },
+          },
         ],
       },
       {
@@ -2138,6 +2340,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/:id",
             description: "Delete a specific activity item.",
             auth: true,
+            body: {},
             response: {
               message: "Activity deleted",
             },
@@ -2449,6 +2652,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Return the unread notification count used for the badge indicator.",
             auth: true,
+            params: {},
             response: {
               count: 3,
             },
@@ -2577,6 +2781,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "Administrative view of all support tickets across the tenant.",
             auth: true,
+            params: {},
             response: {
               tickets: [
                 {
@@ -2636,7 +2841,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/tickets/:id",
             description: "Delete a ticket (used for spam/cleanup).",
             auth: true,
-            response: null,
+            body: {},
+            response: { message: "Ticket deleted" },
           },
           {
             method: "GET",
@@ -2940,6 +3146,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             description:
               "List infrastructure providers configured in the admin panel.",
             auth: true,
+            params: {},
             response: {
               providers: [{ id: "provider_001", name: "Primary Provider", type: "cloud" }],
             },
@@ -3731,6 +3938,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/plans",
             description: "List all VPS plans available on the platform.",
             auth: true,
+            params: {},
             response: {
               plans: [{ id: "g6-standard-2", label: "Shared 2GB", price: { hourly: 0.027, monthly: 20 } }],
             },
@@ -3774,6 +3982,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/providers",
             description: "List all configured infrastructure providers.",
             auth: true,
+            params: {},
             response: {
               providers: [{ id: "provider_001", name: "Primary Provider", type: "cloud", status: "active" }],
             },
@@ -3818,6 +4027,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/providers/:id/regions",
             description: "Get available regions for a provider.",
             auth: true,
+            params: {},
             response: {
               regions: [{ id: "us-east", label: "Newark, NJ", country: "US", enabled: true }],
             },
@@ -3915,6 +4125,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/tickets/:id/replies",
             description: "Get all replies for an admin ticket view.",
             auth: true,
+            params: {},
             response: {
               replies: [{ id: "reply_001", message: "Customer reply", createdAt: "2026-10-24T10:00:00Z" }],
             },
@@ -4075,6 +4286,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/",
             description: "Basic health check.",
             auth: false,
+            params: {},
             response: {
               success: true,
               message: "API is healthy",
@@ -4097,8 +4309,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/detailed",
             description: "Detailed health check with rate limiting info.",
-            
-            params: {}, auth: false,
+
+            params: {}, auth: true,
             response: {
               health: "ok",
               rateLimiting: { status: "healthy" },
@@ -4131,7 +4343,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/metrics",
             description:
               "Rolling metrics (request rate, error rate) used by the admin rate-limit dashboard.",
-            auth: false,
+            auth: true,
             params: { window: 15 },
             response: {
               metrics: {
@@ -4146,8 +4358,8 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/rate-limiting",
             description:
               "Detailed rate limit performance and current throttle states.",
-            auth: false,
-            
+            auth: true,
+
             params: {}, response: {
               activeRules: [
                 { route: "/api/vps", limit: 60, window: 60, current: 15 },
@@ -4158,11 +4370,37 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             method: "GET",
             path: "/config-validation",
             description: "Validate platform configuration and environment variables.",
-            
-            params: {}, auth: false,
+
+            params: {}, auth: true,
             response: {
               valid: true,
               checks: [{ name: "database", status: "ok" }, { name: "redis", status: "ok" }],
+            },
+          },
+          {
+            method: "GET",
+            path: "/uptime",
+            description: "Get Better Stack uptime monitor statuses, active incidents, and status reports (5-minute cache).",
+            auth: false,
+            params: {},
+            response: {
+              success: true,
+              configured: true,
+              monitors: [{ id: "mon_001", name: "API", status: "operational" }],
+              activeIncidents: [],
+              incidentsHistory: [],
+              statusReports: [],
+            },
+          },
+          {
+            method: "GET",
+            path: "/organizations",
+            description: "List up to 10 homepage-opted-in organizations. Unauthenticated callers always receive an empty array.",
+            auth: false,
+            params: {},
+            response: {
+              success: true,
+              organizations: [{ name: "Acme Corp" }],
             },
           },
         ],
@@ -4178,6 +4416,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/",
             description: "Get current theme configuration.",
             auth: false,
+            params: {},
             response: {
               theme: {
                 id: "default",
@@ -4199,6 +4438,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/config",
             description: "Get contact page configuration including available categories and methods.",
             auth: false,
+            params: {},
             response: {
               config: {
                 categories: [{ id: "sales", label: "Sales", enabled: true }],
@@ -4220,6 +4460,35 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             response: {
               success: true,
               message: "Your message has been sent.",
+            },
+          },
+        ],
+      },
+      {
+        title: "Announcements",
+        base: `${apiBase}/announcements`,
+        description: "Public platform announcements scoped to the viewer's audience.",
+        icon: <Zap className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/",
+            description: "Get up to 10 active, in-schedule announcements. Audience is inferred from the caller's session (guest, authenticated, or admin).",
+            auth: false,
+            params: {},
+            response: {
+              success: true,
+              announcements: [
+                {
+                  id: "ann_001",
+                  title: "Scheduled Maintenance",
+                  message: "Brief maintenance window on Sunday 2am UTC.",
+                  type: "maintenance",
+                  target_audience: "all",
+                  is_dismissable: true,
+                  priority: 10,
+                },
+              ],
             },
           },
         ],
@@ -4268,6 +4537,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/",
             description: "Get public pricing overview.",
             auth: false,
+            params: {},
             response: {
               pricing: {
                 startingAt: 4.99,
@@ -4293,6 +4563,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/category-mappings",
             description: "Get enabled category mappings for white-label display on public pages.",
             auth: false,
+            params: {},
             response: {
               success: true,
               mappings: [
@@ -4336,6 +4607,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             path: "/categories",
             description: "Get all public documentation categories.",
             auth: false,
+            params: {},
             response: {
               categories: [
                 { id: "cat_001", name: "Getting Started", slug: "getting-started", articleCount: 5 },
@@ -4464,6 +4736,492 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
               data: {
                 packs: [{ id: "pack_100gb", gb: 100, price: 9.50, isPopular: true }],
                 warningThresholdGb: 10,
+              },
+            },
+          },
+        ],
+      },
+      {
+        title: "Admin Activity Log",
+        base: `${apiBase}/admin/activity`,
+        description: "Admin-only global activity log with filtering, CSV export, and summary statistics.",
+        icon: <Activity className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/",
+            description: "List all platform activity logs with optional filters. Returns paginated results with org name and user role.",
+            auth: true,
+            params: {
+              organization_id: "org_001",
+              user_id: "user_123",
+              event_type: "vps.created",
+              entity_type: "vps",
+              status: "success",
+              from: "2026-01-01T00:00:00Z",
+              to: "2026-12-31T23:59:59Z",
+              limit: 10,
+              offset: 0,
+            },
+            response: {
+              logs: [
+                {
+                  id: "log_001",
+                  user_id: "user_123",
+                  organization_id: "org_001",
+                  organization_name: "Acme Corp",
+                  event_type: "vps.created",
+                  entity_type: "vps",
+                  entity_id: "vps_456",
+                  message: "VPS created",
+                  status: "success",
+                  ip_address: "1.2.3.4",
+                  created_at: "2026-01-15T10:00:00Z",
+                },
+              ],
+              total: 1,
+              limit: 10,
+              offset: 0,
+            },
+          },
+          {
+            method: "GET",
+            path: "/export",
+            description: "Export activity logs as a CSV file (max 10,000 rows). Supports the same filters as GET /.",
+            auth: true,
+            params: {
+              organization_id: "org_001",
+              from: "2026-01-01T00:00:00Z",
+              to: "2026-12-31T23:59:59Z",
+            },
+            response: { note: "Returns CSV file download (Content-Type: text/csv)" },
+          },
+          {
+            method: "GET",
+            path: "/summary",
+            description: "Get aggregated activity statistics: totals by event type, entity type, status, and hourly breakdown.",
+            auth: true,
+            params: {
+              from: "2026-01-01T00:00:00Z",
+              to: "2026-12-31T23:59:59Z",
+            },
+            response: {
+              byEventType: [{ event_type: "vps.created", count: 42 }],
+              byEntityType: [{ entity_type: "vps", count: 80 }],
+              byStatus: [{ status: "success", count: 120 }],
+              byHour: [{ hour: "2026-01-15T10:00:00Z", count: 5 }],
+              total: 130,
+            },
+          },
+        ],
+      },
+      {
+        title: "Admin Announcements",
+        base: `${apiBase}/admin/announcements`,
+        description: "Admin CRUD for platform announcements displayed on the public banner and dashboard.",
+        icon: <Zap className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/",
+            description: "List all announcements with optional type and active filters.",
+            auth: true,
+            params: { type: "maintenance", is_active: true },
+            response: {
+              success: true,
+              announcements: [
+                {
+                  id: "ann_001",
+                  title: "Scheduled Maintenance",
+                  message: "Brief outage 2am UTC",
+                  type: "maintenance",
+                  is_active: true,
+                  start_time: "2026-06-01T02:00:00Z",
+                  end_time: "2026-06-01T04:00:00Z",
+                  created_at: "2026-05-25T00:00:00Z",
+                },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/:id",
+            description: "Get a single announcement by ID.",
+            auth: true,
+            params: {},
+            response: {
+              success: true,
+              announcement: {
+                id: "ann_001",
+                title: "Scheduled Maintenance",
+                message: "Brief outage 2am UTC",
+                type: "maintenance",
+                is_active: true,
+              },
+            },
+          },
+          {
+            method: "POST",
+            path: "/",
+            description: "Create a new platform announcement.",
+            auth: true,
+            body: {
+              title: "Scheduled Maintenance",
+              message: "Brief outage 2am UTC on June 1st.",
+              type: "maintenance",
+              is_active: true,
+              start_time: "2026-06-01T02:00:00Z",
+              end_time: "2026-06-01T04:00:00Z",
+              target_audience: "all",
+              priority: 1,
+            },
+            response: {
+              success: true,
+              announcement: { id: "ann_001", title: "Scheduled Maintenance" },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/:id",
+            description: "Update an existing announcement.",
+            auth: true,
+            body: {
+              title: "Updated Maintenance Window",
+              is_active: false,
+            },
+            response: {
+              success: true,
+              announcement: { id: "ann_001", title: "Updated Maintenance Window", is_active: false },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/:id",
+            description: "Delete an announcement permanently.",
+            auth: true,
+            body: {},
+            response: { success: true, message: "Announcement deleted" },
+          },
+        ],
+      },
+      {
+        title: "Admin Networking",
+        base: `${apiBase}/admin/networking`,
+        description: "Admin tools for IP management, IPv6, VLANs, firewall rules, and firewall templates.",
+        icon: <Network className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/ips",
+            description: "List all IP addresses across all VPS instances. Filters by region and instance ID.",
+            auth: true,
+            params: { region: "us-east", instanceId: "vps_123" },
+            response: {
+              ips: [
+                { address: "203.0.113.10", type: "ipv4", region: "us-east", instanceId: "vps_123", rdns: "203-0-113-10.example.com" },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/ips/:address",
+            description: "Get details for a specific IP address including rDNS.",
+            auth: true,
+            params: {},
+            response: {
+              ip: { address: "203.0.113.10", type: "ipv4", rdns: "203-0-113-10.example.com", instanceId: "vps_123" },
+            },
+          },
+          {
+            method: "POST",
+            path: "/ips",
+            description: "Allocate a new IP address for a VPS instance.",
+            auth: true,
+            body: { instanceId: "vps_123", type: "ipv4", region: "us-east" },
+            response: {
+              success: true,
+              ip: { address: "203.0.113.11", type: "ipv4", instanceId: "vps_123" },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/ips/:instanceId/:address",
+            description: "Remove an IP address from a VPS instance.",
+            auth: true,
+            body: {},
+            response: { success: true, message: "IP address removed" },
+          },
+          {
+            method: "POST",
+            path: "/ips/assign",
+            description: "Assign an existing IP to a VPS instance.",
+            auth: true,
+            body: { address: "203.0.113.10", instanceId: "vps_456" },
+            response: { success: true, message: "IP assigned" },
+          },
+          {
+            method: "POST",
+            path: "/ips/share",
+            description: "Configure IP sharing between VPS instances.",
+            auth: true,
+            body: { address: "203.0.113.10", sourceInstanceId: "vps_123", targetInstanceId: "vps_456" },
+            response: { success: true, message: "IP sharing configured" },
+          },
+          {
+            method: "PUT",
+            path: "/ips/:address/rdns",
+            description: "Update reverse DNS (rDNS) for an IP address.",
+            auth: true,
+            body: { rdns: "my-server.example.com" },
+            response: { success: true, ip: { address: "203.0.113.10", rdns: "my-server.example.com" } },
+          },
+          {
+            method: "GET",
+            path: "/ipv6/pools",
+            description: "List all IPv6 address pools.",
+            auth: true,
+            params: {},
+            response: {
+              pools: [{ range: "2001:db8::/56", region: "us-east", instanceId: "vps_123" }],
+            },
+          },
+          {
+            method: "GET",
+            path: "/ipv6/ranges",
+            description: "List all IPv6 ranges across the platform.",
+            auth: true,
+            params: {},
+            response: {
+              ranges: [{ range: "2001:db8::/56", region: "us-east", instanceId: "vps_123" }],
+            },
+          },
+          {
+            method: "POST",
+            path: "/ipv6/ranges",
+            description: "Allocate a new IPv6 range for a VPS instance.",
+            auth: true,
+            body: { instanceId: "vps_123", region: "us-east" },
+            response: {
+              success: true,
+              range: { range: "2001:db8:1::/56", instanceId: "vps_123" },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/ipv6/ranges/:range",
+            description: "Remove an IPv6 range.",
+            auth: true,
+            body: {},
+            response: { success: true, message: "IPv6 range removed" },
+          },
+          {
+            method: "GET",
+            path: "/ipv6/range-rdns-records",
+            description: "List custom IPv6 rDNS records within a specific range. Requires range and prefix query params.",
+            auth: true,
+            params: { range: "2001:db8::/56", prefix: 56 },
+            response: {
+              success: true,
+              data: {
+                records: [{ address: "2001:db8::1", rdns: "my-server.example.com" }],
+                vpsInstances: [{ id: "vps_123", label: "my-server" }],
+              },
+            },
+          },
+          {
+            method: "POST",
+            path: "/ipv6/range-rdns",
+            description: "Set or clear reverse DNS for an IPv6 address within a panel-managed range.",
+            auth: true,
+            body: { range: "2001:db8::/56", prefix: 56, address: "2001:db8::1", rdns: "my-server.example.com" },
+            response: {
+              success: true,
+              record: { address: "2001:db8::1", rdns: "my-server.example.com" },
+            },
+          },
+          {
+            method: "GET",
+            path: "/vlans",
+            description: "List all VLANs across the platform.",
+            auth: true,
+            params: {},
+            response: {
+              vlans: [{ label: "vlan-prod", region: "us-east", instanceCount: 3 }],
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/vlans/:regionId/:label",
+            description: "Delete a VLAN from a specific region.",
+            auth: true,
+            body: {},
+            response: { success: true, message: "VLAN deleted" },
+          },
+          {
+            method: "GET",
+            path: "/firewalls",
+            description: "List all firewalls.",
+            auth: true,
+            params: {},
+            response: {
+              firewalls: [{ id: "fw_001", label: "Default Firewall", status: "enabled", instanceCount: 5 }],
+            },
+          },
+          {
+            method: "POST",
+            path: "/firewalls",
+            description: "Create a new firewall.",
+            auth: true,
+            body: {
+              label: "My Firewall",
+              rules: {
+                inbound_policy: "DROP",
+                outbound_policy: "ACCEPT",
+                inbound: [{ action: "ACCEPT", protocol: "TCP", ports: "22", addresses: { ipv4: ["0.0.0.0/0"] } }],
+              },
+            },
+            response: {
+              success: true,
+              firewall: { id: "fw_001", label: "My Firewall", status: "enabled" },
+            },
+          },
+          {
+            method: "GET",
+            path: "/firewalls/:id",
+            description: "Get full details of a firewall.",
+            auth: true,
+            params: {},
+            response: {
+              firewall: { id: "fw_001", label: "My Firewall", status: "enabled", rules: { inbound: [], outbound: [] } },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/firewalls/:id",
+            description: "Update a firewall's label or status.",
+            auth: true,
+            body: { label: "Updated Firewall", status: "disabled" },
+            response: {
+              success: true,
+              firewall: { id: "fw_001", label: "Updated Firewall", status: "disabled" },
+            },
+          },
+          {
+            method: "DELETE",
+            path: "/firewalls/:id",
+            description: "Delete a firewall.",
+            auth: true,
+            body: {},
+            response: { success: true, message: "Firewall deleted" },
+          },
+          {
+            method: "GET",
+            path: "/firewalls/:id/rules",
+            description: "Get inbound and outbound rules for a firewall.",
+            auth: true,
+            params: {},
+            response: {
+              rules: {
+                inbound_policy: "DROP",
+                outbound_policy: "ACCEPT",
+                inbound: [{ action: "ACCEPT", protocol: "TCP", ports: "22" }],
+                outbound: [],
+              },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/firewalls/:id/rules",
+            description: "Replace all rules for a firewall.",
+            auth: true,
+            body: {
+              inbound_policy: "DROP",
+              outbound_policy: "ACCEPT",
+              inbound: [{ action: "ACCEPT", protocol: "TCP", ports: "443", addresses: { ipv4: ["0.0.0.0/0"] } }],
+              outbound: [],
+            },
+            response: { success: true, rules: { inbound: [], outbound: [] } },
+          },
+          {
+            method: "GET",
+            path: "/firewalls/:id/devices",
+            description: "List VPS instances attached to a firewall.",
+            auth: true,
+            params: {},
+            response: {
+              devices: [{ id: "vps_123", label: "my-server", entity_type: "linode" }],
+            },
+          },
+          {
+            method: "POST",
+            path: "/firewalls/:id/devices",
+            description: "Attach a VPS instance to a firewall.",
+            auth: true,
+            body: { instanceId: "vps_123" },
+            response: { success: true, message: "Device attached to firewall" },
+          },
+          {
+            method: "DELETE",
+            path: "/firewalls/:id/devices/:deviceId",
+            description: "Detach a VPS instance from a firewall.",
+            auth: true,
+            body: {},
+            response: { success: true, message: "Device detached from firewall" },
+          },
+          {
+            method: "GET",
+            path: "/firewalls/:id/history",
+            description: "Get audit history for a firewall showing rule changes.",
+            auth: true,
+            params: {},
+            response: {
+              history: [
+                { id: "hist_001", action: "rules_updated", user: "admin@example.com", timestamp: "2026-01-10T14:00:00Z" },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/firewall-settings",
+            description: "Get global firewall default settings.",
+            auth: true,
+            params: {},
+            response: {
+              settings: { defaultInboundPolicy: "DROP", defaultOutboundPolicy: "ACCEPT", autoAttachEnabled: false },
+            },
+          },
+          {
+            method: "PUT",
+            path: "/firewall-settings",
+            description: "Update global firewall default settings.",
+            auth: true,
+            body: { defaultInboundPolicy: "DROP", defaultOutboundPolicy: "ACCEPT", autoAttachEnabled: true },
+            response: {
+              success: true,
+              settings: { defaultInboundPolicy: "DROP", defaultOutboundPolicy: "ACCEPT", autoAttachEnabled: true },
+            },
+          },
+          {
+            method: "GET",
+            path: "/firewall-templates",
+            description: "List all available firewall rule templates.",
+            auth: true,
+            params: {},
+            response: {
+              templates: [{ slug: "web-server", name: "Web Server", description: "HTTP/HTTPS + SSH" }],
+            },
+          },
+          {
+            method: "GET",
+            path: "/firewall-templates/:slug",
+            description: "Get a firewall template by slug including its pre-built rules.",
+            auth: true,
+            params: {},
+            response: {
+              template: {
+                slug: "web-server",
+                name: "Web Server",
+                rules: { inbound: [{ action: "ACCEPT", protocol: "TCP", ports: "80,443" }], outbound: [] },
               },
             },
           },

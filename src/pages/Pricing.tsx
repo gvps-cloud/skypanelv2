@@ -162,6 +162,25 @@ const PricingPage: React.FC = () => {
 
   const formatCurrency = (amount: number | string | null | undefined): string => {
     if (amount == null) {
+      return '$0.000000';
+    }
+
+    const value = typeof amount === 'string' ? parseFloat(amount) : amount;
+
+    if (!Number.isFinite(value) || value < 0) {
+      return '$0.000000';
+    }
+
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 6,
+      maximumFractionDigits: 6,
+    }).format(value);
+  };
+
+  const formatMonthly = (amount: number | string | null | undefined): string => {
+    if (amount == null) {
       return '$0.00';
     }
 
@@ -174,6 +193,8 @@ const PricingPage: React.FC = () => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value);
   };
 
@@ -388,7 +409,7 @@ const PricingPage: React.FC = () => {
                             <CardDescription>{plan.description}</CardDescription>
                           )}
                           <div className="pt-2">
-                            <span className="text-3xl font-bold">{formatCurrency(totalMonthly)}</span>
+                            <span className="text-3xl font-bold">{formatMonthly(totalMonthly)}</span>
                             <span className="text-muted-foreground">/month</span>
                             <div className="text-sm text-muted-foreground">
                               {formatCurrency(totalHourly)} per hour
@@ -453,7 +474,7 @@ const PricingPage: React.FC = () => {
                             <div className="pt-2 border-t border-border/60">
                               <p className="text-xs text-muted-foreground mb-1">Backup Pricing:</p>
                               <p className="text-sm">
-                                +{formatCurrency((Number(plan.backup_price_monthly) || 0) + (Number(plan.backup_upcharge_monthly) || 0))}/month
+                                +{formatMonthly((Number(plan.backup_price_monthly) || 0) + (Number(plan.backup_upcharge_monthly) || 0))}/month
                               </p>
                             </div>
                           )}
