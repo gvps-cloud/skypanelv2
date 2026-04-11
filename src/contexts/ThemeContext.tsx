@@ -36,11 +36,16 @@ interface ThemeContextValue {
   themes: ThemePreset[];
   reloadTheme: () => Promise<void>;
   customPreset: ThemePreset | null;
+  colorMode: "light" | "dark";
+  setColorMode: (mode: "light" | "dark") => void;
+  toggleColorMode: () => void;
+  isDark: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "skypanelv2:theme";
+const COLOR_MODE_STORAGE_KEY = "user-theme-preference";
 const STYLE_ELEMENT_ID = "skypanelv2-theme-style";
 const BASE_THEME_IDS = new Set(themePresets.map((preset) => preset.id));
 
@@ -147,6 +152,14 @@ const sanitizeThemePreset = (preset: ThemePresetLike | null | undefined): ThemeP
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [themeId, setThemeId] = useState<ThemeId>(() => getStoredTheme() ?? DEFAULT_THEME_ID);
   const [customPreset, setCustomPreset] = useState<ThemePreset | null>(null);
+  const [colorMode, setColorMode] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") {
+      return "dark";
+    }
+
+    const savedTheme = window.localStorage.getItem(COLOR_MODE_STORAGE_KEY);
+    return savedTheme === "light" ? "light" : "dark";
+  });
 
   const themes = useMemo<ThemePreset[]>(() => {
     if (!customPreset) {
@@ -172,11 +185,22 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     window.localStorage.setItem(STORAGE_KEY, activePreset.id);
   }, [activePreset.id]);
 
-  // Note: Light/dark mode is handled by the local useTheme hook
-  // This context only manages theme presets and colors
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(colorMode);
+    window.localStorage.setItem(COLOR_MODE_STORAGE_KEY, colorMode);
+  }, [colorMode]);
 
   const handleSetTheme = useCallback((next: ThemeId) => {
     setThemeId(next);
+  }, []);
+
+  const toggleColorMode = useCallback(() => {
+    setColorMode((current) => (current === "light" ? "dark" : "light"));
   }, []);
 
   const applyRemoteConfig = useCallback((config: ThemeConfigPayload | null | undefined) => {
@@ -235,8 +259,21 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       themes,
       reloadTheme,
       customPreset,
+      colorMode,
+      setColorMode,
+      toggleColorMode,
+      isDark: colorMode === "dark",
     }),
-    [activePreset.id, handleSetTheme, themes, reloadTheme, customPreset]
+    [
+      activePreset.id,
+      colorMode,
+      customPreset,
+      handleSetTheme,
+      reloadTheme,
+      setColorMode,
+      themes,
+      toggleColorMode,
+    ]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
@@ -249,4 +286,16 @@ export function useTheme(): ThemeContextValue {
     throw new Error("useTheme must be used within a ThemeProvider");
   }
   return context;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useThemeMode() {
+  const { colorMode, setColorMode, toggleColorMode, isDark } = useTheme();
+
+  return {
+    colorMode,
+    setColorMode,
+    toggleColorMode,
+    isDark,
+  };
 }

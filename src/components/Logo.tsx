@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/hooks/useTheme";
+import { useThemeMode } from "@/contexts/ThemeContext";
 
 interface LogoProps {
   /**
@@ -24,7 +24,7 @@ const sizeMap = {
  */
 export function Logo({ size = "md", className }: LogoProps) {
   const dimension = sizeMap[size];
-  const { isDark } = useTheme();
+  const { isDark } = useThemeMode();
 
   return (
     <img

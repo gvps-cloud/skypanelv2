@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Terminal as TerminalIcon } from 'lucide-react';
-import { useTheme as useSiteTheme } from '@/hooks/useTheme';
+import { useThemeMode } from '@/contexts/ThemeContext';
 import { API_BASE_URL, buildApiUrl } from '../../lib/api';
 import {
   resolveTerminalTheme,
@@ -35,7 +35,7 @@ interface SSHTerminalProps {
 type WSStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScreen = false, fitContainer = false }) => {
-  const { theme: siteTheme } = useSiteTheme();
+  const { colorMode } = useThemeMode();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -67,8 +67,8 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
   const rowsRef = useRef(rows);
   const colsRef = useRef(cols);
   const resolvedTheme = useMemo(
-    () => resolveTerminalTheme(themePreference, siteTheme),
-    [siteTheme, themePreference],
+    () => resolveTerminalTheme(themePreference, colorMode),
+    [colorMode, themePreference],
   );
 
   useEffect(() => {
@@ -415,9 +415,9 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
               </Button>
               <Select
                 value={themePreference}
-                onValueChange={(value) =>
-                  setThemePreference(sanitizeTerminalThemePreference(value))
-                }
+                onValueChange={(value) => {
+                  setThemePreference(sanitizeTerminalThemePreference(value));
+                }}
               >
                 <SelectTrigger className="h-8 w-[170px] rounded-full border-border/70 bg-background/80 text-xs">
                   <SelectValue placeholder="Theme" />

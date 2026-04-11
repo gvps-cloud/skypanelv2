@@ -15,15 +15,14 @@
     .invoice-meta-value,
     .totals-row,
     .totals-row span,
-    .container tbody td,
-    .container thead th,
-    .container h3,
-    .container blockquote,
-    .container code,
-    .container pre,
-    .container ol,
-    .container ul,
-    .footer p:first-child
+    .container table tbody td
+  ) {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .invoice-preview :is(
+    [style*="color: #333333"],
+    [style*="color:#333333"]
   ) {
   color: hsl(var(--foreground)) !important;
 }
@@ -37,12 +36,17 @@
     .invoice-meta-label,
     .company-info p,
     .footer,
-    .footer p:not(:first-child)
+    [style*="color: #666666"],
+    [style*="color:#666666"]
   ) {
   color: hsl(var(--muted-foreground)) !important;
 }
 
-.dark .invoice-preview .invoice-info p {
+.dark .invoice-preview :is(
+    .invoice-info p,
+    [style*="color: #007bff"],
+    [style*="color:#007bff"]
+  ) {
   color: hsl(var(--primary)) !important;
 }
 
@@ -69,6 +73,10 @@
 .dark .invoice-preview .status-badge.cancelled {
   background: hsl(var(--destructive)) !important;
   color: hsl(var(--destructive-foreground)) !important;
+}
+
+.dark .invoice-preview table thead th {
+  color: hsl(var(--secondary-foreground)) !important;
 }
 
 .dark .invoice-preview a {
