@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   type LucideIcon,
@@ -274,25 +274,21 @@ interface InstanceEventSummary {
   entityLabel: string | null;
 }
 
-type TabId =
-  | "overview"
-  | "backups"
-  | "networking"
-  | "activity"
-  | "firewall"
-  | "metrics"
-  | "ssh"
-  | "notes";
+const TAB_IDS = [
+  "overview",
+  "backups",
+  "networking",
+  "activity",
+  "firewall",
+  "metrics",
+  "ssh",
+  "notes",
+] as const;
+
+type TabId = (typeof TAB_IDS)[number];
 
 const isTabId = (value: string | null): value is TabId =>
-  value === "overview" ||
-  value === "backups" ||
-  value === "networking" ||
-  value === "activity" ||
-  value === "firewall" ||
-  value === "metrics" ||
-  value === "ssh" ||
-  value === "notes";
+  value !== null && TAB_IDS.includes(value as TabId);
 
 interface TabDefinition {
   id: TabId;
@@ -643,9 +639,11 @@ const BACKUP_WINDOW_CHOICES: Array<{ value: string; label: string }> = [
 
 const VPSDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { token } = useAuth();
   const { setDynamicOverride, removeDynamicOverride } = useBreadcrumb();
+  const tabParam = searchParams.get("tab");
+  const activeTab: TabId = isTabId(tabParam) ? tabParam : "overview";
 
   const [detail, setDetail] = useState<VpsInstanceDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -654,10 +652,6 @@ const VPSDetail: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<
     "boot" | "shutdown" | "reboot" | null
   >(null);
-  const [activeTab, setActiveTab] = useState<TabId>(() => {
-    const tab = searchParams.get("tab");
-    return isTabId(tab) ? tab : "overview";
-  });
   const [sshConfirmOpen, setSshConfirmOpen] = useState(false);
   const [sshConsoleOpen, setSshConsoleOpen] = useState(false);
   const [sshConfirmPassword, setSshConfirmPassword] = useState("");
@@ -744,6 +738,7 @@ const VPSDetail: React.FC = () => {
   const [rebuildDiskEncryption, setRebuildDiskEncryption] = useState<string>("");
   const [rebuildMaintenancePolicy, setRebuildMaintenancePolicy] = useState<string>("");
   const [rebuildShowAdvanced, setRebuildShowAdvanced] = useState<boolean>(false);
+  const sshAutoOpenKeyRef = useRef<string | null>(null);
 
   const tabDefinitions = useMemo<TabDefinition[]>(() => {
     const tabs: TabDefinition[] = [
@@ -766,14 +761,20 @@ const VPSDetail: React.FC = () => {
     return tabs;
   }, [detail?.providerType]);
 
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (isTabId(tab)) {
-      setActiveTab(tab);
-      return;
-    }
-    setActiveTab("overview");
-  }, [searchParams]);
+  const setActiveTab = useCallback(
+    (tab: TabId) => {
+      setSearchParams((currentParams) => {
+        const nextParams = new URLSearchParams(currentParams);
+        if (tab === "overview") {
+          nextParams.delete("tab");
+        } else {
+          nextParams.set("tab", tab);
+        }
+        return nextParams;
+      });
+    },
+    [setSearchParams],
+  );
 
   const openSshConsole = useCallback(() => {
     if (!detail?.id) {
@@ -798,6 +799,32 @@ const VPSDetail: React.FC = () => {
     setSshConfirmLoading(false);
     setSshConfirmOpen(true);
   }, [detail?.id, resetSshConfirmState]);
+
+  useEffect(() => {
+    if (activeTab !== "ssh") {
+      sshAutoOpenKeyRef.current = null;
+      return;
+    }
+
+    if (!detail?.id || sshConfirmOpen || sshConsoleOpen) {
+      return;
+    }
+
+    const autoOpenKey = `${detail.id}:${searchParams.toString()}`;
+    if (sshAutoOpenKeyRef.current === autoOpenKey) {
+      return;
+    }
+
+    sshAutoOpenKeyRef.current = autoOpenKey;
+    handleOpenSshRequest();
+  }, [
+    activeTab,
+    detail?.id,
+    handleOpenSshRequest,
+    searchParams,
+    sshConfirmOpen,
+    sshConsoleOpen,
+  ]);
 
   const handleConfirmSshAccess = useCallback(async () => {
     if (!sshConfirmPassword.trim()) {

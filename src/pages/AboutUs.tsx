@@ -173,13 +173,13 @@ export default function AboutUs() {
       : "N/A";
 
   const totalNonAdminUsers = (() => {
-    const regularUsers = stats?.users?.regular;
+    const regularUsers = stats?.users.regular;
     if (typeof regularUsers === "number" && Number.isFinite(regularUsers)) {
       return regularUsers;
     }
 
-    const totalUsers = stats?.users?.total;
-    const adminUsers = stats?.users?.admins;
+    const totalUsers = stats?.users.total;
+    const adminUsers = stats?.users.admins;
     if (
       typeof totalUsers === "number" &&
       Number.isFinite(totalUsers) &&
