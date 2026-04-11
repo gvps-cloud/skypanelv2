@@ -177,7 +177,7 @@ const InvoiceDetail: React.FC = () => {
           <Card>
             <CardContent className="p-4 sm:p-8">
               <div
-                className="invoice-preview prose prose-sm max-w-none dark:prose-invert"
+                className="invoice-preview max-w-none overflow-x-auto"
                 dangerouslySetInnerHTML={{
                   __html: DOMPurify.sanitize(invoice.htmlContent),
                 }}
