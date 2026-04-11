@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   type LucideIcon,
@@ -737,8 +737,6 @@ const VPSDetail: React.FC = () => {
   const [rebuildDiskEncryption, setRebuildDiskEncryption] = useState<string>("");
   const [rebuildMaintenancePolicy, setRebuildMaintenancePolicy] = useState<string>("");
   const [rebuildShowAdvanced, setRebuildShowAdvanced] = useState<boolean>(false);
-  const sshAutoOpenKeyRef = useRef<string | null>(null);
-
   const tabDefinitions = useMemo<TabDefinition[]>(() => {
     const tabs: TabDefinition[] = [
       { id: "overview", label: "Overview", icon: Server },
@@ -822,34 +820,12 @@ const VPSDetail: React.FC = () => {
 
   useEffect(() => {
     if (activeTab !== "ssh") {
-      sshAutoOpenKeyRef.current = null;
       setSshConfirmOpen(false);
       setSshConsoleOpen(false);
       resetSshConfirmState();
       setSshConfirmLoading(false);
-      return;
     }
-
-    if (!detail?.id || sshConfirmOpen || sshConsoleOpen) {
-      return;
-    }
-
-    const autoOpenKey = `${detail.id}:${searchParams.toString()}`;
-    if (sshAutoOpenKeyRef.current === autoOpenKey) {
-      return;
-    }
-
-    sshAutoOpenKeyRef.current = autoOpenKey;
-    handleOpenSshRequest();
-  }, [
-    activeTab,
-    detail?.id,
-    handleOpenSshRequest,
-    resetSshConfirmState,
-    searchParams,
-    sshConfirmOpen,
-    sshConsoleOpen,
-  ]);
+  }, [activeTab, resetSshConfirmState]);
 
   const handleConfirmSshAccess = useCallback(async () => {
     if (!sshConfirmPassword.trim()) {
@@ -4764,6 +4740,9 @@ const VPSDetail: React.FC = () => {
                 <span className="opacity-50">:: {detail.label}</span>
               ) : null}
             </DialogTitle>
+            <DialogDescription>
+              Interactive browser-based shell for this VPS instance.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-hidden relative bg-background">
             {detail?.id ? (

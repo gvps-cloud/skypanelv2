@@ -227,12 +227,16 @@ describe("VPSDetail tab routing", () => {
     currentResponse = instanceResponse;
   });
 
-  it("auto-opens password confirmation for ssh deep links", async () => {
+  it("keeps ssh deep links on the tab until the console button is clicked", async () => {
     renderPage("/vps/vps-1?tab=ssh");
 
     expect(await screen.findByText("SSH Console")).toBeTruthy();
-    expect(await screen.findByText("Confirm Password")).toBeTruthy();
     expect(screen.getByTestId("location-search").textContent).toBe("?tab=ssh");
+    expect(screen.queryByText("Confirm Password")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open SSH Console" }));
+
+    expect(await screen.findByText("Confirm Password")).toBeTruthy();
   });
 
   it("syncs tab changes back into the URL", async () => {
@@ -285,6 +289,10 @@ describe("VPSDetail tab routing", () => {
 
   it("closes SSH dialogs when navigation leaves the ssh tab", async () => {
     renderPage("/vps/vps-1?tab=ssh");
+
+    expect(await screen.findByText("SSH Console")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open SSH Console" }));
 
     expect(await screen.findByText("Confirm Password")).toBeTruthy();
 

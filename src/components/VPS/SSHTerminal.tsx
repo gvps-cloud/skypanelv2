@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
@@ -10,79 +10,21 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { Terminal as TerminalIcon } from 'lucide-react';
+import { useTheme as useSiteTheme } from '@/hooks/useTheme';
 import { API_BASE_URL, buildApiUrl } from '../../lib/api';
+import {
+  resolveTerminalTheme,
+  sanitizeTerminalThemePreference,
+  SSH_TERMINAL_THEME_STORAGE_KEY,
+  TERMINAL_THEMES,
+  type TerminalThemePreference,
+} from '@/components/VPS/sshTerminalThemes';
 
 const DEFAULT_ROWS = 30;
 const DEFAULT_COLS = 120;
 const FULLSCREEN_ROWS = 50;
 const FULLSCREEN_COLS = 150;
 const INITIAL_FONT_SIZE = 14;
-
-const TERMINAL_THEMES: Record<'dark' | 'light' | 'matrix', Terminal['options']['theme']> = {
-  dark: {
-    background: '#111827',
-    foreground: '#e5e7eb',
-    cursor: '#93c5fd',
-    black: '#000000',
-    red: '#ef4444',
-    green: '#10b981',
-    yellow: '#f59e0b',
-    blue: '#3b82f6',
-    magenta: '#8b5cf6',
-    cyan: '#06b6d4',
-    white: '#f3f4f6',
-    brightBlack: '#6b7280',
-    brightRed: '#f87171',
-    brightGreen: '#34d399',
-    brightYellow: '#fbbf24',
-    brightBlue: '#60a5fa',
-    brightMagenta: '#a78bfa',
-    brightCyan: '#22d3ee',
-    brightWhite: '#ffffff',
-  },
-  light: {
-    background: '#ffffff',
-    foreground: '#1f2937',
-    cursor: '#3b82f6',
-    black: '#000000',
-    red: '#dc2626',
-    green: '#059669',
-    yellow: '#d97706',
-    blue: '#2563eb',
-    magenta: '#7c3aed',
-    cyan: '#0891b2',
-    white: '#f9fafb',
-    brightBlack: '#6b7280',
-    brightRed: '#ef4444',
-    brightGreen: '#10b981',
-    brightYellow: '#f59e0b',
-    brightBlue: '#3b82f6',
-    brightMagenta: '#8b5cf6',
-    brightCyan: '#06b6d4',
-    brightWhite: '#ffffff',
-  },
-  matrix: {
-    background: '#000000',
-    foreground: '#00ff00',
-    cursor: '#00ff00',
-    black: '#000000',
-    red: '#00ff00',
-    green: '#00ff00',
-    yellow: '#00ff00',
-    blue: '#00ff00',
-    magenta: '#00ff00',
-    cyan: '#00ff00',
-    white: '#00ff00',
-    brightBlack: '#006600',
-    brightRed: '#00ff00',
-    brightGreen: '#00ff00',
-    brightYellow: '#00ff00',
-    brightBlue: '#00ff00',
-    brightMagenta: '#00ff00',
-    brightCyan: '#00ff00',
-    brightWhite: '#00ff00',
-  },
-};
 
 interface SSHTerminalProps {
   instanceId: string;
@@ -93,6 +35,7 @@ interface SSHTerminalProps {
 type WSStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScreen = false, fitContainer = false }) => {
+  const { theme: siteTheme } = useSiteTheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -107,7 +50,15 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
   const [cols, setCols] = useState<number>(initialCols.current);
   const [connectedUser, setConnectedUser] = useState<string>('root');
   const [sessionLog, setSessionLog] = useState<string>('');
-  const [theme, setTheme] = useState<'dark' | 'light' | 'matrix'>('dark');
+  const [themePreference, setThemePreference] = useState<TerminalThemePreference>(() => {
+    if (typeof window === 'undefined') {
+      return 'auto';
+    }
+
+    return sanitizeTerminalThemePreference(
+      window.localStorage.getItem(SSH_TERMINAL_THEME_STORAGE_KEY),
+    );
+  });
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
@@ -115,6 +66,21 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
 
   const rowsRef = useRef(rows);
   const colsRef = useRef(cols);
+  const resolvedTheme = useMemo(
+    () => resolveTerminalTheme(themePreference, siteTheme),
+    [siteTheme, themePreference],
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(
+      SSH_TERMINAL_THEME_STORAGE_KEY,
+      themePreference,
+    );
+  }, [themePreference]);
 
   useEffect(() => {
     rowsRef.current = rows;
@@ -129,10 +95,10 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
     if (containerRef.current && !termRef.current) {
       const term = new Terminal({
         cursorBlink: true,
-  fontSize: INITIAL_FONT_SIZE,
+        fontSize: INITIAL_FONT_SIZE,
         rows: initialRows.current,
         cols: initialCols.current,
-        theme: TERMINAL_THEMES.dark,
+        theme: TERMINAL_THEMES[resolvedTheme],
         allowTransparency: true,
         fontFamily: 'Menlo, Monaco, "Courier New", monospace',
       });
@@ -183,14 +149,14 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
         resizeObserverRef.current = null;
       };
     }
-  }, []);
+  }, [resolvedTheme]);
 
   // Update theme when changed
   useEffect(() => {
     if (termRef.current) {
-      termRef.current.options.theme = TERMINAL_THEMES[theme];
+      termRef.current.options.theme = TERMINAL_THEMES[resolvedTheme];
     }
-  }, [theme]);
+  }, [resolvedTheme]);
 
   // Update terminal size when layout constraints change
   useEffect(() => {
@@ -447,11 +413,19 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
               >
                 Disconnect
               </Button>
-              <Select value={theme} onValueChange={(value) => setTheme(value as 'dark' | 'light' | 'matrix')}>
-                <SelectTrigger className="h-8 w-[150px] rounded-full border-border/70 bg-background/80 text-xs">
+              <Select
+                value={themePreference}
+                onValueChange={(value) =>
+                  setThemePreference(sanitizeTerminalThemePreference(value))
+                }
+              >
+                <SelectTrigger className="h-8 w-[170px] rounded-full border-border/70 bg-background/80 text-xs">
                   <SelectValue placeholder="Theme" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="auto">
+                    Auto ({resolvedTheme === 'matrix' ? 'Matrix' : 'Light'})
+                  </SelectItem>
                   <SelectItem value="dark">Dark</SelectItem>
                   <SelectItem value="light">Light</SelectItem>
                   <SelectItem value="matrix">Matrix</SelectItem>
@@ -564,7 +538,7 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
               'flex-1 w-full overflow-hidden rounded-2xl border border-border/80 bg-black/90 shadow-inner',
               terminalSizeClass
             )}
-            style={{ backgroundColor: TERMINAL_THEMES[theme].background }}
+            style={{ backgroundColor: TERMINAL_THEMES[resolvedTheme].background }}
           />
 
           <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 px-5 py-3 text-xs text-muted-foreground shrink-0">
@@ -573,7 +547,7 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
               <span>• Select text and click Copy to copy</span>
               <span>• Use Search button to find text</span>
               <span>• Download saves your session log</span>
-              <span>• Try different themes for better visibility</span>
+              <span>• Auto follows the site light/dark mode</span>
             </div>
           </div>
         </div>
