@@ -772,7 +772,7 @@ const VPS: React.FC = () => {
 
           return {
             id: String(plan.id),
-            label: `${plan.name} - $${totalPrice.toFixed(6)}/mo`,
+            label: `${plan.name} - $${totalPrice.toFixed(2)}/mo`,
             disk: disk,
             memory: memoryMb,
             vcpus: vcpus,

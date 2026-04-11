@@ -443,8 +443,8 @@ const formatTransferAllowance = (transferGb: number): string => {
 };
 
 const formatCurrency = (value: number): string => {
-  if (!Number.isFinite(value) || value <= 0) return "$0.000000";
-  return `$${value.toFixed(6)}`;
+  if (!Number.isFinite(value) || value <= 0) return "$0.00";
+  return `$${value.toFixed(2)}`;
 };
 
 const formatPercent = (value: number): string =>
@@ -1118,8 +1118,11 @@ const VPSDetail: React.FC = () => {
           throw new Error("Malformed response from server");
         }
         setDetail(parsed.instance);
-        // Initialize notes value from the instance
-        setNotesValue(parsed.instance.notes || "");
+        // Only sync notes from server when user isn't actively editing — prevents
+        // the 30-second poll from wiping unsaved text mid-keystroke.
+        if (!notesEditing) {
+          setNotesValue(parsed.instance.notes || "");
+        }
       } catch (err) {
         console.error("Failed to load VPS instance detail:", err);
         const message =
@@ -2341,9 +2344,9 @@ const VPSDetail: React.FC = () => {
         </div>
 
         {/* Horizontal Tab Navigation */}
-        <div className="rounded-2xl border border bg-card shadow-sm mb-6">
-          <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-6">
-            <p className="text-sm sm:text-base font-semibold text-foreground mb-6 sm:mb-8">
+        <div className="mb-6">
+          <div className="pb-4">
+            <p className="text-sm sm:text-base font-semibold text-muted-foreground mb-4">
               Instance Feature Views
             </p>
 

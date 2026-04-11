@@ -95,7 +95,7 @@ function plansToAccordionGroups(plans: VPSPlan[]): Record<string, AccordionSelec
           id: plan.id,
           label: plan.label,
           description: `${plan.vcpus} vCPU, ${formatMemory(plan.memory)} RAM, ${Math.round(plan.disk / 1024)} GB Storage`,
-          metadata: plan.price ? `$${plan.price.monthly.toFixed(6)}/mo` : undefined,
+          metadata: plan.price ? `$${plan.price.monthly.toFixed(2)}/mo` : undefined,
         })),
       };
     }
