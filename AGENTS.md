@@ -1,3 +1,8 @@
+---
+description: 
+alwaysApply: true
+---
+
 # AGENTS.md
 
 This file documents the current state of the `skypanelv2` repository so coding agents can work against the app as it exists today rather than older assumptions.
