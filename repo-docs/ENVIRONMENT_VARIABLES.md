@@ -22,12 +22,30 @@ This document provides a comprehensive reference for all environment variables u
 | `ENCRYPTION_KEY` | **Yes** | - | 32-character key for general encryption operations |
 | `TRUST_PROXY` | No | `true` | Proxy trust configuration for proper IP detection |
 
+### CDN Integration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `BUNNY_CDN_ENABLED` | No | `false` | Enable dynamic proxy trusting for Bunny CDN edge IPs |
+| `BUNNY_CDN_API_URL_IPV4` | No | `https://api.bunny.net/system/edgeserverlist` | Bunny CDN IPv4 edge IP list URL |
+| `BUNNY_CDN_API_URL_IPV6` | No | `https://api.bunny.net/system/edgeserverlist/IPv6` | Bunny CDN IPv6 edge IP list URL |
+| `BUNNY_CDN_REFRESH_INTERVAL_MS` | No | `86400000` | How often to fetch edge IPs in milliseconds (default: 24h) |
+
 **Security Notes:**
 - Generate `SSH_CRED_SECRET` using: `node scripts/generate-ssh-secret.js`
 - Use cryptographically secure random strings for all secrets
 - Rotate secrets regularly in production environments
 
-## Database Configuration
+### Default Admin Seed (Optional)
+
+Used by the `scripts/create-test-admin.js` script.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DEFAULT_ADMIN_EMAIL` | No | `admin@example.com` | Default admin email address to seed |
+| `DEFAULT_ADMIN_PASSWORD` | No | `Admin123#` | Default admin password to seed |
+
+## Database & Caching Configuration
 
 ### PostgreSQL
 
@@ -46,6 +64,15 @@ DATABASE_URL=postgresql://username:password@ep-example-123456.us-east-1.aws.neon
 # Other cloud providers
 DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
 ```
+
+### Redis (Optional)
+
+Used for rate limiting and token blacklisting/brute force protection.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `REDIS_URL` | No | `redis://localhost:6379` | Redis connection URL |
+| `REDIS_PASSWORD` | No | - | Redis authentication password |
 
 ## Branding & UI Configuration
 
@@ -107,6 +134,12 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
 
 **Setup Instructions:**
 1. **Linode**: Create token at https://cloud.linode.com/profile/tokens
+
+### GitHub (Optional)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GITHUB_TOKEN` | No | - | GitHub Personal Access Token to increase API rate limits for checking application updates |
 
 
 
@@ -173,7 +206,7 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
 | `VITE_RYBBIT_API_KEY` | No | - | Rybbit API key |
 | `VITE_RYBBIT_TRACK_ERRORS` | No | `true` | Enable JavaScript error tracking |
 | `VITE_RYBBIT_SESSION_REPLAY` | No | `true` | Enable session replay recording |
-| `VITE_TRACKING_SCRIPT_URL` | No | - | Generic tracking script URL fallback |
+| `VITE_TRACKING_SCRIPT_URL` | No | - | Generic tracking script URL fallback (prefer Rybbit) |
 
 ## Backup Configuration (Optional)
 

@@ -905,6 +905,14 @@ Backend integrations from skypanelv2-api:
 - CORS origins configured for production domain
 - `TRUST_PROXY=1` (single reverse proxy) or `2` (Cloudflare + proxy)
 
+#### CDN Configuration (Bunny CDN)
+
+If your application is deployed behind Bunny CDN, you must enable the integration to accurately capture client IP addresses instead of the CDN's edge server IPs. This is crucial for rate limiting, brute force protection, and logging.
+
+1. Set `BUNNY_CDN_ENABLED=true` in your `.env` file.
+2. Ensure your CDN is forwarding the `True-Client-IP` or `X-Forwarded-For` header.
+3. The application will dynamically fetch and trust Bunny CDN's edge server lists (`api.bunny.net/system/edgeserverlist`) and automatically parse the real client IP.
+
 ### Deployment with PM2
 
 ```bash
