@@ -447,6 +447,11 @@ const formatCurrency = (value: number): string => {
   return `$${value.toFixed(2)}`;
 };
 
+const formatHourlyCurrency = (value: number): string => {
+  if (!Number.isFinite(value) || value <= 0) return "$0.000000";
+  return `$${value.toFixed(6)}`;
+};
+
 const formatPercent = (value: number): string =>
   `${Math.max(0, value).toFixed(1)}%`;
 
@@ -2478,7 +2483,7 @@ const VPSDetail: React.FC = () => {
                             </span>
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {formatCurrency(detail?.plan.pricing.hourly ?? 0)}{" "}
+                            {formatHourlyCurrency(detail?.plan.pricing.hourly ?? 0)}{" "}
                             hourly billable
                           </p>
                         </div>
@@ -2897,7 +2902,7 @@ const VPSDetail: React.FC = () => {
                       <p className="mt-1 text-xs">
                         Enabling backups adds{" "}
                         {formatCurrency(backupPricing.monthly)} / month (
-                        {formatCurrency(backupPricing.hourly)} hourly) — 40% of
+                        {formatHourlyCurrency(backupPricing.hourly)} hourly) — 40% of
                         your selected plan.
                       </p>
                     </div>
