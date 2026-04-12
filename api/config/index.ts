@@ -26,6 +26,13 @@ export interface RateLimitConfig {
 
 export type EmailProvider = "resend" | "smtp";
 
+export interface BunnyCdnConfig {
+  enabled: boolean;
+  ipv4Url: string;
+  ipv6Url: string;
+  refreshIntervalMs: number;
+}
+
 export interface Config {
   PORT: number;
   NODE_ENV: string;
@@ -38,6 +45,8 @@ export interface Config {
   RATE_LIMIT_MAX_REQUESTS: number;
   // Enhanced rate limiting configuration
   rateLimiting: RateLimitConfig;
+  // Bunny CDN integration
+  bunnyCdn: BunnyCdnConfig;
   PAYPAL_CLIENT_ID: string;
   PAYPAL_CLIENT_SECRET: string;
   PAYPAL_MODE: string;
@@ -264,6 +273,20 @@ function parseRateLimitConfig(): RateLimitConfig {
 function getConfig(): Config {
   const rateLimitingConfig = parseRateLimitConfig();
 
+  const bunnyCdnConfig: BunnyCdnConfig = {
+    enabled: parseBoolean(process.env.BUNNY_CDN_ENABLED, false),
+    ipv4Url:
+      process.env.BUNNY_CDN_API_URL_IPV4 ||
+      "https://api.bunny.net/system/edgeserverlist",
+    ipv6Url:
+      process.env.BUNNY_CDN_API_URL_IPV6 ||
+      "https://api.bunny.net/system/edgeserverlist/IPv6",
+    refreshIntervalMs: parseInt(
+      process.env.BUNNY_CDN_REFRESH_INTERVAL_MS || "86400000",
+      10,
+    ), // 24 hours
+  };
+
   const smtpPort = process.env.SMTP_PORT
     ? parseInt(process.env.SMTP_PORT, 10)
     : undefined;
@@ -293,6 +316,7 @@ function getConfig(): Config {
     ),
     // Enhanced rate limiting configuration
     rateLimiting: rateLimitingConfig,
+    bunnyCdn: bunnyCdnConfig,
     PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID || "",
     PAYPAL_CLIENT_SECRET: process.env.PAYPAL_CLIENT_SECRET || "",
     PAYPAL_MODE: process.env.PAYPAL_MODE || "sandbox",
@@ -507,7 +531,11 @@ export function validateConfig(): void {
   const isDevelopment = process.env.NODE_ENV === "development";
 
   // ========== CRITICAL SECRETS (Required always) ==========
-  const jwtValidation = validateSecretLength("JWT_SECRET", process.env.JWT_SECRET, 32);
+  const jwtValidation = validateSecretLength(
+    "JWT_SECRET",
+    process.env.JWT_SECRET,
+    32,
+  );
   if (!jwtValidation.isValid) {
     errors.push(jwtValidation.error!);
   }

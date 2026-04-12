@@ -9,6 +9,7 @@ import { EgressBillingService } from "./services/egressBillingService.js";
 import { EgressHourlyBillingService } from "./services/egressHourlyBillingService.js";
 import { notificationService } from "./services/notificationService.js";
 import { ticketNotificationService } from "./services/ticketNotificationService.js";
+import { bunnyCdnService } from "./services/bunnyCdnService.js";
 import { query } from "./lib/database.js";
 import { config } from "./config/index.js";
 
@@ -35,10 +36,15 @@ async function syncEnvConfigToDatabase() {
         "INSERT INTO networking_config (rdns_base_domain, created_at, updated_at) VALUES ($1, NOW(), NOW())",
         [envDomain],
       );
-      console.log(`🔄 Created networking_config from .env: RDNS_BASE_DOMAIN=${envDomain}`);
+      console.log(
+        `🔄 Created networking_config from .env: RDNS_BASE_DOMAIN=${envDomain}`,
+      );
     }
   } catch (error) {
-    console.warn("⚠️ Could not sync RDNS_BASE_DOMAIN to database:", (error as Error).message);
+    console.warn(
+      "⚠️ Could not sync RDNS_BASE_DOMAIN to database:",
+      (error as Error).message,
+    );
   }
 }
 
@@ -48,8 +54,19 @@ async function syncEnvConfigToDatabase() {
 const PORT = process.env.PORT || 3001;
 let lastScheduledEgressMonth: string | null = null;
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   console.log(`Server ready on port ${PORT}`);
+
+  // Initialize Bunny CDN integration
+  bunnyCdnService.initialize(config.bunnyCdn);
+  if (config.bunnyCdn.enabled) {
+    try {
+      await bunnyCdnService.fetchBunnyIPs();
+    } catch (err) {
+      console.error("Failed to fetch initial Bunny CDN IPs on startup:", err);
+    }
+  }
+
   // Initialize websocket SSH bridge on same HTTP server
   initSSHBridge(server);
 
@@ -176,8 +193,8 @@ async function runHourlyEgressBilling(runType: "initial" | "scheduled") {
     const result = await EgressHourlyBillingService.runHourlyBilling();
     console.log(
       `✅ Hourly egress billing completed: ` +
-      `${result.billedCount} billed, ${result.suspendedCount} suspended, ` +
-      `${result.skippedCount} skipped, ${result.errorCount} errors`,
+        `${result.billedCount} billed, ${result.suspendedCount} suspended, ` +
+        `${result.skippedCount} skipped, ${result.errorCount} errors`,
     );
 
     if (result.errors.length > 0) {

@@ -124,8 +124,48 @@ export function getClientIP(
   const warnings: string[] = [];
   let result: IPDetectionResult;
 
-  // Try X-Forwarded-For header first (most common proxy header)
-  if (trustProxy && req.headers["x-forwarded-for"]) {
+  // Add detection for Bunny CDN
+  const cdnLoop = req.headers["cdn-loop"];
+  if (cdnLoop && typeof cdnLoop === "string" && cdnLoop.includes("bunnycdn")) {
+    warnings.push("Request routed through Bunny CDN");
+  }
+
+  // 1. Use Express's built-in req.ip if trust proxy is configured properly
+  // req.ip is populated based on the app.set('trust proxy', ...) configuration
+  if (trustProxy && req.ip) {
+    const sanitized = sanitizeIP(req.ip);
+    if (isValidIP(sanitized)) {
+      result = {
+        ip: sanitized,
+        source: "x-forwarded-for", // Express derives req.ip from X-Forwarded-For
+        originalHeader: req.headers["x-forwarded-for"] as string | undefined,
+        isValid: true,
+      };
+    }
+  }
+
+  // 2. Try True-Client-IP header (often used by CDNs like Cloudflare and Bunny CDN)
+  if (!result && trustProxy && req.headers["true-client-ip"]) {
+    const trueClientIp = req.headers["true-client-ip"];
+    const headerValue = Array.isArray(trueClientIp)
+      ? trueClientIp[0]
+      : trueClientIp;
+    const sanitized = sanitizeIP(headerValue);
+
+    if (isValidIP(sanitized)) {
+      result = {
+        ip: sanitized,
+        source: "x-real-ip", // Grouping with x-real-ip source for legacy compatibility
+        originalHeader: headerValue,
+        isValid: true,
+      };
+    } else {
+      warnings.push(`Invalid True-Client-IP header: ${headerValue}`);
+    }
+  }
+
+  // 3. Fallback: Manual X-Forwarded-For parsing
+  if (!result && trustProxy && req.headers["x-forwarded-for"]) {
     const forwardedFor = req.headers["x-forwarded-for"];
     const headerValue = Array.isArray(forwardedFor)
       ? forwardedFor[0]
@@ -149,7 +189,7 @@ export function getClientIP(
     }
   }
 
-  // Try X-Real-IP header as fallback
+  // 4. Try X-Real-IP header as fallback
   if (!result && trustProxy && req.headers["x-real-ip"]) {
     const realIP = req.headers["x-real-ip"];
     const headerValue = Array.isArray(realIP) ? realIP[0] : realIP;
@@ -167,7 +207,7 @@ export function getClientIP(
     }
   }
 
-  // Try socket remote address
+  // 5. Try socket remote address
   if (!result) {
     const socketIP =
       (req.socket as any)?.remoteAddress || req.connection?.remoteAddress;
@@ -187,7 +227,7 @@ export function getClientIP(
     }
   }
 
-  // Use fallback IP if nothing else worked
+  // 6. Use fallback IP if nothing else worked
   if (!result) {
     warnings.push("No valid IP found in any source, using fallback");
     result = {

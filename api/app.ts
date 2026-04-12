@@ -20,9 +20,7 @@ import { fileURLToPath } from "url";
 import cors from "cors";
 import fs from "fs";
 import cookieParser from "cookie-parser";
-import {
-  createSecurityMiddleware,
-} from "./middleware/security.js";
+import { createSecurityMiddleware } from "./middleware/security.js";
 import { requireHttpsMiddleware } from "./middleware/requireHttps.js";
 import { csrfProtection } from "./middleware/csrfProtection.js";
 import {
@@ -77,12 +75,45 @@ import { sendSafeErrorResponse } from "./lib/errorHandling.js";
 validateConfig();
 
 const app = express();
-app.set("trust proxy", config.rateLimiting.trustProxy);
+
+import { bunnyCdnService } from "./services/bunnyCdnService.js";
+
+// Implement dynamic trust proxy logic for Bunny CDN
+app.set("trust proxy", function (ip: string) {
+  // Trust localhost / private networking by default
+  if (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip.startsWith("10.") ||
+    ip.startsWith("192.168.")
+  ) {
+    return true;
+  }
+
+  // If configured with static trust proxy setting (like a number or boolean true/false)
+  // we fallback to the static configuration if Bunny CDN is not enabled or if the IP isn't a CDN IP
+  const staticTrust = config.rateLimiting.trustProxy;
+
+  // If Bunny CDN integration is enabled, check if the IP belongs to it
+  if (config.bunnyCdn.enabled && bunnyCdnService.isBunnyIp(ip)) {
+    return true;
+  }
+
+  if (typeof staticTrust === "function") {
+    return (staticTrust as any)(ip);
+  }
+
+  if (staticTrust === true) {
+    return true;
+  }
+
+  return false;
+});
 
 // Block leading space encoded path probes (/%20/)
 app.use((req, res, next) => {
   const rawUrl = req.originalUrl || req.url;
-  if (rawUrl.startsWith('/%20/') || rawUrl.startsWith('/ ')) {
+  if (rawUrl.startsWith("/%20/") || rawUrl.startsWith("/ ")) {
     return res.sendStatus(403);
   }
   next();
@@ -136,10 +167,9 @@ function readEnvBoolean(value: string | undefined, fallback: boolean): boolean {
 }
 
 function buildRuntimeHeadMarkup(nonce: string): string {
-  const companyName = readEnvString(
-    process.env.COMPANY_NAME,
-    process.env.VITE_COMPANY_NAME,
-  ) || "GVPSCloud";
+  const companyName =
+    readEnvString(process.env.COMPANY_NAME, process.env.VITE_COMPANY_NAME) ||
+    "GVPSCloud";
 
   const scriptSrc = readEnvString(
     process.env.VITE_RYBBIT_SCRIPT_URL,
@@ -147,12 +177,20 @@ function buildRuntimeHeadMarkup(nonce: string): string {
   );
   const siteId = readEnvString(process.env.VITE_RYBBIT_SITE_ID);
   const apiKey = readEnvString(process.env.VITE_RYBBIT_API_KEY);
-  const trackErrors = readEnvBoolean(process.env.VITE_RYBBIT_TRACK_ERRORS, true);
-  const sessionReplay = readEnvBoolean(process.env.VITE_RYBBIT_SESSION_REPLAY, true);
+  const trackErrors = readEnvBoolean(
+    process.env.VITE_RYBBIT_TRACK_ERRORS,
+    true,
+  );
+  const sessionReplay = readEnvBoolean(
+    process.env.VITE_RYBBIT_SESSION_REPLAY,
+    true,
+  );
 
   const runtimeConfig = {
     VITE_RYBBIT_SCRIPT_URL: scriptSrc,
-    VITE_TRACKING_SCRIPT_URL: readEnvString(process.env.VITE_TRACKING_SCRIPT_URL),
+    VITE_TRACKING_SCRIPT_URL: readEnvString(
+      process.env.VITE_TRACKING_SCRIPT_URL,
+    ),
     VITE_RYBBIT_SITE_ID: siteId,
     VITE_RYBBIT_API_KEY: apiKey,
     VITE_RYBBIT_TRACK_ERRORS: trackErrors,
@@ -194,10 +232,7 @@ let cachedClientIndexMtimeMs = -1;
 
 function getClientIndexTemplate(): string {
   const stats: Stats = fs.statSync(clientIndexFile);
-  if (
-    cachedClientIndexTemplate &&
-    cachedClientIndexMtimeMs === stats.mtimeMs
-  ) {
+  if (cachedClientIndexTemplate && cachedClientIndexMtimeMs === stats.mtimeMs) {
     return cachedClientIndexTemplate;
   }
 
@@ -208,16 +243,12 @@ function getClientIndexTemplate(): string {
 
 function renderClientIndexHtml(nonce: string): string {
   const template = getClientIndexTemplate();
-  return template
-    .replace(
-      "<!-- APP_RUNTIME_HEAD -->",
-      buildRuntimeHeadMarkup(nonce),
-    )
-    // Add nonce to all inline <script> tags in the template (those without src attribute)
-    .replace(
-      /(<script(?![^>]*\bsrc=)[^>]*)(>)/g,
-      `$1 nonce="${nonce}"$2`,
-    );
+  return (
+    template
+      .replace("<!-- APP_RUNTIME_HEAD -->", buildRuntimeHeadMarkup(nonce))
+      // Add nonce to all inline <script> tags in the template (those without src attribute)
+      .replace(/(<script(?![^>]*\bsrc=)[^>]*)(>)/g, `$1 nonce="${nonce}"$2`)
+  );
 }
 
 // Security middleware - use enhanced Helmet configuration with nonce-based CSP
