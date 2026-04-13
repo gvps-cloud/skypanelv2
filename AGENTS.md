@@ -17,9 +17,14 @@ SkyPanelV2 is a full-stack VPS hosting/billing panel: React 18 + Vite frontend, 
 
 - `npm run dev` — concurrent frontend (Vite :5173) + backend (Express :3001)
 - `npm run dev-up` — kill ports first, then `dev` (preferred clean start)
+- `npm run client:dev` — frontend only (Vite :5173)
+- `npm run server:dev` — backend only (Express :3001, nodemon)
 - `npm run build` — `tsc -b && vite build` (runs `docs:api:sync` via `prebuild` hook)
 - `npm run check` — type-check without emitting (`tsc --noEmit`)
 - `npm run lint` — ESLint (warnings ok, 0 errors)
+- `npm run preview` — preview production build
+- `npm run start` — production: Express API + Vite preview
+- `npm run start:dev` — Express API + Vite preview on :5173
 
 ### Testing
 
@@ -43,6 +48,45 @@ Vitest config (`vitest.config.ts`): globals enabled, jsdom environment, `@` alia
 - `npm run seed:admin` — seed default admin user
 - `node scripts/seed-branding.js` — update DB branding to match `.env`
 - **Never modify existing migrations.** Add a new sequential `NNN_description.sql` file.
+- ⚠️ **NEVER run `db:reset`, `db:reset:confirm`, `db:fresh`, or destructive migration commands — they destroy all data.**
+
+### API Docs
+
+- `npm run docs:api:sync` — refresh API docs manifest (auto-runs via pre-hooks)
+- `npm run docs:api:audit` — audit API docs coverage
+
+### Deployment
+
+- `npm run pm2:start` — build and launch PM2 processes
+- `npm run pm2:reload` — reload PM2 processes
+- `npm run pm2:stop` — stop PM2 processes
+- `npm run pm2:list` — list PM2 processes
+
+### Utilities
+
+- `npm run kill-ports` — kill ports 3001, 5173, 8000
+- `npm run pwa:icons` — generate PWA icons
+
+## Environment Configuration
+
+Copy `.env.example` to `.env`. Node.js **22.22.0** (see `.nvmrc`). npm is the package manager.
+
+| Group | Variables | Notes |
+|---|---|---|
+| **Core (required)** | `DATABASE_URL`, `JWT_SECRET`, `SSH_CRED_SECRET`, `ENCRYPTION_KEY` | App won't start without these |
+| **Server** | `NODE_ENV` (development), `PORT` (3001), `CLIENT_URL` (http://localhost:5173) | |
+| **Provider** | `LINODE_API_TOKEN`, `LINODE_API_URL` | Linode VPS provisioning |
+| **Billing** | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_MODE` (sandbox/live) | PayPal integration |
+| **Email** | `EMAIL_PROVIDER_PRIORITY` (resend,smtp), `RESEND_API_KEY` or `SMTP_*` | Fallback chain: Resend → SMTP |
+| **Branding** | `COMPANY_NAME`, `VITE_COMPANY_NAME`, `COMPANY_BRAND_NAME` | White-label brand name |
+| **Networking** | `RDNS_BASE_DOMAIN` | Reverse DNS base domain |
+| **Admin seed** | `DEFAULT_ADMIN_EMAIL`, `DEFAULT_ADMIN_PASSWORD` | Optional, for `seed:admin` script |
+| **Rate limiting** | `RATE_LIMIT_{ANONYMOUS,AUTHENTICATED,ADMIN}_{WINDOW_MS,MAX}` | Tiered role-based limits |
+| **Operational** | `TRUST_PROXY` (true), `MAX_FILE_SIZE`, `UPLOAD_PATH`, `BACKUP_STORAGE_PROVIDER`, `BACKUP_RETENTION_DAYS` | |
+
+Generate secrets:
+- `node scripts/generate-ssh-secret.js` → `SSH_CRED_SECRET`
+- `node scripts/generate-encryption-key.js` → `ENCRYPTION_KEY`
 
 ## Critical Conventions
 
@@ -145,6 +189,76 @@ Always use `normalizeProviderToken()` from `api/lib/providerTokens.js` before cr
 
 Single source of truth: `public/favicon.svg`. The `Logo` component (`src/components/Logo.tsx`) renders it as `<img>`. To update icons, replace `favicon.svg` and regenerate via [realfavicongenerator.net](https://realfavicongenerator.net).
 
+## Frontend Routing
+
+Route guards are defined in `src/App.tsx`:
+
+- **Public** (no auth): `/`, `/pricing`, `/faq`, `/about`, `/contact`, `/status`, `/terms`, `/privacy`, `/login`, `/register`, `/forgot-password`, `/reset-password`, `/docs/*`, `/regions`
+- **Protected** (auth + AppLayout sidebar): `/dashboard`, `/vps/*`, `/ssh-keys`, `/billing/*`, `/egress-credits`, `/support`, `/settings`, `/activity`, `/organizations/*`, `/api-docs`, `/notes/*`
+- **Admin** (auth + admin role, blocked during impersonation): `/admin`, `/admin/user/:id`
+- **Standalone** (auth, no sidebar): SSH console (`/vps/:id/ssh`)
+- **Invitations**: `/organizations/invitations/:token/*`
+
+App shell providers (in order): `QueryClientProvider` → `ThemeProvider` → `AuthProvider` → `ImpersonationProvider` → `Router`
+
+## Backend API Routes
+
+Registered in `api/app.ts`. Auth middleware applied at router level per route group:
+
+```
+/api/auth          — Authentication (login, register, 2FA, password reset)
+/api/vps           — VPS management, providers, plans, images, actions
+/api/organizations — Org CRUD, members, invitations, roles
+/api/payments      — PayPal orders, capture, wallet operations
+/api/egress        — Egress credits, purchase flow, usage readings
+/api/support       — Support tickets and replies
+/api/ssh-keys      — SSH key CRUD with provider sync
+/api/api-keys      — User API key management (row-level security)
+/api/invoices      — Invoice listing and detail
+/api/notifications — SSE stream, mark read (PostgreSQL LISTEN/NOTIFY)
+/api/activity      — User activity feed (SSE endpoint)
+/api/activities    — Activity logging
+/api/theme         — Theme preset management
+/api/pricing       — Public pricing data
+/api/faq           — Public FAQ content
+/api/contact       — Contact form submission
+/api/documentation — Public documentation articles
+/api/announcements — Public announcements
+/api/notes         — Personal and organization notes
+/api/health        — Health check
+
+/api/admin/*       — Admin: users, platform settings, billing, email-templates,
+                      contact, faq, github, category-mappings, ssh-keys,
+                      activity, documentation, networking, announcements
+```
+
+Cross-cutting: CSRF on `/api`, API key auth (`authenticateApiKey`) on `/api`, smart rate limiting on `/api`.
+
+## Egress Billing System
+
+Prepaid egress credit model with hourly enforcement:
+
+- Credit packs (100GB–10TB) purchased via PayPal, stored per-organization
+- Hourly billing polls Linode transfer API every 60 min, calculates delta
+- Auto-suspends VPS instances when org credit balance hits zero
+- All members share the same credit pool; permissions control view vs purchase
+
+Key services: `egressCreditService.ts`, `egressHourlyBillingService.ts`, `egressBillingService.ts`, `egress/egressUtils.ts`. Migrations 025–033.
+
+## Notable Scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/run-migration.js` | Apply pending migrations |
+| `scripts/reset-database.js` | Interactive DB reset (**NEVER run in production**) |
+| `scripts/seed-admin.js` | Seed default admin user |
+| `scripts/seed-branding.js` | Update DB branding to match `.env` |
+| `scripts/generate-ssh-secret.js` | Generate `SSH_CRED_SECRET` value |
+| `scripts/generate-encryption-key.js` | Generate `ENCRYPTION_KEY` value |
+| `scripts/apply-single-migration.js` | Apply a specific migration file |
+| `scripts/audit-api-docs.mjs` | API docs audit (used by `npm run docs:api:*`) |
+| `scripts/generate-pwa-icons.js` | Generate PWA icons |
+
 ## Key Files to Check Before Changes
 
 | Before changing... | Check this file first |
@@ -169,23 +283,6 @@ migrations/     SQL migrations (never modify existing)
 scripts/        DB, admin, diagnostics, maintenance utilities
 public/         Static assets (favicon.svg is logo source of truth)
 ```
-
-## Environment Setup
-
-Copy `.env.example` to `.env`. Required values:
-
-```bash
-DATABASE_URL=postgresql://...
-JWT_SECRET=...
-SSH_CRED_SECRET=32-char-key
-ENCRYPTION_KEY=32-char-key
-```
-
-Node.js **22.22.0** (see `.nvmrc`). npm is the package manager.
-
-Generate secrets:
-- `node scripts/generate-ssh-secret.js`
-- `node scripts/generate-encryption-key.js`
 
 ## Installing Skills
 
