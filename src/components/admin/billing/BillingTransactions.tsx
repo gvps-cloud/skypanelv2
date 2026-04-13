@@ -8,6 +8,7 @@ import { Loader2, ArrowUpRight, ArrowDownLeft, RefreshCw, FileText, Download } f
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { injectInvoiceTheme } from '@/lib/invoiceTheme';
 import {
   Dialog,
   DialogContent,
@@ -271,10 +272,10 @@ export const BillingTransactions: React.FC = () => {
               Invoice {viewInvoice?.invoiceNumber || viewInvoice?.id}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 w-full border rounded-md overflow-hidden bg-white">
+          <div className="flex-1 w-full border rounded-md overflow-hidden bg-background">
             {viewInvoice?.htmlContent ? (
               <iframe
-                srcDoc={viewInvoice.htmlContent}
+                srcDoc={injectInvoiceTheme(viewInvoice.htmlContent)}
                 className="w-full h-full border-none"
                 title="Invoice Preview"
               />

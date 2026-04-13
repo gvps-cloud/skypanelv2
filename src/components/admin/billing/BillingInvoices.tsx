@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Loader2, Download, FileText, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { injectInvoiceTheme } from '@/lib/invoiceTheme';
 import {
   Dialog,
   DialogContent,
@@ -190,10 +191,10 @@ export const BillingInvoices: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Invoice {viewInvoice?.invoiceNumber}</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 w-full border rounded-md overflow-hidden bg-white">
+          <div className="flex-1 w-full border rounded-md overflow-hidden bg-background">
             {viewInvoice?.htmlContent ? (
               <iframe 
-                srcDoc={viewInvoice.htmlContent} 
+                srcDoc={injectInvoiceTheme(viewInvoice.htmlContent)}
                 className="w-full h-full border-none"
                 title="Invoice Preview"
               />
