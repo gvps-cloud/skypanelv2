@@ -5,642 +5,213 @@ alwaysApply: true
 
 # AGENTS.md
 
-This file documents the current state of the `skypanelv2` repository so coding agents can work against the app as it exists today rather than older assumptions.
-
-## What This Application Is
+Compact instruction file for coding agents working in the `skypanelv2` repository.
 
-SkyPanelV2 is a full-stack VPS hosting and billing panel with:
+## What This Is
 
-- Public marketing, pricing, status, FAQ, contact, legal, and API docs pages
-- User authentication and account management
-- VPS management, detail screens, and SSH console access
-- Billing, invoices, transactions, and PayPal payment flows
-- Support, notifications, and activity history
-- Organizations, invitations, and membership workflows
-- Egress (network transfer) billing with prepaid credit packs and hourly enforcement
-- Admin tools for users, billing, platform settings, FAQ/contact content, email templates, GitHub/update integrations, and impersonation
+SkyPanelV2 is a full-stack VPS hosting/billing panel: React 18 + Vite frontend, Express 4 + PostgreSQL backend, Linode API integration, PayPal billing. See `CLAUDE.md` for deeper architectural context.
 
-## Current Stack
+## Dev Commands
 
-### Frontend
+### Core
 
-- React 18
-- TypeScript
-- Vite
-- React Router DOM 7
-- TanStack Query
-- Tailwind CSS
-- shadcn/ui and Radix UI primitives
-- React Hook Form + Zod
-- Framer Motion
-- Xterm.js for SSH console UI
+- `npm run dev` — concurrent frontend (Vite :5173) + backend (Express :3001)
+- `npm run dev-up` — kill ports first, then `dev` (preferred clean start)
+- `npm run build` — `tsc -b && vite build` (runs `docs:api:sync` via `prebuild` hook)
+- `npm run check` — type-check without emitting (`tsc --noEmit`)
+- `npm run lint` — ESLint (warnings ok, 0 errors)
 
-### Backend
+### Testing
 
-- Express 4
-- TypeScript with ESM modules
-- PostgreSQL via `pg`
-- JWT authentication
-- Helmet, CORS, express-validator, and custom rate limiting middleware
-
-### Integrations
-
-- Linode API
-- PayPal server/client SDKs
-- Resend and SMTP email delivery
-- Optional GitHub token support
-- PM2-based production process management
-- Caddy deployment helpers
-
-## Development Commands
-
-### Core App
-
-- `npm run dev` - Start frontend and backend development servers concurrently
-- `npm run dev-up` - Kill ports `3001`, `5173`, and `8000`, then start dev
-- `npm run client:dev` - Start Vite dev server
-- `npm run server:dev` - Start backend dev server with `nodemon`
-- `npm run build` - Run TypeScript build and Vite production build
-- `npm run check` - Type-check without emitting
-- `npm run lint` - Run ESLint
-- `npm run preview` - Preview the built frontend
-- `npm run start` - Run the production API server and Vite preview together
-
-### API Docs / Metadata
-
-- `npm run docs:api:sync` - Refresh API docs manifest data
-- `npm run docs:api:audit` - Audit API docs coverage
-
-These sync automatically before `dev`, `client:dev`, and `build`.
-
-### Database / Reset
-
-- `npm run db:reset` - Interactive database reset
-- `npm run db:reset:confirm` - Reset database without prompt
-- `npm run db:fresh` - Reset database and apply migrations
-- `npm run seed:admin` - Seed the default admin user
-- `node scripts/seed-branding.js` - Update database branding (docs, FAQ, contact, rDNS) to match .env
-
-### Runtime / Deployment Helpers
-
-- `npm run kill-ports` - Kill ports `3001`, `5173`, and `8000`
-- `npm run pm2:start` - Build and launch PM2 processes
-- `npm run pm2:reload` - Reload PM2 processes
-- `npm run pm2:stop` - Stop and delete PM2 processes
-- `npm run pm2:list` - List PM2 processes
-- `npm run pwa:icons` - Generate PWA icons
-
-## Environment Configuration
-
-Copy `.env.example` to `.env`.
-
-### Core Required Values
-
-```bash
-NODE_ENV=development
-PORT=3001
-CLIENT_URL=http://localhost:5173
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/skypanelv2
-JWT_SECRET=your-super-secret-jwt-key-here
-SSH_CRED_SECRET=your-32-character-encryption-key
-ENCRYPTION_KEY=your-32-character-encryption-key
-```
-
-### Branding
-
-> **Note:** These are example values. Set these to match your deployment brand.
-
-```bash
-COMPANY_NAME=SkyPanelV2
-VITE_COMPANY_NAME=SkyPanelV2
-COMPANY_BRAND_NAME=SkyPanelV2
-```
-
-### Networking
-
-```bash
-RDNS_BASE_DOMAIN=ip.rev.example.com
-```
-
-### Admin Seed Defaults (optional)
-
-```bash
-DEFAULT_ADMIN_EMAIL=admin@example.com
-DEFAULT_ADMIN_PASSWORD=Admin123#
-```
-
-### External Services
-
-```bash
-LINODE_API_TOKEN=your-linode-api-token
-LINODE_API_URL=https://api.linode.com/v4
-PAYPAL_CLIENT_ID=your-paypal-client-id
-PAYPAL_CLIENT_SECRET=your-paypal-client-secret
-PAYPAL_MODE=sandbox
-EMAIL_PROVIDER_PRIORITY=resend,smtp
-RESEND_API_KEY=
-SMTP_HOST=mail.example.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_REQUIRE_TLS=true
-SMTP_USERNAME=smtp-user@example.com
-SMTP_PASSWORD=super-secure-password
-FROM_EMAIL=noreply@example.com
-FROM_NAME=SkyPANELv2
-CONTACT_FORM_RECIPIENT=support@example.com
-```
-
-### Operational Settings
-
-```bash
-TRUST_PROXY=true
-MAX_FILE_SIZE=10485760
-UPLOAD_PATH=./uploads
-BACKUP_STORAGE_PROVIDER=local
-BACKUP_RETENTION_DAYS=30
-```
-
-### Rate Limiting
-
-The current environment file exposes configurable role-based limits:
-
-- `RATE_LIMIT_ANONYMOUS_WINDOW_MS`
-- `RATE_LIMIT_ANONYMOUS_MAX`
-- `RATE_LIMIT_AUTHENTICATED_WINDOW_MS`
-- `RATE_LIMIT_AUTHENTICATED_MAX`
-- `RATE_LIMIT_ADMIN_WINDOW_MS`
-- `RATE_LIMIT_ADMIN_MAX`
-
-The current defaults in `.env.example` are much higher than the older values previously documented.
-
-## Current Application Structure
-
-```text
-api/
-  app.ts                Express app wiring and route registration
-  server.ts             API server bootstrap
-  config/               Environment and runtime config
-  lib/                  Shared backend helpers
-  middleware/           Auth, permissions, rate limiting, validation
-  routes/               Public, authenticated, and admin API routes
-  services/             Business logic and background/process services
-
-src/
-  App.tsx               Main router and route guards
-  components/           Reusable UI and feature-specific components
-  contexts/             Auth, theme, breadcrumb, and impersonation state
-  hooks/                Reusable frontend hooks
-  lib/                  API client and utilities
-  pages/                Public, user, and admin route pages
-  services/             Frontend service wrappers
-  styles/               Page-specific styles
-  theme/                Theme preset/token definitions
-  types/                Shared frontend types
-
-migrations/             SQL migrations
-scripts/                Database, migration, admin, diagnostics, and maintenance scripts
-public/                 Static assets, icons, and favicon.svg (single source of truth for site logo)
-repo-docs/              Internal docs and audit artifacts
-deploy/                 Deployment-related templates
-```
-
-## Frontend Routing Overview
-
-### Public Pages
-
-- `/` via `HomeRedesign`
-- `/pricing`
-- `/faq`
-- `/about`
-- `/contact`
-- `/status`
-- `/terms`
-- `/privacy`
-- `/login`
-- `/register`
-- `/forgot-password`
-- `/reset-password`
-- Organization invitation acceptance routes
-
-### Authenticated User Pages
-
-- `/dashboard`
-- `/vps`
-- `/vps/:id`
-- `/vps/:id/ssh`
-- `/ssh-keys`
-- `/organizations`
-- `/organizations/:id`
-- `/billing`
-- `/billing/invoice/:id`
-- `/billing/transaction/:id`
-- `/billing/payment/success`
-- `/billing/payment/cancel`
-- `/support`
-- `/settings`
-- `/activity`
-- `/api-docs`
-- `/egress-credits`
-
-- `/docs` — public documentation (matches `/docs/:categorySlug/:articleSlug`)
-- `/regions` — public regions map
-
-### Admin Pages
-
-- `/admin`
-- `/admin/user/:id`
-
-The app shell currently relies on:
-
-- `AuthProvider`
-- `ThemeProvider`
-- `ImpersonationProvider`
-- public/authenticated/admin route guards in `src/App.tsx`
-
-## Backend API Overview
-
-The Express app currently registers these route groups:
-
-- `/api/auth`
-- `/api/payments`
-- `/api/admin`
-- `/api/admin/platform`
-- `/api/admin/email-templates`
-- `/api/admin/contact`
-- `/api/admin/billing`
-- `/api/vps`
-- `/api/support`
-- `/api/activity`
-- `/api/activities`
-- `/api/invoices`
-- `/api/notifications`
-- `/api/theme`
-- `/api/health`
-- `/api/contact`
-- `/api/faq`
-- `/api/admin/faq`
-- `/api/admin/github`
-- `/api/ssh-keys`
-- `/api/organizations`
-- `/api/pricing`
-- `/api/egress`
-- `/api/api-keys` - User API key management with row-level security
-- `/api/documentation` - Public documentation articles
-- `/api/announcements` - Public announcements
-- `/api/admin/ssh-keys` - Admin SSH key management
-- `/api/admin/documentation` - Admin documentation CRUD
-- `/api/admin/networking` - Admin networking config (rDNS, IPv6)
-- `/api/admin/announcements` - Admin announcements management
-
-Cross-cutting backend behavior includes:
-
-- Config validation at startup
-- Helmet and CORS middleware
-- JSON and URL-encoded body parsing
-- API-only smart rate limiting and response headers
-- Metrics collection and persistence startup
-- Billing cron startup
-- Production serving of the built frontend from `dist`
-
-## Key Architectural Patterns
-
-### Database Access
-
-Use shared database helpers from `api/lib/` rather than creating ad hoc connections inside route handlers.
-
-### Route / Service Split
-
-Keep HTTP request/response handling in route files and business logic in `api/services/` whenever possible.
-
-### Auth and Permissions
-
-- JWT auth is applied through backend middleware
-- Frontend route guards are convenience layers, not the source of truth
-- Admin impersonation is a core feature and affects access-sensitive work
-
-### Theming
-
-Theme behavior spans frontend context/state and backend theme APIs. Review `src/contexts/ThemeContext.tsx`, `src/theme/`, and `api/routes/theme.ts` before changing theme behavior.
-
-### Organizations and Billing Scope
-
-Organizations, invitations, and billing visibility are tightly related areas. Be careful when modifying resource queries, access control, or dashboard summaries so data does not leak across users or orgs.
-
-### Egress Billing System
-
-SkyPanelV2 implements a **prepaid egress credit model with hourly enforcement** to prevent network transfer abuse:
-
-- **Credit packs** (100GB, 1TB, 5TB, 10TB) are purchased via PayPal and stored per-organization
-- **Hourly billing** polls Linode transfer API every 60 minutes, calculating delta from the last reading
-- **Auto-shutoff** suspends VPS instances when an organization's credit balance hits zero
-- **Organization-scoped**: all members share the same credit pool; permissions control who can view vs. purchase
-
-Key services:
-
-- `api/services/egressCreditService.ts` — credit balance, purchase, deduction, manual add
-- `api/services/egressHourlyBillingService.ts` — hourly billing orchestrator
-- `api/services/egressBillingService.ts` — transfer pool tracking and overage projection
-- `api/services/egress/egressUtils.ts` — Linode transfer API helpers
-
-Key routes:
-
-- `GET /api/egress/credits` — org credit balance
-- `GET /api/egress/credits/history` — purchase history
-- `GET /api/egress/credits/packs` — available packs
-- `POST /api/egress/credits/purchase` — initiate PayPal purchase
-- `POST /api/egress/credits/purchase/complete` — complete purchase
-- `GET /api/egress/usage/:vpsId` — per-VPS hourly readings
-- Admin routes under `/api/egress/admin/*` for manual credit management and billing triggers
-
-Key frontend files:
-
-- `src/pages/EgressCredits.tsx` — dedicated egress credits page
-- `src/pages/Organizations.tsx` — org Egress tab with credit management
-- `src/pages/VPSDetail.tsx` — egress usage section in Networking tab
-- `src/components/admin/EgressCreditManager.tsx` — admin credit management UI
-- `src/components/admin/EgressPackSettings.tsx` — admin pack pricing config
-- `src/services/egressService.ts` — frontend API client
-
-Database migrations 025–032 implement the egress system (tables: `organization_egress_credits`, `egress_credit_packs`, `vps_egress_hourly_readings`, etc.). Note: 51 migrations total (001–051, sequential).
-
-## Testing Notes
-
-The repo includes:
-
-- Vitest
-- React Testing Library
-- Supertest
-- Playwright
-
-There is currently no `npm run test` or `npm run test:watch` script in `package.json`, so do not assume those commands exist.
-
-## Useful Scripts
-
-Notable scripts currently present in `scripts/` include:
-
-- `run-migration.js`
-- `reset-database.js`
-- `create-test-admin.js`
-- `ensure-admin-user.js`
-- `promote-to-admin.js`
-- `update-admin-password.js`
-- `audit-api-docs.mjs`
-- `generate-ssh-secret.js`
-- `generate-encryption-key.js`
-- `generate-pwa-icons.js`
-- `seed-branding.js` — update DB branding (docs, FAQ, contact, rDNS) to match `.env`
-- `update-theme-to-mono.js`
-- `apply-single-migration.js` — apply a specific migration file
-- `apply-stackscript-migration.js`
-- `reseed-faq.js`
-- provider/data migration helpers
-- verification/debug helpers for admins, settings, plans, migrations, and schema state
-
-## Code Conventions
-
-### File Naming
-
-| File type | Convention | Example |
-|-----------|------------|---------|
-| Pages and components | PascalCase `.tsx` | `VPSDetail.tsx`, `BillingCard.tsx` |
-| Custom hooks | camelCase, prefixed with `use`, `.ts` | `useCategoryMappings.ts`, `useTheme.ts` |
-| Frontend services | camelCase `.ts` | `paymentService.ts`, `egressService.ts` |
-| Backend routes | camelCase `.ts` | `vps.ts`, `adminDocumentation.ts` |
-| Backend services | PascalCase class or camelCase singleton `.ts` | `billingService.ts`, `BillingService` class |
-| Migrations | Sequential `NNN_description.sql` (zero-padded to 3 digits) | `048_add_foo_table.sql` |
-
-> **Never modify an existing migration.** Add a new sequential file instead.
-
-### Frontend API Calls
-
-Use the native `fetch()` API — there is no shared apiClient wrapper. Construct URLs via `API_BASE_URL` declared in `src/lib/api.ts`:
+**No `npm test` script exists.** Run directly:
+
+- `npx vitest run tests/security/` — security tests (the primary test suite)
+- `npx vitest run` — all tests
+
+Vitest config (`vitest.config.ts`): globals enabled, jsdom environment, `@` alias resolved.
+
+### Security
+
+- `npm run audit:security` — npm audit (high severity filter)
+- `npm run scan:code` — semgrep static analysis
+- `npm run test:security` — `vitest run tests/security/`
+- `npm run verify:security` — all three above combined
+
+### Database
+
+- `node scripts/run-migration.js` — apply pending migrations
+- `npm run seed:admin` — seed default admin user
+- `node scripts/seed-branding.js` — update DB branding to match `.env`
+- **Never modify existing migrations.** Add a new sequential `NNN_description.sql` file.
+
+## Critical Conventions
+
+### Backend: ESM `.js` Extensions (mandatory)
+
+All local backend imports require `.js` — the app uses ESM (`"type": "module"` in `package.json`):
 
 ```typescript
-import { API_BASE_URL } from '@/lib/api';
-// or from service file: const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
-
-const response = await fetch(`${API_BASE_URL}/endpoint`, {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify(payload),
-});
-if (!response.ok) {
-  const err = await response.json().catch(() => ({}));
-  throw new Error(err.error || `HTTP ${response.status}`);
-}
-return response.json();
+import { query } from '../lib/database.js';           // ✅
+import { query } from '../lib/database';               // ❌ breaks at runtime
 ```
 
-Get the JWT token from the `useAuth()` context hook (`src/contexts/AuthContext.tsx`).
+### Backend: Config Access
 
-### TanStack Query Pattern
+Import `config` from `api/config/index.ts`. Never access `process.env` directly in route/service files:
 
-Export a **query key factory** object from every hook file, then use it in `useQuery`, `useMutation`, and `invalidateQueries`:
+```typescript
+import { config } from '../config/index.js';
+const token = config.LINODE_API_TOKEN;  // ✅
+```
+
+### Frontend: Use `apiClient`, Not Raw `fetch`
+
+A shared `ApiClient` class exists at `src/lib/api.ts`. It handles CSRF tokens, organization headers, and 401 auto-logout:
+
+```typescript
+import { apiClient } from '@/lib/api';
+const data = await apiClient.get('/vps');
+await apiClient.post('/billing/top-up', { amount: 10 });
+```
+
+For one-off calls, `API_BASE_URL` is also exported. Get JWT token from `useAuth()` context hook.
+
+### Frontend: TanStack Query Key Factories
+
+Export a query key factory from every hook file:
 
 ```typescript
 export const myResourceKeys = {
   all: ['my-resource'] as const,
   detail: (id: string) => ['my-resource', id] as const,
 };
-
-export function useMyResource(id: string) {
-  return useQuery({
-    queryKey: myResourceKeys.detail(id),
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/my-resource/${id}`, { ... });
-      if (!res.ok) throw new Error('Failed to fetch');
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Request failed');
-      return data.item;
-    },
-    enabled: !!id,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-export function useUpdateMyResource() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, ...payload }) => { /* fetch call */ },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: myResourceKeys.all });
-      queryClient.invalidateQueries({ queryKey: myResourceKeys.detail(variables.id) });
-    },
-  });
-}
 ```
 
-### Tailwind / className
+### Frontend: Tailwind Classes
 
-Use `cn()` from `@/lib/utils` for all conditional or composed class names:
+Use `cn()` from `@/lib/utils` for all conditional/composed class names.
+
+### Backend: Route-Level Auth
+
+Apply auth middleware at the router level, not per-handler:
 
 ```typescript
-import { cn } from '@/lib/utils';
-<div className={cn('base-class', isActive && 'active-class', variant === 'ghost' && 'ghost-class')} />
+router.use(authenticateToken, requireOrganization);
 ```
 
-### Backend: ESM Imports
+Admin routes use `requireAdmin`. API key auth middleware (`authenticateApiKey`) is applied globally on `/api` in `app.ts`.
 
-All local backend imports **require the `.js` extension** — this is mandatory with ESM modules:
+### Backend: Error Handling
 
-```typescript
-import { query } from '../lib/database.js';       // ✅
-import { authenticateToken } from '../middleware/auth.js'; // ✅
-import { query } from '../lib/database';           // ❌ breaks at runtime
+- Business logic errors: `res.status(4xx).json({ error: 'message' })`
+- Provider/Linode errors: use `handleProviderError()` from `api/lib/errorHandling.ts`
+- Activity logging: `logActivity()` from `api/services/activityLogger.ts`
+
+## Architecture Gotchas
+
+### CSRF Protection
+
+CSRF middleware is applied to all `/api` routes in `api/app.ts`. The `apiClient` handles this automatically by reading `csrf_token` from cookies and sending `X-CSRF-Token`. Raw `fetch` calls must do this manually.
+
+### Pre-Start Hooks
+
+`predev`, `preclient:dev`, and `prebuild` all run `docs:api:sync` — expect a few seconds of delay before the server starts. This is normal.
+
+### Not Prisma
+
+`@prisma/client` is in `package.json` but the app uses raw `pg` queries with SQL migrations. There is no `prisma/schema.prisma`. Use `query()` and `transaction()` from `api/lib/database.ts`.
+
+### Organization Data Isolation
+
+All resource queries must be scoped to `organization_id`. Be careful with VPS, billing, egress, and dashboard queries — data must not leak across orgs. Impersonation context affects access.
+
+### Background Schedulers
+
+`api/server.ts` starts hourly billing, egress billing, and 24h low-balance reminders on boot. "0 instances billed" log output is normal with an empty VPS fleet.
+
+### TypeScript Strictness
+
+`strict: false`, `noUnusedLocals: false`, `noUnusedParameters: false` in `tsconfig.json`. ESLint allows `@typescript-eslint/no-explicit-any` (off) and uses `_` prefix for unused vars (warn).
+
+### ESM Module Resolution
+
+`tsconfig.json` uses `"moduleResolution": "bundler"` — no `.js` extensions needed in frontend imports (Vite resolves them). Only backend imports need `.js`.
+
+### Provider Token Resolution
+
+Always use `normalizeProviderToken()` from `api/lib/providerTokens.js` before creating provider instances.
+
+### Site Logo
+
+Single source of truth: `public/favicon.svg`. The `Logo` component (`src/components/Logo.tsx`) renders it as `<img>`. To update icons, replace `favicon.svg` and regenerate via [realfavicongenerator.net](https://realfavicongenerator.net).
+
+## Key Files to Check Before Changes
+
+| Before changing... | Check this file first |
+|---|---|
+| Frontend routes | `src/App.tsx` |
+| API surface area | `api/app.ts` |
+| Database queries | `api/lib/database.ts` |
+| Auth/permissions | `api/middleware/auth.ts` |
+| Theme behavior | `src/contexts/ThemeContext.tsx` + `api/routes/theme.ts` |
+| Egress billing | `api/services/egressCreditService.ts`, `api/services/egressHourlyBillingService.ts` |
+
+## Migrations
+
+53 total (001–053, sequential). Located in `migrations/`. Each runs in a transaction with SHA256 checksum validation.
+
+## App Structure (top-level)
+
+```text
+api/            Express backend (routes, services, middleware, config)
+src/            React frontend (pages, components, hooks, services, contexts)
+migrations/     SQL migrations (never modify existing)
+scripts/        DB, admin, diagnostics, maintenance utilities
+public/         Static assets (favicon.svg is logo source of truth)
 ```
 
-### Backend: Config Access
+## Environment Setup
 
-Import the `config` object from `api/config/index.ts`. **Never access `process.env` directly** in route or service files:
+Copy `.env.example` to `.env`. Required values:
 
-```typescript
-import { config } from '../config/index.js';
-const token = config.LINODE_API_TOKEN; // ✅
-
-const token = process.env.LINODE_API_TOKEN; // ❌
+```bash
+DATABASE_URL=postgresql://...
+JWT_SECRET=...
+SSH_CRED_SECRET=32-char-key
+ENCRYPTION_KEY=32-char-key
 ```
 
-### Backend: Route Auth Middleware
+Node.js **22.22.0** (see `.nvmrc`). npm is the package manager.
 
-For protected resource routes, apply auth middleware once at the router level rather than per-handler:
-
-```typescript
-const router = express.Router();
-router.use(authenticateToken, requireOrganization); // applies to all routes below
-```
-
-Admin routes use `requireAdmin` in place of (or in addition to) `requireOrganization`.
-
-### Backend: Error Response Shape
-
-All error responses follow this structure:
-
-```typescript
-// Validation errors (400)
-res.status(400).json({ error: 'Validation failed', errors: errors.array(), code: 'VALIDATION_ERROR', timestamp: new Date().toISOString() });
-
-// Business logic errors (4xx)
-res.status(404).json({ error: 'Resource not found' });
-
-// Linode/provider errors — use the helper
-import { handleProviderError } from '../lib/errorHandling.js';
-// handleProviderError(res, error, 'context message')
-```
-
-Use `handleProviderError()` from `api/lib/errorHandling.ts` in VPS routes rather than raw `catch` blocks.
-
-### Backend: Activity Logging
-
-Call `logActivity()` from `api/services/activityLogger.ts` for significant user-facing actions (VPS create/delete/rebuild, SSH session start, billing events):
-
-```typescript
-import { logActivity } from '../services/activityLogger.js';
-await logActivity(userId, organizationId, 'vps.created', `Created VPS ${label}`, { vpsId });
-```
-
-## Practical Guidance for Agents
-
-- Check `package.json` before referencing scripts
-- Check `src/App.tsx` before documenting or changing routes
-- Check `api/app.ts` before documenting or changing API surface area
-- Prefer existing helpers/services instead of duplicating logic
-- Be careful with org-aware data access, billing visibility, and impersonation
-- Treat public marketing pages and authenticated panel flows as separate product surfaces when making changes
-- The site logo/favicon is a single source of truth: `public/favicon.svg` — the `Logo` component (`src/components/Logo.tsx`) renders it as an `<img>` tag, and `index.html` links it as the browser favicon. To update icons, replace `favicon.svg` and regenerate raster variants via [realfavicongenerator.net](https://realfavicongenerator.net/)
-
-## Cursor Cloud specific instructions
-
-### Environment
-
-- **Node.js 22.22.0** is required (matches `.nvmrc`). Use `nvm use` to activate.
-- **npm** is the package manager (lockfile: `package-lock.json`).
-- All secrets (`DATABASE_URL`, `JWT_SECRET`, `ENCRYPTION_KEY`, `SSH_CRED_SECRET`, etc.) are injected as environment variables via Cursor Secrets. The `.env` file must be generated from `.env.example` by mapping these injected env vars at setup time — it is **not** committed to the repo.
-- The `DATABASE_URL` points to an **external PostgreSQL instance** (not localhost). All migrations and seed data are already applied. Do **not** run `db:fresh`, `db:reset`, or destructive migration commands.
-- Redis is available via the injected `REDIS_URL` and is used for token blacklist and brute-force protection.
-
-### Running the app
-
-- `npm run dev` starts both Vite (port 5173) and Express API (port 3001) concurrently.
-- `npm run dev-up` is the preferred clean-start command — it kills ports 3001/5173/8000 first.
-- The Vite dev server proxies `/api/` requests to the Express backend automatically.
-- Access the app at `http://localhost:5173`.
-
-### Lint / Type check / Tests
-
-- `npm run lint` — ESLint (expect warnings, 0 errors).
-- `npm run check` — TypeScript type check (`tsc --noEmit`).
-- `npx vitest run tests/security/` — runs security tests (the only test suite with a defined path). There is no `npm test` script.
-- API docs sync (`npm run docs:api:sync`) runs automatically via pre-hooks before `dev`, `client:dev`, and `build`.
-
-### Gotchas
-
-- The `predev` and `preclient:dev` hooks run `docs:api:sync` automatically — this is normal and takes a few seconds before the dev server starts.
-- The backend starts an hourly billing scheduler and egress billing on boot — log output about "0 instances billed" is expected with an empty VPS fleet.
-- `@prisma/client` and `prisma` are listed as dependencies but the app uses raw `pg` queries with SQL migrations — there is no `prisma/schema.prisma` file.
-- The admin user `admin@skypanelv2.com` / `admin123` is seeded in the external database and can be used for development.
+Generate secrets:
+- `node scripts/generate-ssh-secret.js`
+- `node scripts/generate-encryption-key.js`
 
 ## Installing Skills
 
-When creating or installing a new skill, always place it in:
-
-`C:\Users\moran\.openclaw-autoclaw\skills/<skill-name>/SKILL.md`
-
-This is the managed skills directory. The agent will automatically discover
-any skill placed here — no extra configuration needed. Do NOT install skills
-into `~/.agents/skills/` (that directory is shared with other tools).
+Place new skills in `C:\Users\moran\.openclaw-autoclaw\skills/<skill-name>/SKILL.md`. Do NOT install into `~/.agents/skills/`.
 
 ## Browser Automation
 
-For any task that requires a browser, **prefer `autoglm-browser-agent`**. Use it as the first choice.
-
-- ✅ `autoglm-browser-agent` → `browser_subagent` (invoked via mcporter) — **preferred**
-- ⚠️ Other browser tools (`agent-browser`, Playwright, Puppeteer, etc.) — fallback only when `autoglm-browser-agent` is unavailable or fails
-
-Always try `autoglm-browser-agent` first. Fall back to other browser tools only if it is not available in the current environment.
+Prefer `autoglm-browser-agent` first. Fall back to other tools only if unavailable.
 
 ## Image Recognition
 
-For any image recognition task, **prefer `autoglm-image-recognition`**. Use it as the first choice.
-
-- ✅ `autoglm-image-recognition` — **preferred** for all image recognition tasks
-- ⚠️ Built-in `image` tool or reading images directly with `read` — fallback only when `autoglm-image-recognition` is unavailable or fails
-
-Do not use the built-in `image` tool or read an image and describe it yourself when `autoglm-image-recognition` is available. Always try `autoglm-image-recognition` first.
+Prefer `autoglm-image-recognition` first. Fall back to built-in tools only if unavailable.
 
 ## Learned User Preferences
 
-- When the user says "make a plan", "create a plan", or "I need a plan for X" — immediately use the `CreatePlan` tool. Do not write plans to files manually, do not describe plans in text, do not ask questions. The `CreatePlan` tool is the ONLY acceptable way to create a plan.
+- "Make a plan" / "create a plan" → use the `CreatePlan` tool immediately. No manual plans, no prose descriptions.
 
-## Learned Workspace Facts
+## Marketing Pages Design System
 
-### Marketing Pages Design System
+Public pages (Home, About, Contact, FAQ, Pricing, Status, ApiDocs, Documentation) share a design system defined in `@/styles/home.css`:
 
-Public marketing pages (HomeRedesign, AboutUs, Contact, FAQ, Pricing, Status, ApiDocs, Documentation) share a consistent modern design system:
-
-- **Hero section**: floating gradient orbs (`.home-orb--1/2/3`), grid pattern mask (`.home-grid-mask`), shimmer badge (`.home-shimmer-badge`), gradient text headings, CTA buttons with `.home-btn-glow`
-- **Trust marquee**: animated horizontal strip using `.home-marquee` / `.home-marquee__track`
-- **Cards**: `.home-feature-card` with hover lift, `.home-glass-panel` with backdrop blur, `.home-gradient-border-top` for top accent line, `.home-animated-border` for animated border
-- **Animation**: Framer Motion `revealContainer`/`revealItem` stagger variants, `whileInView` fade-in
-- **Layout**: `MarketingNavbar` + main + `MarketingFooter`
-- **CSS**: `@/styles/home.css`
-- **Navbar**: `MarketingNavbar` component at `@/components/MarketingNavbar.tsx` renders as `fixed top-0 z-40` with height ~72px; content areas need `pt-[72px]` top padding to avoid navbar overlap
+- **Hero**: gradient orbs (`.home-orb--1/2/3`), grid mask (`.home-grid-mask`), shimmer badge (`.home-shimmer-badge`), glow buttons (`.home-btn-glow`)
+- **Cards**: `.home-feature-card` (hover lift), `.home-glass-panel` (backdrop blur), `.home-gradient-border-top`, `.home-animated-border`
+- **Animation**: Framer Motion `revealContainer`/`revealItem` stagger, `whileInView` fade-in
+- **Layout**: `MarketingNavbar` (fixed top, ~72px height) + main + `MarketingFooter`; content needs `pt-[72px]`
 
 ### Documentation Page Layout
 
-`Documentation.tsx` uses a sidebar + content area with `showHero` to conditionally render the index hero. Article detail pages (renderArticle, renderPlansRegionsArticle, renderCreatingVpsArticle) did NOT have the hero — the fix was to add a compact article hero section that shows when `categorySlug` is set, rendered before the sidebar layout div so it spans full viewport width.
-
-### Key CSS Classes (`@/styles/home.css`)
-
-- `.home-orb--1`, `.home-orb--2`, `.home-orb--3` — floating gradient orbs
-- `.home-grid-mask` — grid pattern with mask
-- `.home-shimmer-badge` — shimmer effect on badges
-- `.home-btn-glow` — glow effect on CTA buttons
-- `.home-marquee`, `.home-marquee__track` — trust marquee
-- `.home-feature-card` — hover lift card
-- `.home-glass-panel` — backdrop blur panel
-- `.home-gradient-border-top` — top accent line
-- `.home-animated-border` — animated border
-- `.home-cta-shell` — CTA section shell with orbs
+`Documentation.tsx` uses sidebar + content with conditional hero. Article detail pages get a compact hero when `categorySlug` is set (rendered before sidebar layout for full-width).

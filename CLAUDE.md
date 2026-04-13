@@ -203,7 +203,7 @@ Specialized limiters: `loginRateLimiter` (5/15min), `passwordResetRateLimiter` (
 
 ### Database Migrations
 
-SQL migrations are in the `migrations/` directory (52 total: 001–052, sequential). Apply pending migrations with `node scripts/run-migration.js`. Each migration runs in a transaction with SHA256 checksum validation. **Never modify an existing migration** — add a new sequential file instead.
+SQL migrations are in the `migrations/` directory (53 total: 001–053, sequential). Apply pending migrations with `node scripts/run-migration.js`. Each migration runs in a transaction with SHA256 checksum validation. **Never modify an existing migration** — add a new sequential file instead.
 
 ## API Routes
 
