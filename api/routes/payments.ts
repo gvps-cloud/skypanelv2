@@ -614,7 +614,7 @@ router.get(
       const balanceBefore =
         safeParseNumber(metadataBalanceBefore) ??
         (balanceAfter !== null
-          ? parseFloat((balanceAfter - amount).toFixed(2))
+          ? parseFloat((balanceAfter - amount).toFixed(6))
           : null);
 
       res.json({

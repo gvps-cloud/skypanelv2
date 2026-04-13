@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx -y @modelcontextprotocol/server-filesystem %USERPROFILE%\\Desktop"
+    },
+    "fetch": {
+      "command": "npx -y @modelcontextprotocol/server-fetch"
+    },
+    "sqlite": {
+      "command": "npx -y @modelcontextprotocol/server-sqlite --db-path ./data.db"
+    }
+  },
+  "imports": []
+}

@@ -75,7 +75,7 @@ export const calculateMonthlySpent = async (billingSummary?: { totalSpentThisMon
       // additional pages are unlikely to include current month. We keep going only if hasMore remains true.
     }
 
-    const computedMonthlySpent = Number(monthlyTotal.toFixed(2));
+    const computedMonthlySpent = Number(monthlyTotal.toFixed(6));
     
     // Compare against server summary if available and flag discrepancies beyond small threshold
     const serverValue = billingSummary?.totalSpentThisMonth;

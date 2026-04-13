@@ -625,7 +625,7 @@ export class EgressBillingService {
             return { billed: false, transactionId: null as string | null };
           }
 
-          const newBalance = Number((currentBalance - amount).toFixed(4));
+          const newBalance = Number((currentBalance - amount).toFixed(6));
           await client.query(
             'UPDATE wallets SET balance = $1, updated_at = NOW() WHERE organization_id = $2',
             [newBalance, orgId],

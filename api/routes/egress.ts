@@ -313,7 +313,7 @@ router.post(
       if (currentBalance < pack.price) {
         return res.status(400).json({
           success: false,
-          error: `Insufficient wallet balance. Required: $${pack.price.toFixed(2)}, Available: $${currentBalance.toFixed(2)}`,
+          error: `Insufficient wallet balance. Required: $${pack.price.toFixed(6)}, Available: $${currentBalance.toFixed(6)}`,
         });
       }
 

@@ -1527,7 +1527,7 @@ const VPS: React.FC = () => {
         mobileLoading.hideLoading();
         mobileToast.error(
           `Insufficient wallet balance. Required: $${totalHourlyCost.toFixed(
-            4,
+            6,
           )}/hour, Available: $${walletBalance?.balance.toFixed(6) || "0.000000"}`,
           {
             duration: 8000, // Longer duration for important financial information
@@ -1654,7 +1654,7 @@ const VPS: React.FC = () => {
         if (payload.code === "INSUFFICIENT_BALANCE") {
           mobileToast.error(
             `Insufficient wallet balance. You need $${
-              payload.required?.toFixed(4) || "unknown"
+              payload.required?.toFixed(6) || "unknown"
             } but only have $${
               payload.available?.toFixed(6) || "unknown"
             }. Please add funds to your wallet.`,

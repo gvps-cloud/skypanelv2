@@ -27,7 +27,7 @@ import Pagination from '../components/ui/Pagination';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import PayPalCheckoutDialog from '@/components/billing/PayPalCheckoutDialog';
-import { formatCurrency as formatCurrencyDisplay } from '@/lib/formatters';
+import { formatBillingAmount as formatBillingAmountDisplay } from '@/lib/formatters';
 // Navigation provided by AppLayout
 
 interface FilterState {
@@ -276,7 +276,7 @@ const Billing: React.FC = () => {
         setMonthlySpentError('No current-month transactions found');
       }
 
-      setComputedMonthlySpent(Number(monthlyTotal.toFixed(2)));
+      setComputedMonthlySpent(Number(monthlyTotal.toFixed(6)));
 
       // Compare against server summary if available and flag discrepancies beyond small threshold
       const serverValue = summaryData?.totalSpentThisMonth;
@@ -385,7 +385,7 @@ const Billing: React.FC = () => {
   };
 
   const formatCurrencyValue = (amount: number | null | undefined): string =>
-    formatCurrencyDisplay(amount, { absolute: true });
+    formatBillingAmountDisplay(amount, { absolute: true });
 
   const formatDate = (dateString: string | null | undefined): string => {
     // Handle null, undefined, or empty strings

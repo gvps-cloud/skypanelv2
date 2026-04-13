@@ -4,7 +4,7 @@ import { ArrowLeft, Download, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { paymentService, type PaymentTransactionDetail } from '../services/paymentService';
-import { formatCurrency as formatCurrencyDisplay } from '@/lib/formatters';
+import { formatBillingAmount as formatCurrencyDisplay } from '@/lib/formatters';
 
 const TransactionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();

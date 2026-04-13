@@ -1220,7 +1220,7 @@ const Organizations: React.FC = () => {
                           <CardContent className="p-4">
                             <div className="text-sm text-muted-foreground">Projected Cost</div>
                             <div className="text-2xl font-bold">
-                              ${egressOverview.projectedTotals.totalAmount.toFixed(2)}
+                              ${egressOverview.projectedTotals.totalAmount.toFixed(6)}
                             </div>
                           </CardContent>
                         </Card>
@@ -1260,10 +1260,10 @@ const Organizations: React.FC = () => {
                                       {server.allocatedBillableGb.toFixed(4)}
                                     </td>
                                     <td className="p-2 text-right font-mono">
-                                      ${server.unitPricePerGb.toFixed(2)}/GB
+                                      ${server.unitPricePerGb.toFixed(6)}/GB
                                     </td>
                                     <td className="p-2 text-right font-mono">
-                                      ${server.amount.toFixed(2)}
+                                      ${server.amount.toFixed(6)}
                                     </td>
                                     <td className="p-2">
                                       <Badge variant={server.status === "billed" ? "default" : "secondary"}>
@@ -1307,7 +1307,7 @@ const Organizations: React.FC = () => {
                                       {cycle.allocatedBillableGb.toFixed(4)}
                                     </td>
                                     <td className="p-2 text-right font-mono">
-                                      ${cycle.totalAmount.toFixed(2)}
+                                      ${cycle.totalAmount.toFixed(6)}
                                     </td>
                                     <td className="p-2">
                                       <Badge variant={cycle.status === "billed" ? "default" : "secondary"}>
@@ -1415,7 +1415,7 @@ const Organizations: React.FC = () => {
                                         {purchase.creditsGb.toFixed(2)} GB
                                       </td>
                                       <td className="p-2 text-right font-mono">
-                                        ${purchase.amountPaid.toFixed(2)}
+                                        ${purchase.amountPaid.toFixed(6)}
                                       </td>
                                     </tr>
                                   ))}

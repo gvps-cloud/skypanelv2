@@ -106,7 +106,7 @@ export const CostSummary: React.FC<CostSummaryProps> = ({
               ${baseMonthlyCost.toFixed(2)}/mo
             </div>
             <div className="text-xs text-muted-foreground">
-              ${baseHourlyCost.toFixed(4)}/hr
+              ${baseHourlyCost.toFixed(6)}/hr
             </div>
           </div>
         </div>
@@ -125,7 +125,7 @@ export const CostSummary: React.FC<CostSummaryProps> = ({
                 ${backupMonthlyCost.toFixed(2)}/mo
               </div>
               <div className="text-xs text-muted-foreground">
-                ${backupHourlyCost.toFixed(4)}/hr
+                ${backupHourlyCost.toFixed(6)}/hr
               </div>
             </div>
           </div>
@@ -141,7 +141,7 @@ export const CostSummary: React.FC<CostSummaryProps> = ({
               ${totalMonthlyCost.toFixed(2)}/mo
             </div>
             <div className="text-xs text-muted-foreground">
-              ${totalHourlyCost.toFixed(4)}/hr
+              ${totalHourlyCost.toFixed(6)}/hr
             </div>
           </div>
         </div>

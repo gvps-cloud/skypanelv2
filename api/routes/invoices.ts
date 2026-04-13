@@ -273,6 +273,11 @@ router.post(
         userEmail
       );
 
+      const txMeta = typeof transaction.metadata === 'string'
+        ? JSON.parse(transaction.metadata) : transaction.metadata;
+      invoiceData.walletBalanceBefore = txMeta?.balance_before ?? txMeta?.balanceBefore ?? null;
+      invoiceData.walletBalanceAfter = txMeta?.balance_after ?? txMeta?.balanceAfter ?? null;
+
       // Generate HTML with organization theme
       const themeConfig = await themeService.getThemeConfig();
       const themePalette = resolveThemePalette(themeConfig);
@@ -366,6 +371,11 @@ router.post(
         userName,
         userEmail
       );
+
+      if (transactions.length > 0) {
+        invoiceData.walletBalanceBefore = transactions[transactions.length - 1].balanceBefore ?? null;
+        invoiceData.walletBalanceAfter = transactions[0].balanceAfter ?? null;
+      }
 
       // Generate HTML with organization theme
       const themeConfig = await themeService.getThemeConfig();
@@ -525,6 +535,13 @@ router.post(
         organizationName
       );
 
+      const walletBalances = await InvoiceService.resolveWalletBalances(organizationId, {
+        startDate,
+        endDate,
+      });
+      invoiceData.walletBalanceBefore = walletBalances.walletBalanceBefore;
+      invoiceData.walletBalanceAfter = walletBalances.walletBalanceAfter;
+
       if (egressInvoiceItems.length > 0) {
         const egressTotal = egressInvoiceItems.reduce(
           (sum, item) => sum + Number(item.amount || 0),
@@ -532,8 +549,8 @@ router.post(
         );
 
         invoiceData.items.push(...egressInvoiceItems);
-        invoiceData.subtotal = Number((invoiceData.subtotal + egressTotal).toFixed(4));
-        invoiceData.total = Number((invoiceData.subtotal + invoiceData.tax).toFixed(4));
+        invoiceData.subtotal = Number((invoiceData.subtotal + egressTotal).toFixed(6));
+        invoiceData.total = Number((invoiceData.subtotal + invoiceData.tax).toFixed(6));
         invoiceData.title =
           billingCycles.length > 0
             ? 'VPS & Egress Billing Statement'

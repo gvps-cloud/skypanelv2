@@ -421,7 +421,7 @@ class PaymentService {
                 Number.isFinite(balanceBeforeRaw)
               ? balanceBeforeRaw
               : balanceAfter !== null
-              ? parseFloat((balanceAfter - amount).toFixed(2))
+              ? parseFloat((balanceAfter - amount).toFixed(6))
               : null;
           const typeValue = (tx as Record<string, unknown>).type;
           const type =

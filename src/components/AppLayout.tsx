@@ -64,7 +64,7 @@ import {
 } from "lucide-react";
 import { generateBreadcrumbs } from "@/lib/breadcrumbs";
 import { cn } from "@/lib/utils";
-import { formatCurrency as formatCurrencyDisplay } from "@/lib/formatters";
+import { formatBillingAmount as formatCurrencyDisplay } from "@/lib/formatters";
 import NotificationDropdown from "@/components/NotificationDropdown";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";

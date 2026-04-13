@@ -179,7 +179,7 @@ export class BillingService {
               result.totalAmount += billingOutcome.amountCharged;
               result.totalHours += billingOutcome.hoursCharged;
               console.log(
-                `✅ Successfully billed VPS ${instance.label} (${instance.id}) - ${billingOutcome.hoursCharged}h @ $${instance.hourlyRate.toFixed(4)}/h (charged $${billingOutcome.amountCharged.toFixed(4)})`
+                `✅ Successfully billed VPS ${instance.label} (${instance.id}) - ${billingOutcome.hoursCharged}h @ $${instance.hourlyRate.toFixed(6)}/h (charged $${billingOutcome.amountCharged.toFixed(6)})`
               );
             } catch (error) {
               result.failedInstances.push(instance.id);
@@ -195,7 +195,7 @@ export class BillingService {
       }
 
       console.log(
-        `🏁 Billing completed: ${result.billedInstances} billed, ${result.failedInstances.length} failed, ${result.totalHours}h charged, $${result.totalAmount.toFixed(4)} total`
+        `🏁 Billing completed: ${result.billedInstances} billed, ${result.failedInstances.length} failed, ${result.totalHours}h charged, $${result.totalAmount.toFixed(6)} total`
       );
       return result;
 
@@ -308,7 +308,7 @@ export class BillingService {
           backupHourlyRate = baseBackupHourly + backupUpchargeHourly;
         }
 
-        const totalAmount = Number(((baseHourlyRate + backupHourlyRate) * hoursToCharge).toFixed(4));
+        const totalAmount = Number(((baseHourlyRate + backupHourlyRate) * hoursToCharge).toFixed(6));
 
         const walletResult = await client.query(
           'SELECT balance FROM wallets WHERE organization_id = $1',
@@ -323,7 +323,7 @@ export class BillingService {
         const currentBalance = parseFloat(walletResult.rows[0].balance);
         if (currentBalance < totalAmount) {
           console.warn(
-            `Insufficient balance for VPS ${instance.label}: required $${totalAmount.toFixed(4)}, available $${currentBalance.toFixed(4)}`
+            `Insufficient balance for VPS ${instance.label}: required $${totalAmount.toFixed(6)}, available $${currentBalance.toFixed(6)}`
           );
 
           await client.query(`
@@ -569,7 +569,7 @@ export class BillingService {
     label: string
   ): Promise<boolean> {
     try {
-      console.log(`💳 Processing initial billing for VPS ${label} - $${hourlyRate.toFixed(4)}/hour`);
+      console.log(`💳 Processing initial billing for VPS ${label} - $${hourlyRate.toFixed(6)}/hour`);
 
       const success = await PayPalService.deductFundsFromWallet(
         organizationId,

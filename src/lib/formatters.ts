@@ -34,6 +34,30 @@ export function formatCurrency(
   return formatter.format(value);
 }
 
+export function formatBillingAmount(
+  amount: number | null | undefined,
+  {
+    currency = "USD",
+    fallback,
+    absolute = false,
+    locale = "en-US",
+  }: FormatCurrencyOptions = {}
+): string {
+  const formatter = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 6,
+    maximumFractionDigits: 6,
+  });
+
+  if (amount === null || amount === undefined || Number.isNaN(amount)) {
+    return fallback ?? formatter.format(0);
+  }
+
+  const value = absolute ? Math.abs(amount) : amount;
+  return formatter.format(value);
+}
+
 export interface FormatGigabytesOptions {
   precision?: number;
   fallback?: string;

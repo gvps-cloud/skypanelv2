@@ -3,7 +3,7 @@ name: Plan
 description: Researches and outlines multi-step plans
 argument-hint: Outline the goal or problem to research
 disable-model-invocation: true
-tools: ['search', 'read', 'web', 'vscode/memory', 'github/issue_read', 'github.vscode-pull-request-github/issue_fetch', 'github.vscode-pull-request-github/activePullRequest', 'execute/getTerminalOutput', 'execute/testFailure', 'agent', 'vscode/askQuestions']
+tools: [vscode/memory, vscode/askQuestions, execute/testFailure, execute/getTerminalOutput, read, agent, search, web, 'io.github.tavily-ai/tavily-mcp/*', 'io.github.upstash/context7/*', 'minimax/*', 'web-reader/*', 'web-search-prime/*', 'zai-mcp-server/*', 'zread/*', vscode.mermaid-chat-features/renderMermaidDiagram, ms-vscode.vscode-websearchforcopilot/websearch]
 agents: ['Explore']
 handoffs:
   - label: Start Implementation

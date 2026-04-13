@@ -20,7 +20,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import type { VPSInstance } from "@/types/vps";
 import type { Dispatch, SetStateAction } from "react";
-import { formatCurrency, formatGigabytes } from "@/lib/formatters";
+import { formatCurrency, formatBillingAmount, formatGigabytes } from "@/lib/formatters";
 
 interface RegionShape {
   id: string;
@@ -271,7 +271,7 @@ export function VpsInstancesTable({
           return (
             <div className="space-y-1 text-xs min-w-[100px]">
               <div className="text-muted-foreground text-xs">Hourly</div>
-              <div className="font-medium text-foreground text-xs">{formatCurrency(pricing.hourly)}</div>
+              <div className="font-medium text-foreground text-xs">{formatBillingAmount(pricing.hourly)}</div>
               <div className="text-muted-foreground text-xs">Monthly</div>
               <div className="font-medium text-foreground text-xs">{formatCurrency(pricing.monthly)}</div>
             </div>
@@ -484,7 +484,7 @@ export function VpsInstancesTable({
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="space-y-1">
                 <p className="text-muted-foreground">Hourly</p>
-                <p className="font-medium text-foreground">{formatCurrency(instance.pricing.hourly)}</p>
+                <p className="font-medium text-foreground">{formatBillingAmount(instance.pricing.hourly)}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-muted-foreground">Monthly</p>

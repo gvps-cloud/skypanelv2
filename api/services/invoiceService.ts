@@ -25,6 +25,8 @@ export interface InvoiceData {
   createdAt: Date;
   dueDate?: Date;
   status: 'draft' | 'issued' | 'paid' | 'cancelled';
+  walletBalanceBefore?: number | null;
+  walletBalanceAfter?: number | null;
 }
 
 export interface InvoiceItem {
@@ -55,10 +57,10 @@ const defaultInvoicePalette: ThemePalette = {
 
 const formatInvoiceAmount = (amount: number): string => {
   if (!Number.isFinite(amount)) {
-    return '0.0000';
+    return '0.000000';
   }
 
-  return amount.toFixed(4);
+  return amount.toFixed(6);
 };
 
 export class InvoiceService {
@@ -100,6 +102,78 @@ export class InvoiceService {
       console.error('Failed to ensure billing_invoices table exists:', error);
       throw error;
     }
+  }
+
+  static async resolveWalletBalances(
+    organizationId: string,
+    options?: { transactionIds?: string[]; startDate?: Date; endDate?: Date }
+  ): Promise<{ walletBalanceBefore: number | null; walletBalanceAfter: number | null }> {
+    const result: { walletBalanceBefore: number | null; walletBalanceAfter: number | null } = {
+      walletBalanceBefore: null,
+      walletBalanceAfter: null,
+    };
+
+    try {
+      if (options?.transactionIds && options.transactionIds.length > 0) {
+        const placeholders = options.transactionIds.map((_, i) => `$${i + 2}`).join(', ');
+        const rows = await query(
+          `SELECT id, metadata, created_at
+           FROM payment_transactions
+           WHERE id IN (${placeholders}) AND organization_id = $1
+           ORDER BY created_at ASC`,
+          [organizationId, ...options.transactionIds]
+        );
+
+        if (rows.rows.length > 0) {
+          const firstMeta = typeof rows.rows[0].metadata === 'string'
+            ? JSON.parse(rows.rows[0].metadata) : rows.rows[0].metadata;
+          result.walletBalanceBefore = firstMeta?.balance_before ?? firstMeta?.balanceBefore ?? null;
+
+          const lastMeta = typeof rows.rows[rows.rows.length - 1].metadata === 'string'
+            ? JSON.parse(rows.rows[rows.rows.length - 1].metadata)
+            : rows.rows[rows.rows.length - 1].metadata;
+          result.walletBalanceAfter = lastMeta?.balance_after ?? lastMeta?.balanceAfter ?? null;
+        }
+      } else if (options?.startDate && options?.endDate) {
+        const rows = await query(
+          `SELECT id, metadata, created_at
+           FROM payment_transactions
+           WHERE organization_id = $1
+             AND created_at >= $2 AND created_at <= $3
+             AND status = 'completed'
+           ORDER BY created_at ASC
+           LIMIT 1`,
+          [organizationId, options.startDate, options.endDate]
+        );
+
+        if (rows.rows.length > 0) {
+          const firstMeta = typeof rows.rows[0].metadata === 'string'
+            ? JSON.parse(rows.rows[0].metadata) : rows.rows[0].metadata;
+          result.walletBalanceBefore = firstMeta?.balance_before ?? firstMeta?.balanceBefore ?? null;
+        }
+
+        const lastRows = await query(
+          `SELECT id, metadata, created_at
+           FROM payment_transactions
+           WHERE organization_id = $1
+             AND created_at >= $2 AND created_at <= $3
+             AND status = 'completed'
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [organizationId, options.startDate, options.endDate]
+        );
+
+        if (lastRows.rows.length > 0) {
+          const lastMeta = typeof lastRows.rows[0].metadata === 'string'
+            ? JSON.parse(lastRows.rows[0].metadata) : lastRows.rows[0].metadata;
+          result.walletBalanceAfter = lastMeta?.balance_after ?? lastMeta?.balanceAfter ?? null;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to resolve wallet balances:', error);
+    }
+
+    return result;
   }
 
   /**
@@ -441,6 +515,23 @@ export class InvoiceService {
             </div>
           </div>
         </div>
+
+        ${invoiceData.walletBalanceBefore != null || invoiceData.walletBalanceAfter != null ? `
+        <div class="invoice-meta" style="margin-top: 20px;">
+          ${invoiceData.walletBalanceBefore != null ? `
+          <div class="invoice-meta-item">
+            <span class="invoice-meta-label">Wallet Balance Before</span>
+            <span class="invoice-meta-value">${invoiceData.currency} $${formatInvoiceAmount(invoiceData.walletBalanceBefore!)}</span>
+          </div>
+          ` : ''}
+          ${invoiceData.walletBalanceAfter != null ? `
+          <div class="invoice-meta-item">
+            <span class="invoice-meta-label">Wallet Balance After</span>
+            <span class="invoice-meta-value">${invoiceData.currency} $${formatInvoiceAmount(invoiceData.walletBalanceAfter!)}</span>
+          </div>
+          ` : ''}
+        </div>
+        ` : ''}
 
         <div style="text-align: right;">
           <span class="status-badge ${invoiceData.status}">${invoiceData.status.toUpperCase()}</span>

@@ -3565,7 +3565,7 @@ const Admin: React.FC = () => {
                                           <span className="text-sm text-muted-foreground">
                                             $
                                             {Number(plan.markup_price).toFixed(
-                                              2,
+                                              6,
                                             )}
                                           </span>
                                         )}

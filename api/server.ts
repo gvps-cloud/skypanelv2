@@ -123,7 +123,7 @@ async function runHourlyBilling(runType: "initial" | "scheduled") {
     console.log(
       `✅ Billing completed: ${
         result.billedInstances
-      } instances billed, $${result.totalAmount.toFixed(4)} total`,
+      } instances billed, $${result.totalAmount.toFixed(6)} total`,
     );
 
     if (result.failedInstances.length > 0) {

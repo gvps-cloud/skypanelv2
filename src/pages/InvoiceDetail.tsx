@@ -204,7 +204,7 @@ const InvoiceDetail: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-lg font-semibold">
-                  {invoice.currency} ${invoice.totalAmount.toFixed(4)}
+                  {invoice.currency} ${invoice.totalAmount.toFixed(6)}
                 </p>
               </CardContent>
             </Card>
@@ -224,6 +224,34 @@ const InvoiceDetail: React.FC = () => {
                 </p>
               </CardContent>
             </Card>
+            {invoice.data.walletBalanceBefore != null && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription className="text-xs font-semibold uppercase">
+                    Wallet Balance Before
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-lg font-semibold">
+                    {invoice.currency} ${(invoice.data.walletBalanceBefore as number).toFixed(6)}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            {invoice.data.walletBalanceAfter != null && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription className="text-xs font-semibold uppercase">
+                    Wallet Balance After
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-lg font-semibold">
+                    {invoice.currency} ${(invoice.data.walletBalanceAfter as number).toFixed(6)}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

@@ -96,7 +96,7 @@ export const getActiveHoursTooltip = (
   let tooltip = `Created: ${formattedDate}`;
   
   if (estimatedCost !== undefined) {
-    tooltip += `\nEstimated cost: $${estimatedCost.toFixed(4)}`;
+    tooltip += `\nEstimated cost: $${estimatedCost.toFixed(6)}`;
   }
   
   return tooltip;

@@ -127,7 +127,7 @@ export class PayPalService {
       return 0;
     }
 
-    return Number(amount.toFixed(4));
+    return Number(amount.toFixed(6));
   }
 
   /**
@@ -560,7 +560,7 @@ export class PayPalService {
         const balanceBefore =
           toNumber(metadataBefore) ??
           (balanceAfter !== null
-            ? parseFloat((balanceAfter - amount).toFixed(2))
+            ? parseFloat((balanceAfter - amount).toFixed(6))
             : null);
 
         return {

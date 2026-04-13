@@ -1,0 +1,34 @@
+{
+  "mcp": {
+    "filesystem": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "%USERPROFILE%\\Desktop"
+      ],
+      "enabled": true
+    },
+    "fetch": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
+      "enabled": true
+    },
+    "sqlite": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-sqlite",
+        "--db-path",
+        "./data.db"
+      ],
+      "enabled": true
+    }
+  }
+}

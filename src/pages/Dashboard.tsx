@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { getMonthlySpendWithFallback } from "../lib/billingUtils";
 import { MonthlyResetIndicator } from "@/components/Dashboard/MonthlyResetIndicator";
-import { formatCurrency } from "@/lib/formatters";
+import { formatBillingAmount } from "@/lib/formatters";
 import { apiClient } from "@/lib/api";
 
 interface MetricSummary {
@@ -391,7 +391,7 @@ const Dashboard: React.FC = () => {
                         Wallet Balance
                       </p>
                       <p className="text-lg font-semibold leading-tight">
-                        {formatCurrency(walletBalance)}
+                        {formatBillingAmount(walletBalance)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Ready to deploy infrastructure
@@ -410,7 +410,7 @@ const Dashboard: React.FC = () => {
                         Monthly Spend
                       </p>
                       <p className="text-lg font-semibold leading-tight">
-                        {formatCurrency(monthlySpend)}
+                        {formatBillingAmount(monthlySpend)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Current month to date
@@ -430,7 +430,7 @@ const Dashboard: React.FC = () => {
                       </p>
                       <p className="text-lg font-semibold leading-tight">
                         {lastPayment?.amount
-                          ? formatCurrency(lastPayment.amount)
+                          ? formatBillingAmount(lastPayment.amount)
                           : "—"}
                       </p>
                       <p className="text-xs text-muted-foreground">

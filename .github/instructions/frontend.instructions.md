@@ -8,9 +8,22 @@ See [AGENTS.md](../../AGENTS.md) for full conventions. Key frontend-specific rem
 
 ## API Calls
 
-- No shared `apiClient` wrapper. Use `fetch()` with `API_BASE_URL` from `src/lib/api.ts`.
-- Always attach `Authorization: Bearer ${token}` — get `token` from `useAuth()`.
-- Throw on `!response.ok`. Prefer `err.error || \`HTTP ${response.status}\`` as the message.
+**Preferred**: use the `apiClient` singleton from `@/lib/api`. It automatically handles CSRF tokens (`X-CSRF-Token` from the `csrf_token` cookie), the `X-Organization-ID` header, and 401 auto-logout:
+
+```typescript
+import { apiClient } from '@/lib/api';
+
+// Inside a queryFn or mutation:
+const data = await apiClient.get<MyType>('/vps');
+await apiClient.post('/ssh-keys', { name, publicKey });
+await apiClient.delete(`/ssh-keys/${id}`);
+```
+
+`apiClient` authenticates via the HttpOnly `auth_token` cookie (`credentials: "include"`). Do **not** manually attach an `Authorization` header when using `apiClient`.
+
+**Alternative** (raw fetch, e.g. in older pages like `SSHKeys.tsx`): use `fetch()` with `API_BASE_URL` from `@/lib/api` and attach `Authorization: Bearer ${token}` (get `token` from `useAuth()`), plus `X-CSRF-Token` from the `csrf_token` cookie. Avoid this pattern in new code.
+
+For both patterns, throw on `!response.ok`. Prefer `err.error || \`HTTP ${response.status}\`` as the message.
 
 ## TanStack Query
 

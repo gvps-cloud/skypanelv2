@@ -2820,9 +2820,9 @@ router.post("/", async (req: Request, res: Response) => {
       if (currentBalance < hourlyRate) {
         res.status(400).json({
           error: `Insufficient wallet balance. Required: $${hourlyRate.toFixed(
-            4,
+            6,
           )}, Available: $${currentBalance.toFixed(
-            2,
+            6,
           )}. Please add funds to your wallet.`,
           code: "INSUFFICIENT_BALANCE",
           required: hourlyRate,
@@ -3162,7 +3162,7 @@ router.post("/", async (req: Request, res: Response) => {
         hourlyRate: hourlyRate,
         message: billingSuccess
           ? `Initial billing of $${hourlyRate.toFixed(
-              4,
+              6,
             )}/hour processed successfully`
           : "Initial billing failed - will be retried by hourly billing service",
       },

@@ -619,7 +619,7 @@ class PaymentService {
 
                 : balanceAfter !== null
 
-                  ? parseFloat((balanceAfter - amount).toFixed(4))
+                  ? parseFloat((balanceAfter - amount).toFixed(6))
 
                   : null;
 
