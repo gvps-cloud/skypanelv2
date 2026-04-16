@@ -101,7 +101,7 @@ export async function resolveOrganizationIdForUser(options: {
     }
   }
 
-  if (!organizationId && role !== 'admin') {
+  if (!organizationId && role !== 'admin' && config.AUTO_CREATE_ORG) {
     try {
       const newOrg = await query(
         `INSERT INTO organizations (name, slug, owner_id, created_at, updated_at)

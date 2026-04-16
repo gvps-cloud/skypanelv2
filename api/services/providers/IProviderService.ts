@@ -329,6 +329,34 @@ export interface ProviderCreateIPv6RangeRequest {
   prefixLength: number;
 }
 
+// ── Disk Management Types ──
+
+export interface ProviderDisk {
+  id: number;
+  label: string;
+  status: string;
+  size: number;
+  filesystem: string;
+  created: string;
+  updated: string;
+}
+
+export interface CreateDiskParams {
+  label: string;
+  size: number;
+  filesystem?: string;
+  image?: string;
+  rootPassword?: string;
+  authorizedKeys?: string[];
+  stackscriptId?: number;
+  stackscriptData?: Record<string, string>;
+}
+
+export interface UpdateDiskParams {
+  label?: string;
+  filesystem?: string;
+}
+
 /**
  * Interface that all provider implementations must implement
  *
@@ -508,4 +536,15 @@ export interface IProviderService {
   updateFirewallSettings(settings: FirewallSettings): Promise<FirewallSettings>;
   listFirewallTemplates(): Promise<FirewallTemplate[]>;
   getFirewallTemplate(slug: string): Promise<FirewallTemplate>;
+
+  // ── Disk Management ──
+
+  listDisks(instanceId: string): Promise<ProviderDisk[]>;
+  getDisk(instanceId: string, diskId: number): Promise<ProviderDisk>;
+  createDisk(instanceId: string, params: CreateDiskParams): Promise<ProviderDisk>;
+  updateDisk(instanceId: string, diskId: number, params: UpdateDiskParams): Promise<ProviderDisk>;
+  resizeDisk(instanceId: string, diskId: number, size: number): Promise<void>;
+  cloneDisk(instanceId: string, diskId: number): Promise<ProviderDisk>;
+  resetDiskPassword(instanceId: string, diskId: number, password: string): Promise<void>;
+  deleteDisk(instanceId: string, diskId: number): Promise<void>;
 }

@@ -57,12 +57,12 @@ export function validateRateLimitConfiguration(): ConfigValidationResult {
   // Enhanced validation checks
   
   // 1. Environment-specific validation
-  const isProduction = process.env.NODE_ENV === 'production';
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  
+  const isProduction = config.NODE_ENV === 'production';
+  const isDevelopment = config.NODE_ENV === 'development';
+
   if (isProduction) {
     // Production-specific checks
-    if (rateLimitConfig.trustProxy === true && !process.env.TRUST_PROXY) {
+    if (rateLimitConfig.trustProxy === true && !config.rateLimiting.trustProxy) {
       warnings.push('Trust proxy is enabled by default in production - consider explicit configuration');
     }
 
@@ -133,7 +133,7 @@ export function validateRateLimitConfiguration(): ConfigValidationResult {
     authenticatedLimits: `${rateLimitConfig.authenticatedMaxRequests} requests per ${windowMinutes} minutes`,
     adminLimits: `${rateLimitConfig.adminMaxRequests} requests per ${windowMinutes} minutes`,
     trustProxy: rateLimitConfig.trustProxy,
-    environment: process.env.NODE_ENV || 'development'
+    environment: config.NODE_ENV || 'development'
   };
   
   return {
@@ -189,7 +189,7 @@ export async function performStartupValidation(): Promise<void> {
   }
   
   // Exit if critical errors in production
-  if (!validation.isValid && process.env.NODE_ENV === 'production') {
+  if (!validation.isValid && config.NODE_ENV === 'production') {
     console.error('🚨 Critical rate limiting configuration errors detected in production');
     console.error('Application startup aborted to prevent security issues');
     process.exit(1);

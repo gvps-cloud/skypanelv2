@@ -408,8 +408,7 @@ class LinodeService {
   }
 
   constructor() {
-    // Read directly from process.env first to avoid any timing issues
-    this.apiToken = process.env.LINODE_API_TOKEN || config.LINODE_API_TOKEN || '';
+    this.apiToken = config.LINODE_API_TOKEN || '';
     if (!this.apiToken) {
       console.warn('LINODE_API_TOKEN not configured');
     }
@@ -784,7 +783,7 @@ class LinodeService {
       if (!this.apiToken) {
         throw new Error('Linode API token not configured');
       }
-      const isDebug = process.env.LOG_LEVEL === 'debug' || process.env.NODE_ENV !== 'production'
+      const isDebug = config.LOG_LEVEL === 'debug' || config.NODE_ENV !== 'production'
       if (isDebug) {
         console.log('Fetching Linode types')
       }
@@ -857,7 +856,7 @@ class LinodeService {
       if (!token) {
         throw new Error('Linode API token not configured');
       }
-      const isDebug = process.env.LOG_LEVEL === 'debug' || process.env.NODE_ENV !== 'production'
+      const isDebug = config.LOG_LEVEL === 'debug' || config.NODE_ENV !== 'production'
       if (isDebug) {
         console.log('Fetching Linode images')
       }
@@ -932,7 +931,7 @@ class LinodeService {
       if (!this.apiToken) {
         throw new Error('Linode API token not configured');
       }
-      const isDebug = process.env.LOG_LEVEL === 'debug' || process.env.NODE_ENV !== 'production';
+      const isDebug = config.LOG_LEVEL === 'debug' || config.NODE_ENV !== 'production';
       if (isDebug) {
         console.log('Fetching Linode stack scripts');
       }
@@ -1122,7 +1121,7 @@ class LinodeService {
       if (!this.apiToken) {
         throw new Error('Linode API token not configured');
       }
-      const isDebug = process.env.LOG_LEVEL === 'debug' || process.env.NODE_ENV !== 'production'
+      const isDebug = config.LOG_LEVEL === 'debug' || config.NODE_ENV !== 'production'
       if (isDebug) {
         console.log('Fetching Linode regions')
       }
@@ -2765,6 +2764,166 @@ class LinodeService {
       }
     } catch (error) {
       console.error(`Error deleting VLAN ${label}:`, error);
+      throw error;
+    }
+  }
+
+  // ========================
+  // Disk Management
+  // ========================
+
+  async listDisks(instanceId: number, token?: string): Promise<any[]> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(
+        `${this.baseUrl}/linode/instances/${instanceId}/disks`,
+        { headers: this.getHeaders(token) }
+      );
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (list disks): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      const data = await response.json();
+      return data.data ?? [];
+    } catch (error) {
+      console.error(`Error listing disks for instance ${instanceId}:`, error);
+      throw error;
+    }
+  }
+
+  async getDisk(instanceId: number, diskId: number, token?: string): Promise<any> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(
+        `${this.baseUrl}/linode/instances/${instanceId}/disks/${diskId}`,
+        { headers: this.getHeaders(token) }
+      );
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (get disk): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return response.json();
+    } catch (error) {
+      console.error(`Error getting disk ${diskId} for instance ${instanceId}:`, error);
+      throw error;
+    }
+  }
+
+  async createDisk(instanceId: number, params: {
+    label: string;
+    size: number;
+    filesystem?: string;
+    image?: string;
+    root_pass?: string;
+    authorized_keys?: string[];
+    stackscript_id?: number;
+    stackscript_data?: Record<string, string>;
+  }, token?: string): Promise<any> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(
+        `${this.baseUrl}/linode/instances/${instanceId}/disks`,
+        { method: 'POST', headers: this.getHeaders(token), body: JSON.stringify(params) }
+      );
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (create disk): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return response.json();
+    } catch (error) {
+      console.error(`Error creating disk for instance ${instanceId}:`, error);
+      throw error;
+    }
+  }
+
+  async updateDisk(instanceId: number, diskId: number, params: {
+    label?: string;
+    filesystem?: string;
+  }, token?: string): Promise<any> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(
+        `${this.baseUrl}/linode/instances/${instanceId}/disks/${diskId}`,
+        { method: 'PUT', headers: this.getHeaders(token), body: JSON.stringify(params) }
+      );
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (update disk): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return response.json();
+    } catch (error) {
+      console.error(`Error updating disk ${diskId} for instance ${instanceId}:`, error);
+      throw error;
+    }
+  }
+
+  async resizeDisk(instanceId: number, diskId: number, size: number, token?: string): Promise<any> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(
+        `${this.baseUrl}/linode/instances/${instanceId}/disks/${diskId}/resize`,
+        { method: 'POST', headers: this.getHeaders(token), body: JSON.stringify({ size }) }
+      );
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (resize disk): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return response.json();
+    } catch (error) {
+      console.error(`Error resizing disk ${diskId} for instance ${instanceId}:`, error);
+      throw error;
+    }
+  }
+
+  async cloneDisk(instanceId: number, diskId: number, token?: string): Promise<any> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(
+        `${this.baseUrl}/linode/instances/${instanceId}/disks/${diskId}/clone`,
+        { method: 'POST', headers: this.getHeaders(token) }
+      );
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (clone disk): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return response.json();
+    } catch (error) {
+      console.error(`Error cloning disk ${diskId} for instance ${instanceId}:`, error);
+      throw error;
+    }
+  }
+
+  async resetDiskPassword(instanceId: number, diskId: number, password: string, token?: string): Promise<any> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(
+        `${this.baseUrl}/linode/instances/${instanceId}/disks/${diskId}/password`,
+        { method: 'POST', headers: this.getHeaders(token), body: JSON.stringify({ password }) }
+      );
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (reset disk password): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return response.json();
+    } catch (error) {
+      console.error(`Error resetting password for disk ${diskId} on instance ${instanceId}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteDisk(instanceId: number, diskId: number, token?: string): Promise<void> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(
+        `${this.baseUrl}/linode/instances/${instanceId}/disks/${diskId}`,
+        { method: 'DELETE', headers: this.getHeaders(token) }
+      );
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (delete disk): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+    } catch (error) {
+      console.error(`Error deleting disk ${diskId} for instance ${instanceId}:`, error);
       throw error;
     }
   }

@@ -40,6 +40,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
+import { apiClient } from "@/lib/api";
+import VPSDisksTab from "./vps-detail/VPSDisksTab";
 import { useBreadcrumb } from "../contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -282,6 +284,7 @@ type TabId =
   | "firewall"
   | "metrics"
   | "ssh"
+  | "disks"
   | "notes";
 
 interface TabDefinition {
@@ -752,6 +755,10 @@ const VPSDetail: React.FC = () => {
 
     tabs.push({ id: "ssh", label: "SSH", icon: TerminalIcon });
 
+    if (detail?.providerType === "linode" || !detail?.providerType) {
+      tabs.push({ id: "disks", label: "Disks", icon: HardDrive });
+    }
+
     tabs.push({ id: "notes", label: "Notes", icon: FileText });
 
     return tabs;
@@ -786,34 +793,17 @@ const VPSDetail: React.FC = () => {
 
     setSshConfirmLoading(true);
     try {
-      const response = await fetch("/api/auth/verify-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ password: sshConfirmPassword }),
+      await apiClient.post("/api/auth/verify-password", {
+        password: sshConfirmPassword,
       });
-
-      if (!response.ok) {
-        let message = "Unable to verify password";
-        try {
-          const data = (await response.json()) as { error?: string };
-          if (data?.error) {
-            message = data.error;
-          }
-        } catch (error) {
-          console.warn("Failed to parse password verification response", error);
-        }
-        setSshConfirmError(message);
-        return;
-      }
 
       setSshConfirmOpen(false);
       resetSshConfirmState();
       setSshModalOpen(true);
-    } catch {
-      setSshConfirmError("Unable to verify password. Please try again.");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unable to verify password. Please try again.";
+      setSshConfirmError(message);
     } finally {
       setSshConfirmLoading(false);
     }
@@ -1109,15 +1099,7 @@ const VPSDetail: React.FC = () => {
       setError(null);
 
       try {
-        const response = await fetch(`/api/vps/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-          throw new Error(
-            (payload as { error?: string }).error || "Failed to load instance",
-          );
-        }
+        const payload = await apiClient.get<VpsDetailResponse>(`/api/vps/${id}`);
         const parsed = payload as VpsDetailResponse;
         if (!parsed || !parsed.instance) {
           throw new Error("Malformed response from server");
@@ -1142,17 +1124,14 @@ const VPSDetail: React.FC = () => {
         }
       }
     },
-    [id, token],
+    [id],
   );
 
   const loadNetworkingConfig = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await fetch("/api/vps/networking/config", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const payload = await response.json();
-      if (response.ok && payload.config?.rdns_base_domain) {
+      const payload = await apiClient.get<{ config?: { rdns_base_domain?: string } }>("/api/vps/networking/config");
+      if (payload.config?.rdns_base_domain) {
         setRdnsBaseDomain(payload.config.rdns_base_domain);
       }
       // If the request fails or no config is found, keep the default value
@@ -1292,17 +1271,7 @@ const VPSDetail: React.FC = () => {
       if (!detail) return;
       setActionLoading(action);
       try {
-        const response = await fetch(`/api/vps/${detail.id}/${action}`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(
-            payload.error ||
-              `Failed to ${statusActionLabel[action].toLowerCase()} instance`,
-          );
-        }
+        await apiClient.post(`/api/vps/${detail.id}/${action}`);
         toast.success(`${statusActionLabel[action]} request sent`);
         await loadData({ silent: true });
       } catch (err) {
@@ -1314,7 +1283,7 @@ const VPSDetail: React.FC = () => {
         setActionLoading(null);
       }
     },
-    [detail, loadData, token],
+    [detail, loadData],
   );
 
   const allowStart = detail?.status === "stopped";
@@ -1339,10 +1308,7 @@ const VPSDetail: React.FC = () => {
     if (organizationSSHKeys.length === 0) {
       setSshKeysLoading(true);
       try {
-        const response = await fetch("/api/ssh-keys", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await response.json();
+        const data = await apiClient.get<{ keys?: any[] }>("/api/ssh-keys");
         if (Array.isArray(data.keys)) {
           setOrganizationSSHKeys(
             data.keys.map((key: any) => ({
@@ -1367,13 +1333,9 @@ const VPSDetail: React.FC = () => {
         if (!providerId) {
           throw new Error("Provider context missing for image catalog");
         }
-        const response = await fetch(
+        const data = await apiClient.get<{ images?: any[] }>(
           `/api/vps/images?provider_id=${encodeURIComponent(providerId)}`,
-          {
-          headers: { Authorization: `Bearer ${token}` },
-          },
         );
-        const data = await response.json();
         if (Array.isArray(data.images)) {
           setAvailableImages(
             data.images
@@ -1392,7 +1354,7 @@ const VPSDetail: React.FC = () => {
         setImagesLoading(false);
       }
     }
-  }, [token, availableImages.length, detail, organizationSSHKeys.length]);
+  }, [availableImages.length, detail, organizationSSHKeys.length]);
 
   const performRebuild = useCallback(async () => {
     if (!detail) return;
@@ -1411,25 +1373,14 @@ const VPSDetail: React.FC = () => {
 
     setRebuildLoading(true);
     try {
-      const response = await fetch(`/api/vps/${detail.id}/rebuild`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          image: rebuildImage,
-          rootPassword: rebuildPassword,
-          sshKeys: rebuildSSHKeys,
-          booted: rebuildBooted,
-          ...(rebuildDiskEncryption ? { diskEncryption: rebuildDiskEncryption } : {}),
-          ...(rebuildMaintenancePolicy ? { maintenancePolicy: rebuildMaintenancePolicy } : {}),
-        }),
+      await apiClient.post(`/api/vps/${detail.id}/rebuild`, {
+        image: rebuildImage,
+        rootPassword: rebuildPassword,
+        sshKeys: rebuildSSHKeys,
+        booted: rebuildBooted,
+        ...(rebuildDiskEncryption ? { diskEncryption: rebuildDiskEncryption } : {}),
+        ...(rebuildMaintenancePolicy ? { maintenancePolicy: rebuildMaintenancePolicy } : {}),
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || "Failed to rebuild instance");
-      }
       toast.success("Rebuild request sent — the server is being reinstalled");
       setRebuildDialogOpen(false);
       setRebuildImage("");
@@ -1449,7 +1400,7 @@ const VPSDetail: React.FC = () => {
     } finally {
       setRebuildLoading(false);
     }
-  }, [detail, rebuildImage, rebuildPassword, rebuildConfirmLabel, rebuildSSHKeys, rebuildBooted, rebuildDiskEncryption, rebuildMaintenancePolicy, token, loadData]);
+  }, [detail, rebuildImage, rebuildPassword, rebuildConfirmLabel, rebuildSSHKeys, rebuildBooted, rebuildDiskEncryption, rebuildMaintenancePolicy, loadData]);
 
   const backupsEnabled = detail?.backups?.enabled ?? false;
   const backupToggleBusy =
@@ -1483,30 +1434,17 @@ const VPSDetail: React.FC = () => {
         const endpoint = action === "snapshot" ? "snapshot" : action;
         const body =
           action === "snapshot"
-            ? JSON.stringify({
+            ? {
                 label:
                   snapshotLabel.trim().length > 0
                     ? snapshotLabel.trim()
                     : undefined,
-              })
+              }
             : undefined;
-        const response = await fetch(
+        await apiClient.post(
           `/api/vps/${detail.id}/backups/${endpoint}`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body,
-          },
+          body,
         );
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(
-            (payload as { error?: string }).error || "Backup operation failed",
-          );
-        }
         if (action === "snapshot") {
           toast.success("Snapshot requested");
           setSnapshotLabel("");
@@ -1525,31 +1463,17 @@ const VPSDetail: React.FC = () => {
         setBackupAction(null);
       }
     },
-    [detail, loadData, snapshotLabel, token],
+    [detail, loadData, snapshotLabel],
   );
 
   const handleBackupScheduleSave = useCallback(async () => {
     if (!detail) return;
     setScheduleBusy(true);
     try {
-      const response = await fetch(`/api/vps/${detail.id}/backups/schedule`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          day: scheduleDay === "" ? null : scheduleDay,
-          window: scheduleWindow === "" ? null : scheduleWindow,
-        }),
+      await apiClient.post(`/api/vps/${detail.id}/backups/schedule`, {
+        day: scheduleDay === "" ? null : scheduleDay,
+        window: scheduleWindow === "" ? null : scheduleWindow,
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(
-          (payload as { error?: string }).error ||
-            "Failed to update backup schedule",
-        );
-      }
       toast.success("Backup schedule updated");
       await loadData({ silent: true });
     } catch (err) {
@@ -1560,7 +1484,7 @@ const VPSDetail: React.FC = () => {
     } finally {
       setScheduleBusy(false);
     }
-  }, [detail, loadData, scheduleDay, scheduleWindow, token]);
+  }, [detail, loadData, scheduleDay, scheduleWindow]);
 
   const handleBackupScheduleReset = useCallback(() => {
     setScheduleDay(normalizedOriginalDay);
@@ -1582,23 +1506,10 @@ const VPSDetail: React.FC = () => {
 
       setRestoreBusyId(backupId);
       try {
-        const response = await fetch(
+        await apiClient.post(
           `/api/vps/${detail.id}/backups/${backupId}/restore`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ overwrite: true }),
-          },
+          { overwrite: true },
         );
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(
-            (payload as { error?: string }).error || "Failed to restore backup",
-          );
-        }
         toast.success("Backup restore initiated");
         await loadData({ silent: true });
       } catch (err) {
@@ -1610,7 +1521,7 @@ const VPSDetail: React.FC = () => {
         setRestoreBusyId(null);
       }
     },
-    [detail?.id, loadData, token],
+    [detail?.id, loadData],
   );
 
   const handleAttachFirewall = useCallback(async () => {
@@ -1618,20 +1529,9 @@ const VPSDetail: React.FC = () => {
       return;
     setFirewallAction("attach");
     try {
-      const response = await fetch(`/api/vps/${detail.id}/firewalls/attach`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ firewallId: selectedFirewallId }),
+      await apiClient.post(`/api/vps/${detail.id}/firewalls/attach`, {
+        firewallId: selectedFirewallId,
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(
-          (payload as { error?: string }).error || "Failed to attach firewall",
-        );
-      }
       toast.success("Firewall attached to instance");
       setSelectedFirewallId("");
       await loadData({ silent: true });
@@ -1643,7 +1543,7 @@ const VPSDetail: React.FC = () => {
     } finally {
       setFirewallAction(null);
     }
-  }, [detail, firewallAction, loadData, selectedFirewallId, token]);
+  }, [detail, firewallAction, loadData, selectedFirewallId]);
 
   const handleDetachFirewall = useCallback(
     async (firewallId: number, deviceId: number | null) => {
@@ -1661,21 +1561,10 @@ const VPSDetail: React.FC = () => {
       if (firewallAction === actionId) return;
       setFirewallAction(actionId);
       try {
-        const response = await fetch(`/api/vps/${detail.id}/firewalls/detach`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ firewallId, deviceId }),
+        await apiClient.post(`/api/vps/${detail.id}/firewalls/detach`, {
+          firewallId,
+          deviceId,
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(
-            (payload as { error?: string }).error ||
-              "Failed to detach firewall",
-          );
-        }
         toast.success("Firewall detached from instance");
         await loadData({ silent: true });
       } catch (err) {
@@ -1687,7 +1576,7 @@ const VPSDetail: React.FC = () => {
         setFirewallAction(null);
       }
     },
-    [detail, firewallAction, loadData, token],
+    [detail, firewallAction, loadData],
   );
 
   const beginEditRdns = useCallback(
@@ -1750,27 +1639,13 @@ const VPSDetail: React.FC = () => {
         [address]: { ...prev[address], saving: true },
       }));
       try {
-        const response = await fetch(`/api/vps/${detail.id}/networking/rdns`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            address,
-            rdns:
-              editorState.value.trim().length > 0
-                ? editorState.value.trim()
-                : null,
-          }),
+        await apiClient.post(`/api/vps/${detail.id}/networking/rdns`, {
+          address,
+          rdns:
+            editorState.value.trim().length > 0
+              ? editorState.value.trim()
+              : null,
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(
-            (payload as { error?: string }).error ||
-              "Failed to update reverse DNS",
-          );
-        }
         toast.success("Reverse DNS updated");
         await loadData({ silent: true });
       } catch (err) {
@@ -1789,7 +1664,7 @@ const VPSDetail: React.FC = () => {
         [address]: { ...prev[address], saving: false, editing: false },
       }));
     },
-    [detail, loadData, rdnsEditor, token],
+    [detail, loadData, rdnsEditor],
   );
 
   // IPv6 RDNS dialog functions
@@ -1813,25 +1688,19 @@ const VPSDetail: React.FC = () => {
       });
       if (!detail) return;
       try {
-        const response = await fetch(
+        const payload = await apiClient.get<{ records?: any[] }>(
           `/api/vps/${detail.id}/networking/ipv6-rdns-records`,
-          { headers: { Authorization: `Bearer ${token}` } },
         );
-        if (response.ok) {
-          const payload = await response.json();
-          setIpv6RdnsDialog((prev) => ({
-            ...prev,
-            existingRecords: payload.records ?? [],
-            loadingRecords: false,
-          }));
-        } else {
-          setIpv6RdnsDialog((prev) => ({ ...prev, loadingRecords: false }));
-        }
+        setIpv6RdnsDialog((prev) => ({
+          ...prev,
+          existingRecords: payload.records ?? [],
+          loadingRecords: false,
+        }));
       } catch {
         setIpv6RdnsDialog((prev) => ({ ...prev, loadingRecords: false }));
       }
     },
-    [detail, token],
+    [detail],
   );
 
   const saveIpv6Rdns = useCallback(async () => {
@@ -1843,21 +1712,10 @@ const VPSDetail: React.FC = () => {
     }
     setIpv6RdnsDialog((prev) => ({ ...prev, saving: true }));
     try {
-      const response = await fetch(`/api/vps/${detail.id}/networking/rdns`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          address: ipAddress.trim(),
-          rdns: domain.trim().length > 0 ? domain.trim() : null,
-        }),
+      await apiClient.post(`/api/vps/${detail.id}/networking/rdns`, {
+        address: ipAddress.trim(),
+        rdns: domain.trim().length > 0 ? domain.trim() : null,
       });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload.error || "Failed to update reverse DNS");
-      }
       toast.success("Reverse DNS updated");
       setIpv6RdnsDialog((prev) => ({
         ...prev,
@@ -1877,25 +1735,17 @@ const VPSDetail: React.FC = () => {
       toast.error(message);
       setIpv6RdnsDialog((prev) => ({ ...prev, saving: false }));
     }
-  }, [detail, ipv6RdnsDialog, loadData, token]);
+  }, [detail, ipv6RdnsDialog, loadData]);
 
   const clearIpv6RdnsRecord = useCallback(
     async (address: string) => {
       if (!detail) return;
       setIpv6RdnsDialog((prev) => ({ ...prev, deletingAddress: address }));
       try {
-        const response = await fetch(`/api/vps/${detail.id}/networking/rdns`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ address, rdns: null }),
+        await apiClient.post(`/api/vps/${detail.id}/networking/rdns`, {
+          address,
+          rdns: null,
         });
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}));
-          throw new Error(payload.error || "Failed to clear reverse DNS");
-        }
         toast.success("Reverse DNS cleared");
         setIpv6RdnsDialog((prev) => ({
           ...prev,
@@ -1913,7 +1763,7 @@ const VPSDetail: React.FC = () => {
         setIpv6RdnsDialog((prev) => ({ ...prev, deletingAddress: null }));
       }
     },
-    [detail, loadData, token],
+    [detail, loadData],
   );
 
   // Hostname editing functions
@@ -1961,21 +1811,9 @@ const VPSDetail: React.FC = () => {
     setHostnameError("");
 
     try {
-      const response = await fetch(`/api/vps/${detail.id}/hostname`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ hostname: hostnameValue.trim() }),
+      await apiClient.put(`/api/vps/${detail.id}/hostname`, {
+        hostname: hostnameValue.trim(),
       });
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(
-          (payload as { error?: string }).error || "Failed to update hostname",
-        );
-      }
 
       toast.success("Hostname updated successfully");
       setHostnameEditing(false);
@@ -1990,11 +1828,11 @@ const VPSDetail: React.FC = () => {
     } finally {
       setHostnameSaving(false);
     }
-  }, [detail, hostnameValue, validateHostname, token, loadData]);
+  }, [detail, hostnameValue, validateHostname, loadData]);
 
   // Toggle watchdog (Lassie) setting
   const toggleWatchdog = useCallback(async (enabled: boolean) => {
-    if (!detail?.id || !token) return;
+    if (!detail?.id) return;
 
     setWatchdogSaving(true);
     // Optimistic update
@@ -2007,21 +1845,9 @@ const VPSDetail: React.FC = () => {
     });
 
     try {
-      const response = await fetch(`/api/vps/${detail.id}/watchdog`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ watchdog_enabled: enabled }),
+      await apiClient.put(`/api/vps/${detail.id}/watchdog`, {
+        watchdog_enabled: enabled,
       });
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(
-          (payload as { error?: string }).error || "Failed to update watchdog setting",
-        );
-      }
 
       toast.success(`Shutdown Watchdog ${enabled ? "enabled" : "disabled"}`);
     } catch (err) {
@@ -2040,27 +1866,17 @@ const VPSDetail: React.FC = () => {
     } finally {
       setWatchdogSaving(false);
     }
-  }, [detail?.id, token]);
+  }, [detail?.id]);
 
   // Save notes function
   const saveNotes = useCallback(async () => {
-    if (!detail?.id || !token) return;
+    if (!detail?.id) return;
 
     setNotesSaving(true);
     try {
-      const response = await fetch(`/api/vps/${detail.id}/notes`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ notes: notesValue }),
+      const payload = await apiClient.put<{ message?: string }>(`/api/vps/${detail.id}/notes`, {
+        notes: notesValue,
       });
-
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error || "Failed to save notes");
-      }
 
       // Update the detail with new notes
       setDetail((prev) =>
@@ -2076,7 +1892,7 @@ const VPSDetail: React.FC = () => {
     } finally {
       setNotesSaving(false);
     }
-  }, [detail?.id, notesValue, token]);
+  }, [detail?.id, notesValue]);
 
   const cancelEditingNotes = useCallback(() => {
     setNotesValue(detail?.notes || "");
@@ -2707,6 +2523,10 @@ const VPSDetail: React.FC = () => {
                   )}
                 </div>
               </section>
+            )}
+
+            {activeTab === "disks" && (
+              <VPSDisksTab instanceId={detail?.id} instanceLabel={detail?.label} />
             )}
 
             {activeTab === "backups" && (

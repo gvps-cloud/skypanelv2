@@ -13,10 +13,7 @@
 
 import crypto from 'crypto';
 import Redis from 'ioredis';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
+import { config } from '../config/index.js';
 
 /**
  * Token blacklist entry structure
@@ -52,11 +49,8 @@ let redisAvailable = false;
  */
 async function initializeRedis(): Promise<void> {
   // Check if Redis is configured
-  const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI;
+  const redisUrl = config.REDIS_URL;
   if (!redisUrl) {
-    if (process.env.REDIS_HOST || process.env.REDIS_PORT || process.env.REDIS_PASSWORD) {
-      console.warn('[Token blacklist] REDIS_HOST/REDIS_PORT/REDIS_PASSWORD are no longer supported. Please use REDIS_URL instead.');
-    }
     console.log('[Token blacklist] Redis not configured, using in-memory storage');
     redisAvailable = false;
     return;

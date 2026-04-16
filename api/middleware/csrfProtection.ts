@@ -32,7 +32,7 @@ function parseBoolean(value: string | undefined, fallback: boolean): boolean {
 }
 
 function getCsrfSecret(): string {
-  return process.env.CSRF_SECRET || config.JWT_SECRET;
+  return config.JWT_SECRET;
 }
 
 function signToken(payload: string): string {
@@ -67,7 +67,7 @@ function isValidToken(token: string): boolean {
 }
 
 function getCookieOptions() {
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = config.NODE_ENV === "production";
   return {
     httpOnly: false,
     secure: isProduction,
@@ -92,8 +92,13 @@ function readSubmittedToken(req: Request): string | undefined {
 }
 
 export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
-  const enforce = parseBoolean(process.env.CSRF_ENFORCE, true);
-  const shadowMode = parseBoolean(process.env.CSRF_SHADOW_MODE, false);
+  const isProduction = config.NODE_ENV === "production";
+  const enforce = config.CSRF_ENFORCE !== false;
+  const shadowMode = !isProduction && config.CSRF_SHADOW_MODE === true;
+
+  if (isProduction && config.CSRF_SHADOW_MODE) {
+    console.error("[Security] CSRF_SHADOW_MODE is enabled in production — ignoring. Shadow mode is only permitted in non-production environments.");
+  }
 
   if (!shouldCheckCsrf(req)) {
     next();

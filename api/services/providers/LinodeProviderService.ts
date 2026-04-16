@@ -25,6 +25,9 @@ import {
   FirewallTemplate,
   FirewallStatus,
   CreateFirewallParams,
+  ProviderDisk,
+  CreateDiskParams,
+  UpdateDiskParams,
 } from './IProviderService.js';
 import { linodeService } from '../linodeService.js';
 import { normalizeLinodeError } from './errorNormalizer.js';
@@ -766,5 +769,108 @@ export class LinodeProviderService extends BaseProviderService {
     };
 
     return statusMap[status.toLowerCase()] || 'unknown';
+  }
+
+  // ── Disk Management ──
+
+  async listDisks(instanceId: string): Promise<ProviderDisk[]> {
+    this.validateToken();
+    try {
+      const disks = await linodeService.listDisks(Number(instanceId));
+      return disks.map((d: any) => this.normalizeDisk(d));
+    } catch (error) {
+      this.handleApiError(error, 'listDisks');
+    }
+  }
+
+  async getDisk(instanceId: string, diskId: number): Promise<ProviderDisk> {
+    this.validateToken();
+    try {
+      const disk = await linodeService.getDisk(Number(instanceId), diskId);
+      return this.normalizeDisk(disk);
+    } catch (error) {
+      this.handleApiError(error, 'getDisk');
+    }
+  }
+
+  async createDisk(instanceId: string, params: CreateDiskParams): Promise<ProviderDisk> {
+    this.validateToken();
+    try {
+      const disk = await linodeService.createDisk(Number(instanceId), {
+        label: params.label,
+        size: params.size,
+        filesystem: params.filesystem,
+        image: params.image,
+        root_pass: params.rootPassword,
+        authorized_keys: params.authorizedKeys,
+        stackscript_id: params.stackscriptId,
+        stackscript_data: params.stackscriptData,
+      });
+      return this.normalizeDisk(disk);
+    } catch (error) {
+      this.handleApiError(error, 'createDisk');
+    }
+  }
+
+  async updateDisk(instanceId: string, diskId: number, params: UpdateDiskParams): Promise<ProviderDisk> {
+    this.validateToken();
+    try {
+      const disk = await linodeService.updateDisk(Number(instanceId), diskId, {
+        label: params.label,
+        filesystem: params.filesystem,
+      });
+      return this.normalizeDisk(disk);
+    } catch (error) {
+      this.handleApiError(error, 'updateDisk');
+    }
+  }
+
+  async resizeDisk(instanceId: string, diskId: number, size: number): Promise<void> {
+    this.validateToken();
+    try {
+      await linodeService.resizeDisk(Number(instanceId), diskId, size);
+    } catch (error) {
+      this.handleApiError(error, 'resizeDisk');
+    }
+  }
+
+  async cloneDisk(instanceId: string, diskId: number): Promise<ProviderDisk> {
+    this.validateToken();
+    try {
+      const disk = await linodeService.cloneDisk(Number(instanceId), diskId);
+      return this.normalizeDisk(disk);
+    } catch (error) {
+      this.handleApiError(error, 'cloneDisk');
+    }
+  }
+
+  async resetDiskPassword(instanceId: string, diskId: number, password: string): Promise<void> {
+    this.validateToken();
+    try {
+      await linodeService.resetDiskPassword(Number(instanceId), diskId, password);
+    } catch (error) {
+      this.handleApiError(error, 'resetDiskPassword');
+    }
+  }
+
+  async deleteDisk(instanceId: string, diskId: number): Promise<void> {
+    this.validateToken();
+    try {
+      await linodeService.deleteDisk(Number(instanceId), diskId);
+    } catch (error) {
+      this.handleApiError(error, 'deleteDisk');
+    }
+  }
+
+  private normalizeDisk(d: any): ProviderDisk {
+    return {
+      id: d.id,
+      label: d.label,
+      status: d.status,
+      size: d.size,
+      filesystem: d.filesystem,
+      created: d.created,
+      updated: d.updated,
+    };
   }
 }

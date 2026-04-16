@@ -218,4 +218,14 @@ export abstract class BaseProviderService implements IProviderService {
   abstract updateFirewallSettings(settings: any): Promise<any>;
   abstract listFirewallTemplates(): Promise<any[]>;
   abstract getFirewallTemplate(slug: string): Promise<any>;
+
+  // ── Disk Management ──
+  abstract listDisks(instanceId: string): Promise<any[]>;
+  abstract getDisk(instanceId: string, diskId: number): Promise<any>;
+  abstract createDisk(instanceId: string, params: any): Promise<any>;
+  abstract updateDisk(instanceId: string, diskId: number, params: any): Promise<any>;
+  abstract resizeDisk(instanceId: string, diskId: number, size: number): Promise<void>;
+  abstract cloneDisk(instanceId: string, diskId: number): Promise<any>;
+  abstract resetDiskPassword(instanceId: string, diskId: number, password: string): Promise<void>;
+  abstract deleteDisk(instanceId: string, diskId: number): Promise<void>;
 }

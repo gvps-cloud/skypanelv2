@@ -3,6 +3,8 @@
  * Fetches commit history from the skypanelv2 repository
  */
 
+import { config } from '../config/index.js';
+
 export interface GitHubCommit {
   sha: string;
   shortSha: string;
@@ -74,8 +76,8 @@ export async function fetchGitHubCommits(
   };
 
   // Use GitHub token if available for higher rate limits
-  if (process.env.GITHUB_TOKEN) {
-    headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
+  if (config.GITHUB_TOKEN) {
+    headers['Authorization'] = `Bearer ${config.GITHUB_TOKEN}`;
   }
 
   try {

@@ -43,8 +43,8 @@ function ensureTransporter(): Transporter {
       user,
       pass,
     },
-    debug: process.env.NODE_ENV !== "production",
-    logger: process.env.NODE_ENV !== "production",
+    debug: config.NODE_ENV !== "production",
+    logger: config.NODE_ENV !== "production",
   });
 
   console.log(`${logPrefix} SMTP transporter created successfully`);

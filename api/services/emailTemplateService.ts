@@ -18,12 +18,11 @@ type RenderedEmail = { subject: string; html: string; text: string };
 
 const resolveCompanyName = (): string =>
   config.COMPANY_BRAND_NAME
-  || (process.env.COMPANY_NAME && process.env.COMPANY_NAME.trim())
-  || (process.env.VITE_COMPANY_NAME && process.env.VITE_COMPANY_NAME.trim())
+  || config.COMPANY_NAME
   || 'SkyPanelV2';
 
 const resolveCompanyLogoUrl = (): string | undefined =>
-  (process.env.COMPANY_LOGO_URL && process.env.COMPANY_LOGO_URL.trim())
+  config.COMPANY_LOGO_URL
   || undefined;
 
 const isFullHtmlDocument = (html: string): boolean => /<!doctype\s+html|<html[\s>]/i.test(html);

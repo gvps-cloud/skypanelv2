@@ -76,6 +76,17 @@ export interface Config {
   // Better Stack / Better Uptime integration
   BETTERUPTIME_API_KEY?: string;
   BETTERUPTIME_STATUS_PAGE_ID?: string;
+  // Redis (optional, for token blacklist / brute force / rate limiting)
+  REDIS_URL?: string;
+  // Logging
+  LOG_LEVEL?: string;
+  // GitHub integration (optional, for update checking)
+  GITHUB_TOKEN?: string;
+  // CSRF configuration
+  CSRF_ENFORCE?: boolean;
+  CSRF_SHADOW_MODE?: boolean;
+  // Auto-create organizations for users without one (disabled in production)
+  AUTO_CREATE_ORG: boolean;
 }
 
 /**
@@ -361,6 +372,15 @@ function getConfig(): Config {
     BETTERUPTIME_API_KEY: process.env.BETTERUPTIME_API_KEY?.trim() || undefined,
     BETTERUPTIME_STATUS_PAGE_ID:
       process.env.BETTERUPTIME_STATUS_PAGE_ID?.trim() || undefined,
+    REDIS_URL:
+      process.env.REDIS_URL?.trim() ||
+      process.env.REDIS_URI?.trim() ||
+      undefined,
+    LOG_LEVEL: process.env.LOG_LEVEL?.trim() || undefined,
+    GITHUB_TOKEN: process.env.GITHUB_TOKEN?.trim() || undefined,
+    CSRF_ENFORCE: parseBoolean(process.env.CSRF_ENFORCE, true),
+    CSRF_SHADOW_MODE: parseBoolean(process.env.CSRF_SHADOW_MODE, false),
+    AUTO_CREATE_ORG: parseBoolean(process.env.AUTO_CREATE_ORG, process.env.NODE_ENV !== 'production'),
   };
 
   return config;

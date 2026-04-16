@@ -16,10 +16,7 @@
  */
 
 import Redis from 'ioredis';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
+import { config } from '../config/index.js';
 
 /**
  * Failed attempt entry structure
@@ -73,11 +70,8 @@ let redisAvailable = false;
  * Initialize Redis connection (lazy loading)
  */
 async function initializeRedis(): Promise<void> {
-  const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI;
+  const redisUrl = config.REDIS_URL;
   if (!redisUrl) {
-    if (process.env.REDIS_HOST || process.env.REDIS_PORT || process.env.REDIS_PASSWORD) {
-      console.warn('[Brute force] REDIS_HOST/REDIS_PORT/REDIS_PASSWORD are no longer supported. Please use REDIS_URL instead.');
-    }
     console.log('[Brute force] Redis not configured, using in-memory storage');
     redisAvailable = false;
     return;

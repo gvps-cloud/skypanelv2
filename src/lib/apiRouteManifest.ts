@@ -1861,6 +1861,54 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
+    "method": "GET",
+    "path": "/api/vps/:id/disks",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/vps/:id/disks",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/vps/:id/disks/:diskId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/vps/:id/disks/:diskId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/vps/:id/disks/:diskId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/vps/:id/disks/:diskId/clone",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/vps/:id/disks/:diskId/password",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/vps/:id/disks/:diskId/resize",
+    "protected": true,
+    "admin": false
+  },
+  {
     "method": "POST",
     "path": "/api/vps/:id/firewalls/attach",
     "protected": true,
