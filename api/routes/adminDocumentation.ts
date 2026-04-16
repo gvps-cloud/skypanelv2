@@ -11,6 +11,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import { config } from '../config/index.js';
 
 const router = Router();
 
@@ -19,8 +20,7 @@ router.use(authenticateToken);
 router.use(requireAdmin);
 
 // Configure multer for file uploads
-const UPLOAD_DIR = process.env.UPLOAD_PATH || './uploads';
-const DOCUMENTATION_UPLOAD_DIR = path.join(UPLOAD_DIR, 'documentation');
+const DOCUMENTATION_UPLOAD_DIR = path.join(config.UPLOAD_PATH, 'documentation');
 
 // Ensure upload directory exists
 if (!fs.existsSync(DOCUMENTATION_UPLOAD_DIR)) {
@@ -65,8 +65,8 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760', 10) // 10MB default
-  }
+    fileSize: config.MAX_FILE_SIZE,
+  },
 });
 
 // Helper to generate slug from name

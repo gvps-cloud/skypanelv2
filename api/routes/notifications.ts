@@ -2,6 +2,7 @@ import express, { Response, NextFunction } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js';
 import { query } from '../lib/database.js';
 import { notificationService, Notification } from '../services/notificationService.js';
+import { tokenBlacklistService } from '../services/tokenBlacklistService.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 
@@ -19,6 +20,19 @@ const authenticateSSE = async (
     
     if (!token) {
       return res.status(401).json({ error: 'Access token required' });
+    }
+
+    // Reject tokens that have been revoked (e.g. after logout / password reset)
+    const isRevoked = await tokenBlacklistService.isRevoked(token);
+    if (isRevoked) {
+      console.warn('SSE authentication attempt with revoked token:', {
+        hasToken: !!token,
+        tokenPrefix: token.substring(0, 10) + '...'
+      });
+      return res.status(401).json({
+        error: 'Token has been revoked',
+        code: 'TOKEN_REVOKED'
+      });
     }
 
     // Verify JWT token

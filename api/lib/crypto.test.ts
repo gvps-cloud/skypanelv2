@@ -4,6 +4,8 @@ import {
   decryptSecret,
   hasEncryptionKey,
   reencryptSecret,
+  encrypt,
+  decrypt,
 } from './crypto';
 
 describe('Cryptographic utilities', () => {
@@ -31,6 +33,13 @@ describe('Cryptographic utilities', () => {
       expect(typeof encrypted).toBe('string');
 
       const decrypted = decryptSecret(encrypted, 'ssh');
+      expect(decrypted).toBe(plaintext);
+    });
+
+    it('should default type to ssh when the second argument is omitted', () => {
+      const plaintext = 'defaults-to-ssh';
+      const encrypted = encryptSecret(plaintext);
+      const decrypted = decryptSecret(encrypted);
       expect(decrypted).toBe(plaintext);
     });
 
@@ -106,6 +115,23 @@ describe('Cryptographic utilities', () => {
     it('should throw an error if the secret is less than 16 characters', () => {
       vi.stubEnv('SSH_CRED_SECRET', 'short');
       expect(() => encryptSecret('plaintext', 'ssh')).toThrow(/Encryption key must be at least 16 characters/);
+    });
+
+    it('should throw an error if the secret is missing entirely', () => {
+      vi.stubEnv('SSH_CRED_SECRET', '');
+      expect(() => encryptSecret('plaintext', 'ssh')).toThrow(/Encryption key must be at least 16 characters/);
+    });
+
+    it('should return the input unchanged when decrypting a payload with missing fields', () => {
+      // A base64-encoded JSON object that is well-formed JSON but is missing iv/tag/ciphertext.
+      const missingFields = Buffer.from(JSON.stringify({ keyVersion: 'current' })).toString('base64');
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const decrypted = decryptSecret(missingFields, 'ssh');
+
+      expect(decrypted).toBe(missingFields);
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
     });
 
     it('should throw an error if decryption fails due to tampered ciphertext', () => {
@@ -208,6 +234,16 @@ describe('Cryptographic utilities', () => {
       vi.stubEnv('PROVIDER_TOKEN_SECRET', '');
       vi.stubEnv('SSH_CRED_SECRET', '');
       expect(hasEncryptionKey('provider')).toBe(false);
+    });
+  });
+
+  describe('backward-compatible aliases', () => {
+    it('exposes encrypt as an alias for encryptSecret', () => {
+      expect(encrypt).toBe(encryptSecret);
+    });
+
+    it('exposes decrypt as an alias for decryptSecret', () => {
+      expect(decrypt).toBe(decryptSecret);
     });
   });
 });

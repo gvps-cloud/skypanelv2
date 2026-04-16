@@ -23,6 +23,7 @@ import {
 import { EgressHourlyBillingService } from "../services/egressHourlyBillingService.js";
 import { logActivity } from "../services/activityLogger.js";
 import { query as dbQuery, transaction } from "../lib/database.js";
+import { resolveClientBaseUrl } from "../lib/clientBaseUrl.js";
 
 const router = express.Router();
 
@@ -148,31 +149,7 @@ router.post(
       }
 
       // Determine client base URL for return URLs
-      const originHeader =
-        typeof req.headers.origin === "string" ? req.headers.origin : undefined;
-      const forwardedProto =
-        typeof req.headers["x-forwarded-proto"] === "string"
-          ? req.headers["x-forwarded-proto"]
-          : undefined;
-      const forwardedHost =
-        typeof req.headers["x-forwarded-host"] === "string"
-          ? req.headers["x-forwarded-host"]
-          : undefined;
-      const host = req.get("host");
-
-      let clientBaseUrl = process.env.CLIENT_URL;
-      if (!clientBaseUrl) {
-        if (originHeader) {
-          clientBaseUrl = originHeader;
-        } else if (forwardedHost) {
-          const proto = forwardedProto || req.protocol;
-          clientBaseUrl = `${proto}://${forwardedHost}`;
-        } else if (host) {
-          clientBaseUrl = `${req.protocol}://${host}`;
-        } else {
-          clientBaseUrl = "http://localhost:5173";
-        }
-      }
+      const clientBaseUrl = resolveClientBaseUrl(req);
 
       // Create PayPal payment
       const result = await PayPalService.createPayment({

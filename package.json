@@ -36,6 +36,10 @@
     "pwa:icons": "node scripts/generate-pwa-icons.js",
     "audit:security": "npm audit --audit-level=high",
     "scan:code": "semgrep --config=auto --error",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run api/ src/",
+    "test:coverage": "vitest run --coverage",
     "test:security": "vitest run tests/security/",
     "verify:security": "npm-run-all audit:security scan:code test:security",
     "start:dev": "concurrently \"node --import tsx api/server.ts\" \"vite preview --port 5173 --strictPort\""

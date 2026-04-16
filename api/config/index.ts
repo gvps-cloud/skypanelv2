@@ -65,9 +65,14 @@ export interface Config {
   PROVIDER_TOKEN_SECRET?: string;
   CONTACT_FORM_RECIPIENT?: string;
   COMPANY_BRAND_NAME: string;
+  COMPANY_NAME: string;
+  COMPANY_LOGO_URL?: string;
   RDNS_BASE_DOMAIN: string;
   VPS_TAG: string;
   corsOrigins: string[];
+  // File uploads
+  UPLOAD_PATH: string;
+  MAX_FILE_SIZE: number;
   // Better Stack / Better Uptime integration
   BETTERUPTIME_API_KEY?: string;
   BETTERUPTIME_STATUS_PAGE_ID?: string;
@@ -340,10 +345,18 @@ function getConfig(): Config {
       process.env.COMPANY_NAME?.trim() ||
       process.env.COMPANY_BRAND_NAME?.trim() ||
       "SkyPanelV2",
+    COMPANY_NAME:
+      process.env["COMPANY-NAME"]?.trim() ||
+      process.env.COMPANY_NAME?.trim() ||
+      process.env.VITE_COMPANY_NAME?.trim() ||
+      "SkyPanelV2",
+    COMPANY_LOGO_URL: process.env.COMPANY_LOGO_URL?.trim() || undefined,
     RDNS_BASE_DOMAIN:
       process.env.RDNS_BASE_DOMAIN?.trim() || "ip.rev.example.com",
     VPS_TAG: process.env.VPS_TAG?.trim() || "skypanelv2",
     corsOrigins: parseCorsOrigins(process.env.CLIENT_URL),
+    UPLOAD_PATH: process.env.UPLOAD_PATH?.trim() || "./uploads",
+    MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE || "10485760", 10),
     // Better Stack / Better Uptime (optional)
     BETTERUPTIME_API_KEY: process.env.BETTERUPTIME_API_KEY?.trim() || undefined,
     BETTERUPTIME_STATUS_PAGE_ID:

@@ -270,112 +270,72 @@ export const requireOrganization = async (
 };
 
 /**
- * Optional authentication middleware
- * Attempts to authenticate but continues even if no token is provided
- * Sets req.user if authentication succeeds, leaves it undefined otherwise
+ * Optional authentication middleware.
+ *
+ * Attempts to authenticate but always continues. On success, populates
+ * `req.user` (including `organizationId`) so downstream handlers can adapt
+ * for logged-in vs anonymous callers. On any failure — missing token,
+ * invalid/expired token, blacklisted token, unknown user — it silently
+ * calls `next()` without attaching a user.
+ *
+ * Accepts the token from both the `Authorization: Bearer …` header and the
+ * HttpOnly `auth_token` cookie (same as {@link authenticateToken}).
  */
 export const optionalAuth = async (
   req: AuthenticatedRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
+    // Extract token from Authorization header or cookie
+    let token: string | null = null;
+
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    if (authHeader) {
+      const parts = authHeader.split(' ');
+      if (parts.length === 2 && parts[0] === 'Bearer') {
+        token = parts[1];
+      }
+    }
+
+    if (!token && req.cookies && req.cookies.auth_token) {
+      token = req.cookies.auth_token;
+    }
 
     if (!token) {
       // No token provided, continue without authentication
       return next();
     }
 
+    // Reject revoked tokens so downstream handlers don't see stale user context
+    const isRevoked = await tokenBlacklistService.isRevoked(token);
+    if (isRevoked) {
+      return next();
+    }
+
     // Verify JWT token
     const decoded = jwt.verify(token, config.JWT_SECRET) as any;
 
-    // Get user from database
+    // Get user from database (including active_organization_id for org resolution)
     const userResult = await query(
-      'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled AS "twoFactorEnabled" FROM users WHERE id = $1',
+      'SELECT id, email, role, name, phone, timezone, preferences, two_factor_enabled AS "twoFactorEnabled", active_organization_id FROM users WHERE id = $1',
       [decoded.userId]
     );
 
     if (userResult.rows.length === 0) {
-      // Invalid token, continue without authentication
       return next();
     }
 
     const user = userResult.rows[0];
 
-    // Get user's organization
-    let orgMember = null;
-    let organizationId: string | undefined;
-
-    try {
-      // Check for X-Organization-ID header
-      const requestedOrgId = req.headers['x-organization-id'] as string;
-      
-      if (requestedOrgId) {
-        const orgResult = await query(
-          'SELECT organization_id FROM organization_members WHERE user_id = $1 AND organization_id = $2',
-          [user.id, requestedOrgId]
-        );
-        if (orgResult.rows.length > 0) {
-          organizationId = orgResult.rows[0].organization_id;
-        }
-      }
-
-      if (!organizationId) {
-        const orgResult = await query(
-          'SELECT organization_id FROM organization_members WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1',
-          [user.id]
-        );
-        orgMember = orgResult.rows[0] || null;
-        organizationId = orgMember?.organization_id;
-      }
-    } catch {
-      console.warn('organization_members table not found, skipping organization lookup');
-    }
-
-    if (!organizationId) {
-      try {
-        const ownerOrg = await query(
-          'SELECT id FROM organizations WHERE owner_id = $1 ORDER BY created_at DESC LIMIT 1',
-          [user.id]
-        );
-        if (ownerOrg.rows[0]) {
-          organizationId = ownerOrg.rows[0].id;
-        }
-      } catch {
-        console.warn('organizations lookup failed for owner fallback');
-      }
-    }
-
-    // If still no organization, create one automatically for the user
-    if (!organizationId) {
-      try {
-        const newOrg = await query(
-          `INSERT INTO organizations (name, slug, owner_id, created_at, updated_at)
-           VALUES ($1, $2, $3, NOW(), NOW())
-           RETURNING id`,
-          [
-            `${user.email}'s Organization`,
-            user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-'),
-            user.id
-          ]
-        );
-        organizationId = newOrg.rows[0].id;
-        console.log('Created automatic organization for user:', { userId: user.id, organizationId });
-
-        // Add user to organization members
-        await query(
-          `INSERT INTO organization_members (organization_id, user_id, role, created_at)
-           VALUES ($1, $2, $3, NOW())
-           ON CONFLICT (organization_id, user_id) DO NOTHING`,
-          [organizationId, user.id, 'owner']
-        );
-      } catch (orgCreateError) {
-        console.error('Failed to create automatic organization:', orgCreateError);
-        // Continue without organization - this will be handled by requireOrganization middleware
-      }
-    }
+    const requestedOrgId = req.headers['x-organization-id'] as string | undefined;
+    const organizationId = await resolveOrganizationIdForUser({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      activeOrganizationId: user.active_organization_id,
+      headerOrgId: requestedOrgId,
+    });
 
     req.user = {
       id: user.id,
@@ -388,14 +348,16 @@ export const optionalAuth = async (
       timezone: user.timezone,
       organizationId,
       preferences: user.preferences,
-      twoFactorEnabled: user.twoFactorEnabled
+      twoFactorEnabled: user.twoFactorEnabled,
+      isImpersonating: Boolean(decoded.isImpersonating),
+      originalAdminId: decoded.originalAdminId,
     };
     (req as any).userId = user.id;
     (req as any).organizationId = organizationId;
 
     next();
   } catch {
-    // Authentication failed, continue without user
+    // Authentication failed, continue without user context
     next();
   }
 };

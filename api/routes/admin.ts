@@ -55,7 +55,7 @@ const router = express.Router();
 const AUTH_COOKIE_NAME = "auth_token";
 
 function getAuthCookieOptions(): CookieOptions {
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = config.NODE_ENV === "production";
   return {
     httpOnly: true,
     secure: isProduction,
@@ -3968,7 +3968,7 @@ router.get(
 
       res.status(500).json({
         error: errorMessage,
-        details: process.env.NODE_ENV === "development" ? err.stack : undefined,
+        details: config.NODE_ENV === "development" ? err.stack : undefined,
       });
     }
   },

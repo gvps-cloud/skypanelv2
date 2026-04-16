@@ -11,18 +11,13 @@ import { InvoiceService } from '../services/invoiceService.js';
 import { PayPalService, type WalletTransaction } from '../services/paypalService.js';
 import { query } from '../lib/database.js';
 import { themeService, resolveThemePalette } from '../services/themeService.js';
+import { config } from '../config/index.js';
 
 const router = express.Router();
 
-const resolveCompanyName = (): string =>
-  (process.env['COMPANY-NAME'] && process.env['COMPANY-NAME'].trim())
-  || (process.env.COMPANY_NAME && process.env.COMPANY_NAME.trim())
-  || (process.env.VITE_COMPANY_NAME && process.env.VITE_COMPANY_NAME.trim())
-  || 'SkyPanelV2';
+const resolveCompanyName = (): string => config.COMPANY_NAME;
 
-const resolveCompanyLogo = (): string | undefined =>
-  (process.env.COMPANY_LOGO_URL && process.env.COMPANY_LOGO_URL.trim())
-  || undefined;
+const resolveCompanyLogo = (): string | undefined => config.COMPANY_LOGO_URL;
 
 type AuthenticatedRequest = Request & {
   user: {

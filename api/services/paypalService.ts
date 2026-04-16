@@ -150,7 +150,7 @@ export class PayPalService {
       const amountValue = paymentIntent.amount.toFixed(2);
       const itemName = paymentIntent.description?.substring(0, 127) || 'Wallet Credit';
 
-      const clientBaseUrl = paymentIntent.clientBaseUrl || process.env.CLIENT_URL || 'http://localhost:5173';
+      const clientBaseUrl = paymentIntent.clientBaseUrl || config.CLIENT_URL;
 
       const request = {
         body: {

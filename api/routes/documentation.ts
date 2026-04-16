@@ -6,9 +6,9 @@ import { Router, type Request, type Response } from 'express';
 import { query } from '../lib/database.js';
 import fs from 'fs';
 import path from 'path';
+import { config } from '../config/index.js';
 
-const UPLOAD_DIR = process.env.UPLOAD_PATH || './uploads';
-const DOCUMENTATION_UPLOAD_DIR = path.resolve(UPLOAD_DIR, 'documentation');
+const DOCUMENTATION_UPLOAD_DIR = path.resolve(config.UPLOAD_PATH, 'documentation');
 
 const router = Router();
 

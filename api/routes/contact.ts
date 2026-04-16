@@ -93,7 +93,7 @@ router.get('/config', async (req: Request, res: Response) => {
     console.error('[Contact API] Error stack:', err.stack);
     res.status(500).json({ 
       error: err.message || 'Failed to fetch contact configuration',
-      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      details: appConfig.NODE_ENV === 'development' ? err.stack : undefined
     });
   }
 });

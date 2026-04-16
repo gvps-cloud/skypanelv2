@@ -32,5 +32,38 @@ describe('errorHandling', () => {
         details: undefined,
       });
     });
+
+    it('should accept RESOURCE_NOT_FOUND with a 404 status', () => {
+      const error = createError(ErrorCodes.RESOURCE_NOT_FOUND, 'Resource not found', 404);
+
+      expect(error).toEqual({
+        code: 'RESOURCE_NOT_FOUND',
+        message: 'Resource not found',
+        statusCode: 404,
+        details: undefined,
+      });
+    });
+
+    it('should preserve null details when explicitly provided', () => {
+      const error = createError(ErrorCodes.INVALID_INPUT, 'Invalid input', 400, null);
+
+      expect(error).toEqual({
+        code: 'INVALID_INPUT',
+        message: 'Invalid input',
+        statusCode: 400,
+        details: null,
+      });
+    });
+
+    it('should accept arbitrary string error codes', () => {
+      const error = createError('CUSTOM_ERROR_CODE', 'Custom message', 418);
+
+      expect(error).toEqual({
+        code: 'CUSTOM_ERROR_CODE',
+        message: 'Custom message',
+        statusCode: 418,
+        details: undefined,
+      });
+    });
   });
 });

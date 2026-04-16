@@ -19,12 +19,13 @@ import {
 } from "../middleware/rateLimiting.js";
 import { generateApiKey, hashApiKey } from "../lib/secureRandom.js";
 import { toSafeErrorMessage } from "../lib/errorHandling.js";
+import { config } from "../config/index.js";
 
 const router = Router();
 const AUTH_COOKIE_NAME = "auth_token";
 
 function getAuthCookieOptions(): CookieOptions {
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = config.NODE_ENV === "production";
   return {
     httpOnly: true,
     secure: isProduction,
@@ -502,7 +503,7 @@ router.get(
   "/debug/user",
   authenticateToken,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    if (process.env.NODE_ENV === "production") {
+    if (config.NODE_ENV === "production") {
       res.status(404).json({ error: "Not found" });
       return;
     }

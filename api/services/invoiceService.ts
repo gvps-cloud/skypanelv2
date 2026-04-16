@@ -6,6 +6,7 @@
 import { query } from '../lib/database.js';
 import type { PoolClient } from 'pg';
 import type { ThemePalette } from './themeService.js';
+import { config } from '../config/index.js';
 
 export interface InvoiceData {
   id: string;
@@ -185,11 +186,8 @@ export class InvoiceService {
     companyLogo?: string,
     themePalette?: ThemePalette
   ): string {
-    const resolvedCompanyName = (companyName && companyName.trim())
-      || (process.env['COMPANY-NAME'] && process.env['COMPANY-NAME'].trim())
-      || (process.env.COMPANY_NAME && process.env.COMPANY_NAME.trim())
-      || (process.env.VITE_COMPANY_NAME && process.env.VITE_COMPANY_NAME.trim())
-      || 'SkyPanelV2';
+    const resolvedCompanyName =
+      (companyName && companyName.trim()) || config.COMPANY_NAME;
 
     const formattedDate = new Date(invoiceData.createdAt).toLocaleString('en-US', {
       year: 'numeric',

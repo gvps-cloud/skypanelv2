@@ -33,7 +33,7 @@ router.get("/", (req: Request, res: Response) => {
     success: true,
     message: "API is healthy",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || "development",
+    environment: config.NODE_ENV || "development",
   });
 });
 
@@ -79,7 +79,7 @@ router.get("/status", async (req: Request, res: Response) => {
       message: "Failed to retrieve status",
       timestamp: new Date().toISOString(),
       error:
-        process.env.NODE_ENV === "development"
+        config.NODE_ENV === "development"
           ? (error as Error).message
           : "Internal server error",
     });
@@ -97,7 +97,7 @@ router.get("/detailed", authenticateToken, requireAdmin, (req: Request, res: Res
     const healthStatus = {
       status: rateLimitHealth.status,
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || "development",
+      environment: config.NODE_ENV || "development",
 
       // Rate limiting health
       rateLimiting: {
@@ -155,7 +155,7 @@ router.get("/detailed", authenticateToken, requireAdmin, (req: Request, res: Res
       message: "Health check failed",
       timestamp: new Date().toISOString(),
       error:
-        process.env.NODE_ENV === "development"
+        config.NODE_ENV === "development"
           ? error.message
           : "Internal server error",
     });
@@ -246,7 +246,7 @@ router.get(
       message: "Rate limiting health check failed",
       timestamp: new Date().toISOString(),
       error:
-        process.env.NODE_ENV === "development"
+        config.NODE_ENV === "development"
           ? error.message
           : "Internal server error",
     });
@@ -304,7 +304,7 @@ router.get("/metrics", authenticateToken, requireAdmin, (req: Request, res: Resp
       message: "Failed to retrieve metrics",
       timestamp: new Date().toISOString(),
       error:
-        process.env.NODE_ENV === "development"
+        config.NODE_ENV === "development"
           ? error.message
           : "Internal server error",
     });
@@ -340,7 +340,7 @@ router.get(
       message: "Configuration validation failed",
       timestamp: new Date().toISOString(),
       error:
-        process.env.NODE_ENV === "development"
+        config.NODE_ENV === "development"
           ? error.message
           : "Internal server error",
     });
@@ -384,7 +384,7 @@ router.get("/stats", optionalAuth, async (req: AuthenticatedRequest, res: Respon
       message: "Failed to retrieve VPS statistics",
       timestamp: new Date().toISOString(),
       error:
-        process.env.NODE_ENV === "development"
+        config.NODE_ENV === "development"
           ? (error as Error).message
           : "Internal server error",
     });
@@ -412,7 +412,7 @@ router.get("/platform-stats", async (req: Request, res: Response) => {
       message: "Failed to retrieve platform statistics",
       timestamp: new Date().toISOString(),
       error:
-        process.env.NODE_ENV === "development"
+        config.NODE_ENV === "development"
           ? (error as Error).message
           : "Internal server error",
     });
@@ -441,7 +441,7 @@ router.get("/uptime", async (req: Request, res: Response) => {
       success: false,
       message: "Failed to retrieve uptime data",
       timestamp: new Date().toISOString(),
-      configured: !!(process.env.BETTERUPTIME_API_KEY && process.env.BETTERUPTIME_STATUS_PAGE_ID),
+      configured: !!(config.BETTERUPTIME_API_KEY && config.BETTERUPTIME_STATUS_PAGE_ID),
       monitors: [],
       activeIncidents: [],
       incidentsHistory: [],
@@ -449,7 +449,7 @@ router.get("/uptime", async (req: Request, res: Response) => {
       cachedAt: null,
       stale: false,
       error:
-        process.env.NODE_ENV === "development"
+        config.NODE_ENV === "development"
           ? (error as Error).message
           : "Internal server error",
     });
@@ -502,7 +502,7 @@ router.get("/organizations", optionalAuth, async (req: AuthenticatedRequest, res
       message: "Failed to retrieve organizations",
       timestamp: new Date().toISOString(),
       error:
-        process.env.NODE_ENV === "development"
+        config.NODE_ENV === "development"
           ? (error as Error).message
           : "Internal server error",
     });
