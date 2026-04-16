@@ -138,15 +138,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
+  const getCsrfToken = (): string | null => {
+    const cookie = document.cookie
+      .split(";")
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith("csrf_token="));
+    if (!cookie) return null;
+    const value = cookie.split("=").slice(1).join("=");
+    return value ? decodeURIComponent(value) : null;
+  };
+
   const logout = async () => {
     // Notify server to blacklist the token
     if (token) {
       try {
+        const csrfToken = getCsrfToken();
         await fetch("/api/auth/logout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(csrfToken && { "X-CSRF-Token": csrfToken }),
           },
           credentials: "include",
         });
@@ -166,12 +178,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const refreshToken = async (currentToken?: string) => {
     try {
       const tokenToUse = currentToken || token;
+      const csrfToken = getCsrfToken();
 
       const response = await fetch("/api/auth/refresh", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(tokenToUse ? { Authorization: `Bearer ${tokenToUse}` } : {}),
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         credentials: "include",
       });
@@ -208,13 +222,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const verifyPassword = async (password: string) => {
     try {
       if (!token) throw new Error("Not authenticated");
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/auth/verify-password", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         body: JSON.stringify({ password }),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -308,10 +325,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = async (email: string, password: string, code?: string) => {
     try {
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         credentials: "include",
         body: JSON.stringify({ email, password, code }),
@@ -350,10 +369,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const register = async (data: RegisterData) => {
     try {
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
         credentials: "include",
         body: JSON.stringify(data),
@@ -392,12 +413,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }) => {
     try {
       if (!token) throw new Error("Not authenticated");
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/auth/profile", {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
+        credentials: "include",
         body: JSON.stringify(data),
       });
       const result = await response.json();
@@ -419,12 +443,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   ) => {
     try {
       if (!token) throw new Error("Not authenticated");
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/auth/password", {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
+        credentials: "include",
         body: JSON.stringify({ currentPassword, newPassword }),
       });
       const result = await response.json();
@@ -462,12 +489,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         ? notificationsOrPayload
         : { notifications: notificationsOrPayload, security };
 
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/auth/preferences", {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
       const result = await response.json();
@@ -511,12 +541,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const createApiKey = async (name: string) => {
     try {
       if (!token) throw new Error("Not authenticated");
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/auth/api-keys", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
+        credentials: "include",
         body: JSON.stringify({ name }),
       });
       const result = await response.json();
@@ -533,11 +566,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const revokeApiKey = async (id: string) => {
     try {
       if (!token) throw new Error("Not authenticated");
+      const csrfToken = getCsrfToken();
       const response = await fetch(`/api/auth/api-keys/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
+        credentials: "include",
       });
       const result = await response.json();
       if (!response.ok) {
@@ -553,11 +589,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const setup2FA = async () => {
     try {
       if (!token) throw new Error("Not authenticated");
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/auth/2fa/setup", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
+        credentials: "include",
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Failed to setup 2FA");
@@ -571,12 +610,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const verify2FA = async (otpToken: string) => {
     try {
       if (!token) throw new Error("Not authenticated");
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/auth/2fa/verify", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
+        credentials: "include",
         body: JSON.stringify({ token: otpToken }),
       });
       const result = await response.json();
@@ -598,11 +640,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const disable2FA = async () => {
     try {
       if (!token) throw new Error("Not authenticated");
+      const csrfToken = getCsrfToken();
       const response = await fetch("/api/auth/2fa/disable", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
         },
+        credentials: "include",
       });
       const result = await response.json();
       if (!response.ok)
@@ -626,12 +671,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       try {
         // Call backend API to persist organization context
+        const csrfToken = getCsrfToken();
         const response = await fetch("/api/auth/switch-organization", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
+            ...(csrfToken && { "X-CSRF-Token": csrfToken }),
           },
+          credentials: "include",
           body: JSON.stringify({ organizationId: orgId }),
         });
 
