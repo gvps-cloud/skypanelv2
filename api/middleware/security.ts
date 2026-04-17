@@ -6,6 +6,7 @@ import crypto from "crypto";
 import type { AuthenticatedRequest } from "./auth.js";
 import { logActivity } from "../services/activityLogger.js";
 import helmet from "helmet";
+import { config } from "../config/index.js";
 
 /**
  * Enhanced Helmet configuration with XSS protection
@@ -23,8 +24,14 @@ import helmet from "helmet";
  * - form-action 'self': Restrict form submissions to same origin
  * - frame-ancestors 'none': Prevent page from being embedded in frames (clickjacking protection)
  * - upgrade-insecure-requests: Automatically upgrade HTTP to HTTPS
+ *
+ * **XSS hardening note:** `'unsafe-eval'` is omitted in BOTH development and
+ * production. Modern Vite (>= 5) uses native ES modules in dev and does not
+ * require eval(). Removing it closes a significant XSS vector at no cost to
+ * developer ergonomics. `'unsafe-inline'` remains in dev for Vite's HMR error
+ * overlay; production uses nonce-based scripts exclusively.
  */
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = config.NODE_ENV === "production";
 
 const buildCspDirectives = () => {
   const connectSrc = [
@@ -55,7 +62,7 @@ const buildCspDirectives = () => {
         "'sha256-MSG2xchJN1qC+4Jk56/h7996tbE2FVQ4hQMQYC3ewWc='",
         "'sha256-yqZYXtmLxRaOKX1dE/QElpGWJGCAbxmPF7dqT3XsdmQ='",
       ]
-    : ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.sslip.io"];
+    : ["'self'", "'unsafe-inline'", "https://*.sslip.io"];
   // style-src keeps 'unsafe-inline' because React sets inline styles at runtime
   // and dynamic theme/chart CSS injection requires it
   const styleSrc = ["'self'", "'unsafe-inline'"];

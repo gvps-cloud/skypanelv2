@@ -131,6 +131,22 @@ async function attemptProvider(
 }
 
 export async function sendEmail(options: SendMailOptions): Promise<void> {
+  // Test-mode guardrail: never make real email provider calls from the test
+  // suite. Tests that need to assert on email dispatch should vi.mock the
+  // specific sender (sendWelcomeEmail, sendPasswordResetEmail, etc.) or spy on
+  // this function directly. Rationale: unconfigured/misconfigured providers in
+  // CI machines can block for 10+ seconds, producing flaky, slow test runs.
+  if (config.NODE_ENV === "test") {
+    console.log(
+      `${logPrefix} [test-mode] Suppressed email send`,
+      {
+        to: options.to,
+        subject: options.subject,
+      },
+    );
+    return;
+  }
+
   const senderEmail =
     config.FROM_EMAIL ||
     config.CONTACT_FORM_RECIPIENT ||
