@@ -1,0 +1,71 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Re-run weekly so new CVEs against unchanged code still surface
+    - cron: '0 12 * * 1'
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: npm audit (high+)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # --ignore-scripts blocks post-install supply-chain attacks; safe because
+      # audit only needs the dependency graph, not compiled binaries.
+      - run: npm ci --ignore-scripts
+
+      - name: npm audit (high and above)
+        run: npm run audit:security
+
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+
+  security-tests:
+    name: Security tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Run security test suite
+        run: npm run test:security
+        env:
+          # Guard rails: no emails, no real providers, no VPS creation
+          EMAIL_PROVIDER_PRIORITY: test
+          MOCK_PROVIDERS: 'true'
+          NODE_ENV: test
