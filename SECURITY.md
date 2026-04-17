@@ -13,11 +13,13 @@ We aim to respond within 72 hours and ship a fix or mitigation plan within 7 day
 
 ## Dependency Policy
 
-### Audit Gate
+### Audit Gate (local-only)
 
-`npm run audit:security` runs `npm audit --audit-level=high` and exits non-zero on any **high** or **critical** finding. This command is wired into CI (see `.github/workflows/*`) and blocks merge/deploy on failure.
+`npm run audit:security` runs `npm audit --audit-level=high` and exits non-zero on any **high** or **critical** finding. Run this manually before every merge to `main` and before every deploy.
 
-The `npm run verify:prod` command bundles `audit:security` with type-check, lint, tests, semgrep, and docs audit as the final pre-release gate.
+The `npm run verify:prod` command bundles `audit:security` with type-check, lint, tests, semgrep, and docs audit as the final pre-release gate — run it locally as the last step before `git push` or `npm run pm2:start`.
+
+> We do **not** use hosted CI (GitHub Actions, Dependabot, etc.) on this project. Every security, lint, and test gate is a local command an operator must run before releasing. Treat the list below as a manual checklist.
 
 ### Override Strategy
 
@@ -49,11 +51,13 @@ Low/moderate findings without fixes should be reviewed quarterly against this ta
 
 ## Supply-Chain Practices
 
-- **Exact versions** — devDeps and deps avoid `^` where feasible; `package-lock.json` is committed (CI uses `npm ci`).
+- **Exact versions** — devDeps and deps avoid `^` where feasible; `package-lock.json` is committed. Local installs use `npm ci --ignore-scripts` to block post-install hooks (a known supply-chain attack vector).
 - **Override audit** — every entry in the `overrides` block must cite an advisory or upstream issue in this file.
-- **Post-install scripts blocked** — CI runs `npm ci --ignore-scripts` to prevent supply-chain attacks via install-hook code execution.
-- **SBOM** — generated per release via `@cyclonedx/cyclonedx-npm` and committed.
-- **Automated alerts** — Dependabot / Renovate watches for new CVEs; security-severity PRs auto-merge after CI green.
+- **Manual CVE sweep** — run `npm outdated` and `npm audit` on a scheduled cadence (weekly recommended); review new advisories against the override list before bumping.
+- **Pre-release verification** — `npm run verify:prod` is the operator-run gate before every release. Do not skip it.
+- **SBOM (optional)** — if a release needs an inventory, generate locally via `npx @cyclonedx/cyclonedx-npm --output-file sbom.json` and attach to the release notes.
+
+This project intentionally does not use hosted CI (GitHub Actions / Dependabot / Renovate). Security responsibility lies with the operator running the verify commands before release.
 
 ## Runtime Security Controls
 
