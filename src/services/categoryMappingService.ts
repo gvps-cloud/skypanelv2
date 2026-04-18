@@ -13,11 +13,36 @@ import type {
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 class CategoryMappingService {
+  private getCsrfToken(): string | null {
+    const cookie = document.cookie
+      .split(';')
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith('csrf_token='));
+    if (!cookie) {
+      return null;
+    }
+    const value = cookie.split('=')[1];
+    return value ? decodeURIComponent(value) : null;
+  }
+
   private getAuthHeaders(): HeadersInit {
-    const token = localStorage.getItem('auth_token');
+    const userStr = localStorage.getItem('auth_user');
+    let organizationId: string | undefined;
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        organizationId = user.organizationId;
+      } catch {
+        // ignore
+      }
+    }
+
+    const csrfToken = this.getCsrfToken();
     return {
       'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : '',
+      ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+      ...(organizationId && { 'X-Organization-ID': organizationId }),
     };
   }
 
@@ -33,6 +58,7 @@ class CategoryMappingService {
       const response = await fetch(`${API_BASE_URL}/admin/category-mappings`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
+        credentials: 'include',
       });
 
       const data = await response.json();
@@ -108,6 +134,7 @@ class CategoryMappingService {
       const response = await fetch(`${API_BASE_URL}/admin/category-mappings/${id}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
+        credentials: 'include',
       });
 
       const data = await response.json();
@@ -146,6 +173,7 @@ class CategoryMappingService {
       const response = await fetch(`${API_BASE_URL}/admin/category-mappings`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify(input),
       });
 
@@ -186,6 +214,7 @@ class CategoryMappingService {
       const response = await fetch(`${API_BASE_URL}/admin/category-mappings/${id}`, {
         method: 'PUT',
         headers: this.getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify(input),
       });
 
@@ -222,6 +251,7 @@ class CategoryMappingService {
       const response = await fetch(`${API_BASE_URL}/admin/category-mappings/${id}`, {
         method: 'DELETE',
         headers: this.getAuthHeaders(),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -256,6 +286,7 @@ class CategoryMappingService {
       const response = await fetch(`${API_BASE_URL}/admin/category-mappings/reorder`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify({ orderings }),
       });
 
@@ -295,6 +326,7 @@ class CategoryMappingService {
       const response = await fetch(`${API_BASE_URL}/admin/category-mappings/sync`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify({ mappings }),
       });
 

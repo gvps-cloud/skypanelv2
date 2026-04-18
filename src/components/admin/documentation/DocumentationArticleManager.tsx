@@ -214,7 +214,37 @@ export default function DocumentationArticleManager() {
   const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
-  const token = localStorage.getItem("auth_token");
+  const getCsrfToken = (): string | null => {
+    const cookie = document.cookie
+      .split(';')
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith('csrf_token='));
+    if (!cookie) {
+      return null;
+    }
+    const value = cookie.split('=')[1];
+    return value ? decodeURIComponent(value) : null;
+  };
+
+  const getAuthHeaders = (): HeadersInit => {
+    const userStr = localStorage.getItem("auth_user");
+    let organizationId: string | undefined;
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        organizationId = user.organizationId;
+      } catch {
+        // ignore
+      }
+    }
+
+    const csrfToken = getCsrfToken();
+    return {
+      ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+      ...(organizationId && { "X-Organization-ID": organizationId }),
+    };
+  };
 
   const form = useForm<ArticleFormData>({
     resolver: zodResolver(articleSchema),
@@ -251,14 +281,15 @@ export default function DocumentationArticleManager() {
   const fetchCategories = useCallback(async () => {
     try {
       const res = await fetch(buildApiUrl("/api/admin/documentation/categories"), {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
+        credentials: "include",
       });
       const data = await res.json();
       setCategories(data.categories || []);
     } catch (error) {
       console.error("Failed to fetch categories:", error);
     }
-  }, [token]);
+  }, []);
 
   // Fetch articles
   const fetchArticles = useCallback(async () => {
@@ -270,7 +301,8 @@ export default function DocumentationArticleManager() {
           : buildApiUrl(`/api/admin/documentation/articles?category_id=${selectedCategoryId}`);
 
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
+        credentials: "include",
       });
       const data = await res.json();
       setArticles(data.articles || []);
@@ -280,7 +312,7 @@ export default function DocumentationArticleManager() {
     } finally {
       setIsLoading(false);
     }
-  }, [token, selectedCategoryId]);
+  }, [selectedCategoryId]);
 
   useEffect(() => {
     fetchCategories();
@@ -310,8 +342,9 @@ export default function DocumentationArticleManager() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
+        credentials: "include",
         body: JSON.stringify({ articles: reorderData }),
       });
 
@@ -344,7 +377,8 @@ export default function DocumentationArticleManager() {
         buildApiUrl(`/api/admin/documentation/articles/${articleId}/files`),
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: getAuthHeaders(),
+          credentials: "include",
           body: formData,
         }
       );
@@ -363,7 +397,8 @@ export default function DocumentationArticleManager() {
     try {
       const res = await fetch(buildApiUrl(`/api/admin/documentation/files/${fileId}`), {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
+        credentials: "include",
       });
 
       if (!res.ok) {
@@ -385,8 +420,9 @@ export default function DocumentationArticleManager() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
+        credentials: "include",
         body: JSON.stringify(data),
       });
 
@@ -432,8 +468,9 @@ export default function DocumentationArticleManager() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...getAuthHeaders(),
           },
+          credentials: "include",
           body: JSON.stringify(data),
         }
       );
@@ -490,7 +527,8 @@ export default function DocumentationArticleManager() {
         buildApiUrl(`/api/admin/documentation/articles/${selectedArticle.id}`),
         {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: getAuthHeaders(),
+          credentials: "include",
         }
       );
 
@@ -519,8 +557,9 @@ export default function DocumentationArticleManager() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...getAuthHeaders(),
           },
+          credentials: "include",
           body: JSON.stringify({ is_active: !article.is_active }),
         }
       );
@@ -545,7 +584,8 @@ export default function DocumentationArticleManager() {
       const res = await fetch(
         buildApiUrl(`/api/admin/documentation/articles/${article.id}`),
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: getAuthHeaders(),
+          credentials: "include",
         }
       );
       const data = await res.json();

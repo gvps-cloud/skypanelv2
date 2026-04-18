@@ -116,13 +116,10 @@ export const BillingTransactions: React.FC = () => {
 
   const handleDownloadInvoice = async (invoiceId: string, invoiceNumber?: string) => {
     try {
-      const authToken = localStorage.getItem('auth_token') || localStorage.getItem('token');
       const apiUrl = import.meta.env.VITE_API_URL || '/api';
 
       const response = await fetch(`${apiUrl}/admin/billing/invoices/${invoiceId}/download`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+        credentials: 'include',
       });
 
       if (!response.ok) {

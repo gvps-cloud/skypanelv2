@@ -76,16 +76,11 @@ class ApiClient {
   }
 
   private getAuthHeaders(): HeadersInit {
-    const userStr = localStorage.getItem("auth_user");
     let organizationId: string | undefined;
-    
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        organizationId = user.organizationId;
-      } catch {
-        // ignore
-      }
+    try {
+      organizationId = sessionStorage.getItem("skypanel_org_id") ?? undefined;
+    } catch {
+      // sessionStorage unavailable
     }
 
     const csrfToken = this.getCsrfToken();

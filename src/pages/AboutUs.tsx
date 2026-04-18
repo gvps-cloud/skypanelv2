@@ -99,9 +99,6 @@ const values: ValueItem[] = [
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
 
-const asRecord = (v: unknown): Record<string, unknown> | null =>
-  v && typeof v === "object" ? (v as Record<string, unknown>) : null;
-
 const parseNumber = (v: unknown): number | null => {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -115,27 +112,21 @@ export default function AboutUs() {
   useEffect(() => {
     let mounted = true;
 
-    const read = async (path: string) => {
-      try {
-        const r = await fetch(path);
-        if (!r.ok) return null;
-        return asRecord(await r.json());
-      } catch {
-        return null;
-      }
-    };
-
     const load = async () => {
-      const regData = await read("/api/pricing/public-regions");
-      if (!mounted) return;
-      if (regData?.success === true) {
-        const regions = regData.regions;
-        if (Array.isArray(regions) && regions.length > 0) {
-          setRegionCount(regions.length);
-        } else {
-          const c = parseNumber(regData.count);
-          if (c !== null && c > 0) setRegionCount(c);
+      try {
+        const regData = await api.get<{ success?: boolean; regions?: any[]; count?: number }>("/pricing/public-regions");
+        if (!mounted) return;
+        if (regData?.success === true) {
+          const regions = regData.regions;
+          if (Array.isArray(regions) && regions.length > 0) {
+            setRegionCount(regions.length);
+          } else {
+            const c = parseNumber(regData.count);
+            if (c !== null && c > 0) setRegionCount(c);
+          }
         }
+      } catch {
+        // Silently fail - region count is optional
       }
     };
 

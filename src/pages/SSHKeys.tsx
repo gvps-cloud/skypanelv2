@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Key, Plus, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,6 +11,7 @@ import { SSHKeyForm } from '@/components/SSHKeys/SSHKeyForm';
 import { DeleteSSHKeyDialog } from '@/components/SSHKeys/DeleteSSHKeyDialog';
 import { Badge } from '@/components/ui/badge';
 import type { OrganizationSSHKey } from '@/types/organizations';
+import { apiClient } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,6 @@ import {
 import { cn } from '@/lib/utils';
 
 const SSHKeys: React.FC = () => {
-  const { token } = useAuth();
   const location = useLocation();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [keyToDelete, setKeyToDelete] = useState<OrganizationSSHKey | null>(null);
@@ -41,37 +40,18 @@ const SSHKeys: React.FC = () => {
   } = useQuery<OrganizationSSHKey[]>({
     queryKey: ['ssh-keys'],
     queryFn: async () => {
-      const response = await fetch('/api/ssh-keys', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch SSH keys');
-      }
-      const data = await response.json();
+      const data = await apiClient.get<{ keys?: OrganizationSSHKey[] }>('/ssh-keys');
       return data.keys || [];
     },
-    enabled: !!token,
   });
 
   // Add SSH key mutation
   const addKeyMutation = useMutation({
     mutationFn: async (data: { name: string; publicKey: string }) => {
-      const response = await fetch('/api/ssh-keys', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: data.name,
-          publicKey: data.publicKey,
-        }),
+      return apiClient.post('/ssh-keys', {
+        name: data.name,
+        publicKey: data.publicKey,
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add SSH key');
-      }
-      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['ssh-keys'] });
@@ -97,17 +77,7 @@ const SSHKeys: React.FC = () => {
   // Delete SSH key mutation
   const deleteKeyMutation = useMutation({
     mutationFn: async (keyId: string) => {
-      const response = await fetch(`/api/ssh-keys/${keyId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete SSH key');
-      }
-      return response.json();
+      return apiClient.delete(`/ssh-keys/${keyId}`);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['ssh-keys'] });

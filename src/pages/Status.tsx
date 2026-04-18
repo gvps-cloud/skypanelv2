@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import "@/styles/home.css";
+import { apiClient } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -184,8 +185,7 @@ export default function Status() {
       let vpsStopped = 0;
 
       try {
-        const statusResponse = await fetch("/api/health/status");
-        const statusData = await statusResponse.json();
+        const statusData = await apiClient.get<{ success?: boolean; services?: { vps?: { total?: number; running?: number; stopped?: number } } }>('/health/status');
 
         if (statusData.success && statusData.services) {
           vpsCount = statusData.services.vps?.total || 0;
@@ -211,8 +211,7 @@ export default function Status() {
       setLastUpdated(new Date().toLocaleTimeString());
 
       try {
-        const uptimeResponse = await fetch("/api/health/uptime");
-        const uptimeData = await uptimeResponse.json();
+        const uptimeData = await apiClient.get<{ success?: boolean; configured?: boolean; monitors?: BetterStackMonitor[]; activeIncidents?: any[]; incidentsHistory?: any[]; statusReports?: any[]; cachedAt?: string | null; stale?: boolean }>('/health/uptime');
 
         if (uptimeData.success && uptimeData.configured) {
           setBsConfigured(true);

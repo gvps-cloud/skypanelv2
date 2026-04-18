@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import Pagination from '@/components/ui/Pagination';
+import { apiClient } from '@/lib/api';
 
 interface ActivityRecord {
   id: string;
@@ -66,11 +67,7 @@ const ActivityPage: React.FC = () => {
       if (to instanceof Date) params.set('to', to.toISOString());
       params.set('limit', String(limit));
       params.set('offset', String((page - 1) * limit));
-      const res = await fetch(`/api/activity?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load activity');
+      const data = await apiClient.get<{ activities?: ActivityRecord[]; pagination?: PaginationInfo; error?: string }>(`/activity?${params.toString()}`);
       setActivities(data.activities || []);
       setPagination(data.pagination || {
         total: 0,

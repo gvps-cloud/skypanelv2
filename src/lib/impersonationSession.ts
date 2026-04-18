@@ -1,9 +1,8 @@
-export const AUTH_TOKEN_STORAGE_KEY = "auth_token";
-export const AUTH_USER_STORAGE_KEY = "auth_user";
 export const IMPERSONATION_TOKEN_STORAGE_KEY = "impersonation_token";
 export const IMPERSONATION_USER_STORAGE_KEY = "impersonation_user";
 export const IMPERSONATION_ADMIN_STORAGE_KEY = "impersonation_original_admin";
 export const IMPERSONATION_EXPIRES_AT_STORAGE_KEY = "impersonation_expires_at";
+export const SESSION_ORG_ID_KEY = "skypanel_org_id";
 
 export interface StoredSessionUser {
   id: string;
@@ -46,16 +45,49 @@ type JwtPayload = {
   [key: string]: unknown;
 };
 
-function isBrowser() {
-  return typeof window !== "undefined" && typeof localStorage !== "undefined";
+function isBrowser(): boolean {
+  return typeof window !== "undefined";
 }
 
-function parseStoredJson<T>(key: string): T | null {
+function sessionStorageGetItem(key: string): string | null {
+  if (!isBrowser()) {
+    return null;
+  }
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function sessionStorageSetItem(key: string, value: string): void {
+  if (!isBrowser()) {
+    return;
+  }
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // Storage full or unavailable
+  }
+}
+
+function sessionStorageRemoveItem(key: string): void {
+  if (!isBrowser()) {
+    return;
+  }
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    // Ignore
+  }
+}
+
+function parseStoredJson<T>(key: string, storage: Storage): T | null {
   if (!isBrowser()) {
     return null;
   }
 
-  const rawValue = localStorage.getItem(key);
+  const rawValue = storage.getItem(key);
   if (!rawValue) {
     return null;
   }
@@ -111,10 +143,10 @@ export function clearImpersonationSessionStorage() {
     return;
   }
 
-  localStorage.removeItem(IMPERSONATION_TOKEN_STORAGE_KEY);
-  localStorage.removeItem(IMPERSONATION_USER_STORAGE_KEY);
-  localStorage.removeItem(IMPERSONATION_ADMIN_STORAGE_KEY);
-  localStorage.removeItem(IMPERSONATION_EXPIRES_AT_STORAGE_KEY);
+  sessionStorageRemoveItem(IMPERSONATION_TOKEN_STORAGE_KEY);
+  sessionStorageRemoveItem(IMPERSONATION_USER_STORAGE_KEY);
+  sessionStorageRemoveItem(IMPERSONATION_ADMIN_STORAGE_KEY);
+  sessionStorageRemoveItem(IMPERSONATION_EXPIRES_AT_STORAGE_KEY);
 }
 
 export function persistImpersonationSession(session: StoredImpersonationSession) {
@@ -122,10 +154,10 @@ export function persistImpersonationSession(session: StoredImpersonationSession)
     return;
   }
 
-  localStorage.setItem(IMPERSONATION_TOKEN_STORAGE_KEY, session.token);
-  localStorage.setItem(IMPERSONATION_USER_STORAGE_KEY, JSON.stringify(session.user));
-  localStorage.setItem(IMPERSONATION_ADMIN_STORAGE_KEY, JSON.stringify(session.originalAdmin));
-  localStorage.setItem(IMPERSONATION_EXPIRES_AT_STORAGE_KEY, session.expiresAt);
+  sessionStorageSetItem(IMPERSONATION_TOKEN_STORAGE_KEY, session.token);
+  sessionStorageSetItem(IMPERSONATION_USER_STORAGE_KEY, JSON.stringify(session.user));
+  sessionStorageSetItem(IMPERSONATION_ADMIN_STORAGE_KEY, JSON.stringify(session.originalAdmin));
+  sessionStorageSetItem(IMPERSONATION_EXPIRES_AT_STORAGE_KEY, session.expiresAt);
 }
 
 export function getStoredImpersonationSession(): StoredImpersonationSession | null {
@@ -133,9 +165,7 @@ export function getStoredImpersonationSession(): StoredImpersonationSession | nu
     return null;
   }
 
-  const dedicatedToken = localStorage.getItem(IMPERSONATION_TOKEN_STORAGE_KEY);
-  const fallbackToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-  const token = dedicatedToken ?? fallbackToken;
+  const token = sessionStorageGetItem(IMPERSONATION_TOKEN_STORAGE_KEY);
 
   if (!token || !hasImpersonationClaims(token) || isTokenExpired(token)) {
     clearImpersonationSessionStorage();
@@ -143,16 +173,14 @@ export function getStoredImpersonationSession(): StoredImpersonationSession | nu
   }
 
   const payload = decodeJwtPayload(token);
-  const user =
-    parseStoredJson<StoredSessionUser>(IMPERSONATION_USER_STORAGE_KEY) ??
-    parseStoredJson<StoredSessionUser>(AUTH_USER_STORAGE_KEY);
+  const user = parseStoredJson<StoredSessionUser>(IMPERSONATION_USER_STORAGE_KEY, sessionStorage);
 
   if (!user) {
     return null;
   }
 
   const expiresAt =
-    localStorage.getItem(IMPERSONATION_EXPIRES_AT_STORAGE_KEY) ??
+    sessionStorageGetItem(IMPERSONATION_EXPIRES_AT_STORAGE_KEY) ??
     (payload?.exp ? new Date(payload.exp * 1000).toISOString() : null);
 
   if (!expiresAt) {
@@ -160,7 +188,7 @@ export function getStoredImpersonationSession(): StoredImpersonationSession | nu
   }
 
   const originalAdmin =
-    parseStoredJson<StoredOriginalAdmin>(IMPERSONATION_ADMIN_STORAGE_KEY) ??
+    parseStoredJson<StoredOriginalAdmin>(IMPERSONATION_ADMIN_STORAGE_KEY, sessionStorage) ??
     (payload?.originalAdminId
       ? {
           id: String(payload.originalAdminId),

@@ -3,7 +3,7 @@
  * Handles egress credits API calls
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+import { apiClient } from '@/lib/api';
 
 export interface CreditPack {
   id: string;
@@ -58,29 +58,6 @@ export interface EgressPurchaseResult {
 }
 
 class EgressService {
-  private getAuthHeaders(organizationIdOverride?: string): HeadersInit {
-    const token = localStorage.getItem("auth_token");
-    const userStr = localStorage.getItem("auth_user");
-    let organizationId: string | undefined;
-
-    // Prefer explicit override from caller
-    if (organizationIdOverride) {
-      organizationId = organizationIdOverride;
-    } else if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        organizationId = user.organizationId;
-      } catch {
-        // ignore
-      }
-    }
-
-    return {
-      "Content-Type": "application/json",
-      Authorization: token ? `Bearer ${token}` : "",
-      ...(organizationId && { "X-Organization-ID": organizationId }),
-    };
-  }
 
   /**
    * Get current egress credit balance
@@ -91,30 +68,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/egress/credits`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to get credit balance",
-        };
-      }
-
-      return {
-        success: true,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.get<{ data: EgressCreditBalance }>('/egress/credits');
+      return { success: true, data: data.data };
+    } catch (error: any) {
       console.error("Get egress balance error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -127,30 +85,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/egress/credits/packs`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to get credit packs",
-        };
-      }
-
-      return {
-        success: true,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.get<{ data: CreditPack[] }>('/egress/credits/packs');
+      return { success: true, data: data.data };
+    } catch (error: any) {
       console.error("Get credit packs error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -159,21 +98,7 @@ class EgressService {
    */
   async purchaseCredits(packId: string): Promise<EgressPurchaseResult> {
     try {
-      const response = await fetch(`${API_BASE_URL}/egress/credits/purchase`, {
-        method: "POST",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ packId }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to create purchase",
-        };
-      }
-
+      const data = await apiClient.post<any>('/egress/credits/purchase', { packId });
       return {
         success: true,
         paymentId: data.paymentId,
@@ -182,12 +107,9 @@ class EgressService {
         amount: data.amount,
         creditsGb: data.creditsGb,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Purchase credits error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -200,30 +122,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/egress/credits/history?limit=${limit}`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to get purchase history",
-        };
-      }
-
-      return {
-        success: true,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.get<{ data: CreditPurchase[] }>(`/egress/credits/history?limit=${limit}`);
+      return { success: true, data: data.data };
+    } catch (error: any) {
       console.error("Get purchase history error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -240,30 +143,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/egress/usage/${vpsId}?limit=${limit}`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to get VPS usage",
-        };
-      }
-
-      return {
-        success: true,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.get<{ data: { vpsId: string; label: string; usage: HourlyReading[] } }>(`/egress/usage/${vpsId}?limit=${limit}`);
+      return { success: true, data: data.data };
+    } catch (error: any) {
       console.error("Get VPS usage error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -276,30 +160,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/egress/usage/${vpsId}/summary`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to get VPS usage summary",
-        };
-      }
-
-      return {
-        success: true,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.get<{ data: VPSUsageSummary }>(`/egress/usage/${vpsId}/summary`);
+      return { success: true, data: data.data };
+    } catch (error: any) {
       console.error("Get VPS usage summary error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -312,33 +177,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/egress/credits/wallet-balance`,
-        {
-          method: "GET",
-          headers: this.getAuthHeaders(_organizationId),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to get wallet balance",
-        };
-      }
-
-      return {
-        success: true,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.get<{ data: { balance: number } }>('/egress/credits/wallet-balance');
+      return { success: true, data: data.data };
+    } catch (error: any) {
       console.error("Get wallet balance error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -358,35 +201,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/egress/credits/purchase/wallet`,
-        {
-          method: "POST",
-          headers: this.getAuthHeaders(organizationId),
-          body: JSON.stringify({ organizationId, packId }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to purchase credits",
-        };
-      }
-
-      return {
-        success: true,
-        message: data.message,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.post<any>('/egress/credits/purchase/wallet', { organizationId, packId });
+      return { success: true, message: data.message, data: data.data };
+    } catch (error: any) {
       console.error("Purchase with wallet error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -404,30 +223,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/organizations/${organizationId}/egress/credits?limit=${limit}`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to get organization egress credits",
-        };
-      }
-
-      return {
-        success: true,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.get<{ data: any }>(`/organizations/${organizationId}/egress/credits?limit=${limit}`);
+      return { success: true, data: data.data };
+    } catch (error: any) {
       console.error("Get organization egress credits error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -440,30 +240,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/organizations/${organizationId}/egress/credits/packs`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to get credit packs",
-        };
-      }
-
-      return {
-        success: true,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.get<{ data: CreditPack[] }>(`/organizations/${organizationId}/egress/credits/packs`);
+      return { success: true, data: data.data };
+    } catch (error: any) {
       console.error("Get credit packs error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -483,24 +264,7 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/organizations/${organizationId}/egress/credits/purchase`,
-        {
-          method: "POST",
-          headers: this.getAuthHeaders(organizationId),
-          body: JSON.stringify({ packId }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to create purchase",
-        };
-      }
-
+      const data = await apiClient.post<any>(`/organizations/${organizationId}/egress/credits/purchase`, { packId });
       return {
         success: true,
         paymentId: data.paymentId,
@@ -509,12 +273,9 @@ class EgressService {
         amount: data.amount,
         creditsGb: data.creditsGb,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Initiate purchase error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -543,35 +304,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-    const response = await fetch(
-      `${API_BASE_URL}/organizations/${organizationId}/egress/credits/purchase/complete`,
-      {
-        method: "POST",
-        headers: this.getAuthHeaders(organizationId),
-        body: JSON.stringify({ paymentId, packId }),
-      },
-    );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to complete purchase",
-        };
-      }
-
-      return {
-        success: true,
-        message: data.message,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.post<any>(`/organizations/${organizationId}/egress/credits/purchase/complete`, { paymentId, packId });
+      return { success: true, message: data.message, data: data.data };
+    } catch (error: any) {
       console.error("Complete purchase error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -587,30 +324,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/egress/admin/settings/packs`, {
-        method: "GET",
-        headers: this.getAuthHeaders(),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to get pack settings",
-        };
-      }
-
-      return {
-        success: true,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.get<{ data: { packs: CreditPack[]; warningThresholdGb: number } }>('/egress/admin/settings/packs');
+      return { success: true, data: data.data };
+    } catch (error: any) {
       console.error("Get admin pack settings error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 
@@ -630,32 +348,11 @@ class EgressService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/egress/admin/settings/packs`, {
-        method: "PUT",
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({ packs, warningThresholdGb }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || "Failed to update pack settings",
-        };
-      }
-
-      return {
-        success: true,
-        message: data.message,
-        data: data.data,
-      };
-    } catch (error) {
+      const data = await apiClient.put<any>('/egress/admin/settings/packs', { packs, warningThresholdGb });
+      return { success: true, message: data.message, data: data.data };
+    } catch (error: any) {
       console.error("Update admin pack settings error:", error);
-      return {
-        success: false,
-        error: "Network error occurred",
-      };
+      return { success: false, error: error.message || "Network error occurred" };
     }
   }
 }

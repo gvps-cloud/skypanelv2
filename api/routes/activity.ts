@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { authenticateToken, requireOrganization } from "../middleware/auth.js";
 import { query } from "../lib/database.js";
 import { ensureActivityLogsTable } from "../services/activityLogger.js";
+import { sendSafeErrorResponse } from "../lib/errorHandling.js";
 
 const router = express.Router();
 
@@ -40,11 +41,8 @@ router.get("/recent", async (req: Request, res: Response) => {
     }));
 
     res.json({ activities });
-  } catch (err: any) {
-    console.error("Recent activity fetch error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to fetch recent activity" });
+  } catch (err) {
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to fetch recent activity" });
   }
 });
 
@@ -123,9 +121,8 @@ router.get("/", requireOrganization, async (req: Request, res: Response) => {
         totalPages: Math.ceil(total / lim),
       },
     });
-  } catch (err: any) {
-    console.error("Activity list error:", err);
-    res.status(500).json({ error: err.message || "Failed to fetch activity" });
+  } catch (err) {
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to fetch activity" });
   }
 });
 

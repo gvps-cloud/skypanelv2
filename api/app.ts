@@ -30,8 +30,8 @@ import {
 import { config, validateConfig } from "./config/index.js";
 import authRoutes from "./routes/auth.js";
 import paymentRoutes from "./routes/payments.js";
-import adminRoutes from "./routes/admin.js";
-import vpsRoutes from "./routes/vps.js";
+import adminRoutes from "./routes/admin/index.js";
+import vpsRoutes from "./routes/vps/index.js";
 import supportRoutes from "./routes/support.js";
 import activityRoutes from "./routes/activity.js";
 import invoicesRouter from "./routes/invoices.js";

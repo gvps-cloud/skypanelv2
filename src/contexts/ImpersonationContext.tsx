@@ -2,12 +2,11 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
-  AUTH_TOKEN_STORAGE_KEY,
-  AUTH_USER_STORAGE_KEY,
   clearImpersonationSessionStorage,
   getStoredImpersonationSession,
   persistImpersonationSession,
 } from '@/lib/impersonationSession';
+import { apiClient } from '@/lib/api';
 
 interface ImpersonatedUser {
   id: string;
@@ -118,34 +117,20 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsStarting(true);
     setStartingProgress(0);
     setStartingMessage('Validating permissions...');
-    
-    try {
-      const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
 
+    try {
       // First, fetch target user details for the loading overlay
       setStartingProgress(10);
       setStartingMessage('Fetching user details...');
-      
+
       try {
-        const userResponse = await fetch(`/api/admin/users/${targetUserId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+        const userData = await apiClient.get<{ user: { id: string; name: string; email: string; role: string } }>(`/admin/users/${targetUserId}`);
+        setStartingTargetUser({
+          id: userData.user.id,
+          name: userData.user.name,
+          email: userData.user.email,
+          role: userData.user.role
         });
-        
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          setStartingTargetUser({
-            id: userData.user.id,
-            name: userData.user.name,
-            email: userData.user.email,
-            role: userData.user.role
-          });
-        }
       } catch (userFetchError) {
         console.warn('Could not fetch user details for loading overlay:', userFetchError);
       }
@@ -154,37 +139,24 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       setStartingProgress(25);
       setStartingMessage('Preparing impersonation session...');
 
-      const response = await fetch(`/api/admin/users/${targetUserId}/impersonate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ confirmAdminImpersonation }),
-      });
+      // Admin auth is sent via HttpOnly cookie (credentials: "include")
+      let data;
+      try {
+        data = await apiClient.post<{ requiresConfirmation?: boolean; targetUser?: any; error?: string; impersonationToken?: string; user?: any; originalAdmin?: any; expiresAt?: string }>(`/admin/users/${targetUserId}/impersonate`, { confirmAdminImpersonation });
+      } catch (err: any) {
+        if (err?.requiresConfirmation) {
+          throw err;
+        }
+        throw new Error(err?.message || 'Failed to start impersonation');
+      }
 
       setStartingProgress(50);
       setStartingMessage('Processing response...');
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.requiresConfirmation) {
-          // Re-throw with confirmation data for the caller to handle
-          const error = new Error(data.error) as any;
-          error.requiresConfirmation = true;
-          error.targetUser = data.targetUser;
-          throw error;
-        }
-        throw new Error(data.error || 'Failed to start impersonation');
-      }
-
       setStartingProgress(75);
       setStartingMessage('Updating session...');
 
-      // Store the impersonation token and update auth state
-      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, data.impersonationToken);
-      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(data.user));
+      // Store impersonation session in sessionStorage (not localStorage)
       persistImpersonationSession({
         token: data.impersonationToken,
         user: data.user,
@@ -205,14 +177,14 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       setStartingMessage('Redirecting...');
 
       toast.success(`Now acting as ${data.user.name}`);
-      
+
       // Small delay to show completion
       setTimeout(() => {
         window.location.href = '/dashboard';
       }, 500);
     } catch (error: any) {
       console.error('Impersonation start error:', error);
-      
+
       if (error.requiresConfirmation) {
         // Store target user info for confirmation dialog
         if (error.targetUser) {
@@ -226,7 +198,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         // Re-throw for the caller to handle confirmation dialog
         throw error;
       }
-      
+
       toast.error(error.message || 'Failed to start impersonation');
       throw error;
     } finally {
@@ -243,7 +215,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     setIsExiting(true);
-    
+
     try {
       const response = await fetch('/api/admin/impersonation/exit', {
         method: 'POST',
@@ -251,6 +223,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
           'Authorization': `Bearer ${state.impersonationToken}`,
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
       });
 
       const data = await response.json();
@@ -259,9 +232,7 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error(data.error || 'Failed to exit impersonation');
       }
 
-      // Restore admin token and user data
-      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, data.adminToken);
-      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(data.admin));
+      // Clear impersonation session from sessionStorage
       clearImpersonationSessionStorage();
 
       // Clear impersonation state
@@ -274,13 +245,13 @@ export const ImpersonationProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       toast.success('Returned to admin session');
-      
+
       // Redirect back to admin panel
       window.location.href = '/admin#user-management';
     } catch (error: any) {
       console.error('Impersonation exit error:', error);
       toast.error(error.message || 'Failed to exit impersonation');
-      
+
       // On error, still clear local state and redirect to login for safety
       clearImpersonation();
       window.location.href = '/login';

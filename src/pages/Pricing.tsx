@@ -36,6 +36,7 @@ import { useEnabledCategoryMappings } from '@/hooks/useCategoryMappings';
 import { BRAND_NAME } from '@/lib/brand';
 import MarketingNavbar from '@/components/MarketingNavbar';
 import MarketingFooter from '@/components/MarketingFooter';
+import { apiClient } from '@/lib/api';
 import '@/styles/home.css';
 
 /* â”€â”€â”€ Animation Variants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -101,16 +102,9 @@ const PricingPage: React.FC = () => {
     setError(null);
 
     try {
-      const vpsResponse = await fetch('/api/pricing/vps');
-      const vpsResult = await vpsResponse.json().catch(() => ({}));
-
-      if (!vpsResponse.ok) {
-        console.warn('VPS plans fetch failed:', (vpsResult as any).error);
-        setError('Failed to load pricing information');
-      } else {
-        console.log('VPS plans loaded:', vpsResult.plans?.length || 0);
-        setVpsPlans(vpsResult.plans || []);
-      }
+      const vpsResult = await apiClient.get<{ plans?: VPSPlan[]; error?: string }>('/pricing/vps');
+      console.log('VPS plans loaded:', vpsResult.plans?.length || 0);
+      setVpsPlans(vpsResult.plans || []);
     } catch (err) {
       console.error('Failed to load pricing data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load pricing information');

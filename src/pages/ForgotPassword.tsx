@@ -8,6 +8,7 @@ import "@/styles/auth.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { apiClient } from "@/lib/api";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -19,17 +20,7 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to process password reset request");
-      }
-
-      await response.json();
+      await apiClient.post("/auth/forgot-password", { email });
       toast.success("Reset code has been sent to your email");
       setSubmitted(true);
     } catch (error: unknown) {

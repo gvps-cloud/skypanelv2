@@ -1,6 +1,7 @@
 import express, { Response } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js';
 import { ActivityFeedService } from '../services/activityFeed.js';
+import { sendSafeErrorResponse } from '../lib/errorHandling.js';
 
 const router = express.Router();
 
@@ -15,11 +16,10 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    const activities = await ActivityFeedService.getUserActivities(user.id, unreadOnly);
+    const activities = await ActivityFeedService.getUserActivities(user.id, unreadOnly, user.organizationId);
     res.json({ activities });
-  } catch (error) {
-    console.error('Failed to fetch activities:', error);
-    res.status(500).json({ error: 'Failed to fetch activities' });
+  } catch (err) {
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: 'Failed to fetch activities' });
   }
 });
 
@@ -31,11 +31,10 @@ router.get('/unread-count', async (req: AuthenticatedRequest, res: Response) => 
   }
 
   try {
-    const count = await ActivityFeedService.getUnreadCount(user.id);
+    const count = await ActivityFeedService.getUnreadCount(user.id, user.organizationId);
     res.json({ count });
-  } catch (error) {
-    console.error('Failed to fetch unread count:', error);
-    res.status(500).json({ error: 'Failed to fetch unread count' });
+  } catch (err) {
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: 'Failed to fetch unread count' });
   }
 });
 
@@ -47,11 +46,10 @@ router.put('/read-all', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    await ActivityFeedService.markAllAsRead(user.id);
+    await ActivityFeedService.markAllAsRead(user.id, user.organizationId);
     res.json({ message: 'All activities marked as read' });
-  } catch (error) {
-    console.error('Failed to mark all as read:', error);
-    res.status(500).json({ error: 'Failed to mark all as read' });
+  } catch (err) {
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: 'Failed to mark all as read' });
   }
 });
 
@@ -102,9 +100,8 @@ router.get('/organization/:organizationId', async (req: AuthenticatedRequest, re
   try {
     const activities = await ActivityFeedService.getActivitiesByOrganization(user.id, organizationId);
     res.json({ activities });
-  } catch (error) {
-    console.error('Failed to fetch organization activities:', error);
-    res.status(500).json({ error: 'Failed to fetch organization activities' });
+  } catch (err) {
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: 'Failed to fetch organization activities' });
   }
 });
 

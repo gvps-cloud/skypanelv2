@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { buildApiUrl } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import {
   DEFAULT_THEME_ID,
   ThemeId,
@@ -208,11 +208,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
-      const response = await fetch(buildApiUrl('/theme'));
-      if (!response.ok) {
-        throw new Error(`Failed to load theme configuration: ${response.status}`);
-      }
-      const payload = await response.json();
+      const payload = await apiClient.get<{ theme?: ThemeConfigPayload }>('/theme');
       const config: ThemeConfigPayload | null = payload?.theme ?? null;
       applyRemoteConfig(config);
     } catch (error) {

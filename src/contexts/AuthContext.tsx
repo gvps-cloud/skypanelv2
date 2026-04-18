@@ -1,17 +1,15 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from "react";
 import {
-  AUTH_TOKEN_STORAGE_KEY,
-  AUTH_USER_STORAGE_KEY,
   clearImpersonationSessionStorage,
   decodeJwtPayload,
   getStoredImpersonationSession,
   hasImpersonationClaims,
-  isTokenExpired,
   persistImpersonationSession,
   type StoredOriginalAdmin,
   type StoredSessionUser,
 } from "@/lib/impersonationSession";
+import { apiClient } from "@/lib/api";
 
 export interface User {
   id: string;
@@ -77,19 +75,6 @@ export const useAuth = () => {
   return context;
 };
 
-/**
- * Get authentication token from multiple sources
- * Priority: localStorage > cookies
- * This supports both traditional localStorage auth and HttpOnly cookie auth
- */
-const getAuthToken = (): string | null => {
-  const localToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-  if (localToken && !isTokenExpired(localToken)) {
-    return localToken;
-  }
-  return null;
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -138,73 +123,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   };
 
-  const getCsrfToken = (): string | null => {
-    const cookie = document.cookie
-      .split(";")
-      .map((entry) => entry.trim())
-      .find((entry) => entry.startsWith("csrf_token="));
-    if (!cookie) return null;
-    const value = cookie.split("=").slice(1).join("=");
-    return value ? decodeURIComponent(value) : null;
-  };
-
   const logout = async () => {
-    // Notify server to blacklist the token
-    if (token) {
-      try {
-        const csrfToken = getCsrfToken();
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-          },
-          credentials: "include",
-        });
-      } catch {
-        // Continue with local cleanup even if server request fails
-      }
+    try {
+      await apiClient.post("/auth/logout");
+    } catch {
+      // Continue with local cleanup even if server request fails
     }
 
     setUser(null);
     setToken(null);
     setIsImpersonating(false);
-    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-    localStorage.removeItem(AUTH_USER_STORAGE_KEY);
     clearImpersonationSessionStorage();
+    try { sessionStorage.removeItem("skypanel_org_id"); } catch { /* ignore */ }
   };
 
-  const refreshToken = async (currentToken?: string) => {
+  const refreshToken = async () => {
     try {
-      const tokenToUse = currentToken || token;
-      const csrfToken = getCsrfToken();
-
-      const response = await fetch("/api/auth/refresh", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(tokenToUse ? { Authorization: `Bearer ${tokenToUse}` } : {}),
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Token refresh failed");
-      }
-
-      const data = await response.json();
+      const data = await apiClient.post<{ token?: string; user?: User }>("/auth/refresh");
 
       if (typeof data.token === "string" && data.token.length > 0) {
         setToken(data.token);
-        localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, data.token);
       }
 
-      // Update user data if returned from refresh
       if (data.user) {
         setUser(data.user);
-        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(data.user));
       }
 
       if (typeof data.token === "string" && data.token.length > 0) {
@@ -214,31 +156,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (error) {
       console.error("Token refresh error:", error);
-      logout(); // If refresh fails, logout the user
+      logout();
       throw error;
     }
   };
 
   const verifyPassword = async (password: string) => {
     try {
-      if (!token) throw new Error("Not authenticated");
-      const csrfToken = getCsrfToken();
-      const response = await fetch("/api/auth/verify-password", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        body: JSON.stringify({ password }),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Incorrect password");
-      }
-
+      await apiClient.post("/auth/verify-password", { password });
       return true;
     } catch (error) {
       console.error("Verify password error:", error);
@@ -247,74 +172,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
-    // Check for existing token using multi-source token retrieval
-    const storedToken = getAuthToken();
-    const storedImpersonationSession = getStoredImpersonationSession();
-    const storedUser =
-      localStorage.getItem(AUTH_USER_STORAGE_KEY) ??
-      (storedImpersonationSession
-        ? JSON.stringify(storedImpersonationSession.user)
-        : null);
-
-    if (storedToken && storedUser) {
-      // Check if token is expired
-      if (isTokenExpired(storedToken)) {
-        logout();
-        window.location.href = "/";
+    // Restore session from HttpOnly cookie via /api/auth/me
+    fetch("/api/auth/me", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data?.user) {
+          setUser(data.user);
+          if (typeof data.token === "string" && data.token.length > 0) {
+            setToken(data.token);
+          }
+          if (data.user.organizationId) {
+            try { sessionStorage.setItem("skypanel_org_id", data.user.organizationId); } catch { /* ignore */ }
+          }
+          syncImpersonationSession(data.token ?? null, data.user);
+        }
+      })
+      .catch(() => {
+        // Ignore unauthenticated restore failures
+      })
+      .finally(() => {
         setLoading(false);
-        return;
-      }
-
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-
-      if (storedImpersonationSession?.token === storedToken) {
-        setIsImpersonating(true);
-      } else {
-        setIsImpersonating(hasImpersonationClaims(storedToken));
-      }
-
-      // Automatically refresh user data (and ensure org membership) on load
-      refreshToken(storedToken).catch((err) => {
-        console.warn("Background refresh failed on load:", err);
-        // We don't necessarily want to logout here if it's just a network blip,
-        // but refreshToken already calls logout on error.
       });
-    } else {
-      fetch("/api/auth/me", { credentials: "include" })
-        .then(async (response) => {
-          if (!response.ok) {
-            return null;
-          }
-          return response.json();
-        })
-        .then((data) => {
-          if (data?.user) {
-            setUser(data.user);
-            localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(data.user));
-            // /me now returns a fresh token so Bearer-header callers work.
-            if (typeof data.token === "string" && data.token.length > 0) {
-              setToken(data.token);
-              localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, data.token);
-            }
-            syncImpersonationSession(data.token ?? null, data.user);
-          }
-        })
-        .catch(() => {
-          // Ignore unauthenticated restore failures
-        });
-    }
-
-    setLoading(false);
 
     // Set up periodic token expiration check (every minute)
     const tokenCheckInterval = setInterval(() => {
-      const currentToken = getAuthToken();
-      if (currentToken && isTokenExpired(currentToken)) {
-        logout();
-        window.location.href = "/";
-      }
-    }, 60000); // Check every 60 seconds
+      // Token is HttpOnly cookie - we can't read it directly
+      // If token is expired, API calls will fail and auto-logout will trigger
+    }, 60000);
 
     return () => {
       clearInterval(tokenCheckInterval);
@@ -325,40 +214,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = async (email: string, password: string, code?: string) => {
     try {
-      const csrfToken = getCsrfToken();
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-        body: JSON.stringify({ email, password, code }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Login failed");
-      }
-
-      const data = await response.json();
+      const data = await apiClient.post<{
+        require2fa?: boolean;
+        user?: User;
+        token?: string;
+      }>("/auth/login", { email, password, code });
 
       if (data.require2fa) {
         return { require2fa: true };
       }
 
-      setUser(data.user);
+      setUser(data.user ?? null);
       setToken(data.token ?? null);
       setIsImpersonating(false);
       clearImpersonationSessionStorage();
-
-      // Store in localStorage
-      if (data.token) {
-        localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, data.token);
-      } else {
-        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+      if (data.user?.organizationId) {
+        try { sessionStorage.setItem("skypanel_org_id", data.user.organizationId); } catch { /* ignore */ }
       }
-      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(data.user));
 
       return { success: true };
     } catch (error) {
@@ -369,36 +241,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const register = async (data: RegisterData) => {
     try {
-      const csrfToken = getCsrfToken();
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Registration failed");
-      }
-
-      const result = await response.json();
+      const result = await apiClient.post<{ user: User; token?: string }>(
+        "/auth/register",
+        data,
+      );
 
       setUser(result.user);
       setToken(result.token ?? null);
       setIsImpersonating(false);
       clearImpersonationSessionStorage();
-
-      // Store in localStorage
-      if (result.token) {
-        localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, result.token);
-      } else {
-        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+      if (result.user.organizationId) {
+        try { sessionStorage.setItem("skypanel_org_id", result.user.organizationId); } catch { /* ignore */ }
       }
-      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(result.user));
     } catch (error) {
       console.error("Registration error:", error);
       throw error;
@@ -412,24 +266,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     timezone?: string;
   }) => {
     try {
-      if (!token) throw new Error("Not authenticated");
-      const csrfToken = getCsrfToken();
-      const response = await fetch("/api/auth/profile", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to update profile");
-      }
+      const result = await apiClient.put<{ user: User }>("/auth/profile", data);
       setUser(result.user);
-      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(result.user));
       syncImpersonationSession(token, result.user);
     } catch (error) {
       console.error("Update profile error:", error);
@@ -442,22 +280,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     newPassword: string,
   ) => {
     try {
-      if (!token) throw new Error("Not authenticated");
-      const csrfToken = getCsrfToken();
-      const response = await fetch("/api/auth/password", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-        body: JSON.stringify({ currentPassword, newPassword }),
+      const result = await apiClient.put("/auth/password", {
+        currentPassword,
+        newPassword,
       });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to change password");
-      }
       return result;
     } catch (error) {
       console.error("Change password error:", error);
@@ -470,8 +296,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     security?: any,
   ) => {
     try {
-      if (!token) throw new Error("Not authenticated");
-
       const hasPayloadShape =
         notificationsOrPayload &&
         typeof notificationsOrPayload === "object" &&
@@ -489,27 +313,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         ? notificationsOrPayload
         : { notifications: notificationsOrPayload, security };
 
-      const csrfToken = getCsrfToken();
-      const response = await fetch("/api/auth/preferences", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to update preferences");
-      }
+      const result = await apiClient.put<{ preferences: any }>(
+        "/auth/preferences",
+        payload,
+      );
 
-      // Update local user state
       if (user) {
         const updatedUser = { ...user, preferences: result.preferences };
         setUser(updatedUser);
-        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(updatedUser));
       }
 
       return result.preferences;
@@ -521,16 +332,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const getApiKeys = async () => {
     try {
-      if (!token) throw new Error("Not authenticated");
-      const response = await fetch("/api/auth/api-keys", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to fetch API keys");
-      }
+      const result = await apiClient.get<{ apiKeys: any[] }>("/auth/api-keys");
       return result.apiKeys;
     } catch (error) {
       console.error("Get API keys error:", error);
@@ -540,22 +342,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const createApiKey = async (name: string) => {
     try {
-      if (!token) throw new Error("Not authenticated");
-      const csrfToken = getCsrfToken();
-      const response = await fetch("/api/auth/api-keys", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-        body: JSON.stringify({ name }),
+      const result = await apiClient.post<{ apiKey: any }>("/auth/api-keys", {
+        name,
       });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to create API key");
-      }
       return result.apiKey;
     } catch (error) {
       console.error("Create API key error:", error);
@@ -565,20 +354,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const revokeApiKey = async (id: string) => {
     try {
-      if (!token) throw new Error("Not authenticated");
-      const csrfToken = getCsrfToken();
-      const response = await fetch(`/api/auth/api-keys/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to revoke API key");
-      }
+      const result = await apiClient.delete(`/auth/api-keys/${id}`);
       return result;
     } catch (error) {
       console.error("Revoke API key error:", error);
@@ -588,18 +364,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const setup2FA = async () => {
     try {
-      if (!token) throw new Error("Not authenticated");
-      const csrfToken = getCsrfToken();
-      const response = await fetch("/api/auth/2fa/setup", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Failed to setup 2FA");
+      const result = await apiClient.post<{ secret: string; qrCode: string }>(
+        "/auth/2fa/setup",
+      );
       return result;
     } catch (error) {
       console.error("Setup 2FA error:", error);
@@ -609,26 +376,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const verify2FA = async (otpToken: string) => {
     try {
-      if (!token) throw new Error("Not authenticated");
-      const csrfToken = getCsrfToken();
-      const response = await fetch("/api/auth/2fa/verify", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-        body: JSON.stringify({ token: otpToken }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Failed to verify 2FA");
+      await apiClient.post("/auth/2fa/verify", { token: otpToken });
 
-      // Update local user state
       if (user) {
         const updatedUser = { ...user, twoFactorEnabled: true };
         setUser(updatedUser);
-        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(updatedUser));
         syncImpersonationSession(token, updatedUser);
       }
     } catch (error) {
@@ -639,25 +391,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const disable2FA = async () => {
     try {
-      if (!token) throw new Error("Not authenticated");
-      const csrfToken = getCsrfToken();
-      const response = await fetch("/api/auth/2fa/disable", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-        },
-        credentials: "include",
-      });
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.error || "Failed to disable 2FA");
+      await apiClient.post("/auth/2fa/disable");
 
-      // Update local user state
       if (user) {
         const updatedUser = { ...user, twoFactorEnabled: false };
         setUser(updatedUser);
-        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(updatedUser));
         syncImpersonationSession(token, updatedUser);
       }
     } catch (error) {
@@ -667,39 +405,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const switchOrganization = async (orgId: string) => {
-      if (!user || !token) return;
+    try {
+      const data = await apiClient.post<{ user: User }>(
+        "/auth/switch-organization",
+        { organizationId: orgId },
+      );
 
-      try {
-        // Call backend API to persist organization context
-        const csrfToken = getCsrfToken();
-        const response = await fetch("/api/auth/switch-organization", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-          },
-          credentials: "include",
-          body: JSON.stringify({ organizationId: orgId }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to switch organization context");
-        }
-
-        const data = await response.json();
-
-        // Update local state with the returned user object
-        const updatedUser = data.user;
-        setUser(updatedUser);
-        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(updatedUser));
-        syncImpersonationSession(token, updatedUser);
-      } catch (error) {
-        console.error("Switch organization error:", error);
-        throw error;
+      const updatedUser = data.user;
+      setUser(updatedUser);
+      syncImpersonationSession(token, updatedUser);
+      if (updatedUser.organizationId) {
+        try { sessionStorage.setItem("skypanel_org_id", updatedUser.organizationId); } catch { /* ignore */ }
       }
+    } catch (error) {
+      console.error("Switch organization error:", error);
+      throw error;
     }
+  }
 
   const value = {
     user,

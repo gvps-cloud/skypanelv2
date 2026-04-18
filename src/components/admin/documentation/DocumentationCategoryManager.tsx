@@ -186,7 +186,37 @@ export default function DocumentationCategoryManager() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<DocumentationCategory | null>(null);
 
-  const token = localStorage.getItem("auth_token");
+  const getCsrfToken = (): string | null => {
+    const cookie = document.cookie
+      .split(';')
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith('csrf_token='));
+    if (!cookie) {
+      return null;
+    }
+    const value = cookie.split('=')[1];
+    return value ? decodeURIComponent(value) : null;
+  };
+
+  const getAuthHeaders = (): HeadersInit => {
+    const userStr = localStorage.getItem("auth_user");
+    let organizationId: string | undefined;
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        organizationId = user.organizationId;
+      } catch {
+        // ignore
+      }
+    }
+
+    const csrfToken = getCsrfToken();
+    return {
+      ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+      ...(organizationId && { "X-Organization-ID": organizationId }),
+    };
+  };
 
   const createForm = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
@@ -219,11 +249,11 @@ export default function DocumentationCategoryManager() {
 
   // Fetch categories
   const fetchCategories = useCallback(async () => {
-    if (!token) return;
     setIsLoading(true);
     try {
       const res = await fetch(buildApiUrl("/api/admin/documentation/categories"), {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
+        credentials: "include",
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load categories");
@@ -233,7 +263,7 @@ export default function DocumentationCategoryManager() {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     fetchCategories();
@@ -261,8 +291,9 @@ export default function DocumentationCategoryManager() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...getAuthHeaders(),
           },
+          credentials: "include",
           body: JSON.stringify({ categories: reorderData }),
         }
       );
@@ -281,15 +312,15 @@ export default function DocumentationCategoryManager() {
 
   // Create category
   const handleCreate = async (data: CategoryFormData) => {
-    if (!token) return;
     setSubmitting(true);
     try {
       const res = await fetch(buildApiUrl("/api/admin/documentation/categories"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
+        credentials: "include",
         body: JSON.stringify(data),
       });
 
@@ -309,7 +340,7 @@ export default function DocumentationCategoryManager() {
 
   // Edit category
   const handleEdit = async (data: CategoryFormData) => {
-    if (!token || !selectedCategory) return;
+    if (!selectedCategory) return;
 
     setSubmitting(true);
     try {
@@ -319,8 +350,9 @@ export default function DocumentationCategoryManager() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...getAuthHeaders(),
           },
+          credentials: "include",
           body: JSON.stringify(data),
         }
       );
@@ -346,7 +378,7 @@ export default function DocumentationCategoryManager() {
 
   // Delete category
   const handleDelete = async () => {
-    if (!token || !selectedCategory) return;
+    if (!selectedCategory) return;
 
     setSubmitting(true);
     try {
@@ -354,7 +386,8 @@ export default function DocumentationCategoryManager() {
         buildApiUrl(`/api/admin/documentation/categories/${selectedCategory.id}`),
         {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: getAuthHeaders(),
+          credentials: "include",
         }
       );
 
@@ -376,7 +409,6 @@ export default function DocumentationCategoryManager() {
 
   // Toggle active
   const handleToggleActive = async (category: DocumentationCategory) => {
-    if (!token) return;
     try {
       const res = await fetch(
         buildApiUrl(`/api/admin/documentation/categories/${category.id}`),
@@ -384,8 +416,9 @@ export default function DocumentationCategoryManager() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...getAuthHeaders(),
           },
+          credentials: "include",
           body: JSON.stringify({ is_active: !category.is_active }),
         }
       );

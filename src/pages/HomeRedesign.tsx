@@ -27,7 +27,7 @@ import {
 
 import "@/styles/home.css";
 import { BRAND_NAME } from "@/lib/brand";
-import { API_BASE_URL } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -393,9 +393,7 @@ function SocialProof() {
   const { data: orgData } = useQuery({
     queryKey: ['public-organizations'],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/health/organizations`);
-      if (!res.ok) throw new Error('Failed to fetch');
-      return res.json();
+      return apiClient.get<any>('/health/organizations');
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -459,48 +457,42 @@ export default function HomeRedesign() {
     let mounted = true;
 
     const load = async () => {
-      const read = async (path: string) => {
-        try {
-          const r = await fetch(path);
-          if (!r.ok) return null;
-          return asRecord(await r.json());
-        } catch {
-          return null;
+      try {
+        const [regData, priceData] = await Promise.all([
+          apiClient.get<{ success?: boolean; regions?: any[]; count?: number }>('/pricing/public-regions'),
+          apiClient.get<{ plans?: any[] }>('/pricing/vps'),
+        ]);
+
+        if (!mounted) return;
+
+        if (regData?.success === true) {
+          const regions = regData.regions;
+          if (Array.isArray(regions) && regions.length > 0) {
+            setRegionCount(regions.length);
+            setRegionsData(regions as RegionData[]);
+          } else {
+            const c = parseNumber(regData.count);
+            if (c !== null && c > 0) setRegionCount(c);
+          }
         }
-      };
 
-      const [regData, priceData] = await Promise.all([
-        read("/api/pricing/public-regions"),
-        read("/api/pricing/vps"),
-      ]);
-
-      if (!mounted) return;
-
-      if (regData?.success === true) {
-        const regions = regData.regions;
-        if (Array.isArray(regions) && regions.length > 0) {
-          setRegionCount(regions.length);
-          setRegionsData(regions as RegionData[]);
-        } else {
-          const c = parseNumber(regData.count);
-          if (c !== null && c > 0) setRegionCount(c);
+        if (priceData) {
+          const plans = priceData.plans;
+          if (Array.isArray(plans)) {
+            const values = plans
+              .map((p) => {
+                const rec = asRecord(p);
+                return (parseNumber(rec?.base_price) ?? 0) + (parseNumber(rec?.markup_price) ?? 0);
+              })
+              .filter((v) => Number.isFinite(v) && v > 0);
+            if (values.length > 0) setLowestPrice(Math.min(...values));
+          }
         }
+      } catch {
+        // Silently fail - pricing data is optional
+      } finally {
+        setPricingLoading(false);
       }
-
-      if (priceData) {
-        const plans = priceData.plans;
-        if (Array.isArray(plans)) {
-          const values = plans
-            .map((p) => {
-              const rec = asRecord(p);
-              return (parseNumber(rec?.base_price) ?? 0) + (parseNumber(rec?.markup_price) ?? 0);
-            })
-            .filter((v) => Number.isFinite(v) && v > 0);
-          if (values.length > 0) setLowestPrice(Math.min(...values));
-        }
-      }
-
-      setPricingLoading(false);
     };
 
     void load();

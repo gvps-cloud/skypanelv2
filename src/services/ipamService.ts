@@ -3,7 +3,7 @@
  * Handles admin networking operations: IPs, IPv6 ranges/pools, VLANs, Firewalls
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+import { apiClient } from '@/lib/api';
 
 // ── Types ──
 
@@ -125,126 +125,75 @@ export interface CreateFirewallRequest {
 
 // ── Helpers ──
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem("auth_token");
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+export type ApiResult<T> = { success: boolean; data?: T; error?: string; pages?: number; total?: number };
+
+async function apiGet<T>(path: string): Promise<ApiResult<T>> {
+  try {
+    const json = await apiClient.get<{ data?: T; pages?: number; total?: number }>(path);
+    return { success: true, data: json.data, pages: json.pages, total: json.total };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Request failed' };
+  }
 }
 
-async function handleResponse<T>(response: Response): Promise<{ success: boolean; data?: T; error?: string; pages?: number; total?: number }> {
-  const json = await response.json();
-  if (!response.ok) {
-    return { success: false, error: json.error || "Request failed" };
+async function apiMutate<T>(method: 'post' | 'put' | 'delete', path: string, data?: any): Promise<ApiResult<T>> {
+  try {
+    const json = await apiClient[method]<{ data?: T; pages?: number; total?: number }>(path, data);
+    return { success: true, data: json.data, pages: json.pages, total: json.total };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Request failed' };
   }
-  return {
-    success: true,
-    data: json.data,
-    pages: json.pages,
-    total: json.total,
-  };
 }
 
 // ── IP Addresses ──
 
 export async function listIPs(page = 1, pageSize = 100) {
-  const res = await fetch(
-    `${API_BASE_URL}/admin/networking/ips?page=${page}&pageSize=${pageSize}`,
-    { headers: getAuthHeaders() }
-  );
-  return handleResponse<IPAMIPAddress[]>(res);
+  return apiGet<IPAMIPAddress[]>(`/admin/networking/ips?page=${page}&pageSize=${pageSize}`);
 }
 
 export async function getIPAddress(address: string) {
-  const res = await fetch(
-    `${API_BASE_URL}/admin/networking/ips/${encodeURIComponent(address)}`,
-    { headers: getAuthHeaders() }
-  );
-  return handleResponse<IPAMIPAddress>(res);
+  return apiGet<IPAMIPAddress>(`/admin/networking/ips/${encodeURIComponent(address)}`);
 }
 
 export async function allocateIP(instanceId: string, publicIp: boolean, type: "ipv4" | "ipv6") {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/ips`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ instanceId, public: publicIp, type }),
-  });
-  return handleResponse<IPAMIPAddress>(res);
+  return apiMutate<IPAMIPAddress>('post', '/admin/networking/ips', { instanceId, public: publicIp, type });
 }
 
 export async function deleteIPAddress(instanceId: string, address: string) {
-  const res = await fetch(
-    `${API_BASE_URL}/admin/networking/ips/${encodeURIComponent(instanceId)}/${encodeURIComponent(address)}`,
-    { method: "DELETE", headers: getAuthHeaders() }
-  );
-  return handleResponse<void>(res);
+  return apiMutate<void>('delete', `/admin/networking/ips/${encodeURIComponent(instanceId)}/${encodeURIComponent(address)}`);
 }
 
 export async function assignIPs(
   assignments: Array<{ address: string; instanceId: string }>,
   region: string
 ) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/ips/assign`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ assignments, region }),
-  });
-  return handleResponse<void>(res);
+  return apiMutate<void>('post', '/admin/networking/ips/assign', { assignments, region });
 }
 
 export async function shareIPs(instanceId: string, ips: string[]) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/ips/share`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ instanceId, ips }),
-  });
-  return handleResponse<void>(res);
+  return apiMutate<void>('post', '/admin/networking/ips/share', { instanceId, ips });
 }
 
 export async function updateReverseDNS(address: string, rdns: string | null) {
-  const res = await fetch(
-    `${API_BASE_URL}/admin/networking/ips/${encodeURIComponent(address)}/rdns`,
-    {
-      method: "PUT",
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ rdns }),
-    }
-  );
-  return handleResponse<IPAMIPAddress>(res);
+  return apiMutate<IPAMIPAddress>('put', `/admin/networking/ips/${encodeURIComponent(address)}/rdns`, { rdns });
 }
 
 // ── IPv6 ──
 
 export async function listIPv6Pools() {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/ipv6/pools`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<IPAMIPv6Pool[]>(res);
+  return apiGet<IPAMIPv6Pool[]>('/admin/networking/ipv6/pools');
 }
 
 export async function listIPv6Ranges() {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/ipv6/ranges`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<IPAMIPv6Range[]>(res);
+  return apiGet<IPAMIPv6Range[]>('/admin/networking/ipv6/ranges');
 }
 
 export async function createIPv6Range(prefixLength: number, instanceId?: string, routeTarget?: string) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/ipv6/ranges`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ prefixLength, instanceId, routeTarget }),
-  });
-  return handleResponse<{ range: string; routeTarget: string }>(res);
+  return apiMutate<{ range: string; routeTarget: string }>('post', '/admin/networking/ipv6/ranges', { prefixLength, instanceId, routeTarget });
 }
 
 export async function deleteIPv6Range(range: string) {
-  const res = await fetch(
-    `${API_BASE_URL}/admin/networking/ipv6/ranges/${encodeURIComponent(range)}`,
-    { method: "DELETE", headers: getAuthHeaders() }
-  );
-  return handleResponse<void>(res);
+  return apiMutate<void>('delete', `/admin/networking/ipv6/ranges/${encodeURIComponent(range)}`);
 }
 
 export interface IPv6RangeRdnsVpsRow {
@@ -260,11 +209,7 @@ export interface IPv6RangeRdnsRecordsPayload {
 
 export async function getIPv6RangeRdnsRecords(range: string, prefixLength: number) {
   const params = new URLSearchParams({ range, prefix: String(prefixLength) });
-  const res = await fetch(
-    `${API_BASE_URL}/admin/networking/ipv6/range-rdns-records?${params.toString()}`,
-    { headers: getAuthHeaders() }
-  );
-  return handleResponse<IPv6RangeRdnsRecordsPayload>(res);
+  return apiGet<IPv6RangeRdnsRecordsPayload>(`/admin/networking/ipv6/range-rdns-records?${params.toString()}`);
 }
 
 export async function updateIPv6RangeRdns(
@@ -273,150 +218,82 @@ export async function updateIPv6RangeRdns(
   address: string,
   rdns: string | null
 ) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/ipv6/range-rdns`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ range, prefix: prefixLength, address, rdns }),
-  });
-  const json = await res.json();
-  if (!res.ok) {
-    return { success: false as const, error: json.error || "Request failed" };
+  try {
+    const json = await apiClient.post<{ rdns: string | null }>('/admin/networking/ipv6/range-rdns', { range, prefix: prefixLength, address, rdns });
+    return { success: true as const, rdns: json.rdns };
+  } catch (err: any) {
+    return { success: false as const, error: err.message || 'Request failed' };
   }
-  return { success: true as const, rdns: json.rdns as string | null };
 }
 
 // ── VLANs ──
 
 export async function listVLANs() {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/vlans`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<IPAMVLAN[]>(res);
+  return apiGet<IPAMVLAN[]>('/admin/networking/vlans');
 }
 
 export async function deleteVLAN(regionId: string, label: string) {
-  const res = await fetch(
-    `${API_BASE_URL}/admin/networking/vlans/${encodeURIComponent(regionId)}/${encodeURIComponent(label)}`,
-    { method: "DELETE", headers: getAuthHeaders() }
-  );
-  return handleResponse<void>(res);
+  return apiMutate<void>('delete', `/admin/networking/vlans/${encodeURIComponent(regionId)}/${encodeURIComponent(label)}`);
 }
 
 // ── Firewalls ──
 
 export async function listFirewalls() {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewalls`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<IPAMFirewall[]>(res);
+  return apiGet<IPAMFirewall[]>('/admin/networking/firewalls');
 }
 
 export async function createFirewall(data: CreateFirewallRequest) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewalls`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data),
-  });
-  return handleResponse<IPAMFirewall>(res);
+  return apiMutate<IPAMFirewall>('post', '/admin/networking/firewalls', data);
 }
 
 export async function getFirewall(id: number) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewalls/${id}`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<IPAMFirewall>(res);
+  return apiGet<IPAMFirewall>(`/admin/networking/firewalls/${id}`);
 }
 
 export async function updateFirewall(id: number, updates: { label?: string; status?: FirewallStatus; tags?: string[] }) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewalls/${id}`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(updates),
-  });
-  return handleResponse<IPAMFirewall>(res);
+  return apiMutate<IPAMFirewall>('put', `/admin/networking/firewalls/${id}`, updates);
 }
 
 export async function deleteFirewall(id: number) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewalls/${id}`, {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<void>(res);
+  return apiMutate<void>('delete', `/admin/networking/firewalls/${id}`);
 }
 
 export async function getFirewallRules(id: number) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewalls/${id}/rules`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<IPAMFirewallRules>(res);
+  return apiGet<IPAMFirewallRules>(`/admin/networking/firewalls/${id}/rules`);
 }
 
 export async function updateFirewallRules(id: number, rules: IPAMFirewallRules) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewalls/${id}/rules`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(rules),
-  });
-  return handleResponse<IPAMFirewallRules>(res);
+  return apiMutate<IPAMFirewallRules>('put', `/admin/networking/firewalls/${id}/rules`, rules);
 }
 
 export async function getFirewallDevices(id: number) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewalls/${id}/devices`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<IPAMFirewallDevice[]>(res);
+  return apiGet<IPAMFirewallDevice[]>(`/admin/networking/firewalls/${id}/devices`);
 }
 
 export async function attachFirewallDevice(firewallId: number, type: string, entityId: number) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewalls/${firewallId}/devices`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ type, entityId }),
-  });
-  return handleResponse<IPAMFirewallDevice>(res);
+  return apiMutate<IPAMFirewallDevice>('post', `/admin/networking/firewalls/${firewallId}/devices`, { type, entityId });
 }
 
 export async function detachFirewallDevice(firewallId: number, deviceId: number) {
-  const res = await fetch(
-    `${API_BASE_URL}/admin/networking/firewalls/${firewallId}/devices/${deviceId}`,
-    { method: "DELETE", headers: getAuthHeaders() }
-  );
-  return handleResponse<void>(res);
+  return apiMutate<void>('delete', `/admin/networking/firewalls/${firewallId}/devices/${deviceId}`);
 }
 
 export async function getFirewallHistory(id: number) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewalls/${id}/history`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<Array<Record<string, unknown>>>(res);
+  return apiGet<Array<Record<string, unknown>>>(`/admin/networking/firewalls/${id}/history`);
 }
 
 export async function getFirewallSettings() {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewall-settings`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<IPAMFirewallSettings>(res);
+  return apiGet<IPAMFirewallSettings>('/admin/networking/firewall-settings');
 }
 
 export async function updateFirewallSettings(settings: IPAMFirewallSettings) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewall-settings`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(settings),
-  });
-  return handleResponse<IPAMFirewallSettings>(res);
+  return apiMutate<IPAMFirewallSettings>('put', '/admin/networking/firewall-settings', settings);
 }
 
 export async function listFirewallTemplates() {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewall-templates`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<IPAMFirewallTemplate[]>(res);
+  return apiGet<IPAMFirewallTemplate[]>('/admin/networking/firewall-templates');
 }
 
 export async function getFirewallTemplate(slug: string) {
-  const res = await fetch(`${API_BASE_URL}/admin/networking/firewall-templates/${encodeURIComponent(slug)}`, {
-    headers: getAuthHeaders(),
-  });
-  return handleResponse<IPAMFirewallTemplate>(res);
+  return apiGet<IPAMFirewallTemplate>(`/admin/networking/firewall-templates/${encodeURIComponent(slug)}`);
 }

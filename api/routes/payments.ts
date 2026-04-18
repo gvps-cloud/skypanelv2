@@ -44,7 +44,13 @@ const safeParseNumber = (value: unknown): number | null => {
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
 
-router.get("/config", requireOrganization, (req: Request, res: Response) => {
+// Note: If a PayPal webhook route is added in the future, it must be declared
+// BEFORE the requireOrganization guard to allow unauthenticated PayPal callbacks.
+
+// Apply organization guard to all authenticated routes
+router.use(requireOrganization);
+
+router.get("/config", (req: Request, res: Response) => {
   if (!config.PAYPAL_CLIENT_ID) {
     return res.status(503).json({
       success: false,
@@ -89,7 +95,6 @@ router.post(
         "Description is required and must be less than 255 characters",
       ),
   ],
-  requireOrganization,
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -265,7 +270,6 @@ router.post(
  */
 router.get(
   "/wallet/balance",
-  requireOrganization,
   async (req: Request, res: Response) => {
     try {
       const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
@@ -330,7 +334,6 @@ router.post(
         "Description is required and must be less than 255 characters",
       ),
   ],
-  requireOrganization,
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -406,7 +409,6 @@ router.get(
       .isInt({ min: 0 })
       .withMessage("Offset must be a non-negative integer"),
   ],
-  requireOrganization,
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -480,7 +482,6 @@ router.get(
         "Status must be completed, failed, cancelled, or refunded",
       ),
   ],
-  requireOrganization,
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -543,7 +544,6 @@ router.get(
 router.get(
   "/transactions/:id",
   [param("id").isUUID().withMessage("Transaction ID must be a valid UUID")],
-  requireOrganization,
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -642,7 +642,6 @@ router.post(
       .isLength({ min: 1, max: 255 })
       .withMessage("Reason is required and must be less than 255 characters"),
   ],
-  requireOrganization,
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -730,7 +729,6 @@ router.post(
  */
 router.get(
   "/billing/summary",
-  requireOrganization,
   async (req: Request, res: Response) => {
     try {
       const { organizationId, id: userId } = (req as AuthenticatedRequest).user;

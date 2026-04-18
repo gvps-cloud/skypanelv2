@@ -23,6 +23,7 @@ import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
 import { BRAND_NAME } from "@/lib/brand";
 import { LeafletMap } from "@/components/regions";
+import { apiClient } from "@/lib/api";
 
 interface Region {
   id: string;
@@ -209,8 +210,7 @@ export default function Regions() {
         let regionsData: Region[] = [];
 
         try {
-          const response = await fetch("/api/pricing/public-regions");
-          const json = await response.json();
+          const json = await apiClient.get<{ success?: boolean; regions?: Region[] }>("/pricing/public-regions");
           if (json.success && Array.isArray(json.regions))
             regionsData = json.regions;
         } catch {

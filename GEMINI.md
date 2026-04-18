@@ -1,5 +1,7 @@
 # SkyPanelV2 - Agent Context (GEMINI.md)
 
+> **Important**: Always read `[AGENTS.md](./AGENTS.md)` alongside this file. AGENTS.md documents the current state of the repository and provides practical guidance for coding agents. This file (GEMINI.md) provides Gemini-specific development instructions and deeper architectural context.
+
 This file documents the current state of the `skypanelv2` repository so coding agents can work against the app as it exists today rather than older assumptions.
 
 ## What This Application Is

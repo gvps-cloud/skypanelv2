@@ -48,6 +48,7 @@ import type {
   PhoneConfig,
   OfficeConfig,
 } from "@/types/contact";
+import { apiClient } from "@/lib/api";
 
 /* ─── Animation Variants ─────────────────────────────────────────── */
 
@@ -191,13 +192,7 @@ export default function Contact() {
     const fetchContactConfig = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/contact/config");
-
-        if (!response.ok) {
-          throw new Error("Failed to load contact configuration");
-        }
-
-        const data: ContactConfig = await response.json();
+        const data = await apiClient.get<ContactConfig>("/contact/config");
         setContactConfig(data);
       } catch (err) {
         console.error("Error fetching contact config:", err);
@@ -241,6 +236,7 @@ export default function Contact() {
         }
         throw new Error(errorMessage);
       }
+      data satisfies { ticketId?: string; message?: string };
       toast.success(
         "Message sent successfully! We'll get back to you soon.",
       );

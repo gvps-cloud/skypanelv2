@@ -18,6 +18,7 @@ import {
   CardDescription,
   CardHeader,
 } from "@/components/ui/card";
+import { apiClient } from "@/lib/api";
 
 interface Invoice {
   id: string;
@@ -46,24 +47,7 @@ const InvoiceDetail: React.FC = () => {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("auth_token");
-      const response = await fetch(`/api/invoices/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          toast.error("Invoice not found");
-        } else {
-          toast.error("Failed to load invoice");
-        }
-        navigate("/billing");
-        return;
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ success: boolean; invoice: Invoice }>(`/invoices/${id}`);
       if (data.success) {
         setInvoice(data.invoice);
       }
@@ -85,11 +69,9 @@ const InvoiceDetail: React.FC = () => {
 
     setDownloading(true);
     try {
-      const token = localStorage.getItem("auth_token");
+      // For file downloads, we need to use fetch directly with credentials
       const response = await fetch(`/api/invoices/${id}/download`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: "include",
       });
 
       if (!response.ok) {

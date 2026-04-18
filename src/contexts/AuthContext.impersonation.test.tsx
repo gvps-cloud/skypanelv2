@@ -4,8 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import {
-  AUTH_TOKEN_STORAGE_KEY,
-  AUTH_USER_STORAGE_KEY,
   IMPERSONATION_ADMIN_STORAGE_KEY,
   IMPERSONATION_EXPIRES_AT_STORAGE_KEY,
   IMPERSONATION_TOKEN_STORAGE_KEY,
@@ -41,15 +39,17 @@ describe("AuthProvider impersonation bootstrap", () => {
 
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     global.fetch = originalFetch;
     localStorage.clear();
+    sessionStorage.clear();
   });
 
-  it("keeps impersonation active after the startup refresh call", async () => {
+  it("keeps impersonation active after the startup /api/auth/me call", async () => {
     const exp = Math.floor(Date.now() / 1000) + 60 * 30;
     const impersonationToken = createJwt({
       userId: "user-1",
@@ -70,11 +70,9 @@ describe("AuthProvider impersonation bootstrap", () => {
       organizationId: "org-1",
     };
 
-    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, impersonationToken);
-    localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(impersonatedUser));
-    localStorage.setItem(IMPERSONATION_TOKEN_STORAGE_KEY, impersonationToken);
-    localStorage.setItem(IMPERSONATION_USER_STORAGE_KEY, JSON.stringify(impersonatedUser));
-    localStorage.setItem(
+    sessionStorage.setItem(IMPERSONATION_TOKEN_STORAGE_KEY, impersonationToken);
+    sessionStorage.setItem(IMPERSONATION_USER_STORAGE_KEY, JSON.stringify(impersonatedUser));
+    sessionStorage.setItem(
       IMPERSONATION_ADMIN_STORAGE_KEY,
       JSON.stringify({
         id: "admin-1",
@@ -83,7 +81,7 @@ describe("AuthProvider impersonation bootstrap", () => {
         role: "admin",
       }),
     );
-    localStorage.setItem(
+    sessionStorage.setItem(
       IMPERSONATION_EXPIRES_AT_STORAGE_KEY,
       new Date(exp * 1000).toISOString(),
     );
@@ -106,17 +104,13 @@ describe("AuthProvider impersonation bootstrap", () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/auth/refresh",
+        "/api/auth/me",
         expect.objectContaining({
-          method: "POST",
-          headers: expect.objectContaining({
-            Authorization: `Bearer ${impersonationToken}`,
-          }),
+          credentials: "include",
         }),
       );
     });
 
-    expect(localStorage.getItem(IMPERSONATION_TOKEN_STORAGE_KEY)).toBe(impersonationToken);
-    expect(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)).toBe(impersonationToken);
+    expect(sessionStorage.getItem(IMPERSONATION_TOKEN_STORAGE_KEY)).toBe(impersonationToken);
   });
 });

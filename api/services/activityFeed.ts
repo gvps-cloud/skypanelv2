@@ -96,7 +96,8 @@ export class ActivityFeedService {
     return allInsertedActivities;
   }
 
-  static async getUserActivities(userId: string, unreadOnly = false): Promise<Activity[]> {
+  static async getUserActivities(userId: string, unreadOnly = false, organizationId?: string | null): Promise<Activity[]> {
+    const orgFilter = organizationId ? 'AND af.organization_id = $3' : '';
     const result = await query(
       `SELECT 
          af.id,
@@ -113,9 +114,10 @@ export class ActivityFeedService {
        LEFT JOIN organizations o ON af.organization_id = o.id
        WHERE af.user_id = $1
          AND ($2 = false OR af.is_read = false)
+         ${orgFilter}
        ORDER BY af.created_at DESC
        LIMIT 50`,
-      [userId, unreadOnly]
+      organizationId ? [userId, unreadOnly, organizationId] : [userId, unreadOnly]
     );
 
     return result.rows;
@@ -134,16 +136,34 @@ export class ActivityFeedService {
     }
   }
 
-  static async markAllAsRead(userId: string): Promise<void> {
-    await query(
-      `UPDATE activity_feed 
-       SET is_read = true 
-       WHERE user_id = $1 AND is_read = false`,
-      [userId]
-    );
+  static async markAllAsRead(userId: string, organizationId?: string | null): Promise<void> {
+    if (organizationId) {
+      await query(
+        `UPDATE activity_feed 
+         SET is_read = true 
+         WHERE user_id = $1 AND organization_id = $2 AND is_read = false`,
+        [userId, organizationId]
+      );
+    } else {
+      await query(
+        `UPDATE activity_feed 
+         SET is_read = true 
+         WHERE user_id = $1 AND is_read = false`,
+        [userId]
+      );
+    }
   }
 
-  static async getUnreadCount(userId: string): Promise<number> {
+  static async getUnreadCount(userId: string, organizationId?: string | null): Promise<number> {
+    if (organizationId) {
+      const result = await query(
+        `SELECT COUNT(*) as count 
+         FROM activity_feed 
+         WHERE user_id = $1 AND organization_id = $2 AND is_read = false`,
+        [userId, organizationId]
+      );
+      return parseInt(result.rows[0].count, 10);
+    }
     const result = await query(
       `SELECT COUNT(*) as count 
        FROM activity_feed 

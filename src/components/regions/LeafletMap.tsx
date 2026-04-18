@@ -180,7 +180,7 @@ function RegionMarkersLayer({ regions, latencyState, onRegionClick }: LeafletMap
       }
     });
 
-    // Add markers using MarkerClusterGroup approach
+    // Add markers using a feature group
     const markers: L.Marker[] = [];
 
     regions.forEach((region) => {

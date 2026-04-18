@@ -1,10 +1,10 @@
-import express, { Request, Response } from "express";
-import { createHash } from "crypto";
-import { authenticateToken, requireOrganization } from "../middleware/auth.js";
-import { query } from "../lib/database.js";
-import { linodeService } from "../services/linodeService.js";
-import { handleProviderError, logError } from "../lib/errorHandling.js";
-import type { ProviderType } from "../services/providers/IProviderService.js";
+import express from "express";
+import type { Request, Response } from "express";
+import { authenticateToken, requireOrganization } from "../../middleware/auth.js";
+import { query } from "../../lib/database.js";
+import { linodeService } from "../../services/linodeService.js";
+import { handleProviderError, logError, sendSafeErrorResponse } from "../../lib/errorHandling.js";
+import type { ProviderType } from "../../services/providers/IProviderService.js";
 import type {
   CreateLinodeRequest,
   RebuildLinodeRequest,
@@ -14,1494 +14,65 @@ import type {
   LinodeInstanceStatsSeries,
   LinodeBackupSummary,
   LinodeMetricTuple,
-} from "../services/linodeService.js";
-import { logActivity } from "../services/activityLogger.js";
-import { encryptSecret } from "../lib/crypto.js";
-import {
-  normalizeProviderToken,
-  getProviderTokenByType,
-} from "../lib/providerTokens.js";
-import { BillingService } from "../services/billingService.js";
-import { AuthService } from "../services/authService.js";
-import {
-  normalizeRegionList,
-  parseStoredAllowedRegions,
-  shouldFilterByAllowedRegions,
-} from "../lib/providerRegions.js";
-import { RoleService } from "../services/roles.js";
+} from "../../services/linodeService.js";
+import { logActivity } from "../../services/activityLogger.js";
+import { encryptSecret } from "../../lib/crypto.js";
+import { BillingService } from "../../services/billingService.js";
+import { AuthService } from "../../services/authService.js";
+import { RoleService } from "../../services/roles.js";
+import { EgressBillingService } from "../../services/egressBillingService.js";
+import { config } from "../../config/index.js";
+import { normalizeProviderToken } from "../../lib/providerTokens.js";
 import {
   getPanelIpv6PrefixRangesForRdns,
   ipv6AddressOwnedByLinodeInstance,
   ipv6AddressInRange,
-} from "../lib/ipv6.js";
-import { EgressBillingService } from "../services/egressBillingService.js";
+} from "../../lib/ipv6.js";
+import {
+  isBrandedTemplateId,
+  toBrandedTemplateId,
+  isLegacyTemplateId,
+  normalizeImageTemplate,
+  resolveImageForProvider,
+  loadProviderTokenById,
+  clampPercent,
+  deriveProgressFromEvents,
+  resolveRegionLabel,
+  resolvePlanMeta,
+  DEFAULT_RDNS_BASE_DOMAIN,
+  BACKUP_DAY_OPTIONS,
+  BACKUP_WINDOW_OPTIONS,
+} from "./shared/utils.js";
+import {
+  normalizeProviderStatus,
+  toStringOrNull,
+  toNumberOrNull,
+  mapIPv4Address,
+  mapIPv6Assignment,
+  mapIPv6Range,
+  mapIPv6RangeCollection,
+  pickIPv4Array,
+  pickIPv6Pool,
+  mapFirewallAttachment,
+  mapFirewallSummary,
+  mapFirewallOption,
+  mapConfigProfile,
+  mapEventSummary,
+  mapBackupSummary,
+  bytesToGigabytes,
+  extractTransferUsedBytes,
+  extractTransferBillableBytes,
+  normalizeSeries,
+  summarizeSeries,
+  deriveTimeframe,
+  MetricSeriesPayload,
+  TransferPayload,
+  BackupsPayload,
+  BackupSummaryPayload,
+} from "./shared/types.js";
+
 const router = express.Router();
-
 router.use(authenticateToken, requireOrganization);
-
-import { config } from "../config/index.js";
-
-const DEFAULT_RDNS_BASE_DOMAIN = config.RDNS_BASE_DOMAIN;
-
-const LEGACY_TEMPLATE_PREFIX = "tpl_";
-const BRANDED_TEMPLATE_PREFIX = config.COMPANY_BRAND_NAME + "/";
-
-function isBrandedTemplateId(id: string): boolean {
-  return id.startsWith(BRANDED_TEMPLATE_PREFIX);
-}
-
-function isLegacyTemplateId(id: string): boolean {
-  return id.startsWith(LEGACY_TEMPLATE_PREFIX);
-}
-
-function toBrandedTemplateId(upstreamImageId: string): string {
-  return `${BRANDED_TEMPLATE_PREFIX}${upstreamImageId}`;
-}
-
-/** @deprecated Legacy hash-based template ID — kept for backwards compatibility */
-function toLegacyTemplateId(providerId: string, upstreamImageId: string): string {
-  const digest = createHash("sha256")
-    .update(`${providerId}:${upstreamImageId}`)
-    .digest("hex")
-    .slice(0, 24);
-  return `${LEGACY_TEMPLATE_PREFIX}${digest}`;
-}
-
-function normalizeImageTemplate(
-  image: any,
-  _providerId: string,
-): {
-  id: string;
-  label: string;
-  description: string | null;
-  distribution: string | null;
-  minDiskSize: number | null;
-  public: boolean;
-  deprecated: boolean;
-} {
-  const upstreamId = String(image?.id || "").trim();
-  // Strip 'linode/' prefix from upstream ID for white-labeling
-  // e.g., 'linode/ubuntu22.04' -> 'ubuntu22.04'
-  const whiteLabelId = upstreamId.replace(/^linode\//, '');
-  return {
-    id: toBrandedTemplateId(whiteLabelId),
-    label: image?.label || upstreamId,
-    description: image?.description || null,
-    distribution: image?.vendor || null,
-    minDiskSize:
-      typeof image?.size === "number" && Number.isFinite(image.size)
-        ? image.size
-        : null,
-    public: Boolean(image?.is_public),
-    deprecated: Boolean(image?.deprecated),
-  };
-}
-
-async function resolveImageForProvider(
-  providerId: string,
-  requestedImage: string,
-  providerApiToken?: string,
-): Promise<string | null> {
-  const requested = requestedImage.trim();
-
-  // Path 1: Branded template ID (e.g. "SkyPanelV2/ubuntu22.04") → strip prefix and restore 'linode/'
-  if (isBrandedTemplateId(requested)) {
-    const whiteLabelId = requested.slice(BRANDED_TEMPLATE_PREFIX.length);
-    // Restore 'linode/' prefix for upstream API (e.g., 'ubuntu22.04' -> 'linode/ubuntu22.04')
-    // Only add prefix if not already present (handles edge cases)
-    if (!whiteLabelId.startsWith('linode/')) {
-      return `linode/${whiteLabelId}`;
-    }
-    return whiteLabelId;
-  }
-
-  // Path 2: Legacy hash-based template ID (e.g. "tpl_4a61d5f6f1f9a9f3e58ab1e2") → lookup
-  if (isLegacyTemplateId(requested)) {
-    const images = await linodeService.getLinodeImages(providerApiToken);
-    for (const image of images) {
-      const upstreamId = String(image.id || "").trim();
-      if (toLegacyTemplateId(providerId, upstreamId) === requested) {
-        return upstreamId;
-      }
-    }
-    return null;
-  }
-
-  // Path 3: Bare upstream image ID → pass through as-is
-  return requested;
-}
-
-async function _loadActiveProviderToken(
-  providerType: "linode",
-): Promise<string | null> {
-  const providerInfo = await getProviderTokenByType(providerType);
-  return providerInfo?.token ?? null;
-}
-
-async function loadProviderTokenById(
-  providerId: string,
-  providerType: "linode",
-): Promise<string | null> {
-  const providerResult = await query(
-    "SELECT id, api_key_encrypted FROM service_providers WHERE id = $1 AND type = $2 AND active = true LIMIT 1",
-    [providerId, providerType],
-  );
-
-  if (providerResult.rows.length === 0) {
-    return null;
-  }
-
-  const providerRow = providerResult.rows[0];
-  return normalizeProviderToken(providerRow.id, providerRow.api_key_encrypted);
-}
-
-router.get("/networking/config", async (_req: Request, res: Response) => {
-  try {
-    const result = await query(
-      "SELECT rdns_base_domain FROM networking_config ORDER BY updated_at DESC LIMIT 1",
-    );
-    const row = result.rows?.[0] ?? null;
-    const baseDomain =
-      typeof row?.rdns_base_domain === "string" &&
-      row.rdns_base_domain.trim().length > 0
-        ? row.rdns_base_domain.trim()
-        : DEFAULT_RDNS_BASE_DOMAIN;
-    res.json({ config: { rdns_base_domain: baseDomain } });
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Failed to load networking configuration";
-    if (message.toLowerCase().includes("does not exist")) {
-      res.json({
-        config: { rdns_base_domain: DEFAULT_RDNS_BASE_DOMAIN },
-        warning: message,
-      });
-      return;
-    }
-    console.error("Networking config fetch error:", error);
-    res.status(500).json({ error: message });
-  }
-});
-
-// Get active providers (user-accessible, respects display_order)
-router.get("/providers", async (_req: Request, res: Response) => {
-  try {
-    const result = await query(
-      "SELECT id, name, type, active, display_order FROM service_providers WHERE active = true ORDER BY display_order ASC NULLS LAST, created_at DESC",
-    );
-    res.json({ providers: result.rows || [] });
-  } catch (err: any) {
-    console.error("VPS providers list error:", err);
-    res.status(500).json({ error: err.message || "Failed to fetch providers" });
-  }
-});
-
-/**
- * GET /api/vps/plans
- *
- * Retrieve available VPS plans for users with backup pricing information.
- *
- * Authentication: User authentication required
- *
- * Response includes:
- * - Plan details (name, provider, pricing)
- * - Backup pricing breakdown (base + upcharge)
- * - Available backup frequencies (daily/weekly)
- * - Total costs for different backup options
- *
- * See: repo-docs/FLEXIBLE_BACKUP_PRICING_API.md for detailed documentation
- */
-router.get("/plans", async (_req: Request, res: Response) => {
-  try {
-    const result = await query(
-      `SELECT
-         id,
-         name,
-         COALESCE(specifications->>'description', '') AS description,
-         provider_id,
-         provider_plan_id,
-         base_price,
-         markup_price,
-         backup_price_monthly,
-         backup_price_hourly,
-         backup_upcharge_monthly,
-         backup_upcharge_hourly,
-         daily_backups_enabled,
-         weekly_backups_enabled,
-         COALESCE(specifications->>'region_id', specifications->>'region') AS region_id,
-         specifications
-       FROM vps_plans
-       WHERE active = true
-       ORDER BY created_at DESC`,
-    );
-
-    const plans = (result.rows || []).map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      provider_id: row.provider_id,
-      provider_plan_id: row.provider_plan_id,
-      base_price: row.base_price,
-      markup_price: row.markup_price,
-      backup_price_monthly: row.backup_price_monthly || 0,
-      backup_price_hourly: row.backup_price_hourly || 0,
-      backup_upcharge_monthly: row.backup_upcharge_monthly || 0,
-      backup_upcharge_hourly: row.backup_upcharge_hourly || 0,
-      daily_backups_enabled: row.daily_backups_enabled || false,
-      weekly_backups_enabled: row.weekly_backups_enabled !== false,
-      region_id: row.region_id,
-      specifications: row.specifications,
-    }));
-
-    res.json({ plans });
-  } catch (error) {
-    console.error("VPS plans fetch error:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to fetch plans";
-    res.status(500).json({ error: message });
-  }
-});
-
-const BACKUP_DAY_OPTIONS = new Set([
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-]);
-
-const BACKUP_WINDOW_OPTIONS = new Set([
-  "W0",
-  "W2",
-  "W4",
-  "W6",
-  "W8",
-  "W10",
-  "W12",
-  "W14",
-  "W16",
-  "W18",
-  "W20",
-  "W22",
-]);
-
-interface MetricPoint {
-  timestamp: number;
-  value: number;
-}
-
-interface MetricSummary {
-  average: number;
-  peak: number;
-  last: number;
-}
-
-interface MetricSeriesPayload {
-  series: MetricPoint[];
-  summary: MetricSummary;
-  unit: "percent" | "bitsPerSecond" | "blocksPerSecond";
-}
-
-interface AccountTransferPayload {
-  quotaGb: number;
-  usedGb: number;
-  billableGb: number;
-  remainingGb: number;
-}
-
-interface TransferPayload {
-  usedGb: number;
-  quotaGb: number;
-  billableGb: number;
-  utilizationPercent: number;
-  account: AccountTransferPayload | null;
-  usedBytes: number;
-}
-
-interface BackupsPayload {
-  enabled: boolean;
-  available: boolean;
-  schedule: { day: string | null; window: string | null } | null;
-  lastSuccessful: string | null;
-  automatic: BackupSummaryPayload[];
-  snapshot: BackupSummaryPayload | null;
-  snapshotInProgress: BackupSummaryPayload | null;
-}
-
-interface BackupSummaryPayload {
-  id: number | null;
-  label: string | null;
-  type: string | null;
-  status: string | null;
-  created: string | null;
-  finished: string | null;
-  updated: string | null;
-  available: boolean;
-  totalSizeMb: number;
-  configs: string[];
-}
-
-interface PlanSpecs {
-  vcpus: number;
-  memory: number;
-  disk: number;
-  transfer: number;
-}
-
-interface PlanPricing {
-  hourly: number;
-  monthly: number;
-}
-
-interface PlanMeta {
-  planRow: any;
-  specs: PlanSpecs;
-  pricing: PlanPricing;
-  providerPlanId: string | null;
-}
-
-const normalizeProviderStatus = (status: string | null | undefined): string => {
-  if (!status) return "unknown";
-  return status === "offline" ? "stopped" : status;
-};
-
-const isMetricTuple = (value: unknown): value is LinodeMetricTuple =>
-  Array.isArray(value) &&
-  value.length >= 2 &&
-  typeof value[0] === "number" &&
-  typeof value[1] === "number";
-
-const normalizeSeries = (series: unknown): MetricPoint[] => {
-  if (!Array.isArray(series)) {
-    return [];
-  }
-  return (series as unknown[])
-    .filter(isMetricTuple)
-    .map(([timestamp, value]) => ({ timestamp, value }))
-    .filter(
-      (point) =>
-        Number.isFinite(point.timestamp) && Number.isFinite(point.value),
-    );
-};
-
-const summarizeSeries = (series: MetricPoint[]): MetricSummary => {
-  if (series.length === 0) {
-    return { average: 0, peak: 0, last: 0 };
-  }
-  let total = 0;
-  let peak = -Infinity;
-  for (const point of series) {
-    total += point.value;
-    if (point.value > peak) {
-      peak = point.value;
-    }
-  }
-  return {
-    average: total / series.length,
-    peak: peak === -Infinity ? 0 : peak,
-    last: series[series.length - 1]?.value ?? 0,
-  };
-};
-
-const deriveTimeframe = (
-  collections: MetricPoint[][],
-): { start: number | null; end: number | null } => {
-  const timestamps: number[] = [];
-  collections.forEach((series) => {
-    series.forEach((point) => {
-      if (Number.isFinite(point.timestamp)) {
-        timestamps.push(point.timestamp);
-      }
-    });
-  });
-  if (timestamps.length === 0) {
-    return { start: null, end: null };
-  }
-  return {
-    start: Math.min(...timestamps),
-    end: Math.max(...timestamps),
-  };
-};
-
-const bytesToGigabytes = (value: number): number => {
-  if (!Number.isFinite(value) || value <= 0) {
-    return 0;
-  }
-  return value / 1_000_000_000;
-};
-
-const extractTransferUsedBytes = (value: unknown): number => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (value && typeof value === "object") {
-    const source = value as Record<string, unknown>;
-    const directCandidate =
-      source.total ?? source.bytes ?? source.amount ?? source.used;
-    if (
-      typeof directCandidate === "number" &&
-      Number.isFinite(directCandidate)
-    ) {
-      return directCandidate;
-    }
-    const inboundCandidate = source.in ?? source.ingress ?? source.inbound;
-    const outboundCandidate = source.out ?? source.egress ?? source.outbound;
-    let total = 0;
-    if (
-      typeof inboundCandidate === "number" &&
-      Number.isFinite(inboundCandidate)
-    ) {
-      total += inboundCandidate;
-    }
-    if (
-      typeof outboundCandidate === "number" &&
-      Number.isFinite(outboundCandidate)
-    ) {
-      total += outboundCandidate;
-    }
-    if (total > 0) {
-      return total;
-    }
-  }
-  return 0;
-};
-
-const extractTransferBillableBytes = (value: unknown): number => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (value && typeof value === "object") {
-    const source = value as Record<string, unknown>;
-    const directCandidate =
-      source.total ?? source.bytes ?? source.amount ?? source.billable;
-    if (
-      typeof directCandidate === "number" &&
-      Number.isFinite(directCandidate)
-    ) {
-      return directCandidate;
-    }
-  }
-  return 0;
-};
-
-const mapBackupSummary = (
-  backup: LinodeBackupSummary | null | undefined,
-): BackupSummaryPayload | null => {
-  if (!backup || typeof backup !== "object") {
-    return null;
-  }
-  const disks = Array.isArray(backup.disks) ? backup.disks : [];
-  const totalSizeMb = disks.reduce<number>((sum, disk) => {
-    const diskSize =
-      typeof (disk as { size?: unknown }).size === "number"
-        ? (disk as { size?: number }).size!
-        : 0;
-    return sum + diskSize;
-  }, 0);
-
-  return {
-    id: typeof backup.id === "number" ? backup.id : null,
-    label: typeof backup.label === "string" ? backup.label : null,
-    type: typeof backup.type === "string" ? backup.type : null,
-    status: typeof backup.status === "string" ? backup.status : null,
-    created: typeof backup.created === "string" ? backup.created : null,
-    finished: typeof backup.finished === "string" ? backup.finished : null,
-    updated: typeof backup.updated === "string" ? backup.updated : null,
-    available: Boolean((backup as { available?: boolean }).available),
-    totalSizeMb,
-    configs: Array.isArray(backup.configs) ? backup.configs : [],
-  };
-};
-
-const toStringOrNull = (value: any): string | null => {
-  if (typeof value === "string" && value.trim().length > 0) {
-    return value;
-  }
-  return null;
-};
-
-const toNumberOrNull = (value: any): number | null => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  return null;
-};
-
-const mapIPv4Address = (entry: any): any | null => {
-  if (!entry || typeof entry !== "object") return null;
-  const address = toStringOrNull(entry.address);
-  if (!address) return null;
-  const editable = entry?.rdns_editable;
-  return {
-    address,
-    type: toStringOrNull(entry.type),
-    public: Boolean(entry.public),
-    rdns: toStringOrNull(entry.rdns),
-    gateway: toStringOrNull(entry.gateway),
-    subnetMask: toStringOrNull(entry.subnet_mask),
-    prefix: toNumberOrNull(entry.prefix),
-    region: toStringOrNull(entry.region),
-    rdnsEditable: typeof editable === "boolean" ? editable : true,
-  };
-};
-
-const mapIPv6Assignment = (entry: any): any | null => {
-  if (!entry || typeof entry !== "object") return null;
-  const address = toStringOrNull(entry.address);
-  if (!address) return null;
-  return {
-    address,
-    prefix: toNumberOrNull(entry.prefix),
-    rdns: toStringOrNull(entry.rdns),
-    region: toStringOrNull(entry.region),
-    type: toStringOrNull(entry.type),
-    gateway: toStringOrNull(entry.gateway),
-  };
-};
-
-const mapIPv6Range = (entry: any): any | null => {
-  if (!entry || typeof entry !== "object") return null;
-  const range = toStringOrNull(entry.range);
-  const prefix = toNumberOrNull(entry.prefix);
-  if (!range && prefix === null) {
-    return null;
-  }
-  return {
-    range,
-    prefix,
-    region: toStringOrNull(entry.region),
-    routeTarget: toStringOrNull(entry.route_target),
-    type: toStringOrNull(entry.type),
-  };
-};
-
-const mapIPv6RangeCollection = (value: any): any[] => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .map(mapIPv6Range)
-    .filter((item: any): item is Record<string, unknown> => Boolean(item));
-};
-
-const pickIPv4Array = (source: any, key: string): any[] => {
-  if (source && Array.isArray(source[key])) {
-    return source[key];
-  }
-  return [];
-};
-
-const pickIPv6Pool = (source: any): any[] => {
-  if (!source) {
-    return [];
-  }
-  if (Array.isArray(source.pools)) {
-    return source.pools;
-  }
-  if (Array.isArray(source.pool)) {
-    return source.pool;
-  }
-  return [];
-};
-
-const mapFirewallAttachment = (entry: any): any | null => {
-  const deviceId = toNumberOrNull(entry?.id);
-  if (deviceId === null) {
-    return null;
-  }
-
-  const entity =
-    entry?.entity && typeof entry.entity === "object" ? entry.entity : {};
-  const entityId = toNumberOrNull((entity as any)?.id);
-
-  return {
-    id: deviceId,
-    entityId,
-    entityLabel: toStringOrNull((entity as any)?.label),
-    type: toStringOrNull(entry?.type ?? (entity as any)?.type),
-  };
-};
-
-const mapFirewallSummary = (entry: any, attachment?: any): any | null => {
-  const id = toNumberOrNull(entry?.id);
-  if (id === null) {
-    return null;
-  }
-  const tags = Array.isArray(entry?.tags)
-    ? entry.tags
-        .map((tag: any) => toStringOrNull(tag))
-        .filter((tag): tag is string => Boolean(tag))
-    : [];
-
-  return {
-    id,
-    label: toStringOrNull(entry?.label),
-    status: toStringOrNull(entry?.status),
-    tags,
-    created: toStringOrNull(entry?.created),
-    updated: toStringOrNull(entry?.updated),
-    pendingChanges: Boolean(entry?.has_pending_changes),
-    rules:
-      entry?.rules && typeof entry.rules === "object"
-        ? {
-            inbound: Array.isArray(entry.rules.inbound)
-              ? entry.rules.inbound
-              : [],
-            outbound: Array.isArray(entry.rules.outbound)
-              ? entry.rules.outbound
-              : [],
-          }
-        : null,
-    attachment: attachment ? mapFirewallAttachment(attachment) : null,
-  };
-};
-
-const mapFirewallOption = (entry: any): any | null => {
-  const id = toNumberOrNull(entry?.id);
-  if (id === null) {
-    return null;
-  }
-
-  const tags = Array.isArray(entry?.tags)
-    ? entry.tags
-        .map((tag: any) => toStringOrNull(tag))
-        .filter((tag): tag is string => Boolean(tag))
-    : [];
-
-  return {
-    id,
-    label: toStringOrNull(entry?.label),
-    status: toStringOrNull(entry?.status),
-    tags,
-  };
-};
-
-const mapConfigProfile = (entry: any): any | null => {
-  const id = toNumberOrNull(entry?.id);
-  if (id === null) {
-    return null;
-  }
-  return {
-    id,
-    label: toStringOrNull(entry?.label),
-    kernel: toStringOrNull(entry?.kernel),
-    rootDevice: toStringOrNull(entry?.root_device),
-    runLevel: toStringOrNull(entry?.run_level),
-    comments: toStringOrNull(entry?.comments),
-    virtMode: toStringOrNull(entry?.virt_mode),
-    memoryLimit: toNumberOrNull(entry?.memory_limit),
-    interfaces: Array.isArray(entry?.interfaces) ? entry.interfaces : [],
-    helpers:
-      entry?.helpers && typeof entry.helpers === "object"
-        ? entry.helpers
-        : null,
-    created: toStringOrNull(entry?.created),
-    updated: toStringOrNull(entry?.updated),
-  };
-};
-
-const mapEventSummary = (entry: any): any | null => {
-  const id = toNumberOrNull(entry?.id);
-  if (id === null) {
-    return null;
-  }
-  return {
-    id,
-    action: toStringOrNull(entry?.action) ?? "unknown",
-    status: toStringOrNull(entry?.status),
-    message: toStringOrNull(entry?.message),
-    created: toStringOrNull(entry?.created),
-    username: toStringOrNull(entry?.username),
-    percentComplete: toNumberOrNull(entry?.percent_complete),
-    entityLabel: toStringOrNull(entry?.entity?.label),
-  };
-};
-
-const clampPercent = (value: number | null | undefined): number | null => {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return null;
-  }
-  if (value < 0) return 0;
-  if (value > 100) return 100;
-  return value;
-};
-
-const PROGRESS_ACTION_MAP: Record<string, string[]> = {
-  provisioning: [
-    "linode_create",
-    "linode_clone",
-    "linode_migrate",
-    "linode_migration_begin",
-  ],
-  rebooting: ["linode_reboot", "linode_shutdown", "linode_boot"],
-  restoring: [
-    "linode_snapshot_clone",
-    "linode_snapshot_restore",
-    "linode_migrate",
-  ],
-  backing_up: ["linode_snapshot", "linode_snapshot_create"],
-  rebuilding: ["linode_rebuild"],
-};
-
-const pickProgressEvent = (
-  events: Array<Record<string, any>>,
-  instanceStatus: string,
-): Record<string, any> | null => {
-  if (!Array.isArray(events) || events.length === 0) {
-    return null;
-  }
-
-  const normalizedStatus = (instanceStatus || "").toLowerCase();
-  const actionCandidates = PROGRESS_ACTION_MAP[normalizedStatus];
-
-  if (Array.isArray(actionCandidates) && actionCandidates.length > 0) {
-    const actionSet = new Set(
-      actionCandidates.map((action) => action.toLowerCase()),
-    );
-    const byAction = events.find((event) => {
-      const action =
-        typeof event?.action === "string" ? event.action.toLowerCase() : "";
-      return actionSet.has(action);
-    });
-    if (byAction) {
-      return byAction;
-    }
-  }
-
-  const activeByPercent = events.find((event) => {
-    const percent = clampPercent(event?.percentComplete ?? null);
-    return percent !== null && percent < 100;
-  });
-  if (activeByPercent) {
-    return activeByPercent;
-  }
-
-  const activeByStatus = events.find((event) => {
-    const status =
-      typeof event?.status === "string" ? event.status.toLowerCase() : "";
-    return status && status !== "finished" && status !== "notification";
-  });
-  if (activeByStatus) {
-    return activeByStatus;
-  }
-
-  const anyWithPercent = events.find(
-    (event) => clampPercent(event?.percentComplete ?? null) !== null,
-  );
-  return anyWithPercent || null;
-};
-
-const deriveProgressFromEvents = (
-  instanceStatus: string,
-  events: Array<Record<string, any>>,
-): {
-  percent: number | null;
-  action: string | null;
-  status: string | null;
-  message: string | null;
-  created: string | null;
-} | null => {
-  if (!Array.isArray(events) || events.length === 0) {
-    return null;
-  }
-
-  const bestEvent = pickProgressEvent(events, instanceStatus);
-  if (!bestEvent) {
-    return null;
-  }
-
-  const rawPercent = clampPercent(bestEvent?.percentComplete ?? null);
-  let percent = rawPercent;
-  if (percent === null) {
-    const status =
-      typeof bestEvent?.status === "string"
-        ? bestEvent.status.toLowerCase()
-        : "";
-    if (
-      status === "finished" ||
-      status === "completed" ||
-      status === "success"
-    ) {
-      percent = 100;
-    } else if (status === "failed" || status === "error") {
-      percent = 100;
-    } else if (status === "started" || status === "running") {
-      percent = 10;
-    }
-  }
-
-  return {
-    percent,
-    action: typeof bestEvent?.action === "string" ? bestEvent.action : null,
-    status: typeof bestEvent?.status === "string" ? bestEvent.status : null,
-    message: typeof bestEvent?.message === "string" ? bestEvent.message : null,
-    created: typeof bestEvent?.created === "string" ? bestEvent.created : null,
-  };
-};
-
-let regionLabelCache: Map<string, string> | null = null;
-
-const ensureRegionLabelCache = async (): Promise<Map<string, string>> => {
-  if (regionLabelCache) {
-    return regionLabelCache;
-  }
-  try {
-    const regions = await linodeService.getLinodeRegions();
-    regionLabelCache = new Map(
-      regions.map((region) => [region.id, region.label]),
-    );
-  } catch (err) {
-    console.warn("Failed to populate region label cache:", err);
-    regionLabelCache = new Map();
-  }
-  return regionLabelCache;
-};
-
-const resolveRegionLabel = async (
-  regionId: string | null,
-): Promise<string | null> => {
-  if (!regionId) {
-    return null;
-  }
-  const cache = await ensureRegionLabelCache();
-  if (cache.has(regionId)) {
-    return cache.get(regionId) ?? null;
-  }
-  try {
-    const regions = await linodeService.getLinodeRegions();
-    regionLabelCache = new Map(
-      regions.map((region) => [region.id, region.label]),
-    );
-    return regionLabelCache.get(regionId) ?? null;
-  } catch (err) {
-    console.warn("Failed to refresh region labels:", err);
-    return null;
-  }
-};
-
-const resolvePlanMeta = async (
-  instanceRow: any,
-  providerDetail: LinodeInstance | null,
-): Promise<PlanMeta> => {
-  let planRow: any = null;
-  const configuration =
-    instanceRow?.configuration && typeof instanceRow.configuration === "object"
-      ? instanceRow.configuration
-      : {};
-  const configuredType =
-    typeof configuration?.type === "string" ? configuration.type : undefined;
-  const providerType = providerDetail?.type;
-
-  const planIdCandidate = instanceRow?.plan_id;
-
-  try {
-    if (planIdCandidate) {
-      const res = await query("SELECT * FROM vps_plans WHERE id = $1 LIMIT 1", [
-        planIdCandidate,
-      ]);
-      planRow = res.rows[0] ?? null;
-    }
-    if (!planRow && configuredType) {
-      const res = await query(
-        "SELECT * FROM vps_plans WHERE provider_plan_id = $1 LIMIT 1",
-        [configuredType],
-      );
-      planRow = res.rows[0] ?? null;
-    }
-    if (!planRow && providerType) {
-      const res = await query(
-        "SELECT * FROM vps_plans WHERE provider_plan_id = $1 LIMIT 1",
-        [providerType],
-      );
-      planRow = res.rows[0] ?? null;
-    }
-  } catch (err) {
-    console.warn("Failed to resolve VPS plan metadata:", err);
-  }
-
-  const providerPlanId =
-    typeof planRow?.provider_plan_id === "string"
-      ? String(planRow.provider_plan_id)
-      : (configuredType ?? providerType ?? null);
-
-  const specs: PlanSpecs = { vcpus: 0, memory: 0, disk: 0, transfer: 0 };
-  const pricing: PlanPricing = { hourly: 0, monthly: 0 };
-
-  if (planRow) {
-    const rawSpecs =
-      planRow.specifications && typeof planRow.specifications === "object"
-        ? planRow.specifications
-        : {};
-
-    const sanitizeNumber = (value: any): number | undefined => {
-      if (typeof value === "number" && Number.isFinite(value)) return value;
-      if (typeof value === "string") {
-        const parsed = Number(value);
-        return Number.isFinite(parsed) ? parsed : undefined;
-      }
-      return undefined;
-    };
-
-    const pickNumber = (candidates: Array<number | undefined>): number => {
-      for (const candidate of candidates) {
-        if (typeof candidate === "number" && Number.isFinite(candidate)) {
-          return candidate;
-        }
-      }
-      return 0;
-    };
-
-    const storageMb = sanitizeNumber(rawSpecs.storage_mb);
-    const storageGb = sanitizeNumber(rawSpecs.storage_gb);
-    const memoryMb = sanitizeNumber(rawSpecs.memory_mb);
-    const memoryGb = sanitizeNumber(rawSpecs.memory_gb);
-
-    const diskValues: Array<number | undefined> = [
-      sanitizeNumber(rawSpecs.disk),
-      storageMb,
-      storageGb !== undefined ? storageGb * 1024 : undefined,
-    ];
-
-    const memoryValues: Array<number | undefined> = [
-      sanitizeNumber(rawSpecs.memory),
-      memoryMb,
-      memoryGb !== undefined ? memoryGb * 1024 : undefined,
-    ];
-
-    const cpuValues: Array<number | undefined> = [
-      sanitizeNumber(rawSpecs.vcpus),
-      sanitizeNumber(rawSpecs.cpu_cores),
-    ];
-
-    const transferValues: Array<number | undefined> = [
-      sanitizeNumber(rawSpecs.transfer),
-      sanitizeNumber(rawSpecs.transfer_gb),
-      sanitizeNumber(rawSpecs.bandwidth_gb),
-    ];
-
-    specs.disk = pickNumber(diskValues);
-    specs.memory = pickNumber(memoryValues);
-    specs.vcpus = pickNumber(cpuValues);
-    specs.transfer = pickNumber(transferValues);
-
-    const basePrice = Number(planRow.base_price ?? 0);
-    const markupPrice = Number(planRow.markup_price ?? 0);
-    const monthly = basePrice + markupPrice;
-    pricing.monthly = monthly;
-    pricing.hourly = monthly > 0 ? monthly / 730 : 0;
-  } else if (providerDetail?.specs) {
-    specs.vcpus = Number(providerDetail.specs.vcpus ?? 0);
-    specs.memory = Number(providerDetail.specs.memory ?? 0);
-    specs.disk = Number(providerDetail.specs.disk ?? 0);
-    specs.transfer = Number(providerDetail.specs.transfer ?? 0);
-  }
-
-  return {
-    planRow,
-    specs,
-    pricing,
-    providerPlanId: providerPlanId ?? null,
-  };
-};
-
-// Get available admin-configured apps / StackScripts
-// NOTE: This endpoint previously returned Linode marketplace/community StackScripts.
-// We intentionally restrict this to admin-configured StackScript entries only
-// so creation workflows use curated, provider-account-owned StackScripts.
-router.get("/apps", async (req: Request, res: Response) => {
-  try {
-    // Return only enabled StackScript configs created by admins
-    const configsRes = await query(
-      `SELECT stackscript_id, label, description, is_enabled, display_order, metadata
-         FROM vps_stackscript_configs
-        WHERE is_enabled = TRUE
-        ORDER BY display_order ASC, created_at ASC`,
-    );
-
-    const configs = configsRes.rows || [];
-
-    if (configs.length === 0) {
-      return res.json({ apps: [] });
-    }
-
-    // Try to fetch provider-owned StackScripts (mineOnly true)
-    const ownedScripts = await linodeService
-      .getLinodeStackScripts({ mineOnly: true })
-      .catch(() => []);
-    const scriptMap = new Map<number, any>();
-    ownedScripts.forEach((s: any) => scriptMap.set(Number(s.id), s));
-
-    const apps: any[] = [];
-    for (const row of configs) {
-      const id = Number(row.stackscript_id);
-      let script = scriptMap.get(id);
-      if (!script) {
-        try {
-          script = await linodeService.getStackScript(id);
-        } catch (err) {
-          // If a script cannot be fetched, skip it (admins can fix via admin UI)
-          console.warn(
-            `Configured StackScript ${id} could not be loaded:`,
-            err?.message || err,
-          );
-          continue;
-        }
-      }
-
-      const displayLabel = row.label || script.label || `StackScript ${id}`;
-      const displayDescription =
-        row.description || script.description || script.rev_note || "";
-      const user_defined_fields = Array.isArray(script.user_defined_fields)
-        ? script.user_defined_fields
-        : [];
-
-      apps.push({
-        slug: `stackscript-${id}`,
-        id,
-        name: script.label || displayLabel,
-        display_name: displayLabel,
-        description: displayDescription,
-        summary: script.description || script.rev_note || "",
-        images: Array.isArray(script.images) ? script.images : [],
-        user_defined_fields,
-        stackscript_id: id,
-        isMarketplace: false,
-      });
-    }
-
-    res.json({ apps });
-  } catch (err: any) {
-    console.error("Configured apps fetch error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to fetch configured apps" });
-  }
-});
-
-// Get available Linode images
-router.get("/images", async (req: Request, res: Response) => {
-  try {
-    const providerId =
-      typeof req.query.provider_id === "string" ? req.query.provider_id.trim() : "";
-
-    if (!providerId) {
-      return res.status(400).json({
-        error: "provider_id query parameter is required",
-        code: "PROVIDER_ID_REQUIRED",
-      });
-    }
-
-    const providerToken = await loadProviderTokenById(providerId, "linode");
-    if (!providerToken) {
-      return res.status(404).json({
-        error: "Provider not found or inactive",
-        code: "PROVIDER_NOT_FOUND",
-      });
-    }
-
-    const images = await linodeService.getLinodeImages(providerToken);
-    const templates = images.map((image) =>
-      normalizeImageTemplate(image, providerId),
-    );
-    res.json({ images: templates });
-  } catch (err: any) {
-    console.error("Images fetch error:", err);
-    res.status(500).json({ error: err.message || "Failed to fetch images" });
-  }
-});
-
-// Get available regions for a specific provider
-// Optionally filtered by type_class to only show regions with active plans of that type
-router.get(
-  "/providers/:providerId/regions",
-  async (req: Request, res: Response) => {
-    try {
-      const { providerId } = req.params;
-      const { type_class } = req.query as any;
-
-      // Fetch provider details
-      const providerResult = await query(
-        "SELECT id, type, api_key_encrypted, allowed_regions FROM service_providers WHERE id = $1 AND active = true LIMIT 1",
-        [providerId],
-      );
-
-      if (providerResult.rows.length === 0) {
-        return res
-          .status(404)
-          .json({ error: "Provider not found or inactive" });
-      }
-
-      const provider = providerResult.rows[0];
-      const providerType = provider.type as "linode";
-
-      let allowedRegions: string[] = [];
-
-      try {
-        const overridesResult = await query(
-          "SELECT region FROM provider_region_overrides WHERE provider_id = $1",
-          [providerId],
-        );
-
-        if (overridesResult.rows.length > 0) {
-          allowedRegions = normalizeRegionList(
-            overridesResult.rows
-              .map((row) => row.region)
-              .filter((value): value is string => typeof value === "string"),
-          );
-        }
-      } catch (overrideErr: any) {
-        const message = String(overrideErr?.message || "").toLowerCase();
-        const relationMissing =
-          message.includes("relation") &&
-          message.includes("provider_region_overrides");
-        if (!relationMissing) {
-          throw overrideErr;
-        }
-      }
-
-      if (allowedRegions.length === 0) {
-        allowedRegions = parseStoredAllowedRegions(
-          provider.allowed_regions ?? null,
-        );
-      }
-
-      const normalizedAllowedRegions =
-        allowedRegions.length > 0 ? allowedRegions : [];
-      const shouldApplyAllowedRegionFilter = shouldFilterByAllowedRegions(
-        normalizedAllowedRegions,
-      );
-
-      if (providerType !== "linode") {
-        return res.status(400).json({ error: "Unsupported provider type" });
-      }
-
-      const allRegions = await linodeService.getLinodeRegions();
-
-      // Filter regions based on allowed_regions configuration
-      let regions = allRegions;
-      if (shouldApplyAllowedRegionFilter) {
-        const allowedSet = new Set(normalizedAllowedRegions);
-        regions = allRegions.filter(
-          (region) =>
-            region &&
-            typeof region.id === "string" &&
-            allowedSet.has(region.id.toLowerCase()),
-        );
-      }
-
-      // If type_class is specified, filter to only show regions with active plans of that type
-      if (type_class && typeof type_class === "string") {
-        try {
-          // Get unique region IDs that have active plans with the specified type_class
-          const plansResult = await query(
-            `SELECT DISTINCT vpr.region_id
-             FROM vps_plan_regions vpr
-             INNER JOIN vps_plans p ON vpr.vps_plan_id = p.id
-             WHERE p.provider_id = $1
-               AND p.active = true
-               AND p.type_class = $2`,
-            [providerId, type_class],
-          );
-
-          const regionsWithPlans = new Set(
-            (plansResult.rows || []).map((row: any) => row.region_id),
-          );
-
-          // Only return regions that have active plans for this type_class
-          regions = regions.filter(
-            (region) =>
-              region &&
-              typeof region.id === "string" &&
-              regionsWithPlans.has(region.id),
-          );
-        } catch (plansErr: any) {
-          const message = String(plansErr?.message || "").toLowerCase();
-          // If the vps_plan_regions table doesn't exist yet, just return all regions
-          if (
-            !message.includes("does not exist") &&
-            !message.includes("relation")
-          ) {
-            throw plansErr;
-          }
-        }
-      }
-
-      res.json({ regions });
-    } catch (err: any) {
-      console.error("Regions fetch error:", err);
-      res.status(500).json({ error: err.message || "Failed to fetch regions" });
-    }
-  },
-);
-
-/**
- * GET /api/vps/providers/:providerId/plans/:regionId
- *
- * Get VPS plans available for a specific provider and region.
- *
- * Query parameters:
- * - type_class: Optional filter by plan type (standard, cpu, memory, premium, gpu, accelerated)
- *
- * Returns plans that are:
- * - Active
- * - Belong to the specified provider
- * - Available in the specified region (via vps_plan_regions junction table)
- * - Optionally filtered by type_class
- */
-router.get(
-  "/providers/:providerId/plans/:regionId",
-  async (req: Request, res: Response) => {
-    try {
-      const { providerId, regionId } = req.params;
-      const { type_class } = req.query as any;
-
-      // Verify provider exists
-      const providerCheck = await query(
-        "SELECT id FROM service_providers WHERE id = $1 AND active = true LIMIT 1",
-        [providerId],
-      );
-
-      if (providerCheck.rows.length === 0) {
-        return res
-          .status(404)
-          .json({ error: "Provider not found or inactive" });
-      }
-
-      let queryText = `
-        SELECT
-          p.id,
-          p.name,
-          COALESCE(p.specifications->>'description', '') AS description,
-          p.provider_id,
-          p.provider_plan_id,
-          p.base_price,
-          p.markup_price,
-          p.backup_price_monthly,
-          p.backup_price_hourly,
-          p.backup_upcharge_monthly,
-          p.backup_upcharge_hourly,
-          p.daily_backups_enabled,
-          p.weekly_backups_enabled,
-          p.type_class,
-          p.specifications
-        FROM vps_plans p
-        INNER JOIN vps_plan_regions vpr ON p.id = vpr.vps_plan_id
-        WHERE p.active = true
-          AND p.provider_id = $1
-          AND vpr.region_id = $2
-      `;
-
-      const queryParams: any[] = [providerId, regionId];
-
-      if (type_class && typeof type_class === "string") {
-        queryText += ` AND p.type_class = $3`;
-        queryParams.push(type_class);
-      }
-
-      queryText += ` ORDER BY p.base_price ASC`;
-
-      const result = await query(queryText, queryParams);
-
-      const plans = (result.rows || []).map((row: any) => ({
-        id: row.id,
-        name: row.name,
-        description: row.description,
-        provider_id: row.provider_id,
-        provider_plan_id: row.provider_plan_id,
-        base_price: row.base_price,
-        markup_price: row.markup_price,
-        backup_price_monthly: row.backup_price_monthly || 0,
-        backup_price_hourly: row.backup_price_hourly || 0,
-        backup_upcharge_monthly: row.backup_upcharge_monthly || 0,
-        backup_upcharge_hourly: row.backup_upcharge_hourly || 0,
-        daily_backups_enabled: row.daily_backups_enabled || false,
-        weekly_backups_enabled: row.weekly_backups_enabled !== false,
-        type_class: row.type_class || "standard",
-        specifications: row.specifications,
-      }));
-
-      res.json({ plans });
-    } catch (error) {
-      console.error("Region-filtered plans fetch error:", error);
-      const message =
-        error instanceof Error ? error.message : "Failed to fetch plans";
-      res.status(500).json({ error: message });
-    }
-  },
-);
-
-// Get available Linode stack scripts
-router.get("/stackscripts", async (req: Request, res: Response) => {
-  const isTruthy = (value: any) => String(value || "").toLowerCase() === "true";
-  const configuredOnly = isTruthy(
-    (req.query as any).configured ||
-      (req.query as any).allowed ||
-      (req.query as any).allowedOnly,
-  );
-  const mineOnly = isTruthy(req.query.mine);
-
-  try {
-    if (configuredOnly) {
-      let configs: any[] = [];
-      try {
-        const configRes = await query(
-          `SELECT stackscript_id, label, description, is_enabled, display_order, metadata
-             FROM vps_stackscript_configs
-            WHERE is_enabled = TRUE
-            ORDER BY display_order ASC, created_at ASC`,
-        );
-        configs = configRes.rows || [];
-      } catch (configErr: any) {
-        const msg = String(configErr?.message || "").toLowerCase();
-        if (
-          msg.includes("does not exist") ||
-          (msg.includes("relation") && msg.includes("vps_stackscript_configs"))
-        ) {
-          console.warn(
-            "StackScript config table missing; returning empty configured list",
-          );
-          return res.json({ stackscripts: [] });
-        }
-        throw configErr;
-      }
-
-      if (configs.length === 0) {
-        return res.json({ stackscripts: [] });
-      }
-
-      let ownedScripts: any[] = [];
-      const scriptMap = new Map<number, any>();
-      try {
-        ownedScripts = await linodeService.getLinodeStackScripts({
-          mineOnly: true,
-        });
-        ownedScripts.forEach((script) => scriptMap.set(script.id, script));
-      } catch (err) {
-        console.warn(
-          "Failed to fetch owned StackScripts list, will query individually:",
-          err,
-        );
-      }
-
-      const enriched: any[] = [];
-      for (const row of configs) {
-        const stackscriptId = Number(row.stackscript_id);
-        let script = scriptMap.get(stackscriptId);
-        if (!script) {
-          try {
-            const single = await linodeService.getStackScript(stackscriptId);
-            if (single) {
-              script = single;
-              scriptMap.set(single.id, single);
-            }
-          } catch (err) {
-            console.warn(`Failed to fetch StackScript ${stackscriptId}:`, err);
-          }
-        }
-
-        if (!script) {
-          continue;
-        }
-
-        const displayLabel =
-          row.label || script.label || `StackScript ${stackscriptId}`;
-        const displayDescription =
-          row.description || script.description || script.rev_note || "";
-        const metadata =
-          row.metadata && typeof row.metadata === "object" ? row.metadata : {};
-
-        enriched.push({
-          ...script,
-          label: displayLabel,
-          description: displayDescription,
-          config: {
-            stackscript_id: stackscriptId,
-            label: row.label,
-            description: row.description,
-            is_enabled: row.is_enabled !== false,
-            display_order: Number(row.display_order || 0),
-            metadata,
-          },
-        });
-      }
-
-      enriched.sort((a, b) => {
-        const orderA = Number(a?.config?.display_order ?? 0);
-        const orderB = Number(b?.config?.display_order ?? 0);
-        if (orderA !== orderB) return orderA - orderB;
-        return String(a?.label || "").localeCompare(
-          String(b?.label || ""),
-          undefined,
-          { sensitivity: "base" },
-        );
-      });
-
-      return res.json({ stackscripts: enriched });
-    }
-
-    const stackscripts = await linodeService.getLinodeStackScripts({
-      mineOnly,
-    });
-    return res.json({ stackscripts });
-  } catch (err: any) {
-    console.error("StackScripts fetch error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to fetch stack scripts" });
-  }
-});
-
-// Get SSH keys for the active organization (organization-scoped for security)
-// SECURITY: This endpoint queries the local database to ensure organization isolation
-// and prevent cross-organization SSH key exposure.
-router.get("/providers/:providerId/ssh-keys", async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user?.id;
-    const organizationId = (req as any).user?.organizationId;
-    if (!userId || !organizationId) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-
-    const canViewKeys = await RoleService.checkPermission(
-      userId,
-      organizationId,
-      "ssh_keys_view",
-    );
-    if (!canViewKeys) {
-      return res
-        .status(403)
-        .json({ error: "You do not have permission to view SSH keys" });
-    }
-
-    // Fetch SSH keys from local database (organization-scoped for security)
-    const result = await query(
-      `SELECT id, name, public_key, fingerprint, linode_key_id, created_at
-       FROM user_ssh_keys
-       WHERE organization_id = $1
-       ORDER BY created_at DESC`,
-      [organizationId]
-    );
-
-    // Map to expected format for LinodeConfiguration component
-    const keys = result.rows.map(row => ({
-      id: row.linode_key_id || row.id,
-      label: row.name,
-      ssh_key: row.public_key,
-      fingerprint: row.fingerprint,
-      created: row.created_at,
-    }));
-
-    return res.json({ ssh_keys: keys });
-  } catch (err: any) {
-    console.error("SSH keys fetch error:", err);
-    return res
-      .status(500)
-      .json({ error: err.message || "Failed to fetch SSH keys" });
-  }
-});
 
 // List VPS instances for the user's organization with permission-based filtering
 router.get("/", async (req: Request, res: Response) => {
@@ -1928,12 +499,7 @@ router.get("/uptime-summary", async (req: Request, res: Response) => {
       vpsInstances,
     });
   } catch (error) {
-    console.error("VPS uptime summary error:", error);
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Failed to fetch VPS uptime data";
-    res.status(500).json({ error: message });
+    sendSafeErrorResponse(res, error, 500, { fallbackMessage: "Failed to fetch VPS uptime data" });
   }
 });
 
@@ -2654,8 +1220,8 @@ router.post("/", async (req: Request, res: Response) => {
         return;
       }
     } catch (providerErr) {
-      console.error("Error fetching provider details:", providerErr);
-      res.status(500).json({ error: "Failed to validate provider" });
+      const structuredError = handleProviderError(providerErr, "linode", "validate provider credentials");
+      res.status(structuredError.statusCode).json({ error: structuredError.message, code: structuredError.code });
       return;
     }
 
@@ -2831,11 +1397,7 @@ router.post("/", async (req: Request, res: Response) => {
         return;
       }
     } catch (walletErr) {
-      console.error("Error checking wallet balance:", walletErr);
-      res.status(500).json({
-        error: "Failed to verify wallet balance. Please try again.",
-        code: "WALLET_CHECK_FAILED",
-      });
+      sendSafeErrorResponse(res, walletErr, 500, { fallbackMessage: "Failed to verify wallet balance. Please try again." });
       return;
     }
 
@@ -3249,10 +1811,8 @@ router.post("/:id/boot", async (req: Request, res: Response) => {
     }
     res.json({ status });
   } catch (err: any) {
-    console.error("VPS boot error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to boot VPS instance" });
+    const structuredError = handleProviderError(err, "linode", "boot VPS instance");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -3330,10 +1890,8 @@ router.post("/:id/shutdown", async (req: Request, res: Response) => {
     }
     res.json({ status });
   } catch (err: any) {
-    console.error("VPS shutdown error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to shutdown VPS instance" });
+    const structuredError = handleProviderError(err, "linode", "shutdown VPS instance");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -3412,10 +1970,8 @@ router.post("/:id/reboot", async (req: Request, res: Response) => {
     }
     res.json({ status });
   } catch (err: any) {
-    console.error("VPS reboot error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to reboot VPS instance" });
+    const structuredError = handleProviderError(err, "linode", "reboot VPS instance");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -3837,8 +2393,8 @@ router.post("/:id/backups/enable", async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err: any) {
-    console.error("VPS enable backups error:", err);
-    res.status(500).json({ error: err.message || "Failed to enable backups" });
+    const structuredError = handleProviderError(err, "linode", "enable backups");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -3909,8 +2465,8 @@ router.post("/:id/backups/disable", async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err: any) {
-    console.error("VPS disable backups error:", err);
-    res.status(500).json({ error: err.message || "Failed to disable backups" });
+    const structuredError = handleProviderError(err, "linode", "disable backups");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -4040,10 +2596,8 @@ router.post("/:id/backups/schedule", async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err: any) {
-    console.error("VPS update backup schedule error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to update backup schedule" });
+    const structuredError = handleProviderError(err, "linode", "update backup schedule");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -4121,10 +2675,8 @@ router.post("/:id/backups/snapshot", async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err: any) {
-    console.error("VPS snapshot error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to trigger snapshot" });
+    const structuredError = handleProviderError(err, "linode", "trigger snapshot");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -4214,10 +2766,8 @@ router.post(
 
       res.json({ success: true });
     } catch (err: any) {
-      console.error("VPS restore backup error:", err);
-      res
-        .status(500)
-        .json({ error: err.message || "Failed to restore from backup" });
+      const structuredError = handleProviderError(err, "linode", "restore backup");
+      res.status(structuredError.statusCode).json({ error: structuredError.message });
     }
   },
 );
@@ -4299,8 +2849,8 @@ router.post("/:id/firewalls/attach", async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err: any) {
-    console.error("VPS attach firewall error:", err);
-    res.status(500).json({ error: err.message || "Failed to attach firewall" });
+    const structuredError = handleProviderError(err, "linode", "attach firewall");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -4392,8 +2942,8 @@ router.post("/:id/firewalls/detach", async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err: any) {
-    console.error("VPS detach firewall error:", err);
-    res.status(500).json({ error: err.message || "Failed to detach firewall" });
+    const structuredError = handleProviderError(err, "linode", "detach firewall");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -4521,11 +3071,8 @@ router.post("/:id/networking/rdns", async (req: Request, res: Response) => {
 
     res.json({ success: true, rdns: rdnsValue });
   } catch (err: any) {
-    console.error("VPS rDNS update error:", err);
-    // Forward validation errors from Linode as 400 instead of 500
-    const message = err.message || "Failed to update rDNS";
-    const isValidationError = /forward dns|not found|invalid|must be/i.test(message);
-    res.status(isValidationError ? 400 : 500).json({ error: message });
+    const structuredError = handleProviderError(err, "linode", "update rDNS");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -4594,8 +3141,8 @@ router.get("/:id/networking/ipv6-rdns-records", async (req: Request, res: Respon
 
     res.json({ records });
   } catch (err: any) {
-    console.error("IPv6 RDNS records fetch error:", err);
-    res.status(500).json({ error: err.message || "Failed to fetch IPv6 RDNS records" });
+    const structuredError = handleProviderError(err, "linode", "fetch IPv6 RDNS records");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -4706,8 +3253,8 @@ router.put("/:id/hostname", async (req: Request, res: Response) => {
       message: "Hostname updated successfully",
     });
   } catch (err: any) {
-    console.error("VPS hostname update error:", err);
-    res.status(500).json({ error: err.message || "Failed to update hostname" });
+    const structuredError = handleProviderError(err, "linode", "update hostname");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -4794,8 +3341,8 @@ router.put("/:id/watchdog", async (req: Request, res: Response) => {
       message: `Shutdown Watchdog ${watchdog_enabled ? "enabled" : "disabled"} successfully`,
     });
   } catch (err: any) {
-    console.error("VPS watchdog update error:", err);
-    res.status(500).json({ error: err.message || "Failed to update watchdog setting" });
+    const structuredError = handleProviderError(err, "linode", "update watchdog setting");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -4897,10 +3444,8 @@ router.delete("/:id", async (req: Request, res: Response) => {
     }
     res.json({ deleted: true });
   } catch (err: any) {
-    console.error("VPS delete error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to delete VPS instance" });
+    const structuredError = handleProviderError(err, "linode", "delete VPS instance");
+    res.status(structuredError.statusCode).json({ error: structuredError.message });
   }
 });
 
@@ -4995,9 +3540,8 @@ router.put("/:id/notes", async (req: Request, res: Response) => {
       notes: notes.trim() || null,
       message: notes.trim() ? "Notes updated successfully" : "Notes cleared",
     });
-  } catch (err: any) {
-    console.error("VPS notes update error:", err);
-    res.status(500).json({ error: err.message || "Failed to update notes" });
+  } catch (err) {
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to update notes" });
   }
 });
 
@@ -5025,297 +3569,8 @@ router.get("/:id/notes", async (req: Request, res: Response) => {
     }
 
     res.json({ notes: rowRes.rows[0].notes || null });
-  } catch (err: any) {
-    console.error("VPS notes fetch error:", err);
-    res.status(500).json({ error: err.message || "Failed to fetch notes" });
-  }
-});
-
-// ========================
-// Disk Management Routes
-// ========================
-
-async function resolveVpsInstance(req: Request, res: Response) {
-  const { id } = req.params;
-  const user = (req as any).user;
-  const userId = user.id;
-  const userRole = user.role;
-  const organizationId = user.organizationId;
-
-  if (userRole !== "admin") {
-    const hasPermission = await RoleService.checkPermission(userId, organizationId, "vps_manage");
-    if (!hasPermission) {
-      res.status(403).json({ error: "Insufficient permissions", required: "vps_manage" });
-      return null;
-    }
-  }
-
-  let rowRes;
-  if (userRole === "admin") {
-    rowRes = await query("SELECT * FROM vps_instances WHERE id = $1", [id]);
-  } else {
-    rowRes = await query("SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2", [id, organizationId]);
-  }
-
-  if (rowRes.rows.length === 0) {
-    res.status(404).json({ error: "Instance not found" });
-    return null;
-  }
-
-  const row = rowRes.rows[0];
-  const providerInstanceId = Number(row.provider_instance_id);
-  if (!Number.isFinite(providerInstanceId)) {
-    res.status(400).json({ error: "Instance is missing provider reference" });
-    return null;
-  }
-
-  return { row, providerInstanceId, user };
-}
-
-// List disks for a VPS instance
-router.get("/:id/disks", async (req: Request, res: Response) => {
-  try {
-    const ctx = await resolveVpsInstance(req, res);
-    if (!ctx) return;
-
-    const disks = await linodeService.listDisks(ctx.providerInstanceId);
-    res.json({ disks });
-  } catch (err: any) {
-    const structuredError = handleProviderError(err, "linode", "list disks");
-    res.status(structuredError.statusCode).json({ error: structuredError.message });
-  }
-});
-
-// Get a specific disk
-router.get("/:id/disks/:diskId", async (req: Request, res: Response) => {
-  try {
-    const ctx = await resolveVpsInstance(req, res);
-    if (!ctx) return;
-
-    const diskId = Number(req.params.diskId);
-    if (!Number.isFinite(diskId)) {
-      return res.status(400).json({ error: "Invalid disk ID" });
-    }
-
-    const disk = await linodeService.getDisk(ctx.providerInstanceId, diskId);
-    res.json({ disk });
-  } catch (err: any) {
-    const structuredError = handleProviderError(err, "linode", "get disk");
-    res.status(structuredError.statusCode).json({ error: structuredError.message });
-  }
-});
-
-// Create a disk
-router.post("/:id/disks", async (req: Request, res: Response) => {
-  try {
-    const ctx = await resolveVpsInstance(req, res);
-    if (!ctx) return;
-
-    const { label, size, filesystem, image, root_pass, authorized_keys, stackscript_id, stackscript_data } = req.body;
-    if (!label || !size) {
-      return res.status(400).json({ error: "label and size are required" });
-    }
-    if (typeof size !== "number" || size < 1) {
-      return res.status(400).json({ error: "size must be a positive number (MB)" });
-    }
-
-    const disk = await linodeService.createDisk(ctx.providerInstanceId, {
-      label,
-      size,
-      filesystem,
-      image,
-      root_pass,
-      authorized_keys,
-      stackscript_id,
-      stackscript_data,
-    });
-
-    await logActivity({
-      userId: ctx.user.id,
-      organizationId: ctx.user.organizationId,
-      eventType: "vps.disk.create",
-      entityType: "disk",
-      entityId: String(disk.id),
-      message: `Created disk '${label}' on VPS '${ctx.row.label}'`,
-      status: "success",
-      metadata: { instanceId: ctx.row.id, diskId: disk.id, size },
-    }, req as any);
-
-    res.status(201).json({ disk });
-  } catch (err: any) {
-    const structuredError = handleProviderError(err, "linode", "create disk");
-    res.status(structuredError.statusCode).json({ error: structuredError.message });
-  }
-});
-
-// Update a disk (label, filesystem)
-router.put("/:id/disks/:diskId", async (req: Request, res: Response) => {
-  try {
-    const ctx = await resolveVpsInstance(req, res);
-    if (!ctx) return;
-
-    const diskId = Number(req.params.diskId);
-    if (!Number.isFinite(diskId)) {
-      return res.status(400).json({ error: "Invalid disk ID" });
-    }
-
-    const { label, filesystem } = req.body;
-    const params: { label?: string; filesystem?: string } = {};
-    if (label) params.label = label;
-    if (filesystem) params.filesystem = filesystem;
-
-    const disk = await linodeService.updateDisk(ctx.providerInstanceId, diskId, params);
-
-    await logActivity({
-      userId: ctx.user.id,
-      organizationId: ctx.user.organizationId,
-      eventType: "vps.disk.update",
-      entityType: "disk",
-      entityId: String(diskId),
-      message: `Updated disk ${diskId} on VPS '${ctx.row.label}'`,
-      status: "success",
-      metadata: { instanceId: ctx.row.id, diskId, updates: params },
-    }, req as any);
-
-    res.json({ disk });
-  } catch (err: any) {
-    const structuredError = handleProviderError(err, "linode", "update disk");
-    res.status(structuredError.statusCode).json({ error: structuredError.message });
-  }
-});
-
-// Resize a disk
-router.post("/:id/disks/:diskId/resize", async (req: Request, res: Response) => {
-  try {
-    const ctx = await resolveVpsInstance(req, res);
-    if (!ctx) return;
-
-    const diskId = Number(req.params.diskId);
-    if (!Number.isFinite(diskId)) {
-      return res.status(400).json({ error: "Invalid disk ID" });
-    }
-
-    const { size } = req.body;
-    if (!size || typeof size !== "number" || size < 1) {
-      return res.status(400).json({ error: "size must be a positive number (MB)" });
-    }
-
-    await linodeService.resizeDisk(ctx.providerInstanceId, diskId, size);
-
-    await logActivity({
-      userId: ctx.user.id,
-      organizationId: ctx.user.organizationId,
-      eventType: "vps.disk.resize",
-      entityType: "disk",
-      entityId: String(diskId),
-      message: `Resized disk ${diskId} to ${size}MB on VPS '${ctx.row.label}'`,
-      status: "success",
-      metadata: { instanceId: ctx.row.id, diskId, newSize: size },
-    }, req as any);
-
-    res.json({ success: true });
-  } catch (err: any) {
-    const structuredError = handleProviderError(err, "linode", "resize disk");
-    res.status(structuredError.statusCode).json({ error: structuredError.message });
-  }
-});
-
-// Clone a disk
-router.post("/:id/disks/:diskId/clone", async (req: Request, res: Response) => {
-  try {
-    const ctx = await resolveVpsInstance(req, res);
-    if (!ctx) return;
-
-    const diskId = Number(req.params.diskId);
-    if (!Number.isFinite(diskId)) {
-      return res.status(400).json({ error: "Invalid disk ID" });
-    }
-
-    const disk = await linodeService.cloneDisk(ctx.providerInstanceId, diskId);
-
-    await logActivity({
-      userId: ctx.user.id,
-      organizationId: ctx.user.organizationId,
-      eventType: "vps.disk.clone",
-      entityType: "disk",
-      entityId: String(disk.id),
-      message: `Cloned disk ${diskId} on VPS '${ctx.row.label}'`,
-      status: "success",
-      metadata: { instanceId: ctx.row.id, sourceDiskId: diskId, newDiskId: disk.id },
-    }, req as any);
-
-    res.status(201).json({ disk });
-  } catch (err: any) {
-    const structuredError = handleProviderError(err, "linode", "clone disk");
-    res.status(structuredError.statusCode).json({ error: structuredError.message });
-  }
-});
-
-// Reset disk password
-router.post("/:id/disks/:diskId/password", async (req: Request, res: Response) => {
-  try {
-    const ctx = await resolveVpsInstance(req, res);
-    if (!ctx) return;
-
-    const diskId = Number(req.params.diskId);
-    if (!Number.isFinite(diskId)) {
-      return res.status(400).json({ error: "Invalid disk ID" });
-    }
-
-    const { password } = req.body;
-    if (!password || typeof password !== "string" || password.length < 8) {
-      return res.status(400).json({ error: "password is required and must be at least 8 characters" });
-    }
-
-    await linodeService.resetDiskPassword(ctx.providerInstanceId, diskId, password);
-
-    await logActivity({
-      userId: ctx.user.id,
-      organizationId: ctx.user.organizationId,
-      eventType: "vps.disk.password_reset",
-      entityType: "disk",
-      entityId: String(diskId),
-      message: `Reset password for disk ${diskId} on VPS '${ctx.row.label}'`,
-      status: "success",
-      metadata: { instanceId: ctx.row.id, diskId },
-      suppressNotification: true,
-    }, req as any);
-
-    res.json({ success: true });
-  } catch (err: any) {
-    const structuredError = handleProviderError(err, "linode", "reset disk password");
-    res.status(structuredError.statusCode).json({ error: structuredError.message });
-  }
-});
-
-// Delete a disk
-router.delete("/:id/disks/:diskId", async (req: Request, res: Response) => {
-  try {
-    const ctx = await resolveVpsInstance(req, res);
-    if (!ctx) return;
-
-    const diskId = Number(req.params.diskId);
-    if (!Number.isFinite(diskId)) {
-      return res.status(400).json({ error: "Invalid disk ID" });
-    }
-
-    await linodeService.deleteDisk(ctx.providerInstanceId, diskId);
-
-    await logActivity({
-      userId: ctx.user.id,
-      organizationId: ctx.user.organizationId,
-      eventType: "vps.disk.delete",
-      entityType: "disk",
-      entityId: String(diskId),
-      message: `Deleted disk ${diskId} from VPS '${ctx.row.label}'`,
-      status: "success",
-      metadata: { instanceId: ctx.row.id, diskId },
-    }, req as any);
-
-    res.json({ success: true });
-  } catch (err: any) {
-    const structuredError = handleProviderError(err, "linode", "delete disk");
-    res.status(structuredError.statusCode).json({ error: structuredError.message });
+  } catch (err) {
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to fetch notes" });
   }
 });
 

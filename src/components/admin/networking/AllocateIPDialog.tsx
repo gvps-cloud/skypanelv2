@@ -21,11 +21,36 @@ import { toast } from "sonner";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
+function getCsrfToken(): string | null {
+  const cookie = document.cookie
+    .split(';')
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith('csrf_token='));
+  if (!cookie) {
+    return null;
+  }
+  const value = cookie.split('=')[1];
+  return value ? decodeURIComponent(value) : null;
+}
+
 function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem("auth_token");
+  const userStr = localStorage.getItem("auth_user");
+  let organizationId: string | undefined;
+  
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      organizationId = user.organizationId;
+    } catch {
+      // ignore
+    }
+  }
+
+  const csrfToken = getCsrfToken();
   return {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+    ...(organizationId && { "X-Organization-ID": organizationId }),
   };
 }
 
@@ -52,6 +77,7 @@ export function AllocateIPDialog({ open, onClose, onAllocated }: AllocateIPDialo
     queryFn: async () => {
       const res = await fetch(`${API_BASE_URL}/admin/servers`, {
         headers: getAuthHeaders(),
+        credentials: "include",
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to load instances");
@@ -73,6 +99,7 @@ export function AllocateIPDialog({ open, onClose, onAllocated }: AllocateIPDialo
       const res = await fetch(`${API_BASE_URL}/admin/networking/ips`, {
         method: "POST",
         headers: getAuthHeaders(),
+        credentials: "include",
         body: JSON.stringify(data),
       });
       const json = await res.json();

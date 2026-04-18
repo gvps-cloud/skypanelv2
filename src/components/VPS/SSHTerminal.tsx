@@ -208,7 +208,6 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
 
   const connect = useCallback((isReconnect = false) => {
     if (status === 'connecting' || status === 'connected') return;
-    const token = localStorage.getItem('auth_token') ?? '';
 
     let wsUrl: string;
     try {
@@ -217,13 +216,13 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
       // Force secure websocket if window is HTTPS to prevent Mixed Content
       const isHttps = url.protocol === 'https:' || window.location.protocol === 'https:';
       url.protocol = isHttps ? 'wss:' : 'ws:';
-      url.searchParams.set('token', token);
+      // WebSocket auth via HttpOnly cookie - no token in URL needed
       url.searchParams.set('rows', String(rows));
       url.searchParams.set('cols', String(cols));
       wsUrl = url.toString();
     } catch (err) {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      wsUrl = `${protocol}//${window.location.host}/api/vps/${instanceId}/ssh?token=${encodeURIComponent(token)}&rows=${rows}&cols=${cols}`;
+      wsUrl = `${protocol}//${window.location.host}/api/vps/${instanceId}/ssh?rows=${rows}&cols=${cols}`;
       console.warn('Falling back to window-based WebSocket URL due to error constructing URL:', err);
     }
 

@@ -104,6 +104,10 @@ router.get('/stream', authenticateSSE, async (req: AuthenticatedRequest, res: Re
   if (!user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  if (!user.organizationId) {
+    return res.status(403).json({ error: 'Organization membership required' });
+  }
   
   // Set headers for SSE
   res.setHeader('Content-Type', 'text/event-stream');
@@ -116,8 +120,8 @@ router.get('/stream', authenticateSSE, async (req: AuthenticatedRequest, res: Re
 
   // Handler for new notifications
   const notificationHandler = (notification: Notification) => {
-    // Only send notifications for this user
-    if (notification.user_id === user.id) {
+    // Only send notifications for this user AND current organization
+    if (notification.user_id === user.id && notification.organization_id === user.organizationId) {
       res.write(`data: ${JSON.stringify({ 
         type: 'notification', 
         data: notification 
@@ -149,11 +153,15 @@ router.get('/unread-count', async (req: AuthenticatedRequest, res: Response) => 
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    if (!user.organizationId) {
+      return res.status(403).json({ error: 'Organization membership required' });
+    }
+
     const result = await query(
       `SELECT COUNT(*) as count
        FROM activity_logs
-       WHERE user_id = $1 AND is_read = FALSE`,
-      [user.id]
+       WHERE user_id = $1 AND organization_id = $2 AND is_read = FALSE`,
+      [user.id, user.organizationId]
     );
 
     const count = parseInt(result.rows[0]?.count || '0', 10);
@@ -171,6 +179,10 @@ router.get('/unread', async (req: AuthenticatedRequest, res: Response) => {
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+
+    if (!user.organizationId) {
+      return res.status(403).json({ error: 'Organization membership required' });
+    }
     
     const limit = Math.min(Number(req.query.limit) || 20, 100);
 
@@ -178,10 +190,10 @@ router.get('/unread', async (req: AuthenticatedRequest, res: Response) => {
       `SELECT id, user_id, organization_id, event_type, entity_type, entity_id, 
               message, status, metadata, created_at, is_read, read_at
        FROM activity_logs
-       WHERE user_id = $1 AND is_read = FALSE
+       WHERE user_id = $1 AND organization_id = $2 AND is_read = FALSE
        ORDER BY created_at DESC
-       LIMIT $2`,
-      [user.id, limit]
+       LIMIT $3`,
+      [user.id, user.organizationId, limit]
     );
 
     res.json({ notifications: result.rows || [] });
@@ -198,6 +210,10 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+
+    if (!user.organizationId) {
+      return res.status(403).json({ error: 'Organization membership required' });
+    }
     
     const limit = Math.min(Number(req.query.limit) || 50, 200);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
@@ -206,16 +222,16 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
       `SELECT id, user_id, organization_id, event_type, entity_type, entity_id, 
               message, status, metadata, created_at, is_read, read_at
        FROM activity_logs
-       WHERE user_id = $1
+       WHERE user_id = $1 AND organization_id = $2
        ORDER BY created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [user.id, limit, offset]
+       LIMIT $3 OFFSET $4`,
+      [user.id, user.organizationId, limit, offset]
     );
 
     // Get total count
     const countResult = await query(
-      `SELECT COUNT(*) as total FROM activity_logs WHERE user_id = $1`,
-      [user.id]
+      `SELECT COUNT(*) as total FROM activity_logs WHERE user_id = $1 AND organization_id = $2`,
+      [user.id, user.organizationId]
     );
     const total = parseInt(countResult.rows[0]?.total || '0', 10);
 
@@ -242,8 +258,23 @@ router.patch('/:id/read', async (req: AuthenticatedRequest, res: Response) => {
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+
+    if (!user.organizationId) {
+      return res.status(403).json({ error: 'Organization membership required' });
+    }
     
     const notificationId = req.params.id;
+
+    // First verify the notification belongs to the user's organization
+    const ownershipCheck = await query(
+      `SELECT id FROM activity_logs 
+       WHERE id = $1 AND organization_id = $2`,
+      [notificationId, user.organizationId]
+    );
+
+    if (ownershipCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
 
     const result = await query(
       `SELECT mark_notification_read($1, $2) as success`,
@@ -271,9 +302,13 @@ router.patch('/read-all', async (req: AuthenticatedRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    if (!user.organizationId) {
+      return res.status(403).json({ error: 'Organization membership required' });
+    }
+
     const result = await query(
-      `SELECT mark_all_notifications_read($1) as count`,
-      [user.id]
+      `SELECT mark_all_notifications_read($1, $2) as count`,
+      [user.id, user.organizationId]
     );
 
     const count = result.rows[0]?.count || 0;

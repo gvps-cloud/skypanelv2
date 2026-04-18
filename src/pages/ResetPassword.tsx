@@ -8,6 +8,7 @@ import "@/styles/auth.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { apiClient } from "@/lib/api";
 import {
   InputOTP,
   InputOTPGroup,
@@ -66,17 +67,7 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, token: resetCode, password }),
-      });
-
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
-        const message = data?.error || "Failed to reset password";
-        throw new Error(message);
-      }
+      await apiClient.post("/auth/reset-password", { email, token: resetCode, password });
 
       toast.success("Password reset successfully. You can now sign in.");
       setCompleted(true);
