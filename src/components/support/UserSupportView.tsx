@@ -23,7 +23,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { buildApiUrl } from "@/lib/api";
+import { apiClient, buildApiUrl } from "@/lib/api";
 import {
   SupportTicket,
   TicketMessage,
@@ -72,25 +72,17 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
     Array<{ id: string; label: string }>
   >([]);
 
-  const authHeader = useMemo(
-    () => ({ Authorization: `Bearer ${token}` }),
-    [token]
-  );
-
   const fetchWalletBalance = useCallback(async () => {
     try {
-      const res = await fetch(buildApiUrl("/api/payments/wallet/balance"), {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await apiClient.get<{ balance: number; success: boolean }>("/payments/wallet/balance");
+      if (data.success) {
         setWalletBalance(data.balance);
       }
     } catch {
       // Ignore wallet balance fetch failures because this is only a
       // non-critical background UI enhancement for the support view.
     }
-  }, [authHeader]);
+  }, []);
 
   useEffect(() => {
     fetchWalletBalance();
@@ -98,11 +90,8 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
 
   const fetchVpsInstances = useCallback(async () => {
     try {
-      const res = await fetch(buildApiUrl("/api/vps"), {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (res.ok && data.instances) {
+      const data = await apiClient.get<{ instances: any[] }>("/vps");
+      if (data.instances) {
         setVpsInstances(
           data.instances.map((i: any) => ({ id: i.id, label: i.label }))
         );
@@ -111,7 +100,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
       // Ignore errors when fetching VPS instances for ticket creation because
       // the create-ticket flow can still proceed without optional VPS options.
     }
-  }, [authHeader]);
+  }, []);
 
   useEffect(() => {
     if (isCreateModalOpen) {
@@ -163,11 +152,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
   const fetchTickets = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(buildApiUrl("/api/support/tickets"), {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch tickets");
+      const data = await apiClient.get<{ tickets: any[]; error?: string }>("/support/tickets");
 
       const mapped: SupportTicket[] = (data.tickets || []).map((t: any) => ({
         id: t.id,
@@ -197,7 +182,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
       setLoading(false);
       setTicketsInitialized(true);
     }
-  }, [authHeader]);
+  }, []);
 
   useEffect(() => {
     fetchTickets();
@@ -323,19 +308,14 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
       // Don't reload if already selected (optional optimization, but good for avoiding flicker)
       // But we do want to load messages if they aren't loaded.
       // For now, let's just set it.
-      
+
       if (selectedTicket?.id !== ticket.id) {
         setSelectedTicket({ ...ticket, messages: [] });
       }
-      
+
       try {
-        const res = await fetch(
-          buildApiUrl(`/api/support/tickets/${ticket.id}/replies`),
-          { headers: authHeader }
-        );
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to load replies");
-        
+        const data = await apiClient.get<{ replies: any[]; error?: string }>(`/support/tickets/${ticket.id}/replies`);
+
         const msgs: TicketMessage[] = (data.replies || []).map((m: any) => ({
           id: m.id,
           ticket_id: m.ticket_id,
@@ -347,7 +327,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
           message: m.message,
           created_at: m.created_at,
         }));
-        
+
         setSelectedTicket((prev) =>
           prev ? { ...prev, messages: msgs } : prev
         );
@@ -356,7 +336,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         toast.error(e.message || "Failed to load messages");
       }
     },
-    [authHeader, scrollToBottom, selectedTicket?.id]
+    [scrollToBottom, selectedTicket?.id]
   );
 
   useEffect(() => {
@@ -397,20 +377,14 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
     }
 
     try {
-      const res = await fetch(
-        buildApiUrl(`/api/support/tickets/${selectedTicket.id}/replies`),
-        {
-          method: "POST",
-          headers: { ...authHeader, "Content-Type": "application/json" },
-          body: JSON.stringify({ message: replyMessage }),
-        }
+      const data = await apiClient.post<{ reply: any; error?: string }>(
+        `/support/tickets/${selectedTicket.id}/replies`,
+        { message: replyMessage }
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send reply");
 
       toast.success("Reply sent successfully");
       setReplyMessage("");
-      
+
       const newReply = data.reply;
       if (newReply) {
         const newMsg: TicketMessage = {
@@ -421,7 +395,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
           message: newReply.message,
           created_at: newReply.created_at,
         };
-        
+
         setSelectedTicket((prev) => {
           if (!prev || prev.id !== newReply.ticket_id) return prev;
           if (prev.messages.some(m => m.id === newMsg.id)) return prev;
@@ -437,7 +411,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
     } catch (error: any) {
       toast.error(error.message || "Failed to send reply");
     }
-  }, [selectedTicket, replyMessage, authHeader, openTicket, scrollToBottom]);
+  }, [selectedTicket, replyMessage, openTicket, scrollToBottom]);
 
   const requestReopen = useCallback(async () => {
     if (!selectedTicket) return;
@@ -450,20 +424,14 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
     try {
       const note = reopenRequestMessage.trim();
       const payload = note ? { message: note } : {};
-      const res = await fetch(
-        buildApiUrl(`/api/support/tickets/${selectedTicket.id}/reopen-request`),
-        {
-          method: "POST",
-          headers: { ...authHeader, "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
+      const data = await apiClient.post<{ reply: any; error?: string }>(
+        `/support/tickets/${selectedTicket.id}/reopen-request`,
+        payload
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to request reopen");
 
       toast.success("Re-open request sent to support staff");
       setReopenRequestMessage("");
-      
+
       const newReply = data.reply;
       if (newReply) {
         const newMsg: TicketMessage = {
@@ -474,7 +442,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
           message: newReply.message,
           created_at: newReply.created_at,
         };
-        
+
         setSelectedTicket((prev) => {
           if (!prev || prev.id !== newReply.ticket_id) return prev;
           if (prev.messages.some(m => m.id === newMsg.id)) return prev;
@@ -497,7 +465,6 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
   }, [
     selectedTicket,
     reopenRequestMessage,
-    authHeader,
     openTicket,
     fetchTickets,
     scrollToBottom,
@@ -505,19 +472,13 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
 
   const handleCreateTicket = async (data: CreateTicketData) => {
     try {
-      const res = await fetch(buildApiUrl("/api/support/tickets"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify({
-          subject: data.subject,
-          message: data.description, // Backend expects 'message' not 'description'
-          priority: data.priority,
-          category: data.category,
-          vpsId: data.vpsId,
-        }),
+      const resData = await apiClient.post<{ error?: string }>("/support/tickets", {
+        subject: data.subject,
+        message: data.description, // Backend expects 'message' not 'description'
+        priority: data.priority,
+        category: data.category,
+        vpsId: data.vpsId,
       });
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData.error || "Failed to create ticket");
 
       toast.success("Support ticket created successfully");
       setIsCreateModalOpen(false);
