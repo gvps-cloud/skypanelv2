@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Shield, MoreHorizontal, Pencil, Trash2, RefreshCw, Plus, Settings, BookTemplate } from "lucide-react";
 import { toast } from "sonner";
+import { apiClient } from "@/lib/api";
 import {
   listFirewalls, createFirewall, deleteFirewall, updateFirewall,
   getFirewallRules, updateFirewallRules,
@@ -22,41 +23,6 @@ import {
   type IPAMFirewallDevice, type FirewallAction,
   type IPAMFirewallTemplate, type IPAMFirewallSettings,
 } from "@/services/ipamService";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
-
-function getCsrfToken(): string | null {
-  const cookie = document.cookie
-    .split(';')
-    .map((entry) => entry.trim())
-    .find((entry) => entry.startsWith('csrf_token='));
-  if (!cookie) {
-    return null;
-  }
-  const value = cookie.split('=')[1];
-  return value ? decodeURIComponent(value) : null;
-}
-
-function getAuthHeaders(): HeadersInit {
-  const userStr = localStorage.getItem("auth_user");
-  let organizationId: string | undefined;
-  
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      organizationId = user.organizationId;
-    } catch {
-      // ignore
-    }
-  }
-
-  const csrfToken = getCsrfToken();
-  return {
-    "Content-Type": "application/json",
-    ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-    ...(organizationId && { "X-Organization-ID": organizationId }),
-  };
-}
 
 // ── Empty rule template ──
 
@@ -134,9 +100,7 @@ export function FirewallManager() {
   const serversQuery = useQuery({
     queryKey: ["admin", "servers"],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/admin/servers`, { headers: getAuthHeaders(), credentials: "include" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to fetch servers");
+      const json = await apiClient.get<{ servers: Array<{ id: number; label: string; provider_instance_id: string }> }>("/admin/servers");
       return (json.servers || []) as Array<{ id: number; label: string; provider_instance_id: string }>;
     },
     enabled: attachDialogOpen,

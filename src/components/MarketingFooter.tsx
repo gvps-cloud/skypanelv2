@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowUp } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import FooterPartnerLinks from "@/components/FooterPartnerLinks";
 import { BRAND_NAME } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 
@@ -81,9 +82,12 @@ export default function MarketingFooter() {
 
         {/* Bottom bar */}
         <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
-          <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.
-          </p>
+          <div className="flex flex-col items-center gap-2 sm:items-start">
+            <p className="text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.
+            </p>
+            <FooterPartnerLinks />
+          </div>
           <Button
             variant="ghost"
             size="sm"

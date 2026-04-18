@@ -31,7 +31,7 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { buildApiUrl } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 import type { FAQCategory, FAQItem } from '@/types/faq';
 
 const categorySchema = z.object({
@@ -157,14 +157,9 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ token }) => {
   );
 
   const fetchCategories = async () => {
-    if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(buildApiUrl('/api/admin/faq/categories'), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load categories');
+      const data = await apiClient.get<{ categories: FAQCategory[] }>('/admin/faq/categories');
       setCategories(data.categories || []);
     } catch (error: any) {
       toast.error(error.message || 'Failed to load categories');
@@ -174,13 +169,8 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ token }) => {
   };
 
   const fetchItemCounts = async () => {
-    if (!token) return;
     try {
-      const res = await fetch(buildApiUrl('/api/admin/faq/items'), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load FAQ items');
+      const data = await apiClient.get<{ items: FAQItem[] }>('/admin/faq/items');
       const counts: Record<string, number> = {};
       (data.items || []).forEach((item: FAQItem) => {
         counts[item.category_id] = (counts[item.category_id] || 0) + 1;
@@ -194,22 +184,12 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ token }) => {
   useEffect(() => {
     fetchCategories();
     fetchItemCounts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, []);
 
   const handleCreate = async (data: CategoryFormData) => {
     setSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl('/api/admin/faq/categories'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      });
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || 'Failed to create category');
+      const responseData = await apiClient.post<{ category: FAQCategory }>('/admin/faq/categories', data);
       
       setCategories(prev => [...prev, responseData.category]);
       setShowCreateDialog(false);
@@ -227,16 +207,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ token }) => {
 
     setSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/faq/categories/${selectedCategory.id}`), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      });
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || 'Failed to update category');
+      const responseData = await apiClient.put<{ category: FAQCategory }>(`/admin/faq/categories/${selectedCategory.id}`, data);
       
       setCategories(prev => prev.map(cat => cat.id === selectedCategory.id ? responseData.category : cat));
       setShowEditDialog(false);
@@ -255,14 +226,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ token }) => {
 
     setSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/faq/categories/${selectedCategory.id}`), {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to delete category');
-      }
+      await apiClient.delete(`/admin/faq/categories/${selectedCategory.id}`);
       
       setCategories(prev => prev.filter(cat => cat.id !== selectedCategory.id));
       setShowDeleteDialog(false);
@@ -277,16 +241,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ token }) => {
 
   const handleToggleActive = async (category: FAQCategory) => {
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/faq/categories/${category.id}`), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ is_active: !category.is_active }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update category');
+      const data = await apiClient.put<{ category: FAQCategory }>(`/admin/faq/categories/${category.id}`, { is_active: !category.is_active });
       
       setCategories(prev => prev.map(cat => cat.id === category.id ? data.category : cat));
       toast.success(`Category ${!category.is_active ? 'activated' : 'deactivated'}`);
@@ -335,19 +290,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ token }) => {
     }));
 
     try {
-      const res = await fetch(buildApiUrl('/api/admin/faq/categories/reorder'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ categories: reorderData }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to reorder categories');
-      }
+      await apiClient.post('/admin/faq/categories/reorder', { categories: reorderData });
 
       toast.success('Categories reordered successfully');
     } catch (error: any) {

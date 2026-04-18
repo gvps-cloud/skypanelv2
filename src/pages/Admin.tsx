@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
+import { apiClient } from "@/lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
@@ -1349,22 +1350,7 @@ const Admin: React.FC = () => {
     if (!token || serverActionLoading) return;
     setServerActionLoading({ serverId, action });
     try {
-      const response = await fetch(
-        buildApiUrl(`/api/vps/${serverId}/${action}`),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || `Failed to ${action} server`);
-      }
-
+      await apiClient.post(`/vps/${serverId}/${action}`);
       toast.success(`Server ${action} command sent successfully`);
       setTimeout(() => fetchServers(), 2000);
     } catch (error: any) {
@@ -1406,19 +1392,7 @@ const Admin: React.FC = () => {
 
     try {
       setThemeConfigLoading(true);
-      const response = await fetch(buildApiUrl("/api/admin/theme"), {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to load theme configuration: ${response.status}`,
-        );
-      }
-
-      const payload = await response.json();
+      const payload = await apiClient.get<{ theme?: { updatedAt?: string } }>('/admin/theme');
       const theme = payload?.theme as { updatedAt?: string } | undefined;
 
       setThemeUpdatedAt(
@@ -1450,20 +1424,7 @@ const Admin: React.FC = () => {
         setSavingPresetId(preset.id);
         setTheme(preset.id);
 
-        const response = await fetch(buildApiUrl("/api/admin/theme"), {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ presetId: preset.id }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to update theme: ${response.status}`);
-        }
-
-        const payload = await response.json();
+        const payload = await apiClient.put<{ theme?: { updatedAt?: string } }>('/admin/theme', { presetId: preset.id });
         const theme = payload?.theme as { updatedAt?: string } | undefined;
         setThemeUpdatedAt(
           typeof theme?.updatedAt === "string" ? theme.updatedAt : null,
@@ -1560,11 +1521,7 @@ const Admin: React.FC = () => {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/tickets`, {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load tickets");
+      const data = await apiClient.get<{ tickets: SupportTicket[] }>('/admin/tickets');
       const mapped: SupportTicket[] = (data.tickets || []).map((t: any) => ({
         id: t.id,
         created_by: t.created_by,
@@ -1588,11 +1545,7 @@ const Admin: React.FC = () => {
   const fetchProviders = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/providers`, {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load providers");
+      const data = await apiClient.get<{ providers: AdminProvider[] }>('/admin/providers');
       setProviders(data.providers || []);
     } catch (e: any) {
       toast.error(e.message);
@@ -1604,12 +1557,7 @@ const Admin: React.FC = () => {
     if (!token) return;
     setRdnsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/networking/rdns`, {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || "Failed to load rDNS configuration");
+      const data = await apiClient.get<{ config?: { rdns_base_domain?: string }, warning?: string }>('/admin/networking/rdns');
       const base = (data.config?.rdns_base_domain ??
         "ip.rev.example.com") as string;
       setRdnsBaseDomain(base);
@@ -1630,15 +1578,8 @@ const Admin: React.FC = () => {
     }
     setRdnsSaving(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/networking/rdns`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify({ rdns_base_domain: rdnsBaseDomain.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || "Failed to save rDNS configuration");
-      setRdnsBaseDomain(data.config?.rdns_base_domain ?? rdnsBaseDomain.trim());
+      await apiClient.put('/admin/networking/rdns', { rdns_base_domain: rdnsBaseDomain.trim() });
+      setRdnsBaseDomain(rdnsBaseDomain.trim());
       toast.success("rDNS configuration updated");
     } catch (e: any) {
       toast.error(e.message);
@@ -1651,13 +1592,7 @@ const Admin: React.FC = () => {
     if (!token) return;
     setEgressPricingLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/egress/pricing`, {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to load egress pricing");
-      }
+      const data = await apiClient.get<{ pricing: any[], warning?: string }>('/admin/egress/pricing');
       setEgressPricing(Array.isArray(data.pricing) ? data.pricing : []);
     } catch (e: any) {
       toast.error(e.message || "Failed to load egress pricing");
@@ -1670,14 +1605,7 @@ const Admin: React.FC = () => {
     if (!token) return;
     setEgressPricingSyncing(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/egress/pricing/sync`, {
-        method: "POST",
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to sync egress pricing");
-      }
+      const data = await apiClient.post<{ pricing: any[] }>('/admin/egress/pricing/sync');
       setEgressPricing(Array.isArray(data.pricing) ? data.pricing : []);
       toast.success("Egress pricing synced");
     } catch (e: any) {
@@ -1691,13 +1619,7 @@ const Admin: React.FC = () => {
     if (!token) return;
     setLiveEgressUsageLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/egress/live-usage`, {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to load live egress usage");
-      }
+      const data = await apiClient.get<{ pools: any[] }>('/admin/egress/live-usage');
       setLiveEgressUsage(Array.isArray(data.pools) ? data.pools : []);
     } catch (e: any) {
       toast.error(e.message || "Failed to load live egress usage");
@@ -1710,13 +1632,7 @@ const Admin: React.FC = () => {
     if (!token) return;
     setEgressHistoryLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/egress/history?month=${egressHistoryMonth}`, {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to load egress billing history");
-      }
+      const data = await apiClient.get<{ cycles: any[] }>(`/admin/egress/history?month=${egressHistoryMonth}`);
       setEgressHistory(Array.isArray(data.cycles) ? data.cycles : []);
     } catch (e: any) {
       toast.error(e.message || "Failed to load egress billing history");
@@ -1729,15 +1645,7 @@ const Admin: React.FC = () => {
     if (!token) return;
     setEgressExecuting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/egress/execute`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to execute egress billing");
-      }
+      const data = await apiClient.post<{ result?: { billedCount?: number, failedCount?: number } }>('/admin/egress/execute');
       const result = data.result;
       toast.success(
         `Egress billing executed: ${result?.billedCount ?? 0} billed, ${result?.failedCount ?? 0} failed`,
@@ -1759,15 +1667,7 @@ const Admin: React.FC = () => {
     if (!token) return;
     setSavingEgressRegionId(regionId);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/egress/pricing/${regionId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to update egress pricing");
-      }
+      const data = await apiClient.put<{ pricing: any }>(`/admin/egress/pricing/${regionId}`, payload);
       setEgressPricing((prev) =>
         prev.map((item) => (item.region_id === regionId ? data.pricing : item)),
       );
@@ -1784,25 +1684,10 @@ const Admin: React.FC = () => {
     if (!token) return;
     setLoadingStackscripts(true);
     try {
-      // Fetch configs
-      const configRes = await fetch(
-        `${API_BASE_URL}/admin/stackscripts/configs`,
-        { headers: authHeader },
-      );
-      const configData = await configRes.json();
-      if (!configRes.ok)
-        throw new Error(
-          configData.error || "Failed to load StackScript configs",
-        );
-
-      // Fetch available stackscripts
-      const scriptRes = await fetch(
-        `${API_BASE_URL}/admin/upstream/stackscripts?mine=true`,
-        { headers: authHeader },
-      );
-      const scriptData = await scriptRes.json();
-      if (!scriptRes.ok)
-        throw new Error(scriptData.error || "Failed to load StackScripts");
+      const [configData, scriptData] = await Promise.all([
+        apiClient.get<{ configs: StackscriptConfigRecord[] }>('/admin/stackscripts/configs'),
+        apiClient.get<{ stackscripts: LinodeStackScriptSummary[] }>('/admin/upstream/stackscripts?mine=true'),
+      ]);
 
       const configured: StackscriptConfigRecord[] = Array.isArray(
         configData.configs,
@@ -1864,21 +1749,14 @@ const Admin: React.FC = () => {
   ) => {
     try {
       setSavingStackscriptId(stackscriptId);
-      const res = await fetch(`${API_BASE_URL}/admin/stackscripts/configs`, {
-        method: "POST",
-        headers: { ...authHeader, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stackscript_id: stackscriptId,
-          label: draft.label,
-          description: draft.description,
-          is_enabled: draft.is_enabled,
-          display_order: draft.display_order,
-          metadata: {},
-        }),
+      await apiClient.post('/admin/stackscripts/configs', {
+        stackscript_id: stackscriptId,
+        label: draft.label,
+        description: draft.description,
+        is_enabled: draft.is_enabled,
+        display_order: draft.display_order,
+        metadata: {},
       });
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || "Failed to save StackScript config");
       toast.success("StackScript configuration saved");
       await fetchStackscriptConfigs();
     } catch (e: any) {
@@ -1891,11 +1769,7 @@ const Admin: React.FC = () => {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/plans`, {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load plans");
+      const data = await apiClient.get<{ plans: VPSPlan[] }>('/admin/plans');
       setPlans(data.plans);
     } catch (e: any) {
       toast.error(e.message);
@@ -1907,14 +1781,7 @@ const Admin: React.FC = () => {
   const fetchLinodeTypes = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/upstream/plans`, {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || "Failed to load upstream provider plans");
-
-      // Backend now handles type_class mapping, so we can use the data directly
+      const data = await apiClient.get<{ plans: LinodeType[] }>('/admin/upstream/plans');
       setLinodeTypes(data.plans || []);
     } catch (e: any) {
       toast.error(e.message);
@@ -1924,14 +1791,7 @@ const Admin: React.FC = () => {
   const fetchLinodeRegions = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/upstream/regions`, {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(
-          data.error || "Failed to load upstream provider regions",
-        );
+      const data = await apiClient.get<{ regions: LinodeRegion[] }>('/admin/upstream/regions');
       setLinodeRegions(data.regions);
     } catch (e: any) {
       toast.error(e.message);
@@ -1942,11 +1802,7 @@ const Admin: React.FC = () => {
     if (!token) return;
     setServersLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/servers`, {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load servers");
+      const data = await apiClient.get<{ servers: any[] }>('/admin/servers');
       const rows: AdminServerInstance[] = Array.isArray(data.servers)
         ? data.servers.map((server: any) => ({
             ...server,
@@ -1973,11 +1829,7 @@ const Admin: React.FC = () => {
     if (!token) return;
     setUsersLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/users`, {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load users");
+      const data = await apiClient.get<{ users: AdminUserRecord[] }>('/admin/users');
       const rows: AdminUserRecord[] = Array.isArray(data.users)
         ? data.users
         : [];
@@ -1987,31 +1839,25 @@ const Admin: React.FC = () => {
     } finally {
       setUsersLoading(false);
     }
-  }, [token, authHeader]);
+  }, [token]);
 
   const savePlan = async () => {
     if (!editPlanId) return;
 
     // Find the plan being edited to get its provider
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/plans/${editPlanId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify({
-          name: editPlan.name,
-          base_price: editPlan.base_price,
-          markup_price: editPlan.markup_price,
-          backup_price_monthly: editPlan.backup_price_monthly || 0,
-          backup_price_hourly: editPlan.backup_price_hourly || 0,
-          backup_upcharge_monthly: editPlan.backup_upcharge_monthly || 0,
-          backup_upcharge_hourly: editPlan.backup_upcharge_hourly || 0,
-          daily_backups_enabled: editPlan.daily_backups_enabled,
-          weekly_backups_enabled: editPlan.weekly_backups_enabled,
-          active: editPlan.active,
-        }),
+      const data = await apiClient.put<{ plan: VPSPlan }>(`/admin/plans/${editPlanId}`, {
+        name: editPlan.name,
+        base_price: editPlan.base_price,
+        markup_price: editPlan.markup_price,
+        backup_price_monthly: editPlan.backup_price_monthly || 0,
+        backup_price_hourly: editPlan.backup_price_hourly || 0,
+        backup_upcharge_monthly: editPlan.backup_upcharge_monthly || 0,
+        backup_upcharge_hourly: editPlan.backup_upcharge_hourly || 0,
+        daily_backups_enabled: editPlan.daily_backups_enabled,
+        weekly_backups_enabled: editPlan.weekly_backups_enabled,
+        active: editPlan.active,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update plan");
       setPlans((prev) =>
         prev.map((p) => (p.id === editPlanId ? data.plan : p)),
       );
@@ -2051,46 +1897,40 @@ const Admin: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/plans`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify({
-          provider_id: selectedProvider.id,
-          name:
-            newVPSPlan.name && newVPSPlan.name.trim().length > 0
-              ? newVPSPlan.name.trim()
-              : selectedType.label,
-          provider_plan_id: selectedType.id,
-          base_price: selectedType.price.monthly,
-          markup_price: newVPSPlan.markupPrice,
-          backup_price_monthly:
-            parseFloat(String(newVPSPlan.backupPriceMonthly)) ||
-            selectedType.backup_price_monthly ||
-            0,
-          backup_price_hourly:
-            parseFloat(String(newVPSPlan.backupPriceHourly)) ||
-            selectedType.backup_price_hourly ||
-            0,
-          backup_upcharge_monthly:
-            parseFloat(String(newVPSPlan.backupUpchargeMonthly)) || 0,
-          backup_upcharge_hourly:
-            parseFloat(String(newVPSPlan.backupUpchargeHourly)) || 0,
-          daily_backups_enabled: newVPSPlan.dailyBackupsEnabled,
-          weekly_backups_enabled: newVPSPlan.weeklyBackupsEnabled,
-          specifications: {
-            vcpus: selectedType.vcpus,
-            memory: selectedType.memory,
-            disk: selectedType.disk,
-            transfer: selectedType.transfer,
-            type_class: selectedType.type_class,
-          },
+      const data = await apiClient.post<{ plan: VPSPlan }>('/admin/plans', {
+        provider_id: selectedProvider.id,
+        name:
+          newVPSPlan.name && newVPSPlan.name.trim().length > 0
+            ? newVPSPlan.name.trim()
+            : selectedType.label,
+        provider_plan_id: selectedType.id,
+        base_price: selectedType.price.monthly,
+        markup_price: newVPSPlan.markupPrice,
+        backup_price_monthly:
+          parseFloat(String(newVPSPlan.backupPriceMonthly)) ||
+          selectedType.backup_price_monthly ||
+          0,
+        backup_price_hourly:
+          parseFloat(String(newVPSPlan.backupPriceHourly)) ||
+          selectedType.backup_price_hourly ||
+          0,
+        backup_upcharge_monthly:
+          parseFloat(String(newVPSPlan.backupUpchargeMonthly)) || 0,
+        backup_upcharge_hourly:
+          parseFloat(String(newVPSPlan.backupUpchargeHourly)) || 0,
+        daily_backups_enabled: newVPSPlan.dailyBackupsEnabled,
+        weekly_backups_enabled: newVPSPlan.weeklyBackupsEnabled,
+        specifications: {
+          vcpus: selectedType.vcpus,
+          memory: selectedType.memory,
+          disk: selectedType.disk,
+          transfer: selectedType.transfer,
           type_class: selectedType.type_class,
-          regions: newVPSPlan.selectedRegions,
-          active: newVPSPlan.active,
-        }),
+        },
+        type_class: selectedType.type_class,
+        regions: newVPSPlan.selectedRegions,
+        active: newVPSPlan.active,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create VPS plan");
       setPlans((prev) => [data.plan, ...prev]);
       setNewVPSPlan({
         name: "",
@@ -2121,18 +1961,12 @@ const Admin: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/providers`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader },
-        body: JSON.stringify({
-          name: newProvider.name,
-          type: newProvider.type,
-          apiKey: newProvider.apiKey,
-          active: newProvider.active,
-        }),
+      const data = await apiClient.post<{ provider: AdminProvider }>('/admin/providers', {
+        name: newProvider.name,
+        type: newProvider.type,
+        apiKey: newProvider.apiKey,
+        active: newProvider.active,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create provider");
       setProviders((prev) => [data.provider, ...prev]);
       setNewProvider({
         name: "",
@@ -2150,14 +1984,7 @@ const Admin: React.FC = () => {
   // Delete VPS plan
   const deleteVPSPlan = async (planId: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/plans/${planId}`, {
-        method: "DELETE",
-        headers: authHeader,
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to delete plan");
-      }
+      await apiClient.delete(`/admin/plans/${planId}`);
       setPlans(plans.filter((p) => p.id !== planId));
       setDeletePlanId(null);
       toast.success("VPS plan deleted");
@@ -2170,16 +1997,7 @@ const Admin: React.FC = () => {
   const updateProvider = async () => {
     if (!editProviderId) return;
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/admin/providers/${editProviderId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", ...authHeader },
-          body: JSON.stringify(editProvider),
-        },
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update provider");
+      const data = await apiClient.put<{ provider: AdminProvider }>(`/admin/providers/${editProviderId}`, editProvider);
       setProviders(
         providers.map((p) => (p.id === editProviderId ? data.provider : p)),
       );
@@ -2194,14 +2012,7 @@ const Admin: React.FC = () => {
   // Delete provider
   const deleteProvider = async (providerId: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/providers/${providerId}`, {
-        method: "DELETE",
-        headers: authHeader,
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to delete provider");
-      }
+      await apiClient.delete(`/admin/providers/${providerId}`);
       setProviders(providers.filter((p) => p.id !== providerId));
       setDeleteProviderId(null);
       toast.success("Provider deleted");
@@ -2214,16 +2025,7 @@ const Admin: React.FC = () => {
   const validateProvider = async (providerId: string) => {
     try {
       setValidatingProviderId(providerId);
-      const res = await fetch(
-        `${API_BASE_URL}/admin/providers/${providerId}/validate`,
-        {
-          method: "POST",
-          headers: authHeader,
-        },
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to validate provider");
-
+      const data = await apiClient.post<{ validation_status?: ProviderValidationStatus, validation_message?: string, last_api_call?: string }>(`/admin/providers/${providerId}/validate`);
       // Update provider in state with validation results
       setProviders(
         providers.map((p) =>
@@ -2254,16 +2056,7 @@ const Admin: React.FC = () => {
   const reorderProviders = async (providerIds: string[]) => {
     try {
       console.log("Reordering providers:", providerIds);
-      const res = await fetch(`${API_BASE_URL}/admin/providers/reorder`, {
-        method: "PUT",
-        headers: { ...authHeader, "Content-Type": "application/json" },
-        body: JSON.stringify({ providerIds }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("Reorder error:", data);
-        throw new Error(data.error || "Failed to reorder providers");
-      }
+      await apiClient.put('/admin/providers/reorder', { providerIds });
       toast.success("Provider order updated successfully");
     } catch (e: any) {
       console.error("Reorder exception:", e);

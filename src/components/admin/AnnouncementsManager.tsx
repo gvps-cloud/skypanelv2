@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { buildApiUrl } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -155,18 +155,16 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
       if (filterType !== "all") params.set("type", filterType);
       if (filterActive !== "all") params.set("is_active", filterActive);
 
-      const res = await fetch(buildApiUrl(`/api/admin/announcements?${params.toString()}`), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load announcements");
+      const data = await apiClient.get<{ announcements: Announcement[] }>(
+        `/admin/announcements?${params.toString()}`
+      );
       setAnnouncements(data.announcements || []);
     } catch (error: any) {
       toast.error(error.message || "Failed to load announcements");
     } finally {
       setLoading(false);
     }
-  }, [token, filterType, filterActive]);
+  }, [filterType, filterActive]);
 
   useEffect(() => {
     fetchAnnouncements();
@@ -181,17 +179,10 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
         expires_at: data.expires_at || null,
       };
 
-      const res = await fetch(buildApiUrl("/api/admin/announcements"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || "Failed to create announcement");
-
+      const responseData = await apiClient.post<{ announcement: Announcement }>(
+        "/admin/announcements",
+        payload
+      );
       setAnnouncements((prev) => [responseData.announcement, ...prev]);
       setShowCreateDialog(false);
       createForm.reset(EMPTY_FORM);
@@ -229,16 +220,10 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
         expires_at: data.expires_at || null,
       };
 
-      const res = await fetch(buildApiUrl(`/api/admin/announcements/${selectedAnnouncement.id}`), {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || "Failed to update announcement");
+      const responseData = await apiClient.put<{ announcement: Announcement }>(
+        `/admin/announcements/${selectedAnnouncement.id}`,
+        payload
+      );
 
       setAnnouncements((prev) =>
         prev.map((a) => (a.id === selectedAnnouncement.id ? responseData.announcement : a))
@@ -255,16 +240,10 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
 
   const handleToggleActive = async (announcement: Announcement) => {
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/announcements/${announcement.id}`), {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ is_active: !announcement.is_active }),
-      });
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || "Failed to toggle announcement");
+      const responseData = await apiClient.put<{ announcement: Announcement }>(
+        `/admin/announcements/${announcement.id}`,
+        { is_active: !announcement.is_active }
+      );
 
       setAnnouncements((prev) =>
         prev.map((a) => (a.id === announcement.id ? responseData.announcement : a))
@@ -284,12 +263,7 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
     if (!selectedAnnouncement) return;
     setSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/announcements/${selectedAnnouncement.id}`), {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to delete announcement");
+      await apiClient.delete(`/admin/announcements/${selectedAnnouncement.id}`);
 
       setAnnouncements((prev) => prev.filter((a) => a.id !== selectedAnnouncement.id));
       setShowDeleteDialog(false);

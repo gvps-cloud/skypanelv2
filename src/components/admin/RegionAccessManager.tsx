@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { RefreshCw, MapPin, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
-import { buildApiUrl } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -89,16 +89,7 @@ export const RegionAccessManager: React.FC<RegionAccessManagerProps> = ({ token 
 
     try {
       setLoadingProviders(true);
-      const response = await fetch(buildApiUrl("/api/admin/providers"), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to load providers");
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ providers: ProviderSummary[] }>("/admin/providers");
       const supportedProviders: ProviderSummary[] = Array.isArray(data.providers)
         ? data.providers.filter((provider: ProviderSummary) =>
             provider && SUPPORTED_PROVIDER_TYPES.has((provider.type || "").toLowerCase())
@@ -132,16 +123,9 @@ export const RegionAccessManager: React.FC<RegionAccessManagerProps> = ({ token 
 
       try {
         setLoadingRegions(true);
-        const response = await fetch(buildApiUrl(`/api/admin/providers/${providerId}/regions`), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          throw new Error(data.error || "Failed to load regions");
-        }
-
-        const data: ProviderRegionsResponse = await response.json();
+        const data: ProviderRegionsResponse = await apiClient.get<ProviderRegionsResponse>(
+          `/admin/providers/${providerId}/regions`
+        );
         const regionRows: RegionRow[] = data.regions.map((region) => ({
           id: region.id,
           normalizedId: normalizeSlug(String(region.id || "")),
@@ -276,21 +260,10 @@ export const RegionAccessManager: React.FC<RegionAccessManagerProps> = ({ token 
                 .map((region) => region.normalizedId),
             };
 
-      const response = await fetch(buildApiUrl(`/api/admin/providers/${selectedProviderId}/regions`), {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to update regions");
-      }
-
-      const data = await response.json().catch(() => ({ success: true }));
+      const data = await apiClient.put<{ message?: string }>(
+        `/admin/providers/${selectedProviderId}/regions`,
+        payload
+      );
       toast.success(data.message || "Region allowlist updated");
       await loadRegions(selectedProviderId);
     } catch (error: any) {

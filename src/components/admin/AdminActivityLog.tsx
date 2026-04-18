@@ -31,7 +31,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import Pagination from "@/components/ui/Pagination";
-import { buildApiUrl } from "@/lib/api";
+import { apiClient, buildApiUrl } from "@/lib/api";
 
 interface AdminActivityRecord {
   id: string;
@@ -96,31 +96,12 @@ const AdminActivityLog: React.FC = () => {
   // Fetch organizations for filter dropdown
   const fetchOrganizations = useCallback(async () => {
     try {
-      const res = await fetch(buildApiUrl("/api/admin/organizations"), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const contentType = res.headers.get("content-type") || "";
-
-        if (contentType.includes("application/json")) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(
-            errorData.error || `Failed to fetch organizations: HTTP ${res.status}`
-          );
-        }
-
-        const errorText = await res.text().catch(() => "");
-        throw new Error(
-          errorText || `Failed to fetch organizations: HTTP ${res.status}`
-        );
-      }
-
-      const data = await res.json();
+      const data = await apiClient.get<{ organizations: Organization[] }>('/admin/organizations');
       setOrganizations(data.organizations || []);
     } catch (err) {
       console.error("Failed to fetch organizations:", err);
     }
-  }, [token]);
+  }, []);
 
   // Debounced user search
   useEffect(() => {
@@ -129,18 +110,7 @@ const AdminActivityLog: React.FC = () => {
     const timer = setTimeout(async () => {
       if (userSearch.length >= 2) {
         try {
-          const res = await fetch(
-            buildApiUrl(`/api/admin/users/search?q=${encodeURIComponent(userSearch)}`),
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          if (!res.ok) {
-            const errorText = await res.text().catch(() => "");
-            throw new Error(
-              errorText || `User search failed with status ${res.status}`
-            );
-          }
-
-          const data = await res.json();
+          const data = await apiClient.get<{ users: UserSearchResult[] }>(`/admin/users/search?q=${encodeURIComponent(userSearch)}`);
           setUserResults(data.users || []);
         } catch (err) {
           console.error("Failed to search users:", err);
@@ -171,11 +141,7 @@ const AdminActivityLog: React.FC = () => {
       params.set("limit", String(limit));
       params.set("offset", String((page - 1) * limit));
 
-      const res = await fetch(buildApiUrl(`/api/admin/activity?${params.toString()}`), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load activity");
+      const data = await apiClient.get<{ activities: AdminActivityRecord[], pagination: PaginationInfo }>(`/admin/activity?${params.toString()}`);
       setActivities(data.activities || []);
       setPagination(
         data.pagination || {

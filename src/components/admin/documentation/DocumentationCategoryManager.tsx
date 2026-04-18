@@ -62,7 +62,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildApiUrl } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 
 // Types
 interface DocumentationCategory {
@@ -186,38 +186,6 @@ export default function DocumentationCategoryManager() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<DocumentationCategory | null>(null);
 
-  const getCsrfToken = (): string | null => {
-    const cookie = document.cookie
-      .split(';')
-      .map((entry) => entry.trim())
-      .find((entry) => entry.startsWith('csrf_token='));
-    if (!cookie) {
-      return null;
-    }
-    const value = cookie.split('=')[1];
-    return value ? decodeURIComponent(value) : null;
-  };
-
-  const getAuthHeaders = (): HeadersInit => {
-    const userStr = localStorage.getItem("auth_user");
-    let organizationId: string | undefined;
-    
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        organizationId = user.organizationId;
-      } catch {
-        // ignore
-      }
-    }
-
-    const csrfToken = getCsrfToken();
-    return {
-      ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-      ...(organizationId && { "X-Organization-ID": organizationId }),
-    };
-  };
-
   const createForm = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
@@ -251,12 +219,7 @@ export default function DocumentationCategoryManager() {
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(buildApiUrl("/api/admin/documentation/categories"), {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load categories");
+      const data = await apiClient.get<{ categories: DocumentationCategory[] }>("/admin/documentation/categories");
       setCategories(data.categories || []);
     } catch (error: any) {
       toast.error(error.message || "Failed to load categories");
@@ -285,24 +248,7 @@ export default function DocumentationCategoryManager() {
     }));
 
     try {
-      const res = await fetch(
-        buildApiUrl("/api/admin/documentation/categories/reorder"),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...getAuthHeaders(),
-          },
-          credentials: "include",
-          body: JSON.stringify({ categories: reorderData }),
-        }
-      );
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to reorder categories");
-      }
-
+      await apiClient.post("/admin/documentation/categories/reorder", { categories: reorderData });
       toast.success("Categories reordered successfully");
     } catch (error: any) {
       toast.error(error.message || "Failed to reorder categories");
@@ -314,19 +260,7 @@ export default function DocumentationCategoryManager() {
   const handleCreate = async (data: CategoryFormData) => {
     setSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl("/api/admin/documentation/categories"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || "Failed to create category");
-
+      const responseData = await apiClient.post<{ category: DocumentationCategory }>("/admin/documentation/categories", data);
       setCategories((prev) => [...prev, responseData.category]);
       setShowCreateDialog(false);
       createForm.reset();
@@ -344,22 +278,7 @@ export default function DocumentationCategoryManager() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(
-        buildApiUrl(`/api/admin/documentation/categories/${selectedCategory.id}`),
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...getAuthHeaders(),
-          },
-          credentials: "include",
-          body: JSON.stringify(data),
-        }
-      );
-
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || "Failed to update category");
-
+      const responseData = await apiClient.put<{ category: DocumentationCategory }>(`/admin/documentation/categories/${selectedCategory.id}`, data);
       setCategories((prev) =>
         prev.map((cat) =>
           cat.id === selectedCategory.id ? responseData.category : cat
@@ -382,20 +301,7 @@ export default function DocumentationCategoryManager() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(
-        buildApiUrl(`/api/admin/documentation/categories/${selectedCategory.id}`),
-        {
-          method: "DELETE",
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to delete category");
-      }
-
+      await apiClient.delete(`/admin/documentation/categories/${selectedCategory.id}`);
       setCategories((prev) => prev.filter((cat) => cat.id !== selectedCategory.id));
       setShowDeleteDialog(false);
       setSelectedCategory(null);
@@ -410,20 +316,7 @@ export default function DocumentationCategoryManager() {
   // Toggle active
   const handleToggleActive = async (category: DocumentationCategory) => {
     try {
-      const res = await fetch(
-        buildApiUrl(`/api/admin/documentation/categories/${category.id}`),
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...getAuthHeaders(),
-          },
-          credentials: "include",
-          body: JSON.stringify({ is_active: !category.is_active }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update category");
+      const data = await apiClient.put<{ category: DocumentationCategory }>(`/admin/documentation/categories/${category.id}`, { is_active: !category.is_active });
 
       setCategories((prev) =>
         prev.map((cat) =>

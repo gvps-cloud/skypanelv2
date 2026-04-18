@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { buildApiUrl } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 import type { GitHubCommit } from '@/types/faq';
 
 interface UpdatesManagerProps {
@@ -28,12 +28,9 @@ export const UpdatesManager: React.FC<UpdatesManagerProps> = ({ token }) => {
     }
     
     try {
-      const url = buildApiUrl(`/api/admin/github/commits?limit=10${forceRefresh ? '&refresh=true' : ''}`);
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load commits');
+      const data = await apiClient.get<{ commits: GitHubCommit[] }>(
+        `/admin/github/commits?limit=10${forceRefresh ? '&refresh=true' : ''}`
+      );
       setCommits(data.commits || []);
       if (forceRefresh) {
         toast.success('Commits refreshed');

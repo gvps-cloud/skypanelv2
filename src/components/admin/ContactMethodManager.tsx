@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { buildApiUrl } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 import type { ContactMethod, EmailConfig, TicketConfig, PhoneConfig, OfficeConfig } from '@/types/contact';
 
 // Validation schemas for each method type
@@ -84,11 +84,7 @@ export const ContactMethodManager: React.FC<ContactMethodManagerProps> = ({ toke
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(buildApiUrl('/api/admin/contact/methods'), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load contact methods');
+      const data = await apiClient.get<{ methods: ContactMethod[] }>('/admin/contact/methods');
       setMethods(data.methods || []);
     } catch (error: any) {
       toast.error(error.message || 'Failed to load contact methods');
@@ -113,26 +109,10 @@ export const ContactMethodManager: React.FC<ContactMethodManagerProps> = ({ toke
     try {
       console.log(`[ContactMethodManager] Updating ${methodType} method with data:`, data);
       
-      const res = await fetch(buildApiUrl(`/api/admin/contact/methods/${methodType}`), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      });
-      
-      const responseData = await res.json();
-      console.log(`[ContactMethodManager] Response for ${methodType}:`, responseData);
-      
-      if (!res.ok) {
-        // Handle validation errors
-        if (responseData.errors && Array.isArray(responseData.errors)) {
-          const errorMessages = responseData.errors.map((e: any) => e.msg).join(', ');
-          throw new Error(errorMessages);
-        }
-        throw new Error(responseData.error || 'Failed to update contact method');
-      }
+      const responseData = await apiClient.put<{ method: ContactMethod }>(
+        `/admin/contact/methods/${methodType}`,
+        data
+      );
       
       // Update local state with the new method data
       setMethods(prev => prev.map(m => m.method_type === methodType ? responseData.method : m));

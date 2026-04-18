@@ -18,41 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
-
-function getCsrfToken(): string | null {
-  const cookie = document.cookie
-    .split(';')
-    .map((entry) => entry.trim())
-    .find((entry) => entry.startsWith('csrf_token='));
-  if (!cookie) {
-    return null;
-  }
-  const value = cookie.split('=')[1];
-  return value ? decodeURIComponent(value) : null;
-}
-
-function getAuthHeaders(): HeadersInit {
-  const userStr = localStorage.getItem("auth_user");
-  let organizationId: string | undefined;
-  
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      organizationId = user.organizationId;
-    } catch {
-      // ignore
-    }
-  }
-
-  const csrfToken = getCsrfToken();
-  return {
-    "Content-Type": "application/json",
-    ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-    ...(organizationId && { "X-Organization-ID": organizationId }),
-  };
-}
+import { apiClient } from "@/lib/api";
 
 interface VPSInstance {
   id: string;
@@ -75,12 +41,7 @@ export function AllocateIPDialog({ open, onClose, onAllocated }: AllocateIPDialo
   const { data: instances = [], isLoading } = useQuery<VPSInstance[]>({
     queryKey: ["admin-servers-for-allocate"],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/admin/servers`, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load instances");
+      const json = await apiClient.get<{ servers: any[] }>("/admin/servers");
       return (json.servers || []).map((s: any) => ({
         id: s.id,
         label: s.label,
@@ -96,15 +57,7 @@ export function AllocateIPDialog({ open, onClose, onAllocated }: AllocateIPDialo
       public: boolean;
       type: "ipv4" | "ipv6";
     }) => {
-      const res = await fetch(`${API_BASE_URL}/admin/networking/ips`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to allocate IP");
-      return json;
+      return apiClient.post("/admin/networking/ips", data);
     },
     onSuccess: () => {
       toast.success("IP address allocated");

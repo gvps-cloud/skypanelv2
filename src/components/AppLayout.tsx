@@ -65,9 +65,11 @@ import {
 import { generateBreadcrumbs } from "@/lib/breadcrumbs";
 import { cn } from "@/lib/utils";
 import { formatBillingAmount as formatCurrencyDisplay } from "@/lib/formatters";
+import FooterPartnerLinks from "@/components/FooterPartnerLinks";
 import NotificationDropdown from "@/components/NotificationDropdown";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiClient } from "@/lib/api";
 import {
   BreadcrumbProvider,
   useBreadcrumb,
@@ -237,7 +239,7 @@ const BreadcrumbNavigation: React.FC = () => {
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { token, user, isImpersonating } = useAuth();
+  const { user, isImpersonating } = useAuth();
   const [commandOpen, setCommandOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -300,16 +302,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   // Fetch VPS instances
   const fetchVPSInstances = useCallback(async () => {
-    if (!token) return;
-
     setVpsLoading(true);
     try {
-      const res = await fetch("/api/vps", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const payload = await res.json();
-      if (!res.ok)
-        throw new Error(payload.error || "Failed to load VPS instances");
+      const payload = await apiClient.get<{ instances: any[]; error?: string }>("/vps");
 
       const mapped: VPSInstance[] = (payload.instances || []).map((i: any) => ({
         id: i.id,
@@ -350,23 +345,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     } finally {
       setVpsLoading(false);
     }
-  }, [token]);
+  }, []);
 
   const fetchSupportTickets = useCallback(async () => {
-    if (!token || !isAdmin) {
+    if (!isAdmin) {
       setSupportTickets([]);
       return;
     }
 
     setSupportTicketsLoading(true);
     try {
-      const res = await fetch("/api/admin/tickets", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const payload = await res.json();
-      if (!res.ok) {
-        throw new Error(payload.error || "Failed to load support tickets");
-      }
+      const payload = await apiClient.get<{ tickets: any[]; error?: string }>("/admin/tickets");
 
       const rows: TicketCommandItem[] = Array.isArray(payload.tickets)
         ? payload.tickets.slice(0, 12).map((ticket: any) => ({
@@ -384,23 +373,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     } finally {
       setSupportTicketsLoading(false);
     }
-  }, [token, isAdmin]);
+  }, [isAdmin]);
 
   const fetchAdminCommandUsers = useCallback(async () => {
-    if (!token || !isAdmin) {
+    if (!isAdmin) {
       setAdminCommandUsers([]);
       return;
     }
 
     setAdminUsersLoading(true);
     try {
-      const res = await fetch("/api/admin/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const payload = await res.json();
-      if (!res.ok) {
-        throw new Error(payload.error || "Failed to load admin users");
-      }
+      const payload = await apiClient.get<{ users: any[]; error?: string }>("/admin/users");
 
       const allUsers: AdminUserCommandItem[] = Array.isArray(payload.users)
         ? payload.users.slice(0, 15).map((user: any) => ({
@@ -422,23 +405,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     } finally {
       setAdminUsersLoading(false);
     }
-  }, [token, isAdmin]);
+  }, [isAdmin]);
 
   const fetchRecentInvoices = useCallback(async () => {
-    if (!token) {
-      setInvoiceItems([]);
-      return;
-    }
-
     setInvoicesLoading(true);
     try {
-      const res = await fetch("/api/invoices?limit=12", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const payload = await res.json();
-      if (!res.ok || payload.success === false) {
-        throw new Error(payload.error || "Failed to load invoices");
-      }
+      const payload = await apiClient.get<{ invoices: any[]; error?: string; success?: boolean }>("/invoices?limit=12");
 
       const rows: InvoiceCommandItem[] = Array.isArray(payload.invoices)
         ? payload.invoices.slice(0, 12).map((invoice: any) => ({
@@ -459,11 +431,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     } finally {
       setInvoicesLoading(false);
     }
-  }, [token]);
+  }, []);
 
   // Fetch data when command dialog opens (lazy loading)
   useEffect(() => {
-    if (commandOpen && !dataLoaded && token) {
+    if (commandOpen && !dataLoaded) {
       setDataLoaded(true);
       fetchVPSInstances();
       fetchRecentInvoices();
@@ -475,7 +447,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, [
     commandOpen,
     dataLoaded,
-    token,
     isAdmin,
     fetchVPSInstances,
     fetchRecentInvoices,
@@ -1164,6 +1135,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </CardContent>
           </Card>
         </div>
+
+        <footer className="border-t border-border/60 bg-background px-4 py-3 sm:px-6">
+          <div className="flex items-center justify-center sm:justify-end">
+            <FooterPartnerLinks />
+          </div>
+        </footer>
 
         {/* Command Dialog */}
         <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>

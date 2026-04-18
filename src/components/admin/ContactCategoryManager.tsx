@@ -30,7 +30,7 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { buildApiUrl } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 import type { ContactCategory } from '@/types/contact';
 
 const categorySchema = z.object({
@@ -157,14 +157,9 @@ export const ContactCategoryManager: React.FC<ContactCategoryManagerProps> = ({ 
   );
 
   const fetchCategories = async () => {
-    if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(buildApiUrl('/api/admin/contact/categories'), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load categories');
+      const data = await apiClient.get<{ categories: ContactCategory[] }>('/admin/contact/categories');
       setCategories(data.categories || []);
     } catch (error: any) {
       toast.error(error.message || 'Failed to load categories');
@@ -175,22 +170,12 @@ export const ContactCategoryManager: React.FC<ContactCategoryManagerProps> = ({ 
 
   useEffect(() => {
     fetchCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, []);
 
   const handleCreate = async (data: CategoryFormData) => {
     setSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl('/api/admin/contact/categories'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      });
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || 'Failed to create category');
+      const responseData = await apiClient.post<{ category: ContactCategory }>('/admin/contact/categories', data);
       
       setCategories(prev => [...prev, responseData.category]);
       setShowCreateDialog(false);
@@ -208,16 +193,7 @@ export const ContactCategoryManager: React.FC<ContactCategoryManagerProps> = ({ 
 
     setSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/contact/categories/${selectedCategory.id}`), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      });
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || 'Failed to update category');
+      const responseData = await apiClient.put<{ category: ContactCategory }>(`/admin/contact/categories/${selectedCategory.id}`, data);
       
       setCategories(prev => prev.map(cat => cat.id === selectedCategory.id ? responseData.category : cat));
       setShowEditDialog(false);
@@ -236,14 +212,7 @@ export const ContactCategoryManager: React.FC<ContactCategoryManagerProps> = ({ 
 
     setSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/contact/categories/${selectedCategory.id}`), {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to delete category');
-      }
+      await apiClient.delete(`/admin/contact/categories/${selectedCategory.id}`);
       
       setCategories(prev => prev.filter(cat => cat.id !== selectedCategory.id));
       setShowDeleteDialog(false);
@@ -258,16 +227,7 @@ export const ContactCategoryManager: React.FC<ContactCategoryManagerProps> = ({ 
 
   const handleToggleActive = async (category: ContactCategory) => {
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/contact/categories/${category.id}`), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ is_active: !category.is_active }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update category');
+      const data = await apiClient.put<{ category: ContactCategory }>(`/admin/contact/categories/${category.id}`, { is_active: !category.is_active });
       
       setCategories(prev => prev.map(cat => cat.id === category.id ? data.category : cat));
       toast.success(`Category ${!category.is_active ? 'activated' : 'deactivated'}`);
@@ -316,19 +276,7 @@ export const ContactCategoryManager: React.FC<ContactCategoryManagerProps> = ({ 
     }));
 
     try {
-      const res = await fetch(buildApiUrl('/api/admin/contact/categories/reorder'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ categories: reorderData }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to reorder categories');
-      }
+      await apiClient.post('/admin/contact/categories/reorder', { categories: reorderData });
 
       toast.success('Categories reordered successfully');
     } catch (error: any) {

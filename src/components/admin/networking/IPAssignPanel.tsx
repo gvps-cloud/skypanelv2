@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowRight, Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { assignIPs } from "@/services/ipamService";
+import { apiClient } from "@/lib/api";
 
 // IPv4 regex: matches valid IPv4 addresses
 const IPv4_REGEX = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
@@ -17,41 +18,6 @@ const IPv6_REGEX = /^(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{
 
 function isValidIPAddress(value: string): boolean {
   return IPv4_REGEX.test(value) || IPv6_REGEX.test(value);
-}
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
-
-function getCsrfToken(): string | null {
-  const cookie = document.cookie
-    .split(';')
-    .map((entry) => entry.trim())
-    .find((entry) => entry.startsWith('csrf_token='));
-  if (!cookie) {
-    return null;
-  }
-  const value = cookie.split('=')[1];
-  return value ? decodeURIComponent(value) : null;
-}
-
-function getAuthHeaders(): HeadersInit {
-  const userStr = localStorage.getItem("auth_user");
-  let organizationId: string | undefined;
-  
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      organizationId = user.organizationId;
-    } catch {
-      // ignore
-    }
-  }
-
-  const csrfToken = getCsrfToken();
-  return {
-    "Content-Type": "application/json",
-    ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-    ...(organizationId && { "X-Organization-ID": organizationId }),
-  };
 }
 
 interface VPSInstance {
@@ -87,9 +53,7 @@ export function IPAssignPanel() {
   const { data: providers = [] } = useQuery<Provider[]>({
     queryKey: ["admin", "providers-for-regions"],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/admin/providers`, { headers: getAuthHeaders(), credentials: "include" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load providers");
+      const json = await apiClient.get<{ providers: Provider[] }>("/admin/providers");
       return (json.providers || []).filter((p: Provider) => p.active);
     },
   });
@@ -104,12 +68,7 @@ export function IPAssignPanel() {
     queryKey: ["admin", "provider-regions", firstProvider?.id],
     queryFn: async () => {
       if (!firstProvider) return { regions: [], mode: "default" as const };
-      const res = await fetch(`${API_BASE_URL}/admin/providers/${firstProvider.id}/regions`, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load regions");
+      const json = await apiClient.get<{ regions: any[]; mode?: string }>(`/admin/providers/${firstProvider.id}/regions`);
       return {
         regions: (json.regions || []).map((r: any) => ({
           id: r.id,
@@ -117,7 +76,7 @@ export function IPAssignPanel() {
           country: r.country,
           allowed: r.allowed,
         })),
-        mode: json.mode || "default",
+        mode: (json.mode || "default") as "default" | "custom",
       };
     },
     enabled: !!firstProvider,
@@ -129,9 +88,7 @@ export function IPAssignPanel() {
   const { data: instances = [] } = useQuery<VPSInstance[]>({
     queryKey: ["admin", "servers-for-assign"],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/admin/servers`, { headers: getAuthHeaders(), credentials: "include" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load instances");
+      const json = await apiClient.get<{ servers: any[] }>("/admin/servers");
       return (json.servers || []).map((s: any) => ({
         id: s.id,
         label: s.label,

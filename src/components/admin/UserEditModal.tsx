@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
@@ -104,21 +105,7 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
     mutationFn: async (updates: { name?: string; email?: string; role?: string; phone?: string; timezone?: string }) => {
       if (!user?.id) throw new Error('User ID is required');
 
-      const response = await fetch(`/api/admin/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to update user`);
-      }
-
-      return response.json();
+      return apiClient.put(`/admin/users/${user.id}`, updates);
     },
     onSuccess: () => {
       displaySuccess('User updated successfully');

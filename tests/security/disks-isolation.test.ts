@@ -51,7 +51,6 @@ describe('Disk Operations Organization Isolation', () => {
   let orgAUserToken: string;
   let orgAId: string;
   let orgAVpsId: string;
-  let orgADiskId: string;
 
   let orgBUserId: string;
   let orgBUserToken: string;
@@ -60,39 +59,37 @@ describe('Disk Operations Organization Isolation', () => {
 
   beforeAll(async () => {
     const emailCounter = Date.now();
-    const password = await bcrypt.hash('TestPassword123!', 10);
+    const passwordHash = await bcrypt.hash('TestPassword123!', 12);
+
+    orgAUserId = uuidv4();
+    await query(
+      `INSERT INTO users (id, email, password_hash, name, role, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+      [orgAUserId, `orgauser${emailCounter}@test.com`, passwordHash, 'Test User A', 'user']
+    );
+
+    orgBUserId = uuidv4();
+    await query(
+      `INSERT INTO users (id, email, password_hash, name, role, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+      [orgBUserId, `orgbuser${emailCounter}@test.com`, passwordHash, 'Test User B', 'user']
+    );
 
     const orgAResult = await query(
-      `INSERT INTO organizations (name, slug, owner_id, settings, created_at, updated_at)
-       VALUES ($1, $2, $3, '{}', NOW(), NOW())
+      `INSERT INTO organizations (name, slug, owner_id, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW())
        RETURNING id`,
-      [`TestOrgA_${emailCounter}`, `testorga${emailCounter}`, uuidv4()]
+      [`TestOrgA_${emailCounter}`, `testorga${emailCounter}`, orgAUserId]
     );
     orgAId = orgAResult.rows[0].id;
 
     const orgBResult = await query(
-      `INSERT INTO organizations (name, slug, owner_id, settings, created_at, updated_at)
-       VALUES ($1, $2, $3, '{}', NOW(), NOW())
+      `INSERT INTO organizations (name, slug, owner_id, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW())
        RETURNING id`,
-      [`TestOrgB_${emailCounter}`, `testorgb${emailCounter}`, uuidv4()]
+      [`TestOrgB_${emailCounter}`, `testorgb${emailCounter}`, orgBUserId]
     );
     orgBId = orgBResult.rows[0].id;
-
-    const orgAUserResult = await query(
-      `INSERT INTO users (email, password, name, role, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, NOW(), NOW())
-       RETURNING id`,
-      [`orgauser${emailCounter}@test.com`, password, 'Test User A', 'user']
-    );
-    orgAUserId = orgAUserResult.rows[0].id;
-
-    const orgBUserResult = await query(
-      `INSERT INTO users (email, password, name, role, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, NOW(), NOW())
-       RETURNING id`,
-      [`orgbuser${emailCounter}@test.com`, password, 'Test User B', 'user']
-    );
-    orgBUserId = orgBUserResult.rows[0].id;
 
     await query(
       `INSERT INTO organization_members (organization_id, user_id, role, created_at)
@@ -105,17 +102,18 @@ describe('Disk Operations Organization Isolation', () => {
       [orgBId, orgBUserId]
     );
 
+    const roleSuffix = Date.now();
     const orgARoleResult = await query(
       `INSERT INTO organization_roles (organization_id, name, permissions, is_custom, created_at, updated_at)
-       VALUES ($1, 'admin', $2, false, NOW(), NOW())
+       VALUES ($1, $2, $3, false, NOW(), NOW())
        RETURNING id`,
-      [orgAId, JSON.stringify(['vps_view', 'vps_manage', 'vps_delete'])]
+      [orgAId, `test-admin-${roleSuffix}`, JSON.stringify(['vps_view', 'vps_manage', 'vps_delete'])]
     );
     const orgBRoleResult = await query(
       `INSERT INTO organization_roles (organization_id, name, permissions, is_custom, created_at, updated_at)
-       VALUES ($1, 'admin', $2, false, NOW(), NOW())
+       VALUES ($1, $2, $3, false, NOW(), NOW())
        RETURNING id`,
-      [orgBId, JSON.stringify(['vps_view', 'vps_manage', 'vps_delete'])]
+      [orgBId, `test-admin-${roleSuffix}`, JSON.stringify(['vps_view', 'vps_manage', 'vps_delete'])]
     );
 
     await query(
@@ -134,16 +132,16 @@ describe('Disk Operations Organization Isolation', () => {
 
     if (providerId) {
       const orgAVpsResult = await query(
-        `INSERT INTO vps_instances (organization_id, provider_id, provider_instance_id, label, status, created_at, updated_at)
-         VALUES ($1, $2, 99999, $3, 'running', NOW(), NOW())
+        `INSERT INTO vps_instances (organization_id, provider_id, plan_id, provider_instance_id, label, status, created_at, updated_at)
+         VALUES ($1, $2, 'test-plan', 99999, $3, 'running', NOW(), NOW())
          RETURNING id`,
         [orgAId, providerId, 'TestVPS-OrgA']
       );
       orgAVpsId = orgAVpsResult.rows[0].id;
 
       const orgBVpsResult = await query(
-        `INSERT INTO vps_instances (organization_id, provider_id, provider_instance_id, label, status, created_at, updated_at)
-         VALUES ($1, $2, 99998, $3, 'running', NOW(), NOW())
+        `INSERT INTO vps_instances (organization_id, provider_id, plan_id, provider_instance_id, label, status, created_at, updated_at)
+         VALUES ($1, $2, 'test-plan', 99998, $3, 'running', NOW(), NOW())
          RETURNING id`,
         [orgBId, providerId, 'TestVPS-OrgB']
       );
@@ -154,36 +152,23 @@ describe('Disk Operations Organization Isolation', () => {
     }
 
     orgAUserToken = jwt.sign(
-      { userId: orgAUserId, role: 'user', organizationId: orgAId },
-      'test-jwt-secret-for-testing-only',
+      { userId: orgAUserId, email: `orgauser${emailCounter}@test.com`, role: 'user', organizationId: orgAId },
+      process.env.JWT_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
     orgBUserToken = jwt.sign(
-      { userId: orgBUserId, role: 'user', organizationId: orgBId },
-      'test-jwt-secret-for-testing-only',
+      { userId: orgBUserId, email: `orgbuser${emailCounter}@test.com`, role: 'user', organizationId: orgBId },
+      process.env.JWT_SECRET || 'test-secret',
       { expiresIn: '1h' }
     );
   });
 
   afterAll(async () => {
-    if (orgAVpsId) {
-      await query(`DELETE FROM vps_instances WHERE id = $1`, [orgAVpsId]);
-    }
-    if (orgBVpsId) {
-      await query(`DELETE FROM vps_instances WHERE id = $1`, [orgBVpsId]);
-    }
-    if (orgAUserId) {
-      await query(`DELETE FROM users WHERE id = $1`, [orgAUserId]);
-    }
-    if (orgBUserId) {
-      await query(`DELETE FROM users WHERE id = $1`, [orgBUserId]);
-    }
-    if (orgAId) {
-      await query(`DELETE FROM organizations WHERE id = $1`, [orgAId]);
-    }
-    if (orgBId) {
-      await query(`DELETE FROM organizations WHERE id = $1`, [orgBId]);
-    }
+    await query('DELETE FROM vps_instances WHERE organization_id IN ($1, $2)', [orgAId, orgBId]);
+    await query('DELETE FROM organization_members WHERE organization_id IN ($1, $2)', [orgAId, orgBId]);
+    await query('DELETE FROM organization_roles WHERE organization_id IN ($1, $2)', [orgAId, orgBId]);
+    await query('DELETE FROM organizations WHERE id IN ($1, $2)', [orgAId, orgBId]);
+    await query('DELETE FROM users WHERE id IN ($1, $2)', [orgAUserId, orgBUserId]);
   });
 
   describe('GET /api/vps/:id/disks', () => {

@@ -1,7 +1,6 @@
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -41,6 +40,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { buildApiUrl } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 import {
   SupportTicket,
   TicketMessage,
@@ -113,11 +113,6 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
   const eventSourceRef = useRef<EventSource | null>(null);
   const ticketStatusRef = useRef<TicketStatus | undefined>(undefined);
 
-  const authHeader = useMemo(
-    () => ({ Authorization: `Bearer ${token}` }),
-    [token]
-  );
-
   const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -127,18 +122,14 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
   const fetchTickets = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(buildApiUrl("/api/admin/tickets"), {
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch tickets");
+      const data = await apiClient.get<{ tickets: SupportTicket[] }>("/admin/tickets");
       setTickets(data.tickets || []);
     } catch (error: any) {
       toast.error(error.message || "Failed to load tickets");
     } finally {
       setLoading(false);
     }
-  }, [authHeader]);
+  }, []);
 
   useEffect(() => {
     ticketStatusRef.current = selectedTicket?.status;
@@ -155,12 +146,10 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         return;
       }
       try {
-        const res = await fetch(
-          buildApiUrl(`/api/admin/users/${selectedTicket.creator.id}/detail`),
-          { headers: authHeader }
+        const data = await apiClient.get<{ billing?: { wallet_balance: number } }>(
+          `/admin/users/${selectedTicket.creator.id}/detail`
         );
-        const data = await res.json();
-        if (res.ok && data.billing) {
+        if (data.billing) {
           setClientBalance(data.billing.wallet_balance);
         }
       } catch (err) {
@@ -171,7 +160,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
     if (selectedTicket) {
       fetchClientBalance();
     }
-  }, [selectedTicket, authHeader]);
+  }, [selectedTicket]);
 
   // Set up real-time updates for selected ticket
   useEffect(() => {
@@ -268,13 +257,10 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
       }
 
       try {
-        const res = await fetch(
-          buildApiUrl(`/api/admin/tickets/${ticket.id}/replies`),
-          { headers: authHeader }
+        const data = await apiClient.get<{ replies: any[] }>(
+          `/admin/tickets/${ticket.id}/replies`
         );
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to load replies");
-        
+
         const msgs: TicketMessage[] = (data.replies || []).map((m: any) => ({
           id: m.id,
           ticket_id: m.ticket_id,
@@ -292,7 +278,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         toast.error(e.message || "Failed to load replies");
       }
     },
-    [authHeader, scrollToBottom, selectedTicket?.id]
+    [scrollToBottom, selectedTicket?.id]
   );
 
   // Handle pending focus ticket once the opener is ready
@@ -312,20 +298,14 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
     if (!selectedTicket || !replyMessage.trim()) return;
 
     try {
-      const res = await fetch(
-        buildApiUrl(`/api/admin/tickets/${selectedTicket.id}/replies`),
-        {
-          method: "POST",
-          headers: { ...authHeader, "Content-Type": "application/json" },
-          body: JSON.stringify({ message: replyMessage }),
-        }
+      const data = await apiClient.post<{ reply: TicketMessage }>(
+        `/admin/tickets/${selectedTicket.id}/replies`,
+        { message: replyMessage }
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send reply");
 
       toast.success("Reply sent successfully");
       setReplyMessage("");
-      
+
       const newReply = data.reply;
       if (newReply) {
         const newMsg: TicketMessage = {
@@ -352,21 +332,15 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
     } catch (error: any) {
       toast.error(error.message || "Failed to send reply");
     }
-  }, [selectedTicket, replyMessage, authHeader, openTicket, scrollToBottom]);
+  }, [selectedTicket, replyMessage, openTicket, scrollToBottom]);
 
   const updateTicketStatus = useCallback(
     async (ticketId: string, status: TicketStatus) => {
       try {
-        const res = await fetch(
-          buildApiUrl(`/api/admin/tickets/${ticketId}/status`),
-          {
-            method: "PATCH",
-            headers: { ...authHeader, "Content-Type": "application/json" },
-            body: JSON.stringify({ status }),
-          }
+        const data = await apiClient.patch<{ ticket?: { status: TicketStatus } }>(
+          `/admin/tickets/${ticketId}/status`,
+          { status }
         );
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to update status");
         const updatedStatus = (data?.ticket?.status as TicketStatus) || status;
 
         toast.success(`Ticket marked as ${updatedStatus.replace("_", " ")}`);
@@ -380,31 +354,14 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
         toast.error(error.message || "Failed to update ticket status");
       }
     },
-    [authHeader, fetchTickets, selectedTicket]
+    [fetchTickets, selectedTicket]
   );
 
   const deleteTicket = useCallback(async () => {
     if (!deleteTicketId) return;
 
     try {
-      const res = await fetch(
-        buildApiUrl(`/api/admin/tickets/${deleteTicketId}`),
-        {
-          method: "DELETE",
-          headers: authHeader,
-        }
-      );
-      const raw = await res.text();
-      let data: any;
-      if (raw) {
-        try {
-          data = JSON.parse(raw);
-        } catch (parseError) {
-          console.warn("Failed to parse delete ticket response", parseError);
-        }
-      }
-      if (!res.ok)
-        throw new Error(data?.error || raw || "Failed to delete ticket");
+      await apiClient.delete(`/admin/tickets/${deleteTicketId}`);
 
       toast.success("Ticket deleted successfully");
       if (selectedTicket?.id === deleteTicketId) {
@@ -416,7 +373,7 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
     } finally {
       setDeleteTicketId(null);
     }
-  }, [deleteTicketId, authHeader, selectedTicket, fetchTickets]);
+  }, [deleteTicketId, selectedTicket, fetchTickets]);
 
   return (
     <>

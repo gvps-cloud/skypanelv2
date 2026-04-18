@@ -70,7 +70,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildApiUrl } from "@/lib/api";
+import { apiClient, buildApiUrl } from "@/lib/api";
 
 // Types
 interface DocumentationCategory {
@@ -280,11 +280,7 @@ export default function DocumentationArticleManager() {
   // Fetch categories
   const fetchCategories = useCallback(async () => {
     try {
-      const res = await fetch(buildApiUrl("/api/admin/documentation/categories"), {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
-      const data = await res.json();
+      const data = await apiClient.get<{ categories: DocumentationCategory[] }>("/admin/documentation/categories");
       setCategories(data.categories || []);
     } catch (error) {
       console.error("Failed to fetch categories:", error);
@@ -295,16 +291,10 @@ export default function DocumentationArticleManager() {
   const fetchArticles = useCallback(async () => {
     try {
       setIsLoading(true);
-      const url =
-        selectedCategoryId === "all"
-          ? buildApiUrl("/api/admin/documentation/articles")
-          : buildApiUrl(`/api/admin/documentation/articles?category_id=${selectedCategoryId}`);
-
-      const res = await fetch(url, {
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
-      const data = await res.json();
+      const url = selectedCategoryId === "all"
+        ? "/admin/documentation/articles"
+        : `/admin/documentation/articles?category_id=${selectedCategoryId}`;
+      const data = await apiClient.get<{ articles: DocumentationArticle[] }>(url);
       setArticles(data.articles || []);
     } catch (error) {
       console.error("Failed to fetch articles:", error);
@@ -338,21 +328,7 @@ export default function DocumentationArticleManager() {
     }));
 
     try {
-      const res = await fetch(buildApiUrl("/api/admin/documentation/articles/reorder"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        credentials: "include",
-        body: JSON.stringify({ articles: reorderData }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to reorder articles");
-      }
-
+      await apiClient.post("/admin/documentation/articles/reorder", { articles: reorderData });
       toast.success("Articles reordered successfully");
     } catch (error: any) {
       toast.error(error.message || "Failed to reorder articles");
@@ -395,16 +371,7 @@ export default function DocumentationArticleManager() {
   // Delete file
   const deleteFile = async (fileId: string): Promise<boolean> => {
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/documentation/files/${fileId}`), {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to delete file");
-      }
+      await apiClient.delete(`/admin/documentation/files/${fileId}`);
       return true;
     } catch (error) {
       console.error("Failed to delete file:", error);
@@ -416,19 +383,7 @@ export default function DocumentationArticleManager() {
   const handleCreate = async (data: ArticleFormData) => {
     setIsSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl("/api/admin/documentation/articles"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || "Failed to create article");
-
+      const responseData = await apiClient.post<{ article: DocumentationArticle }>("/admin/documentation/articles", data);
       const newArticle = responseData.article;
 
       // Upload pending files
@@ -462,21 +417,7 @@ export default function DocumentationArticleManager() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(
-        buildApiUrl(`/api/admin/documentation/articles/${selectedArticle.id}`),
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...getAuthHeaders(),
-          },
-          credentials: "include",
-          body: JSON.stringify(data),
-        }
-      );
-
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || "Failed to update article");
+      const responseData = await apiClient.put<{ article: DocumentationArticle }>(`/admin/documentation/articles/${selectedArticle.id}`, data);
 
       // Delete marked files
       for (const fileId of filesToDelete) {
@@ -523,20 +464,7 @@ export default function DocumentationArticleManager() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(
-        buildApiUrl(`/api/admin/documentation/articles/${selectedArticle.id}`),
-        {
-          method: "DELETE",
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to delete article");
-      }
-
+      await apiClient.delete(`/admin/documentation/articles/${selectedArticle.id}`);
       setArticles((prev) => prev.filter((art) => art.id !== selectedArticle.id));
       setShowDeleteDialog(false);
       setSelectedArticle(null);
@@ -551,21 +479,7 @@ export default function DocumentationArticleManager() {
   // Toggle active
   const handleToggleActive = async (article: DocumentationArticle) => {
     try {
-      const res = await fetch(
-        buildApiUrl(`/api/admin/documentation/articles/${article.id}`),
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...getAuthHeaders(),
-          },
-          credentials: "include",
-          body: JSON.stringify({ is_active: !article.is_active }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update article");
-
+      const data = await apiClient.put<{ article: DocumentationArticle }>(`/admin/documentation/articles/${article.id}`, { is_active: !article.is_active });
       setArticles((prev) =>
         prev.map((art) =>
           art.id === article.id ? { ...art, ...data.article, category_name: art.category_name, category_slug: art.category_slug, files: art.files } : art
@@ -580,16 +494,7 @@ export default function DocumentationArticleManager() {
   // Open edit dialog
   const openEditDialog = async (article: DocumentationArticle) => {
     try {
-      // Fetch full article with files
-      const res = await fetch(
-        buildApiUrl(`/api/admin/documentation/articles/${article.id}`),
-        {
-          headers: getAuthHeaders(),
-          credentials: "include",
-        }
-      );
-      const data = await res.json();
-
+      const data = await apiClient.get<{ article: DocumentationArticle }>(`/admin/documentation/articles/${article.id}`);
       setSelectedArticle(data.article);
       setUploadedFiles(data.article.files || []);
       setFilesToDelete([]);

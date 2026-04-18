@@ -32,7 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
-import { buildApiUrl } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 import type { FAQCategory, FAQItem } from '@/types/faq';
 
 const itemSchema = z.object({
@@ -156,13 +156,8 @@ export const FAQItemManager: React.FC<FAQItemManagerProps> = ({ token }) => {
   );
 
   const fetchCategories = async () => {
-    if (!token) return;
     try {
-      const res = await fetch(buildApiUrl('/api/admin/faq/categories'), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load categories');
+      const data = await apiClient.get<{ categories: FAQCategory[] }>('/admin/faq/categories');
       setCategories(data.categories || []);
     } catch (error: any) {
       toast.error(error.message || 'Failed to load categories');
@@ -170,14 +165,9 @@ export const FAQItemManager: React.FC<FAQItemManagerProps> = ({ token }) => {
   };
 
   const fetchItems = async () => {
-    if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(buildApiUrl('/api/admin/faq/items'), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load FAQ items');
+      const data = await apiClient.get<{ items: FAQItem[] }>('/admin/faq/items');
       setItems(data.items || []);
     } catch (error: any) {
       toast.error(error.message || 'Failed to load FAQ items');
@@ -189,22 +179,12 @@ export const FAQItemManager: React.FC<FAQItemManagerProps> = ({ token }) => {
   useEffect(() => {
     fetchCategories();
     fetchItems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, []);
 
   const handleCreate = async (data: ItemFormData) => {
     setSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl('/api/admin/faq/items'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      });
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || 'Failed to create FAQ item');
+      const responseData = await apiClient.post<{ item: FAQItem }>('/admin/faq/items', data);
       
       setItems(prev => [...prev, responseData.item]);
       setShowCreateDialog(false);
@@ -222,16 +202,7 @@ export const FAQItemManager: React.FC<FAQItemManagerProps> = ({ token }) => {
 
     setSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/faq/items/${selectedItem.id}`), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      });
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || 'Failed to update FAQ item');
+      const responseData = await apiClient.put<{ item: FAQItem }>(`/admin/faq/items/${selectedItem.id}`, data);
       
       setItems(prev => prev.map(item => item.id === selectedItem.id ? responseData.item : item));
       setShowEditDialog(false);
@@ -250,14 +221,7 @@ export const FAQItemManager: React.FC<FAQItemManagerProps> = ({ token }) => {
 
     setSubmitting(true);
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/faq/items/${selectedItem.id}`), {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to delete FAQ item');
-      }
+      await apiClient.delete(`/admin/faq/items/${selectedItem.id}`);
       
       setItems(prev => prev.filter(item => item.id !== selectedItem.id));
       setShowDeleteDialog(false);
@@ -272,16 +236,7 @@ export const FAQItemManager: React.FC<FAQItemManagerProps> = ({ token }) => {
 
   const handleToggleActive = async (item: FAQItem) => {
     try {
-      const res = await fetch(buildApiUrl(`/api/admin/faq/items/${item.id}`), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ is_active: !item.is_active }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update FAQ item');
+      const data = await apiClient.put<{ item: FAQItem }>(`/admin/faq/items/${item.id}`, { is_active: !item.is_active });
       
       setItems(prev => prev.map(i => i.id === item.id ? data.item : i));
       toast.success(`FAQ item ${!item.is_active ? 'activated' : 'deactivated'}`);
@@ -337,19 +292,7 @@ export const FAQItemManager: React.FC<FAQItemManagerProps> = ({ token }) => {
     }));
 
     try {
-      const res = await fetch(buildApiUrl('/api/admin/faq/items/reorder'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ items: reorderData }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to reorder FAQ items');
-      }
+      await apiClient.post('/admin/faq/items/reorder', { items: reorderData });
 
       toast.success('FAQ items reordered successfully');
     } catch (error: any) {
