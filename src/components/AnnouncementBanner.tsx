@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { X, Info, AlertTriangle, CheckCircle, Wrench, AlertOctagon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { buildApiUrl } from "@/lib/api";
+import { apiClient } from "@/lib/api";
 
 interface Announcement {
   id: string;
@@ -57,19 +56,13 @@ export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
   topOffset = 0,
   onHeightChange,
 }) => {
-  const { token } = useAuth();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const fetchAnnouncements = useCallback(async () => {
     try {
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-      const res = await fetch(buildApiUrl("/api/announcements"), { headers });
-      const data = await res.json();
-      if (res.ok && data.announcements) {
+      const data = await apiClient.get<{ announcements: Announcement[] }>("/announcements");
+      if (data.announcements) {
         const dismissed = getDismissedIds();
         setAnnouncements(
           (data.announcements as Announcement[]).filter(
@@ -80,7 +73,7 @@ export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
     } catch {
       // Silently fail — announcements are non-critical
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     fetchAnnouncements();
