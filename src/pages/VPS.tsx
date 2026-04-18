@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import type { ProviderType } from "@/types/provider";
 import type { CreateVPSForm, VPSInstance } from "@/types/vps";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiClient } from "@/lib/api";
 import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
 import { useFormPersistence } from "@/hooks/use-form-persistence";
 import { useMobileNavigation } from "@/hooks/use-mobile-navigation";
@@ -410,19 +411,8 @@ const VPS: React.FC = () => {
   }, [ensureCreateLabel]);
 
   const loadProviderOptions = useCallback(async () => {
-    if (!token) {
-      setProviderOptions([]);
-      return;
-    }
-
     try {
-      const response = await fetch("/api/vps/providers", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to load providers");
-      }
+      const data = await apiClient.get<{ providers: any[]; error?: string }>("/vps/providers");
 
       const providersRaw = Array.isArray(data.providers) ? data.providers : [];
 
@@ -445,14 +435,13 @@ const VPS: React.FC = () => {
       toast.error(error?.message || "Failed to load providers");
       setProviderOptions([]);
     }
-  }, [normalizeProviderType, token]);
+  }, [normalizeProviderType]);
 
   const loadPlatformRegions = useCallback(async () => {
     try {
-      const response = await fetch("/api/pricing/public-regions");
-      const data = await response.json().catch(() => ({}));
+      const data = await apiClient.get<{ regions: any[]; error?: string; success?: boolean }>("/pricing/public-regions");
 
-      if (!response.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || "Failed to load regions");
       }
 
@@ -460,7 +449,7 @@ const VPS: React.FC = () => {
         ? data.regions
         : []
       )
-        .map((region: any) => {
+        .map((region: any): RegionOption | null => {
           if (!region || typeof region.id !== "string") return null;
           const id = region.id.trim();
           if (!id) return null;
@@ -539,7 +528,7 @@ const VPS: React.FC = () => {
 
   useEffect(() => {
     const fetchCreateRegions = async () => {
-      if (!createForm.provider_id || !token) {
+      if (!createForm.provider_id) {
         setCreateRegionOptions([]);
         setCreateRegionsError(null);
         setCreateRegionsLoading(false);
@@ -551,17 +540,10 @@ const VPS: React.FC = () => {
 
       try {
         const url = createForm.type_class
-          ? `/api/vps/providers/${createForm.provider_id}/regions?type_class=${encodeURIComponent(createForm.type_class)}`
-          : `/api/vps/providers/${createForm.provider_id}/regions`;
+          ? `/vps/providers/${createForm.provider_id}/regions?type_class=${encodeURIComponent(createForm.type_class)}`
+          : `/vps/providers/${createForm.provider_id}/regions`;
 
-        const response = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to load regions");
-        }
+        const data = await apiClient.get<{ regions: any[]; error?: string }>(url);
 
         const regions = Array.isArray(data.regions) ? data.regions : [];
         const normalizedRegions: CreateRegionOption[] = regions
@@ -592,7 +574,7 @@ const VPS: React.FC = () => {
     };
 
     fetchCreateRegions();
-  }, [createForm.provider_id, createForm.type_class, token]);
+  }, [createForm.provider_id, createForm.type_class]);
 
   // Sync default selection to current form image when images load
   useEffect(() => {
@@ -706,21 +688,15 @@ const VPS: React.FC = () => {
   }, [selectedStackScript, providerImages, createForm.image, setCreateForm]);
 
   const loadVPSPlans = useCallback(async () => {
-    if (!token) return;
     try {
-      let plansUrl = "/api/vps/plans";
+      let plansUrl = "/vps/plans";
 
       // If provider, region, and type_class are selected, use the new region-filtered endpoint
       if (createForm.provider_id && createForm.region && createForm.type_class) {
-        plansUrl = `/api/vps/providers/${createForm.provider_id}/plans/${createForm.region}?type_class=${createForm.type_class}`;
+        plansUrl = `/vps/providers/${createForm.provider_id}/plans/${createForm.region}?type_class=${createForm.type_class}`;
       }
 
-      const res = await fetch(plansUrl, {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include",
-      });
-      const plansPayload = await res.json();
-      if (!res.ok) throw new Error(plansPayload.error || "Failed to load VPS plans");
+      const plansPayload = await apiClient.get<{ plans: any[]; error?: string }>(plansUrl);
 
       // Map admin plans to ProviderPlan format
       const mappedPlans: ProviderPlan[] = (plansPayload.plans || []).map(
@@ -793,41 +769,28 @@ const VPS: React.FC = () => {
       console.error("Failed to load VPS plans:", error);
       toast.error(error.message || "Failed to load VPS plans");
     }
-  }, [token, createForm.provider_id, createForm.region, createForm.type_class]);
+  }, [createForm.provider_id, createForm.region, createForm.type_class]);
 
   const loadProviderImages = useCallback(async () => {
-    if (!token || !createForm.provider_id) {
+    if (!createForm.provider_id) {
       setProviderImages([]);
       return;
     }
     try {
-      const res = await fetch(
-        `/api/vps/images?provider_id=${encodeURIComponent(createForm.provider_id)}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include",
-        },
+      const payload = await apiClient.get<{ images: any[]; error?: string }>(
+        `/vps/images?provider_id=${encodeURIComponent(createForm.provider_id)}`,
       );
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.error || "Failed to load images");
       setProviderImages(payload.images || []);
     } catch (error: any) {
       console.error("Failed to load provider images:", error);
       toast.error(error.message || "Failed to load images");
     }
-  }, [token, createForm.provider_id]);
+  }, [createForm.provider_id]);
 
   const loadProviderStackScripts = useCallback(async () => {
-    if (!token) return;
     try {
       // Load admin-configured StackScripts for 1-Click deployments
-      const res = await fetch("/api/vps/stackscripts?configured=true", {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include",
-      });
-      const payload = await res.json();
-      if (!res.ok)
-        throw new Error(payload.error || "Failed to load stack scripts");
+      const payload = await apiClient.get<{ stackscripts: any[]; error?: string }>("/vps/stackscripts?configured=true");
 
       const scripts = Array.isArray(payload.stackscripts)
         ? payload.stackscripts
@@ -857,16 +820,9 @@ const VPS: React.FC = () => {
       console.error("Failed to load 1-Click deployments:", error);
       toast.error(error.message || "Failed to load deployments");
     }
-  }, [token]);
+  }, []);
 
   const loadInstances = useCallback(async (options?: { background?: boolean }) => {
-    if (!token) {
-      setInstances([]);
-      setInitialLoading(false);
-      setIsRefreshingInstances(false);
-      return;
-    }
-
     const background = options?.background ?? hasLoadedInstancesRef.current;
 
     if (background) {
@@ -876,12 +832,7 @@ const VPS: React.FC = () => {
     }
 
     try {
-      const res = await fetch("/api/vps", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const payload = await res.json();
-      if (!res.ok)
-        throw new Error(payload.error || "Failed to load VPS instances");
+      const payload = await apiClient.get<{ instances: any[]; error?: string }>("/vps");
 
       const clampPercent = (value: unknown): number | null => {
         if (value === null || typeof value === "undefined") return null;
@@ -1003,7 +954,7 @@ const VPS: React.FC = () => {
         setInitialLoading(false);
       }
     }
-  }, [token, providerPlans]);
+  }, [providerPlans]);
 
   useEffect(() => {
     loadVPSPlans();
@@ -1011,16 +962,15 @@ const VPS: React.FC = () => {
 
   useEffect(() => {
     hasLoadedInstancesRef.current = false;
-    setInitialLoading(Boolean(token));
-  }, [token]);
+  }, []);
 
   useEffect(() => {
-    if (!token || hasLoadedInstancesRef.current) {
+    if (hasLoadedInstancesRef.current) {
       return;
     }
 
     loadInstances({ background: false });
-  }, [token, loadInstances]);
+  }, [loadInstances]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -1128,19 +1078,12 @@ const VPS: React.FC = () => {
         });
         return;
       }
-      let url = `/api/vps/${instanceId}`;
-      const method: "POST" | "DELETE" = "POST";
+      let url = `/vps/${instanceId}`;
       if (action === "boot") url += "/boot";
       else if (action === "shutdown") url += "/shutdown";
       else if (action === "reboot") url += "/reboot";
 
-      const res = await fetch(url, {
-        method,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok)
-        throw new Error(data.error || `Failed to ${action} instance`);
+      const data = await apiClient.post<{ error?: string }>(url);
 
       // Refresh from server for accurate status/IP sync
       await loadInstances();
@@ -1188,28 +1131,21 @@ const VPS: React.FC = () => {
         if (action === "shutdown" && instance.status === "stopped") continue;
         if (action === "reboot" && instance.status !== "running") continue;
 
-        let url = `/api/vps/${instance.id}`;
-        let method: "POST" | "DELETE" = "POST";
+        let url = `/vps/${instance.id}`;
 
         if (action === "boot") url += "/boot";
         else if (action === "shutdown") url += "/shutdown";
         else if (action === "reboot") url += "/reboot";
-        else if (action === "delete") method = "DELETE";
+        else if (action === "delete") {
+          const res = await fetch(url, { method: "DELETE", credentials: "include" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok)
+            throw new Error(data.error || `Failed to ${action} ${instance.label}`);
+          results.success++;
+          continue;
+        }
 
-        const res = await fetch(url, {
-          method,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok)
-          throw new Error(
-            data.error || `Failed to ${action} ${instance.label}`,
-          );
-
+        await apiClient.post(url);
         results.success++;
       } catch (error: any) {
         results.failed++;
@@ -1419,12 +1355,12 @@ const VPS: React.FC = () => {
 
       setDeleteModal((m) => ({ ...m, loading: true, error: "" }));
 
-      const res = await fetch(`/api/vps/${deleteModal.id}`, {
+      const res = await fetch(`/vps/${deleteModal.id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({
           password: deleteModal.password,
           twoFactorCode: deleteModal.twoFactorCode,
@@ -1493,10 +1429,7 @@ const VPS: React.FC = () => {
       createForm.backup_frequency !== "none"
     ) {
       try {
-        const planRes = await fetch("/api/vps/plans", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const planData = await planRes.json();
+        const planData = await apiClient.get<{ plans: any[] }>("/vps/plans");
         const plan = (planData.plans || []).find(
           (p: any) => p.id === createForm.type,
         );
@@ -1607,19 +1540,11 @@ const VPS: React.FC = () => {
       // Update loading state for VPS creation
       mobileLoading.updateProgress(33, "Step 2 of 3: Provisioning your server");
 
-      const res = await fetch("/api/vps", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      mobileLoading.updateProgress(66, "Step 3 of 3: Configuring instance");
-
-      const payload = await res.json();
-      if (!res.ok) {
+      let payload: any;
+      try {
+        payload = await apiClient.post("/vps", body);
+      } catch (err: any) {
+        payload = err.data || {};
         mobileLoading.hideLoading();
 
         // Helper to check if error is password-related
@@ -1635,7 +1560,7 @@ const VPS: React.FC = () => {
           );
         };
 
-        const errorMessage = payload.error || "";
+        const errorMessage = payload.error || err.message || "";
         const errorCode = payload.code || "";
 
         // Handle password strength errors with special UX - keep modal open and show helpful message
