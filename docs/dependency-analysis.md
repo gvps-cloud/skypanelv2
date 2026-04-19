@@ -310,7 +310,7 @@ This document records the evaluation of each package flagged by `depcheck` as po
 **Status**: ✅ KEEP
 
 **Analysis**:
-- Used in `npm run scan:code` script: `"scan:code": "semgrep --config=auto --error"`
+- Used in `npm run scan:code` script: `"scan:code": "node scripts/run-semgrep.js --config=auto"`
 - Required for `npm run verify:security` command
 - Static analysis security tool
 

@@ -1,7 +1,6 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { buildApiUrl } from '@/lib/api';
-import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import type { RateLimitOverrideSummary, OverrideFormState } from './types';
 import { formatWindowMinutes, toDateTimeLocalInput } from './utils';
 
@@ -11,7 +10,6 @@ export function useOverrideManager(deps: {
   fetchOverrides: () => Promise<void>;
   fetchHealthCheck: () => Promise<void>;
 }) {
-  const { token } = useAuth();
   const { defaultOverrideLimit, defaultOverrideWindow, fetchOverrides, fetchHealthCheck } = deps;
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
   const [selectedOverride, setSelectedOverride] = useState<RateLimitOverrideSummary | null>(null);
@@ -25,8 +23,6 @@ export function useOverrideManager(deps: {
   });
   const [savingOverride, setSavingOverride] = useState(false);
   const [deletingOverrideId, setDeletingOverrideId] = useState<string | null>(null);
-
-  const authHeader = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const closeOverrideDialog = useCallback(() => {
     setOverrideDialogOpen(false);
@@ -107,23 +103,7 @@ export function useOverrideManager(deps: {
         payload.email = overrideForm.email.trim().toLowerCase();
       }
 
-      const response = await fetch(buildApiUrl('/api/admin/rate-limits/overrides'), {
-        method: 'POST',
-        headers: {
-          ...authHeader,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => null);
-        const message =
-          errorBody?.error ||
-          (Array.isArray(errorBody?.errors) ? errorBody.errors[0]?.msg || errorBody.errors[0] : null) ||
-          'Failed to save override';
-        throw new Error(message);
-      }
+      await apiClient.post('/api/admin/rate-limits/overrides', payload);
 
       await Promise.all([fetchOverrides(), fetchHealthCheck()]);
       toast.success('Rate limit override saved');
@@ -134,25 +114,13 @@ export function useOverrideManager(deps: {
     } finally {
       setSavingOverride(false);
     }
-  }, [overrideForm, selectedOverride, authHeader, fetchOverrides, fetchHealthCheck, closeOverrideDialog]);
+  }, [overrideForm, selectedOverride, fetchOverrides, fetchHealthCheck, closeOverrideDialog]);
 
   const handleDeleteOverride = useCallback(
     async (override: RateLimitOverrideSummary) => {
       setDeletingOverrideId(override.id);
       try {
-        const response = await fetch(
-          buildApiUrl(`/api/admin/rate-limits/overrides/${override.userId}`),
-          {
-            method: 'DELETE',
-            headers: authHeader,
-          },
-        );
-
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => null);
-          const message = errorBody?.error || 'Failed to delete override';
-          throw new Error(message);
-        }
+        await apiClient.delete(`/api/admin/rate-limits/overrides/${override.userId}`);
 
         await Promise.all([fetchOverrides(), fetchHealthCheck()]);
         toast.success('Rate limit override removed');
@@ -163,7 +131,7 @@ export function useOverrideManager(deps: {
         setDeletingOverrideId(null);
       }
     },
-    [authHeader, fetchOverrides, fetchHealthCheck],
+    [fetchOverrides, fetchHealthCheck],
   );
 
   return {

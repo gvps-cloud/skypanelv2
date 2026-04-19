@@ -9,43 +9,9 @@ import type {
   UpdateCategoryMappingInput,
   CategoryMappingOrdering,
 } from '../types/categoryMappings.js';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+import { apiClient } from '@/lib/api';
 
 class CategoryMappingService {
-  private getCsrfToken(): string | null {
-    const cookie = document.cookie
-      .split(';')
-      .map((entry) => entry.trim())
-      .find((entry) => entry.startsWith('csrf_token='));
-    if (!cookie) {
-      return null;
-    }
-    const value = cookie.split('=')[1];
-    return value ? decodeURIComponent(value) : null;
-  }
-
-  private getAuthHeaders(): HeadersInit {
-    const userStr = localStorage.getItem('auth_user');
-    let organizationId: string | undefined;
-    
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        organizationId = user.organizationId;
-      } catch {
-        // ignore
-      }
-    }
-
-    const csrfToken = this.getCsrfToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-      ...(organizationId && { 'X-Organization-ID': organizationId }),
-    };
-  }
-
   /**
    * Get all category mappings (admin only)
    */
@@ -55,20 +21,7 @@ class CategoryMappingService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/category-mappings`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || 'Failed to fetch category mappings',
-        };
-      }
+      const data = await apiClient.get<{ mappings?: CategoryMapping[] }>('/admin/category-mappings');
 
       return {
         success: true,
@@ -93,21 +46,7 @@ class CategoryMappingService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/pricing/category-mappings`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || 'Failed to fetch enabled category mappings',
-        };
-      }
+      const data = await apiClient.get<{ mappings?: CategoryMapping[] }>('/pricing/category-mappings');
 
       return {
         success: true,
@@ -131,20 +70,7 @@ class CategoryMappingService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/category-mappings/${id}`, {
-        method: 'GET',
-        headers: this.getAuthHeaders(),
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || 'Failed to fetch category mapping',
-        };
-      }
+      const data = await apiClient.get<{ mapping: CategoryMapping }>(`/admin/category-mappings/${id}`);
 
       return {
         success: true,
@@ -170,21 +96,7 @@ class CategoryMappingService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/category-mappings`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(input),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || 'Failed to create category mapping',
-        };
-      }
+      const data = await apiClient.post<{ mapping: CategoryMapping }>('/admin/category-mappings', input);
 
       return {
         success: true,
@@ -211,21 +123,7 @@ class CategoryMappingService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/category-mappings/${id}`, {
-        method: 'PUT',
-        headers: this.getAuthHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(input),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || 'Failed to update category mapping',
-        };
-      }
+      const data = await apiClient.put<{ mapping: CategoryMapping }>(`/admin/category-mappings/${id}`, input);
 
       return {
         success: true,
@@ -248,19 +146,7 @@ class CategoryMappingService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/category-mappings/${id}`, {
-        method: 'DELETE',
-        headers: this.getAuthHeaders(),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        return {
-          success: false,
-          error: data.error || 'Failed to delete category mapping',
-        };
-      }
+      await apiClient.delete(`/admin/category-mappings/${id}`);
 
       return { success: true };
     } catch (error) {
@@ -283,21 +169,7 @@ class CategoryMappingService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/category-mappings/reorder`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        credentials: 'include',
-        body: JSON.stringify({ orderings }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || 'Failed to reorder category mappings',
-        };
-      }
+      const data = await apiClient.post<{ mappings?: CategoryMapping[] }>('/admin/category-mappings/reorder', { orderings });
 
       return {
         success: true,
@@ -323,21 +195,7 @@ class CategoryMappingService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/category-mappings/sync`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        credentials: 'include',
-        body: JSON.stringify({ mappings }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || 'Failed to sync category mappings',
-        };
-      }
+      const data = await apiClient.post<{ mappings?: CategoryMapping[] }>('/admin/category-mappings/sync', { mappings });
 
       return {
         success: true,

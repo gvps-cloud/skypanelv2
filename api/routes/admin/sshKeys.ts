@@ -123,7 +123,10 @@ async function getProviderTokens(): Promise<{ linode?: string }> {
           }
         }
       } catch (error: any) {
-        console.error(`Failed to decrypt ${row.type} API token:`, error.message);
+        console.error('Failed to decrypt provider API token', {
+          providerType: row.type,
+          error: error.message,
+        });
       }
     }
 

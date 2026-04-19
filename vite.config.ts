@@ -4,19 +4,6 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { VitePWA } from 'vite-plugin-pwa';
 import type { Plugin } from 'vite';
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function getApiUrlPattern(clientUrl: string): RegExp {
-  try {
-    const origin = new URL(clientUrl).origin;
-    return new RegExp(`^${escapeRegExp(origin)}/api/`, "i");
-  } catch {
-    return /^https:\/\/gvps\.cloud\/api\//i;
-  }
-}
-
 // Plugin to remove mock data from all source files in production builds
 function removeMockData(): Plugin {
   return {
@@ -56,12 +43,7 @@ function removeMockData(): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const companyName = process.env.VITE_COMPANY_NAME || process.env.COMPANY_NAME || process.env.COMPANY_BRAND_NAME || 'GVPSCloud';
-  const clientUrl =
-    env.CLIENT_URL ||
-    process.env.CLIENT_URL ||
-    "http://localhost:5173";
-  const apiUrlPattern = getApiUrlPattern(clientUrl);
-  
+
   return {
     resolve: {
       alias: {

@@ -1,21 +1,22 @@
 {
-  "generatedAt": "2026-04-11T08:22:58.914Z",
-  "actualCount": 330,
-  "actualProtectedCount": 303,
-  "docsCount": 332,
-  "docsProtectedCount": 305,
-  "missingInDocs": [
-    {
-      "method": "GET",
-      "path": "/api/auth/debug/user",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\auth.ts"
-    }
-  ],
+  "generatedAt": "2026-04-19T17:53:26.888Z",
+  "actualCount": 139,
+  "actualProtectedCount": 113,
+  "docsCount": 139,
+  "docsProtectedCount": 113,
+  "missingInDocs": [],
   "staleInDocs": [],
   "authMismatches": [],
-  "incompleteDocs": [],
+  "incompleteDocs": [
+    {
+      "key": "GET /api/auth/debug/user",
+      "section": "Authentication & Profile",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    }
+  ],
   "actualRoutes": [
     {
       "method": "GET",
@@ -86,1126 +87,6 @@
       "protected": true,
       "admin": false,
       "source": "api\\routes\\activity.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/activity",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\activity.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/activity/export",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\activity.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/activity/summary",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\activity.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/announcements",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\announcements.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/announcements",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\announcements.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/announcements/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\announcements.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/announcements/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\announcements.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/announcements/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\announcements.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/billing/invoices",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\billing.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/billing/invoices/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\billing.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/billing/invoices/:id/download",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\billing.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/billing/stats",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\billing.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/billing/transactions",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\billing.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/billing/transactions",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\billing.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/billing/transactions/:transactionId/invoice",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\billing.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/billing/users",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\billing.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/category-mappings",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\categoryMappings.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/category-mappings",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\categoryMappings.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/category-mappings/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\categoryMappings.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/category-mappings/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\categoryMappings.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/category-mappings/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\categoryMappings.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/category-mappings/enabled",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\admin\\categoryMappings.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/category-mappings/reorder",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\categoryMappings.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/category-mappings/sync",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\categoryMappings.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/contact/categories",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\contact.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/contact/categories",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\contact.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/contact/categories/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\contact.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/contact/categories/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\contact.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/contact/categories/reorder",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\contact.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/contact/methods",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\contact.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/contact/methods/:method_type",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\contact.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/contact/methods/:method_type",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\contact.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/documentation/articles",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/documentation/articles",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/documentation/articles/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/documentation/articles/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/documentation/articles/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/documentation/articles/:id/files",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/documentation/articles/reorder",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/documentation/categories",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/documentation/categories",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/documentation/categories/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/documentation/categories/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/documentation/categories/reorder",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/documentation/files/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminDocumentation.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/egress/execute",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/egress/history",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/egress/live-usage",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/egress/pricing",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/egress/pricing/:regionId",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/egress/pricing/sync",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/email-templates",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\emailTemplates.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/email-templates/:name",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\emailTemplates.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/email-templates/:name",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\emailTemplates.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/email-templates/preview",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\emailTemplates.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/faq/categories",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/faq/categories",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/faq/categories/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/faq/categories/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/faq/categories/reorder",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/faq/items",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/faq/items",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/faq/items/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/faq/items/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/faq/items/reorder",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/faq/updates",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/faq/updates",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/faq/updates/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/faq/updates/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/faq/updates/reorder",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\adminFaq.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/github/commits",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\github.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/impersonation/exit",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewall-settings",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/networking/firewall-settings",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewall-templates",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewall-templates/:slug",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewalls",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/firewalls",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/networking/firewalls/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewalls/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/networking/firewalls/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewalls/:id/devices",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/firewalls/:id/devices",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/networking/firewalls/:id/devices/:deviceId",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewalls/:id/history",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/firewalls/:id/rules",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/networking/firewalls/:id/rules",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/ips",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/ips",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/ips/:address",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/networking/ips/:address/rdns",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/networking/ips/:instanceId/:address",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/ips/assign",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/ips/share",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/ipv6/pools",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/ipv6/range-rdns",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/ipv6/range-rdns-records",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/ipv6/ranges",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/networking/ipv6/ranges",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/networking/ipv6/ranges/:range",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/rdns",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/networking/rdns",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/networking/vlans",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/networking/vlans/:regionId/:label",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\networking.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/organizations",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/organizations",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/organizations/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/organizations/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/organizations/:id/members",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/organizations/:id/members/:userId",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/organizations/:id/members/:userId",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/plans",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/plans",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/plans/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/plans/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/platform/availability",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/platform/availability",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/platform/region-labels",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/platform/region-labels/:regionId",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/platform/region-labels/:regionId",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/platform/region-labels/:regionId",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/platform/region-labels/bulk",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\platform.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/providers",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/providers",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/providers/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/providers/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/providers/:id/regions",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/providers/:id/regions",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/providers/:id/validate",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/providers/reorder",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/rate-limits/overrides",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/rate-limits/overrides",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/rate-limits/overrides/:userId",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/servers",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/ssh-keys",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\sshKeys.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/ssh-keys",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\sshKeys.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/ssh-keys/:keyId",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\sshKeys.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/ssh-keys/:keyId",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin\\sshKeys.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/stackscripts/configs",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/stackscripts/configs",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/stackscripts/configs/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/stackscripts/configs/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/theme",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/theme",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/tickets",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/tickets/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/tickets/:id/replies",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/tickets/:id/replies",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PATCH",
-      "path": "/api/admin/tickets/:id/status",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/tickets/:id/stream",
-      "protected": false,
-      "admin": false,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/upstream/plans",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/upstream/regions",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/upstream/stackscripts",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/users",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/admin/users/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/users/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/users/:id",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/users/:id/detail",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/admin/users/:id/impersonate",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/admin/users/search",
-      "protected": true,
-      "admin": true,
-      "source": "api\\routes\\admin.ts"
     },
     {
       "method": "GET",
@@ -2109,412 +990,140 @@
       "protected": false,
       "admin": false,
       "source": "api\\routes\\theme.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/vps/:id",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/:id",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/backups/:backupId/restore",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/backups/disable",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/backups/enable",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/backups/schedule",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/backups/snapshot",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/boot",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/firewalls/attach",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/firewalls/detach",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/vps/:id/hostname",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/:id/networking/ipv6-rdns-records",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/networking/rdns",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/:id/notes",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/vps/:id/notes",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/reboot",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/rebuild",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "POST",
-      "path": "/api/vps/:id/shutdown",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/vps/:id/watchdog",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/apps",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/images",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/networking/config",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/plans",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/providers",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/providers/:providerId/plans/:regionId",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/providers/:providerId/regions",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/providers/:providerId/ssh-keys",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/stackscripts",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
-    },
-    {
-      "method": "GET",
-      "path": "/api/vps/uptime-summary",
-      "protected": true,
-      "admin": false,
-      "source": "api\\routes\\vps.ts"
     }
   ],
   "docEndpoints": [
     {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "POST",
-      "relativePath": "/register",
-      "path": "/api/auth/register",
-      "auth": false,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "POST",
-      "relativePath": "/login",
-      "path": "/api/auth/login",
-      "auth": false,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "POST",
-      "relativePath": "/refresh",
-      "path": "/api/auth/refresh",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
+      "sectionTitle": "Activities Feed",
+      "sectionBase": "/api/activities",
       "method": "GET",
-      "relativePath": "/me",
-      "path": "/api/auth/me",
+      "relativePath": "/",
+      "path": "/api/activities",
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "POST",
-      "relativePath": "/verify-password",
-      "path": "/api/auth/verify-password",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "POST",
-      "relativePath": "/logout",
-      "path": "/api/auth/logout",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "PUT",
-      "relativePath": "/profile",
-      "path": "/api/auth/profile",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "PUT",
-      "relativePath": "/password",
-      "path": "/api/auth/password",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "PUT",
-      "relativePath": "/preferences",
-      "path": "/api/auth/preferences",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "GET",
-      "relativePath": "/api-keys",
-      "path": "/api/auth/api-keys",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "POST",
-      "relativePath": "/api-keys",
-      "path": "/api/auth/api-keys",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
+      "sectionTitle": "Activities Feed",
+      "sectionBase": "/api/activities",
       "method": "DELETE",
-      "relativePath": "/api-keys/:id",
-      "path": "/api/auth/api-keys/:id",
+      "relativePath": "/:id",
+      "path": "/api/activities/:id",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "POST",
-      "relativePath": "/forgot-password",
-      "path": "/api/auth/forgot-password",
-      "auth": false,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "POST",
-      "relativePath": "/reset-password",
-      "path": "/api/auth/reset-password",
-      "auth": false,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "POST",
-      "relativePath": "/verify-email",
-      "path": "/api/auth/verify-email",
-      "auth": false,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "POST",
-      "relativePath": "/2fa/setup",
-      "path": "/api/auth/2fa/setup",
+      "sectionTitle": "Activities Feed",
+      "sectionBase": "/api/activities",
+      "method": "PUT",
+      "relativePath": "/:id/read",
+      "path": "/api/activities/:id/read",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Authentication & Profile",
-      "sectionBase": "/api/auth",
-      "method": "POST",
-      "relativePath": "/2fa/verify",
-      "path": "/api/auth/2fa/verify",
+      "sectionTitle": "Activities Feed",
+      "sectionBase": "/api/activities",
+      "method": "GET",
+      "relativePath": "/organization/:organizationId",
+      "path": "/api/activities/organization/:organizationId",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Activities Feed",
+      "sectionBase": "/api/activities",
+      "method": "PUT",
+      "relativePath": "/read-all",
+      "path": "/api/activities/read-all",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Activities Feed",
+      "sectionBase": "/api/activities",
+      "method": "GET",
+      "relativePath": "/unread-count",
+      "path": "/api/activities/unread-count",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Activity & Audit Log",
+      "sectionBase": "/api/activity",
+      "method": "GET",
+      "relativePath": "/",
+      "path": "/api/activity",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Activity & Audit Log",
+      "sectionBase": "/api/activity",
+      "method": "GET",
+      "relativePath": "/export",
+      "path": "/api/activity/export",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Activity & Audit Log",
+      "sectionBase": "/api/activity",
+      "method": "GET",
+      "relativePath": "/recent",
+      "path": "/api/activity/recent",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Activity & Audit Log",
+      "sectionBase": "/api/activity",
+      "method": "GET",
+      "relativePath": "/summary",
+      "path": "/api/activity/summary",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Announcements",
+      "sectionBase": "/api/announcements",
+      "method": "GET",
+      "relativePath": "/",
+      "path": "/api/announcements",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Authentication & Profile",
@@ -2525,7 +1134,56 @@
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/2fa/setup",
+      "path": "/api/auth/2fa/setup",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/2fa/verify",
+      "path": "/api/auth/2fa/verify",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "GET",
+      "relativePath": "/api-keys",
+      "path": "/api/auth/api-keys",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/api-keys",
+      "path": "/api/auth/api-keys",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Authentication & Profile",
@@ -2536,7 +1194,141 @@
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "GET",
+      "relativePath": "/debug/user",
+      "path": "/api/auth/debug/user",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/forgot-password",
+      "path": "/api/auth/forgot-password",
+      "auth": false,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/login",
+      "path": "/api/auth/login",
+      "auth": false,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/logout",
+      "path": "/api/auth/logout",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "GET",
+      "relativePath": "/me",
+      "path": "/api/auth/me",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "PUT",
+      "relativePath": "/password",
+      "path": "/api/auth/password",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "PUT",
+      "relativePath": "/preferences",
+      "path": "/api/auth/preferences",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "PUT",
+      "relativePath": "/profile",
+      "path": "/api/auth/profile",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/refresh",
+      "path": "/api/auth/refresh",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/register",
+      "path": "/api/auth/register",
+      "auth": false,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/reset-password",
+      "path": "/api/auth/reset-password",
+      "auth": false,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Authentication & Profile",
@@ -2547,117 +1339,416 @@
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Billing & Payments",
-      "sectionBase": "/api/payments",
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
       "method": "POST",
-      "relativePath": "/create-payment",
-      "path": "/api/payments/create-payment",
+      "relativePath": "/verify-email",
+      "path": "/api/auth/verify-email",
+      "auth": false,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Authentication & Profile",
+      "sectionBase": "/api/auth",
+      "method": "POST",
+      "relativePath": "/verify-password",
+      "path": "/api/auth/verify-password",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Billing & Payments",
-      "sectionBase": "/api/payments",
+      "sectionTitle": "Contact",
+      "sectionBase": "/api/contact",
       "method": "POST",
-      "relativePath": "/capture-payment/:orderId",
-      "path": "/api/payments/capture-payment/:orderId",
-      "auth": true,
+      "relativePath": "/",
+      "path": "/api/contact",
+      "auth": false,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Billing & Payments",
-      "sectionBase": "/api/payments",
+      "sectionTitle": "Contact",
+      "sectionBase": "/api/contact",
       "method": "GET",
       "relativePath": "/config",
-      "path": "/api/payments/config",
-      "auth": true,
+      "path": "/api/contact/config",
+      "auth": false,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Billing & Payments",
-      "sectionBase": "/api/payments",
+      "sectionTitle": "Documentation",
+      "sectionBase": "/api/documentation",
       "method": "GET",
-      "relativePath": "/wallet/balance",
-      "path": "/api/payments/wallet/balance",
-      "auth": true,
+      "relativePath": "/articles/:slug",
+      "path": "/api/documentation/articles/:slug",
+      "auth": false,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Billing & Payments",
-      "sectionBase": "/api/payments",
+      "sectionTitle": "Documentation",
+      "sectionBase": "/api/documentation",
+      "method": "GET",
+      "relativePath": "/categories",
+      "path": "/api/documentation/categories",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Documentation",
+      "sectionBase": "/api/documentation",
+      "method": "GET",
+      "relativePath": "/categories/:slug",
+      "path": "/api/documentation/categories/:slug",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Documentation",
+      "sectionBase": "/api/documentation",
+      "method": "GET",
+      "relativePath": "/files/:id",
+      "path": "/api/documentation/files/:id",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Admin Egress Management",
+      "sectionBase": "/api/egress/admin",
       "method": "POST",
-      "relativePath": "/wallet/deduct",
-      "path": "/api/payments/wallet/deduct",
+      "relativePath": "/billing/run",
+      "path": "/api/egress/admin/billing/run",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": true
     },
     {
-      "sectionTitle": "Billing & Payments",
-      "sectionBase": "/api/payments",
-      "method": "GET",
-      "relativePath": "/wallet/transactions",
-      "path": "/api/payments/wallet/transactions",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Billing & Payments",
-      "sectionBase": "/api/payments",
-      "method": "GET",
-      "relativePath": "/history",
-      "path": "/api/payments/history",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Billing & Payments",
-      "sectionBase": "/api/payments",
-      "method": "GET",
-      "relativePath": "/transactions/:id",
-      "path": "/api/payments/transactions/:id",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Billing & Payments",
-      "sectionBase": "/api/payments",
-      "method": "POST",
-      "relativePath": "/refund",
-      "path": "/api/payments/refund",
+      "sectionTitle": "Admin Egress Management",
+      "sectionBase": "/api/egress/admin",
+      "method": "DELETE",
+      "relativePath": "/credits/:orgId",
+      "path": "/api/egress/admin/credits/:orgId",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": true
     },
     {
-      "sectionTitle": "Billing & Payments",
-      "sectionBase": "/api/payments",
+      "sectionTitle": "Admin Egress Management",
+      "sectionBase": "/api/egress/admin",
+      "method": "POST",
+      "relativePath": "/credits/:orgId",
+      "path": "/api/egress/admin/credits/:orgId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": true
+    },
+    {
+      "sectionTitle": "Admin Egress Management",
+      "sectionBase": "/api/egress/admin",
       "method": "GET",
-      "relativePath": "/billing/summary",
-      "path": "/api/payments/billing/summary",
+      "relativePath": "/credits/:orgId/balance",
+      "path": "/api/egress/admin/credits/:orgId/balance",
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": true
+    },
+    {
+      "sectionTitle": "Admin Egress Management",
+      "sectionBase": "/api/egress/admin",
+      "method": "GET",
+      "relativePath": "/settings/packs",
+      "path": "/api/egress/admin/settings/packs",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": true
+    },
+    {
+      "sectionTitle": "Admin Egress Management",
+      "sectionBase": "/api/egress/admin",
+      "method": "PUT",
+      "relativePath": "/settings/packs",
+      "path": "/api/egress/admin/settings/packs",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": true
+    },
+    {
+      "sectionTitle": "Egress & Network Billing",
+      "sectionBase": "/api/egress",
+      "method": "GET",
+      "relativePath": "/credits",
+      "path": "/api/egress/credits",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Egress & Network Billing",
+      "sectionBase": "/api/egress",
+      "method": "GET",
+      "relativePath": "/credits/history",
+      "path": "/api/egress/credits/history",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Egress & Network Billing",
+      "sectionBase": "/api/egress",
+      "method": "GET",
+      "relativePath": "/credits/packs",
+      "path": "/api/egress/credits/packs",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Egress & Network Billing",
+      "sectionBase": "/api/egress",
+      "method": "POST",
+      "relativePath": "/credits/purchase",
+      "path": "/api/egress/credits/purchase",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Egress & Network Billing",
+      "sectionBase": "/api/egress",
+      "method": "POST",
+      "relativePath": "/credits/purchase/wallet",
+      "path": "/api/egress/credits/purchase/wallet",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Egress & Network Billing",
+      "sectionBase": "/api/egress",
+      "method": "GET",
+      "relativePath": "/credits/wallet-balance",
+      "path": "/api/egress/credits/wallet-balance",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Egress & Network Billing",
+      "sectionBase": "/api/egress",
+      "method": "GET",
+      "relativePath": "/usage/:vpsId",
+      "path": "/api/egress/usage/:vpsId",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Egress & Network Billing",
+      "sectionBase": "/api/egress",
+      "method": "GET",
+      "relativePath": "/usage/:vpsId/summary",
+      "path": "/api/egress/usage/:vpsId/summary",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "FAQ & Updates",
+      "sectionBase": "/api/faq",
+      "method": "GET",
+      "relativePath": "/categories",
+      "path": "/api/faq/categories",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "FAQ & Updates",
+      "sectionBase": "/api/faq",
+      "method": "GET",
+      "relativePath": "/updates",
+      "path": "/api/faq/updates",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/",
+      "path": "/api/health",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/config-validation",
+      "path": "/api/health/config-validation",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": true
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/detailed",
+      "path": "/api/health/detailed",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": true
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/metrics",
+      "path": "/api/health/metrics",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": true
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/organizations",
+      "path": "/api/health/organizations",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/platform-stats",
+      "path": "/api/health/platform-stats",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/rate-limiting",
+      "path": "/api/health/rate-limiting",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": true
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/stats",
+      "path": "/api/health/stats",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/status",
+      "path": "/api/health/status",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Platform Health",
+      "sectionBase": "/api/health",
+      "method": "GET",
+      "relativePath": "/uptime",
+      "path": "/api/health/uptime",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Invoices & Financial Records",
@@ -2668,7 +1759,8 @@
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Invoices & Financial Records",
@@ -2679,7 +1771,8 @@
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Invoices & Financial Records",
@@ -2690,29 +1783,8 @@
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Invoices & Financial Records",
-      "sectionBase": "/api/invoices",
-      "method": "POST",
-      "relativePath": "/from-transaction/:transactionId",
-      "path": "/api/invoices/from-transaction/:transactionId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Invoices & Financial Records",
-      "sectionBase": "/api/invoices",
-      "method": "POST",
-      "relativePath": "/from-transactions",
-      "path": "/api/invoices/from-transactions",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Invoices & Financial Records",
@@ -2724,832 +1796,32 @@
       "hasBody": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/",
-      "path": "/api/vps",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
+      "sectionTitle": "Invoices & Financial Records",
+      "sectionBase": "/api/invoices",
       "method": "POST",
-      "relativePath": "/",
-      "path": "/api/vps",
+      "relativePath": "/from-transaction/:transactionId",
+      "path": "/api/invoices/from-transaction/:transactionId",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/:id",
-      "path": "/api/vps/:id",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
+      "sectionTitle": "Invoices & Financial Records",
+      "sectionBase": "/api/invoices",
       "method": "POST",
-      "relativePath": "/:id/boot",
-      "path": "/api/vps/:id/boot",
+      "relativePath": "/from-transactions",
+      "path": "/api/invoices/from-transactions",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "POST",
-      "relativePath": "/:id/shutdown",
-      "path": "/api/vps/:id/shutdown",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "POST",
-      "relativePath": "/:id/reboot",
-      "path": "/api/vps/:id/reboot",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "POST",
-      "relativePath": "/:id/rebuild",
-      "path": "/api/vps/:id/rebuild",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "DELETE",
-      "relativePath": "/:id",
-      "path": "/api/vps/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/:id/notes",
-      "path": "/api/vps/:id/notes",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "PUT",
-      "relativePath": "/:id/notes",
-      "path": "/api/vps/:id/notes",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/uptime-summary",
-      "path": "/api/vps/uptime-summary",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "PUT",
-      "relativePath": "/:id/hostname",
-      "path": "/api/vps/:id/hostname",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "POST",
-      "relativePath": "/:id/backups/enable",
-      "path": "/api/vps/:id/backups/enable",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "POST",
-      "relativePath": "/:id/backups/disable",
-      "path": "/api/vps/:id/backups/disable",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "POST",
-      "relativePath": "/:id/backups/snapshot",
-      "path": "/api/vps/:id/backups/snapshot",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "POST",
-      "relativePath": "/:id/backups/schedule",
-      "path": "/api/vps/:id/backups/schedule",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "POST",
-      "relativePath": "/:id/backups/:backupId/restore",
-      "path": "/api/vps/:id/backups/:backupId/restore",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "POST",
-      "relativePath": "/:id/firewalls/attach",
-      "path": "/api/vps/:id/firewalls/attach",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "POST",
-      "relativePath": "/:id/firewalls/detach",
-      "path": "/api/vps/:id/firewalls/detach",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Provisioning & Lifecycle",
-      "sectionBase": "/api/vps",
-      "method": "PUT",
-      "relativePath": "/:id/watchdog",
-      "path": "/api/vps/:id/watchdog",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Catalog & Integrations",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/providers",
-      "path": "/api/vps/providers",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Catalog & Integrations",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/providers/:providerId/regions",
-      "path": "/api/vps/providers/:providerId/regions",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Catalog & Integrations",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/plans",
-      "path": "/api/vps/plans",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Catalog & Integrations",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/images",
-      "path": "/api/vps/images",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Catalog & Integrations",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/stackscripts",
-      "path": "/api/vps/stackscripts",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Catalog & Integrations",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/providers/:providerId/ssh-keys",
-      "path": "/api/vps/providers/:providerId/ssh-keys",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Catalog & Integrations",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/apps",
-      "path": "/api/vps/apps",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Catalog & Integrations",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/providers/:providerId/plans/:regionId",
-      "path": "/api/vps/providers/:providerId/plans/:regionId",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Networking",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/networking/config",
-      "path": "/api/vps/networking/config",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Networking",
-      "sectionBase": "/api/vps",
-      "method": "POST",
-      "relativePath": "/:id/networking/rdns",
-      "path": "/api/vps/:id/networking/rdns",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "VPS Networking",
-      "sectionBase": "/api/vps",
-      "method": "GET",
-      "relativePath": "/:id/networking/ipv6-rdns-records",
-      "path": "/api/vps/:id/networking/ipv6-rdns-records",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organization SSH Keys",
-      "sectionBase": "/api/ssh-keys",
-      "method": "GET",
-      "relativePath": "/",
-      "path": "/api/ssh-keys",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organization SSH Keys",
-      "sectionBase": "/api/ssh-keys",
-      "method": "POST",
-      "relativePath": "/",
-      "path": "/api/ssh-keys",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organization SSH Keys",
-      "sectionBase": "/api/ssh-keys",
-      "method": "DELETE",
-      "relativePath": "/:keyId",
-      "path": "/api/ssh-keys/:keyId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Egress & Network Billing",
-      "sectionBase": "/api/egress",
-      "method": "GET",
-      "relativePath": "/credits",
-      "path": "/api/egress/credits",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Egress & Network Billing",
-      "sectionBase": "/api/egress",
-      "method": "GET",
-      "relativePath": "/credits/history",
-      "path": "/api/egress/credits/history",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Egress & Network Billing",
-      "sectionBase": "/api/egress",
-      "method": "GET",
-      "relativePath": "/credits/packs",
-      "path": "/api/egress/credits/packs",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Egress & Network Billing",
-      "sectionBase": "/api/egress",
-      "method": "POST",
-      "relativePath": "/credits/purchase",
-      "path": "/api/egress/credits/purchase",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Egress & Network Billing",
-      "sectionBase": "/api/egress",
-      "method": "GET",
-      "relativePath": "/credits/wallet-balance",
-      "path": "/api/egress/credits/wallet-balance",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Egress & Network Billing",
-      "sectionBase": "/api/egress",
-      "method": "POST",
-      "relativePath": "/credits/purchase/wallet",
-      "path": "/api/egress/credits/purchase/wallet",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Egress & Network Billing",
-      "sectionBase": "/api/egress",
-      "method": "GET",
-      "relativePath": "/usage/:vpsId",
-      "path": "/api/egress/usage/:vpsId",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Egress & Network Billing",
-      "sectionBase": "/api/egress",
-      "method": "GET",
-      "relativePath": "/usage/:vpsId/summary",
-      "path": "/api/egress/usage/:vpsId/summary",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/",
-      "path": "/api/organizations",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/all",
-      "path": "/api/organizations/all",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "PUT",
-      "relativePath": "/:id",
-      "path": "/api/organizations/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/:id/members",
-      "path": "/api/organizations/:id/members",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "POST",
-      "relativePath": "/:id/members",
-      "path": "/api/organizations/:id/members",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "DELETE",
-      "relativePath": "/:id/members/:userId",
-      "path": "/api/organizations/:id/members/:userId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "PUT",
-      "relativePath": "/:id/members/:userId",
-      "path": "/api/organizations/:id/members/:userId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "POST",
-      "relativePath": "/:id/members/invite",
-      "path": "/api/organizations/:id/members/invite",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/:id/invitations",
-      "path": "/api/organizations/:id/invitations",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/:id/roles",
-      "path": "/api/organizations/:id/roles",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "POST",
-      "relativePath": "/:id/roles",
-      "path": "/api/organizations/:id/roles",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "PUT",
-      "relativePath": "/:id/roles/:roleId",
-      "path": "/api/organizations/:id/roles/:roleId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "DELETE",
-      "relativePath": "/:id/roles/:roleId",
-      "path": "/api/organizations/:id/roles/:roleId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/resources",
-      "path": "/api/organizations/resources",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/invitations/:token",
-      "path": "/api/organizations/invitations/:token",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "POST",
-      "relativePath": "/invitations/:token/accept",
-      "path": "/api/organizations/invitations/:token/accept",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "POST",
-      "relativePath": "/invitations/:token/decline",
-      "path": "/api/organizations/invitations/:token/decline",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "DELETE",
-      "relativePath": "/invitations/:id",
-      "path": "/api/organizations/invitations/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/:id/egress",
-      "path": "/api/organizations/:id/egress",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/:id/egress/credits",
-      "path": "/api/organizations/:id/egress/credits",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/:id/egress/credits/packs",
-      "path": "/api/organizations/:id/egress/credits/packs",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "POST",
-      "relativePath": "/:id/egress/credits/purchase",
-      "path": "/api/organizations/:id/egress/credits/purchase",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "POST",
-      "relativePath": "/:id/egress/credits/purchase/complete",
-      "path": "/api/organizations/:id/egress/credits/purchase/complete",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/:id/notes",
-      "path": "/api/organizations/:id/notes",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "POST",
-      "relativePath": "/:id/notes",
-      "path": "/api/organizations/:id/notes",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "GET",
-      "relativePath": "/:id/notes/:noteId",
-      "path": "/api/organizations/:id/notes/:noteId",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "PUT",
-      "relativePath": "/:id/notes/:noteId",
-      "path": "/api/organizations/:id/notes/:noteId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Organizations",
-      "sectionBase": "/api/organizations",
-      "method": "DELETE",
-      "relativePath": "/:id/notes/:noteId",
-      "path": "/api/organizations/:id/notes/:noteId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Personal Notes",
-      "sectionBase": "/api/notes",
-      "method": "GET",
-      "relativePath": "/personal",
-      "path": "/api/notes/personal",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Personal Notes",
-      "sectionBase": "/api/notes",
-      "method": "POST",
-      "relativePath": "/personal",
-      "path": "/api/notes/personal",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Personal Notes",
-      "sectionBase": "/api/notes",
-      "method": "GET",
-      "relativePath": "/personal/:noteId",
-      "path": "/api/notes/personal/:noteId",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Personal Notes",
-      "sectionBase": "/api/notes",
-      "method": "PUT",
-      "relativePath": "/personal/:noteId",
-      "path": "/api/notes/personal/:noteId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Personal Notes",
-      "sectionBase": "/api/notes",
-      "method": "DELETE",
-      "relativePath": "/personal/:noteId",
-      "path": "/api/notes/personal/:noteId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Personal Notes",
@@ -3560,249 +1832,68 @@
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Activity & Audit Log",
-      "sectionBase": "/api/activity",
+      "sectionTitle": "Personal Notes",
+      "sectionBase": "/api/notes",
       "method": "GET",
-      "relativePath": "/",
-      "path": "/api/activity",
+      "relativePath": "/personal",
+      "path": "/api/notes/personal",
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Activity & Audit Log",
-      "sectionBase": "/api/activity",
-      "method": "GET",
-      "relativePath": "/recent",
-      "path": "/api/activity/recent",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Activity & Audit Log",
-      "sectionBase": "/api/activity",
-      "method": "GET",
-      "relativePath": "/export",
-      "path": "/api/activity/export",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Activity & Audit Log",
-      "sectionBase": "/api/activity",
-      "method": "GET",
-      "relativePath": "/summary",
-      "path": "/api/activity/summary",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Activities Feed",
-      "sectionBase": "/api/activities",
-      "method": "GET",
-      "relativePath": "/",
-      "path": "/api/activities",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Activities Feed",
-      "sectionBase": "/api/activities",
-      "method": "DELETE",
-      "relativePath": "/:id",
-      "path": "/api/activities/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Activities Feed",
-      "sectionBase": "/api/activities",
-      "method": "PUT",
-      "relativePath": "/:id/read",
-      "path": "/api/activities/:id/read",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Activities Feed",
-      "sectionBase": "/api/activities",
-      "method": "GET",
-      "relativePath": "/organization/:organizationId",
-      "path": "/api/activities/organization/:organizationId",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Activities Feed",
-      "sectionBase": "/api/activities",
-      "method": "PUT",
-      "relativePath": "/read-all",
-      "path": "/api/activities/read-all",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Activities Feed",
-      "sectionBase": "/api/activities",
-      "method": "GET",
-      "relativePath": "/unread-count",
-      "path": "/api/activities/unread-count",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
-      "method": "GET",
-      "relativePath": "/tickets",
-      "path": "/api/support/tickets",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
+      "sectionTitle": "Personal Notes",
+      "sectionBase": "/api/notes",
       "method": "POST",
-      "relativePath": "/tickets",
-      "path": "/api/support/tickets",
+      "relativePath": "/personal",
+      "path": "/api/notes/personal",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
+      "sectionTitle": "Personal Notes",
+      "sectionBase": "/api/notes",
+      "method": "DELETE",
+      "relativePath": "/personal/:noteId",
+      "path": "/api/notes/personal/:noteId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Personal Notes",
+      "sectionBase": "/api/notes",
       "method": "GET",
-      "relativePath": "/tickets/:id/replies",
-      "path": "/api/support/tickets/:id/replies",
+      "relativePath": "/personal/:noteId",
+      "path": "/api/notes/personal/:noteId",
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
-      "method": "POST",
-      "relativePath": "/tickets/:id/replies",
-      "path": "/api/support/tickets/:id/replies",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
-      "method": "GET",
-      "relativePath": "/tickets/:id/stream",
-      "path": "/api/support/tickets/:id/stream",
-      "auth": false,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
-      "method": "DELETE",
-      "relativePath": "/tickets/:id",
-      "path": "/api/support/tickets/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
+      "sectionTitle": "Personal Notes",
+      "sectionBase": "/api/notes",
       "method": "PUT",
-      "relativePath": "/tickets/:id/assign",
-      "path": "/api/support/tickets/:id/assign",
+      "relativePath": "/personal/:noteId",
+      "path": "/api/notes/personal/:noteId",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
-      "method": "PUT",
-      "relativePath": "/tickets/:id/priority",
-      "path": "/api/support/tickets/:id/priority",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
-      "method": "POST",
-      "relativePath": "/tickets/:id/reopen-request",
-      "path": "/api/support/tickets/:id/reopen-request",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
-      "method": "PUT",
-      "relativePath": "/tickets/:id/status",
-      "path": "/api/support/tickets/:id/status",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
-      "method": "PUT",
-      "relativePath": "/tickets/:id/replies/:replyId",
-      "path": "/api/support/tickets/:id/replies/:replyId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Support Tickets",
-      "sectionBase": "/api/support",
-      "method": "DELETE",
-      "relativePath": "/tickets/:id/replies/:replyId",
-      "path": "/api/support/tickets/:id/replies/:replyId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Notifications",
@@ -3813,29 +1904,8 @@
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Notifications",
-      "sectionBase": "/api/notifications",
-      "method": "GET",
-      "relativePath": "/unread",
-      "path": "/api/notifications/unread",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Notifications",
-      "sectionBase": "/api/notifications",
-      "method": "GET",
-      "relativePath": "/unread-count",
-      "path": "/api/notifications/unread-count",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Notifications",
@@ -3846,7 +1916,8 @@
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Notifications",
@@ -3857,7 +1928,8 @@
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Notifications",
@@ -3868,1547 +1940,488 @@
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
+      "sectionTitle": "Notifications",
+      "sectionBase": "/api/notifications",
       "method": "GET",
-      "relativePath": "/users",
-      "path": "/api/admin/users",
+      "relativePath": "/unread",
+      "path": "/api/notifications/unread",
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/users/:id",
-      "path": "/api/admin/users/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/users/:id/impersonate",
-      "path": "/api/admin/users/:id/impersonate",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/impersonation/exit",
-      "path": "/api/admin/impersonation/exit",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
+      "sectionTitle": "Notifications",
+      "sectionBase": "/api/notifications",
       "method": "GET",
-      "relativePath": "/tickets",
-      "path": "/api/admin/tickets",
+      "relativePath": "/unread-count",
+      "path": "/api/notifications/unread-count",
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/tickets/:id/replies",
-      "path": "/api/admin/tickets/:id/replies",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PATCH",
-      "relativePath": "/tickets/:id/status",
-      "path": "/api/admin/tickets/:id/status",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/tickets/:id",
-      "path": "/api/admin/tickets/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/faq/categories",
-      "path": "/api/admin/faq/categories",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/faq/categories",
-      "path": "/api/admin/faq/categories",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/faq/categories/:id",
-      "path": "/api/admin/faq/categories/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/faq/categories/:id",
-      "path": "/api/admin/faq/categories/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/faq/categories/reorder",
-      "path": "/api/admin/faq/categories/reorder",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/faq/items",
-      "path": "/api/admin/faq/items",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/faq/items",
-      "path": "/api/admin/faq/items",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/faq/items/:id",
-      "path": "/api/admin/faq/items/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/faq/items/:id",
-      "path": "/api/admin/faq/items/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/faq/items/reorder",
-      "path": "/api/admin/faq/items/reorder",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/faq/updates",
-      "path": "/api/admin/faq/updates",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/faq/updates",
-      "path": "/api/admin/faq/updates",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/faq/updates/:id",
-      "path": "/api/admin/faq/updates/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/faq/updates/:id",
-      "path": "/api/admin/faq/updates/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/faq/updates/reorder",
-      "path": "/api/admin/faq/updates/reorder",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/contact/categories",
-      "path": "/api/admin/contact/categories",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/contact/categories",
-      "path": "/api/admin/contact/categories",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/contact/categories/:id",
-      "path": "/api/admin/contact/categories/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/contact/categories/:id",
-      "path": "/api/admin/contact/categories/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/contact/categories/reorder",
-      "path": "/api/admin/contact/categories/reorder",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/contact/methods",
-      "path": "/api/admin/contact/methods",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/contact/methods/:method_type",
-      "path": "/api/admin/contact/methods/:method_type",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/contact/methods/:method_type",
-      "path": "/api/admin/contact/methods/:method_type",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/providers",
-      "path": "/api/admin/providers",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/providers/:id/regions",
-      "path": "/api/admin/providers/:id/regions",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/rate-limits/overrides",
-      "path": "/api/admin/rate-limits/overrides",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/rate-limits/overrides",
-      "path": "/api/admin/rate-limits/overrides",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/rate-limits/overrides/:userId",
-      "path": "/api/admin/rate-limits/overrides/:userId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/platform/availability",
-      "path": "/api/admin/platform/availability",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/platform/availability",
-      "path": "/api/admin/platform/availability",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/platform/region-labels",
-      "path": "/api/admin/platform/region-labels",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/platform/region-labels/:regionId",
-      "path": "/api/admin/platform/region-labels/:regionId",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/platform/region-labels/:regionId",
-      "path": "/api/admin/platform/region-labels/:regionId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/platform/region-labels/:regionId",
-      "path": "/api/admin/platform/region-labels/:regionId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/platform/region-labels/bulk",
-      "path": "/api/admin/platform/region-labels/bulk",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/theme",
-      "path": "/api/admin/theme",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/theme",
-      "path": "/api/admin/theme",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/billing/stats",
-      "path": "/api/admin/billing/stats",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/billing/transactions",
-      "path": "/api/admin/billing/transactions",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/billing/transactions",
-      "path": "/api/admin/billing/transactions",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/billing/transactions/:transactionId/invoice",
-      "path": "/api/admin/billing/transactions/:transactionId/invoice",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/billing/users",
-      "path": "/api/admin/billing/users",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/billing/invoices",
-      "path": "/api/admin/billing/invoices",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/billing/invoices/:id",
-      "path": "/api/admin/billing/invoices/:id",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/billing/invoices/:id/download",
-      "path": "/api/admin/billing/invoices/:id/download",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/category-mappings",
-      "path": "/api/admin/category-mappings",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/category-mappings",
-      "path": "/api/admin/category-mappings",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/category-mappings/:id",
-      "path": "/api/admin/category-mappings/:id",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/category-mappings/:id",
-      "path": "/api/admin/category-mappings/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/category-mappings/:id",
-      "path": "/api/admin/category-mappings/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/category-mappings/enabled",
-      "path": "/api/admin/category-mappings/enabled",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/category-mappings/reorder",
-      "path": "/api/admin/category-mappings/reorder",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/category-mappings/sync",
-      "path": "/api/admin/category-mappings/sync",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/email-templates",
-      "path": "/api/admin/email-templates",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/email-templates/:name",
-      "path": "/api/admin/email-templates/:name",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/email-templates/:name",
-      "path": "/api/admin/email-templates/:name",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/email-templates/preview",
-      "path": "/api/admin/email-templates/preview",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/github/commits",
-      "path": "/api/admin/github/commits",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/documentation/categories",
-      "path": "/api/admin/documentation/categories",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/documentation/categories",
-      "path": "/api/admin/documentation/categories",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/documentation/categories/:id",
-      "path": "/api/admin/documentation/categories/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/documentation/categories/:id",
-      "path": "/api/admin/documentation/categories/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/documentation/categories/reorder",
-      "path": "/api/admin/documentation/categories/reorder",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/documentation/articles",
-      "path": "/api/admin/documentation/articles",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/documentation/articles",
-      "path": "/api/admin/documentation/articles",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/documentation/articles/:id",
-      "path": "/api/admin/documentation/articles/:id",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/documentation/articles/:id",
-      "path": "/api/admin/documentation/articles/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/documentation/articles/:id",
-      "path": "/api/admin/documentation/articles/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/documentation/articles/reorder",
-      "path": "/api/admin/documentation/articles/reorder",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/documentation/articles/:id/files",
-      "path": "/api/admin/documentation/articles/:id/files",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/documentation/files/:id",
-      "path": "/api/admin/documentation/files/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/ssh-keys",
-      "path": "/api/admin/ssh-keys",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/ssh-keys/:keyId",
-      "path": "/api/admin/ssh-keys/:keyId",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/ssh-keys",
-      "path": "/api/admin/ssh-keys",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/ssh-keys/:keyId",
-      "path": "/api/admin/ssh-keys/:keyId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/networking/rdns",
-      "path": "/api/admin/networking/rdns",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/networking/rdns",
-      "path": "/api/admin/networking/rdns",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/organizations",
-      "path": "/api/admin/organizations",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/organizations",
-      "path": "/api/admin/organizations",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/organizations/:id",
-      "path": "/api/admin/organizations/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/organizations/:id",
-      "path": "/api/admin/organizations/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/organizations/:id/members",
-      "path": "/api/admin/organizations/:id/members",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/organizations/:id/members/:userId",
-      "path": "/api/admin/organizations/:id/members/:userId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/organizations/:id/members/:userId",
-      "path": "/api/admin/organizations/:id/members/:userId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/plans",
-      "path": "/api/admin/plans",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/plans",
-      "path": "/api/admin/plans",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/plans/:id",
-      "path": "/api/admin/plans/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/plans/:id",
-      "path": "/api/admin/plans/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/providers",
-      "path": "/api/admin/providers",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/providers",
-      "path": "/api/admin/providers",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/providers/:id",
-      "path": "/api/admin/providers/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/providers/:id",
-      "path": "/api/admin/providers/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/providers/:id/regions",
-      "path": "/api/admin/providers/:id/regions",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/providers/:id/regions",
-      "path": "/api/admin/providers/:id/regions",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/providers/:id/validate",
-      "path": "/api/admin/providers/:id/validate",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/providers/reorder",
-      "path": "/api/admin/providers/reorder",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/servers",
-      "path": "/api/admin/servers",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/stackscripts/configs",
-      "path": "/api/admin/stackscripts/configs",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/stackscripts/configs",
-      "path": "/api/admin/stackscripts/configs",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/stackscripts/configs/:id",
-      "path": "/api/admin/stackscripts/configs/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/stackscripts/configs/:id",
-      "path": "/api/admin/stackscripts/configs/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/tickets/:id/replies",
-      "path": "/api/admin/tickets/:id/replies",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/tickets/:id/stream",
-      "path": "/api/admin/tickets/:id/stream",
-      "auth": false,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/upstream/plans",
-      "path": "/api/admin/upstream/plans",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/upstream/regions",
-      "path": "/api/admin/upstream/regions",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/upstream/stackscripts",
-      "path": "/api/admin/upstream/stackscripts",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/users/:id",
-      "path": "/api/admin/users/:id",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/users/:id/detail",
-      "path": "/api/admin/users/:id/detail",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/users/search",
-      "path": "/api/admin/users/search",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "DELETE",
-      "relativePath": "/users/:id",
-      "path": "/api/admin/users/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/egress/pricing",
-      "path": "/api/admin/egress/pricing",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/egress/pricing/sync",
-      "path": "/api/admin/egress/pricing/sync",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "PUT",
-      "relativePath": "/egress/pricing/:regionId",
-      "path": "/api/admin/egress/pricing/:regionId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/egress/live-usage",
-      "path": "/api/admin/egress/live-usage",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "POST",
-      "relativePath": "/egress/execute",
-      "path": "/api/admin/egress/execute",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Platform Management",
-      "sectionBase": "/api/admin",
-      "method": "GET",
-      "relativePath": "/egress/history",
-      "path": "/api/admin/egress/history",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Platform Health",
-      "sectionBase": "/api/health",
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
       "method": "GET",
       "relativePath": "/",
-      "path": "/api/health",
-      "auth": false,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Platform Health",
-      "sectionBase": "/api/health",
-      "method": "GET",
-      "relativePath": "/status",
-      "path": "/api/health/status",
-      "auth": false,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Platform Health",
-      "sectionBase": "/api/health",
-      "method": "GET",
-      "relativePath": "/detailed",
-      "path": "/api/health/detailed",
+      "path": "/api/organizations",
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Platform Health",
-      "sectionBase": "/api/health",
-      "method": "GET",
-      "relativePath": "/stats",
-      "path": "/api/health/stats",
-      "auth": false,
-      "hasParams": true,
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "PUT",
+      "relativePath": "/:id",
+      "path": "/api/organizations/:id",
+      "auth": true,
+      "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Platform Health",
-      "sectionBase": "/api/health",
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
       "method": "GET",
-      "relativePath": "/platform-stats",
-      "path": "/api/health/platform-stats",
-      "auth": false,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Platform Health",
-      "sectionBase": "/api/health",
-      "method": "GET",
-      "relativePath": "/metrics",
-      "path": "/api/health/metrics",
+      "relativePath": "/:id/egress",
+      "path": "/api/organizations/:id/egress",
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Platform Health",
-      "sectionBase": "/api/health",
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
       "method": "GET",
-      "relativePath": "/rate-limiting",
-      "path": "/api/health/rate-limiting",
+      "relativePath": "/:id/egress/credits",
+      "path": "/api/organizations/:id/egress/credits",
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Platform Health",
-      "sectionBase": "/api/health",
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
       "method": "GET",
-      "relativePath": "/config-validation",
-      "path": "/api/health/config-validation",
+      "relativePath": "/:id/egress/credits/packs",
+      "path": "/api/organizations/:id/egress/credits/packs",
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Platform Health",
-      "sectionBase": "/api/health",
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "POST",
+      "relativePath": "/:id/egress/credits/purchase",
+      "path": "/api/organizations/:id/egress/credits/purchase",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "POST",
+      "relativePath": "/:id/egress/credits/purchase/complete",
+      "path": "/api/organizations/:id/egress/credits/purchase/complete",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
       "method": "GET",
-      "relativePath": "/uptime",
-      "path": "/api/health/uptime",
-      "auth": false,
+      "relativePath": "/:id/invitations",
+      "path": "/api/organizations/:id/invitations",
+      "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Platform Health",
-      "sectionBase": "/api/health",
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
       "method": "GET",
-      "relativePath": "/organizations",
-      "path": "/api/health/organizations",
-      "auth": false,
+      "relativePath": "/:id/members",
+      "path": "/api/organizations/:id/members",
+      "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Theme",
-      "sectionBase": "/api/theme",
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "POST",
+      "relativePath": "/:id/members",
+      "path": "/api/organizations/:id/members",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "DELETE",
+      "relativePath": "/:id/members/:userId",
+      "path": "/api/organizations/:id/members/:userId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "PUT",
+      "relativePath": "/:id/members/:userId",
+      "path": "/api/organizations/:id/members/:userId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "POST",
+      "relativePath": "/:id/members/invite",
+      "path": "/api/organizations/:id/members/invite",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
       "method": "GET",
-      "relativePath": "/",
-      "path": "/api/theme",
-      "auth": false,
+      "relativePath": "/:id/notes",
+      "path": "/api/organizations/:id/notes",
+      "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Contact",
-      "sectionBase": "/api/contact",
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "POST",
+      "relativePath": "/:id/notes",
+      "path": "/api/organizations/:id/notes",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "DELETE",
+      "relativePath": "/:id/notes/:noteId",
+      "path": "/api/organizations/:id/notes/:noteId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "GET",
+      "relativePath": "/:id/notes/:noteId",
+      "path": "/api/organizations/:id/notes/:noteId",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "PUT",
+      "relativePath": "/:id/notes/:noteId",
+      "path": "/api/organizations/:id/notes/:noteId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "GET",
+      "relativePath": "/:id/roles",
+      "path": "/api/organizations/:id/roles",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "POST",
+      "relativePath": "/:id/roles",
+      "path": "/api/organizations/:id/roles",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "DELETE",
+      "relativePath": "/:id/roles/:roleId",
+      "path": "/api/organizations/:id/roles/:roleId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "PUT",
+      "relativePath": "/:id/roles/:roleId",
+      "path": "/api/organizations/:id/roles/:roleId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "GET",
+      "relativePath": "/all",
+      "path": "/api/organizations/all",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "DELETE",
+      "relativePath": "/invitations/:id",
+      "path": "/api/organizations/invitations/:id",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "GET",
+      "relativePath": "/invitations/:token",
+      "path": "/api/organizations/invitations/:token",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "POST",
+      "relativePath": "/invitations/:token/accept",
+      "path": "/api/organizations/invitations/:token/accept",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "POST",
+      "relativePath": "/invitations/:token/decline",
+      "path": "/api/organizations/invitations/:token/decline",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Organizations",
+      "sectionBase": "/api/organizations",
+      "method": "GET",
+      "relativePath": "/resources",
+      "path": "/api/organizations/resources",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "GET",
+      "relativePath": "/billing/summary",
+      "path": "/api/payments/billing/summary",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "POST",
+      "relativePath": "/capture-payment/:orderId",
+      "path": "/api/payments/capture-payment/:orderId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
       "method": "GET",
       "relativePath": "/config",
-      "path": "/api/contact/config",
-      "auth": false,
+      "path": "/api/payments/config",
+      "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Contact",
-      "sectionBase": "/api/contact",
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
       "method": "POST",
-      "relativePath": "/",
-      "path": "/api/contact",
-      "auth": false,
+      "relativePath": "/create-payment",
+      "path": "/api/payments/create-payment",
+      "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Announcements",
-      "sectionBase": "/api/announcements",
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
       "method": "GET",
-      "relativePath": "/",
-      "path": "/api/announcements",
-      "auth": false,
+      "relativePath": "/history",
+      "path": "/api/payments/history",
+      "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "FAQ & Updates",
-      "sectionBase": "/api/faq",
-      "method": "GET",
-      "relativePath": "/categories",
-      "path": "/api/faq/categories",
-      "auth": false,
-      "hasParams": true,
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "POST",
+      "relativePath": "/refund",
+      "path": "/api/payments/refund",
+      "auth": true,
+      "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "FAQ & Updates",
-      "sectionBase": "/api/faq",
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
       "method": "GET",
-      "relativePath": "/updates",
-      "path": "/api/faq/updates",
-      "auth": false,
+      "relativePath": "/transactions/:id",
+      "path": "/api/payments/transactions/:id",
+      "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "GET",
+      "relativePath": "/wallet/balance",
+      "path": "/api/payments/wallet/balance",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "POST",
+      "relativePath": "/wallet/deduct",
+      "path": "/api/payments/wallet/deduct",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Billing & Payments",
+      "sectionBase": "/api/payments",
+      "method": "GET",
+      "relativePath": "/wallet/transactions",
+      "path": "/api/payments/wallet/transactions",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Pricing",
@@ -5419,18 +2432,8 @@
       "auth": false,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Pricing",
-      "sectionBase": "/api/pricing",
-      "method": "GET",
-      "relativePath": "/public-regions",
-      "path": "/api/pricing/public-regions",
-      "auth": false,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Pricing",
@@ -5441,7 +2444,20 @@
       "auth": false,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Pricing",
+      "sectionBase": "/api/pricing",
+      "method": "GET",
+      "relativePath": "/public-regions",
+      "path": "/api/pricing/public-regions",
+      "auth": false,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
       "sectionTitle": "Pricing",
@@ -5452,535 +2468,200 @@
       "auth": false,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Documentation",
-      "sectionBase": "/api/documentation",
-      "method": "GET",
-      "relativePath": "/categories",
-      "path": "/api/documentation/categories",
-      "auth": false,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Documentation",
-      "sectionBase": "/api/documentation",
-      "method": "GET",
-      "relativePath": "/categories/:slug",
-      "path": "/api/documentation/categories/:slug",
-      "auth": false,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Documentation",
-      "sectionBase": "/api/documentation",
-      "method": "GET",
-      "relativePath": "/articles/:slug",
-      "path": "/api/documentation/articles/:slug",
-      "auth": false,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Documentation",
-      "sectionBase": "/api/documentation",
-      "method": "GET",
-      "relativePath": "/files/:id",
-      "path": "/api/documentation/files/:id",
-      "auth": false,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Egress Management",
-      "sectionBase": "/api/egress/admin",
-      "method": "POST",
-      "relativePath": "/billing/run",
-      "path": "/api/egress/admin/billing/run",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Egress Management",
-      "sectionBase": "/api/egress/admin",
-      "method": "GET",
-      "relativePath": "/credits/:orgId/balance",
-      "path": "/api/egress/admin/credits/:orgId/balance",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Egress Management",
-      "sectionBase": "/api/egress/admin",
-      "method": "POST",
-      "relativePath": "/credits/:orgId",
-      "path": "/api/egress/admin/credits/:orgId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Egress Management",
-      "sectionBase": "/api/egress/admin",
-      "method": "DELETE",
-      "relativePath": "/credits/:orgId",
-      "path": "/api/egress/admin/credits/:orgId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Egress Management",
-      "sectionBase": "/api/egress/admin",
-      "method": "GET",
-      "relativePath": "/settings/packs",
-      "path": "/api/egress/admin/settings/packs",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Egress Management",
-      "sectionBase": "/api/egress/admin",
-      "method": "PUT",
-      "relativePath": "/settings/packs",
-      "path": "/api/egress/admin/settings/packs",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Activity Log",
-      "sectionBase": "/api/admin/activity",
+      "sectionTitle": "Organization SSH Keys",
+      "sectionBase": "/api/ssh-keys",
       "method": "GET",
       "relativePath": "/",
-      "path": "/api/admin/activity",
+      "path": "/api/ssh-keys",
       "auth": true,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Activity Log",
-      "sectionBase": "/api/admin/activity",
-      "method": "GET",
-      "relativePath": "/export",
-      "path": "/api/admin/activity/export",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Activity Log",
-      "sectionBase": "/api/admin/activity",
-      "method": "GET",
-      "relativePath": "/summary",
-      "path": "/api/admin/activity/summary",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Announcements",
-      "sectionBase": "/api/admin/announcements",
-      "method": "GET",
-      "relativePath": "/",
-      "path": "/api/admin/announcements",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Announcements",
-      "sectionBase": "/api/admin/announcements",
-      "method": "GET",
-      "relativePath": "/:id",
-      "path": "/api/admin/announcements/:id",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Announcements",
-      "sectionBase": "/api/admin/announcements",
+      "sectionTitle": "Organization SSH Keys",
+      "sectionBase": "/api/ssh-keys",
       "method": "POST",
       "relativePath": "/",
-      "path": "/api/admin/announcements",
+      "path": "/api/ssh-keys",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Announcements",
-      "sectionBase": "/api/admin/announcements",
+      "sectionTitle": "Organization SSH Keys",
+      "sectionBase": "/api/ssh-keys",
+      "method": "DELETE",
+      "relativePath": "/:keyId",
+      "path": "/api/ssh-keys/:keyId",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
+      "method": "GET",
+      "relativePath": "/tickets",
+      "path": "/api/support/tickets",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
+      "method": "POST",
+      "relativePath": "/tickets",
+      "path": "/api/support/tickets",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
+      "method": "DELETE",
+      "relativePath": "/tickets/:id",
+      "path": "/api/support/tickets/:id",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
       "method": "PUT",
-      "relativePath": "/:id",
-      "path": "/api/admin/announcements/:id",
+      "relativePath": "/tickets/:id/assign",
+      "path": "/api/support/tickets/:id/assign",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Announcements",
-      "sectionBase": "/api/admin/announcements",
-      "method": "DELETE",
-      "relativePath": "/:id",
-      "path": "/api/admin/announcements/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/ips",
-      "path": "/api/admin/networking/ips",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/ips/:address",
-      "path": "/api/admin/networking/ips/:address",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "POST",
-      "relativePath": "/ips",
-      "path": "/api/admin/networking/ips",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "DELETE",
-      "relativePath": "/ips/:instanceId/:address",
-      "path": "/api/admin/networking/ips/:instanceId/:address",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "POST",
-      "relativePath": "/ips/assign",
-      "path": "/api/admin/networking/ips/assign",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "POST",
-      "relativePath": "/ips/share",
-      "path": "/api/admin/networking/ips/share",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
       "method": "PUT",
-      "relativePath": "/ips/:address/rdns",
-      "path": "/api/admin/networking/ips/:address/rdns",
+      "relativePath": "/tickets/:id/priority",
+      "path": "/api/support/tickets/:id/priority",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/ipv6/pools",
-      "path": "/api/admin/networking/ipv6/pools",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/ipv6/ranges",
-      "path": "/api/admin/networking/ipv6/ranges",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
       "method": "POST",
-      "relativePath": "/ipv6/ranges",
-      "path": "/api/admin/networking/ipv6/ranges",
+      "relativePath": "/tickets/:id/reopen-request",
+      "path": "/api/support/tickets/:id/reopen-request",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
+      "method": "GET",
+      "relativePath": "/tickets/:id/replies",
+      "path": "/api/support/tickets/:id/replies",
+      "auth": true,
+      "hasParams": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
+      "method": "POST",
+      "relativePath": "/tickets/:id/replies",
+      "path": "/api/support/tickets/:id/replies",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
       "method": "DELETE",
-      "relativePath": "/ipv6/ranges/:range",
-      "path": "/api/admin/networking/ipv6/ranges/:range",
+      "relativePath": "/tickets/:id/replies/:replyId",
+      "path": "/api/support/tickets/:id/replies/:replyId",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/ipv6/range-rdns-records",
-      "path": "/api/admin/networking/ipv6/range-rdns-records",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "POST",
-      "relativePath": "/ipv6/range-rdns",
-      "path": "/api/admin/networking/ipv6/range-rdns",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/vlans",
-      "path": "/api/admin/networking/vlans",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "DELETE",
-      "relativePath": "/vlans/:regionId/:label",
-      "path": "/api/admin/networking/vlans/:regionId/:label",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/firewalls",
-      "path": "/api/admin/networking/firewalls",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "POST",
-      "relativePath": "/firewalls",
-      "path": "/api/admin/networking/firewalls",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/firewalls/:id",
-      "path": "/api/admin/networking/firewalls/:id",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
       "method": "PUT",
-      "relativePath": "/firewalls/:id",
-      "path": "/api/admin/networking/firewalls/:id",
+      "relativePath": "/tickets/:id/replies/:replyId",
+      "path": "/api/support/tickets/:id/replies/:replyId",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "DELETE",
-      "relativePath": "/firewalls/:id",
-      "path": "/api/admin/networking/firewalls/:id",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/firewalls/:id/rules",
-      "path": "/api/admin/networking/firewalls/:id/rules",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
       "method": "PUT",
-      "relativePath": "/firewalls/:id/rules",
-      "path": "/api/admin/networking/firewalls/:id/rules",
+      "relativePath": "/tickets/:id/status",
+      "path": "/api/support/tickets/:id/status",
       "auth": true,
       "hasBody": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
+      "sectionTitle": "Support Tickets",
+      "sectionBase": "/api/support",
       "method": "GET",
-      "relativePath": "/firewalls/:id/devices",
-      "path": "/api/admin/networking/firewalls/:id/devices",
-      "auth": true,
+      "relativePath": "/tickets/:id/stream",
+      "path": "/api/support/tickets/:id/stream",
+      "auth": false,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     },
     {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "POST",
-      "relativePath": "/firewalls/:id/devices",
-      "path": "/api/admin/networking/firewalls/:id/devices",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "DELETE",
-      "relativePath": "/firewalls/:id/devices/:deviceId",
-      "path": "/api/admin/networking/firewalls/:id/devices/:deviceId",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
+      "sectionTitle": "Theme",
+      "sectionBase": "/api/theme",
       "method": "GET",
-      "relativePath": "/firewalls/:id/history",
-      "path": "/api/admin/networking/firewalls/:id/history",
-      "auth": true,
+      "relativePath": "/",
+      "path": "/api/theme",
+      "auth": false,
       "hasParams": true,
       "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/firewall-settings",
-      "path": "/api/admin/networking/firewall-settings",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "PUT",
-      "relativePath": "/firewall-settings",
-      "path": "/api/admin/networking/firewall-settings",
-      "auth": true,
-      "hasBody": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/firewall-templates",
-      "path": "/api/admin/networking/firewall-templates",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
-    },
-    {
-      "sectionTitle": "Admin Networking",
-      "sectionBase": "/api/admin/networking",
-      "method": "GET",
-      "relativePath": "/firewall-templates/:slug",
-      "path": "/api/admin/networking/firewall-templates/:slug",
-      "auth": true,
-      "hasParams": true,
-      "hasResponse": true,
-      "isPlaceholderResponse": false
+      "isPlaceholderResponse": false,
+      "admin": false
     }
   ]
 }

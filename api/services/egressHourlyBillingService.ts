@@ -226,7 +226,11 @@ async function processVPS(vps: VPSForBilling): Promise<{
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`Error processing VPS ${vps.id} for egress billing:`, error);
+    console.error('Error processing VPS for egress billing:', {
+      vpsId: vps.id,
+      label: vps.label,
+      error,
+    });
     return { billed: false, suspended: false, error: errorMessage };
   }
 }
@@ -385,7 +389,10 @@ export async function runHourlyEgressBillingForOrg(
     result.success = false;
     const errorMessage = error instanceof Error ? error.message : String(error);
     result.errors.push(`Billing cycle failed: ${errorMessage}`);
-    console.error(`❌ Hourly egress billing for organization ${organizationId} failed:`, error);
+    console.error('❌ Hourly egress billing for organization failed:', {
+      organizationId,
+      error,
+    });
     return result;
   }
 }

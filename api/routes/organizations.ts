@@ -490,7 +490,7 @@ router.post('/:id/egress/credits/purchase/complete', checkEgressManagePermission
     const transactionResult = await query(
       `SELECT id, amount, currency, status
        FROM payment_transactions
-       WHERE paypal_order_id = $1 AND organization_id = $2`,
+       WHERE provider_transaction_id = $1 AND organization_id = $2`,
       [paymentId, id],
     );
 

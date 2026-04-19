@@ -55,7 +55,7 @@ curl -s https://api.resend.com/domains \
 yourdomain.com {
     reverse_proxy localhost:3001
 
-    # WebSocket support for SSE
+    # SSE endpoint support
     reverse_proxy /api/notifications/stream localhost:3001 {
         header_up Connection {>Connection}
         header_up Upgrade {>Upgrade}
@@ -117,7 +117,7 @@ curl -sI https://yourdomain.com | head -1
 curl -s https://yourdomain.com/api/health | jq .
 # Should return JSON with status "ok"
 
-# WebSocket/SSE works
+# SSE works
 curl -N -H "Accept: text/event-stream" \
   "https://yourdomain.com/api/notifications/stream?token=TEST_TOKEN"
 # Should receive: data: {"type":"connected",...}
@@ -142,6 +142,15 @@ npm run pm2:reload
 npx pm2 logs --lines 50
 ```
 
+For local validation-only boots, avoid the default production ports and disable startup side effects so schedulers and external refreshes do not run:
+
+```bash
+$env:STARTUP_SIDE_EFFECTS_ENABLED="false"
+$env:PORT="3101"
+$env:UI_PORT="4173"
+npx pm2 start ecosystem.config.cjs --env production
+```
+
 ---
 
 ## Health Check
@@ -155,8 +164,9 @@ curl -s https://yourdomain.com/api/health | jq .
 # The health endpoint tests DB connection internally
 
 # Scheduler status
-# Check PM2 logs for "Billing scheduler started" / "Egress billing scheduler started"
-npx pm2 logs --lines 100 | Select-String "scheduler"
+# For real production boots, check PM2 logs for scheduler activity.
+# For validation-only boots with STARTUP_SIDE_EFFECTS_ENABLED=false, confirm the skip message instead.
+npx pm2 logs --lines 100 | Select-String "scheduler|Startup side effects disabled"
 ```
 
 ---

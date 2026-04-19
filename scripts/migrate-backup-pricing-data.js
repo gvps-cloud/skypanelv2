@@ -6,18 +6,16 @@
  * for the flexible backup pricing feature.
  */
 
-import pg from 'pg';
 import dotenv from 'dotenv';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createScriptPool } from './lib/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables
 dotenv.config({ path: join(__dirname, '..', '.env') });
-
-const { Pool } = pg;
 
 async function migrateBackupPricingData() {
   console.log('🚀 Starting Backup Pricing Data Migration...\n');
@@ -27,12 +25,7 @@ async function migrateBackupPricingData() {
     process.exit(1);
   }
 
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
+  const pool = createScriptPool();
 
   try {
     const client = await pool.connect();

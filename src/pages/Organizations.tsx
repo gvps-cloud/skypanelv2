@@ -305,7 +305,7 @@ const Organizations: React.FC = () => {
       }
       navigate(destination);
     } catch (error: any) {
-      console.error(`Failed to open organization ${resourceName}:`, error);
+      console.error('Failed to open organization resource', { resourceName }, error);
       toast.error(error.message || `Failed to open organization ${resourceName}`);
     }
   };

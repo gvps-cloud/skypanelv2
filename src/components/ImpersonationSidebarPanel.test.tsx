@@ -1,8 +1,25 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ImpersonationSidebarPanel } from "@/components/ImpersonationSidebarPanel";
+import { SidebarProvider } from "@/components/ui/sidebar";
+
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+});
 
 const impersonatedUser = {
   id: "user-1",
@@ -16,10 +33,12 @@ describe("ImpersonationSidebarPanel", () => {
     const user = userEvent.setup();
 
     render(
-      <ImpersonationSidebarPanel
-        impersonatedUser={impersonatedUser}
-        onExitImpersonation={onExitImpersonation}
-      />,
+      <SidebarProvider>
+        <ImpersonationSidebarPanel
+          impersonatedUser={impersonatedUser}
+          onExitImpersonation={onExitImpersonation}
+        />
+      </SidebarProvider>,
     );
 
     expect(screen.getByText("Admin Mode")).toBeTruthy();
@@ -35,11 +54,13 @@ describe("ImpersonationSidebarPanel", () => {
     const user = userEvent.setup();
 
     render(
-      <ImpersonationSidebarPanel
-        impersonatedUser={impersonatedUser}
-        onExitImpersonation={onExitImpersonation}
-        collapsed
-      />,
+      <SidebarProvider>
+        <ImpersonationSidebarPanel
+          impersonatedUser={impersonatedUser}
+          onExitImpersonation={onExitImpersonation}
+          collapsed
+        />
+      </SidebarProvider>,
     );
 
     expect(screen.queryByText("Admin Mode")).toBeNull();
@@ -56,12 +77,14 @@ describe("ImpersonationSidebarPanel", () => {
 
   it("renders the full card on mobile even if the sidebar is collapsed", () => {
     render(
-      <ImpersonationSidebarPanel
-        impersonatedUser={impersonatedUser}
-        onExitImpersonation={vi.fn()}
-        collapsed
-        mobile
-      />,
+      <SidebarProvider>
+        <ImpersonationSidebarPanel
+          impersonatedUser={impersonatedUser}
+          onExitImpersonation={vi.fn()}
+          collapsed
+          mobile
+        />
+      </SidebarProvider>,
     );
 
     expect(screen.getByText("Admin Mode")).toBeTruthy();

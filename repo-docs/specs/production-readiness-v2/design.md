@@ -712,10 +712,10 @@ api/routes/admin/
 └── volumePricing.ts      # Volume pricing (Phase 6)
 ```
 
-**Note**: Many admin sub-modules already exist. The monolith `admin.ts` needs to be split, with remaining handlers moved to appropriate sub-modules.
+**Note**: The admin router split is active in the current codebase via `api/routes/admin/index.ts`. A root-mounted alias preserves `POST /api/admin/impersonation/exit` while user-management routes remain under `users.ts`.
 
 **Exception Handling**: Two routes must be mounted BEFORE `requireAdmin`:
-1. Impersonation exit (`POST /admin/impersonation/exit`)
+1. Impersonation exit (`POST /api/admin/impersonation/exit`)
 2. Ticket stream (SSE endpoint)
 
 ```typescript
@@ -733,11 +733,13 @@ router.post('/impersonation/exit', authenticateToken, async (req, res) => {
   // ... impersonation exit handler
 });
 
-// Apply admin guard to all routes below
-router.use(authenticateToken, requireAdmin);
+// Root-mounted alias kept for historical frontend contract
+router.post('/impersonation/exit', authenticateToken, async (req, res) => {
+  // ... impersonation exit handler
+});
 
-// Mount sub-routers
-router.use('/', users);
+// Sub-routers manage their own guards
+router.use('/users', users);
 router.use('/', settings);
 // ... other sub-routers
 
@@ -1213,10 +1215,10 @@ CREATE INDEX idx_organization_volumes_vps ON organization_volumes(vps_instance_i
 **API Routes**: `api/routes/admin/volumePricing.ts`
 
 ```typescript
-// GET /api/admin/volume-pricing - List all pricing
-// POST /api/admin/volume-pricing - Create pricing entry
-// PUT /api/admin/volume-pricing/:id - Update pricing entry
-// DELETE /api/admin/volume-pricing/:id - Delete pricing entry
+// GET /api/admin/volume-billing/volume-types - List all volume types
+// POST /api/admin/volume-billing/volume-types - Create volume type
+// PUT /api/admin/volume-billing/volume-types/:id - Update volume type
+// DELETE /api/admin/volume-billing/volume-types/:id - Delete volume type
 ```
 
 #### 6.3 Linode Volumes API Service
@@ -1358,7 +1360,7 @@ describe('Volume Isolation', () => {
   it('should prevent cross-org volume pricing modification', async () => {
     // Org A user (non-admin) tries to modify volume pricing
     const response = await request(app)
-      .post('/api/admin/volume-pricing')
+      .post('/api/admin/volume-billing/volume-types')
       .set('Authorization', `Bearer ${orgA.token}`)
       .send({ provider_id: 'linode', region_id: 'us-east', price_per_gb_monthly: 0.10 });
     

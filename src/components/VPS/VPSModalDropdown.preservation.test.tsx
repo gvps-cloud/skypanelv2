@@ -28,6 +28,14 @@ import { MapPin } from 'lucide-react';
 // Mock fetch for RegionSelector tests
 const mockFetch = vi.fn();
 
+// Helper: build a fetch response that satisfies apiClient.handleResponse
+// (which reads response.headers.get("content-type"))
+const mockApiResponse = (data: unknown) => ({
+  ok: true,
+  headers: { get: (key: string) => (key === 'content-type' ? 'application/json' : null) },
+  json: async () => data,
+});
+
 // Mock ResizeObserver for cmdk library
 global.ResizeObserver = class ResizeObserver {
   observe() {}
@@ -274,12 +282,17 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
       trigger.focus();
       await user.keyboard('{Enter}');
 
-      // Wait for dropdown to open
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('Search categories...')).toBeTruthy();
+      // Wait for dropdown to open and focus the search input
+      // (Radix Popover with modal={false} does not auto-focus content in jsdom,
+      //  so we must click the input to route subsequent key events through cmdk)
+      const searchInput = await waitFor(() => {
+        const el = screen.getByPlaceholderText('Search categories...');
+        expect(el).toBeTruthy();
+        return el;
       });
+      await user.click(searchInput);
 
-      // Navigate with arrow keys
+      // Navigate with arrow keys (now routed through the focused cmdk Command)
       await user.keyboard('{ArrowDown}');
       await user.keyboard('{ArrowDown}');
 
@@ -347,14 +360,11 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
 
     it('displays US flag for US regions', async () => {
       // Mock regions API response with US region
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          regions: [
-            { id: 'us-central', label: 'Dallas, TX', country: 'United States', capabilities: ['VPS'] },
-          ],
-        }),
-      });
+      mockFetch.mockResolvedValueOnce(mockApiResponse({
+        regions: [
+          { id: 'us-central', label: 'Dallas, TX', country: 'United States', capabilities: ['VPS'] },
+        ],
+      }));
 
       const handleSelect = vi.fn();
 
@@ -363,7 +373,6 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
           providerId="linode"
           selectedRegion="us-central"
           onSelect={handleSelect}
-          token="mock-token"
         />
       );
 
@@ -386,14 +395,11 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
 
     it('displays US flag for regions with "US" country code', async () => {
       // Mock regions API response with US region using "US" abbreviation
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          regions: [
-            { id: 'us-west', label: 'Los Angeles, CA', country: 'US', capabilities: ['VPS'] },
-          ],
-        }),
-      });
+      mockFetch.mockResolvedValueOnce(mockApiResponse({
+        regions: [
+          { id: 'us-west', label: 'Los Angeles, CA', country: 'US', capabilities: ['VPS'] },
+        ],
+      }));
 
       const handleSelect = vi.fn();
 
@@ -402,7 +408,6 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
           providerId="linode"
           selectedRegion="us-west"
           onSelect={handleSelect}
-          token="mock-token"
         />
       );
 
@@ -433,14 +438,11 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
 
     it('displays Globe icon for regions without country data', async () => {
       // Mock regions API response with region that has no country field
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          regions: [
-            { id: 'unknown-region', label: 'Unknown Location', capabilities: ['VPS'] },
-          ],
-        }),
-      });
+      mockFetch.mockResolvedValueOnce(mockApiResponse({
+        regions: [
+          { id: 'unknown-region', label: 'Unknown Location', capabilities: ['VPS'] },
+        ],
+      }));
 
       const handleSelect = vi.fn();
 
@@ -449,7 +451,6 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
           providerId="linode"
           selectedRegion="unknown-region"
           onSelect={handleSelect}
-          token="mock-token"
         />
       );
 
@@ -472,14 +473,11 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
 
     it('displays Globe icon when flag image fails to load', async () => {
       // Mock regions API response with valid country but simulate image load failure
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          regions: [
-            { id: 'test-region', label: 'Test Location', country: 'United States', capabilities: ['VPS'] },
-          ],
-        }),
-      });
+      mockFetch.mockResolvedValueOnce(mockApiResponse({
+        regions: [
+          { id: 'test-region', label: 'Test Location', country: 'United States', capabilities: ['VPS'] },
+        ],
+      }));
 
       const handleSelect = vi.fn();
 
@@ -488,7 +486,6 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
           providerId="linode"
           selectedRegion="test-region"
           onSelect={handleSelect}
-          token="mock-token"
         />
       );
 

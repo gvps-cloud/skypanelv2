@@ -382,10 +382,10 @@ async function getCachedOrFetch<T>(
     await setCached(cacheKey, fresh);
     return { data: fresh, stale: false };
   } catch (err) {
-    console.error(
-      `[BetterStack] Failed to refresh cache key "${cacheKey}":`,
-      err instanceof Error ? err.message : err,
-    );
+    console.error('[BetterStack] Failed to refresh cache key:', {
+      cacheKey,
+      error: err instanceof Error ? err.message : err,
+    });
 
     // Return stale data if we have it, otherwise null
     if (cached) {

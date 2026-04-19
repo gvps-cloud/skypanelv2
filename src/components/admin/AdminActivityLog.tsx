@@ -70,7 +70,7 @@ interface UserSearchResult {
 }
 
 const AdminActivityLog: React.FC = () => {
-  const { token } = useAuth();
+  const { user: _user } = useAuth();
   const [activities, setActivities] = useState<AdminActivityRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -105,8 +105,6 @@ const AdminActivityLog: React.FC = () => {
 
   // Debounced user search
   useEffect(() => {
-    if (!token) return;
-
     const timer = setTimeout(async () => {
       if (userSearch.length >= 2) {
         try {
@@ -121,7 +119,7 @@ const AdminActivityLog: React.FC = () => {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [userSearch, token]);
+  }, [userSearch]);
 
   useEffect(() => {
     fetchOrganizations();
@@ -198,7 +196,7 @@ const AdminActivityLog: React.FC = () => {
     if (to instanceof Date) params.set("to", to.toISOString());
 
     const url = buildApiUrl(`/api/admin/activity/export?${params.toString()}`);
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(url, { credentials: "include" })
       .then(async (res) => {
         if (!res.ok) {
           const contentType = res.headers.get("content-type") || "";

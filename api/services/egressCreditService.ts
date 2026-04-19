@@ -228,8 +228,8 @@ export async function purchaseEgressCredits(
       throw new Error('Payment transaction not found');
     }
 
-    const transaction = transactionResult.rows[0];
-    const paidAmount = Number(transaction.amount);
+    const paymentTx = transactionResult.rows[0];
+    const paidAmount = Number(paymentTx.amount);
 
     // Verify amount matches pack price (allow small rounding differences)
     if (Math.abs(paidAmount - pack.price) > 0.01) {

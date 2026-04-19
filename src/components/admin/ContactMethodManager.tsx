@@ -107,7 +107,7 @@ export const ContactMethodManager: React.FC<ContactMethodManagerProps> = ({ toke
   const updateMethod = async (methodType: string, data: any) => {
     setSubmitting(methodType);
     try {
-      console.log(`[ContactMethodManager] Updating ${methodType} method with data:`, data);
+      console.log('[ContactMethodManager] Updating method', { methodType, data });
       
       const responseData = await apiClient.put<{ method: ContactMethod }>(
         `/admin/contact/methods/${methodType}`,
@@ -122,9 +122,9 @@ export const ContactMethodManager: React.FC<ContactMethodManagerProps> = ({ toke
         description: 'Changes have been saved and will appear on the public contact page'
       });
       
-      console.log(`[ContactMethodManager] Successfully updated ${methodType} method`);
+      console.log('[ContactMethodManager] Successfully updated method', { methodType });
     } catch (error: any) {
-      console.error(`[ContactMethodManager] Error updating ${methodType}:`, error);
+      console.error('[ContactMethodManager] Error updating method', { methodType }, error);
       toast.error(`Failed to update ${methodType} contact method`, {
         description: error.message || 'Please check your input and try again'
       });

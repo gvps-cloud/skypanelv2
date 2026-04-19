@@ -114,6 +114,37 @@ Every week, an operator shall perform a manual dependency review:
 
 This project intentionally does not use hosted CI (GitHub Actions / Dependabot / Renovate). Security responsibility lies with the operator running the verify commands before release.
 
+## Linode OpenAPI Type Synchronization
+
+The `api/types/linode-openapi.ts` file contains auto-generated types from Linode's official OpenAPI specification. These types should be used to replace hand-written types in `api/services/linodeService.ts` for improved type safety.
+
+### Type Sync Procedure
+
+1. **Re-sync after Linode API updates** — When Linode releases API changes:
+   ```bash
+   npm run linode:types:sync
+   ```
+
+   This regenerates `api/types/linode-openapi.ts` from the checked-in OpenAPI source at `repo-docs/linode-openapi.json` using `openapi-typescript`.
+
+2. **Incremental wiring** — Replace hand-written types one interface at a time:
+   - Replace `LinodeInstance` → `components['schemas']['Linode']`
+   - Replace `LinodeType` → `components['schemas']['LinodeType']`
+   - Replace `LinodeRegion` → `components['schemas']['Region']`
+   - Replace `LinodeImage` → `components['schemas']['Image']`
+   - Replace `LinodeVolume` → `components['schemas']['Volume']`
+   - Run `npm run check` after each replacement
+
+3. **Fallback pattern** — If a generated type doesn't match the actual API response shape, keep the hand-written type as a local alias with a comment explaining the deviation.
+
+4. **Volume types** — Linode Volume types are at lines 20536–21000 and 102602–104060 in `linode-openapi.ts`.
+
+### Why This Matters
+
+- Hand-written types can drift from the actual Linode API as Linode releases updates
+- Generated types are always in sync with Linode's official specification
+- Type drift can cause runtime errors when Linode adds new fields or changes field types
+
 ## Runtime Security Controls
 
 High-level summary (see `@AGENTS.md` and `@api/middleware/*.ts` for details):

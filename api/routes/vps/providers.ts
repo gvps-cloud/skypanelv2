@@ -286,10 +286,7 @@ router.get("/providers/:providerId/ssh-keys", async (req: Request, res: Response
 
     return res.json({ ssh_keys: keys });
   } catch (err: any) {
-    console.error("SSH keys fetch error:", err);
-    return res
-      .status(500)
-      .json({ error: err.message || "Failed to fetch SSH keys" });
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to fetch SSH keys" });
   }
 });
 

@@ -16,10 +16,10 @@ const router = express.Router();
 
 router.use(authenticateToken, requireOrganization);
 
-router.use("/providers", providersRouter);
-router.use("/plans", plansRouter);
+router.use("/", providersRouter);
+router.use("/", plansRouter);
 router.use("/stats", statsRouter);
-router.use("/stackscripts", stackscriptsRouter);
+router.use("/", stackscriptsRouter);
 router.use("/", backupsRouter);
 router.use("/", firewallsRouter);
 router.use("/", networkingRouter);

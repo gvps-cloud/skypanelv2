@@ -1057,7 +1057,10 @@ export class EgressBillingService {
             const transfer = await linodeService.getLinodeInstanceTransfer(providerInstanceId);
             measuredUsageGb = normalizeTransferUsageGb(transfer.used);
           } catch (error) {
-            console.warn(`Unable to fetch transfer usage for Linode ${row.provider_instance_id}:`, error);
+            console.warn('Unable to fetch transfer usage for Linode:', {
+              providerInstanceId: row.provider_instance_id,
+              error,
+            });
           }
         }
 

@@ -28,11 +28,14 @@ import {
   ProviderDisk,
   CreateDiskParams,
   UpdateDiskParams,
+  ProviderVolume,
+  CreateVolumeParams,
+  ProviderVolumeType,
 } from './IProviderService.js';
 import { linodeService } from '../linodeService.js';
 import { normalizeLinodeError } from './errorNormalizer.js';
 import { ProviderResourceCache } from '../providerResourceCache.js';
-import type { LinodeInstance, LinodeType, LinodeImage, LinodeRegion } from '../linodeService.js';
+import type { LinodeInstance, LinodeType, LinodeImage, LinodeRegion, LinodeVolume, LinodeVolumeType } from '../linodeService.js';
 
 export class LinodeProviderService extends BaseProviderService {
   private providerId: string;
@@ -55,7 +58,7 @@ export class LinodeProviderService extends BaseProviderService {
       url: error?.url,
       method: error?.method,
     };
-    console.error(`[linode] ${context}:`, safeError);
+    console.error('[linode] Provider API error:', { context, safeError });
     const normalizedError = normalizeLinodeError(safeError, 'linode');
     throw normalizedError;
   }
@@ -381,7 +384,10 @@ export class LinodeProviderService extends BaseProviderService {
             const detail = await linodeService.getIPv6Range(range.range);
             return this.normalizeIPv6Range(range, detail);
           } catch (error) {
-            console.warn(`Failed to enrich provider IPv6 range ${range.range}:`, error);
+            console.warn('Failed to enrich provider IPv6 range:', {
+              range: range.range,
+              error,
+            });
             return this.normalizeIPv6Range(range);
           }
         })
@@ -871,6 +877,141 @@ export class LinodeProviderService extends BaseProviderService {
       filesystem: d.filesystem,
       created: d.created,
       updated: d.updated,
+    };
+  }
+
+  // ── Volume Management ──
+
+  async listVolumes(page?: number, pageSize?: number): Promise<{ data: ProviderVolume[]; pages: number; total: number }> {
+    this.validateToken();
+    try {
+      const result = await linodeService.listVolumes(page, pageSize);
+      return {
+        data: result.data.map(v => this.normalizeVolume(v)),
+        pages: result.pages,
+        total: result.results,
+      };
+    } catch (error) {
+      this.handleApiError(error, 'listVolumes');
+    }
+  }
+
+  async createVolume(params: CreateVolumeParams): Promise<ProviderVolume> {
+    this.validateToken();
+    try {
+      const volume = await linodeService.createVolume(params);
+      return this.normalizeVolume(volume);
+    } catch (error) {
+      this.handleApiError(error, 'createVolume');
+    }
+  }
+
+  async getVolume(volumeId: number): Promise<ProviderVolume> {
+    this.validateToken();
+    try {
+      const volume = await linodeService.getVolume(volumeId);
+      return this.normalizeVolume(volume);
+    } catch (error) {
+      this.handleApiError(error, 'getVolume');
+    }
+  }
+
+  async updateVolume(volumeId: number, params: { label?: string; tags?: string[] }): Promise<ProviderVolume> {
+    this.validateToken();
+    try {
+      const volume = await linodeService.updateVolume(volumeId, params);
+      return this.normalizeVolume(volume);
+    } catch (error) {
+      this.handleApiError(error, 'updateVolume');
+    }
+  }
+
+  async deleteVolume(volumeId: number): Promise<void> {
+    this.validateToken();
+    try {
+      await linodeService.deleteVolume(volumeId);
+    } catch (error) {
+      this.handleApiError(error, 'deleteVolume');
+    }
+  }
+
+  async attachVolume(volumeId: number, linodeId: number): Promise<ProviderVolume> {
+    this.validateToken();
+    try {
+      const volume = await linodeService.attachVolume(volumeId, linodeId);
+      return this.normalizeVolume(volume);
+    } catch (error) {
+      this.handleApiError(error, 'attachVolume');
+    }
+  }
+
+  async detachVolume(volumeId: number): Promise<ProviderVolume> {
+    this.validateToken();
+    try {
+      const volume = await linodeService.detachVolume(volumeId);
+      return this.normalizeVolume(volume);
+    } catch (error) {
+      this.handleApiError(error, 'detachVolume');
+    }
+  }
+
+  async resizeVolume(volumeId: number, size: number): Promise<ProviderVolume> {
+    this.validateToken();
+    try {
+      const volume = await linodeService.resizeVolume(volumeId, size);
+      return this.normalizeVolume(volume);
+    } catch (error) {
+      this.handleApiError(error, 'resizeVolume');
+    }
+  }
+
+  async cloneVolume(volumeId: number, label: string): Promise<ProviderVolume> {
+    this.validateToken();
+    try {
+      const volume = await linodeService.cloneVolume(volumeId, label);
+      return this.normalizeVolume(volume);
+    } catch (error) {
+      this.handleApiError(error, 'cloneVolume');
+    }
+  }
+
+  async listVolumeTypes(): Promise<ProviderVolumeType[]> {
+    this.validateToken();
+    try {
+      const types = await linodeService.listVolumeTypes();
+      return types.map(t => this.normalizeVolumeType(t));
+    } catch (error) {
+      this.handleApiError(error, 'listVolumeTypes');
+    }
+  }
+
+  private normalizeVolume(v: LinodeVolume): ProviderVolume {
+    return {
+      id: v.id,
+      label: v.label,
+      status: v.status,
+      size: v.size,
+      region: v.region,
+      linode_id: v.linode_id,
+      linode_label: v.linode_label,
+      filesystem_path: v.filesystem_path,
+      created: v.created,
+      updated: v.updated,
+      encryption: v.encryption,
+      hardware_type: v.hardware_type,
+      io_ready: v.io_ready,
+      tags: v.tags ?? [],
+    };
+  }
+
+  private normalizeVolumeType(t: LinodeVolumeType): ProviderVolumeType {
+    return {
+      id: t.id,
+      label: t.label,
+      description: t.description,
+      storage_bytes: t.storage_bytes,
+      price: t.price,
+      capabilities: t.capabilities ?? [],
     };
   }
 }

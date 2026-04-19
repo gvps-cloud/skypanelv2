@@ -3,34 +3,26 @@
  * Manage support tickets and VPS plans
  */
 import React, { Suspense, lazy, useEffect, useMemo, useState, useCallback } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   AlertTriangle,
   Building2,
   Calendar,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardList,
   Clock,
   DollarSign,
   Edit,
   FileCode,
   Globe,
-  GripVertical,
+  HardDrive,
   HelpCircle,
   LifeBuoy,
   Megaphone,
   Palette,
-  Play,
   Plus,
-  PowerOff,
   RefreshCw,
-  RotateCcw,
-  Search,
   Server,
-  Terminal,
   ServerCog,
   Settings,
   Shield,
@@ -48,7 +40,6 @@ import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
 import { CategoryManager } from "@/components/admin/CategoryManager";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
-import { SSHTerminal } from "@/components/VPS/SSHTerminal";
 import { useCategoryDisplayName } from "@/hooks/useCategoryMappings";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge } from "@/components/ui/badge";
@@ -111,23 +102,11 @@ import { buildApiUrl } from "@/lib/api";
 import { BRAND_NAME } from "@/lib/brand";
 import { formatCurrency as formatCurrencyDisplay } from "@/lib/formatters";
 import { DEFAULT_THEME_ID, type ThemePreset } from "@/theme/presets";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { AdminContactManagementSection } from "@/pages/admin/AdminContactManagementSection";
+import { AdminNetworkingSection } from "@/pages/admin/AdminNetworkingSection";
+import { AdminProvidersSection } from "@/pages/admin/AdminProvidersSection";
+import { AdminServersSection } from "@/pages/admin/AdminServersSection";
+import { AdminThemeSection } from "@/pages/admin/AdminThemeSection";
 
 const BillingDashboard = lazy(async () => {
   const mod = await import("@/components/admin/billing/BillingDashboard");
@@ -161,14 +140,6 @@ const UpdatesManager = lazy(async () => {
   const mod = await import("@/components/admin/UpdatesManager");
   return { default: mod.UpdatesManager };
 });
-const ContactCategoryManager = lazy(async () => {
-  const mod = await import("@/components/admin/ContactCategoryManager");
-  return { default: mod.ContactCategoryManager };
-});
-const ContactMethodManager = lazy(async () => {
-  const mod = await import("@/components/admin/ContactMethodManager");
-  return { default: mod.ContactMethodManager };
-});
 const PlatformAvailabilityManager = lazy(
   () => import("@/components/admin/PlatformAvailabilityManager"),
 );
@@ -197,10 +168,6 @@ const EgressCreditManager = lazy(
 const DocumentationManager = lazy(
   () => import("@/components/admin/documentation/DocumentationManager"),
 );
-const NetworkingDashboard = lazy(async () => {
-  const mod = await import("@/components/admin/networking/NetworkingDashboard");
-  return { default: mod.NetworkingDashboard };
-});
 const AnnouncementsManager = lazy(async () => {
   const mod = await import("@/components/admin/AnnouncementsManager");
   return { default: mod.AnnouncementsManager };
@@ -208,6 +175,10 @@ const AnnouncementsManager = lazy(async () => {
 const AdminActivityLog = lazy(async () => {
   const mod = await import("@/components/admin/AdminActivityLog");
   return { default: mod.AdminActivityLog };
+});
+const VolumePricing = lazy(async () => {
+  const mod = await import("@/components/admin/billing/VolumePricing");
+  return { default: mod.VolumePricing };
 });
 
 type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
@@ -233,6 +204,7 @@ type AdminSection =
   | "platform"
   | "egress-credits"
   | "contact-management"
+  | "volume-pricing"
   | "billing"
   | "email-templates"
   | "activity-log";
@@ -266,6 +238,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "documentation",
   "platform",
   "contact-management",
+  "volume-pricing",
   "billing",
   "email-templates",
   "activity-log"
@@ -720,139 +693,6 @@ const getPlanResourceSummary = (
   ].filter((value): value is string => Boolean(value));
 };
 
-// Sortable Provider Row Component
-interface SortableProviderRowProps {
-  provider: any;
-  validatingProviderId: string | null;
-  onValidate: (id: string) => void;
-  onEdit: (provider: any) => void;
-  onDelete: (id: string) => void;
-}
-
-const SortableProviderRow: React.FC<SortableProviderRowProps> = ({
-  provider,
-  validatingProviderId,
-  onValidate,
-  onEdit,
-  onDelete,
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: provider.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <TableRow
-      ref={setNodeRef}
-      style={style}
-      className={isDragging ? "relative z-50" : ""}
-    >
-      <TableCell className="w-8">
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
-        >
-          <GripVertical className="h-4 w-4" />
-        </div>
-      </TableCell>
-      <TableCell className="font-medium text-foreground">
-        {provider.name}
-      </TableCell>
-      <TableCell className="capitalize text-muted-foreground">
-        {provider.type}
-      </TableCell>
-      <TableCell>
-        <Badge variant={provider.active ? "default" : "secondary"}>
-          {provider.active ? "Active" : "Inactive"}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        {provider.validation_status === "valid" && (
-          <Badge
-            variant="default"
-            className="gap-1 bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-          >
-            <CheckCircle className="h-3 w-3" /> Valid
-          </Badge>
-        )}
-        {provider.validation_status === "invalid" && (
-          <Badge variant="destructive" className="gap-1">
-            <AlertCircle className="h-3 w-3" /> Invalid
-          </Badge>
-        )}
-        {provider.validation_status === "pending" && (
-          <Badge variant="secondary" className="gap-1">
-            <Clock className="h-3 w-3" /> Pending
-          </Badge>
-        )}
-        {(!provider.validation_status ||
-          provider.validation_status === "unknown") && (
-          <Badge variant="secondary" className="gap-1">
-            <HelpCircle className="h-3 w-3" /> Unknown
-          </Badge>
-        )}
-      </TableCell>
-      <TableCell className="text-sm text-muted-foreground">
-        {provider.last_api_call ? (
-          <span title={new Date(provider.last_api_call).toLocaleString()}>
-            {new Date(provider.last_api_call).toLocaleDateString()}
-          </span>
-        ) : (
-          <span className="text-muted-foreground/60">Never</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex justify-end gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onValidate(provider.id)}
-            disabled={validatingProviderId === provider.id}
-            className="gap-1"
-          >
-            {validatingProviderId === provider.id ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin" /> Validating...
-              </>
-            ) : (
-              <>
-                <CheckCircle className="h-4 w-4" /> Validate
-              </>
-            )}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onEdit(provider)}
-            className="gap-1"
-          >
-            <Edit className="h-4 w-4" /> Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => onDelete(provider.id)}
-            className="gap-1"
-          >
-            <Trash2 className="h-4 w-4" /> Delete
-          </Button>
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-};
-
 // Helper component to get category display name
 const CategoryLabel: React.FC<{ category: string }> = ({ category }) => {
   const displayName = useCategoryDisplayName(category);
@@ -1046,10 +886,7 @@ const Admin: React.FC = () => {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
 
-  const authHeader = useMemo(
-    () => ({ Authorization: `Bearer ${token}` }),
-    [token],
-  );
+
 
   const updateAdminHash = useCallback(
     (section: AdminSection) => {
@@ -1486,6 +1323,8 @@ const Admin: React.FC = () => {
         fetchEgressPricing();
         fetchLiveEgressUsage();
         fetchEgressHistory();
+        break;
+      case "volume-pricing":
         break;
       case "theme":
         break;
@@ -2066,30 +1905,6 @@ const Admin: React.FC = () => {
     }
   };
 
-  // Handle drag end for providers
-  const handleProviderDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      const oldIndex = providers.findIndex((p) => p.id === active.id);
-      const newIndex = providers.findIndex((p) => p.id === over.id);
-
-      const newProviders = arrayMove(providers, oldIndex, newIndex);
-      setProviders(newProviders);
-
-      // Save the new order to the backend
-      reorderProviders(newProviders.map((p) => p.id));
-    }
-  };
-
-  // Drag sensors for providers
-  const providerSensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
-
   const openTicketCount = useMemo(
     () => tickets.filter((ticket) => ticket.status === "open").length,
     [tickets],
@@ -2244,6 +2059,18 @@ const Admin: React.FC = () => {
         actionLabel: "Manage servers",
       },
       {
+        id: "volume-pricing",
+        title: "Volume Pricing",
+        description: "Manage block storage tiers, region pricing, and attached volumes.",
+        icon: HardDrive,
+        accent: "text-sky-600",
+        summary: [
+          { label: "Storage", value: "Pricing" },
+          { label: "Fleet", value: "Volumes" },
+        ],
+        actionLabel: "Manage storage",
+      },
+      {
         id: "vps-plans",
         title: "Plan Catalog",
         description: "Balance pricing, capacity tiers, and backup coverage.",
@@ -2379,13 +2206,14 @@ const Admin: React.FC = () => {
   const quickActions: Array<{ label: string; section: AdminSection }> = [
     { label: "Support Queue", section: "support" },
     { label: "Provisioning", section: "servers" },
+    { label: "Volume Pricing", section: "volume-pricing" },
     { label: "Billing & Finance", section: "billing" },
     { label: "User Management", section: "user-management" },
     { label: "Organizations", section: "organizations" },
     { label: "Email Templates", section: "email-templates" },
   ];
   const sectionGroups: Array<{ title: string; ids: AdminSection[] }> = [
-    { title: "Operations", ids: ["support", "servers", "vps-plans", "providers"] },
+    { title: "Operations", ids: ["support", "servers", "volume-pricing", "vps-plans", "providers"] },
     { title: "Configuration", ids: ["theme", "category-mappings", "announcements", "documentation"] },
     { title: "Finance & Accounts", ids: ["billing", "egress-credits", "user-management", "organizations"] },
   ];
@@ -2531,133 +2359,14 @@ const Admin: React.FC = () => {
         className={isDashboardView ? "space-y-12" : "space-y-7 px-1 sm:px-0"}
       >
         <SectionPanel section="theme" activeSection={activeTab}>
-          {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-            <div className="relative z-10">
-              <Badge variant="secondary" className="mb-3">
-                Branding
-              </Badge>
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                Theme Manager
-              </h2>
-              <p className="mt-2 max-w-2xl text-muted-foreground">
-                Choose a theme preset that updates instantly for all users
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Default preset: Mono (neutral monochrome palette). Use Red for
-                red-accent highlights.
-              </p>
-              {!themeConfigLoading && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Last updated: {formattedThemeUpdatedAt}
-                </p>
-              )}
-            </div>
-
-            {/* Background decoration */}
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <Palette className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-            </div>
-          </div>
-
-          <div className="bg-card shadow sm:rounded-lg">
-            <div className="border-b border px-6 py-4">
-              <h3 className="text-lg font-medium text-foreground">
-                Theme Presets
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Apply a built-in palette for all users
-              </p>
-            </div>
-            <div className="space-y-10 px-6 py-6">
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Presets
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Choose a built-in palette. Applying a preset changes the
-                  experience for every organization member.
-                </p>
-                <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  {orderedThemes.map((preset) => {
-                    const isActive = preset.id === themeId;
-                    const isDefault = preset.id === DEFAULT_THEME_ID;
-                    const isSaving = savingPresetId === preset.id;
-                    const disabled =
-                      (savingPresetId !== null &&
-                        savingPresetId !== preset.id) ||
-                      themeConfigLoading;
-
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => handlePresetSelection(preset)}
-                        disabled={disabled}
-                        className={`relative w-full rounded-lg border p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                          isActive
-                            ? "border-primary ring-2 ring-primary ring-opacity-20"
-                            : "border-border hover:border-primary"
-                        } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <h3 className="text-base font-semibold text-foreground">
-                              {preset.label}
-                            </h3>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {preset.description}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-end gap-2">
-                            {isDefault && (
-                              <Badge variant="secondary">Default</Badge>
-                            )}
-                            <Badge variant={isActive ? "default" : "outline"}>
-                              {isSaving
-                                ? "Saving..."
-                                : isActive
-                                  ? "Active"
-                                  : "Preview"}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="mt-4 flex gap-4">
-                          <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                            <span>Primary</span>
-                            <span
-                              className="h-10 w-10 rounded-md border shadow-sm"
-                              style={{
-                                backgroundColor: `hsl(${preset.light.primary})`,
-                              }}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                            <span>Surface</span>
-                            <span
-                              className="h-10 w-10 rounded-md border shadow-sm"
-                              style={{
-                                backgroundColor: `hsl(${preset.light.background})`,
-                              }}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                            <span>Dark Primary</span>
-                            <span
-                              className="h-10 w-10 rounded-md border shadow-sm"
-                              style={{
-                                backgroundColor: `hsl(${preset.dark.primary})`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
+          <AdminThemeSection
+            themeConfigLoading={themeConfigLoading}
+            formattedThemeUpdatedAt={formattedThemeUpdatedAt}
+            orderedThemes={orderedThemes}
+            themeId={themeId}
+            savingPresetId={savingPresetId}
+            onSelectPreset={handlePresetSelection}
+          />
         </SectionPanel>
 
         <SectionPanel section="support" activeSection={activeTab}>
@@ -3908,47 +3617,7 @@ const Admin: React.FC = () => {
         </SectionPanel>
 
         <SectionPanel section="contact-management" activeSection={activeTab}>
-          {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8 mb-6">
-            <div className="relative z-10">
-              <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
-                Support
-              </Badge>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
-                Contact Management
-              </h2>
-              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
-                Manage contact page content, methods, and availability schedules
-              </p>
-            </div>
-
-            {/* Background decoration */}
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <ClipboardList className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <Tabs defaultValue="categories" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 lg:w-auto lg:inline-grid">
-                <TabsTrigger value="categories">Categories</TabsTrigger>
-                <TabsTrigger value="methods">Contact Methods</TabsTrigger>
-                <TabsTrigger value="availability">Availability</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="categories">
-                <ContactCategoryManager token={token || ""} />
-              </TabsContent>
-
-              <TabsContent value="methods">
-                <ContactMethodManager token={token || ""} />
-              </TabsContent>
-
-              <TabsContent value="availability">
-                <PlatformAvailabilityManager />
-              </TabsContent>
-            </Tabs>
-          </div>
+          <AdminContactManagementSection token={token || ""} />
         </SectionPanel>
 
         <SectionPanel section="billing" activeSection={activeTab}>
@@ -3972,6 +3641,30 @@ const Admin: React.FC = () => {
             formatCurrency={formatCurrency}
             formatDateTime={formatDateTime}
           />
+        </SectionPanel>
+
+        <SectionPanel section="volume-pricing" activeSection={activeTab}>
+          <div className="space-y-4">
+            <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20">
+              <div className="relative z-10 p-4 sm:p-6 md:p-8">
+                <Badge variant="secondary" className="mb-3 text-xs">
+                  Operations
+                </Badge>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                      Volume Pricing
+                    </h2>
+                    <p className="mt-2 max-w-3xl text-sm text-muted-foreground sm:text-base">
+                      Manage block storage pricing tiers and review all provisioned volumes in one place.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <VolumePricing />
+          </div>
         </SectionPanel>
 
         <SectionPanel section="email-templates" activeSection={activeTab}>
@@ -4197,702 +3890,62 @@ const Admin: React.FC = () => {
         </SectionPanel>
 
         <SectionPanel section="servers" activeSection={activeTab}>
-          {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-            <div className="relative z-10 flex items-start justify-between">
-              <div>
-                <Badge variant="secondary" className="mb-3">
-                  Infrastructure
-                </Badge>
-                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                  VPS Servers
-                </h2>
-                <p className="mt-2 max-w-2xl text-muted-foreground">
-                  Monitor and manage all VPS instances provisioned through the
-                  platform
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={fetchServers}
-                disabled={serversLoading}
-              >
-                <RefreshCw className="h-4 w-4" />
-                {serversLoading ? "Refreshing…" : "Refresh"}
-              </Button>
-            </div>
-
-            {/* Background decoration */}
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <ServerCog className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-            </div>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Server List</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                <div className="w-full xl:w-96">
-                  <Label htmlFor="server-search">Search</Label>
-                  <div className="relative mt-1">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="server-search"
-                      placeholder="Search by label, IP, organization, or plan"
-                      value={serverSearch}
-                      onChange={(e) => setServerSearch(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-                <div className="w-full xl:w-56">
-                  <Label htmlFor="server-status">Status</Label>
-                  <Select
-                    value={serverStatusFilter}
-                    onValueChange={(value) => setServerStatusFilter(value)}
-                  >
-                    <SelectTrigger id="server-status" className="mt-1">
-                      <SelectValue placeholder="All status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      {serverStatusOptions.map((status) => (
-                        <SelectItem key={status} value={status.toLowerCase()}>
-                          {formatStatusLabel(status)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {serversLoading ? (
-                  <div className="rounded-lg border py-10 text-center text-muted-foreground">
-                    Loading servers…
-                  </div>
-                ) : filteredServers.length === 0 ? (
-                  <div className="rounded-lg border py-10 text-center text-muted-foreground">
-                    No servers match the current filters.
-                  </div>
-                ) : (
-                  paginatedServers.map((server) => {
-                    const specRecord =
-                      server.plan_specifications &&
-                      typeof server.plan_specifications === "object"
-                        ? (server.plan_specifications as Record<
-                            string,
-                            unknown
-                          >)
-                        : null;
-                    const readNumber = (key: string) => {
-                      if (!specRecord) return undefined;
-                      const raw = specRecord[key];
-                      if (typeof raw === "number") return raw;
-                      if (typeof raw === "string") {
-                        const parsed = Number(raw);
-                        return Number.isFinite(parsed) ? parsed : undefined;
-                      }
-                      return undefined;
-                    };
-                    const specParts: string[] = [];
-                    const vcpus =
-                      readNumber("vcpus") ??
-                      readNumber("cpu") ??
-                      readNumber("cores");
-                    const memory =
-                      readNumber("memory") ??
-                      readNumber("memory_mb") ??
-                      readNumber("ram");
-                    const disk = readNumber("disk") ?? readNumber("storage");
-                    const transfer =
-                      readNumber("transfer") ?? readNumber("bandwidth");
-                    if (typeof vcpus !== "undefined") {
-                      specParts.push(`${vcpus} vCPU`);
-                    }
-                    if (typeof memory !== "undefined") {
-                      specParts.push(`${memory} MB RAM`);
-                    }
-                    if (typeof disk !== "undefined") {
-                      specParts.push(`${disk} GB Disk`);
-                    }
-                    if (typeof transfer !== "undefined") {
-                      specParts.push(`${transfer} TB Transfer`);
-                    }
-                    const specSummary =
-                      specParts.length > 0 ? specParts.join(" • ") : "—";
-                    const configurationRecord =
-                      server.configuration &&
-                      typeof server.configuration === "object"
-                        ? (server.configuration as Record<string, unknown>)
-                        : null;
-                    const regionValue = configurationRecord
-                      ? configurationRecord["region"]
-                      : undefined;
-                    const region =
-                      typeof regionValue === "string" ? regionValue : null;
-                    const normalizedStatus = (
-                      server.status ?? ""
-                    ).toLowerCase();
-                    const canBoot = normalizedStatus === "stopped";
-                    const canShutdown = normalizedStatus === "running";
-                    const canReboot =
-                      normalizedStatus === "running" ||
-                      normalizedStatus === "rebooting";
-                    const canSsh = normalizedStatus === "running";
-                    const loadingForServer =
-                      serverActionLoading?.serverId === server.id;
-
-                    return (
-                      <Card key={server.id} className="border-border/70">
-                        <CardContent className="space-y-4 p-4">
-                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="space-y-1">
-                              <p className="text-base font-semibold text-foreground">
-                                {server.label}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Provider ID #{server.provider_instance_id}
-                              </p>
-                              {server.owner_email && (
-                                <p className="text-xs text-muted-foreground">
-                                  Owner {server.owner_name || "Unknown"} •{" "}
-                                  {server.owner_email}
-                                </p>
-                              )}
-                            </div>
-                            <Badge
-                              variant="outline"
-                              className={statusBadgeClass(server.status)}
-                            >
-                              {formatStatusLabel(server.status)}
-                            </Badge>
-                          </div>
-
-                          <div className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
-                            <div className="space-y-1">
-                              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                IP Address
-                              </p>
-                              <p className="font-medium text-foreground">
-                                {server.ip_address || "—"}
-                              </p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Plan
-                              </p>
-                              <p className="font-medium text-foreground">
-                                {server.plan_name ||
-                                  server.plan_provider_plan_id ||
-                                  server.plan_id}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {specSummary}
-                              </p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Region / Provider
-                              </p>
-                              <p className="font-medium text-foreground">
-                                {server.region_label || region || "—"}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {server.provider_name || "—"}
-                              </p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Updated
-                              </p>
-                              <p className="font-medium text-foreground">
-                                {formatDateTime(server.updated_at)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Button size="sm" variant="outline" asChild>
-                                <Link to={`/vps/${server.id}`}>View</Link>
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={!canSsh}
-                                onClick={() => handleSshAction(server.id)}
-                              >
-                                <Terminal className="mr-1 h-4 w-4" />
-                                SSH
-                              </Button>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={loadingForServer || !canBoot}
-                                onClick={() =>
-                                  handleServerAction(server.id, "boot")
-                                }
-                              >
-                                {loadingForServer &&
-                                serverActionLoading?.action === "boot" ? (
-                                  <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Play className="mr-1 h-4 w-4 text-emerald-500" />
-                                )}
-                                Boot
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={loadingForServer || !canShutdown}
-                                onClick={() =>
-                                  handleServerAction(server.id, "shutdown")
-                                }
-                              >
-                                {loadingForServer &&
-                                serverActionLoading?.action === "shutdown" ? (
-                                  <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
-                                ) : (
-                                  <PowerOff className="mr-1 h-4 w-4 text-red-500" />
-                                )}
-                                Power Off
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={loadingForServer || !canReboot}
-                                onClick={() =>
-                                  handleServerAction(server.id, "reboot")
-                                }
-                              >
-                                {loadingForServer &&
-                                serverActionLoading?.action === "reboot" ? (
-                                  <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
-                                ) : (
-                                  <RotateCcw className="mr-1 h-4 w-4" />
-                                )}
-                                Reboot
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-
-              {totalServerPages > 1 && (
-                <div className="flex items-center justify-between py-4">
-                  <div className="text-sm text-muted-foreground">
-                    Showing{" "}
-                    {Math.min(
-                      (serverPage - 1) * serverItemsPerPage + 1,
-                      filteredServers.length,
-                    )}{" "}
-                    to{" "}
-                    {Math.min(
-                      serverPage * serverItemsPerPage,
-                      filteredServers.length,
-                    )}{" "}
-                    of {filteredServers.length} servers
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setServerPage((p) => Math.max(1, p - 1))}
-                      disabled={serverPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <div className="flex items-center gap-1">
-                      {Array.from(
-                        { length: Math.min(5, totalServerPages) },
-                        (_, i) => {
-                          let p = i + 1;
-                          if (totalServerPages > 5) {
-                            if (serverPage > 3) {
-                              p = serverPage - 2 + i;
-                            }
-                            if (p > totalServerPages) {
-                              p = totalServerPages - (4 - i);
-                            }
-                          }
-                          return (
-                            <Button
-                              key={p}
-                              variant={serverPage === p ? "default" : "outline"}
-                              size="sm"
-                              className="w-8 h-8 p-0"
-                              onClick={() => setServerPage(p)}
-                            >
-                              {p}
-                            </Button>
-                          );
-                        },
-                      )}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setServerPage((p) => Math.min(totalServerPages, p + 1))
-                      }
-                      disabled={serverPage === totalServerPages}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Dialog open={sshModalOpen} onOpenChange={setSshModalOpen}>
-            <DialogContent className="max-w-[90vw] w-full h-[80vh] flex flex-col p-0 gap-0 bg-background border-border">
-              <DialogHeader className="px-4 py-2 border-b border-border/20 bg-muted/10 shrink-0">
-                <DialogTitle className="text-sm font-mono flex items-center gap-2 text-foreground">
-                  <Terminal className="h-4 w-4" />
-                  SSH Console{" "}
-                  {selectedSshServerId && (
-                    <span className="opacity-50">:: {selectedSshServerId}</span>
-                  )}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="flex-1 overflow-hidden relative bg-background">
-                {selectedSshServerId && (
-                  <SSHTerminal
-                    instanceId={selectedSshServerId}
-                    fitContainer={true}
-                  />
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+          <AdminServersSection
+            serversLoading={serversLoading}
+            serverSearch={serverSearch}
+            setServerSearch={setServerSearch}
+            serverStatusFilter={serverStatusFilter}
+            setServerStatusFilter={setServerStatusFilter}
+            serverStatusOptions={serverStatusOptions}
+            filteredServers={filteredServers}
+            paginatedServers={paginatedServers}
+            totalServerPages={totalServerPages}
+            serverPage={serverPage}
+            setServerPage={setServerPage}
+            serverItemsPerPage={serverItemsPerPage}
+            serverActionLoading={serverActionLoading}
+            sshModalOpen={sshModalOpen}
+            setSshModalOpen={setSshModalOpen}
+            selectedSshServerId={selectedSshServerId}
+            onRefresh={fetchServers}
+            onSshAction={handleSshAction}
+            onServerAction={handleServerAction}
+            formatDateTime={formatDateTime}
+            formatStatusLabel={formatStatusLabel}
+            statusBadgeClass={statusBadgeClass}
+          />
         </SectionPanel>
 
         <SectionPanel section="networking" activeSection={activeTab}>
-          {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-            <div className="relative z-10">
-              <Badge variant="secondary" className="mb-3">
-                Network Configuration
-              </Badge>
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                Networking Controls
-              </h2>
-              <p className="mt-2 max-w-2xl text-muted-foreground">
-                Configure reverse DNS defaults and IP address management
-                settings
-              </p>
-            </div>
-
-            {/* Background decoration */}
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <Globe className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-            </div>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Network Settings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs
-                value={networkingTab}
-                onValueChange={handleNetworkingTabChange}
-              >
-                <TabsList className="flex-wrap">
-                  <TabsTrigger value="rdns">Reverse DNS</TabsTrigger>
-                  <TabsTrigger value="ips">IP Addresses</TabsTrigger>
-                  <TabsTrigger value="vlans">VLANs</TabsTrigger>
-                  <TabsTrigger value="firewalls">Firewalls</TabsTrigger>
-                  <TabsTrigger value="assign">Assign IPs</TabsTrigger>
-                  <TabsTrigger value="share">Share IPs</TabsTrigger>
-                </TabsList>
-                <TabsContent value="rdns" className="space-y-6 pt-6">
-                  <div className="space-y-3">
-                    <div>
-                      <h3 className="text-base font-semibold text-foreground">
-                        Reverse DNS Template
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Define the base domain used when setting custom rDNS for
-                        VPS instances. If unset, the system falls back to{" "}
-                        <span className="font-mono">ip.rev.example.com</span>.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="rdns-domain">rDNS base domain</Label>
-                        <Input
-                          id="rdns-domain"
-                          value={rdnsBaseDomain}
-                          onChange={(e) => setRdnsBaseDomain(e.target.value)}
-                          placeholder="ip.rev.example.com"
-                          disabled={rdnsLoading}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Example final rDNS:{" "}
-                          <span className="font-mono">
-                            123-45-67-89.
-                            {rdnsBaseDomain || "ip.rev.example.com"}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button
-                        onClick={saveNetworkingRdns}
-                        disabled={rdnsSaving || rdnsLoading}
-                        className="gap-2"
-                      >
-                        {rdnsSaving ? "Saving…" : "Save rDNS Template"}
-                      </Button>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="ips" className="pt-6">
-                  <NetworkingDashboard tab="ips" />
-                </TabsContent>
-                <TabsContent value="vlans" className="pt-6">
-                  <NetworkingDashboard tab="vlans" />
-                </TabsContent>
-                <TabsContent value="firewalls" className="pt-6">
-                  <NetworkingDashboard tab="firewalls" />
-                </TabsContent>
-                <TabsContent value="assign" className="pt-6">
-                  <NetworkingDashboard tab="assign" />
-                </TabsContent>
-                <TabsContent value="share" className="pt-6">
-                  <NetworkingDashboard tab="share" />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+          <AdminNetworkingSection
+            networkingTab={networkingTab}
+            rdnsBaseDomain={rdnsBaseDomain}
+            rdnsLoading={rdnsLoading}
+            rdnsSaving={rdnsSaving}
+            onNetworkingTabChange={handleNetworkingTabChange}
+            onRdnsBaseDomainChange={setRdnsBaseDomain}
+            onSaveNetworkingRdns={saveNetworkingRdns}
+          />
         </SectionPanel>
 
         <SectionPanel section="providers" activeSection={activeTab}>
-          {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
-            <div className="relative z-10 flex items-start justify-between">
-              <div>
-                <Badge variant="secondary" className="mb-3">
-                  Infrastructure
-                </Badge>
-                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-                  Service Providers
-                </h2>
-                <p className="mt-2 max-w-2xl text-muted-foreground">
-                  Manage infrastructure provider credentials and access control
-                </p>
-              </div>
-              <Button
-                onClick={() => setShowAddProvider(true)}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" /> Add Provider
-              </Button>
-            </div>
-
-            {/* Background decoration */}
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <Settings className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-            </div>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Provider List</CardTitle>
-            </CardHeader>
-            <CardContent className="px-0">
-              <div className="overflow-x-auto">
-                <DndContext
-                  sensors={providerSensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleProviderDragEnd}
-                >
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-8"></TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Validation</TableHead>
-                        <TableHead>Last API Call</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {providers.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={7}
-                            className="py-10 text-center text-muted-foreground"
-                          >
-                            No providers configured yet.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        <SortableContext
-                          items={providers.map((p) => p.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          {providers.map((provider) => (
-                            <SortableProviderRow
-                              key={provider.id}
-                              provider={provider}
-                              validatingProviderId={validatingProviderId}
-                              onValidate={validateProvider}
-                              onEdit={(provider) => {
-                                setEditProviderId(provider.id);
-                                setEditProvider(provider);
-                              }}
-                              onDelete={(id) => setDeleteProviderId(id)}
-                            />
-                          ))}
-                        </SortableContext>
-                      )}
-                    </TableBody>
-                  </Table>
-                </DndContext>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Dialog
-            open={showAddProvider}
-            onOpenChange={(open) => {
-              setShowAddProvider(open);
-              if (!open) {
-                setNewProvider({
-                  name: "",
-                  type: "",
-                  apiKey: "",
-                  active: true,
-                });
-              }
+          <AdminProvidersSection
+            providers={providers}
+            validatingProviderId={validatingProviderId}
+            showAddProvider={showAddProvider}
+            setShowAddProvider={setShowAddProvider}
+            newProvider={newProvider}
+            setNewProvider={setNewProvider}
+            setEditProviderId={setEditProviderId}
+            setEditProvider={setEditProvider}
+            setDeleteProviderId={setDeleteProviderId}
+            onCreateProvider={createProvider}
+            onValidateProvider={validateProvider}
+            onReorderProviders={(nextProviders) => {
+              setProviders(nextProviders);
+              void reorderProviders(nextProviders.map((provider) => provider.id));
             }}
-          >
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Add Service Provider</DialogTitle>
-                <DialogDescription>
-                  Save provider credentials securely. Only active providers can
-                  be used for new workloads.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="provider-name">Name</Label>
-                  <Input
-                    id="provider-name"
-                    placeholder="e.g. Linode Production"
-                    value={newProvider.name}
-                    onChange={(e) =>
-                      setNewProvider((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    A friendly name to identify this provider configuration
-                  </p>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="provider-type">Provider Type</Label>
-                  <Select
-                    value={newProvider.type}
-                    onValueChange={(value) =>
-                      setNewProvider((prev) => ({ ...prev, type: value }))
-                    }
-                  >
-                    <SelectTrigger id="provider-type">
-                      <SelectValue placeholder="Select provider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="linode">Linode</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="provider-key">API Token</Label>
-                  <Input
-                    id="provider-key"
-                    type="password"
-                    placeholder="Enter upstream API token"
-                    value={newProvider.apiKey}
-                    onChange={(e) =>
-                      setNewProvider((prev) => ({
-                        ...prev,
-                        apiKey: e.target.value,
-                      }))
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Create an API token from your upstream provider dashboard with full
-                    access permissions
-                  </p>
-                </div>
-                <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      Enable Provider
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Inactive providers stay stored but hidden from
-                      provisioning.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={newProvider.active}
-                    onCheckedChange={(checked) =>
-                      setNewProvider((prev) => ({ ...prev, active: checked }))
-                    }
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowAddProvider(false);
-                    setNewProvider({
-                      name: "",
-                      type: "linode",
-                      apiKey: "",
-                      active: true,
-                    });
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={createProvider}
-                  disabled={
-                    !newProvider.name ||
-                    !newProvider.type ||
-                    !newProvider.apiKey
-                  }
-                >
-                  Add Provider
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          />
         </SectionPanel>
         <SectionPanel section="regions" activeSection={activeTab}>
           <RegionAccessManager token={token || ""} />

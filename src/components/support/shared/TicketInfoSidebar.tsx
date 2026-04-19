@@ -102,7 +102,9 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
         throw new Error("Copy command failed");
       }
     } catch (error) {
-      console.error(`Failed to copy ${label.toLowerCase()}:`, error);
+      console.error('Failed to copy ticket info field', {
+        label: label.toLowerCase(),
+      }, error);
       toast.error("Unable to copy to clipboard. Please copy manually.");
     }
   };

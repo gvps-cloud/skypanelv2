@@ -237,7 +237,7 @@ export function AccordionSelect({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover modal={false} open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -259,6 +259,7 @@ export function AccordionSelect({
       <PopoverContent
         className="w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
+        onOpenAutoFocus={(event) => event.preventDefault()}
         // Prevent the popover wrapper from swallowing wheel events so the inner scroll container can receive them
         onWheel={(e) => e.stopPropagation()}
       >

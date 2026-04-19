@@ -1,37 +1,28 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  type LucideIcon,
   ArrowLeft,
   RefreshCw,
   Power,
   PowerOff,
   RotateCcw,
   Server,
-  Cpu,
   HardDrive,
-  Network,
   ShieldCheck,
   Activity,
   AlertTriangle,
   Globe2,
   Shield,
   BarChart3,
-  LayoutDashboard,
-  CalendarClock,
-  Gauge,
   SatelliteDish,
   Cloud,
-  Sparkles,
   Copy,
   Edit2,
   Check,
   X,
   Terminal as TerminalIcon,
   FileText,
-  Save,
   Loader2,
-  ShoppingCart,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -42,6 +33,12 @@ import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { apiClient } from "@/lib/api";
 import VPSDisksTab from "./vps-detail/VPSDisksTab";
+import OverviewTab from "./VPSDetail/OverviewTab";
+import NotesTab from "./VPSDetail/NotesTab";
+import BackupsTab from "./VPSDetail/BackupsTab";
+import NetworkingTab from "./VPSDetail/NetworkingTab";
+import ActivityTab from "./VPSDetail/ActivityTab";
+import FirewallTab from "./VPSDetail/FirewallTab";
 import { useBreadcrumb } from "../contexts/BreadcrumbContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,7 +58,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -79,301 +75,16 @@ import { Area, AreaChart, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ActiveHoursDisplay } from "@/components/VPS/ActiveHoursDisplay";
 import RebuildOSSelect from "@/components/VPS/RebuildOSSelect";
 import { egressService } from "@/services/egressService";
-import { Database } from "lucide-react";
 import SSHTerminal from "@/components/VPS/SSHTerminal";
-
-interface MetricPoint {
-  timestamp: number;
-  value: number;
-}
-
-interface MetricSummary {
-  average: number;
-  peak: number;
-  last: number;
-}
-
-interface MetricSeries {
-  series: MetricPoint[];
-  summary: MetricSummary;
-  unit: "percent" | "bitsPerSecond" | "blocksPerSecond";
-}
-
-interface MetricGroup {
-  timeframe: { start: number | null; end: number | null };
-  cpu?: MetricSeries;
-  network?: {
-    inbound?: MetricSeries;
-    outbound?: MetricSeries;
-    privateIn?: MetricSeries;
-    privateOut?: MetricSeries;
-  };
-  io?: {
-    read?: MetricSeries;
-    swap?: MetricSeries;
-  };
-}
-
-interface AccountTransferInfo {
-  quotaGb: number;
-  usedGb: number;
-  billableGb: number;
-  remainingGb: number;
-}
-
-interface TransferInfo {
-  usedGb: number;
-  quotaGb: number;
-  billableGb: number;
-  utilizationPercent: number;
-  account: AccountTransferInfo | null;
-  usedBytes?: number;
-}
-
-interface BackupSummary {
-  id: number | null;
-  label: string | null;
-  type: string | null;
-  status: string | null;
-  created: string | null;
-  finished: string | null;
-  updated: string | null;
-  available: boolean;
-  totalSizeMb: number;
-  configs: string[];
-}
-
-interface BackupsInfo {
-  enabled: boolean;
-  available: boolean;
-  schedule: { day: string | null; window: string | null } | null;
-  lastSuccessful: string | null;
-  automatic: BackupSummary[];
-  snapshot: BackupSummary | null;
-  snapshotInProgress: BackupSummary | null;
-}
-
-interface BackupPricing {
-  monthly: number;
-  hourly: number;
-  currency: string;
-}
-
-interface IPv4Address {
-  address: string;
-  type: string | null;
-  public: boolean;
-  rdns: string | null;
-  gateway: string | null;
-  subnetMask: string | null;
-  prefix: number | null;
-  region: string | null;
-  rdnsEditable: boolean;
-}
-
-interface IPv6Assignment {
-  address: string | null;
-  prefix: number | null;
-  rdns: string | null;
-  region: string | null;
-  type: string | null;
-  gateway: string | null;
-}
-
-interface RdnsSource {
-  address: string;
-  rdns: string | null;
-}
-
-interface IPv6Range {
-  range: string | null;
-  prefix: number | null;
-  region: string | null;
-  routeTarget: string | null;
-  type: string | null;
-}
-
-interface NetworkingInfo {
-  ipv4: {
-    public: IPv4Address[];
-    private: IPv4Address[];
-    shared: IPv4Address[];
-    reserved: IPv4Address[];
-  };
-  ipv6: {
-    linkLocal: IPv6Assignment | null;
-    slaac: IPv6Assignment | null;
-    global: IPv6Range[];
-    ranges: IPv6Range[];
-    pools: IPv6Range[];
-  } | null;
-}
-
-interface FirewallRule {
-  action?: string;
-  protocol?: string;
-  ports?: string;
-  label?: string;
-  description?: string | null;
-  addresses?: {
-    ipv4?: string[];
-    ipv6?: string[];
-  };
-}
-
-interface FirewallSummary {
-  id: number;
-  label: string | null;
-  status: string | null;
-  tags: string[];
-  created: string | null;
-  updated: string | null;
-  pendingChanges: boolean;
-  rules: {
-    inbound: FirewallRule[];
-    outbound: FirewallRule[];
-  } | null;
-  attachment: FirewallAttachment | null;
-}
-
-interface FirewallAttachment {
-  id: number;
-  entityId: number | null;
-  entityLabel: string | null;
-  type: string | null;
-}
-
-interface FirewallOption {
-  id: number;
-  label: string | null;
-  status: string | null;
-  tags: string[];
-}
-
-interface ProviderConfigSummary {
-  id: number;
-  label: string | null;
-  kernel: string | null;
-  rootDevice: string | null;
-  runLevel: string | null;
-  comments: string | null;
-  virtMode?: string | null;
-  memoryLimit?: number | null;
-  interfaces: unknown[];
-  helpers: Record<string, unknown> | null;
-  created: string | null;
-  updated: string | null;
-}
-
-interface InstanceEventSummary {
-  id: number;
-  action: string;
-  status: string | null;
-  message: string | null;
-  created: string | null;
-  username: string | null;
-  percentComplete: number | null;
-  entityLabel: string | null;
-}
-
-type TabId =
-  | "overview"
-  | "backups"
-  | "networking"
-  | "activity"
-  | "firewall"
-  | "metrics"
-  | "ssh"
-  | "disks"
-  | "notes";
-
-interface TabDefinition {
-  id: TabId;
-  label: string;
-  icon: LucideIcon;
-}
-
-interface PlanSpecs {
-  vcpus: number;
-  memory: number;
-  disk: number;
-  transfer: number;
-}
-
-interface PlanPricing {
-  hourly: number;
-  monthly: number;
-  currency: string;
-}
-
-interface PlanInfo {
-  id: string | null;
-  name: string | null;
-  providerPlanId: string | null;
-  specs: PlanSpecs;
-  pricing: PlanPricing;
-}
-
-interface ProviderInfo {
-  id: number;
-  label: string;
-  status: string;
-  region: string;
-  image: string;
-  ipv4: string[];
-  ipv6?: string;
-  created: string;
-  updated: string;
-  specs: {
-    vcpus: number;
-    memory: number;
-    disk: number;
-    transfer: number;
-  };
-  watchdog_enabled?: boolean | null;
-}
-
-interface VpsInstanceDetail {
-  id: string;
-  label: string;
-  status: string;
-  ipAddress: string | null;
-  providerInstanceId: string;
-  providerId: string | null;
-  providerType: string | null;
-  providerName: string | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-  notes: string | null;
-  region: string | null;
-  regionLabel: string | null;
-  configuration: Record<string, unknown>;
-  image: string | null;
-  plan: PlanInfo;
-  provider: ProviderInfo | null;
-  metrics: MetricGroup | null;
-  transfer: TransferInfo | null;
-  backups: BackupsInfo | null;
-  networking: NetworkingInfo | null;
-  firewalls: FirewallSummary[];
-  firewallOptions: FirewallOption[];
-  providerConfigs: ProviderConfigSummary[];
-  activity: InstanceEventSummary[];
-  backupPricing: BackupPricing | null;
-  rdnsEditable: boolean;
-  providerProgress?: {
-    percent: number | null;
-    action: string | null;
-    status: string | null;
-    message: string | null;
-    created: string | null;
-  } | null;
-  progressPercent?: number | null;
-}
-
-interface VpsDetailResponse {
-  instance: VpsInstanceDetail;
-}
+import type {
+  BackupPricing,
+  FirewallRule,
+  RdnsSource,
+  TabDefinition,
+  TabId,
+  VpsDetailResponse,
+  VpsInstanceDetail,
+} from "./VPSDetail/types";
 
 const statusStyles: Record<string, string> = {
   running:
@@ -1275,7 +986,7 @@ const VPSDetail: React.FC = () => {
         toast.success(`${statusActionLabel[action]} request sent`);
         await loadData({ silent: true });
       } catch (err) {
-        console.error(`Failed to ${action} VPS instance:`, err);
+        console.error('Failed to perform VPS action:', { action, error: err });
         const message =
           err instanceof Error ? err.message : `Failed to ${action} instance`;
         toast.error(message);
@@ -2221,308 +1932,31 @@ const VPSDetail: React.FC = () => {
           {/* Main Content */}
           <div className="flex-1 min-w-0 space-y-6 sm:space-y-8">
             {activeTab === "overview" && (
-              <>
-                <section className="rounded-2xl border border bg-card shadow-sm">
-                  <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6 border">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
-                          <LayoutDashboard className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                          <span>Instance Overview</span>
-                        </h2>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                          Metadata and quick actions for this server.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="px-6 sm:px-8 py-6 sm:py-8">
-                    <div className="space-y-6 sm:space-y-8">
-                      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
-                          <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
-                            <span>vCPUs</span>
-                            <Cpu className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-primary dark:text-primary" />
-                          </div>
-                          <p className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-semibold text-foreground">
-                            {detail?.plan.specs.vcpus ?? 0}
-                          </p>
-                        </div>
-                        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
-                          <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
-                            <span>Memory</span>
-                            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-primary dark:text-primary" />
-                          </div>
-                          <p className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-semibold text-foreground">
-                            {formatMemory(detail?.plan.specs.memory ?? 0)}
-                          </p>
-                        </div>
-                        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
-                          <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
-                            <span>Storage</span>
-                            <HardDrive className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-primary dark:text-primary" />
-                          </div>
-                          <p className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-semibold text-foreground">
-                            {formatStorage(detail?.plan.specs.disk ?? 0)}
-                          </p>
-                        </div>
-                        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
-                          <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
-                            <span>Transfer</span>
-                            <Network className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-primary dark:text-primary" />
-                          </div>
-                          <p className="mt-1.5 sm:mt-2 text-lg sm:text-2xl font-semibold text-foreground">
-                            {formatTransferAllowance(
-                              detail?.plan.specs.transfer ?? 0,
-                            )}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
-                        <div className="rounded-xl border border bg-card p-3 sm:p-4">
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            Plan
-                          </p>
-                          <p className="mt-1 text-sm sm:text-base font-semibold text-foreground">
-                            {detail?.plan.name || "Custom Plan"}
-                          </p>
-                        </div>
-                        <div className="rounded-xl border border bg-card p-3 sm:p-4">
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            Pricing
-                          </p>
-                          <p className="mt-1 text-sm sm:text-base font-semibold text-foreground">
-                            {formatCurrency(detail?.plan.pricing.monthly ?? 0)}{" "}
-                            <span className="text-xs sm:text-sm font-normal text-muted-foreground">
-                              / month
-                            </span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatHourlyCurrency(detail?.plan.pricing.hourly ?? 0)}{" "}
-                            hourly billable
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <dl className="mt-6 sm:mt-8 grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Instance ID
-                        </dt>
-                        <dd className="mt-1 text-xs sm:text-sm font-medium text-foreground  break-all">
-                          {detail?.id}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Provider Reference
-                        </dt>
-                        <dd className="mt-1 text-xs sm:text-sm font-medium text-foreground  break-all">
-                          {detail?.providerInstanceId}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Cloud Provider
-                        </dt>
-                        <dd className="mt-1 flex items-center gap-2">
-                          <Cloud className="h-4 w-4 text-primary" />
-                          <span className="text-xs sm:text-sm font-medium text-foreground">
-                            {/* SECURITY: Use providerName (whitelabel) or generic "Cloud" fallback */}
-                            {detail?.providerName || "Cloud"}
-                          </span>
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Public IPv4
-                        </dt>
-                        <dd className="mt-1 text-xs sm:text-sm font-medium text-foreground ">
-                          {detail?.ipAddress || "Not yet assigned"}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Region
-                        </dt>
-                        <dd className="mt-1 text-xs sm:text-sm font-medium text-foreground ">
-                          {detail?.regionLabel || detail?.region || "Unknown"}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Created
-                        </dt>
-                        <dd className="mt-1 text-xs sm:text-sm text-foreground text-muted-foreground">
-                          {formatDateTime(detail?.createdAt || null)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Active Hours
-                        </dt>
-                        <dd className="mt-1">
-                          <ActiveHoursDisplay
-                            createdAt={detail?.createdAt || null}
-                            hourlyRate={detail?.plan?.pricing?.hourly}
-                            context="detail"
-                            className="text-xs sm:text-sm"
-                          />
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Last Updated
-                        </dt>
-                        <dd className="mt-1 text-xs sm:text-sm text-foreground text-muted-foreground">
-                          {formatDateTime(detail?.updatedAt || null)}
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-                </section>
-
-                {/* Watchdog section — Linode only */}
-                {(detail.providerType === "linode" || !detail.providerType) && (
-                  <section className="rounded-2xl border border bg-card shadow-sm">
-                    <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6 border">
-                      <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
-                        <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                        <span>Shutdown Watchdog</span>
-                      </h2>
-                      <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                        Lassie monitors your server and automatically reboots it if it powers off unexpectedly.
-                      </p>
-                    </div>
-                    <div className="px-6 sm:px-8 py-5 sm:py-6">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground">
-                            Shutdown Watchdog (Lassie)
-                          </p>
-                          <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-                            Automatically reboots your server if it powers off without a shutdown job. Lassie stops retrying after 5 boot attempts within 15 minutes.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={detail.provider?.watchdog_enabled ?? false}
-                          onClick={() => toggleWatchdog(!(detail.provider?.watchdog_enabled ?? false))}
-                          disabled={watchdogSaving || isTransitionalState(detail.status)}
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                            (detail.provider?.watchdog_enabled ?? false) ? "bg-primary" : "bg-muted"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                              (detail.provider?.watchdog_enabled ?? false) ? "translate-x-6" : "translate-x-1"
-                            }`}
-                          />
-                        </button>
-                      </div>
-                      {watchdogSaving && (
-                        <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <RefreshCw className="h-3 w-3 animate-spin" />
-                          Saving…
-                        </p>
-                      )}
-                    </div>
-                  </section>
-                )}
-              </>
+              <OverviewTab
+                detail={detail}
+                watchdogSaving={watchdogSaving}
+                onToggleWatchdog={toggleWatchdog}
+                isTransitionalState={isTransitionalState}
+                formatMemory={formatMemory}
+                formatStorage={formatStorage}
+                formatTransferAllowance={formatTransferAllowance}
+                formatCurrency={formatCurrency}
+                formatHourlyCurrency={formatHourlyCurrency}
+                formatDateTime={formatDateTime}
+              />
             )}
 
             {activeTab === "notes" && (
-              <section className="rounded-2xl border bg-card shadow-sm">
-                <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
-                        <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                        <span>Notes</span>
-                      </h2>
-                      <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                        Add personal notes about this server for your reference.
-                      </p>
-                    </div>
-                    {!notesEditing && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setNotesEditing(true)}
-                        className="gap-2"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                        {detail?.notes ? "Edit" : "Add Notes"}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div className="px-6 sm:px-8 py-6">
-                  {notesEditing ? (
-                    <div className="space-y-4">
-                      <Textarea
-                        value={notesValue}
-                        onChange={(e) => setNotesValue(e.target.value)}
-                        placeholder="Write your notes here... (e.g., server purpose, configuration details, reminders)"
-                        className="min-h-[150px] resize-y"
-                        disabled={notesSaving}
-                        maxLength={10000}
-                      />
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground">
-                          {notesValue.length.toLocaleString()} / 10,000
-                          characters
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={cancelEditingNotes}
-                            disabled={notesSaving}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={saveNotes}
-                            disabled={notesSaving}
-                            className="gap-2"
-                          >
-                            {notesSaving ? (
-                              <>
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                Saving...
-                              </>
-                            ) : (
-                              <>
-                                <Save className="h-3.5 w-3.5" />
-                                Save Notes
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : detail?.notes ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <p className="whitespace-pre-wrap text-sm text-foreground leading-relaxed">
-                        {detail.notes}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                      <p className="text-sm text-muted-foreground">
-                        No notes yet. Click "Add Notes" to add some.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </section>
+              <NotesTab
+                detail={detail}
+                notesEditing={notesEditing}
+                notesValue={notesValue}
+                notesSaving={notesSaving}
+                onStartEditing={() => setNotesEditing(true)}
+                onNotesChange={setNotesValue}
+                onCancelEditing={cancelEditingNotes}
+                onSave={saveNotes}
+              />
             )}
 
             {activeTab === "disks" && (
@@ -2530,1288 +1964,106 @@ const VPSDetail: React.FC = () => {
             )}
 
             {activeTab === "backups" && (
-              <section className="rounded-2xl border border bg-card shadow-sm">
-                <div className="border-b border-border px-3 sm:px-6 py-3 sm:py-4 border">
-                  <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
-                    <ShieldCheck className="h-5 w-5 text-primary" />
-                    Backup Protection
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Automatic snapshots captured by the underlying platform.
-                    {/* SECURITY: Only show provider-specific notes if providerName is set */}
-                    {detail?.providerName && (
-                      <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400">
-                        Note: Backup features may vary by provider. Some
-                        options may not be available for {detail.providerName}.
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div className="px-6 py-5 space-y-5">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2 text-sm">
-                      <ShieldCheck
-                        className={`h-4 w-4 ${detail?.backups?.enabled ? "text-green-500" : "text-muted-foreground"}`}
-                      />
-                      <span className="font-medium ">
-                        {detail?.backups?.enabled
-                          ? "Backups Enabled"
-                          : "Backups Disabled"}
-                      </span>
-                    </div>
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {detail?.backups?.schedule
-                        ? `Schedule: ${detail.backups.schedule.day ?? "Any day"} · Window ${detail.backups.schedule.window ?? "Automatic"}`
-                        : "No schedule data available"}
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-border bg-card p-4 border bg-background/60">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleBackupAction(
-                              backupsEnabled ? "disable" : "enable",
-                            )
-                          }
-                          disabled={backupToggleBusy}
-                          className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary ${backupsEnabled ? "border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-900/30" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
-                        >
-                          {backupToggleBusy
-                            ? "Applying…"
-                            : backupsEnabled
-                              ? "Disable backups"
-                              : "Enable backups"}
-                        </button>
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                        <label className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Snapshot label
-                        </label>
-                        <input
-                          type="text"
-                          value={snapshotLabel}
-                          onChange={(event) =>
-                            setSnapshotLabel(event.target.value)
-                          }
-                          placeholder="Optional description"
-                          className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary border bg-background  dark:placeholder:text-muted-foreground"
-                          disabled={snapshotBusy}
-                        />
-                        <Button
-                          type="button"
-                          onClick={() => handleBackupAction("snapshot")}
-                          disabled={snapshotBusy || !backupsEnabled}
-                          className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary ${snapshotBusy || !backupsEnabled ? "bg-primary/40 text-primary-foreground/60 cursor-not-allowed" : "bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"}`}
-                        >
-                          {snapshotBusy ? "Requesting…" : "Capture snapshot"}
-                        </Button>
-                      </div>
-                    </div>
-                    {!backupsEnabled && (
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        Manual snapshots require backups to be enabled. Toggle
-                        backups on to request a new snapshot.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="rounded-xl border border-border bg-card p-4 border bg-background/60">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                      <div className="space-y-2">
-                        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                          <CalendarClock className="h-4 w-4 text-primary" />
-                          Automated backup schedule
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          Choose the preferred weekly snapshot day and two-hour
-                          window. Leave either field on auto to let the provider
-                          pick.
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Current provider selection:{" "}
-                          {normalizedOriginalDay
-                            ? normalizedOriginalDay
-                            : "Auto"}{" "}
-                          ·{" "}
-                          {normalizedOriginalWindow
-                            ? describeBackupWindow(normalizedOriginalWindow)
-                            : "Auto"}
-                        </p>
-                      </div>
-                      <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-xs uppercase tracking-wide text-muted-foreground">
-                            Preferred day
-                          </label>
-                          <select
-                            value={scheduleDay}
-                            onChange={(event) =>
-                              setScheduleDay(event.target.value)
-                            }
-                            disabled={!backupsEnabled || scheduleBusy}
-                            className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:bg-muted border bg-background  disabled:bg-card"
-                          >
-                            {BACKUP_DAY_CHOICES.map((option) => (
-                              <option
-                                key={option.value || "auto"}
-                                value={option.value}
-                              >
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-xs uppercase tracking-wide text-muted-foreground">
-                            Backup window
-                          </label>
-                          <select
-                            value={scheduleWindow}
-                            onChange={(event) =>
-                              setScheduleWindow(event.target.value)
-                            }
-                            disabled={!backupsEnabled || scheduleBusy}
-                            className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:bg-muted border bg-background  disabled:bg-card"
-                          >
-                            {BACKUP_WINDOW_CHOICES.map((option) => (
-                              <option
-                                key={option.value || "auto"}
-                                value={option.value}
-                              >
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        onClick={handleBackupScheduleSave}
-                        disabled={
-                          !backupsEnabled || scheduleBusy || !scheduleDirty
-                        }
-                        variant="default"
-                        size="sm"
-                      >
-                        {scheduleBusy ? "Saving…" : "Save schedule"}
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={handleBackupScheduleReset}
-                        disabled={!scheduleDirty || scheduleBusy}
-                        className={`inline-flex items-center rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-gray-300 border  ${!scheduleDirty || scheduleBusy ? "cursor-not-allowed opacity-60" : "hover:bg-muted dark:hover:bg-gray-800"}`}
-                      >
-                        Reset
-                      </button>
-                    </div>
-                    {!backupsEnabled && (
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        Enable backups to configure the automated schedule.
-                      </p>
-                    )}
-                  </div>
-
-                  {backupPricing && (
-                    <div className="rounded-xl border border-primary bg-primary px-4 py-4 text-sm text-primary dark:border-primary/40 dark:bg-primary/30 dark:text-primary">
-                      <p className="font-semibold">Plan add-on pricing</p>
-                      <p className="mt-1 text-xs">
-                        Enabling backups adds{" "}
-                        {formatCurrency(backupPricing.monthly)} / month (
-                        {formatHourlyCurrency(backupPricing.hourly)} hourly) — 40% of
-                        your selected plan.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="rounded-xl border border-border bg-muted/50 p-4 border bg-background">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      Last successful backup
-                    </p>
-                    <p className="mt-1 text-sm font-medium text-foreground">
-                      {detail?.backups?.lastSuccessful
-                        ? `${formatDateTime(detail.backups.lastSuccessful)} (${formatRelativeTime(detail.backups.lastSuccessful)})`
-                        : "No successful backups recorded yet"}
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        <Cloud className="h-4 w-4 text-primary" />
-                        Automatic backups
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Most recent restore points (up to 5 shown).
-                      </p>
-                    </div>
-                    {detail?.backups?.automatic &&
-                    detail.backups.automatic.length > 0 ? (
-                      <div className="divide-y divide-gray-200 overflow-hidden rounded-xl border border-border dark:divide-gray-800 border">
-                        {detail.backups.automatic.slice(0, 5).map((backup) => {
-                          const backupId =
-                            typeof backup.id === "number" ? backup.id : null;
-                          const restoreAvailable = Boolean(
-                            backup.available && backupId !== null,
-                          );
-                          const automaticRestoreBusy =
-                            backupId !== null && restoreBusyId === backupId;
-                          const restoreDisabled =
-                            !restoreAvailable || restoreBusyId !== null;
-                          const itemKey =
-                            backupId ??
-                            backup.created ??
-                            backup.label ??
-                            Math.random().toString(36);
-                          return (
-                            <div
-                              key={itemKey}
-                              className="flex flex-col gap-2 bg-white px-4 py-3 text-sm bg-background/60 sm:flex-row sm:items-center sm:justify-between"
-                            >
-                              <div>
-                                <p className="font-medium text-foreground">
-                                  {backup.label || `Backup ${backupId ?? ""}`}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {backup.created
-                                    ? `${formatDateTime(backup.created)} (${formatRelativeTime(backup.created)})`
-                                    : "Pending"}
-                                </p>
-                              </div>
-                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                                <div className="flex items-center gap-4">
-                                  <span
-                                    className={`text-xs font-semibold uppercase tracking-wide ${backup.available ? "text-green-500" : "text-amber-500"}`}
-                                  >
-                                    {backup.status || "pending"}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatSizeFromMb(backup.totalSizeMb)}
-                                  </span>
-                                </div>
-                                {restoreAvailable && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (backupId !== null)
-                                        handleBackupRestore(backupId);
-                                    }}
-                                    disabled={restoreDisabled}
-                                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary ${restoreDisabled ? "bg-primary/40 text-primary-foreground/60 cursor-not-allowed" : "bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"}`}
-                                  >
-                                    <RotateCcw
-                                      className={`h-4 w-4 ${automaticRestoreBusy ? "animate-spin" : ""}`}
-                                    />
-                                    {automaticRestoreBusy
-                                      ? "Restoring…"
-                                      : "Restore"}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-input bg-muted/50 px-4 py-6 text-center text-sm text-muted-foreground">
-                        No automatic backups captured yet.
-                      </div>
-                    )}
-
-                    {detail?.backups?.snapshot ||
-                    detail?.backups?.snapshotInProgress ? (
-                      <div className="rounded-xl border border-primary bg-primary px-4 py-4 text-sm text-primary dark:border-primary/60 dark:bg-primary/30 dark:text-primary">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="flex items-center gap-2 font-semibold">
-                            <Sparkles className="h-4 w-4 text-primary" />
-                            <span>Manual snapshots</span>
-                          </div>
-                          {snapshotId !== null && (
-                            <button
-                              type="button"
-                              onClick={() => handleBackupRestore(snapshotId)}
-                              disabled={restoreBusyId !== null}
-                              className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary ${restoreBusyId !== null ? "bg-primary/40 text-primary-foreground/60 cursor-not-allowed" : "bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"}`}
-                            >
-                              <RotateCcw
-                                className={`h-4 w-4 ${snapshotRestoreBusy ? "animate-spin" : ""}`}
-                              />
-                              {snapshotRestoreBusy
-                                ? "Restoring…"
-                                : "Restore snapshot"}
-                            </button>
-                          )}
-                        </div>
-                        {detail?.backups?.snapshot ? (
-                          <p className="mt-2 flex items-center gap-2 text-xs">
-                            <span>
-                              Captured{" "}
-                              {detail.backups.snapshot.created
-                                ? formatDateTime(
-                                    detail.backups.snapshot.created,
-                                  )
-                                : "at an unknown time"}
-                              {detail.backups.snapshot.label
-                                ? ` · ${detail.backups.snapshot.label}`
-                                : ""}
-                              .
-                            </span>
-                          </p>
-                        ) : (
-                          <p className="mt-2 text-xs">
-                            A snapshot is currently running.
-                          </p>
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </section>
+              <BackupsTab
+                detail={detail}
+                backupPricing={backupPricing}
+                backupsEnabled={backupsEnabled}
+                backupToggleBusy={backupToggleBusy}
+                snapshotBusy={snapshotBusy}
+                snapshotLabel={snapshotLabel}
+                scheduleDay={scheduleDay}
+                scheduleWindow={scheduleWindow}
+                scheduleBusy={scheduleBusy}
+                scheduleDirty={scheduleDirty}
+                normalizedOriginalDay={normalizedOriginalDay}
+                normalizedOriginalWindow={normalizedOriginalWindow}
+                restoreBusyId={restoreBusyId}
+                snapshotId={snapshotId}
+                snapshotRestoreBusy={snapshotRestoreBusy}
+                backupDayChoices={BACKUP_DAY_CHOICES}
+                backupWindowChoices={BACKUP_WINDOW_CHOICES}
+                onSnapshotLabelChange={setSnapshotLabel}
+                onScheduleDayChange={setScheduleDay}
+                onScheduleWindowChange={setScheduleWindow}
+                onBackupAction={handleBackupAction}
+                onBackupScheduleSave={handleBackupScheduleSave}
+                onBackupScheduleReset={handleBackupScheduleReset}
+                onBackupRestore={handleBackupRestore}
+                describeBackupWindow={describeBackupWindow}
+                formatCurrency={formatCurrency}
+                formatHourlyCurrency={formatHourlyCurrency}
+                formatDateTime={formatDateTime}
+                formatRelativeTime={formatRelativeTime}
+                formatSizeFromMb={formatSizeFromMb}
+              />
             )}
 
             {activeTab === "networking" && (
-              <section className="rounded-2xl border border bg-card shadow-sm">
-                <div className="border-b border-border px-6 py-4 border">
-                  <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-                    <Globe2 className="h-5 w-5 text-primary" />
-                    Networking
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Current IPv4/IPv6 assignments and routing details.
-                  </p>
-                </div>
-                <div className="px-6 py-5 space-y-8">
-                  <div className="space-y-8">
-                    {/* Transfer Utilisation Section */}
-                    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm border bg-background/60">
-                      <div className="flex flex-col gap-6">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="flex items-start gap-3 min-w-0">
-                            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-primary dark:bg-primary/30">
-                              <Gauge className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                Transfer utilisation
-                              </p>
-                              <h3 className="mt-1 text-base font-semibold text-foreground truncate">
-                                {transferUsageTitle}
-                              </h3>
-                            </div>
-                          </div>
-                          {hasTransferData && (
-                            <span
-                              className="inline-flex items-center rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary dark:bg-primary/40 dark:text-primary"
-                              aria-live="polite"
-                            >
-                              {transferUsagePercent.toFixed(0)}%
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {transferUsageDescription}
-                        </p>
-                        <div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{usageLabel}</span>
-                            <span>
-                              {hasTransferData
-                                ? `${usageUsedGb.toFixed(2)} GB of ${usageQuotaGb.toFixed(0)} GB`
-                                : "Unavailable"}
-                            </span>
-                          </div>
-                          <div
-                            className="mt-2 h-2 w-full rounded-full bg-muted"
-                            role="progressbar"
-                            aria-valuenow={transferUsagePercent}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-label="Transfer utilisation"
-                          >
-                            <div
-                              className="h-2 rounded-full bg-primary transition-all"
-                              style={{ width: `${transferUsagePercent}%` }}
-                            />
-                          </div>
-                        </div>
-                        {hasTransferData ? (
-                          <>
-                            <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                              <div className="rounded-xl border border-border bg-muted/50 p-4 border bg-background">
-                                <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  {accountTransferInfo
-                                    ? "Instance used"
-                                    : "Used"}
-                                </dt>
-                                <dd className="mt-1 text-base font-semibold text-foreground">
-                                  {transferUsedGb.toFixed(2)} GB
-                                </dd>
-                              </div>
-                              <div className="rounded-xl border border-border bg-muted/50 p-4 border bg-background">
-                                <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  {accountTransferInfo
-                                    ? "Instance remaining"
-                                    : "Remaining"}
-                                </dt>
-                                <dd className="mt-1 text-base font-semibold text-foreground">
-                                  {transferRemainingGb !== null
-                                    ? `${transferRemainingGb.toFixed(2)} GB`
-                                    : "—"}
-                                </dd>
-                              </div>
-                              {!accountTransferInfo && (
-                                <>
-                                  <div className="rounded-xl border border-border bg-muted/50 p-4 border bg-background">
-                                    <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                                      Available quota
-                                    </dt>
-                                    <dd className="mt-1 text-base font-semibold text-foreground">
-                                      {usageRemainingGb !== null
-                                        ? `${usageRemainingGb.toFixed(2)} GB`
-                                        : "—"}
-                                    </dd>
-                                  </div>
-                                  <div className="rounded-xl border border-border bg-muted/50 p-4 border bg-background">
-                                    <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-                                      Billable
-                                    </dt>
-                                    <dd className="mt-1 text-base font-semibold text-foreground">
-                                      {effectiveBillableGb.toFixed(2)} GB
-                                    </dd>
-                                  </div>
-                                </>
-                              )}
-                            </dl>
-                            {transferUsagePercent >= 90 && (
-                              <div className="mt-2 inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/30 dark:text-amber-200">
-                                <AlertTriangle className="h-4 w-4" />
-                                Approaching quota
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            Usage data unavailable.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Egress Credits Section */}
-                    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm border bg-background/60">
-                      <div className="flex flex-col gap-6">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="flex items-start gap-3 min-w-0">
-                            <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 dark:bg-blue-500/20">
-                              <Database className="h-5 w-5 text-blue-500" />
-                            </div>
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                Pre-paid egress credits
-                              </p>
-                              <h3 className="mt-1 text-base font-semibold text-foreground truncate">
-                                {egressLoading ? "Loading..." : egressBalance !== null ? `${egressBalance.toFixed(2)} GB available` : "No credits"}
-                              </h3>
-                            </div>
-                          </div>
-                          <Link
-                            to="/egress-credits"
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-                          >
-                            <ShoppingCart className="h-3.5 w-3.5" />
-                            Purchase Credits
-                          </Link>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Credits are deducted hourly when this VPS exceeds its included transfer quota.{" "}
-                          {egressMonthlyUsed > 0 && (
-                            <>
-                              This VPS has used <span className="font-semibold text-foreground">{egressMonthlyUsed.toFixed(2)} GB</span> of credits this month.
-                            </>
-                          )}
-                        </p>
-                        {egressBalance !== null && egressBalance < 200 && (
-                          <div className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/30 dark:text-amber-200">
-                            <AlertTriangle className="h-4 w-4" />
-                            Low egress credits - VPS may be suspended
-                          </div>
-                        )}
-                        {egressBalance === 0 && (
-                          <div className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-900/40 dark:bg-red-900/30 dark:text-red-200">
-                            <AlertTriangle className="h-4 w-4" />
-                            No egress credits - Add funds to prevent suspension
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Connectivity Overview Section */}
-                    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm border bg-background/60">
-                      <div className="flex flex-col gap-6">
-                        <div>
-                          <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
-                            <Network className="h-4 w-4 text-primary" />
-                            Connectivity overview
-                          </h3>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            Quick reference for address availability and DNS
-                            controls.
-                          </p>
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                          <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm min-h-[120px] flex flex-col justify-center border bg-background/60">
-                            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                              Public IPv4
-                            </p>
-                            <p className="mt-2 text-2xl font-semibold text-foreground">
-                              {publicIpv4Count}
-                            </p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              rDNS {rdnsEditable ? "editable" : "locked"}
-                            </p>
-                          </div>
-                          <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm min-h-[120px] flex flex-col justify-center border bg-background/60">
-                            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                              Private IPv4
-                            </p>
-                            <p className="mt-2 text-2xl font-semibold text-foreground">
-                              {privateIpv4Count}
-                            </p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              Internal networking
-                            </p>
-                          </div>
-                          <div className="rounded-lg border border-border bg-muted/50 p-4 text-sm min-h-[120px] flex flex-col justify-center border bg-background/60">
-                            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                              IPv6 SLAAC
-                            </p>
-                            <p className="mt-2 text-xl font-semibold text-foreground">
-                              {hasSlaacIpv6 ? "Available" : "Not provisioned"}
-                            </p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {hasSlaacIpv6
-                                ? "rDNS adjustable in-place"
-                                : "Automatic configuration pending"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-6">
-                    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm border bg-background/60">
-                      <div className="flex flex-wrap items-baseline justify-between gap-3">
-                        <div>
-                          <h3 className="text-sm font-semibold text-foreground">
-                            IPv4 assignments
-                          </h3>
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                            Public and private allocations
-                          </p>
-                        </div>
-                        <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground bg-card/60 text-muted-foreground">
-                          {totalIpv4Count}{" "}
-                          {totalIpv4Count === 1 ? "address" : "addresses"}
-                        </span>
-                      </div>
-                      <div className="mt-4 grid gap-4 md:grid-cols-2">
-                        {ipv4Categories.map((category) => (
-                          <div
-                            key={category.label}
-                            className="flex flex-col gap-3 rounded-xl border border-border bg-muted/50 p-4 border bg-background"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                {category.label}
-                              </p>
-                              <span className="text-xs font-semibold text-muted-foreground">
-                                {category.addresses.length}
-                              </span>
-                            </div>
-                            {category.addresses.length > 0 ? (
-                              <ul className="space-y-3 text-sm text-foreground ">
-                                {category.addresses.map((addr) => {
-                                  const editorState = rdnsEditor[addr.address];
-                                  const editing = editorState?.editing ?? false;
-                                  const saving = editorState?.saving ?? false;
-                                  const currentValue =
-                                    editorState?.value ?? addr.rdns ?? "";
-                                  const isPrivate = !addr.public;
-                                  const showRdnsInfo = !isPrivate;
-                                  const canEditAddress =
-                                    showRdnsInfo &&
-                                    rdnsEditable &&
-                                    addr.rdnsEditable;
-                                  return (
-                                    <li
-                                      key={`${category.label}-${addr.address}`}
-                                      className="rounded-lg bg-card px-3 py-2 shadow-sm bg-background/60"
-                                    >
-                                      <div className="flex items-center justify-between gap-2">
-                                        <span
-                                          className="font-semibold text-foreground truncate"
-                                          title={addr.address}
-                                        >
-                                          {addr.address}
-                                        </span>
-                                        {addr.prefix !== null && (
-                                          <span className="text-xs text-muted-foreground">
-                                            /{addr.prefix}
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className="text-xs text-muted-foreground">
-                                        {formatStatusLabel(addr.type)} ·{" "}
-                                        {addr.public ? "Public" : "Private"}
-                                        {addr.region ? ` · ${addr.region}` : ""}
-                                      </p>
-                                      {addr.gateway && (
-                                        <p className="text-xs text-muted-foreground">
-                                          Gateway: {addr.gateway}
-                                        </p>
-                                      )}
-                                      {showRdnsInfo && (
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                          <span className="truncate">
-                                            rDNS:{" "}
-                                            {shouldDisplayRdns(
-                                              currentValue,
-                                            )
-                                              ? currentValue
-                                              : "Setting up..."}
-                                          </span>
-                                          {shouldDisplayRdns(
-                                            currentValue,
-                                          ) ? (
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                handleCopy(
-                                                  currentValue,
-                                                  `rDNS for ${addr.address}`,
-                                                )
-                                              }
-                                              className="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary border text-muted-foreground dark:hover:border-primary"
-                                              aria-label={`Copy rDNS for ${addr.address}`}
-                                            >
-                                              <Copy className="h-3.5 w-3.5" />
-                                            </button>
-                                          ) : null}
-                                        </div>
-                                      )}
-                                      {canEditAddress && (
-                                        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                          {editing ? (
-                                            <>
-                                              <input
-                                                value={currentValue}
-                                                onChange={(event) =>
-                                                  updateRdnsValue(
-                                                    addr.address,
-                                                    event.target.value,
-                                                  )
-                                                }
-                                                className="w-full rounded-lg border border-input px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary border bg-background  dark:placeholder:text-muted-foreground"
-                                                placeholder="reverse.example.com"
-                                                disabled={saving}
-                                              />
-                                              <div className="flex gap-2">
-                                                <button
-                                                  type="button"
-                                                  onClick={() =>
-                                                    saveRdns(addr.address)
-                                                  }
-                                                  disabled={saving}
-                                                  className={`inline-flex items-center rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary ${saving ? "opacity-75" : ""}`}
-                                                >
-                                                  {saving ? "Saving…" : "Save"}
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  onClick={() =>
-                                                    cancelEditRdns(addr.address)
-                                                  }
-                                                  disabled={saving}
-                                                  className="inline-flex items-center rounded-lg border border-border px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-gray-300 border  dark:hover:bg-gray-800"
-                                                >
-                                                  Cancel
-                                                </button>
-                                              </div>
-                                            </>
-                                          ) : (
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                beginEditRdns(addr.address)
-                                              }
-                                              className="inline-flex w-fit items-center rounded-lg border border-dashed border-input px-3 py-1 text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary border text-muted-foreground dark:hover:border-primary"
-                                            >
-                                              Edit rDNS
-                                            </button>
-                                          )}
-                                        </div>
-                                      )}
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">
-                                No addresses assigned.
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="my-6 border-t border-border border" />
-
-                      <div className="flex flex-wrap items-baseline justify-between gap-3">
-                        <div>
-                          <h3 className="text-sm font-semibold text-foreground">
-                            IPv6 assignments
-                          </h3>
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                            Provider supplied ranges
-                          </p>
-                        </div>
-                        {hasSlaacIpv6 && (
-                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">
-                            SLAAC active
-                          </span>
-                        )}
-                      </div>
-                      {ipv6Info ? (
-                        <div className="mt-4 space-y-5">
-                          <div className="grid gap-4 md:grid-cols-2">
-                            {ipv6Info.slaac && (
-                              <div className="rounded-xl border border-border bg-muted/50 p-4 border bg-background">
-                                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  SLAAC
-                                </p>
-                                <p
-                                  className="mt-1 text-sm font-semibold text-foreground truncate"
-                                  title={ipv6Info.slaac.address ?? ""}
-                                >
-                                  {ipv6Info.slaac.address}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Prefix /{ipv6Info.slaac.prefix ?? "—"}
-                                </p>
-                                {ipv6Info.slaac.gateway && (
-                                  <p className="text-xs text-muted-foreground">
-                                    Gateway: {ipv6Info.slaac.gateway}
-                                  </p>
-                                )}
-                                {slaacAddress && (
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <span className="truncate">
-                                      rDNS: {slaacCurrentValue || "Not set"}
-                                    </span>
-                                    {slaacCurrentValue ? (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleCopy(
-                                            slaacCurrentValue,
-                                            "SLAAC rDNS",
-                                          )
-                                        }
-                                        className="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary border text-muted-foreground dark:hover:border-primary"
-                                        aria-label="Copy SLAAC rDNS"
-                                      >
-                                        <Copy className="h-3.5 w-3.5" />
-                                      </button>
-                                    ) : null}
-                                  </div>
-                                )}
-                                {canEditSlaacRdns && slaacAddress && (
-                                  <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                    {slaacEditing ? (
-                                      <>
-                                        <input
-                                          value={slaacCurrentValue}
-                                          onChange={(event) =>
-                                            updateRdnsValue(
-                                              slaacAddress,
-                                              event.target.value,
-                                            )
-                                          }
-                                          className="w-full rounded-lg border border-input px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary border bg-background  dark:placeholder:text-muted-foreground"
-                                          placeholder="reverse.example.com"
-                                          disabled={slaacSaving}
-                                        />
-                                        <div className="flex gap-2">
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              saveRdns(slaacAddress)
-                                            }
-                                            disabled={slaacSaving}
-                                            className={`inline-flex items-center rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90 ${slaacSaving ? "opacity-75" : ""}`}
-                                            aria-label="Save rDNS"
-                                          >
-                                            {slaacSaving ? "Saving…" : "Save"}
-                                          </button>
-                                          <Button
-                                            type="button"
-                                            onClick={() =>
-                                              cancelEditRdns(slaacAddress)
-                                            }
-                                            disabled={slaacSaving}
-                                            variant="outline"
-                                            size="sm"
-                                            aria-label="Cancel rDNS edit"
-                                          >
-                                            Cancel
-                                          </Button>
-                                        </div>
-                                      </>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          beginEditRdns(slaacAddress)
-                                        }
-                                        className="inline-flex w-fit items-center rounded-lg border border-dashed border-input px-3 py-1 text-xs font-semibold text-muted-foreground hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary border text-muted-foreground dark:hover:border-primary"
-                                        aria-label="Edit rDNS"
-                                      >
-                                        Edit rDNS
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {ipv6Info.linkLocal && (
-                              <div className="rounded-xl border border-border bg-muted/50 p-4 border bg-background">
-                                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  Link-local
-                                </p>
-                                <p
-                                  className="mt-1 text-sm font-semibold text-foreground truncate"
-                                  title={ipv6Info.linkLocal.address ?? ""}
-                                >
-                                  {ipv6Info.linkLocal.address}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Prefix /{ipv6Info.linkLocal.prefix ?? "—"}
-                                </p>
-                                {ipv6Info.linkLocal.gateway && (
-                                  <p className="text-xs text-muted-foreground">
-                                    Gateway: {ipv6Info.linkLocal.gateway}
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          {(ipv6Info.global ?? []).length > 0 && (
-                            <div className="rounded-xl border border-border bg-card p-4 border bg-background/60">
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                Global prefixes
-                              </p>
-                              <ul className="mt-2 space-y-2 text-xs text-gray-600 text-muted-foreground">
-                                {(ipv6Info.global ?? []).map((range, index) => (
-                                  <li
-                                    key={`global-${index}`}
-                                    className="flex flex-col gap-1 rounded-lg bg-muted/50 px-3 py-2 bg-background/60"
-                                  >
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="font-semibold text-foreground">
-                                        {range.range ?? "—"}/{range.prefix ?? "—"}
-                                      </span>
-                                      {rdnsEditable && range.range && range.prefix != null && (
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            openIpv6RdnsDialog(
-                                              range.range!,
-                                              range.prefix!,
-                                            )
-                                          }
-                                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                                        >
-                                          <Edit2 className="h-3 w-3" />
-                                          Edit rDNS
-                                        </button>
-                                      )}
-                                    </div>
-                                    <span>
-                                      {range.region ?? "Region unknown"}
-                                    </span>
-                                    {range.routeTarget && (
-                                      <span>Route: {range.routeTarget}</span>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {(ipv6Info.ranges ?? []).length > 0 && (
-                            <div className="rounded-xl border border-border bg-card p-4 border bg-background/60">
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                Ranged allocations
-                              </p>
-                              <ul className="mt-2 space-y-2 text-xs text-gray-600 text-muted-foreground">
-                                {(ipv6Info.ranges ?? []).map((range, index) => (
-                                  <li
-                                    key={`range-${index}`}
-                                    className="flex flex-col gap-1 rounded-lg bg-muted/50 px-3 py-2 bg-background/60"
-                                  >
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="font-semibold text-foreground">
-                                        {range.range ?? "—"}/{range.prefix ?? "—"}
-                                      </span>
-                                      {rdnsEditable && range.range && range.prefix != null && (
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            openIpv6RdnsDialog(
-                                              range.range!,
-                                              range.prefix!,
-                                            )
-                                          }
-                                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                                        >
-                                          <Edit2 className="h-3 w-3" />
-                                          Edit rDNS
-                                        </button>
-                                      )}
-                                    </div>
-                                    <span>
-                                      {range.region ?? "Region unknown"}
-                                    </span>
-                                    {range.routeTarget && (
-                                      <span>Route: {range.routeTarget}</span>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {(ipv6Info.pools ?? []).length > 0 && (
-                            <div className="rounded-xl border border-border bg-card p-4 border bg-background/60">
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                Pool assignments
-                              </p>
-                              <ul className="mt-2 space-y-2 text-xs text-gray-600 text-muted-foreground">
-                                {(ipv6Info.pools ?? []).map((pool, index) => (
-                                  <li
-                                    key={`pool-${index}`}
-                                    className="flex flex-col gap-1 rounded-lg bg-muted/50 px-3 py-2 bg-background/60"
-                                  >
-                                    <span className="font-semibold text-foreground ">
-                                      {pool.range ?? "—"}/{pool.prefix ?? "—"}
-                                    </span>
-                                    <span>
-                                      {pool.region ?? "Region unknown"}
-                                    </span>
-                                    {pool.routeTarget && (
-                                      <span>Route: {pool.routeTarget}</span>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          No IPv6 assignments reported by the provider.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
+              <NetworkingTab
+                transferUsageTitle={transferUsageTitle}
+                transferUsageDescription={transferUsageDescription}
+                hasTransferData={hasTransferData}
+                transferUsagePercent={transferUsagePercent}
+                usageLabel={usageLabel}
+                usageUsedGb={usageUsedGb}
+                usageQuotaGb={usageQuotaGb}
+                accountTransferInfo={accountTransferInfo}
+                transferUsedGb={transferUsedGb}
+                transferRemainingGb={transferRemainingGb}
+                usageRemainingGb={usageRemainingGb}
+                effectiveBillableGb={effectiveBillableGb}
+                egressLoading={egressLoading}
+                egressBalance={egressBalance}
+                egressMonthlyUsed={egressMonthlyUsed}
+                publicIpv4Count={publicIpv4Count}
+                privateIpv4Count={privateIpv4Count}
+                rdnsEditable={rdnsEditable}
+                hasSlaacIpv6={hasSlaacIpv6}
+                totalIpv4Count={totalIpv4Count}
+                ipv4Categories={ipv4Categories}
+                rdnsEditor={rdnsEditor}
+                ipv6Info={ipv6Info}
+                slaacAddress={slaacAddress}
+                slaacCurrentValue={slaacCurrentValue}
+                slaacEditing={slaacEditing}
+                slaacSaving={slaacSaving}
+                canEditSlaacRdns={canEditSlaacRdns}
+                onHandleCopy={handleCopy}
+                onUpdateRdnsValue={updateRdnsValue}
+                onSaveRdns={saveRdns}
+                onCancelEditRdns={cancelEditRdns}
+                onBeginEditRdns={beginEditRdns}
+                onOpenIpv6RdnsDialog={openIpv6RdnsDialog}
+                formatStatusLabel={formatStatusLabel}
+                shouldDisplayRdns={shouldDisplayRdns}
+              />
             )}
 
             {activeTab === "activity" && (
-              <section className="rounded-2xl border border bg-card shadow-sm">
-                <div className="border-b border-border px-6 py-4 border">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Provider Activity Feed
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Recent VPS events for this instance.
-                  </p>
-                </div>
-                <div className="px-6 py-5">
-                  {eventFeed.length > 0 ? (
-                    <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                      {eventFeed.map((event) => (
-                        <div
-                          key={event.id}
-                          className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">
-                              {formatEventAction(event.action)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {event.message ||
-                                "No additional details provided."}
-                            </p>
-                            {event.entityLabel && (
-                              <p className="text-xs text-muted-foreground">
-                                Entity: {event.entityLabel}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground sm:items-end">
-                            <span>{formatDateTime(event.created)}</span>
-                            {event.username && <span>By {event.username}</span>}
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${statusBadgeClasses(event.status)}`}
-                            >
-                              {formatStatusLabel(event.status)}
-                            </span>
-                            {event.percentComplete !== null && (
-                              <span>{event.percentComplete}% complete</span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-input bg-background/30 px-4 py-6 text-center text-sm text-muted-foreground dark:bg-muted/20 dark:text-muted-foreground">
-                      No provider events recorded in the last 90 days.
-                    </div>
-                  )}
-                </div>
-              </section>
+              <ActivityTab
+                eventFeed={eventFeed}
+                formatEventAction={formatEventAction}
+                formatStatusLabel={formatStatusLabel}
+                statusBadgeClasses={statusBadgeClasses}
+                formatDateTime={formatDateTime}
+              />
             )}
 
             {activeTab === "firewall" && (
-              <section className="rounded-2xl border border bg-card shadow-sm">
-                <div className="border-b border-border px-6 py-4 border">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Firewall Management
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Firewalls attached to this instance and their rule
-                    summaries.
-                  </p>
-                </div>
-                <div className="px-6 py-5 space-y-4">
-                  <div className="rounded-2xl border border-border bg-card p-4 shadow-sm border bg-background/60">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground">
-                          Attach existing firewall
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          Assign a firewall from your catalogue to this server.
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                        <select
-                          className="w-full rounded-lg border border-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary border bg-background "
-                          value={
-                            selectedFirewallId === ""
-                              ? ""
-                              : String(selectedFirewallId)
-                          }
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            setSelectedFirewallId(
-                              value === "" ? "" : Number(value),
-                            );
-                          }}
-                          disabled={
-                            firewallAction === "attach" ||
-                            availableFirewallOptions.length === 0
-                          }
-                        >
-                          <option value="">— Select firewall —</option>
-                          {availableFirewallOptions.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.label || `Firewall ${option.id}`}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={handleAttachFirewall}
-                          disabled={
-                            firewallAction === "attach" ||
-                            selectedFirewallId === ""
-                          }
-                          className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary ${firewallAction === "attach" || selectedFirewallId === "" ? "bg-primary/40 text-primary-foreground/60 cursor-not-allowed" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
-                        >
-                          {firewallAction === "attach"
-                            ? "Attaching…"
-                            : "Attach firewall"}
-                        </button>
-                      </div>
-                    </div>
-                    {availableFirewallOptions.length === 0 && (
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        No unattached firewalls were returned by the provider.
-                      </p>
-                    )}
-                  </div>
-
-                  {firewallSummaries.length > 0 ? (
-                    firewallSummaries.map((firewall) => {
-                      const inbound = firewall.rules?.inbound ?? [];
-                      const outbound = firewall.rules?.outbound ?? [];
-                      const detachBusy =
-                        firewallAction === `detach-${firewall.id}`;
-                      return (
-                        <div
-                          key={firewall.id}
-                          className="rounded-2xl border border-border bg-card p-4 shadow-sm border bg-background/60"
-                        >
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                              <p className="text-base font-semibold text-foreground">
-                                {firewall.label || `Firewall ${firewall.id}`}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {firewall.created
-                                  ? `Created ${formatDateTime(firewall.created)}`
-                                  : "Creation date unknown"}
-                              </p>
-                              {firewall.tags.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                  {firewall.tags.map((tag) => (
-                                    <span
-                                      key={tag}
-                                      className="inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary dark:bg-primary/40 dark:text-primary"
-                                    >
-                                      #{tag}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex flex-col items-start gap-1 text-xs text-muted-foreground sm:items-end">
-                              <span
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${statusBadgeClasses(firewall.status)}`}
-                              >
-                                {formatStatusLabel(firewall.status)}
-                              </span>
-                              {firewall.pendingChanges && (
-                                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-200">
-                                  <AlertTriangle className="h-3.5 w-3.5" />
-                                  Pending changes
-                                </span>
-                              )}
-                              {firewall.updated && (
-                                <span>
-                                  Updated {formatRelativeTime(firewall.updated)}
-                                </span>
-                              )}
-                              {firewall.attachment?.id ? (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleDetachFirewall(
-                                      firewall.id,
-                                      firewall.attachment?.id ?? null,
-                                    )
-                                  }
-                                  disabled={detachBusy}
-                                  className={`mt-2 inline-flex items-center gap-1 rounded-lg border border-input px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary border  dark:hover:bg-gray-800 ${detachBusy ? "opacity-70" : ""}`}
-                                >
-                                  {detachBusy
-                                    ? "Detaching…"
-                                    : "Detach firewall"}
-                                </button>
-                              ) : null}
-                            </div>
-                          </div>
-                          <div className="mt-4 grid gap-4 md:grid-cols-2">
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                Inbound rules ({inbound.length})
-                              </p>
-                              {inbound.length > 0 ? (
-                                <ul className="mt-2 space-y-2 text-xs text-gray-600 text-muted-foreground">
-                                  {inbound.slice(0, 5).map((rule, index) => (
-                                    <li
-                                      key={`inbound-${firewall.id}-${index}`}
-                                      className="rounded-lg bg-muted/50 px-3 py-2 bg-background/60"
-                                    >
-                                      <p className="font-semibold text-foreground ">
-                                        {summarizeFirewallRule(rule)}
-                                      </p>
-                                      {rule.addresses?.ipv4 &&
-                                        rule.addresses.ipv4.length > 0 && (
-                                          <p>
-                                            IPv4:{" "}
-                                            {rule.addresses.ipv4.join(", ")}
-                                          </p>
-                                        )}
-                                      {rule.addresses?.ipv6 &&
-                                        rule.addresses.ipv6.length > 0 && (
-                                          <p>
-                                            IPv6:{" "}
-                                            {rule.addresses.ipv6.join(", ")}
-                                          </p>
-                                        )}
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                  No inbound rules.
-                                </p>
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                Outbound rules ({outbound.length})
-                              </p>
-                              {outbound.length > 0 ? (
-                                <ul className="mt-2 space-y-2 text-xs text-gray-600 text-muted-foreground">
-                                  {outbound.slice(0, 5).map((rule, index) => (
-                                    <li
-                                      key={`outbound-${firewall.id}-${index}`}
-                                      className="rounded-lg bg-muted/50 px-3 py-2 bg-background/60"
-                                    >
-                                      <p className="font-semibold text-foreground ">
-                                        {summarizeFirewallRule(rule)}
-                                      </p>
-                                      {rule.addresses?.ipv4 &&
-                                        rule.addresses.ipv4.length > 0 && (
-                                          <p>
-                                            IPv4:{" "}
-                                            {rule.addresses.ipv4.join(", ")}
-                                          </p>
-                                        )}
-                                      {rule.addresses?.ipv6 &&
-                                        rule.addresses.ipv6.length > 0 && (
-                                          <p>
-                                            IPv6:{" "}
-                                            {rule.addresses.ipv6.join(", ")}
-                                          </p>
-                                        )}
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                  No outbound rules.
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-input bg-muted/50 px-4 py-6 text-center text-sm text-muted-foreground">
-                      No firewalls are currently attached to this instance.
-                    </div>
-                  )}
-                </div>
-              </section>
+              <FirewallTab
+                firewallSummaries={firewallSummaries}
+                availableFirewallOptions={availableFirewallOptions}
+                selectedFirewallId={selectedFirewallId}
+                firewallAction={firewallAction}
+                onSelectedFirewallIdChange={setSelectedFirewallId}
+                onAttachFirewall={handleAttachFirewall}
+                onDetachFirewall={handleDetachFirewall}
+                summarizeFirewallRule={summarizeFirewallRule}
+                formatDateTime={formatDateTime}
+                formatRelativeTime={formatRelativeTime}
+                formatStatusLabel={formatStatusLabel}
+                statusBadgeClasses={statusBadgeClasses}
+              />
             )}
 
             {activeTab === "metrics" && (

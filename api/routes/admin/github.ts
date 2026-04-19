@@ -4,8 +4,8 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { fetchGitHubCommits } from '../services/githubService.js';
+import { authenticateToken, requireAdmin } from '../../middleware/auth.js';
+import { fetchGitHubCommits } from '../../services/githubService.js';
 
 const router = Router();
 

@@ -184,7 +184,11 @@ export class BillingService {
             } catch (error) {
               result.failedInstances.push(instance.id);
               result.errors.push(`Error billing VPS ${instance.label}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-              console.error(`❌ Error billing VPS ${instance.label}:`, error);
+              console.error('❌ Error billing VPS:', {
+                instanceId: instance.id,
+                label: instance.label,
+                error,
+              });
             }
           })
         );
@@ -430,7 +434,10 @@ export class BillingService {
         return { success: true, amountCharged: totalAmount, hoursCharged: hoursToCharge };
       });
     } catch (error) {
-      console.error(`Error billing VPS instance ${instance.id}:`, error);
+      console.error('Error billing VPS instance:', {
+        instanceId: instance.id,
+        error,
+      });
       return { success: false, amountCharged: 0, hoursCharged: 0 };
     }
   }
@@ -584,7 +591,10 @@ export class BillingService {
           await query('UPDATE vps_instances SET last_billed_at = NOW() WHERE id = $1', [vpsInstanceId]);
         } catch (updateErr) {
           // Do not fail initial billing if timestamp update fails
-          console.warn(`Initial billing succeeded but timestamp update failed for VPS ${label}:`, updateErr);
+          console.warn('Initial billing succeeded but timestamp update failed for VPS:', {
+            label,
+            error: updateErr,
+          });
         }
 
         console.log(`✅ Successfully charged initial hour for VPS ${label}`);
@@ -594,7 +604,10 @@ export class BillingService {
         return false;
       }
     } catch (error) {
-      console.error(`Error billing VPS creation for ${label}:`, error);
+      console.error('Error billing VPS creation:', {
+        label,
+        error,
+      });
       return false;
     }
   }
@@ -616,7 +629,10 @@ export class BillingService {
 
       console.log(`🛑 Stopped billing for VPS instance ${vpsInstanceId}`);
     } catch (error) {
-      console.error(`Error stopping billing for VPS ${vpsInstanceId}:`, error);
+      console.error('Error stopping billing for VPS:', {
+        vpsInstanceId,
+        error,
+      });
     }
   }
 

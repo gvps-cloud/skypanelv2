@@ -67,7 +67,7 @@ SkyPanelV2 is gvps-cloud's complete business operations platform for managing ou
 | -------------------- | ------------------------------------------------------------------------------- | ------------------- |
 | **Public Marketing** | Home, pricing, FAQ, about, contact, status, legal pages                         | Anonymous visitors  |
 | **Customer Portal**  | Dashboard, VPS management, billing, support, SSH console, organizations         | Authenticated users |
-| **Admin Dashboard**  | User management, billing ops, platform settings, provider config, impersonation | Admin users         |
+| **Admin Dashboard**  | User management, billing ops, volume pricing, platform settings, provider config, impersonation | Admin users         |
 
 
 ### Revenue Model
@@ -209,7 +209,7 @@ HOURLY BILLING CYCLE (runs every 60 minutes)
 ```text
 SSH CONSOLE ACCESS FLOW
 -----------------------------------------------------------------------------
-1. Browser (xterm.js) → WebSocket Server: ws://host/api/vps/:id/ssh?token=JWT&rows=x&cols=y
+1. Browser (xterm.js) → WebSocket Server: wss://host/api/vps/:id/ssh?token=JWT&rows=x&cols=y
 2. WebSocket Server → Auth module: verify JWT and membership
 3. Auth module → DB: fetch user + org membership → return success to WS server
 4. WS server → DB: load vps_instance (IP + encrypted password) scoped to user org
@@ -301,7 +301,6 @@ PAYMENT & WALLET FLOW
 | **Vite**                  | Build tool and HMR dev server                             |
 | **React Router v7**       | Client-side routing with route guards                     |
 | **TanStack Query**        | Server state management with caching & optimistic updates |
-| **Zustand**               | Lightweight client state management                       |
 | **shadcn/ui**             | Accessible component library (Radix UI primitives)        |
 | **Tailwind CSS**          | Utility-first styling                                     |
 | **React Hook Form + Zod** | Form validation with schema-based validation              |
@@ -410,14 +409,17 @@ Activity & Notifications
 
 Content & Configuration
   /api/faq, /api/contact, /api/theme, /api/pricing, /api/health,
-  /api/documentation, /api/announcements
+  /api/documentation, /api/announcements, /api/notes
 
 Admin Surface
-  /api/admin, /api/admin/platform, /api/admin/billing,
-  /api/admin/email-templates, /api/admin/contact,
-  /api/admin/faq, /api/admin/github, /api/admin/category-mappings,
-  /api/admin/ssh-keys, /api/admin/documentation,
-  /api/admin/networking, /api/admin/announcements
+  /api/admin/theme, /api/admin/rate-limits, /api/admin/tickets,
+  /api/admin/plans, /api/admin/providers, /api/admin/networking,
+  /api/admin/users, /api/admin/organizations, /api/admin/egress,
+  /api/admin/servers, /api/admin/stackscripts, /api/admin/upstream,
+  /api/admin/billing, /api/admin/volume-billing, /api/admin/email-templates,
+  /api/admin/contact, /api/admin/activity, /api/admin/announcements,
+  /api/admin/ssh-keys, /api/admin/category-mappings, /api/admin/platform,
+  /api/admin/faq, /api/admin/documentation, /api/admin/github
 ```
 
 **Core Routes:**
@@ -443,14 +445,27 @@ Admin Surface
 - `/api/theme` — theme presets
 - `/api/pricing` — public pricing data
 - `/api/health` — health check
+- `/api/notes` — personal and organization notes
 
 **Admin Routes (`/api/admin/`*):**
 
-- `/api/admin` — users, stats, impersonation
+- `/api/admin/theme` — theme presets
+- `/api/admin/rate-limits` — rate limit overrides and monitoring
+- `/api/admin/tickets` — support ticket operations
+- `/api/admin/plans` — VPS plan configuration
+- `/api/admin/providers` — provider configuration
+- `/api/admin/users` — user admin operations
+- `/api/admin/organizations` — organization admin operations
+- `/api/admin/egress` — egress pricing and execution
+- `/api/admin/servers` — server operations
+- `/api/admin/stackscripts` — StackScript configuration
+- `/api/admin/upstream` — upstream/provider sync settings
 - `/api/admin/platform` — platform settings
 - `/api/admin/billing` — billing management
+- `/api/admin/volume-billing` — volume type and billing management
 - `/api/admin/email-templates` — email template CRUD
 - `/api/admin/contact` — contact messages
+- `/api/admin/activity` — admin activity log
 - `/api/admin/faq` — FAQ management
 - `/api/admin/github` — GitHub integration
 - `/api/admin/category-mappings` — white-label categories
@@ -479,7 +494,7 @@ Incoming Request
 ```text
 SERVICE LAYER ARCHITECTURE
 -----------------------------------------------------------------------------
-HTTP Route Handlers (auth.ts, vps.ts, payments.ts, organizations.ts, support.ts)
+HTTP Route Handlers (auth.ts, payments.ts, organizations.ts, support.ts, route index modules under admin/ and vps/)
    ↓ delegate to
 Service Layer (authService, linodeService, billingService, paypalService,
               emailService, activityLogger, notificationService, invoiceService,
@@ -488,7 +503,7 @@ Service Layer (authService, linodeService, billingService, paypalService,
 Service Layer depends on:
   • Provider abstraction: ProviderFactory → IProviderService → LinodeProviderService/BaseProviderService
   • Shared libraries: database.ts, crypto.ts, providerTokens.ts, whiteLabel.ts, validation.ts
-  • Background workers: BillingCronService (24h reminders), Hourly Scheduler, NotificationService (LISTEN/NOTIFY)
+  • Background workers: hourly VPS billing, hourly egress billing, monthly egress finalization, NotificationService (LISTEN/NOTIFY)
 ```
 
 ### Provider Architecture (Linode)
@@ -872,7 +887,7 @@ npm run docs:api:audit   # Audit API documentation coverage
 
 # ─── Production ────────────────────────────────────
 npm run build            # Build for production
-npm run start            # Start production server + Vite preview
+npm run start            # Start production API server
 npm run pm2:start        # Build and start with PM2
 npm run pm2:reload       # Graceful PM2 reload
 npm run pm2:stop         # Stop PM2 processes
@@ -892,9 +907,9 @@ npm run pwa:icons        # Generate PWA icons
 ```text
 PRODUCTION ARCHITECTURE
 -----------------------------------------------------------------------------
-Internet → HTTPS (port 443) → Caddy reverse proxy (auto-SSL)
-  • Caddy proxies /api/* → skypanelv2-api (Express + WebSocket on port 3001, managed by PM2)
-  • Caddy proxies /* → skypanelv2-ui (Vite preview on port 5173, also under PM2)
+Internet → HTTPS (port 443) → reverse proxy
+  • Proxy forwards API traffic to `skypanelv2-api` on port 3001
+  • Proxy forwards frontend traffic to `skypanelv2-ui` on port 5173
 
 Backend integrations from skypanelv2-api:
   • PostgreSQL database
@@ -938,14 +953,14 @@ If your application is deployed behind Bunny CDN, you must enable the integratio
 # Clone and setup
 git clone https://github.com/gvps-cloud/skypanelv2.git
 cd skypanelv2
-npm install
+npm ci --ignore-scripts
 
 # Configure environment
 cp .env.example .env
 # Edit .env with production values
 
 # Setup database
-npm run db:fresh
+node scripts/run-migration.js
 npm run seed:admin
 
 # Build and start
@@ -975,7 +990,7 @@ pg_dump skypanelv2 > backup_$(date +%Y%m%d).sql
 
 # Update deployment
 git pull origin main
-npm install
+npm ci --ignore-scripts
 npm run build
 npm run pm2:reload
 ```
@@ -1074,9 +1089,19 @@ skypanelv2/
 │   │   │   ├── platform.ts           # Platform settings
 │   │   │   ├── sshKeys.ts            # Admin SSH key management
 │   │   │   ├── networking.ts         # rDNS and IPv6 config
-│   │   │   └── announcements.ts      # Platform announcements
+│   │   │   ├── announcements.ts      # Platform announcements
+│   │   │   ├── users.ts              # Admin users + impersonation
+│   │   │   ├── organizations.ts      # Admin organization operations
+│   │   │   ├── providers.ts          # Admin provider operations
+│   │   │   ├── plans.ts              # Admin VPS plan operations
+│   │   │   ├── servers.ts            # Admin server operations
+│   │   │   ├── tickets.ts            # Admin support operations
+│   │   │   ├── activity.ts           # Admin activity feed
+│   │   │   ├── documentation.ts      # Admin docs CRUD
+│   │   │   ├── volumePricing.ts      # Admin volume billing operations
+│   │   │   └── index.ts              # Admin route aggregator
 │   │   ├── auth.ts                   # Login, register, 2FA, password reset
-│   │   ├── vps.ts                    # VPS CRUD, actions, providers, plans
+│   │   ├── vps/                      # VPS route modules and aggregator
 │   │   ├── payments.ts               # PayPal order creation/capture
 │   │   ├── organizations.ts          # Org CRUD, members, invitations, roles
 │   │   ├── support.ts                # Ticket CRUD, replies
@@ -1085,7 +1110,6 @@ skypanelv2/
 │   │   ├── activity.ts               # User activity feed
 │   │   ├── activities.ts             # Activity logging
 │   │   ├── notifications.ts          # SSE notification stream
-│   │   ├── admin.ts                  # Admin user management, stats
 │   │   ├── adminFaq.ts               # Admin FAQ management
 │   │   ├── faq.ts                    # Public FAQ content
 │   │   ├── contact.ts                # Contact form submission

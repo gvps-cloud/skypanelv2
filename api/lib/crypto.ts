@@ -37,6 +37,8 @@ interface EncryptedPayload {
   ciphertext: string; // base64
 }
 
+const GCM_AUTH_TAG_LENGTH = 16;
+
 /**
  * Key configuration for encryption
  *
@@ -210,7 +212,13 @@ export function decryptSecret(encoded: string, type: 'ssh' | 'provider' = 'ssh')
     const tag = Buffer.from(payload.tag, 'base64');
     const ciphertext = Buffer.from(payload.ciphertext, 'base64');
 
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    if (tag.length !== GCM_AUTH_TAG_LENGTH) {
+      throw new Error('Invalid authentication tag length');
+    }
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv, {
+      authTagLength: GCM_AUTH_TAG_LENGTH,
+    });
     decipher.setAuthTag(tag);
 
     const plaintext = Buffer.concat([
@@ -220,7 +228,14 @@ export function decryptSecret(encoded: string, type: 'ssh' | 'provider' = 'ssh')
 
     return plaintext;
   } catch (err) {
-    console.error(`decryptSecret: failed to decrypt with key version '${keyVersion}'. Ensure the correct secret is configured.`, err);
+    console.error(
+      'decryptSecret: failed to decrypt provider secret',
+      {
+        keyVersion,
+        message: 'Ensure the correct secret is configured.',
+      },
+      err,
+    );
     throw err;
   }
 }

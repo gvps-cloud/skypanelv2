@@ -5,7 +5,7 @@ import {
   loadProviderTokenById,
   normalizeImageTemplate,
 } from "./shared/utils.js";
-import { handleProviderError } from '../../lib/errorHandling.js';
+import { handleProviderError, sendSafeErrorResponse } from '../../lib/errorHandling.js';
 
 const router = express.Router();
 
@@ -39,8 +39,8 @@ router.get("/apps", async (req: Request, res: Response) => {
           script = await linodeService.getStackScript(id);
         } catch (err) {
           console.warn(
-            `Configured StackScript ${id} could not be loaded:`,
-            err?.message || err,
+            'Configured StackScript could not be loaded',
+            { stackscriptId: id, error: err?.message || String(err) },
           );
           continue;
         }
@@ -69,10 +69,7 @@ router.get("/apps", async (req: Request, res: Response) => {
 
     res.json({ apps });
   } catch (err: any) {
-    console.error("Configured apps fetch error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to fetch configured apps" });
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to fetch configured apps" });
   }
 });
 
@@ -171,7 +168,7 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
               scriptMap.set(single.id, single);
             }
           } catch (err) {
-            console.warn(`Failed to fetch StackScript ${stackscriptId}:`, err);
+            console.warn('Failed to fetch StackScript', { stackscriptId }, err);
           }
         }
 
@@ -220,10 +217,7 @@ router.get("/stackscripts", async (req: Request, res: Response) => {
     });
     return res.json({ stackscripts });
   } catch (err: any) {
-    console.error("StackScripts fetch error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to fetch stack scripts" });
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to fetch stack scripts" });
   }
 });
 

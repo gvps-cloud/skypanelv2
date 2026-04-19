@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiClient } from "@/lib/api";
 import {
   Table,
   TableBody,
@@ -96,7 +97,7 @@ export default function TeamSettings({
   organizationName: propOrganizationName,
   onOrganizationUpdated,
 }: TeamSettingsProps = {}) {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [roles, setRoles] = useState<OrganizationRole[]>([]);
@@ -157,13 +158,7 @@ export default function TeamSettings({
     }
 
     try {
-      const response = await fetch(`/api/organizations/${orgId}/members`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch members");
-
-      const data = await response.json();
+      const data = await apiClient.get<OrganizationMember[]>(`/api/organizations/${orgId}/members`);
       setMembers(data);
     } catch (error) {
       console.error("Error fetching members:", error);
@@ -177,13 +172,7 @@ export default function TeamSettings({
     if (!orgId || orgId === "default-org-id") return;
 
     try {
-      const response = await fetch(`/api/organizations/${orgId}/invitations`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch invitations");
-
-      const data = await response.json();
+      const data = await apiClient.get<PendingInvitation[]>(`/api/organizations/${orgId}/invitations`);
       setInvitations(data);
     } catch (error) {
       console.error("Error fetching invitations:", error);
@@ -194,13 +183,7 @@ export default function TeamSettings({
     if (!orgId || orgId === "default-org-id") return;
 
     try {
-      const response = await fetch(`/api/organizations/${orgId}/roles`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch roles");
-
-      const data = await response.json();
+      const data = await apiClient.get<OrganizationRole[]>(`/api/organizations/${orgId}/roles`);
       setRoles(data);
     } catch (error) {
       console.error("Error fetching roles:", error);
@@ -208,13 +191,13 @@ export default function TeamSettings({
   };
 
   useEffect(() => {
-    if (token && orgId) {
+    if (orgId) {
       fetchMembers();
       fetchInvitations();
       fetchRoles();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, orgId]);
+  }, [orgId]);
 
   useEffect(() => {
     setOrganizationName(propOrganizationName ?? "");
@@ -238,24 +221,10 @@ export default function TeamSettings({
 
     setInviteLoading(true);
     try {
-      const response = await fetch(`/api/organizations/${orgId}/members/invite`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          email: inviteEmail,
-          roleId: inviteRoleId,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to invite member");
-      }
-
-      const data = await response.json();
+      const data = await apiClient.post<{ emailSent?: boolean; emailError?: string }>(
+        `/api/organizations/${orgId}/members/invite`,
+        { email: inviteEmail, roleId: inviteRoleId }
+      );
       
       if (data.emailSent === false) {
         toast.warning(`Invitation created but email failed to send: ${data.emailError || 'Unknown error'}`);
@@ -279,18 +248,7 @@ export default function TeamSettings({
     if (orgId === "default-org-id") return;
 
     try {
-      const response = await fetch(
-        `/api/organizations/invitations/${cancelModal.invitationId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to cancel invitation");
-      }
+      await apiClient.delete(`/api/organizations/invitations/${cancelModal.invitationId}`);
 
       toast.success("Invitation cancelled successfully");
       setCancelModal({ isOpen: false, invitationId: "", email: "" });
@@ -306,18 +264,7 @@ export default function TeamSettings({
     if (!confirm("Are you sure you want to remove this member?")) return;
 
     try {
-      const response = await fetch(
-        `/api/organizations/${orgId}/members/${memberId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to remove member");
-      }
+      await apiClient.delete(`/api/organizations/${orgId}/members/${memberId}`);
 
       toast.success("Member removed successfully");
       setMembers(members.filter((m) => m.id !== memberId));
@@ -336,22 +283,10 @@ export default function TeamSettings({
     }
 
     try {
-      const response = await fetch(
+      await apiClient.put(
         `/api/organizations/${orgId}/members/${updateRoleModal.memberId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ roleId: newMemberRoleId }),
-        }
+        { roleId: newMemberRoleId }
       );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update role");
-      }
 
       toast.success("Role updated successfully");
       setUpdateRoleModal({ isOpen: false, memberId: "", memberName: "", currentRoleId: "" });
@@ -366,27 +301,16 @@ export default function TeamSettings({
   const handleRoleSave = async (roleData: { name: string; permissions: string[] }) => {
     setRoleLoading(true);
     try {
-      const url = editingRole
-        ? `/api/organizations/${orgId}/roles/${editingRole.id}`
-        : `/api/organizations/${orgId}/roles`;
-
-      const method = editingRole ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: roleData.name,
-          permissions: roleData.permissions,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to ${editingRole ? "update" : "create"} role`);
+      if (editingRole) {
+        await apiClient.put(
+          `/api/organizations/${orgId}/roles/${editingRole.id}`,
+          { name: roleData.name, permissions: roleData.permissions }
+        );
+      } else {
+        await apiClient.post(
+          `/api/organizations/${orgId}/roles`,
+          { name: roleData.name, permissions: roleData.permissions }
+        );
       }
 
       toast.success(`${editingRole ? "Role updated" : "Role created"} successfully`);
@@ -405,18 +329,7 @@ export default function TeamSettings({
     if (orgId === "default-org-id") return;
 
     try {
-      const response = await fetch(
-        `/api/organizations/${orgId}/roles/${deleteRoleModal.roleId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to delete role");
-      }
+      await apiClient.delete(`/api/organizations/${orgId}/roles/${deleteRoleModal.roleId}`);
 
       toast.success("Role deleted successfully");
       setDeleteRoleModal({ isOpen: false, roleId: "", roleName: "" });
@@ -440,30 +353,19 @@ export default function TeamSettings({
 
     setOrganizationSaving(true);
     try {
-      const response = await fetch(`/api/organizations/${orgId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: organizationName.trim(),
-        }),
-      });
+      const data = await apiClient.put<{ organization?: { id: string; name: string } }>(
+        `/api/organizations/${orgId}`,
+        { name: organizationName.trim() }
+      );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to update organization");
-      }
-
-      setOrganizationName(data.organization?.name || organizationName.trim());
+      const org = 'organization' in data ? (data as any).organization : data;
+      setOrganizationName(org?.name || organizationName.trim());
       toast.success("Organization renamed successfully");
 
-      if (onOrganizationUpdated && data.organization) {
+      if (onOrganizationUpdated && org) {
         await onOrganizationUpdated({
-          id: data.organization.id,
-          name: data.organization.name,
+          id: org.id,
+          name: org.name,
         });
       }
     } catch (error: any) {

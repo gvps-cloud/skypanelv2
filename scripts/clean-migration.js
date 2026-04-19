@@ -8,16 +8,14 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import pg from 'pg';
 import dotenv from 'dotenv';
+import { createScriptPool } from './lib/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables
 dotenv.config({ path: join(__dirname, '..', '.env') });
-
-const { Pool } = pg;
 
 async function cleanMigration() {
   console.log('🧹 Starting Clean SkyPanelV2 PostgreSQL Migration...\n');
@@ -27,12 +25,7 @@ async function cleanMigration() {
     process.exit(1);
   }
 
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
+  const pool = createScriptPool();
 
   try {
     // Test connection

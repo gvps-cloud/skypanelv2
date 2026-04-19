@@ -103,9 +103,7 @@ const TransactionDetail: React.FC = () => {
       const apiBase = import.meta.env.VITE_API_URL || '/api';
       const downloadUrl = `${apiBase}/invoices/${result.invoiceId}/download`;
       const response = await fetch(downloadUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: 'include',
       });
 
       if (!response.ok) {

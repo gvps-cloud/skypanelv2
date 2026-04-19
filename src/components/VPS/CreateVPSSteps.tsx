@@ -18,7 +18,6 @@ interface CreateVPSStepsProps {
   providerType: ProviderType;
   formData: CreateVPSForm;
   onFormChange: (updates: Partial<CreateVPSForm>) => void;
-  token: string;
 
   // Linode-specific props
   linodeStackScripts?: any[];
@@ -55,7 +54,6 @@ export const CreateVPSSteps: React.FC<CreateVPSStepsProps> = ({
   step,
   formData,
   onFormChange,
-  token,
   linodeStackScripts = [],
   selectedStackScript = null,
   onStackScriptSelect = () => {},
@@ -157,7 +155,6 @@ export const CreateVPSSteps: React.FC<CreateVPSStepsProps> = ({
     return (
       <div className="space-y-4">
         <LinodeConfiguration
-          token={token}
           formData={formData}
           onChange={onFormChange}
         />

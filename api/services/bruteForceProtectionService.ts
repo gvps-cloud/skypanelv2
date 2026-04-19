@@ -268,7 +268,11 @@ export async function trackFailedAttempt(ipAddress: string, email: string): Prom
       console.warn(`[Brute force] (in-memory): ${type} ${id} - Failed attempt ${attempts}${lockedUntil ? `, locked until ${new Date(lockedUntil).toISOString()}` : ''}`);
 
     } catch (error) {
-      console.error(`[Brute force] Failed to track attempt for ${type} ${id}:`, error);
+      console.error('[Brute force] Failed to track attempt:', {
+        type,
+        id,
+        error,
+      });
     }
   }
 }
@@ -354,7 +358,11 @@ export async function isLockedOut(
       }
 
     } catch (error) {
-      console.error(`[Brute force] Failed to check lockout for ${type} ${id}:`, error);
+      console.error('[Brute force] Failed to check lockout:', {
+        type,
+        id,
+        error,
+      });
     }
   }
 
@@ -407,7 +415,11 @@ export async function resetAttempts(ipAddress: string, email?: string): Promise<
       console.log(`[Brute force] (in-memory): Reset ${type} ${id} after successful login`);
 
     } catch (error) {
-      console.error(`[Brute force] Failed to reset ${type} ${id}:`, error);
+      console.error('[Brute force] Failed to reset attempts:', {
+        type,
+        id,
+        error,
+      });
     }
   }
 }

@@ -2,6 +2,8 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 
 const toHex = (value: number) => value.toString(16).padStart(2, "0");
 
+const stripPercent = (value: string) => value.replace(/%/g, "");
+
 const parseHslComponents = (value: string): [number, number, number] | null => {
   const parts = value.trim().split(/\s+/);
   if (parts.length < 3) {
@@ -10,8 +12,8 @@ const parseHslComponents = (value: string): [number, number, number] | null => {
 
   const [hRaw, sRaw, lRaw] = parts;
   const h = Number.parseFloat(hRaw);
-  const s = Number.parseFloat(sRaw.replace('%', ''));
-  const l = Number.parseFloat(lRaw.replace('%', ''));
+  const s = Number.parseFloat(stripPercent(sRaw));
+  const l = Number.parseFloat(stripPercent(lRaw));
 
   if ([h, s, l].some((component) => Number.isNaN(component))) {
     return null;

@@ -1,18 +1,14 @@
 import dotenv from 'dotenv';
-import pg from 'pg';
 import bcrypt from 'bcryptjs';
+import { createScriptPool } from './lib/database.js';
 
 dotenv.config();
-const { Pool } = pg;
 
 async function run() {
   const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com';
   const password = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin123#';
   console.log(`🔐 Updating admin password hash to bcryptjs(12) for admin user (${adminEmail})...`);
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  });
+  const pool = createScriptPool();
 
   try {
     const client = await pool.connect();

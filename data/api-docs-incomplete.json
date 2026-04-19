@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-04-19T17:53:26.890Z",
+  "totalIncomplete": 1,
+  "endpoints": [
+    {
+      "key": "GET /api/auth/debug/user",
+      "section": "Authentication & Profile",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    }
+  ]
+}

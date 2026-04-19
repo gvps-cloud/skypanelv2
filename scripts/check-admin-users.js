@@ -2,17 +2,12 @@
  * Check admin users in the database
  */
 
-import pg from 'pg';
 import dotenv from 'dotenv';
+import { createScriptPool } from './lib/database.js';
 
 dotenv.config();
 
-const { Pool } = pg;
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false }
-});
+const pool = createScriptPool();
 
 async function checkAdminUsers() {
   console.log('🔍 Checking for admin users...\n');

@@ -98,7 +98,8 @@ router.get(
               });
             } catch (tokenErr) {
               console.warn(
-                `Admin servers: failed to normalize API token for provider ${provider.id}`,
+                'Admin servers: failed to normalize API token for provider',
+                { providerId: provider.id },
                 tokenErr,
               );
               providerSecrets.set(provider.id, {
@@ -206,7 +207,8 @@ router.get(
                 }
               } catch (detailErr) {
                 console.warn(
-                  `Admin servers: unable to refresh Linode instance ${row.provider_instance_id}`,
+                  'Admin servers: unable to refresh Linode instance',
+                  { providerInstanceId: row.provider_instance_id },
                   detailErr,
                 );
               }

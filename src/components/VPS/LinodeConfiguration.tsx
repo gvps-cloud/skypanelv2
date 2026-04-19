@@ -5,6 +5,7 @@ import { SSHKeyAccordionSelect } from './SSHKeyAccordionSelect';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { CreateVPSForm } from '@/types/vps';
+import { apiClient } from '@/lib/api';
 import { getUserFriendlyErrorMessage } from '@/lib/providerErrors';
 import { BackupConfiguration } from './BackupConfiguration';
 import { CostSummary } from './CostSummary';
@@ -19,13 +20,11 @@ interface SSHKey {
 interface LinodeConfigurationProps {
   formData: Partial<CreateVPSForm>;
   onChange: (updates: Partial<CreateVPSForm>) => void;
-  token: string;
 }
 
 export default function LinodeConfiguration({
   formData,
   onChange,
-  token,
 }: LinodeConfigurationProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [sshKeys, setSshKeys] = useState<SSHKey[]>([]);
@@ -40,17 +39,7 @@ export default function LinodeConfiguration({
         setLoadingKeys(true);
         setKeysError(null);
         const providerId = formData.provider_id || 'active';
-        const response = await fetch(`/api/vps/providers/${providerId}/ssh-keys`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw data.error || { message: 'Failed to fetch SSH keys' };
-        }
+        const data = await apiClient.get<{ ssh_keys?: SSHKey[] }>(`/api/vps/providers/${providerId}/ssh-keys`);
 
         setSshKeys(data.ssh_keys || []);
       } catch (err: any) {
@@ -63,7 +52,7 @@ export default function LinodeConfiguration({
     };
 
     fetchSSHKeys();
-  }, [token, formData.provider_id]);
+  }, [formData.provider_id]);
 
   // Validate password strength
   const validatePassword = (password: string): string => {
@@ -205,7 +194,6 @@ export default function LinodeConfiguration({
             backupFrequency={formData.backup_frequency || "weekly"}
             onBackupsChange={(enabled) => onChange({ backups: enabled })}
             onFrequencyChange={(frequency) => onChange({ backup_frequency: frequency })}
-            token={token}
           />
         )}
 
@@ -234,7 +222,6 @@ export default function LinodeConfiguration({
           planId={formData.type}
           backupsEnabled={formData.backups || false}
           backupFrequency={formData.backup_frequency || "none"}
-          token={token}
         />
       )}
 

@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { buildApiUrl } from '@/lib/api';
-import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import type { RateLimitMetrics, RateLimitHealthResponse, RateLimitOverrideSummary } from './types';
 import { normalizeHealthResponse, normalizeOverride } from './normalize';
 
 export function useRateLimitData() {
-  const { token } = useAuth();
   const [metrics, setMetrics] = useState<RateLimitMetrics | null>(null);
   const [healthCheck, setHealthCheck] = useState<RateLimitHealthResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -16,19 +14,9 @@ export function useRateLimitData() {
   const [overrides, setOverrides] = useState<RateLimitOverrideSummary[]>([]);
   const [overridesLoading, setOverridesLoading] = useState(false);
 
-  const authHeader = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
-
   const fetchMetrics = useCallback(async () => {
     try {
-      const response = await fetch(buildApiUrl('/api/health/metrics?window=15'), {
-        headers: authHeader,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch metrics: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ metrics?: RateLimitMetrics }>('/api/health/metrics?window=15');
       if (!data?.metrics) {
         throw new Error('Metrics response missing metrics payload');
       }
@@ -38,39 +26,23 @@ export function useRateLimitData() {
       console.error('Failed to fetch rate limit metrics:', error);
       toast.error('Failed to load rate limiting metrics');
     }
-  }, [authHeader]);
+  }, []);
 
   const fetchHealthCheck = useCallback(async () => {
     try {
-      const response = await fetch(buildApiUrl('/api/health/rate-limiting'), {
-        headers: authHeader,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch health check: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get('/api/health/rate-limiting');
       const normalizedHealth = normalizeHealthResponse(data);
       setHealthCheck(normalizedHealth);
     } catch (error: any) {
       console.error('Failed to fetch rate limit health check:', error);
       toast.error('Failed to load rate limiting health status');
     }
-  }, [authHeader]);
+  }, []);
 
   const fetchOverrides = useCallback(async () => {
     setOverridesLoading(true);
     try {
-      const response = await fetch(buildApiUrl('/api/admin/rate-limits/overrides'), {
-        headers: authHeader,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch overrides: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ overrides?: RateLimitOverrideSummary[] }>('/api/admin/rate-limits/overrides');
       const overridesPayload: RateLimitOverrideSummary[] = Array.isArray(data.overrides)
         ? data.overrides.map(normalizeOverride)
         : [];
@@ -83,7 +55,7 @@ export function useRateLimitData() {
     } finally {
       setOverridesLoading(false);
     }
-  }, [authHeader]);
+  }, []);
 
   const defaultAuthenticatedLimit = useMemo(() => {
     if (!healthCheck) return 0;

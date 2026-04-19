@@ -13,18 +13,16 @@
  *                    for each plan (requires manual review after migration)
  */
 
-import pg from 'pg';
 import dotenv from 'dotenv';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createScriptPool } from './lib/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables
 dotenv.config({ path: join(__dirname, '..', '.env') });
-
-const { Pool } = pg;
 
 // Linode API integration
 async function fetchLinodeTypes(providerApiKey) {
@@ -83,10 +81,7 @@ async function migrateVPSPPlanTypeClass(addRegions = false) {
     process.exit(1);
   }
 
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-  });
+  const pool = createScriptPool();
 
   try {
     const client = await pool.connect();

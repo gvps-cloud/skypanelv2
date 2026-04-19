@@ -116,7 +116,7 @@ const parseHslCssVar = (
   }
   const parts = raw
     .split(/[,\s]+/)
-    .map((part) => Number.parseFloat(part.replace('%', '')))
+    .map((part) => Number.parseFloat(part.replace(/%/g, '')))
     .filter((part) => Number.isFinite(part));
 
   if (parts.length < 3) {

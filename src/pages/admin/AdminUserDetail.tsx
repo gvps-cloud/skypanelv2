@@ -114,7 +114,6 @@ interface AdminUserDetailResponse {
 const AdminUserDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { token } = useAuth();
   const { startImpersonation } = useImpersonation();
   const queryClient = useQueryClient();
 
@@ -152,36 +151,27 @@ const AdminUserDetail: React.FC = () => {
         throw new Error('Invalid user ID format');
       }
 
-      const response = await fetch(`/api/admin/users/${id}/detail`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      try {
+        const result = await apiClient.get<AdminUserDetailResponse>(`/admin/users/${id}/detail`);
 
-      if (!response.ok) {
-        if (response.status === 404) {
+        if (!result.user || !result.user.id) {
+          throw new Error('Invalid response format');
+        }
+
+        return result;
+      } catch (error: any) {
+        if (error?.status === 404) {
           throw new Error('User not found');
-        } else if (response.status === 403) {
+        } else if (error?.status === 403) {
           throw new Error('Access denied');
-        } else if (response.status >= 500) {
+        } else if ((error?.status ?? 0) >= 500) {
           throw new Error('Server error - please try again');
         }
 
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch user details`);
+        throw error;
       }
-
-      const result = await response.json();
-
-      // Validate response structure
-      if (!result.user || !result.user.id) {
-        throw new Error('Invalid response format');
-      }
-
-      return result;
     },
-    enabled: !!id && !!token,
+    enabled: !!id,
     retry: (failureCount, error: any) => {
       // Don't retry on 404 or 403 errors
       if (error?.message?.includes('not found') || error?.message?.includes('Access denied')) {
@@ -198,26 +188,17 @@ const AdminUserDetail: React.FC = () => {
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/admin/users/${id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 403) {
+      try {
+        return await apiClient.delete(`/admin/users/${id}`);
+      } catch (error: any) {
+        if (error?.status === 403) {
           throw new Error('You do not have permission to delete this user');
-        } else if (response.status === 404) {
+        } else if (error?.status === 404) {
           throw new Error('User not found');
         }
 
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to delete user`);
+        throw error;
       }
-
-      return response.json().catch(() => ({}));
     },
     onSuccess: (_deletedUser) => {
       const userName = user?.name || 'User';

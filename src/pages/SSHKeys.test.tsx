@@ -56,14 +56,14 @@ describe('SSHKeys page', () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input.toString();
 
-      if (url === '/api/ssh-keys' && (!init?.method || init.method === 'GET')) {
+      if (url.endsWith('/api/ssh-keys') && (!init?.method || init.method === 'GET')) {
         return new Response(JSON.stringify(sshKeysResponse), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });
       }
 
-      if (url === '/api/ssh-keys/ssh-1' && init?.method === 'DELETE') {
+      if (url.endsWith('/api/ssh-keys/ssh-1') && init?.method === 'DELETE') {
         return new Response(
           JSON.stringify({
             success: true,
@@ -115,7 +115,7 @@ describe('SSHKeys page', () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        '/api/ssh-keys/ssh-1',
+        expect.stringContaining('/api/ssh-keys/ssh-1'),
         expect.objectContaining({
           method: 'DELETE',
         })

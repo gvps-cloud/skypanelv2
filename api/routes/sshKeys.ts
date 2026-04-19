@@ -139,20 +139,25 @@ async function getProviderTokens(): Promise<{ linode?: string }> {
        WHERE active = true AND type = 'linode'`
     );
     
-    console.log(`📊 Database query returned ${result.rows.length} active provider(s):`, 
-      result.rows.map((r: any) => r.type).join(', ') || 'none'
-    );
+    console.log('📊 Database query returned active providers', {
+      count: result.rows.length,
+      providers: result.rows.map((r: any) => r.type).join(', ') || 'none',
+    });
     
     const tokens: { linode?: string } = {};
     
     for (const row of result.rows) {
       try {
-        console.log(`🔓 Attempting to decrypt ${row.type} API token...`);
+        console.log('🔓 Attempting to decrypt provider API token', {
+          providerType: row.type,
+        });
         const decrypted = decryptSecret(row.api_key_encrypted);
         
         // Validate token is non-empty
         if (!decrypted || decrypted.trim().length === 0) {
-          console.error(`❌ Decrypted ${row.type} token is empty or invalid`);
+          console.error('❌ Decrypted provider token is empty or invalid', {
+            providerType: row.type,
+          });
           continue;
         }
         
@@ -161,13 +166,17 @@ async function getProviderTokens(): Promise<{ linode?: string }> {
           ? `${decrypted.substring(0, 4)}...${decrypted.substring(decrypted.length - 4)}`
           : '****';
         
-        console.log(`✅ Successfully decrypted ${row.type} token: ${maskedToken}`);
+        console.log('✅ Successfully decrypted provider token', {
+          providerType: row.type,
+          maskedToken,
+        });
         
         if (row.type === 'linode') {
           tokens.linode = decrypted;
         }
       } catch (error: any) {
-        console.error(`❌ Failed to decrypt ${row.type} API token:`, {
+        console.error('❌ Failed to decrypt provider API token', {
+          providerType: row.type,
           error: error.message,
           stack: error.stack
         });

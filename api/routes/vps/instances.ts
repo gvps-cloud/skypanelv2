@@ -372,10 +372,7 @@ router.get("/", async (req: Request, res: Response) => {
 
     res.json({ instances: enriched });
   } catch (err: any) {
-    console.error("VPS list error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to fetch VPS instances" });
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to fetch VPS instances" });
   }
 });
 
@@ -910,7 +907,8 @@ router.get("/:id", async (req: Request, res: Response) => {
                 }
               } catch (deviceErr) {
                 console.warn(
-                  `Failed to fetch firewall devices for ${firewallId}:`,
+                  'Failed to fetch firewall devices',
+                  { firewallId },
                   deviceErr,
                 );
               }
@@ -1079,10 +1077,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
-    console.error("VPS detail error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to fetch VPS instance details" });
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to fetch VPS instance details" });
   }
 });
 
@@ -1730,10 +1725,7 @@ router.post("/", async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
-    console.error("VPS create error:", err);
-    res
-      .status(500)
-      .json({ error: err.message || "Failed to create VPS instance" });
+    sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to create VPS instance" });
   }
 });
 // Instance actions: boot

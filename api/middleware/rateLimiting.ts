@@ -288,8 +288,11 @@ interface LimitConfig {
 function getBaseLimitConfig(userType: UserType): LimitConfig {
   const rateLimitConfig = config.rateLimiting;
 
-  // Check if we're in development mode and apply MUCH higher limits
-  const isDevelopment = process.env.NODE_ENV === "development";
+  // Check if we're in development or test mode and apply MUCH higher limits.
+  // Vitest shares this module-level in-memory state across many requests, so the
+  // higher test limit keeps unrelated suites from tripping each other's counters.
+  const isDevelopment =
+    process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
 
   // Admin users in development get completely unlimited access
   if (userType === "admin" && isDevelopment) {
@@ -834,12 +837,22 @@ export async function checkRateLimit(req: Request): Promise<{
 
 /**
  * Login endpoint rate limiter
- * Limits: 5 attempts per IP address per 15 minutes
+ * Limits: 5 attempts per IP address per 15 minutes (500 in development)
  * This works in conjunction with the brute force protection service
+ *
+ * In development mode:
+ * - Limits are automatically multiplied by 100x for easier testing
+ * - Can be completely disabled using RATE_LIMIT_LOGIN_SKIP_IN_DEV=true (default in dev)
  */
 export const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window
+
+  // 100x multiplier in development/test for easier testing
+  max:
+    config.NODE_ENV === "development" || config.NODE_ENV === "test"
+      ? 5 * 100 // 500 attempts in development/test
+      : 5, // 5 attempts in production
+
   message: {
     error: "Too many login attempts",
     message:
@@ -849,6 +862,15 @@ export const loginRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
+
+  // Skip the limiter entirely in development/test if configured (default: true)
+  skip: (_req: Request) => {
+    return (
+      (config.NODE_ENV === "development" || config.NODE_ENV === "test") &&
+      config.rateLimiting.loginSkipInDevelopment
+    );
+  },
+
   keyGenerator: (req: Request) => {
     // Use IP address as the key for login attempts
     const ipResult = getClientIP(req, {
@@ -894,10 +916,10 @@ export const passwordResetRateLimiter = rateLimit({
   // Calculate window based on config
   windowMs: config.rateLimiting.passwordResetWindowMs,
 
-  // Calculate max requests based on config and development mode
+  // Calculate max requests based on config and development/test mode
   max:
-    config.NODE_ENV === "development"
-      ? config.rateLimiting.passwordResetMaxRequests * 100 // 100x multiplier in development
+    config.NODE_ENV === "development" || config.NODE_ENV === "test"
+      ? config.rateLimiting.passwordResetMaxRequests * 100 // 100x multiplier in development/test
       : config.rateLimiting.passwordResetMaxRequests,
 
   message: {
@@ -910,10 +932,10 @@ export const passwordResetRateLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: false,
 
-  // Skip the limiter entirely in development if configured
+  // Skip the limiter entirely in development/test if configured
   skip: (_req: Request) => {
     return (
-      config.NODE_ENV === "development" &&
+      (config.NODE_ENV === "development" || config.NODE_ENV === "test") &&
       config.rateLimiting.passwordResetSkipInDevelopment
     );
   },
@@ -938,7 +960,7 @@ export const passwordResetRateLimiter = rateLimit({
       path: req.path,
       timestamp: new Date().toISOString(),
       maxRequests:
-        config.NODE_ENV === "development"
+        config.NODE_ENV === "development" || config.NODE_ENV === "test"
           ? config.rateLimiting.passwordResetMaxRequests * 100
           : config.rateLimiting.passwordResetMaxRequests,
       windowMs: config.rateLimiting.passwordResetWindowMs,

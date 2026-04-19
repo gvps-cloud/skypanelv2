@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Globe, MapPin } from "lucide-react";
 
 import { SearchableOptionSelect } from "@/components/VPS/SearchableOptionSelect";
+import { apiClient } from "@/lib/api";
 import type { ProviderRegion } from "@/types/vps";
 
 const COUNTRY_CODES: Record<string, string> = {
@@ -102,7 +103,6 @@ interface RegionSelectorProps {
   providerId: string;
   selectedRegion: string;
   onSelect: (regionId: string) => void;
-  token: string;
   disabled?: boolean;
   filterByCapabilities?: string[];
   typeClass?: string; // VPS plan type_class to filter regions by available plans
@@ -112,7 +112,6 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
   providerId,
   selectedRegion,
   onSelect,
-  token,
   disabled = false,
   filterByCapabilities,
   typeClass,
@@ -166,15 +165,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
           ? `/api/vps/providers/${providerId}/regions?type_class=${encodeURIComponent(typeClass)}`
           : `/api/vps/providers/${providerId}/regions`;
 
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to fetch regions");
-        }
+        const data = await apiClient.get<{ regions?: ProviderRegion[] }>(url);
 
         setRegions(data.regions || []);
       } catch (err: any) {
@@ -187,7 +178,7 @@ export const RegionSelector: React.FC<RegionSelectorProps> = ({
     };
 
     fetchRegions();
-  }, [providerId, token, typeClass]);
+  }, [providerId, typeClass]);
 
   const emptyMessage =
     filterByCapabilities && filterByCapabilities.length > 0

@@ -319,6 +319,11 @@ This implementation plan breaks down the Production Readiness Plan v2 into actio
     - Mount exception routes BEFORE admin guard
     - Mount all sub-routers after guard
     - _Requirements: 4.3_
+
+  - [x] 20.4.a Preserve `POST /api/admin/impersonation/exit` during split
+    - Root alias added in `api/routes/admin/index.ts`
+    - Shared handler extracted from `users.ts`
+    - _Requirements: 4.3_
   
   - [~] 20.5 Update `api/app.ts` to import from new admin router location
     - Update import path
@@ -534,17 +539,18 @@ This implementation plan breaks down the Production Readiness Plan v2 into actio
 
 - [~] 35. Create admin volume pricing UI
   - [~] 35.1 Create `api/routes/admin/volumePricing.ts`
-    - GET /api/admin/volume-pricing — list all pricing
-    - POST /api/admin/volume-pricing — create pricing entry
-    - PUT /api/admin/volume-pricing/:id — update pricing entry
-    - DELETE /api/admin/volume-pricing/:id — delete pricing entry
+    - GET /api/admin/volume-billing/volume-types — list all volume types
+    - POST /api/admin/volume-billing/volume-types — create volume type
+    - PUT /api/admin/volume-billing/volume-types/:id — update volume type
+    - DELETE /api/admin/volume-billing/volume-types/:id — delete volume type
     - Apply `requireAdmin` middleware
     - _Requirements: 6.2_
-  
+
   - [~] 35.2 Create `src/pages/admin/VolumePricingTab.tsx`
     - CRUD table for (provider × region) pricing
     - Inline editing for price/markup
     - Enable/disable pricing per region
+    - Admin navigation places Volume Pricing under Operations, separate from Billing
     - _Requirements: 6.2_
 
 - [~] 36. Add Linode Volumes API methods to linodeService

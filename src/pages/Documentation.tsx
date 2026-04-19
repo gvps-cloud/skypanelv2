@@ -130,6 +130,10 @@ function formatTransfer(gb: number): string {
   return `${gb} GB`;
 }
 
+function formatMonthlyPrice(amount: number): string {
+  return `$${amount.toFixed(2)}`;
+}
+
 const categoryIconMap: Record<
   string,
   React.ComponentType<{ className?: string }>
@@ -158,6 +162,11 @@ function renderDocHtml(raw: string | null | undefined): string {
   const platformUrl = window.location.origin;
   const replaced = raw.replace(/\{\{PLATFORM_URL\}\}/g, platformUrl);
   return DOMPurify.sanitize(replaced);
+}
+
+function SanitizedHtml({ html, className }: { html: string; className: string }) {
+  // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
+  return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 /* ── Sidebar ────────────────────────────────────────────────────────────────*/
@@ -523,12 +532,10 @@ export default function Documentation() {
     const fetchPlansAndRegions = async () => {
       try {
         setLoadingPlansRegions(true);
-        const [plansRes, regionsRes] = await Promise.all([
-          fetch("/api/pricing/vps"),
-          fetch("/api/pricing/public-regions"),
+        const [plansData, regionsData] = await Promise.all([
+          apiClient.get<{ plans?: VpsPlan[] }>("/pricing/vps"),
+          apiClient.get<{ regions?: PublicRegion[] }>("/pricing/public-regions"),
         ]);
-        const plansData = await plansRes.json();
-        const regionsData = await regionsRes.json();
         setVpsPlans(plansData.plans || []);
         setPublicRegions(regionsData.regions || []);
       } catch (err) {
@@ -796,7 +803,7 @@ export default function Documentation() {
                 <td className="px-4 py-3">{formatStorage(disk)}</td>
                 <td className="px-4 py-3">{formatTransfer(transfer)}</td>
                 <td className="px-4 py-3 text-right font-medium">
-                  ${price.toFixed(6)}/mo
+                  {formatMonthlyPrice(price)}/mo
                 </td>
               </tr>
             );
@@ -842,11 +849,9 @@ export default function Documentation() {
 
         {/* Content before the plans table marker */}
         {parts[0] && (
-          <div
+          <SanitizedHtml
             className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm mb-6"
-            dangerouslySetInnerHTML={{
-              __html: renderDocHtml(parts[0]),
-            }}
+            html={renderDocHtml(parts[0])}
           />
         )}
 
@@ -886,11 +891,9 @@ export default function Documentation() {
 
         {/* Content after the plans table marker */}
         {parts[1] && (
-          <div
+          <SanitizedHtml
             className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm"
-            dangerouslySetInnerHTML={{
-              __html: renderDocHtml(parts[1]),
-            }}
+            html={renderDocHtml(parts[1])}
           />
         )}
 
@@ -959,11 +962,9 @@ export default function Documentation() {
         </motion.div>
 
         {article.content && (
-          <div
+          <SanitizedHtml
             className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm"
-            dangerouslySetInnerHTML={{
-              __html: renderDocHtml(article.content),
-            }}
+            html={renderDocHtml(article.content)}
           />
         )}
 
@@ -1190,11 +1191,9 @@ export default function Documentation() {
       </motion.div>
 
       {/* HTML content */}
-      <div
+      <SanitizedHtml
         className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-pre:bg-muted prose-pre:border prose-table:text-sm"
-        dangerouslySetInnerHTML={{
-          __html: renderDocHtml(article.content),
-        }}
+        html={renderDocHtml(article.content)}
       />
 
       {/* File attachments */}

@@ -143,7 +143,9 @@ const AdjustCreditsDialog: React.FC<AdjustCreditsDialogProps> = ({
         toast.error(response.error || `Failed to ${isRemove ? 'remove' : 'add'} credits`);
       }
     } catch (error: any) {
-      console.error(`Failed to ${isRemove ? 'remove' : 'add'} credits:`, error);
+      console.error('Failed to update egress credits', {
+        operation: isRemove ? 'remove' : 'add',
+      }, error);
       toast.error(error.message || `Failed to ${isRemove ? 'remove' : 'add'} credits`);
     } finally {
       setLoading(false);

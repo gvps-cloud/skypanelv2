@@ -17,7 +17,9 @@ Pre-deployment verification checklist for SkyPanelV2. Complete every item before
 - [ ] `AUTO_CREATE_ORG=false` in production
 - [ ] `CSRF_ENFORCE` is not `false`
 - [ ] `TRUST_PROXY` is set appropriately for your proxy chain (`1` for single proxy, `2` for Cloudflare + proxy)
+- [ ] `RDNS_BASE_DOMAIN` points at a DNS zone you control (not a placeholder or temporary wildcard domain such as `nip.io`)
 - [ ] All placeholder values (`your-*`, `example.com`) have been replaced
+- [ ] `STARTUP_SIDE_EFFECTS_ENABLED=true` for real production runtime; only set it to `false` for local validation boots
 
 ## 2. Database
 
@@ -32,8 +34,8 @@ Pre-deployment verification checklist for SkyPanelV2. Complete every item before
 ## 3. Security
 
 - [ ] Run `npm run audit:security` — no high-severity vulnerabilities
-- [ ] Run `npm run test:security` — all 131+ tests pass
-- [ ] Run `npm run scan:code` (semgrep) — zero high-severity findings
+- [ ] Run `npm run test:security` — all security tests pass
+- [ ] Run `npm run scan:code` (Semgrep) — should return `0` findings; the immutable bootstrap migration `migrations/001_initial_schema.sql` is intentionally excluded because its seeded bcrypt hash is a documented false positive
 - [ ] CORS origins (`CLIENT_URL`) match the production domain only
 - [ ] Rate limiting is configured and not disabled
 - [ ] HTTPS is enforced (via reverse proxy or load balancer)
@@ -61,10 +63,11 @@ Pre-deployment verification checklist for SkyPanelV2. Complete every item before
 - [ ] Reverse proxy (Caddy/Nginx) configured with:
   - HTTPS termination
   - Proxy headers (`X-Forwarded-For`, `X-Forwarded-Proto`)
-  - WebSocket support for SSE (`/api/notifications/stream`)
-  - Static asset caching for built frontend
+  - SSE support for `/api/notifications/stream`
+  - Frontend traffic routed to the PM2-managed Vite preview service on `:5173`
 - [ ] Process manager (PM2) configured: `npm run pm2:start`
 - [ ] `ecosystem.config.cjs` reviewed for correct settings
+- [ ] If doing a local validation-only PM2 boot, use `STARTUP_SIDE_EFFECTS_ENABLED=false` with alternate ports to avoid touching live schedulers/services
 - [ ] Log rotation configured
 - [ ] File upload directory (`UPLOAD_PATH`) exists and is writable
 - [ ] Firewall rules allow only ports 80/443 (and 22 for SSH admin)

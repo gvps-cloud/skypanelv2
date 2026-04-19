@@ -750,8 +750,9 @@ describe('Integration Test: Full Admin Email Change Workflow', () => {
     expect(meResponse.body.user).toBeTruthy();
     expect(meResponse.body.user.id).toBe(testUserId);
     expect(meResponse.body.user.email).toBe(newEmail.toLowerCase());
-    // /api/auth/me returns the full name field from database
-    expect(meResponse.body.user.name).toBe(testUserName);
+    // /api/auth/me returns firstName/lastName split from the name field
+    expect(meResponse.body.user.firstName).toBe(testUserName.split(' ')[0]);
+    expect(meResponse.body.user.lastName).toBe(testUserName.split(' ').slice(1).join(' '));
     expect(meResponse.body.user.role).toBe('user');
 
     // Step 8: Verify old email no longer works for login
@@ -952,7 +953,8 @@ describe('Integration Test: Full Admin Email Change Workflow', () => {
 
     expect(meResponse.status).toBe(200);
     expect(meResponse.body.user.id).toBe(testUserId);
-    expect(meResponse.body.user.name).toBe('Test User Case');
+    expect(meResponse.body.user.firstName).toBe('Test');
+    expect(meResponse.body.user.lastName).toBe('User Case');
     expect(meResponse.body.user.role).toBe('user');
 
     // Step 6: Verify user data is correct

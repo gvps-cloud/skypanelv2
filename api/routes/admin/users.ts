@@ -38,8 +38,156 @@ const isMissingTableError = (err: any): boolean => {
   );
 };
 
+export async function handleAdminImpersonationExit(
+  req: AuthenticatedRequest,
+  res: Response,
+) {
+  try {
+    const user = req.user!;
+
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) {
+      res.status(400).json({ error: "No token provided" });
+      return;
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, config.JWT_SECRET);
+    } catch {
+      res.status(400).json({ error: "Invalid token" });
+      return;
+    }
+
+    if (!decoded.isImpersonating || !decoded.originalAdminId) {
+      res.status(400).json({ error: "Not an impersonation session" });
+      return;
+    }
+
+    const adminResult = await query(
+      "SELECT id, email, name, role, phone, timezone, preferences, two_factor_enabled FROM users WHERE id = $1",
+      [decoded.originalAdminId],
+    );
+
+    if (adminResult.rows.length === 0) {
+      res.status(400).json({ error: "Original admin user not found" });
+      return;
+    }
+
+    const originalAdmin = adminResult.rows[0];
+
+    let adminOrgId = null;
+    try {
+      const orgResult = await query(
+        "SELECT organization_id FROM organization_members WHERE user_id = $1 LIMIT 1",
+        [originalAdmin.id],
+      );
+      if (orgResult.rows.length > 0) {
+        adminOrgId = orgResult.rows[0].organization_id;
+      } else {
+        const ownerOrgResult = await query(
+          "SELECT id FROM organizations WHERE owner_id = $1 LIMIT 1",
+          [originalAdmin.id],
+        );
+        if (ownerOrgResult.rows.length > 0) {
+          adminOrgId = ownerOrgResult.rows[0].id;
+        }
+      }
+    } catch (orgErr) {
+      console.warn("Error fetching admin organization:", orgErr);
+    }
+
+    const adminTokenPayload = {
+      userId: originalAdmin.id,
+      exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+    };
+
+    const adminToken = jwt.sign(adminTokenPayload, config.JWT_SECRET);
+
+    const impersonationDuration =
+      Math.floor(Date.now() / 1000) - (decoded.iat || 0);
+    const { generateAuditMetadata } = await import("../../lib/security.js");
+    const auditMetadata = generateAuditMetadata(
+      req,
+      "impersonation_end",
+      user,
+      {
+        impersonation_duration_seconds: impersonationDuration,
+        impersonation_duration_human: `${Math.floor(
+          impersonationDuration / 60,
+        )} minutes`,
+        original_admin_restored: true,
+      },
+    );
+
+    await logActivity(
+      {
+        userId: originalAdmin.id,
+        organizationId: adminOrgId,
+        eventType: "impersonation_end",
+        entityType: "user",
+        entityId: user.id,
+        message: `Admin ${originalAdmin.email} ended impersonation of user ${
+          user.email
+        } (duration: ${Math.floor(impersonationDuration / 60)} minutes)`,
+        status: "info",
+        metadata: auditMetadata,
+      },
+      req,
+    );
+
+    await logActivity(
+      {
+        userId: user.id,
+        organizationId: user.organizationId ?? null,
+        eventType: "impersonation_ended",
+        entityType: "user",
+        entityId: originalAdmin.id,
+        message: `Admin access to your account by ${originalAdmin.name || "an administrator"} has ended`,
+        status: "info",
+        metadata: {
+          admin_user_id: originalAdmin.id,
+          admin_user_name: originalAdmin.name,
+          impersonation_ended_at: new Date().toISOString(),
+        },
+      },
+      req,
+    );
+
+    const nameParts = (originalAdmin.name || "").split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
+    res.cookie(AUTH_COOKIE_NAME, adminToken, getAuthCookieOptions());
+    res.json({
+      adminToken,
+      admin: {
+        id: originalAdmin.id,
+        email: originalAdmin.email,
+        name: originalAdmin.name,
+        firstName,
+        lastName,
+        role: originalAdmin.role,
+        phone: originalAdmin.phone,
+        timezone: originalAdmin.timezone,
+        preferences: originalAdmin.preferences,
+        twoFactorEnabled: originalAdmin.two_factor_enabled,
+        organizationId: adminOrgId,
+      },
+      message: "Impersonation session ended successfully",
+    });
+  } catch (err: any) {
+    console.error("Admin impersonation exit error:", err);
+    res
+      .status(500)
+      .json({ error: err.message || "Failed to exit impersonation" });
+  }
+}
+
 router.get(
-  "/users",
+  "/",
   authenticateToken,
   requireAdmin,
   async (_req: Request, res: Response) => {
@@ -80,7 +228,7 @@ router.get(
 );
 
 router.get(
-  "/users/search",
+  "/search",
   authenticateToken,
   requireAdmin,
   async (req: AuthenticatedRequest, res: Response) => {
@@ -197,7 +345,7 @@ router.get(
 );
 
 router.get(
-  "/users/:id",
+  "/:id",
   authenticateToken,
   requireAdmin,
   (req: Request, _res: Response, next) => {
@@ -301,7 +449,7 @@ router.get(
 );
 
 router.get(
-  "/users/:id/detail",
+  "/:id/detail",
   authenticateToken,
   requireAdmin,
   [param("id").isUUID().withMessage("Invalid user id")],
@@ -596,7 +744,7 @@ router.get(
 );
 
 router.put(
-  "/users/:id",
+  "/:id",
   authenticateToken,
   requireAdmin,
   async (req: AuthenticatedRequest, res: Response) => {
@@ -733,7 +881,7 @@ router.put(
 );
 
 router.delete(
-  "/users/:id",
+  "/:id",
   authenticateToken,
   requireAdmin,
   [param("id").isUUID().withMessage("Invalid user id")],
@@ -946,7 +1094,7 @@ router.delete(
 );
 
 router.post(
-  "/users/:id/impersonate",
+  "/:id/impersonate",
   authenticateToken,
   requireAdmin,
   [
@@ -1128,150 +1276,7 @@ router.post(
 router.post(
   "/impersonation/exit",
   authenticateToken,
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const user = req.user!;
-
-      const authHeader = req.headers["authorization"];
-      const token = authHeader && authHeader.split(" ")[1];
-
-      if (!token) {
-        res.status(400).json({ error: "No token provided" });
-        return;
-      }
-
-      let decoded: any;
-      try {
-        decoded = jwt.verify(token, config.JWT_SECRET);
-      } catch {
-        res.status(400).json({ error: "Invalid token" });
-        return;
-      }
-
-      if (!decoded.isImpersonating || !decoded.originalAdminId) {
-        res.status(400).json({ error: "Not an impersonation session" });
-        return;
-      }
-
-      const adminResult = await query(
-        "SELECT id, email, name, role, phone, timezone, preferences, two_factor_enabled FROM users WHERE id = $1",
-        [decoded.originalAdminId],
-      );
-
-      if (adminResult.rows.length === 0) {
-        res.status(400).json({ error: "Original admin user not found" });
-        return;
-      }
-
-      const originalAdmin = adminResult.rows[0];
-
-      let adminOrgId = null;
-      try {
-        const orgResult = await query(
-          "SELECT organization_id FROM organization_members WHERE user_id = $1 LIMIT 1",
-          [originalAdmin.id],
-        );
-        if (orgResult.rows.length > 0) {
-          adminOrgId = orgResult.rows[0].organization_id;
-        } else {
-          const ownerOrgResult = await query(
-            "SELECT id FROM organizations WHERE owner_id = $1 LIMIT 1",
-            [originalAdmin.id],
-          );
-          if (ownerOrgResult.rows.length > 0) {
-            adminOrgId = ownerOrgResult.rows[0].id;
-          }
-        }
-      } catch (orgErr) {
-        console.warn("Error fetching admin organization:", orgErr);
-      }
-
-      const adminTokenPayload = {
-        userId: originalAdmin.id,
-        exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
-      };
-
-      const adminToken = jwt.sign(adminTokenPayload, config.JWT_SECRET);
-
-      const impersonationDuration =
-        Math.floor(Date.now() / 1000) - (decoded.iat || 0);
-      const { generateAuditMetadata } = await import("../../lib/security.js");
-      const auditMetadata = generateAuditMetadata(
-        req,
-        "impersonation_end",
-        user,
-        {
-          impersonation_duration_seconds: impersonationDuration,
-          impersonation_duration_human: `${Math.floor(
-            impersonationDuration / 60,
-          )} minutes`,
-          original_admin_restored: true,
-        },
-      );
-
-      await logActivity(
-        {
-          userId: originalAdmin.id,
-          organizationId: adminOrgId,
-          eventType: "impersonation_end",
-          entityType: "user",
-          entityId: user.id,
-          message: `Admin ${originalAdmin.email} ended impersonation of user ${
-            user.email
-          } (duration: ${Math.floor(impersonationDuration / 60)} minutes)`,
-          status: "info",
-          metadata: auditMetadata,
-        },
-        req,
-      );
-
-      await logActivity(
-        {
-          userId: user.id,
-          organizationId: user.organizationId ?? null,
-          eventType: "impersonation_ended",
-          entityType: "user",
-          entityId: originalAdmin.id,
-          message: `Admin access to your account by ${originalAdmin.name || "an administrator"} has ended`,
-          status: "info",
-          metadata: {
-            admin_user_id: originalAdmin.id,
-            admin_user_name: originalAdmin.name,
-            impersonation_ended_at: new Date().toISOString(),
-          },
-        },
-        req,
-      );
-
-      const nameParts = (originalAdmin.name || "").split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
-
-      res.cookie(AUTH_COOKIE_NAME, adminToken, getAuthCookieOptions());
-      res.json({
-        adminToken,
-        admin: {
-          id: originalAdmin.id,
-          email: originalAdmin.email,
-          name: originalAdmin.name,
-          firstName,
-          lastName,
-          role: originalAdmin.role,
-          phone: originalAdmin.phone,
-          timezone: originalAdmin.timezone,
-          preferences: originalAdmin.preferences,
-          twoFactorEnabled: originalAdmin.two_factor_enabled,
-          organizationId: adminOrgId,
-        },
-        message: "Impersonation session ended successfully",
-      });
-    } catch (err: any) {
-      console.error("Admin impersonation exit error:", err);
-      res
-        .status(500)
-        .json({ error: err.message || "Failed to exit impersonation" });
-    }
-  },
+  handleAdminImpersonationExit,
 );
 
 export default router;

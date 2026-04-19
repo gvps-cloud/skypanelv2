@@ -23,15 +23,16 @@ SkyPanelV2 is a full-stack VPS hosting/billing panel: React 18 + Vite frontend, 
 - `npm run check` — type-check without emitting (`tsc --noEmit`)
 - `npm run lint` — ESLint (warnings ok, 0 errors)
 - `npm run preview` — preview production build
-- `npm run start` — production: Express API + Vite preview
+- `npm run start` — production: `node --import tsx api/server.ts`
 - `npm run start:dev` — Express API + Vite preview on :5173
 
 ### Testing
 
-**No `npm test` script exists.** Run directly:
+Primary test commands:
 
-- `npx vitest run tests/security/` — security tests (the primary test suite)
-- `npx vitest run` — all tests
+- `npm test` — full Vitest suite
+- `npm run test:coverage` — full suite with V8 coverage
+- `npx vitest run tests/security/` — security tests (the primary targeted suite)
 
 Vitest config (`vitest.config.ts`): globals enabled, jsdom environment, `@` alias resolved.
 
@@ -171,7 +172,7 @@ All resource queries must be scoped to `organization_id`. Be careful with VPS, b
 
 ### Background Schedulers
 
-`api/server.ts` starts hourly billing, egress billing, and 24h low-balance reminders on boot. "0 instances billed" log output is normal with an empty VPS fleet.
+`api/server.ts` starts hourly VPS billing, hourly egress billing, and monthly egress finalization on boot. "0 instances billed" log output is normal with an empty VPS fleet.
 
 ### TypeScript Strictness
 
@@ -227,9 +228,12 @@ Registered in `api/app.ts`. Auth middleware applied at router level per route gr
 /api/notes         — Personal and organization notes
 /api/health        — Health check
 
-/api/admin/*       — Admin: users, platform settings, billing, email-templates,
-                      contact, faq, github, category-mappings, ssh-keys,
-                      activity, documentation, networking, announcements
+/api/admin/*       — Admin: theme, rate-limits, tickets, plans, providers,
+                      networking, users, organizations, egress, servers,
+                      stackscripts, upstream, billing, volume-billing,
+                      email-templates, contact, activity, announcements,
+                      ssh-keys, category-mappings, platform, faq,
+                      documentation, github
 ```
 
 Cross-cutting: CSRF on `/api`, API key auth (`authenticateApiKey`) on `/api`, smart rate limiting on `/api`.
@@ -272,7 +276,7 @@ Key services: `egressCreditService.ts`, `egressHourlyBillingService.ts`, `egress
 
 ## Migrations
 
-53 total (001–053, sequential). Located in `migrations/`. Each runs in a transaction with SHA256 checksum validation.
+55 total (001–055, sequential). Located in `migrations/`. Each runs in a transaction with SHA256 checksum validation.
 
 ## App Structure (top-level)
 

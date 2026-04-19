@@ -9,6 +9,7 @@
 import React, { useState, useEffect } from "react";
 import { Shield, DollarSign, Calendar, Info } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { apiClient } from "@/lib/api";
 import type { VPSPlan } from "@/types/vps";
 
 // Normalizes API values that may arrive as strings so currency math stays reliable
@@ -35,7 +36,6 @@ interface BackupConfigurationProps {
   backupFrequency?: "daily" | "weekly" | "none";
   onBackupsChange: (enabled: boolean) => void;
   onFrequencyChange: (frequency: "daily" | "weekly" | "none") => void;
-  token: string;
 }
 
 export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
@@ -43,7 +43,6 @@ export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
   backupsEnabled,
   onBackupsChange,
   onFrequencyChange,
-  token,
 }) => {
   const [plan, setPlan] = useState<VPSPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,15 +56,7 @@ export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
 
       try {
         setLoading(true);
-        const res = await fetch("/api/vps/plans", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to fetch plans");
-        }
+        const data = await apiClient.get<{ plans?: VPSPlan[] }>("/api/vps/plans");
 
         const selectedPlan = (data.plans || []).find(
           (p: VPSPlan) => p.id === planId
@@ -81,7 +72,7 @@ export const BackupConfiguration: React.FC<BackupConfigurationProps> = ({
     };
 
     fetchPlan();
-  }, [planId, token]);
+  }, [planId]);
 
   // Calculate backup pricing - single flat rate (Linode backups are daily at one price)
   const baseBackupPrice = toCurrencyNumber(plan?.backup_price_monthly);

@@ -8,16 +8,14 @@
 import { readFileSync } from 'fs';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import pg from 'pg';
 import dotenv from 'dotenv';
+import { createScriptPool } from './lib/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load environment variables
 dotenv.config({ path: join(__dirname, '..', '.env') });
-
-const { Pool } = pg;
 
 async function applySingleMigration() {
   try {
@@ -35,10 +33,7 @@ async function applySingleMigration() {
       process.exit(1);
     }
 
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    });
+    const pool = createScriptPool();
 
     console.log('🔌 Testing database connection...');
     const client = await pool.connect();

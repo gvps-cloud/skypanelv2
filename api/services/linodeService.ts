@@ -241,6 +241,32 @@ const MARKETPLACE_CATEGORY_PATTERNS: Array<{ regex: RegExp; category: string }> 
 const DEPRECATED_APP_REGEX = /\[\s*deprecated\s*\]/i;
 const SECRET_FIELD_MATCHERS = [/linode api token/i];
 
+function logLinodeService(
+  level: 'warn' | 'error',
+  message: string,
+  details?: Record<string, unknown>,
+  error?: unknown,
+): void {
+  const logger = level === 'warn' ? console.warn : console.error;
+
+  if (details && error !== undefined) {
+    logger('[LinodeService]', message, details, error);
+    return;
+  }
+
+  if (details) {
+    logger('[LinodeService]', message, details);
+    return;
+  }
+
+  if (error !== undefined) {
+    logger('[LinodeService]', message, error);
+    return;
+  }
+
+  logger('[LinodeService]', message);
+}
+
 export interface AccountTransferResponse {
   used: number;
   quota: number;
@@ -257,6 +283,47 @@ export interface LinodeBackupDisk {
   label?: string;
   size?: number;
   filesystem?: string;
+}
+
+export interface LinodeVolume {
+  id: number;
+  label: string;
+  status: 'creating' | 'active' | 'resizing' | 'key_rotating';
+  size: number;
+  region: string;
+  linode_id: number | null;
+  linode_label: string | null;
+  filesystem_path: string;
+  created: string;
+  updated: string;
+  encryption: 'enabled' | 'disabled';
+  hardware_type: 'hdd' | 'nvme';
+  io_ready: boolean;
+  tags: string[];
+}
+
+export interface LinodeVolumeType {
+  id: string;
+  label: string;
+  description: string;
+  storage_bytes: number;
+  price: {
+    hourly: number | null;
+    monthly: number | null;
+    region_prices?: Array<{
+      region: string;
+      hourly: number | null;
+      monthly: number | null;
+    }>;
+  };
+  capabilities: string[];
+}
+
+export interface LinodeVolumesResponse {
+  data: LinodeVolume[];
+  page: number;
+  pages: number;
+  results: number;
 }
 
 export interface LinodeBackupSummary {
@@ -591,7 +658,12 @@ class LinodeService {
             };
           }
         } catch (error) {
-          console.warn(`Failed to fetch StackScript ${app.stackscript_id} for app ${app.slug}:`, error);
+          logLinodeService(
+            'warn',
+            'Failed to fetch StackScript for marketplace app',
+            { stackscriptId: app.stackscript_id, appSlug: app.slug },
+            error,
+          );
         }
         const partitioned = LinodeService.partitionUserDefinedFields(
           Array.isArray(app?.user_defined_fields) ? app.user_defined_fields : []
@@ -1108,7 +1180,7 @@ class LinodeService {
         deployments_total: stackscript.deployments_total,
       };
     } catch (error) {
-      console.error(`Error fetching StackScript ${stackscriptId}:`, error);
+      logLinodeService('error', 'Error fetching StackScript', { stackscriptId }, error);
       throw error;
     }
   }
@@ -1685,7 +1757,7 @@ class LinodeService {
       const devices = Array.isArray(payload?.data) ? payload.data : [];
       return devices as Record<string, unknown>[];
     } catch (error) {
-      console.error(`Error fetching devices for firewall ${firewallId}:`, error);
+      logLinodeService('error', 'Error fetching firewall devices', { firewallId }, error);
       throw error;
     }
   }
@@ -1707,7 +1779,12 @@ class LinodeService {
         throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
       }
     } catch (error) {
-      console.error(`Error attaching firewall ${firewallId} to Linode ${instanceId}:`, error);
+      logLinodeService(
+        'error',
+        'Error attaching firewall to Linode',
+        { firewallId, instanceId },
+        error,
+      );
       throw error;
     }
   }
@@ -1728,7 +1805,12 @@ class LinodeService {
         throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
       }
     } catch (error) {
-      console.error(`Error detaching firewall ${firewallId} device ${deviceId}:`, error);
+      logLinodeService(
+        'error',
+        'Error detaching firewall device',
+        { firewallId, deviceId },
+        error,
+      );
       throw error;
     }
   }
@@ -1782,7 +1864,7 @@ class LinodeService {
 
       return await response.json();
     } catch (error) {
-      console.error(`Error fetching firewall ${firewallId}:`, error);
+      logLinodeService('error', 'Error fetching firewall', { firewallId }, error);
       throw error;
     }
   }
@@ -1806,7 +1888,7 @@ class LinodeService {
 
       return await response.json();
     } catch (error) {
-      console.error(`Error updating firewall ${firewallId}:`, error);
+      logLinodeService('error', 'Error updating firewall', { firewallId }, error);
       throw error;
     }
   }
@@ -1827,7 +1909,7 @@ class LinodeService {
         throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
       }
     } catch (error) {
-      console.error(`Error deleting firewall ${firewallId}:`, error);
+      logLinodeService('error', 'Error deleting firewall', { firewallId }, error);
       throw error;
     }
   }
@@ -1849,7 +1931,7 @@ class LinodeService {
 
       return await response.json();
     } catch (error) {
-      console.error(`Error fetching firewall rules for ${firewallId}:`, error);
+      logLinodeService('error', 'Error fetching firewall rules', { firewallId }, error);
       throw error;
     }
   }
@@ -1878,7 +1960,7 @@ class LinodeService {
 
       return await response.json();
     } catch (error) {
-      console.error(`Error updating firewall rules for ${firewallId}:`, error);
+      logLinodeService('error', 'Error updating firewall rules', { firewallId }, error);
       throw error;
     }
   }
@@ -1901,7 +1983,7 @@ class LinodeService {
       const data = await response.json();
       return Array.isArray(data?.data) ? data.data : [];
     } catch (error) {
-      console.error(`Error fetching firewall history for ${firewallId}:`, error);
+      logLinodeService('error', 'Error fetching firewall history', { firewallId }, error);
       throw error;
     }
   }
@@ -1992,7 +2074,7 @@ class LinodeService {
 
       return await response.json();
     } catch (error) {
-      console.error(`Error fetching firewall template ${slug}:`, error);
+      logLinodeService('error', 'Error fetching firewall template', { slug }, error);
       throw error;
     }
   }
@@ -2092,7 +2174,7 @@ class LinodeService {
       const payload = await response.json().catch(() => ({}));
       return payload as Record<string, unknown>;
     } catch (error) {
-      console.error(`Error updating rDNS for ${address}:`, error);
+      logLinodeService('error', 'Error updating rDNS', { address }, error);
       throw error;
     }
   }
@@ -2364,7 +2446,12 @@ class LinodeService {
           }
           await new Promise(res => setTimeout(res, statusIntervalMs));
         } catch (statusErr) {
-          console.warn(`${logPrefix} Failed to fetch VPS detail (attempt ${attempt}):`, statusErr);
+          logLinodeService(
+            'warn',
+            'Failed to fetch VPS detail during rDNS setup',
+            { scope: logPrefix, attempt, maxStatusAttempts },
+            statusErr,
+          );
           if (attempt === maxStatusAttempts) {
             throw new Error('VPS detail fetch failed after maximum attempts');
           }
@@ -2394,7 +2481,12 @@ class LinodeService {
 
       console.log(`${logPrefix} Successfully set custom rDNS for VPS ${label} (${primaryIPv4}) to ${customRDNS}`);
     } catch (error) {
-      console.error(`${logPrefix} Error setting up custom rDNS for VPS ${label}:`, error);
+      logLinodeService(
+        'error',
+        'Error setting up custom rDNS for VPS',
+        { scope: logPrefix, instanceId, label, baseDomain },
+        error,
+      );
       // Don't throw the error - we don't want rDNS setup failure to affect anything else
       // The VPS is still functional without custom rDNS
     }
@@ -2443,7 +2535,7 @@ class LinodeService {
 
       return (await response.json()) as LinodeIPAddress;
     } catch (error) {
-      console.error(`Error getting IP ${address}:`, error);
+      logLinodeService('error', 'Error getting IP', { address }, error);
       throw error;
     }
   }
@@ -2488,7 +2580,7 @@ class LinodeService {
         throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
       }
     } catch (error) {
-      console.error(`Error deleting IP ${address}:`, error);
+      logLinodeService('error', 'Error deleting IP', { address, instanceId }, error);
       throw error;
     }
   }
@@ -2653,7 +2745,7 @@ class LinodeService {
         created: payload?.created ?? '',
       };
     } catch (error) {
-      console.error(`Error getting IPv6 range ${range}:`, error);
+      logLinodeService('error', 'Error getting IPv6 range', { range }, error);
       throw error;
     }
   }
@@ -2698,7 +2790,7 @@ class LinodeService {
         throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
       }
     } catch (error) {
-      console.error(`Error deleting IPv6 range ${range}:`, error);
+      logLinodeService('error', 'Error deleting IPv6 range', { range }, error);
       throw error;
     }
   }
@@ -2763,7 +2855,7 @@ class LinodeService {
         throw new Error(`Linode API error: ${response.status} ${response.statusText} ${text}`.trim());
       }
     } catch (error) {
-      console.error(`Error deleting VLAN ${label}:`, error);
+      logLinodeService('error', 'Error deleting VLAN', { regionId, label }, error);
       throw error;
     }
   }
@@ -2786,7 +2878,7 @@ class LinodeService {
       const data = await response.json();
       return data.data ?? [];
     } catch (error) {
-      console.error(`Error listing disks for instance ${instanceId}:`, error);
+      logLinodeService('error', 'Error listing disks for instance', { instanceId }, error);
       throw error;
     }
   }
@@ -2804,7 +2896,7 @@ class LinodeService {
       }
       return response.json();
     } catch (error) {
-      console.error(`Error getting disk ${diskId} for instance ${instanceId}:`, error);
+      logLinodeService('error', 'Error getting disk for instance', { instanceId, diskId }, error);
       throw error;
     }
   }
@@ -2831,7 +2923,7 @@ class LinodeService {
       }
       return response.json();
     } catch (error) {
-      console.error(`Error creating disk for instance ${instanceId}:`, error);
+      logLinodeService('error', 'Error creating disk for instance', { instanceId }, error);
       throw error;
     }
   }
@@ -2852,7 +2944,7 @@ class LinodeService {
       }
       return response.json();
     } catch (error) {
-      console.error(`Error updating disk ${diskId} for instance ${instanceId}:`, error);
+      logLinodeService('error', 'Error updating disk for instance', { instanceId, diskId }, error);
       throw error;
     }
   }
@@ -2870,7 +2962,7 @@ class LinodeService {
       }
       return response.json();
     } catch (error) {
-      console.error(`Error resizing disk ${diskId} for instance ${instanceId}:`, error);
+      logLinodeService('error', 'Error resizing disk for instance', { instanceId, diskId }, error);
       throw error;
     }
   }
@@ -2888,7 +2980,7 @@ class LinodeService {
       }
       return response.json();
     } catch (error) {
-      console.error(`Error cloning disk ${diskId} for instance ${instanceId}:`, error);
+      logLinodeService('error', 'Error cloning disk for instance', { instanceId, diskId }, error);
       throw error;
     }
   }
@@ -2906,7 +2998,7 @@ class LinodeService {
       }
       return response.json();
     } catch (error) {
-      console.error(`Error resetting password for disk ${diskId} on instance ${instanceId}:`, error);
+      logLinodeService('error', 'Error resetting disk password', { instanceId, diskId }, error);
       throw error;
     }
   }
@@ -2923,7 +3015,204 @@ class LinodeService {
         throw new Error(`Linode API error (delete disk): ${response.status} ${response.statusText} ${text}`.trim());
       }
     } catch (error) {
-      console.error(`Error deleting disk ${diskId} for instance ${instanceId}:`, error);
+      logLinodeService('error', 'Error deleting disk for instance', { instanceId, diskId }, error);
+      throw error;
+    }
+  }
+
+  // ========================
+  // Volume Management
+  // ========================
+
+  async listVolumes(page?: number, pageSize?: number): Promise<LinodeVolumesResponse> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const p = page ?? 1;
+      const ps = pageSize ?? 100;
+      const response = await fetch(
+        `${this.baseUrl}/volumes?page=${p}&page_size=${ps}`,
+        { headers: this.getHeaders() }
+      );
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (list volumes): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return (await response.json()) as LinodeVolumesResponse;
+    } catch (error) {
+      console.error('Error listing volumes:', error);
+      throw error;
+    }
+  }
+
+  async createVolume(params: {
+    label: string;
+    size: number;
+    region: string;
+    linode_id?: number;
+    config_id?: number;
+    encryption?: 'enabled' | 'disabled';
+    tags?: string[];
+  }): Promise<LinodeVolume> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(`${this.baseUrl}/volumes`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(params),
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (create volume): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return (await response.json()) as LinodeVolume;
+    } catch (error) {
+      console.error('Error creating volume:', error);
+      throw error;
+    }
+  }
+
+  async getVolume(volumeId: number): Promise<LinodeVolume> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(`${this.baseUrl}/volumes/${volumeId}`, {
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (get volume): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return (await response.json()) as LinodeVolume;
+    } catch (error) {
+      logLinodeService('error', 'Error getting volume', { volumeId }, error);
+      throw error;
+    }
+  }
+
+  async updateVolume(volumeId: number, params: { label?: string; tags?: string[] }): Promise<LinodeVolume> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(`${this.baseUrl}/volumes/${volumeId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: JSON.stringify(params),
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (update volume): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return (await response.json()) as LinodeVolume;
+    } catch (error) {
+      logLinodeService('error', 'Error updating volume', { volumeId }, error);
+      throw error;
+    }
+  }
+
+  async deleteVolume(volumeId: number): Promise<void> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(`${this.baseUrl}/volumes/${volumeId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (delete volume): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+    } catch (error) {
+      logLinodeService('error', 'Error deleting volume', { volumeId }, error);
+      throw error;
+    }
+  }
+
+  async attachVolume(volumeId: number, linodeId: number): Promise<LinodeVolume> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(`${this.baseUrl}/volumes/${volumeId}/attach`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ linode_id: linodeId }),
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (attach volume): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return (await response.json()) as LinodeVolume;
+    } catch (error) {
+      logLinodeService('error', 'Error attaching volume', { volumeId, linodeId }, error);
+      throw error;
+    }
+  }
+
+  async detachVolume(volumeId: number): Promise<LinodeVolume> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(`${this.baseUrl}/volumes/${volumeId}/detach`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (detach volume): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return (await response.json()) as LinodeVolume;
+    } catch (error) {
+      logLinodeService('error', 'Error detaching volume', { volumeId }, error);
+      throw error;
+    }
+  }
+
+  async resizeVolume(volumeId: number, size: number): Promise<LinodeVolume> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(`${this.baseUrl}/volumes/${volumeId}/resize`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ size }),
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (resize volume): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return (await response.json()) as LinodeVolume;
+    } catch (error) {
+      logLinodeService('error', 'Error resizing volume', { volumeId }, error);
+      throw error;
+    }
+  }
+
+  async cloneVolume(volumeId: number, label: string): Promise<LinodeVolume> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(`${this.baseUrl}/volumes/${volumeId}/clone`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ label }),
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (clone volume): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      return (await response.json()) as LinodeVolume;
+    } catch (error) {
+      logLinodeService('error', 'Error cloning volume', { volumeId }, error);
+      throw error;
+    }
+  }
+
+  async listVolumeTypes(): Promise<LinodeVolumeType[]> {
+    try {
+      if (!this.apiToken) throw new Error('Linode API token not configured');
+      const response = await fetch(`${this.baseUrl}/volumes/types`, {
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Linode API error (list volume types): ${response.status} ${response.statusText} ${text}`.trim());
+      }
+      const data = await response.json();
+      return (data.data ?? []) as LinodeVolumeType[];
+    } catch (error) {
+      console.error('Error listing volume types:', error);
       throw error;
     }
   }

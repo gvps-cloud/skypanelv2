@@ -217,7 +217,7 @@ const VPS: React.FC = () => {
       clearOnSubmit: true,
     },
   );
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const { data: enabledCategoryMappings } = useEnabledCategoryMappings();
   const location = useLocation();
   const navigate = useNavigate();
@@ -1137,10 +1137,7 @@ const VPS: React.FC = () => {
         else if (action === "shutdown") url += "/shutdown";
         else if (action === "reboot") url += "/reboot";
         else if (action === "delete") {
-          const res = await fetch(url, { method: "DELETE", credentials: "include" });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok)
-            throw new Error(data.error || `Failed to ${action} ${instance.label}`);
+          await apiClient.delete(url);
           results.success++;
           continue;
         }
@@ -1213,18 +1210,7 @@ const VPS: React.FC = () => {
       // Process each instance
       for (const instance of selectedInstances) {
         try {
-          const res = await fetch(`/api/vps/${instance.id}`, {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ password, twoFactorCode }),
-          });
-
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok)
-            throw new Error(data.error || `Failed to delete ${instance.label}`);
+          await apiClient.delete(`/api/vps/${instance.id}`, { password, twoFactorCode });
 
           results.success++;
         } catch (error: any) {
@@ -1355,19 +1341,10 @@ const VPS: React.FC = () => {
 
       setDeleteModal((m) => ({ ...m, loading: true, error: "" }));
 
-      const res = await fetch(`/vps/${deleteModal.id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          password: deleteModal.password,
-          twoFactorCode: deleteModal.twoFactorCode,
-        }),
+      await apiClient.delete(`/api/vps/${deleteModal.id}`, {
+        password: deleteModal.password,
+        twoFactorCode: deleteModal.twoFactorCode,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to delete instance");
       setDeleteModal({
         open: false,
         id: "",
@@ -1907,7 +1884,6 @@ const VPS: React.FC = () => {
                   setCreateStep(1);
                 }}
                 disabled={false}
-                token={token || ""}
               />
             )}
             <div>
@@ -2122,7 +2098,6 @@ const VPS: React.FC = () => {
           providerType={createForm.provider_type}
           formData={createForm}
           onFormChange={setCreateForm}
-          token={token || ""}
           linodeStackScripts={providerStackScripts}
           selectedStackScript={selectedStackScript}
           onStackScriptSelect={setSelectedStackScript}
@@ -2147,7 +2122,6 @@ const VPS: React.FC = () => {
           providerType={createForm.provider_type}
           formData={createForm}
           onFormChange={setCreateForm}
-          token={token || ""}
           linodeStackScripts={providerStackScripts}
           selectedStackScript={selectedStackScript}
           onStackScriptSelect={setSelectedStackScript}
@@ -2172,7 +2146,6 @@ const VPS: React.FC = () => {
           providerType={createForm.provider_type}
           formData={createForm}
           onFormChange={setCreateForm}
-          token={token || ""}
           effectiveOsGroups={effectiveOsGroups}
           selectedOSGroup={selectedOSGroup}
           onOSGroupSelect={setSelectedOSGroup}
@@ -2197,7 +2170,6 @@ const VPS: React.FC = () => {
           providerType={createForm.provider_type}
           formData={createForm}
           onFormChange={setCreateForm}
-          token={token || ""}
         />
       ),
     },

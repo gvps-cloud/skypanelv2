@@ -40,7 +40,7 @@ describe('API Key Security Tests', () => {
       `INSERT INTO organizations (id, name, slug, owner_id, created_at, updated_at)
        VALUES ($1, $2, $3, $4, NOW(), NOW())
        RETURNING id`,
-      [uuidv4(), 'API Key Test Org', 'apikey-test-org', testUserId]
+      [uuidv4(), 'API Key Test Org', `apikey-test-${Date.now()}-${Math.random().toString(36).substring(7)}`, testUserId]
     );
 
     testOrganizationId = orgResult.rows[0].id;

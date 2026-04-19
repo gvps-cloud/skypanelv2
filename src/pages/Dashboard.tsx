@@ -128,7 +128,8 @@ const Dashboard: React.FC = () => {
             cpuCount = detailData.instance?.plan?.specs?.vcpus || 0;
           } catch (error) {
             console.warn(
-              `Failed to fetch metrics for VPS ${instance.id}:`,
+              'Failed to fetch metrics for VPS',
+              { instanceId: instance.id },
               error,
             );
           }

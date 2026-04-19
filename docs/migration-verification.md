@@ -13,7 +13,7 @@ Before running migrations, verify the current state:
 psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM schema_migrations"
 
 # Count migration files on disk
-ls migrations/*.sql | Measure-Object
+# Count the `.sql` files under `migrations/`
 
 # The database count should be ≤ the file count
 # If database count > file count, migrations were deleted — investigate immediately
@@ -97,9 +97,9 @@ psql "$DATABASE_URL" -c "SELECT tablename, rowsecurity FROM pg_tables WHERE sche
 
 1. **Never modify existing migrations** — always add a new sequential file
 2. **Migration naming**: `NNN_description.sql` where `NNN` is the next sequential number
-3. **Always use `CREATE OR REPLACE`** for functions to allow re-application
+3. Prefer `CREATE OR REPLACE` for functions when modifying existing SQL functions
 4. **Test migrations locally** before applying to production
-5. **Add rollback SQL** as a comment at the bottom of each migration file
+5. Add rollback notes as comments when a migration changes behavior in a non-obvious way
 
 ### Example Migration
 

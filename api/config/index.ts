@@ -15,6 +15,9 @@ export interface RateLimitConfig {
   adminWindowMs: number;
   adminMaxRequests: number;
 
+  // Login rate limits
+  loginSkipInDevelopment: boolean;
+
   // Password reset rate limits (stricter than general limits)
   passwordResetWindowMs: number;
   passwordResetMaxRequests: number;
@@ -87,6 +90,8 @@ export interface Config {
   CSRF_SHADOW_MODE?: boolean;
   // Auto-create organizations for users without one (disabled in production)
   AUTO_CREATE_ORG: boolean;
+  // Validation-only override for safe local production boot checks
+  STARTUP_SIDE_EFFECTS_ENABLED: boolean;
 }
 
 /**
@@ -212,6 +217,12 @@ function parseRateLimitConfig(): RateLimitConfig {
       10,
     ),
     adminMaxRequests: parseInt(process.env.RATE_LIMIT_ADMIN_MAX || "10000", 10),
+
+    // Login rate limits
+    loginSkipInDevelopment: parseBoolean(
+      process.env.RATE_LIMIT_LOGIN_SKIP_IN_DEV,
+      true, // Default: skip login rate limiting in development
+    ),
 
     // Password reset rate limits (default: 3 attempts per 1 hour)
     passwordResetWindowMs: parseInt(
@@ -381,6 +392,10 @@ function getConfig(): Config {
     CSRF_ENFORCE: parseBoolean(process.env.CSRF_ENFORCE, true),
     CSRF_SHADOW_MODE: parseBoolean(process.env.CSRF_SHADOW_MODE, false),
     AUTO_CREATE_ORG: parseBoolean(process.env.AUTO_CREATE_ORG, process.env.NODE_ENV !== 'production'),
+    STARTUP_SIDE_EFFECTS_ENABLED: parseBoolean(
+      process.env.STARTUP_SIDE_EFFECTS_ENABLED,
+      true,
+    ),
   };
 
   return config;

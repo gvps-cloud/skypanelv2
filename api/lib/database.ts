@@ -10,6 +10,39 @@ if (!process.env.IN_DOCKER) {
 // Get PostgreSQL configuration from environment variables
 const databaseUrl = process.env.DATABASE_URL;
 
+function shouldUseSsl(connectionString: string): boolean {
+  try {
+    const parsed = new URL(connectionString);
+    const hostname = parsed.hostname.toLowerCase();
+    const isLocalHost = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(
+      hostname,
+    );
+    const sslMode = parsed.searchParams.get("sslmode")?.toLowerCase();
+
+    if (sslMode === "disable") {
+      return false;
+    }
+
+    if (sslMode) {
+      return true;
+    }
+
+    return !isLocalHost;
+  } catch {
+    return process.env.NODE_ENV === "production";
+  }
+}
+
+function getDatabaseSslConfig(connectionString: string): false | { rejectUnauthorized: boolean } {
+  if (!shouldUseSsl(connectionString)) {
+    return false;
+  }
+
+  return {
+    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== "false",
+  };
+}
+
 if (!databaseUrl) {
   console.error('Missing PostgreSQL configuration:');
   console.error('DATABASE_URL:', databaseUrl ? 'Set' : 'Missing');
@@ -19,7 +52,7 @@ if (!databaseUrl) {
 // Create PostgreSQL connection pool
 export const pool = new Pool({
   connectionString: databaseUrl,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: getDatabaseSslConfig(databaseUrl),
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,

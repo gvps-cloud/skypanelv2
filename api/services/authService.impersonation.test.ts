@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import jwt from "jsonwebtoken";
 
+// Must be set before config module is imported (vi.hoisted runs before imports)
+vi.hoisted(() => {
+  process.env.JWT_SECRET = "test-jwt-secret-for-unit-tests-only";
+  process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
+});
+
 const queryMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../lib/database.js", () => ({

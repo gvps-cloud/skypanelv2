@@ -65,6 +65,102 @@ const hasAuthMarker = (text) =>
 const hasAdminMarker = (text) =>
   text.includes(ADMIN_MARKER);
 
+const routeRelativePath = (routePath, sectionApiBase) => {
+  if (routePath === sectionApiBase) {
+    return "/";
+  }
+  const suffix = routePath.slice(sectionApiBase.length);
+  if (!suffix) {
+    return "/";
+  }
+  return suffix.startsWith("/") ? suffix : `/${suffix}`;
+};
+
+const assignSectionForRoute = (route, sectionApiBases, sectionTitles) => {
+  const candidates = [];
+  for (let i = 0; i < sectionApiBases.length; i += 1) {
+    const base = sectionApiBases[i];
+    if (route.path === base || route.path.startsWith(`${base}/`)) {
+      candidates.push(i);
+    }
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+  if (candidates.length === 1) {
+    return candidates[0];
+  }
+
+  const vpsCandidates = candidates.filter((idx) =>
+    sectionTitles[idx].startsWith("VPS "),
+  );
+  if (vpsCandidates.length > 0) {
+    if (/^\/api\/vps\/(plans|providers|regions|stackscripts)(\/|$)/.test(route.path)) {
+      const catalogMatch = vpsCandidates.find((idx) =>
+        sectionTitles[idx].includes("Catalog"),
+      );
+      if (catalogMatch !== undefined) {
+        return catalogMatch;
+      }
+    }
+
+    if (
+      route.path.includes("/networking") ||
+      route.path.includes("/rdns") ||
+      route.path.includes("/ipam")
+    ) {
+      const networkingMatch = vpsCandidates.find((idx) =>
+        sectionTitles[idx].includes("Networking"),
+      );
+      if (networkingMatch !== undefined) {
+        return networkingMatch;
+      }
+    }
+
+    const lifecycleMatch = vpsCandidates.find((idx) =>
+      sectionTitles[idx].includes("Lifecycle"),
+    );
+    if (lifecycleMatch !== undefined) {
+      return lifecycleMatch;
+    }
+  }
+
+  return candidates.sort((a, b) => sectionApiBases[b].length - sectionApiBases[a].length)[0];
+};
+
+const getAutoSectionBase = (routePath) => {
+  const parts = routePath.split("/").filter(Boolean);
+  if (parts.length >= 2) {
+    return `/${parts[0]}/${parts[1]}`;
+  }
+  return "/api/misc";
+};
+
+const getAutoSectionTitle = (basePath) => {
+  if (basePath === "/api/contact") {
+    return "Contact";
+  }
+  if (basePath === "/api/faq") {
+    return "FAQ & Updates";
+  }
+  if (basePath === "/api/pricing") {
+    return "Pricing";
+  }
+
+  const suffix = basePath.replace(/^\/api\//, "");
+  if (!suffix) {
+    return "Additional APIs";
+  }
+
+  return suffix
+    .split("/")
+    .flatMap((part) => part.split("-"))
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
 const parseAppMounts = () => {
   const { source } = readSource(appFile, ts.ScriptKind.TS);
   const importMap = new Map();
@@ -376,9 +472,66 @@ const parseApiDocsSections = () => {
   return sections;
 };
 
+const buildRenderedDocEndpoints = (sections, actualRoutes) => {
+  const manualDocsByKey = new Map();
+  const sectionApiBases = sections.map((section) => normalizePath(section.base));
+  const sectionTitles = sections.map((section) => section.title);
+
+  for (const section of sections) {
+    const sectionBase = normalizePath(section.base);
+    for (const endpoint of section.endpoints) {
+      const endpointPath = normalizePath(`${sectionBase}${endpoint.relativePath}`);
+      manualDocsByKey.set(`${endpoint.method} ${endpointPath}`, {
+        ...endpoint,
+        path: endpointPath,
+      });
+    }
+  }
+
+  return actualRoutes.map((route) => {
+    const key = `${route.method} ${route.path}`;
+    const manualEndpoint = manualDocsByKey.get(key);
+    if (manualEndpoint) {
+      return {
+        ...manualEndpoint,
+        auth: route.protected,
+        admin: route.admin,
+      };
+    }
+
+    const inferredSectionIndex = assignSectionForRoute(
+      route,
+      sectionApiBases,
+      sectionTitles,
+    );
+    const sectionBase =
+      inferredSectionIndex !== null
+        ? sectionApiBases[inferredSectionIndex]
+        : getAutoSectionBase(route.path);
+    const sectionTitle =
+      inferredSectionIndex !== null
+        ? sectionTitles[inferredSectionIndex]
+        : getAutoSectionTitle(sectionBase);
+
+    return {
+      sectionTitle,
+      sectionBase,
+      method: route.method,
+      relativePath: routeRelativePath(route.path, sectionBase),
+      path: route.path,
+      auth: route.protected,
+      admin: route.admin,
+      hasBody: false,
+      hasParams: false,
+      hasResponse: true,
+      isPlaceholderResponse: true,
+    };
+  });
+};
+
 const actualRoutes = parseActualRoutes();
 const docSections = parseApiDocsSections();
-const docEndpoints = docSections.flatMap((section) => section.endpoints);
+const docEndpoints = buildRenderedDocEndpoints(docSections, actualRoutes);
 
 const actualMap = new Map(
   actualRoutes.map((route) => [`${route.method} ${route.path}`, route]),

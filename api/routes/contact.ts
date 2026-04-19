@@ -70,7 +70,10 @@ router.get('/config', async (req: Request, res: Response) => {
         updated_at: method.updated_at
       };
       
-      console.log(`[Contact API] Processed ${method.method_type} method with config keys:`, Object.keys(config));
+      console.log('[Contact API] Processed method config', {
+        methodType: method.method_type,
+        configKeys: Object.keys(config),
+      });
     }
 
     const response = {

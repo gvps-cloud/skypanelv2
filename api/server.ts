@@ -53,36 +53,43 @@ async function syncEnvConfigToDatabase() {
  */
 const PORT = process.env.PORT || 3001;
 let lastScheduledEgressMonth: string | null = null;
+const startupSideEffectsEnabled = config.STARTUP_SIDE_EFFECTS_ENABLED;
 
 const server = app.listen(PORT, async () => {
   console.log(`Server ready on port ${PORT}`);
 
-  // Initialize Bunny CDN integration
-  bunnyCdnService.initialize(config.bunnyCdn);
-  if (config.bunnyCdn.enabled) {
-    try {
-      await bunnyCdnService.fetchBunnyIPs();
-    } catch (err) {
-      console.error("Failed to fetch initial Bunny CDN IPs on startup:", err);
+  if (!startupSideEffectsEnabled) {
+    console.log(
+      "Startup side effects disabled; skipping Bunny CDN refresh, DB listeners, and schedulers.",
+    );
+  } else {
+    // Initialize Bunny CDN integration
+    bunnyCdnService.initialize(config.bunnyCdn);
+    if (config.bunnyCdn.enabled) {
+      try {
+        await bunnyCdnService.fetchBunnyIPs();
+      } catch (err) {
+        console.error("Failed to fetch initial Bunny CDN IPs on startup:", err);
+      }
     }
+
+    // Initialize websocket SSH bridge on same HTTP server
+    initSSHBridge(server);
+
+    notificationService.start().catch((error) => {
+      console.error("Failed to start notification service:", error);
+    });
+
+    ticketNotificationService.start().catch((error) => {
+      console.error("Failed to start ticket notification service:", error);
+    });
+
+    // Sync .env config (RDNS_BASE_DOMAIN, etc.) into database on startup
+    syncEnvConfigToDatabase();
+
+    // Start hourly billing scheduler
+    startBillingScheduler();
   }
-
-  // Initialize websocket SSH bridge on same HTTP server
-  initSSHBridge(server);
-
-  notificationService.start().catch((error) => {
-    console.error("Failed to start notification service:", error);
-  });
-
-  ticketNotificationService.start().catch((error) => {
-    console.error("Failed to start ticket notification service:", error);
-  });
-
-  // Sync .env config (RDNS_BASE_DOMAIN, etc.) into database on startup
-  syncEnvConfigToDatabase();
-
-  // Start hourly billing scheduler
-  startBillingScheduler();
 });
 
 /**
@@ -118,22 +125,25 @@ function startBillingScheduler() {
  */
 async function runHourlyBilling(runType: "initial" | "scheduled") {
   try {
-    console.log(`🔄 Starting ${runType} hourly VPS billing process...`);
+    console.log('🔄 Starting hourly VPS billing process', { runType });
     const result = await BillingService.runHourlyBilling();
-    console.log(
-      `✅ Billing completed: ${
-        result.billedInstances
-      } instances billed, $${result.totalAmount.toFixed(6)} total`,
-    );
+    console.log('✅ Billing completed', {
+      billedInstances: result.billedInstances,
+      totalAmount: result.totalAmount.toFixed(6),
+    });
 
     if (result.failedInstances.length > 0) {
       console.warn(
-        `⚠️ ${result.failedInstances.length} instances failed billing:`,
-        result.errors,
+        '⚠️ Instances failed billing',
+        {
+          runType,
+          failedCount: result.failedInstances.length,
+          errors: result.errors,
+        },
       );
     }
   } catch (error) {
-    console.error(`❌ Error in ${runType} billing:`, error);
+    console.error('❌ Error in hourly billing', { runType }, error);
   }
 }
 
@@ -160,24 +170,34 @@ async function runMonthlyEgressBillingIfDue(runType: "initial" | "scheduled") {
   }
 
   try {
-    console.log(
-      `🌐 Starting ${runType} monthly egress billing finalization for ${billingMonth}...`,
-    );
+    console.log('🌐 Starting monthly egress billing finalization', {
+      runType,
+      billingMonth,
+    });
     await EgressBillingService.getLiveUsage(billingMonth);
     const result = await EgressBillingService.executeLiveBilling(billingMonth);
-    console.log(
-      `✅ Egress billing completed for ${billingMonth}: ${result.billedCount} billed, ${result.failedCount} failed, ${result.invoiceCount} invoices`,
-    );
+    console.log('✅ Egress billing completed', {
+      billingMonth,
+      billedCount: result.billedCount,
+      failedCount: result.failedCount,
+      invoiceCount: result.invoiceCount,
+    });
     if (result.errors.length > 0) {
       console.warn(
-        `⚠️ Egress billing completed with ${result.errors.length} errors for ${billingMonth}:`,
-        result.errors,
+        '⚠️ Egress billing completed with errors',
+        {
+          runType,
+          billingMonth,
+          errorCount: result.errors.length,
+          errors: result.errors,
+        },
       );
     }
     lastScheduledEgressMonth = billingMonth;
   } catch (error) {
     console.error(
-      `❌ Error in ${runType} monthly egress billing for ${billingMonth}:`,
+      '❌ Error in monthly egress billing',
+      { runType, billingMonth },
       error,
     );
   }
@@ -189,22 +209,27 @@ async function runMonthlyEgressBillingIfDue(runType: "initial" | "scheduled") {
  */
 async function runHourlyEgressBilling(runType: "initial" | "scheduled") {
   try {
-    console.log(`🌐 Starting ${runType} hourly egress billing process...`);
+    console.log('🌐 Starting hourly egress billing process', { runType });
     const result = await EgressHourlyBillingService.runHourlyBilling();
-    console.log(
-      `✅ Hourly egress billing completed: ` +
-        `${result.billedCount} billed, ${result.suspendedCount} suspended, ` +
-        `${result.skippedCount} skipped, ${result.errorCount} errors`,
-    );
+    console.log('✅ Hourly egress billing completed', {
+      billedCount: result.billedCount,
+      suspendedCount: result.suspendedCount,
+      skippedCount: result.skippedCount,
+      errorCount: result.errorCount,
+    });
 
     if (result.errors.length > 0) {
       console.warn(
-        `⚠️ Hourly egress billing completed with ${result.errors.length} errors:`,
-        result.errors,
+        '⚠️ Hourly egress billing completed with errors',
+        {
+          runType,
+          errorCount: result.errors.length,
+          errors: result.errors,
+        },
       );
     }
   } catch (error) {
-    console.error(`❌ Error in ${runType} hourly egress billing:`, error);
+    console.error('❌ Error in hourly egress billing', { runType }, error);
   }
 }
 

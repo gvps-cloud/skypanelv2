@@ -4,9 +4,9 @@
  */
 import { Router, type Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
-import { authenticateToken, requireAdmin, type AuthenticatedRequest } from '../middleware/auth.js';
-import { query } from '../lib/database.js';
-import { logActivity } from '../services/activityLogger.js';
+import { authenticateToken, requireAdmin, type AuthenticatedRequest } from '../../middleware/auth.js';
+import { query } from '../../lib/database.js';
+import { logActivity } from '../../services/activityLogger.js';
 
 const router = Router();
 

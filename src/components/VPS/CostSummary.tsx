@@ -5,20 +5,19 @@
 
 import React, { useState, useEffect } from "react";
 import { DollarSign, Server, Shield } from "lucide-react";
+import { apiClient } from "@/lib/api";
 import type { VPSPlan } from "@/types/vps";
 
 interface CostSummaryProps {
   planId: string;
   backupsEnabled: boolean;
   backupFrequency?: "daily" | "weekly" | "none";
-  token: string;
 }
 
 export const CostSummary: React.FC<CostSummaryProps> = ({
   planId,
   backupsEnabled,
   backupFrequency = "none",
-  token,
 }) => {
   const [plan, setPlan] = useState<VPSPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,15 +31,7 @@ export const CostSummary: React.FC<CostSummaryProps> = ({
 
       try {
         setLoading(true);
-        const res = await fetch("/api/vps/plans", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to fetch plans");
-        }
+        const data = await apiClient.get<{ plans?: VPSPlan[] }>("/api/vps/plans");
 
         const selectedPlan = (data.plans || []).find(
           (p: VPSPlan) => p.id === planId
@@ -56,7 +47,7 @@ export const CostSummary: React.FC<CostSummaryProps> = ({
     };
 
     fetchPlan();
-  }, [planId, token]);
+  }, [planId]);
 
   if (loading || !plan) {
     return null;

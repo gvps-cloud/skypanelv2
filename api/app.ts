@@ -39,27 +39,15 @@ import notificationsRouter from "./routes/notifications.js";
 import themeRoutes from "./routes/theme.js";
 import healthRoutes from "./routes/health.js";
 import contactRouter from "./routes/contact.js";
-import adminPlatformRoutes from "./routes/admin/platform.js";
-import adminEmailTemplatesRouter from "./routes/admin/emailTemplates.js";
-import adminCategoryMappingsRoutes from "./routes/admin/categoryMappings.js";
 import faqRoutes from "./routes/faq.js";
 import sshKeysRoutes from "./routes/sshKeys.js";
 import organizationRoutes from "./routes/organizations.js";
 import pricingRoutes from "./routes/pricing.js";
 import activitiesRoutes from "./routes/activities.js";
-import adminFaqRoutes from "./routes/adminFaq.js";
-import adminContactRoutes from "./routes/admin/contact.js";
-import adminBillingRoutes from "./routes/admin/billing.js";
-import adminSSHKeysRoutes from "./routes/admin/sshKeys.js";
-import adminActivityRoutes from "./routes/admin/activity.js";
-import githubRoutes from "./routes/github.js";
 import egressRoutes from "./routes/egress.js";
 import apiKeysRoutes from "./routes/apiKeys/index.js";
 import { authenticateApiKey } from "./routes/apiKeys/middleware.js";
 import documentationRoutes from "./routes/documentation.js";
-import adminDocumentationRoutes from "./routes/adminDocumentation.js";
-import adminNetworkingRoutes from "./routes/admin/networking.js";
-import adminAnnouncementsRoutes from "./routes/admin/announcements.js";
 import announcementsRoutes from "./routes/announcements.js";
 import notesRoutes from "./routes/notes.js";
 import {
@@ -287,9 +275,15 @@ app.use("/api", addRateLimitHeaders);
 app.use("/api", smartRateLimit);
 
 // Initialize metrics
-initializeMetricsCollection();
-startMetricsPersistence();
-BillingCronService.start();
+if (config.STARTUP_SIDE_EFFECTS_ENABLED) {
+  initializeMetricsCollection();
+  startMetricsPersistence();
+  BillingCronService.start();
+} else {
+  console.log(
+    "Startup side effects disabled; skipping metrics persistence and billing cron startup.",
+  );
+}
 
 // API key authentication (sets req.user if X-API-Key / Bearer sk_live_* provided)
 app.use("/api", authenticateApiKey);
@@ -298,9 +292,6 @@ app.use("/api", authenticateApiKey);
 app.use("/api/auth", authRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/admin/platform", adminPlatformRoutes);
-app.use("/api/admin/email-templates", adminEmailTemplatesRouter);
-app.use("/api/admin", adminCategoryMappingsRoutes);
 app.use("/api/vps", vpsRoutes);
 app.use("/api/support", supportRoutes);
 app.use("/api/activity", activityRoutes);
@@ -309,13 +300,7 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/theme", themeRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/contact", contactRouter);
-app.use("/api/admin/contact", adminContactRoutes);
-app.use("/api/admin/billing", adminBillingRoutes);
-app.use("/api/admin/ssh-keys", adminSSHKeysRoutes);
-app.use("/api/admin/activity", adminActivityRoutes);
 app.use("/api/faq", faqRoutes);
-app.use("/api/admin/faq", adminFaqRoutes);
-app.use("/api/admin/github", githubRoutes);
 app.use("/api/ssh-keys", sshKeysRoutes);
 app.use("/api/organizations", organizationRoutes);
 app.use("/api/activities", activitiesRoutes);
@@ -323,9 +308,6 @@ app.use("/api/pricing", pricingRoutes);
 app.use("/api/egress", egressRoutes);
 app.use("/api/api-keys", apiKeysRoutes);
 app.use("/api/documentation", documentationRoutes);
-app.use("/api/admin/documentation", adminDocumentationRoutes);
-app.use("/api/admin/networking", adminNetworkingRoutes);
-app.use("/api/admin/announcements", adminAnnouncementsRoutes);
 app.use("/api/announcements", announcementsRoutes);
 app.use("/api", notesRoutes);
 

@@ -12,10 +12,10 @@ Step-by-step procedure for deploying a new release to production.
    node scripts/verify-env.js
    ```
 
-2. **Confirm no pending database migrations that could break**
-   ```bash
-   node scripts/run-migration.js --dry-run  # If supported, else review migrations/ manually
-   ```
+   Note: `npm run scan:code` now returns `0` findings in the current repo state. The immutable bootstrap migration `migrations/001_initial_schema.sql` is excluded from the gate scan because its seeded bcrypt hash is an intentional false positive, not a runtime secret.
+
+2. **Confirm pending database migrations are understood**
+   Review new files in `migrations/` and ensure they are additive and safe before rollout.
    - New migrations should be additive only (no DROP/ALTER on existing columns)
    - Review the SQL for any destructive operations
 
@@ -23,8 +23,8 @@ Step-by-step procedure for deploying a new release to production.
 
 4. **Archive current state**
    ```bash
-   git tag -a "pre-release-$(date +%Y%m%d%H%M)" -m "Pre-release snapshot"
-   npx pm2 list  # Record current process state
+    git tag -a pre-release-YYYYMMDDHHMM -m "Pre-release snapshot"
+    npx pm2 list  # Record current process state
    ```
 
 ---
@@ -73,6 +73,8 @@ curl -s https://yourdomain.com/api/health | jq .
 npx pm2 logs --lines 20
 ```
 
+For local validation-only PM2 boots, use alternate ports plus `STARTUP_SIDE_EFFECTS_ENABLED=false`, then confirm the startup skip message rather than scheduler activity.
+
 ### Step 5: Smoke Test
 
 Quick manual verification of core flows:
@@ -99,15 +101,16 @@ Quick manual verification of core flows:
 
 3. **Verify schedulers are running**:
    ```bash
-   npx pm2 logs --lines 50 | Select-String "scheduler|billing|egress"
+    npx pm2 logs --lines 50 | Select-String "scheduler|billing|egress"
    ```
+
+   If you intentionally used `STARTUP_SIDE_EFFECTS_ENABLED=false` for a local validation boot, this check should instead show the startup-side-effects skip message.
 
 4. **Confirm SSE notifications** are working (trigger a VPS action and check browser)
 
 5. **Tag the release**:
    ```bash
    git tag -a vX.Y.Z -m "Release vX.Y.Z"
-   git push origin vX.Y.Z
    ```
 
 ---
@@ -118,9 +121,8 @@ If critical issues are discovered post-rollout:
 
 ### Option A: Revert Code (Preferred)
 
-1. Revert to previous build:
+1. Revert to a previously prepared release artifact or checked-out release tag:
    ```bash
-   git checkout <previous-tag>
    npm run build
    npm run pm2:reload
    ```

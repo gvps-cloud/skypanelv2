@@ -215,19 +215,17 @@ export default function Contact() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const data = await apiClient.post<{ ticketId?: string; message?: string; error?: string; errors?: Array<{ msg?: string }> }>(
+        "/contact",
+        {
           name: formData.name,
           email: formData.email,
           subject: formData.subject,
           category: formData.category,
           message: formData.message,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
+        },
+      );
+      if (data.error || Array.isArray(data.errors)) {
         let errorMessage = data.error || "Failed to send message.";
         if (Array.isArray(data.errors) && data.errors.length > 0) {
           errorMessage = data.errors

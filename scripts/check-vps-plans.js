@@ -1,16 +1,10 @@
 import dotenv from 'dotenv';
-import pg from 'pg';
+import { createScriptPool } from './lib/database.js';
 
 dotenv.config();
-const { Pool } = pg;
 
 async function checkVPSPlans() {
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
+  const pool = createScriptPool();
 
   try {
     console.log('🔍 Checking VPS plans...');

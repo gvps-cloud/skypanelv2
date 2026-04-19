@@ -27,7 +27,7 @@ module.exports = {
     {
       name: 'skypanelv2-ui',
       script: 'node_modules/vite/bin/vite.js',
-      args: 'preview --port 5173 --strictPort',
+      args: `preview --port ${process.env.UI_PORT || 5173} --strictPort`,
       cwd: __dirname,
       exec_mode: 'fork',
       env: {

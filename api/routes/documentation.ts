@@ -10,6 +10,15 @@ import { config } from '../config/index.js';
 
 const DOCUMENTATION_UPLOAD_DIR = path.resolve(config.UPLOAD_PATH, 'documentation');
 
+function resolveDocumentationFilePath(storedPath: string): string | null {
+  const normalizedStoredPath = path.basename(String(storedPath));
+  if (!normalizedStoredPath || normalizedStoredPath !== storedPath) {
+    return null;
+  }
+
+  return `${DOCUMENTATION_UPLOAD_DIR}${path.sep}${normalizedStoredPath}`;
+}
+
 const router = Router();
 
 /**
@@ -224,8 +233,8 @@ router.get('/files/:id', async (req: Request, res: Response): Promise<void> => {
     }
 
     // Resolve and validate file path is within upload directory
-    const resolvedPath = path.resolve(DOCUMENTATION_UPLOAD_DIR, file.stored_path);
-    if (!resolvedPath.startsWith(DOCUMENTATION_UPLOAD_DIR)) {
+    const resolvedPath = resolveDocumentationFilePath(file.stored_path);
+    if (!resolvedPath) {
       console.error('Documentation file path traversal attempt:', file.stored_path);
       res.status(404).json({ error: 'File not found' });
       return;

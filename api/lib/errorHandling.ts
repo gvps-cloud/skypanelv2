@@ -163,7 +163,9 @@ export async function withRetry<T>(
       }
       
       // Log retry attempt
-      console.warn(`Retry attempt ${attempt + 1}/${maxRetries} after error:`, {
+      console.warn('Retry attempt after error', {
+        attempt: attempt + 1,
+        maxRetries,
         message: error.message,
         code: error.code,
         status: error.response?.status
@@ -197,7 +199,7 @@ export function logError(
     ...additionalInfo
   };
   
-  console.error(`[ERROR] ${context}:`, errorInfo);
+  console.error('[ERROR]', errorInfo);
 }
 
 /**

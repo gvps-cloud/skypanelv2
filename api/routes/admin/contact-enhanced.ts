@@ -48,7 +48,7 @@ const enhancedPutHandler = async (req: AuthenticatedRequest, res: Response) => {
     if (typeof title !== 'undefined') {
       updateFields.push(`title = $${paramIndex++}`);
       updateValues.push(title);
-      console.log(`[Contact Method Update] Updating title to: ${title}`);
+      console.log('[Contact Method Update] Updating title', { title });
     }
     if (typeof description !== 'undefined') {
       updateFields.push(`description = $${paramIndex++}`);
@@ -58,17 +58,20 @@ const enhancedPutHandler = async (req: AuthenticatedRequest, res: Response) => {
     if (typeof is_active !== 'undefined') {
       updateFields.push(`is_active = $${paramIndex++}`);
       updateValues.push(is_active);
-      console.log(`[Contact Method Update] Updating is_active to: ${is_active}`);
+      console.log('[Contact Method Update] Updating is_active', { isActive: is_active });
     }
     if (typeof config !== 'undefined') {
       updateFields.push(`config = $${paramIndex++}`);
       const configJson = JSON.stringify(config);
       updateValues.push(configJson);
-      console.log(`[Contact Method Update] Updating config (${configJson.length} bytes):`, config);
+      console.log('[Contact Method Update] Updating config', {
+        bytes: configJson.length,
+        config,
+      });
     }
 
     if (updateFields.length === 0) {
-      console.error(`[Contact Method Update] No fields to update for ${method_type}`);
+      console.error('[Contact Method Update] No fields to update', { methodType: method_type });
       return res.status(400).json({ error: 'No fields to update' });
     }
 
@@ -76,7 +79,9 @@ const enhancedPutHandler = async (req: AuthenticatedRequest, res: Response) => {
     updateValues.push(new Date().toISOString());
     updateValues.push(method_type);
 
-    console.log(`[Contact Method Update] Executing database update with ${updateFields.length} fields`);
+    console.log('[Contact Method Update] Executing database update', {
+      fieldCount: updateFields.length,
+    });
     const updateResult = await query(
       `UPDATE contact_methods 
        SET ${updateFields.join(', ')} 
@@ -86,17 +91,21 @@ const enhancedPutHandler = async (req: AuthenticatedRequest, res: Response) => {
     );
 
     if (updateResult.rows.length === 0) {
-      console.error(`[Contact Method Update] Update returned no rows for ${method_type}`);
+      console.error('[Contact Method Update] Update returned no rows', {
+        methodType: method_type,
+      });
       throw new Error('Update operation failed - no rows returned');
     }
 
     const updatedMethod = updateResult.rows[0];
-    console.log(`[Contact Method Update] Successfully updated method: ${updatedMethod.id}`);
-    console.log(`[Contact Method Update] Updated config:`, updatedMethod.config);
+    console.log('[Contact Method Update] Successfully updated method', {
+      methodId: updatedMethod.id,
+    });
+    console.log('[Contact Method Update] Updated config', updatedMethod.config);
 
     // Log activity
     if (req.user?.id) {
-      console.log(`[Contact Method Update] Logging activity for user: ${req.user.id}`);
+      console.log('[Contact Method Update] Logging activity', { userId: req.user.id });
       await logActivity({
         userId: req.user.id,
         organizationId: req.user.organizationId ?? null,
@@ -110,12 +119,13 @@ const enhancedPutHandler = async (req: AuthenticatedRequest, res: Response) => {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[Contact Method Update] Completed successfully in ${duration}ms`);
+    console.log('[Contact Method Update] Completed successfully', { durationMs: duration });
 
     return res.json({ method: updatedMethod });
   } catch (err: any) {
     const duration = Date.now() - startTime;
-    console.error(`[Contact Method Update] Error after ${duration}ms:`, {
+    console.error('[Contact Method Update] Error', {
+      durationMs: duration,
       method_type,
       error: err.message,
       stack: err.stack,

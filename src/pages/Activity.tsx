@@ -15,7 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import Pagination from '@/components/ui/Pagination';
-import { apiClient } from '@/lib/api';
+import { apiClient, buildApiUrl } from '@/lib/api';
 
 interface ActivityRecord {
   id: string;
@@ -40,7 +40,7 @@ interface PaginationInfo {
 }
 
 const ActivityPage: React.FC = () => {
-  const { token } = useAuth();
+  const { user: _user } = useAuth();
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<string>('');
@@ -115,9 +115,8 @@ const ActivityPage: React.FC = () => {
     const params = new URLSearchParams();
     if (from instanceof Date) params.set('from', from.toISOString());
     if (to instanceof Date) params.set('to', to.toISOString());
-    const url = `/api/activity/export?${params.toString()}`;
-    // Open in new tab/window to trigger download; include auth header via fetch for blob
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    const url = buildApiUrl(`/api/activity/export?${params.toString()}`);
+    fetch(url, { credentials: 'include' })
       .then(async (res) => {
         const blob = await res.blob();
         const dlUrl = window.URL.createObjectURL(blob);

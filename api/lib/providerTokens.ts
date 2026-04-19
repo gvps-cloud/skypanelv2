@@ -3,6 +3,10 @@ import { encryptSecret, decryptSecret } from "./crypto.js";
 
 export type ProviderType = "linode";
 
+function providerLogContext(providerId: string) {
+  return { providerId };
+}
+
 /**
  * Normalizes a provider token by decrypting the stored value and re-encrypting
  * legacy plaintext tokens.
@@ -27,11 +31,13 @@ export async function normalizeProviderToken(
           [reEncrypted, providerId]
         );
         console.info(
-          `normalizeProviderToken: re-encrypted legacy API token for provider ${providerId}`
+          'normalizeProviderToken: re-encrypted legacy API token',
+          providerLogContext(providerId),
         );
       } catch (reEncryptErr) {
         console.error(
-          `normalizeProviderToken: failed to re-encrypt provider ${providerId} token`,
+          'normalizeProviderToken: failed to re-encrypt provider token',
+          providerLogContext(providerId),
           reEncryptErr
         );
       }
@@ -40,7 +46,8 @@ export async function normalizeProviderToken(
     return decrypted;
   } catch (err) {
     console.error(
-      `normalizeProviderToken: failed to decrypt API token for provider ${providerId}`,
+      'normalizeProviderToken: failed to decrypt API token',
+      providerLogContext(providerId),
       err
     );
     throw err;

@@ -17,7 +17,7 @@ function ensureTransporter(): Transporter {
   const user = config.SMTP_USERNAME;
   const pass = config.SMTP_PASSWORD;
 
-  console.log(`${logPrefix} Initializing SMTP transporter with config:`, {
+  console.log('[EmailService] Initializing SMTP transporter with config:', {
     host,
     port,
     hasUsername: !!user,
@@ -30,7 +30,7 @@ function ensureTransporter(): Transporter {
     const error = new Error(
       "SMTP credentials are not fully configured. Please set SMTP_HOST, SMTP_USERNAME, and SMTP_PASSWORD environment variables.",
     );
-    console.error(`${logPrefix} SMTP Configuration Error:`, error.message);
+    console.error('[EmailService] SMTP Configuration Error:', error.message);
     throw error;
   }
 
@@ -68,7 +68,7 @@ async function sendViaResend(mailOptions: SendMailOptions): Promise<void> {
   }
 
   const resend = new Resend(config.RESEND_API_KEY);
-  console.log(`${logPrefix} Attempting to send via Resend`, {
+  console.log('[EmailService] Attempting to send via Resend', {
     to: mailOptions.to,
   });
 
@@ -84,11 +84,11 @@ async function sendViaResend(mailOptions: SendMailOptions): Promise<void> {
     throw error;
   }
 
-  console.log(`${logPrefix} Email sent via Resend successfully`, data);
+  console.log('[EmailService] Email sent via Resend successfully', data);
 }
 
 async function sendViaSmtp(mailOptions: SendMailOptions): Promise<void> {
-  console.log(`${logPrefix} Attempting to send via SMTP`, {
+  console.log('[EmailService] Attempting to send via SMTP', {
     to: mailOptions.to,
     from: mailOptions.from,
     subject: mailOptions.subject,
@@ -98,7 +98,7 @@ async function sendViaSmtp(mailOptions: SendMailOptions): Promise<void> {
 
   const transport = ensureTransporter();
   const info = await transport.sendMail(mailOptions);
-  console.log(`${logPrefix} Email sent via SMTP successfully`, {
+  console.log('[EmailService] Email sent via SMTP successfully', {
     messageId: info.messageId,
     response: info.response,
     to: mailOptions.to,
@@ -137,13 +137,10 @@ export async function sendEmail(options: SendMailOptions): Promise<void> {
   // this function directly. Rationale: unconfigured/misconfigured providers in
   // CI machines can block for 10+ seconds, producing flaky, slow test runs.
   if (config.NODE_ENV === "test") {
-    console.log(
-      `${logPrefix} [test-mode] Suppressed email send`,
-      {
-        to: options.to,
-        subject: options.subject,
-      },
-    );
+    console.log('[EmailService] [test-mode] Suppressed email send', {
+      to: options.to,
+      subject: options.subject,
+    });
     return;
   }
 
@@ -172,7 +169,7 @@ export async function sendEmail(options: SendMailOptions): Promise<void> {
       return;
     } catch (error) {
       attempts.push({ provider, error });
-      console.error(`${logPrefix} Provider '${provider}' failed:`, {
+      console.error('[EmailService] Provider failed:', {
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         provider

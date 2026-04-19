@@ -547,4 +547,61 @@ export interface IProviderService {
   cloneDisk(instanceId: string, diskId: number): Promise<ProviderDisk>;
   resetDiskPassword(instanceId: string, diskId: number, password: string): Promise<void>;
   deleteDisk(instanceId: string, diskId: number): Promise<void>;
+
+  // ── Volume Management ──
+
+  listVolumes(page?: number, pageSize?: number): Promise<{ data: ProviderVolume[]; pages: number; total: number }>;
+  createVolume(params: CreateVolumeParams): Promise<ProviderVolume>;
+  getVolume(volumeId: number): Promise<ProviderVolume>;
+  updateVolume(volumeId: number, params: { label?: string; tags?: string[] }): Promise<ProviderVolume>;
+  deleteVolume(volumeId: number): Promise<void>;
+  attachVolume(volumeId: number, linodeId: number): Promise<ProviderVolume>;
+  detachVolume(volumeId: number): Promise<ProviderVolume>;
+  resizeVolume(volumeId: number, size: number): Promise<ProviderVolume>;
+  cloneVolume(volumeId: number, label: string): Promise<ProviderVolume>;
+  listVolumeTypes(): Promise<ProviderVolumeType[]>;
+}
+
+export interface ProviderVolume {
+  id: number;
+  label: string;
+  status: 'creating' | 'active' | 'resizing' | 'key_rotating';
+  size: number;
+  region: string;
+  linode_id: number | null;
+  linode_label: string | null;
+  filesystem_path: string;
+  created: string;
+  updated: string;
+  encryption: 'enabled' | 'disabled';
+  hardware_type: 'hdd' | 'nvme';
+  io_ready: boolean;
+  tags: string[];
+}
+
+export interface CreateVolumeParams {
+  label: string;
+  size: number;
+  region: string;
+  linode_id?: number;
+  config_id?: number;
+  encryption?: 'enabled' | 'disabled';
+  tags?: string[];
+}
+
+export interface ProviderVolumeType {
+  id: string;
+  label: string;
+  description: string;
+  storage_bytes: number;
+  price: {
+    hourly: number | null;
+    monthly: number | null;
+    region_prices?: Array<{
+      region: string;
+      hourly: number | null;
+      monthly: number | null;
+    }>;
+  };
+  capabilities: string[];
 }

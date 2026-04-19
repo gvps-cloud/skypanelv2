@@ -30,6 +30,14 @@ global.ResizeObserver = class ResizeObserver {
 // Mock fetch for RegionSelector tests
 const mockFetch = vi.fn();
 
+// Helper: build a fetch response that satisfies apiClient.handleResponse
+// (which reads response.headers.get("content-type"))
+const mockApiResponse = (data: unknown) => ({
+  ok: true,
+  headers: { get: (key: string) => (key === 'content-type' ? 'application/json' : null) },
+  json: async () => data,
+});
+
 describe('Bug Condition Exploration: VPS Modal Dropdown Scrolling and Flag Display', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', mockFetch);
@@ -145,14 +153,11 @@ describe('Bug Condition Exploration: VPS Modal Dropdown Scrolling and Flag Displ
     // We'll check if the country code mapping exists by examining the rendered output
     
     // Mock regions API response with Amsterdam/NL region
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        regions: [
-          { id: 'eu-west-3', label: 'Amsterdam, NL', country: 'Netherlands', capabilities: ['VPS'] },
-        ],
-      }),
-    });
+    mockFetch.mockResolvedValueOnce(mockApiResponse({
+      regions: [
+        { id: 'eu-west-3', label: 'Amsterdam, NL', country: 'Netherlands', capabilities: ['VPS'] },
+      ],
+    }));
 
     const handleSelect = vi.fn();
 
@@ -161,7 +166,6 @@ describe('Bug Condition Exploration: VPS Modal Dropdown Scrolling and Flag Displ
         providerId="linode"
         selectedRegion="eu-west-3"
         onSelect={handleSelect}
-        token="mock-token"
       />
     );
 
@@ -200,14 +204,11 @@ describe('Bug Condition Exploration: VPS Modal Dropdown Scrolling and Flag Displ
      */
 
     // Test with Brazil - a country that's likely missing from COUNTRY_CODES
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        regions: [
-          { id: 'sa-east', label: 'São Paulo, BR', country: 'Brazil', capabilities: ['VPS'] },
-        ],
-      }),
-    });
+    mockFetch.mockResolvedValueOnce(mockApiResponse({
+      regions: [
+        { id: 'sa-east', label: 'São Paulo, BR', country: 'Brazil', capabilities: ['VPS'] },
+      ],
+    }));
 
     const handleSelect = vi.fn();
 
@@ -216,7 +217,6 @@ describe('Bug Condition Exploration: VPS Modal Dropdown Scrolling and Flag Displ
         providerId="linode"
         selectedRegion="sa-east"
         onSelect={handleSelect}
-        token="mock-token"
       />
     );
 
@@ -251,14 +251,11 @@ describe('Bug Condition Exploration: VPS Modal Dropdown Scrolling and Flag Displ
      */
 
     // Test with Indonesia - a country that's likely missing from COUNTRY_CODES
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        regions: [
-          { id: 'ap-southeast-2', label: 'Jakarta, ID', country: 'Indonesia', capabilities: ['VPS'] },
-        ],
-      }),
-    });
+    mockFetch.mockResolvedValueOnce(mockApiResponse({
+      regions: [
+        { id: 'ap-southeast-2', label: 'Jakarta, ID', country: 'Indonesia', capabilities: ['VPS'] },
+      ],
+    }));
 
     const handleSelect = vi.fn();
 
@@ -267,7 +264,6 @@ describe('Bug Condition Exploration: VPS Modal Dropdown Scrolling and Flag Displ
         providerId="linode"
         selectedRegion="ap-southeast-2"
         onSelect={handleSelect}
-        token="mock-token"
       />
     );
 

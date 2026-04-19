@@ -11,6 +11,7 @@ This document provides a comprehensive reference for all environment variables u
 | `NODE_ENV` | No | `development` | Application environment (`development`, `production`, `test`) |
 | `PORT` | No | `3001` | Port for the Express.js backend server |
 | `CLIENT_URL` | No | `http://localhost:5173` | Frontend application URL for CORS and redirects |
+| `STARTUP_SIDE_EFFECTS_ENABLED` | No | `true` | Enables startup-time side effects such as schedulers, DB LISTEN clients, and external refresh jobs; set to `false` only for local validation-only production boots |
 | `JWT_SECRET` | **Yes** | - | Secret key for JWT token signing (use strong random string) |
 | `JWT_EXPIRES_IN` | No | `7d` | JWT token expiration time (e.g., `7d`, `24h`, `3600s`) |
 
@@ -52,6 +53,7 @@ Used by the `scripts/create-test-admin.js` script.
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `DATABASE_URL` | **Yes** | - | PostgreSQL connection string |
+| `DB_SSL_REJECT_UNAUTHORIZED` | No | `true` | Only used when PostgreSQL SSL is enabled; set to `false` only for trusted self-signed/internal certificates |
 
 **Examples:**
 ```bash
@@ -63,7 +65,15 @@ DATABASE_URL=postgresql://username:password@ep-example-123456.us-east-1.aws.neon
 
 # Other cloud providers
 DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=require
+
+# EasyPanel / private-network Postgres without TLS
+DATABASE_URL=postgresql://user:pass@host:5432/dbname?sslmode=disable
 ```
+
+**SSL behavior notes:**
+- If `DATABASE_URL` includes `?sslmode=disable`, the app and maintenance scripts keep PostgreSQL SSL disabled even in production.
+- If `DATABASE_URL` includes `?sslmode=require` (or another SSL mode), the app enables SSL automatically.
+- `DB_SSL_REJECT_UNAUTHORIZED=false` is only relevant when SSL is enabled and you intentionally trust a self-signed or private CA certificate.
 
 ### Redis (Optional)
 
@@ -233,8 +243,20 @@ TRUST_PROXY=true
 NODE_ENV=production
 PORT=3001
 CLIENT_URL=https://your-domain.com
+STARTUP_SIDE_EFFECTS_ENABLED=true
 PAYPAL_MODE=live
 TRUST_PROXY=1  # Adjust based on your proxy setup
+```
+
+### Validation-Only Production Boot
+
+Use this only for local boot verification when you need production-mode startup without kicking off schedulers or other startup side effects:
+
+```bash
+NODE_ENV=production
+STARTUP_SIDE_EFFECTS_ENABLED=false
+PORT=3101
+UI_PORT=4173
 ```
 
 ### Testing Environment

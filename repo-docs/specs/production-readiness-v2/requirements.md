@@ -408,6 +408,7 @@ The following constraints apply to ALL requirements in this document:
 1. THE System SHALL create `src/pages/admin/VolumePricing.tsx` with CRUD table for (provider × region) pricing
 2. THE System SHALL create `api/routes/admin/volumePricing.ts` with admin-only CRUD endpoints
 3. THE admin volume pricing routes SHALL be guarded by `requireAdmin` middleware
+4. THE admin UI SHALL expose volume pricing as its own admin section separate from the Billing dashboard
 
 ---
 

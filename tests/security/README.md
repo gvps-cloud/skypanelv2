@@ -135,6 +135,7 @@ npm run scan:code
 - Detects common security vulnerabilities (SQL injection, XSS, etc.)
 - Checks for insecure coding patterns
 - Enforces security best practices
+- Excludes the immutable bootstrap migration `migrations/001_initial_schema.sql` from the gate scan because its seeded bcrypt hash is a documented false positive, not a runtime secret
 
 ### `npm run verify:security`
 
@@ -146,7 +147,7 @@ npm run verify:security
 
 This runs:
 1. `npm audit --audit-level=high` - Dependency vulnerability scan
-2. `semgrep --config=auto --error` - Static code analysis
+2. `node scripts/run-semgrep.js --config=auto` - Static code analysis
 3. `vitest run tests/security/` - Security test suite
 
 ## Test Dependencies

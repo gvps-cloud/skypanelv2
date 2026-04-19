@@ -108,7 +108,11 @@ export abstract class BaseProviderService implements IProviderService {
       url: error?.url,
       method: error?.method,
     };
-    console.error(`[${this.providerType}] ${context}:`, safeError);
+    console.error('[ProviderService] API error:', {
+      provider: this.providerType,
+      context,
+      safeError,
+    });
 
     if (error instanceof Error) {
       throw this.createError(
@@ -228,4 +232,16 @@ export abstract class BaseProviderService implements IProviderService {
   abstract cloneDisk(instanceId: string, diskId: number): Promise<any>;
   abstract resetDiskPassword(instanceId: string, diskId: number, password: string): Promise<void>;
   abstract deleteDisk(instanceId: string, diskId: number): Promise<void>;
+
+  // ── Volume Management ──
+  abstract listVolumes(page?: number, pageSize?: number): Promise<{ data: any[]; pages: number; total: number }>;
+  abstract createVolume(params: any): Promise<any>;
+  abstract getVolume(volumeId: number): Promise<any>;
+  abstract updateVolume(volumeId: number, params: any): Promise<any>;
+  abstract deleteVolume(volumeId: number): Promise<void>;
+  abstract attachVolume(volumeId: number, linodeId: number): Promise<any>;
+  abstract detachVolume(volumeId: number): Promise<any>;
+  abstract resizeVolume(volumeId: number, size: number): Promise<any>;
+  abstract cloneVolume(volumeId: number, label: string): Promise<any>;
+  abstract listVolumeTypes(): Promise<any[]>;
 }

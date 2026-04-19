@@ -9,20 +9,19 @@ import { AlertTriangle } from 'lucide-react';
 import type { Provider, ProviderType } from '@/types/provider';
 import { toast } from 'sonner';
 import { getUserFriendlyErrorMessage, isCredentialError } from '@/lib/providerErrors';
+import { apiClient } from '@/lib/api';
 import { ProviderAccordionSelect } from './ProviderAccordionSelect';
 
 interface ProviderSelectorProps {
   value: string | null;
   onChange: (providerId: string, providerType: ProviderType) => void;
   disabled?: boolean;
-  token: string;
 }
 
 export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
   value,
   onChange,
   disabled = false,
-  token
 }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,18 +32,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/vps/providers', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw data.error || { message: 'Failed to fetch providers' };
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ providers?: Provider[] }>('/api/vps/providers');
       // Providers are already filtered for active=true and ordered by display_order on the backend
       const activeProviders = data.providers || [];
 

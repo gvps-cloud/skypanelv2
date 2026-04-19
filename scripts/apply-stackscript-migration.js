@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 
 import dotenv from 'dotenv';
-import pkg from 'pg';
-const { Pool } = pkg;
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createScriptPool } from './lib/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,12 +14,7 @@ dotenv.config();
 async function applyMigration() {
   console.log('🚀 Applying vps_stackscript_configs migration...');
   
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('localhost') ? false : {
-      rejectUnauthorized: false
-    }
-  });
+  const pool = createScriptPool();
 
   try {
     const client = await pool.connect();
