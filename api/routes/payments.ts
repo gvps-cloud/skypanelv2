@@ -58,7 +58,7 @@ router.get("/config", (req: Request, res: Response) => {
     });
   }
 
-  const disableFunding = ["paylater"];
+  const disableFunding = ["paylater", "credit"];
 
   res.json({
     success: true,

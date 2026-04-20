@@ -756,7 +756,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
                 currency: "USD",
                 intent: "capture",
                 mode: "sandbox",
-                disableFunding: ["paylater"],
+                disableFunding: ["paylater", "credit"],
                 brandName: `${BRAND_NAME}`,
               },
             },

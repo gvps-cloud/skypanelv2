@@ -97,12 +97,11 @@ export const PayPalCheckoutDialog: React.FC<PayPalCheckoutDialogProps> = ({
 
     const options: ReactPayPalScriptOptions = {
       clientId: config.clientId,
-      'client-id': config.clientId,
       currency: config.currency,
       intent: config.intent,
       components: 'buttons',
-      'disable-funding': config.disableFunding?.join(',') || undefined,
-      'data-sdk-integration-source': 'skypanelv2_checkout',
+      disableFunding: config.disableFunding?.join(',') || undefined,
+      dataSdkIntegrationSource: 'skypanelv2_checkout',
     };
 
     return options;
