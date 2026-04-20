@@ -807,6 +807,9 @@ PAYPAL_CLIENT_ID=your-paypal-client-id
 PAYPAL_CLIENT_SECRET=your-paypal-client-secret
 PAYPAL_MODE=sandbox
 
+# Server URL (required for PayPal return/cancel redirects)
+CLIENT_URL=http://localhost:5173
+
 # Linode (required for VPS)
 LINODE_API_TOKEN=your-linode-api-token
 
@@ -825,6 +828,15 @@ RDNS_BASE_DOMAIN=ip.rev.yourdomain.com
 
 > ⚠️ **Branding**: After setting the env vars above, run `node scripts/seed-branding.js` to update the database with your brand name in documentation articles, FAQ items, contact methods, and networking config. Migrations use generic placeholders; this script replaces them with your configured values.
 > For the complete environment variable reference, see `[repo-docs/ENVIRONMENT_VARIABLES.md](./repo-docs/ENVIRONMENT_VARIABLES.md)` and `[.env.example](./.env.example)`.
+
+> **PayPal Return URLs**: PayPal redirects users back to your site after checkout. The redirect URLs are derived from `CLIENT_URL`:
+>
+> | Redirect | URL |
+> | -------- | --- |
+> | **Success** | `{CLIENT_URL}/billing/payment/success` |
+> | **Cancel** | `{CLIENT_URL}/billing/payment/cancel` |
+>
+> Both routes are defined in `src/App.tsx` as protected routes. In production, set `CLIENT_URL` to your public domain (e.g., `https://panel.yourdomain.com`). PayPal also blocks Pay Later / Pay in 4 / PayPal Credit at the order level via `IMMEDIATE_PAYMENT_REQUIRED` — only immediate payment methods are accepted.
 
 ### Icons & Logo
 

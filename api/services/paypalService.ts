@@ -8,9 +8,11 @@ import {
   Environment,
   OrdersController,
   CheckoutPaymentIntent,
-  OrderApplicationContextUserAction,
-  OrderApplicationContextShippingPreference,
-  ItemCategory
+  ItemCategory,
+  PayeePaymentMethodPreference,
+  PayPalExperienceLandingPage,
+  PayPalExperienceUserAction,
+  ShippingPreference
 } from '@paypal/paypal-server-sdk';
 import { config } from '../config/index.js';
 import { query, transaction } from '../lib/database.js';
@@ -182,12 +184,18 @@ export class PayPalService {
               ],
             },
           ],
-          applicationContext: {
-            brandName: config.COMPANY_BRAND_NAME || 'SkyPanelV2',
-            returnUrl: `${clientBaseUrl}/billing/payment/success`,
-            cancelUrl: `${clientBaseUrl}/billing/payment/cancel`,
-            userAction: OrderApplicationContextUserAction.PAYNOW,
-            shippingPreference: OrderApplicationContextShippingPreference.NOSHIPPING,
+          paymentSource: {
+            paypal: {
+              experienceContext: {
+                brandName: config.COMPANY_BRAND_NAME || 'SkyPanelV2',
+                returnUrl: `${clientBaseUrl}/billing/payment/success`,
+                cancelUrl: `${clientBaseUrl}/billing/payment/cancel`,
+                landingPage: PayPalExperienceLandingPage.LOGIN,
+                userAction: PayPalExperienceUserAction.PAYNOW,
+                shippingPreference: ShippingPreference.NOSHIPPING,
+                paymentMethodPreference: PayeePaymentMethodPreference.IMMEDIATEPAYMENTREQUIRED,
+              },
+            },
           },
         },
       };
@@ -199,9 +207,9 @@ export class PayPalService {
 
       console.log('PayPal response:', { statusCode: response.statusCode, hasResult: !!response.result });
 
-      if (response.statusCode === 201 && response.result) {
+      if ((response.statusCode === 201 || response.statusCode === 200) && response.result) {
         const order = response.result;
-        const approvalUrl = order.links?.find(link => link.rel === 'approve')?.href;
+        const approvalUrl = order.links?.find(link => link.rel === 'approve' || link.rel === 'payer-action')?.href;
 
         // Don't create transaction record yet - will be created when payment is captured
         // Transaction records are only created for completed payments
@@ -249,7 +257,7 @@ export class PayPalService {
       const { orders } = getPayPalClient();
       const response = await orders.ordersCapture(request);
 
-      if (response.statusCode === 201 && response.result) {
+      if ((response.statusCode === 201 || response.statusCode === 200) && response.result) {
         const order = response.result;
         const capture = order.purchaseUnits?.[0]?.payments?.captures?.[0];
 
@@ -637,7 +645,7 @@ export class PayPalService {
         result?: { batchHeader?: { payoutBatchId?: string } };
       };
 
-      if (response.statusCode === 201 && response.result) {
+      if ((response.statusCode === 201 || response.statusCode === 200) && response.result) {
         return {
           success: true,
           paymentId: response.result.batchHeader?.payoutBatchId,
