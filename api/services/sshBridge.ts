@@ -1,5 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { Server } from 'http';
+import type { IncomingMessage } from 'http';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { query } from '../lib/database.js';
@@ -14,9 +15,9 @@ interface AuthUser {
   organizationId?: string;
 }
 
-interface IncomingMessage {
+interface WSMessage {
   type: 'input' | 'resize' | 'ping';
-  data?: string; // raw input text
+  data?: string;
   rows?: number;
   cols?: number;
 }
@@ -26,7 +27,6 @@ function parsePath(url: string | undefined): { instanceId: string | null } {
   try {
     const u = new URL(url, 'http://localhost');
     const segments = u.pathname.split('/').filter(Boolean);
-    // Expect: /api/vps/:id/ssh
     if (segments.length >= 3 && segments[0] === 'api' && segments[1] === 'vps' && segments[3] === 'ssh') {
       return { instanceId: segments[2] };
     }
@@ -36,22 +36,73 @@ function parsePath(url: string | undefined): { instanceId: string | null } {
   return { instanceId: null };
 }
 
+function parseCookies(cookieHeader: string | undefined): Record<string, string> {
+  const cookies: Record<string, string> = {};
+  if (!cookieHeader) return cookies;
+  for (const part of cookieHeader.split(';')) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const eqIndex = trimmed.indexOf('=');
+    if (eqIndex === -1) continue;
+    const key = trimmed.slice(0, eqIndex).trim();
+    const value = trimmed.slice(eqIndex + 1).trim();
+    try {
+      cookies[key] = decodeURIComponent(value);
+    } catch {
+      cookies[key] = value;
+    }
+  }
+  return cookies;
+}
+
+function getTokenFromRequest(req: IncomingMessage): string | null {
+  // 1. Try ?token= query param (backward compat with older clients)
+  try {
+    const u = new URL(req.url || '', 'http://localhost');
+    const queryToken = u.searchParams.get('token');
+    if (queryToken) return queryToken;
+  } catch {}
+
+  // 2. Fall back to auth_token HttpOnly cookie (current auth model)
+  const cookies = parseCookies(req.headers.cookie);
+  if (cookies.auth_token) return cookies.auth_token;
+
+  return null;
+}
+
 async function authenticate(token: string | null): Promise<AuthUser | null> {
   if (!token) return null;
   try {
     const decoded = jwt.verify(token, config.JWT_SECRET) as any;
-    const userRes = await query('SELECT id, email, role FROM users WHERE id = $1', [decoded.userId]);
+    const userRes = await query('SELECT id, email, role, active_organization_id FROM users WHERE id = $1', [decoded.userId]);
     if (userRes.rows.length === 0) return null;
     const user = userRes.rows[0];
     let organizationId: string | undefined = undefined;
-    try {
-      const orgRes = await query('SELECT organization_id FROM organization_members WHERE user_id = $1', [user.id]);
-      organizationId = orgRes.rows[0]?.organization_id;
-    } catch {
-      // fallback by owner org
-      const ownerRes = await query('SELECT id FROM organizations WHERE owner_id = $1 ORDER BY created_at DESC LIMIT 1', [user.id]);
-      organizationId = ownerRes.rows[0]?.id;
+
+    // Resolve organization: active_organization_id → membership → owned org
+    if (user.active_organization_id) {
+      try {
+        const activeRes = await query('SELECT organization_id FROM organization_members WHERE user_id = $1 AND organization_id = $2', [user.id, user.active_organization_id]);
+        if (activeRes.rows.length > 0) {
+          organizationId = user.active_organization_id;
+        }
+      } catch { /* table may not exist during migration */ }
     }
+
+    if (!organizationId) {
+      try {
+        const orgRes = await query('SELECT organization_id FROM organization_members WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1', [user.id]);
+        organizationId = orgRes.rows[0]?.organization_id;
+      } catch { /* ignore */ }
+    }
+
+    if (!organizationId) {
+      try {
+        const ownerRes = await query('SELECT id FROM organizations WHERE owner_id = $1 ORDER BY created_at DESC LIMIT 1', [user.id]);
+        organizationId = ownerRes.rows[0]?.id;
+      } catch { /* ignore */ }
+    }
+
     return { id: user.id, email: user.email, role: user.role, organizationId };
   } catch (err) {
     console.warn('WS auth failed:', err);
@@ -74,14 +125,7 @@ export function initSSHBridge(server: Server) {
   wss.on('connection', async (ws, req) => {
     const url = req.url;
     const { instanceId } = parsePath(url);
-    const token = (() => {
-      try {
-        const u = new URL(url || '', 'http://localhost');
-        return u.searchParams.get('token');
-      } catch {
-        return null;
-      }
-    })();
+    const token = getTokenFromRequest(req);
 
     if (!instanceId) {
       send(ws, { type: 'error', message: 'Invalid SSH path' });
@@ -211,9 +255,9 @@ export function initSSHBridge(server: Server) {
     }
 
     ws.on('message', (message: Buffer) => {
-      let payload: IncomingMessage | null = null;
+      let payload: WSMessage | null = null;
       try {
-        payload = JSON.parse(message.toString('utf8')) as IncomingMessage;
+        payload = JSON.parse(message.toString('utf8')) as WSMessage;
       } catch {}
       if (!payload) return;
       if (payload.type === 'input') {

@@ -3303,7 +3303,7 @@ const VPSDetail: React.FC = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden relative bg-background">
-            {detail?.id && (
+            {sshModalOpen && detail?.id && (
               <SSHTerminal
                 instanceId={detail.id}
                 fitContainer={true}

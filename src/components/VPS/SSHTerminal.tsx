@@ -126,63 +126,78 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
 
   // Initialize the terminal
   useEffect(() => {
-    if (containerRef.current && !termRef.current) {
-      const term = new Terminal({
-        cursorBlink: true,
-  fontSize: INITIAL_FONT_SIZE,
-        rows: initialRows.current,
-        cols: initialCols.current,
-        theme: TERMINAL_THEMES.dark,
-        allowTransparency: true,
-        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      });
-      const fitAddon = new FitAddon();
-      const webLinks = new WebLinksAddon();
-      const searchAddon = new SearchAddon();
-      term.loadAddon(fitAddon);
-      term.loadAddon(webLinks);
-      term.loadAddon(searchAddon);
-      term.open(containerRef.current);
-      term.focus();
-      fitAddon.fit();
-      termRef.current = term;
-      fitAddonRef.current = fitAddon;
-      searchAddonRef.current = searchAddon;
+    const container = containerRef.current;
+    if (!container || termRef.current) return;
 
-      const resizeObserver = new ResizeObserver(() => {
-        // Debounce resize to avoid excessive calls
-        setTimeout(() => {
+    let disposed = false;
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const term = new Terminal({
+      cursorBlink: true,
+      fontSize: INITIAL_FONT_SIZE,
+      rows: initialRows.current,
+      cols: initialCols.current,
+      theme: TERMINAL_THEMES.dark,
+      allowTransparency: true,
+      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+    });
+    const fitAddon = new FitAddon();
+    const webLinks = new WebLinksAddon();
+    const searchAddon = new SearchAddon();
+    term.loadAddon(fitAddon);
+    term.loadAddon(webLinks);
+    term.loadAddon(searchAddon);
+    term.open(container);
+    termRef.current = term;
+    fitAddonRef.current = fitAddon;
+    searchAddonRef.current = searchAddon;
+
+    // Defer initial fit so the renderer has time to compute dimensions
+    requestAnimationFrame(() => {
+      if (disposed) return;
+      try {
+        fitAddon.fit();
+      } catch { /* container may still be zero-size */ }
+    });
+
+    const handleResize = () => {
+      if (disposed) return;
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (disposed) return;
+        try {
           fitAddon.fit();
-          const newCols = term.cols;
-          const newRows = term.rows;
-
-          if (newCols && newRows) {
-            // Only update if dimensions actually changed
-            if (newCols !== colsRef.current || newRows !== rowsRef.current) {
-              setCols(newCols);
-              setRows(newRows);
-              colsRef.current = newCols;
-              rowsRef.current = newRows;
-
-              // Notify backend of size change
-              if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-                wsRef.current.send(JSON.stringify({
-                  type: 'resize',
-                  rows: newRows,
-                  cols: newCols
-                }));
-              }
+        } catch { /* ignore fit errors during transitions */ }
+        const newCols = term.cols;
+        const newRows = term.rows;
+        if (newCols && newRows) {
+          if (newCols !== colsRef.current || newRows !== rowsRef.current) {
+            setCols(newCols);
+            setRows(newRows);
+            colsRef.current = newCols;
+            rowsRef.current = newRows;
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              wsRef.current.send(JSON.stringify({
+                type: 'resize',
+                rows: newRows,
+                cols: newCols
+              }));
             }
           }
-        }, 100);
-      });
-      resizeObserver.observe(containerRef.current);
-      resizeObserverRef.current = resizeObserver;
-      return () => {
-        resizeObserver.disconnect();
-        resizeObserverRef.current = null;
-      };
-    }
+        }
+      }, 100);
+    };
+
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(container);
+    resizeObserverRef.current = resizeObserver;
+
+    return () => {
+      disposed = true;
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeObserver.disconnect();
+      resizeObserverRef.current = null;
+    };
   }, []);
 
   // Update theme when changed
@@ -196,7 +211,9 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
   useEffect(() => {
     if (termRef.current && fitAddonRef.current) {
       setTimeout(() => {
-        fitAddonRef.current?.fit();
+        try {
+          fitAddonRef.current?.fit();
+        } catch { /* ignore fit errors during layout transitions */ }
       }, 100);
     }
   }, [isFullScreen, fitContainer]);
