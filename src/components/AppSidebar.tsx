@@ -3,17 +3,17 @@ import { Link, useLocation } from "react-router-dom";
 import {
   Activity,
   Building2,
-  Cog,
   CreditCard,
   BookOpen,
   FileText,
   Key,
   LayoutDashboard,
-  Megaphone,
+  LifeBuoy,
+  Palette,
   Search,
   Server,
-  Settings,
   ShieldCheck,
+  Tags,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -68,7 +68,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       if (isAdminRoute) {
         const activeAnchor = currentHash || "dashboard";
 
-        // Organized admin navigation with task-focused grouping.
+        // Organize admin sections by domain instead of one overloaded ops bucket.
         const adminGroups = [
           {
             title: "Dashboard",
@@ -77,60 +77,65 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             isActive: activeAnchor === "dashboard" || !currentHash,
           },
           {
-            title: "Operations",
-            icon: Cog,
+            title: "Support & Intake",
+            icon: LifeBuoy,
             url: `/admin#support`,
-            isActive: ["support", "servers", "networking", "stackscripts", "providers", "regions", "vps-plans", "category-mappings", "ssh-keys", "activity-log"].includes(activeAnchor),
+            isActive: ["support", "contact-management"].includes(activeAnchor),
             items: [
               { title: "Tickets", url: `/admin#support`, isActive: activeAnchor === "support" },
+              {
+                title: "Contact Management",
+                url: `/admin#contact-management`,
+                isActive: activeAnchor === "contact-management",
+              },
+            ],
+          },
+          {
+            title: "Infrastructure",
+            icon: Server,
+            url: `/admin#servers`,
+            isActive: ["servers", "providers", "regions", "networking", "stackscripts", "ssh-keys"].includes(activeAnchor),
+            items: [
               { title: "Servers", url: `/admin#servers`, isActive: activeAnchor === "servers" },
+              { title: "Providers", url: `/admin#providers`, isActive: activeAnchor === "providers" },
+              { title: "Regions", url: `/admin#regions`, isActive: activeAnchor === "regions" },
               { title: "Networking", url: `/admin#networking`, isActive: activeAnchor === "networking" },
               { title: "StackScripts", url: `/admin#stackscripts`, isActive: activeAnchor === "stackscripts" },
-              { title: "Regions", url: `/admin#regions`, isActive: activeAnchor === "regions" },
-              { title: "Providers", url: `/admin#providers`, isActive: activeAnchor === "providers" },
-              { title: "VPS Plans", url: `/admin#vps-plans`, isActive: activeAnchor === "vps-plans" },
-              { title: "Category Mappings", url: `/admin#category-mappings`, isActive: activeAnchor === "category-mappings" },
               { title: "SSH Keys", url: `/admin#ssh-keys`, isActive: activeAnchor === "ssh-keys" },
-              { title: "Activity Log", url: `/admin#activity-log`, isActive: activeAnchor === "activity-log" },
             ],
           },
           {
-            title: "Content & Communication",
-            icon: Megaphone,
-            url: `/admin#announcements`,
-            isActive: [
-              "announcements",
-              "faq-management",
-              "documentation",
-              "contact-management",
-              "email-templates",
-            ].includes(activeAnchor),
+            title: "Products & Pricing",
+            icon: Tags,
+            url: `/admin#vps-plans`,
+            isActive: ["vps-plans", "volume-pricing", "category-mappings"].includes(activeAnchor),
             items: [
-              { title: "Announcements", url: `/admin#announcements`, isActive: activeAnchor === "announcements" },
-              { title: "FAQ Management", url: `/admin#faq-management`, isActive: activeAnchor === "faq-management" },
-              { title: "Documentation", url: `/admin#documentation`, isActive: activeAnchor === "documentation" },
-              { title: "Contact Management", url: `/admin#contact-management`, isActive: activeAnchor === "contact-management" },
-              { title: "Email Templates", url: `/admin#email-templates`, isActive: activeAnchor === "email-templates" },
+              { title: "VPS Plans", url: `/admin#vps-plans`, isActive: activeAnchor === "vps-plans" },
+              { title: "Volume Pricing", url: `/admin#volume-pricing`, isActive: activeAnchor === "volume-pricing" },
+              { title: "Category Mappings", url: `/admin#category-mappings`, isActive: activeAnchor === "category-mappings" },
             ],
           },
           {
-            title: "Platform Settings",
-            icon: Settings,
-            url: `/admin#platform`,
-            isActive: [
-              "platform",
-              "theme",
-              "rate-limiting",
-            ].includes(activeAnchor),
+            title: "Billing",
+            icon: CreditCard,
+            url: `/admin#billing`,
+            isActive: ["billing", "egress-credits"].includes(activeAnchor),
             items: [
-              { title: "Theme", url: `/admin#theme`, isActive: activeAnchor === "theme" },
-              { title: "Rate Limiting", url: `/admin#rate-limiting`, isActive: activeAnchor === "rate-limiting" },
-              { title: "Platform Controls", url: `/admin#platform`, isActive: activeAnchor === "platform" },
+              {
+                title: "Billing Overview",
+                url: `/admin#billing`,
+                isActive: activeAnchor === "billing",
+              },
+              {
+                title: "Egress Credits",
+                url: `/admin#egress-credits`,
+                isActive: activeAnchor === "egress-credits",
+              },
             ],
           },
           {
-            title: "Identity & Access",
-            icon: ShieldCheck,
+            title: "Users & Organizations",
+            icon: Users,
             url: `/admin#user-management`,
             isActive: ["user-management", "organizations"].includes(activeAnchor),
             items: [
@@ -147,21 +152,33 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             ],
           },
           {
-            title: "Finance",
-            icon: CreditCard,
-            url: `/admin#billing`,
-            isActive: ["billing", "egress-credits"].includes(activeAnchor),
+            title: "Brand & Communications",
+            icon: Palette,
+            url: `/admin#theme`,
+            isActive: [
+              "theme",
+              "announcements",
+              "documentation",
+              "faq-management",
+              "email-templates",
+            ].includes(activeAnchor),
             items: [
-              {
-                title: "Billing Overview",
-                url: `/admin#billing`,
-                isActive: activeAnchor === "billing",
-              },
-              {
-                title: "Egress Credits",
-                url: `/admin#egress-credits`,
-                isActive: activeAnchor === "egress-credits",
-              },
+              { title: "Theme", url: `/admin#theme`, isActive: activeAnchor === "theme" },
+              { title: "Announcements", url: `/admin#announcements`, isActive: activeAnchor === "announcements" },
+              { title: "Documentation", url: `/admin#documentation`, isActive: activeAnchor === "documentation" },
+              { title: "FAQ Management", url: `/admin#faq-management`, isActive: activeAnchor === "faq-management" },
+              { title: "Email Templates", url: `/admin#email-templates`, isActive: activeAnchor === "email-templates" },
+            ],
+          },
+          {
+            title: "Platform & Audit",
+            icon: ShieldCheck,
+            url: `/admin#platform`,
+            isActive: ["platform", "rate-limiting", "activity-log"].includes(activeAnchor),
+            items: [
+              { title: "Platform Controls", url: `/admin#platform`, isActive: activeAnchor === "platform" },
+              { title: "Rate Limiting", url: `/admin#rate-limiting`, isActive: activeAnchor === "rate-limiting" },
+              { title: "Activity Log", url: `/admin#activity-log`, isActive: activeAnchor === "activity-log" },
             ],
           },
         ];

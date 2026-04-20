@@ -47,9 +47,9 @@ export function NavUser({
 
   const isAdmin = user.role === "admin" && !isImpersonating
 
-  const handleLogout = () => {
-    logout()
-    navigate("/login")
+  const handleLogout = async () => {
+    await logout()
+    navigate("/")
   }
 
   return (

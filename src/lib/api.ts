@@ -91,38 +91,81 @@ class ApiClient {
     };
   }
 
+  /**
+   * 401 is used both for invalid credentials (login) and for expired/invalid sessions.
+   * Only the latter should trigger global logout + hard redirect to home.
+   */
+  private shouldSkip401SessionExpiredRedirect(
+    response: Response,
+    apiErrorString: string | undefined,
+  ): boolean {
+    let pathname = "";
+    try {
+      pathname = new URL(response.url).pathname;
+    } catch {
+      return false;
+    }
+
+    if (pathname.endsWith("/auth/login") || pathname.endsWith("/auth/logout") || pathname.endsWith("/auth/register")) {
+      return true;
+    }
+
+    if (
+      pathname.endsWith("/auth/verify-password") &&
+      apiErrorString === "Incorrect password"
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      // Handle 401 Unauthorized - token expired or invalid
-      if (response.status === 401) {
-        const logoutCallback = (window as any).__autoLogoutCallback;
-
-        if (logoutCallback) {
-          logoutCallback();
-          window.location.href = "/";
-        }
-      }
-
       const errorText = await response.text();
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      let apiErrorString: string | undefined;
 
       try {
-        const errorData = JSON.parse(errorText);
+        const errorData = JSON.parse(errorText) as Record<string, unknown>;
+        apiErrorString =
+          typeof errorData.error === "string" ? errorData.error : undefined;
         const nestedMessage =
-          (typeof errorData?.message === "string" && errorData.message) ||
-          (typeof errorData?.error === "string" && errorData.error) ||
-          (typeof errorData?.error?.message === "string" && errorData.error.message) ||
+          (typeof errorData.message === "string" && errorData.message) ||
+          apiErrorString ||
+          (typeof errorData.error === "object" &&
+            errorData.error !== null &&
+            typeof (errorData.error as { message?: string }).message === "string" &&
+            (errorData.error as { message: string }).message) ||
           errorMessage;
 
         const codeSuffix =
-          typeof errorData?.error?.code === "string"
-            ? ` (${errorData.error.code})`
+          typeof errorData.error === "object" &&
+          errorData.error !== null &&
+          typeof (errorData.error as { code?: string }).code === "string"
+            ? ` (${(errorData.error as { code: string }).code})`
             : "";
 
         errorMessage = `${nestedMessage}${codeSuffix}`.trim();
       } catch {
         // If not JSON, use the text as error message
         errorMessage = errorText || errorMessage;
+      }
+
+      if (response.status === 401) {
+        const skipRedirect = this.shouldSkip401SessionExpiredRedirect(
+          response,
+          apiErrorString,
+        );
+
+        if (!skipRedirect) {
+          const logoutCallback = (window as any).__autoLogoutCallback;
+
+          if (logoutCallback) {
+            logoutCallback();
+            window.location.href = "/";
+          }
+        }
       }
 
       const error = new Error(errorMessage);

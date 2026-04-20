@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Loader2, Search, ChevronDown, ChevronRight, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -163,6 +163,7 @@ export function AccordionSelect({
 }: AccordionSelectProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
 
   // Get selected item for display
   const selectedItem = useMemo(() => {
@@ -217,6 +218,19 @@ export function AccordionSelect({
     ? selectedItem.item.label
     : placeholder;
 
+  const portalContainer = useMemo(() => {
+    if (!open || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const triggerElement = triggerRef.current;
+    if (!triggerElement) {
+      return undefined;
+    }
+
+    return triggerElement.closest('[role="dialog"]') as HTMLElement | null;
+  }, [open]);
+
   // Show loading state
   if (loading && !selectedId) {
     return (
@@ -240,6 +254,7 @@ export function AccordionSelect({
     <Popover modal={false} open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          ref={triggerRef}
           type="button"
           variant="outline"
           role="combobox"
@@ -257,6 +272,7 @@ export function AccordionSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent
+        container={portalContainer ?? undefined}
         className="w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
         onOpenAutoFocus={(event) => event.preventDefault()}

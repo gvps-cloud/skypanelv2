@@ -124,17 +124,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const logout = async () => {
-    try {
-      await apiClient.post("/auth/logout");
-    } catch {
-      // Continue with local cleanup even if server request fails
-    }
-
     setUser(null);
     setToken(null);
     setIsImpersonating(false);
     clearImpersonationSessionStorage();
     try { sessionStorage.removeItem("skypanel_org_id"); } catch { /* ignore */ }
+
+    void apiClient.post("/auth/logout").catch(() => {
+      // Continue with local cleanup even if server request fails
+    });
   };
 
   const refreshToken = async () => {

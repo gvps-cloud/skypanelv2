@@ -2205,17 +2205,21 @@ const Admin: React.FC = () => {
 
   const quickActions: Array<{ label: string; section: AdminSection }> = [
     { label: "Support Queue", section: "support" },
-    { label: "Provisioning", section: "servers" },
-    { label: "Volume Pricing", section: "volume-pricing" },
-    { label: "Billing & Finance", section: "billing" },
+    { label: "Contact Management", section: "contact-management" },
+    { label: "Servers", section: "servers" },
+    { label: "VPS Plans", section: "vps-plans" },
+    { label: "Billing Overview", section: "billing" },
     { label: "User Management", section: "user-management" },
     { label: "Organizations", section: "organizations" },
-    { label: "Email Templates", section: "email-templates" },
+    { label: "Activity Log", section: "activity-log" },
   ];
   const sectionGroups: Array<{ title: string; ids: AdminSection[] }> = [
-    { title: "Operations", ids: ["support", "servers", "volume-pricing", "vps-plans", "providers"] },
-    { title: "Configuration", ids: ["theme", "category-mappings", "announcements", "documentation"] },
-    { title: "Finance & Accounts", ids: ["billing", "egress-credits", "user-management", "organizations"] },
+    { title: "Support & Intake", ids: ["support"] },
+    { title: "Infrastructure", ids: ["servers", "providers"] },
+    { title: "Products & Pricing", ids: ["vps-plans", "volume-pricing", "category-mappings"] },
+    { title: "Billing", ids: ["billing", "egress-credits"] },
+    { title: "Users & Organizations", ids: ["user-management", "organizations"] },
+    { title: "Brand & Communications", ids: ["announcements", "email-templates"] },
   ];
 
   return (

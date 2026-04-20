@@ -80,6 +80,7 @@ router.post(
         lastName,
       });
 
+      res.cookie(AUTH_COOKIE_NAME, result.token, getAuthCookieOptions());
       res.status(201).json({
         message: "User registered successfully",
         user: result.user,

@@ -261,8 +261,8 @@ const VPS: React.FC = () => {
   const [createRegionsLoading, setCreateRegionsLoading] = useState(false);
   const [createRegionsError, setCreateRegionsError] = useState<string | null>(null);
   const [categorySearch, setCategorySearch] = useState("");
-  const [regionSearch] = useState("");
-  const [planSearch] = useState("");
+  const [regionSearch, setRegionSearch] = useState("");
+  const [planSearch, setPlanSearch] = useState("");
   const [selectedStackScript, setSelectedStackScript] = useState<any | null>(
     null,
   );
@@ -1770,7 +1770,6 @@ const VPS: React.FC = () => {
     (region) => region.id === createForm.region,
   );
   const normalizedPlanSearch = planSearch.trim().toLowerCase();
-  // Keep for potential future use
   const _filteredPlanOptions = useMemo(
     () =>
       planOptions.filter((option) => {
@@ -1788,7 +1787,7 @@ const VPS: React.FC = () => {
           .join(" ")
           .toLowerCase();
 
-        return haystack.includes(normalizedPlanSearch);
+          return haystack.includes(normalizedPlanSearch);
       }),
     [planOptions, normalizedPlanSearch],
   );

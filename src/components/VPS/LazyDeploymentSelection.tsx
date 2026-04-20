@@ -13,18 +13,6 @@ interface LazyDeploymentSelectionProps {
   onStackScriptSelect: (script: StackScript | null) => void;
 }
 
-/**
- * LazyDeploymentSelection Component
- *
- * An accordion-style dropdown for selecting StackScript deployments.
- * Now uses the shared AccordionSelect component for consistent styling.
- *
- * Features:
- * - "None" option for base OS provisioning
- * - Searchable/filterable StackScripts
- * - Script descriptions for context
- * - Filters out SSH helper scripts
- */
 export default function LazyDeploymentSelection({
   stackScripts,
   selectedStackScript,
