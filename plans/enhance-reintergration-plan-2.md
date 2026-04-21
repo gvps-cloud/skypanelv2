@@ -13,8 +13,9 @@ Changes from v1 are marked with **[v2]** throughout.
 - `platform_integrations.enabled WHERE slug='enhance'` is the admin runtime gate.
 - Effective enablement is `ENHANCE_ENABLED && envConfigured && platform_integrations.enabled`.
 - Do not add or use `ENHANCE_HOSTING_UI_ENABLED`.
-- Add a real predefined `member` org role before shipping hosting permissions.
+- Add real predefined `member` and `hosting_manager` org roles before shipping hosting permissions.
 - Hosting permissions are snake_case: `hosting_view`, `hosting_manage`.
+- `hosting_manager` is a dedicated role scoped to Enhance web hosting with zero VPS permissions, mirroring how `vps_manager` is scoped to Linode VPS with zero hosting permissions.
 - Initial purchase and recurring billing use wallet debits plus compensating internal wallet credits on failure; do not model rollback as a customer-facing refund flow.
 - `repo-docs/enhance-oas3-api.yaml` is the API contract for endpoint paths, operationIds, and payload shapes.
 - Historical commits are implementation references only, not the source of truth.
@@ -35,13 +36,13 @@ Changes from v1 are marked with **[v2]** throughout.
 - **[v2]** The SQL `seed_default_roles_for_organization()` function (migration 015) is severely out of sync with `api/services/roles.ts` — it lacks `notes_*` and `egress_*` permissions and uses `ON CONFLICT DO NOTHING`, so it cannot be simply re-run to update existing roles. The migration must use explicit UPDATE statements instead.
 - **[v2]** `egress_view` and `egress_manage` were never seeded into `predefined_permissions`, are missing from the `validPermissions` allowlist in `organizations.ts:1250`, and are missing from the `CreateRoleWizard.tsx` PERMISSIONS array. Part 0 must close all three gaps.
 
-## Part 0: Member Role And Hosting Permission Foundation
+## Part 0: Member Role, Hosting Manager Role, And Permission Foundation
 
-This lands first and is not gated on any Enhance API work.
+This lands first and is not gated on any Enhance API work. Two new predefined roles are introduced: `member` (general operator) and `hosting_manager` (hosting-only operator, no VPS access).
 
 ### Migration `056_add_member_role.sql`
 
-**[v2]** This migration must perform four distinct operations rather than just re-running the seed function:
+**[v2]** This migration must perform six distinct operations rather than just re-running the seed function:
 
 #### Step 1: Seed new permissions into `predefined_permissions`
 
@@ -73,26 +74,22 @@ SET permissions = permissions || '["hosting_view","hosting_manage"]'::jsonb
 WHERE name = 'admin' AND is_custom = false
   AND NOT (permissions ? 'hosting_view');
 
--- vps_manager: add hosting_view, egress_view **[v2]** (notes_view already present in code but not in SQL function)
-UPDATE organization_roles
-SET permissions = permissions || '["hosting_view"]'::jsonb
-WHERE name = 'vps_manager' AND is_custom = false
-  AND NOT (permissions ? 'hosting_view');
+-- vps_manager: NO hosting permissions (VPS and hosting are fully decoupled) **[v3]**
 
--- support_agent: add hosting_view **[v2]** (notes_view already present in code but not in SQL function)
+-- support_agent: add hosting_view
 UPDATE organization_roles
 SET permissions = permissions || '["hosting_view"]'::jsonb
 WHERE name = 'support_agent' AND is_custom = false
   AND NOT (permissions ? 'hosting_view');
 
--- viewer: add hosting_view, egress_view **[v2]** (notes_view already present in code but not in SQL function)
+-- viewer: add hosting_view
 UPDATE organization_roles
 SET permissions = permissions || '["hosting_view"]'::jsonb
 WHERE name = 'viewer' AND is_custom = false
   AND NOT (permissions ? 'hosting_view');
 ```
 
-**[v2]** Note: `egress_view` was added to `owner` and `admin` roles by migration 032, but `vps_manager`, `support_agent`, and `viewer` never received it. The plan does not add `egress_view` to those roles, matching the v1 intent. If that changes, add separate UPDATEs.
+**[v3]** Note: `vps_manager` gets **no** hosting permissions — VPS and hosting are fully decoupled. `hosting_manager` gets **no** VPS permissions in return. `egress_view` was added to `owner` and `admin` roles by migration 032, but `vps_manager`, `support_agent`, and `viewer` never received it. The plan does not add `egress_view` to those roles. If that changes, add separate UPDATEs.
 
 #### Step 3: Insert the new `member` role for all orgs
 
@@ -107,7 +104,20 @@ FROM organizations
 ON CONFLICT (organization_id, name) DO NOTHING;
 ```
 
-#### Step 4: Backfill legacy `member` rows to the new role
+#### Step 4: Insert the new `hosting_manager` role for all orgs **[v3]**
+
+The `hosting_manager` role is a dedicated hosting-only role with zero VPS permissions, mirroring `vps_manager`:
+
+```sql
+INSERT INTO organization_roles (organization_id, name, permissions, is_custom)
+SELECT id, 'hosting_manager',
+  '["hosting_view","hosting_manage","billing_view","notes_view","ssh_keys_view","tickets_view","tickets_create","egress_view"]'::jsonb,
+  false
+FROM organizations
+ON CONFLICT (organization_id, name) DO NOTHING;
+```
+
+#### Step 5: Backfill legacy `member` rows to the new role
 
 **[v2]** Only reassign rows where the legacy `role` column is `'member'`. Other null-role rows stay as `viewer`:
 
@@ -133,42 +143,49 @@ WHERE vr.organization_id = om.organization_id
   AND (om.role IS NULL OR om.role NOT IN ('owner', 'admin', 'member'));
 ```
 
-#### Step 5: Update the `seed_default_roles_for_organization()` function body
+#### Step 6: Update the `seed_default_roles_for_organization()` function body
 
-**[v2]** Replace the function body entirely to match the current `PREDEFINED_ROLES` in `api/services/roles.ts`, plus the `member` role and all current permissions (including `notes_*`, `egress_*`, `hosting_*`). The function must:
+**[v2]** Replace the function body entirely to match the current `PREDEFINED_ROLES` in `api/services/roles.ts`, plus the `member` and `hosting_manager` roles and all current permissions (including `notes_*`, `egress_*`, `hosting_*`). The function must:
 
-- Include the `member` role as a sixth predefined role.
-- Use the full, current permission sets for all six roles matching `api/services/roles.ts` lines 44-76 (plus the new hosting additions).
+- Include the `member` and `hosting_manager` roles as new predefined roles (total: 7 predefined roles: owner, admin, member, vps_manager, hosting_manager, support_agent, viewer).
+- Use the full, current permission sets for all seven roles matching `api/services/roles.ts` lines 44-76 (plus the new hosting additions).
 - Change the backfill CASE from `ELSE viewer_role_id` to `WHEN 'member' THEN member_role_id ELSE viewer_role_id`.
 - Keep `ON CONFLICT DO NOTHING` for the INSERTs (new orgs need idempotent seeding).
 
 #### Full predefined role permission sets (post-migration):
 
-| Role | Permissions |
-|---|---|
-| `owner` | `vps_view`, `vps_create`, `vps_delete`, `vps_manage`, `notes_view`, `notes_manage`, `ssh_keys_view`, `ssh_keys_manage`, `tickets_view`, `tickets_create`, `tickets_manage`, `billing_view`, `billing_manage`, `egress_view`, `egress_manage`, `members_manage`, `settings_manage`, `hosting_view`, `hosting_manage` |
-| `admin` | `vps_view`, `vps_create`, `vps_delete`, `vps_manage`, `notes_view`, `notes_manage`, `ssh_keys_view`, `ssh_keys_manage`, `tickets_view`, `tickets_create`, `tickets_manage`, `billing_view`, `egress_view`, `settings_manage`, `hosting_view`, `hosting_manage` |
-| `member` | `vps_view`, `vps_create`, `vps_manage`, `notes_view`, `notes_manage`, `ssh_keys_view`, `tickets_view`, `tickets_create`, `billing_view`, `egress_view`, `hosting_view`, `hosting_manage` |
-| `vps_manager` | `vps_view`, `vps_create`, `vps_manage`, `notes_view`, `ssh_keys_view`, `ssh_keys_manage`, `hosting_view` |
-| `support_agent` | `notes_view`, `tickets_view`, `tickets_create`, `tickets_manage`, `hosting_view` |
-| `viewer` | `vps_view`, `notes_view`, `tickets_view`, `hosting_view` |
+| Permission | owner | admin | member | vps_manager | hosting_manager | support_agent | viewer |
+|---|---|---|---|---|---|---|---|
+| `vps_view` | **Y** | **Y** | **Y** | **Y** | — | — | **Y** |
+| `vps_create` | **Y** | **Y** | **Y** | **Y** | — | — | — |
+| `vps_delete` | **Y** | **Y** | — | — | — | — | — |
+| `vps_manage` | **Y** | **Y** | **Y** | **Y** | — | — | — |
+| `notes_view` | **Y** | **Y** | **Y** | **Y** | **Y** | **Y** | **Y** |
+| `notes_manage` | **Y** | **Y** | **Y** | — | — | — | — |
+| `ssh_keys_view` | **Y** | **Y** | **Y** | **Y** | **Y** | — | — |
+| `ssh_keys_manage` | **Y** | **Y** | — | **Y** | — | — | — |
+| `tickets_view` | **Y** | **Y** | **Y** | — | **Y** | **Y** | **Y** |
+| `tickets_create` | **Y** | **Y** | **Y** | — | **Y** | **Y** | — |
+| `tickets_manage` | **Y** | **Y** | — | — | — | **Y** | — |
+| `billing_view` | **Y** | **Y** | **Y** | — | **Y** | — | — |
+| `billing_manage` | **Y** | — | — | — | — | — | — |
+| `egress_view` | **Y** | **Y** | **Y** | — | **Y** | — | — |
+| `egress_manage` | **Y** | — | — | — | — | — | — |
+| `members_manage` | **Y** | — | — | — | — | — | — |
+| `settings_manage` | **Y** | **Y** | — | — | — | — | — |
+| `hosting_view` | **Y** | **Y** | **Y** | — | **Y** | **Y** | **Y** |
+| `hosting_manage` | **Y** | **Y** | **Y** | — | **Y** | — | — |
 
-Suggested default `member` permission set (same as above):
-
-- `vps_view`, `vps_create`, `vps_manage`
-- `notes_view`, `notes_manage`
-- `ssh_keys_view`
-- `tickets_view`, `tickets_create`
-- `billing_view`, `egress_view`
-- `hosting_view`, `hosting_manage`
+Permission counts: `owner` 19/19 | `admin` 16/19 | `member` 12/19 | `vps_manager` 6/19 | `hosting_manager` 8/19 | `support_agent` 5/19 | `viewer` 4/19
 
 ### Code updates paired with migration `056`
 
 `api/services/roles.ts`
 
 - Extend `Permission` with `hosting_view | hosting_manage`.
-- Add `member` to `PREDEFINED_ROLES`.
+- Add `member` and `hosting_manager` to `PREDEFINED_ROLES`.
 - Add hosting permissions to the other predefined roles as described in the table above.
+- **[v3]** `vps_manager` gets **no** hosting permissions — VPS and hosting are decoupled.
 - **[v2]** Verify the `PREDEFINED_ROLES` object exactly matches the updated SQL function body so code and DB never diverge again.
 - In `initializeDefaultRoles`, only backfill null `role_id` to `member` when the legacy `organization_members.role` column is `member`; keep `viewer` as the fallback for other null-role rows.
 
@@ -208,10 +225,14 @@ Suggested default `member` permission set (same as above):
 - `api/services/roles.test.ts`
   - `member` exists in `PREDEFINED_ROLES`
   - `member` has `hosting_manage`
+  - `hosting_manager` exists in `PREDEFINED_ROLES`
+  - `hosting_manager` has `hosting_view` and `hosting_manage`
+  - `hosting_manager` does not have any `vps_*` permissions
   - `viewer` does not have `hosting_manage`
   - **[v2]** All `PREDEFINED_ROLES` entries include `hosting_view`
   - **[v2]** `owner` and `admin` include `hosting_manage`
-  - **[v2]** `vps_manager` and `support_agent` do not include `hosting_manage`
+  - **[v3]** `vps_manager` does not include `hosting_view` or `hosting_manage`
+  - **[v2]** `support_agent` does not include `hosting_manage`
 - `tests/security/member-role-permissions.test.ts`
   - legacy `member` rows end up attached to the predefined `member` role after migration
   - **[v2]** non-member null-role rows remain attached to `viewer`
@@ -690,6 +711,7 @@ Core scenarios to cover:
 ## Docs
 
 - Update `README.md` to describe the restored hosting surface and required env vars.
+- Update `README.md` Organizations & Multi-Tenancy section to include the full predefined roles & permissions matrix table.
 - Add `repo-docs/enhance-integration.md` with the effective enablement model, org mapping, plan sync, purchase flow, and recurring billing behavior.
 - Run `npm run docs:api:sync` after the route work lands.
 
@@ -733,3 +755,13 @@ This section summarizes every change from v1 for quick diff:
 13. **Scheduler registration**: Added concrete location in `api/server.ts` for the billing scheduler hook.
 14. **Frontend routing**: Added line number references in `src/App.tsx` and `src/components/AppSidebar.tsx`.
 15. **Additional tests**: Added tests for egress custom-role acceptance, member role via `/resources`, custom-role preservation during migration, and predefined role hosting permission distribution.
+
+### v3 Changelog (from v2)
+
+16. **`hosting_manager` predefined role**: Added as a 7th predefined role — hosting-only with zero VPS permissions, mirroring `vps_manager` which has VPS-only with zero hosting permissions.
+17. **`vps_manager` decoupled from hosting**: Removed `hosting_view` from `vps_manager` — VPS and hosting are now fully decoupled at the role level.
+18. **Migration 056 Step 4**: Added INSERT for `hosting_manager` role across all orgs.
+19. **Seed function**: Updated to include 7 predefined roles (owner, admin, member, vps_manager, hosting_manager, support_agent, viewer).
+20. **Permission matrix**: Replaced inline role lists with a full cross-referenced permission matrix table.
+21. **README.md docs**: Added instruction to include the predefined roles & permissions matrix in the Organizations & Multi-Tenancy section.
+22. **Tests**: Added `hosting_manager` existence, hosting permissions, and absence of VPS permissions assertions. Updated `vps_manager` test to confirm zero hosting permissions.

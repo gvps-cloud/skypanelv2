@@ -661,8 +661,44 @@ The database schema is managed through **51 sequential SQL migrations** in the `
 - **Organization-Based Isolation** — All resources (VPS, wallets, tickets, SSH keys, invoices) are scoped to organizations
 - **Custom Roles** — Admin-defined roles with granular JSONB permission sets
 - **Email Invitations** — Token-based invitation flow with accept/decline endpoints
-- **Member Management** — Owner, admin, and member role hierarchy
+- **Member Management** — Owner, admin, member, and custom role hierarchy
 - **Active Organization** — Users can switch between organizations they belong to
+
+#### Predefined Roles & Permissions
+
+Seven predefined roles control access across 19 granular permissions. Orgs can also create custom roles via the role wizard.
+
+| Permission | owner | admin | member | vps_manager | hosting_manager | support_agent | viewer |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `vps_view` | Y | Y | Y | Y | — | — | Y |
+| `vps_create` | Y | Y | Y | Y | — | — | — |
+| `vps_delete` | Y | Y | — | — | — | — | — |
+| `vps_manage` | Y | Y | Y | Y | — | — | — |
+| `notes_view` | Y | Y | Y | Y | Y | Y | Y |
+| `notes_manage` | Y | Y | Y | — | — | — | — |
+| `ssh_keys_view` | Y | Y | Y | Y | Y | — | — |
+| `ssh_keys_manage` | Y | Y | — | Y | — | — | — |
+| `tickets_view` | Y | Y | Y | — | Y | Y | Y |
+| `tickets_create` | Y | Y | Y | — | Y | Y | — |
+| `tickets_manage` | Y | Y | — | — | — | Y | — |
+| `billing_view` | Y | Y | Y | — | Y | — | — |
+| `billing_manage` | Y | — | — | — | — | — | — |
+| `egress_view` | Y | Y | Y | — | Y | — | — |
+| `egress_manage` | Y | — | — | — | — | — | — |
+| `members_manage` | Y | — | — | — | — | — | — |
+| `settings_manage` | Y | Y | — | — | — | — | — |
+| `hosting_view` | Y | Y | Y | — | Y | Y | Y |
+| `hosting_manage` | Y | Y | Y | — | Y | — | — |
+
+| Role | Permissions | Purpose |
+|---|---|---|
+| `owner` | 19/19 | Full access to everything |
+| `admin` | 16/19 | All except `billing_manage`, `egress_manage`, `members_manage` |
+| `member` | 12/19 | General day-to-day operator — VPS + hosting, no destructive ops |
+| `vps_manager` | 6/19 | Linode VPS only — no hosting, no egress |
+| `hosting_manager` | 8/19 | Enhance hosting only — no VPS |
+| `support_agent` | 5/19 | Support tickets + read-only hosting context |
+| `viewer` | 4/19 | Read-only across VPS, notes, tickets, hosting |
 
 ### 🔐 Authentication & Security
 
