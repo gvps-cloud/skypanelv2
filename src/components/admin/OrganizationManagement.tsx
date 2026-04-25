@@ -160,7 +160,7 @@ const emptyOrganizationForm = {
 
 const normalizeRoleName = (value: unknown) => {
   if (typeof value !== "string" || !value.trim()) return null;
-  return value === "member" ? "viewer" : value;
+  return value;
 };
 
 const formatRoleLabel = (roleName: string) =>
@@ -311,6 +311,7 @@ const getDefaultAssignableRoleId = (
   if (!organization) return "";
 
   return (
+    organization.roles.find((role) => role.name === "member")?.id ??
     organization.roles.find((role) => role.name === "viewer")?.id ??
     organization.roles.find((role) => role.name !== "owner")?.id ??
     organization.roles[0]?.id ??

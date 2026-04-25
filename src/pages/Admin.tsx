@@ -39,6 +39,9 @@ import { useAuth } from "../contexts/AuthContext";
 import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
 import { CategoryManager } from "@/components/admin/CategoryManager";
+import { EnhanceIntegrationCard } from "@/components/admin/EnhanceIntegrationCard";
+import { FraudCheckList } from "@/components/admin/FraudCheckList";
+import { RefundList } from "@/components/admin/RefundList";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { useCategoryDisplayName } from "@/hooks/useCategoryMappings";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -207,7 +210,10 @@ type AdminSection =
   | "volume-pricing"
   | "billing"
   | "email-templates"
-  | "activity-log";
+  | "activity-log"
+  | "enhance-hosting"
+  | "fraud-protection"
+  | "refunds";
 
 type AdminNetworkingTab =
   | "rdns"
@@ -241,7 +247,10 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "volume-pricing",
   "billing",
   "email-templates",
-  "activity-log"
+  "activity-log",
+  "enhance-hosting",
+  "fraud-protection",
+  "refunds"
 ];
 
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
@@ -3677,6 +3686,27 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="announcements" activeSection={activeTab}>
           <AnnouncementsManager token={token || ""} />
+        </SectionPanel>
+
+        <SectionPanel section="enhance-hosting" activeSection={activeTab}>
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold">Enhance Web Hosting</h2>
+            <EnhanceIntegrationCard />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="fraud-protection" activeSection={activeTab}>
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold">Fraud Protection</h2>
+            <FraudCheckList />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="refunds" activeSection={activeTab}>
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold">Refund Management</h2>
+            <RefundList />
+          </div>
         </SectionPanel>
 
         {/* Legacy application sections removed */}

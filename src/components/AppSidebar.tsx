@@ -15,6 +15,8 @@ import {
   ShieldCheck,
   Tags,
   Users,
+  Globe,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -61,6 +63,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const isOrganizationNotesActive = pathname.startsWith("/notes/organizations");
   const isApiDocsActive = pathname.startsWith("/api-docs");
   const isDocsActive = pathname.startsWith("/docs");
+  const isHostingActive = pathname.startsWith("/hosting");
   const isAdminRoute = pathname.startsWith("/admin") && !authIsImpersonating;
 
   const navMainItems = React.useMemo(
@@ -119,7 +122,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             title: "Billing",
             icon: CreditCard,
             url: `/admin#billing`,
-            isActive: ["billing", "egress-credits"].includes(activeAnchor),
+            isActive: ["billing", "egress-credits", "refunds"].includes(activeAnchor),
             items: [
               {
                 title: "Billing Overview",
@@ -130,6 +133,11 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
                 title: "Egress Credits",
                 url: `/admin#egress-credits`,
                 isActive: activeAnchor === "egress-credits",
+              },
+              {
+                title: "Refunds",
+                url: `/admin#refunds`,
+                isActive: activeAnchor === "refunds",
               },
             ],
           },
@@ -174,11 +182,21 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             title: "Platform & Audit",
             icon: ShieldCheck,
             url: `/admin#platform`,
-            isActive: ["platform", "rate-limiting", "activity-log"].includes(activeAnchor),
+            isActive: ["platform", "rate-limiting", "activity-log", "fraud-protection"].includes(activeAnchor),
             items: [
               { title: "Platform Controls", url: `/admin#platform`, isActive: activeAnchor === "platform" },
               { title: "Rate Limiting", url: `/admin#rate-limiting`, isActive: activeAnchor === "rate-limiting" },
               { title: "Activity Log", url: `/admin#activity-log`, isActive: activeAnchor === "activity-log" },
+              { title: "Fraud Protection", url: `/admin#fraud-protection`, isActive: activeAnchor === "fraud-protection" },
+            ],
+          },
+          {
+            title: "Web Hosting",
+            icon: Globe,
+            url: `/admin#enhance-hosting`,
+            isActive: ["enhance-hosting"].includes(activeAnchor),
+            items: [
+              { title: "Integration", url: `/admin#enhance-hosting`, isActive: activeAnchor === "enhance-hosting" },
             ],
           },
         ];
@@ -205,6 +223,12 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               isActive: isVpsActive,
             },
           ],
+        },
+        {
+          title: "Web Hosting",
+          url: "/hosting",
+          icon: Globe,
+          isActive: isHostingActive,
         },
         {
           title: "Organizations",

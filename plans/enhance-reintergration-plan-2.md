@@ -717,7 +717,7 @@ Core scenarios to cover:
 
 ## Rollout Order
 
-1. Part 0: `member` role and hosting permission foundation (including egress gap fix)
+1. Part 0: `member` and `hosting_manager` roles, hosting permissions, and egress gap fix
 2. `057_add_enhance_hosting_schema.sql`, `.env.example`, and `api/config/index.ts`
 3. `enhanceToggle` service plus hosting enablement middleware/helpers
 4. OAS-backed `enhanceService` with tests
@@ -740,7 +740,7 @@ Core scenarios to cover:
 
 This section summarizes every change from v1 for quick diff:
 
-1. **Migration 056 restructured**: Split into 5 explicit steps (seed permissions → UPDATE existing roles → INSERT member role → backfill rows → replace function body) instead of "re-run the seed function" which would be a no-op due to `ON CONFLICT DO NOTHING`.
+1. **Migration 056 restructured**: Split into 6 explicit steps (seed permissions → UPDATE existing roles → INSERT member role → INSERT hosting_manager role → backfill rows → replace function body) instead of "re-run the seed function" which would be a no-op due to `ON CONFLICT DO NOTHING`.
 2. **`predefined_permissions` gap**: Added `egress_view` and `egress_manage` alongside the new hosting permissions (these were never seeded).
 3. **`validPermissions` allowlist**: Added `egress_view` and `egress_manage` to the custom-role allowlist fix (existing bug).
 4. **`CreateRoleWizard.tsx` Egress category**: Added alongside the Hosting category (existing gap).

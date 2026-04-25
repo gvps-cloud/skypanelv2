@@ -19,6 +19,8 @@ import { resolveClientBaseUrl } from "../lib/clientBaseUrl.js";
 import { config } from "../config/index.js";
 import { logActivity } from "../services/activityLogger.js";
 import { RoleService } from "../services/roles.js";
+import { FraudLabsProService } from "../services/fraudLabsProService.js";
+import { getClientIP } from "../lib/ipDetection.js";
 
 const router = express.Router();
 
@@ -115,6 +117,24 @@ router.post(
         });
       }
       const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
+
+      // FraudLabsPro screening on wallet top-up
+      const fraudResult = await FraudLabsProService.screen({
+        ip: getClientIP(req).ip,
+        email: (req as any).user?.email,
+        amount: amountValue,
+        currency,
+        checkType: 'wallet_topup',
+        userId,
+        organizationId,
+      });
+      if (fraudResult.action === 'blocked') {
+        return res.status(403).json({
+          success: false,
+          error: 'Payment blocked',
+          message: fraudResult.reason || 'This payment was blocked due to security concerns.',
+        });
+      }
 
       const clientBaseUrl = resolveClientBaseUrl(req);
 

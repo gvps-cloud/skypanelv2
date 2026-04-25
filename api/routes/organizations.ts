@@ -209,6 +209,20 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
+    // Pre-fetch member role permissions for all orgs in one query
+    const memberRolesResult = await query(
+      `SELECT organization_id, permissions FROM organization_roles
+       WHERE organization_id = ANY($1) AND name = 'member' AND is_custom = false`,
+      [orgIds]
+    );
+    const memberRolePerms = new Map<string, string[]>();
+    memberRolesResult.rows.forEach((row: any) => {
+      const perms = Array.isArray(row.permissions)
+        ? row.permissions
+        : JSON.parse(row.permissions || '[]');
+      memberRolePerms.set(row.organization_id, perms);
+    });
+
     const resources = orgs.map((org: any) => {
       const permissions = {
         vps_view: false, vps_create: false, vps_delete: false, vps_manage: false,
@@ -216,7 +230,8 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
         ssh_keys_view: false, ssh_keys_manage: false, tickets_view: false,
         tickets_create: false, tickets_manage: false, billing_view: false,
         billing_manage: false, egress_view: false, egress_manage: false,
-        members_manage: false, settings_manage: false
+        members_manage: false, settings_manage: false,
+        hosting_view: false, hosting_manage: false
       };
 
       const member = allMembers.get(org.id);
@@ -239,13 +254,17 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
            'notes_view', 'notes_manage',
            'ssh_keys_view', 'ssh_keys_manage',
            'tickets_view', 'tickets_create', 'tickets_manage',
-           'billing_view', 'egress_view', 'settings_manage'].forEach(p => {
+           'billing_view', 'egress_view', 'settings_manage',
+           'hosting_view', 'hosting_manage'].forEach(p => {
              if (p in permissions) (permissions as any)[p] = true;
            });
         } else if (member.legacy_role === 'member') {
-          ['vps_view', 'notes_view', 'tickets_view'].forEach(p => {
-             if (p in permissions) (permissions as any)[p] = true;
-           });
+          const perms = memberRolePerms.get(org.id);
+          if (perms) {
+            perms.forEach((p: string) => {
+              if (p in permissions) (permissions as any)[p] = true;
+            });
+          }
         }
       }
 
@@ -1253,7 +1272,9 @@ router.post('/:id/roles', requireOrgAccess, async (req: AuthenticatedRequest, re
     'ssh_keys_view', 'ssh_keys_manage',
     'tickets_view', 'tickets_create', 'tickets_manage',
     'billing_view', 'billing_manage',
-    'members_manage', 'settings_manage'
+    'egress_view', 'egress_manage',
+    'members_manage', 'settings_manage',
+    'hosting_view', 'hosting_manage'
   ];
 
   const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));

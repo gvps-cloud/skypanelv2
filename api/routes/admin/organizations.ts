@@ -18,7 +18,7 @@ const router = express.Router();
 
 const normalizeOrganizationRoleName = (roleName?: string | null) => {
   if (!roleName) return null;
-  return roleName === "member" ? "viewer" : roleName;
+  return roleName;
 };
 
 const toLegacyOrganizationMemberRole = (roleName?: string | null) => {
@@ -26,6 +26,7 @@ const toLegacyOrganizationMemberRole = (roleName?: string | null) => {
 
   if (normalizedRoleName === "owner") return "owner";
   if (normalizedRoleName === "admin") return "admin";
+  if (normalizedRoleName === "member") return "member";
   return "member";
 };
 
@@ -58,14 +59,14 @@ const buildAdminOrganizationQuery = (whereClause = "") => `
             'role', COALESCE(
               role_by_id.name,
               legacy_role.name,
-              CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END,
+              om.role,
               'viewer'
             ),
             'roleId', COALESCE(role_by_id.id, legacy_role.id),
             'roleName', COALESCE(
               role_by_id.name,
               legacy_role.name,
-              CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END,
+              om.role,
               'viewer'
             ),
             'userRole', member_user.role,
@@ -75,7 +76,7 @@ const buildAdminOrganizationQuery = (whereClause = "") => `
             CASE COALESCE(
               role_by_id.name,
               legacy_role.name,
-              CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END,
+              om.role,
               'viewer'
             )
               WHEN 'owner' THEN 0
@@ -92,7 +93,7 @@ const buildAdminOrganizationQuery = (whereClause = "") => `
         LEFT JOIN organization_roles role_by_id ON role_by_id.id = om.role_id
         LEFT JOIN organization_roles legacy_role
           ON legacy_role.organization_id = om.organization_id
-         AND legacy_role.name = CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END
+         AND legacy_role.name = om.role
         WHERE om.organization_id = org.id
       ),
       '[]'::jsonb
@@ -935,7 +936,7 @@ router.put(
            COALESCE(
              role_by_id.name,
              legacy_role.name,
-             CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END,
+             om.role,
              'viewer'
            ) as current_role_name,
            u.name,
@@ -947,7 +948,7 @@ router.put(
          LEFT JOIN organization_roles role_by_id ON role_by_id.id = om.role_id
          LEFT JOIN organization_roles legacy_role
            ON legacy_role.organization_id = om.organization_id
-          AND legacy_role.name = CASE WHEN om.role = 'member' THEN 'viewer' ELSE om.role END
+          AND legacy_role.name = om.role
          WHERE om.organization_id = $1 AND om.user_id = $2`,
         [organizationId, userId],
       );

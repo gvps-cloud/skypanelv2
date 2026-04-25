@@ -20,6 +20,7 @@ import {
 import { generateApiKey, hashApiKey } from "../lib/secureRandom.js";
 import { toSafeErrorMessage } from "../lib/errorHandling.js";
 import { config } from "../config/index.js";
+import { FraudLabsProService } from "../services/fraudLabsProService.js";
 
 const router = Router();
 const AUTH_COOKIE_NAME = "auth_token";
@@ -72,6 +73,17 @@ router.post(
       }
 
       const { email, password, firstName, lastName } = req.body;
+
+      // FraudLabsPro screening on registration
+      const clientIP = getClientIP(req);
+      const fraudResult = await FraudLabsProService.screenRegistration(clientIP.ip, email);
+      if (fraudResult.action === 'blocked') {
+        res.status(403).json({
+          error: 'Registration blocked',
+          message: fraudResult.reason || 'Your registration was blocked due to security concerns.',
+        });
+        return;
+      }
 
       const result = await AuthService.register({
         email,

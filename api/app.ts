@@ -50,6 +50,13 @@ import { authenticateApiKey } from "./routes/apiKeys/middleware.js";
 import documentationRoutes from "./routes/documentation.js";
 import announcementsRoutes from "./routes/announcements.js";
 import notesRoutes from "./routes/notes.js";
+import hostingPublicRoutes from "./routes/hosting/public.js";
+import hostingAuthenticatedRoutes from "./routes/hosting/store.js";
+import hostingWebRoutes from "./routes/hosting/web.js";
+import hostingNodeRoutes from "./routes/hosting/node.js";
+import hostingEmailRoutes from "./routes/hosting/email.js";
+import hostingDnsRoutes from "./routes/hosting/dns.js";
+import hostingWordpressRoutes from "./routes/hosting/wordpress.js";
 import {
   initializeMetricsCollection,
   startMetricsPersistence,
@@ -310,6 +317,15 @@ app.use("/api/api-keys", apiKeysRoutes);
 app.use("/api/documentation", documentationRoutes);
 app.use("/api/announcements", announcementsRoutes);
 app.use("/api", notesRoutes);
+
+// Hosting routes: public status first, then authenticated routes
+app.use("/api/hosting", hostingPublicRoutes);
+app.use("/api/hosting", hostingAuthenticatedRoutes);
+app.use("/api/hosting/web", hostingWebRoutes);
+app.use("/api/hosting/node", hostingNodeRoutes);
+app.use("/api/hosting/email", hostingEmailRoutes);
+app.use("/api/hosting/dns", hostingDnsRoutes);
+app.use("/api/hosting/wordpress", hostingWordpressRoutes);
 
 // Health check routes are now handled by the dedicated health router
 

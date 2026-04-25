@@ -23,6 +23,8 @@ import {
   Settings,
   Loader2,
   Check,
+  Globe,
+  Wifi,
 } from "lucide-react";
 
 interface OrganizationRole {
@@ -106,6 +108,22 @@ const PERMISSION_CATEGORIES = [
     iconColor: "text-slate-400",
     borderColor: "border-slate-500/20",
   },
+  {
+    id: "hosting",
+    name: "Web Hosting",
+    icon: Globe,
+    gradient: "from-teal-500/10 to-emerald-500/10",
+    iconColor: "text-teal-400",
+    borderColor: "border-teal-500/20",
+  },
+  {
+    id: "egress",
+    name: "Egress",
+    icon: Wifi,
+    gradient: "from-sky-500/10 to-blue-500/10",
+    iconColor: "text-sky-400",
+    borderColor: "border-sky-500/20",
+  },
 ];
 
 const PERMISSIONS: Permission[] = [
@@ -124,6 +142,10 @@ const PERMISSIONS: Permission[] = [
   { id: "billing_manage", label: "Manage Billing", description: "Manage payment methods", category: "billing" },
   { id: "members_manage", label: "Manage Members", description: "Add, remove, and manage team members", category: "members" },
   { id: "settings_manage", label: "Manage Settings", description: "Configure organization settings", category: "settings" },
+  { id: "hosting_view", label: "View Hosting", description: "View hosting subscriptions and details", category: "hosting" },
+  { id: "hosting_manage", label: "Manage Hosting", description: "Purchase, cancel, and manage hosting subscriptions", category: "hosting" },
+  { id: "egress_view", label: "View Egress", description: "View egress credit balance and usage", category: "egress" },
+  { id: "egress_manage", label: "Manage Egress", description: "Purchase and manage egress credits", category: "egress" },
 ];
 
 export default function CreateRoleWizard({ isOpen, onClose, onSave, editingRole, loading }: CreateRoleWizardProps) {

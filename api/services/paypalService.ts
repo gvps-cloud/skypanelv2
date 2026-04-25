@@ -688,11 +688,12 @@ export class PayPalService {
       }
 
       // Create new transaction record with completed status
+      const captureId = metadata?.capture_id as string | undefined;
       const result = await query(
-        `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, provider_transaction_id, status, description, metadata)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, provider_transaction_id, provider_capture_id, status, description, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING id`,
-        [organizationId, amount, currency, 'paypal', 'paypal', orderId, 'completed', description, JSON.stringify(metadata)]
+        [organizationId, amount, currency, 'paypal', 'paypal', orderId, captureId || null, 'completed', description, JSON.stringify(metadata)]
       );
 
       if (result.rows.length === 0) {

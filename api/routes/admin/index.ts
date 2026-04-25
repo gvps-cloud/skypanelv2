@@ -27,6 +27,9 @@ import platformRouter from "./platform.js";
 import faqRouter from "./faq.js";
 import documentationRouter from "./documentation.js";
 import githubRouter from "./github.js";
+import enhanceAdminRouter from "./enhance.js";
+import refundsRouter from "./refunds.js";
+import fraudRouter from "./fraud.js";
 
 const router = express.Router();
 
@@ -65,5 +68,8 @@ router.use("/platform", platformRouter);
 router.use("/faq", faqRouter);
 router.use("/documentation", documentationRouter);
 router.use("/github", githubRouter);
+router.use("/enhance", enhanceAdminRouter);
+router.use("/refunds", refundsRouter);
+router.use("/fraud-checks", fraudRouter);
 
 export default router;

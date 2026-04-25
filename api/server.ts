@@ -7,6 +7,7 @@ import { initSSHBridge } from "./services/sshBridge.js";
 import { BillingService } from "./services/billingService.js";
 import { EgressBillingService } from "./services/egressBillingService.js";
 import { EgressHourlyBillingService } from "./services/egressHourlyBillingService.js";
+import { HostingBillingService } from "./services/hostingBillingService.js";
 import { notificationService } from "./services/notificationService.js";
 import { ticketNotificationService } from "./services/ticketNotificationService.js";
 import { bunnyCdnService } from "./services/bunnyCdnService.js";
@@ -104,6 +105,7 @@ function startBillingScheduler() {
       runHourlyBilling("initial"),
       runMonthlyEgressBillingIfDue("initial"),
       runHourlyEgressBilling("initial"),
+      HostingBillingService.runMonthlyHostingBilling("initial"),
     ]);
   }, 5000); // Wait 5 seconds after server start
 
@@ -114,6 +116,7 @@ function startBillingScheduler() {
         runHourlyBilling("scheduled"),
         runMonthlyEgressBillingIfDue("scheduled"),
         runHourlyEgressBilling("scheduled"),
+        HostingBillingService.runMonthlyHostingBilling("scheduled"),
       ]);
     },
     60 * 60 * 1000,

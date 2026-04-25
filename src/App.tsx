@@ -66,6 +66,8 @@ import OrganizationNotes from "./pages/OrganizationNotes";
 import AdminUserDetail from "./pages/admin/AdminUserDetail";
 import Organizations from "./pages/Organizations";
 import AcceptInvitation from "./pages/AcceptInvitation";
+import Hosting from "./pages/Hosting";
+import HostingStore from "./pages/HostingStore";
 
 // Component to handle impersonation banner display
 function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
@@ -276,6 +278,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <VPSDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hosting"
+          element={
+            <ProtectedRoute>
+              <Hosting />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hosting/store"
+          element={
+            <ProtectedRoute>
+              <HostingStore />
             </ProtectedRoute>
           }
         />

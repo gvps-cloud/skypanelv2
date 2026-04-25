@@ -18,7 +18,9 @@ export type Permission =
   | 'egress_view'
   | 'egress_manage'
   | 'members_manage'
-  | 'settings_manage';
+  | 'settings_manage'
+  | 'hosting_view'
+  | 'hosting_manage';
 
 export interface Role {
   id: string;
@@ -41,7 +43,7 @@ export interface UpdateRoleData {
   permissions?: Permission[];
 }
 
-const PREDEFINED_ROLES: Record<string, Permission[]> = {
+export const PREDEFINED_ROLES: Record<string, Permission[]> = {
   owner: [
     'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
     'notes_view', 'notes_manage',
@@ -50,7 +52,8 @@ const PREDEFINED_ROLES: Record<string, Permission[]> = {
     'billing_view', 'billing_manage',
     'egress_view', 'egress_manage',
     'members_manage',
-    'settings_manage'
+    'settings_manage',
+    'hosting_view', 'hosting_manage'
   ],
   admin: [
     'vps_view', 'vps_create', 'vps_delete', 'vps_manage',
@@ -59,19 +62,39 @@ const PREDEFINED_ROLES: Record<string, Permission[]> = {
     'tickets_view', 'tickets_create', 'tickets_manage',
     'billing_view',
     'egress_view',
-    'settings_manage'
+    'settings_manage',
+    'hosting_view', 'hosting_manage'
+  ],
+  member: [
+    'vps_view', 'vps_create', 'vps_manage',
+    'notes_view', 'notes_manage',
+    'ssh_keys_view',
+    'tickets_view', 'tickets_create',
+    'billing_view',
+    'egress_view',
+    'hosting_view', 'hosting_manage'
   ],
   vps_manager: [
     'vps_view', 'vps_create', 'vps_manage',
     'notes_view',
     'ssh_keys_view', 'ssh_keys_manage'
   ],
+  hosting_manager: [
+    'hosting_view', 'hosting_manage',
+    'billing_view',
+    'notes_view',
+    'ssh_keys_view',
+    'tickets_view', 'tickets_create',
+    'egress_view'
+  ],
   support_agent: [
     'notes_view',
-    'tickets_view', 'tickets_create', 'tickets_manage'
+    'tickets_view', 'tickets_create', 'tickets_manage',
+    'hosting_view'
   ],
   viewer: [
-    'vps_view', 'notes_view', 'tickets_view'
+    'vps_view', 'notes_view', 'tickets_view',
+    'hosting_view'
   ]
 };
 
@@ -259,10 +282,24 @@ export class RoleService {
         values
       );
 
+      const memberRole = await client.query(
+        `SELECT id FROM organization_roles WHERE organization_id = $1 AND name = 'member'`,
+        [organizationId]
+      );
+
       const viewerRole = await client.query(
         `SELECT id FROM organization_roles WHERE organization_id = $1 AND name = 'viewer'`,
         [organizationId]
       );
+
+      if (memberRole.rows.length > 0) {
+        await client.query(
+          `UPDATE organization_members
+           SET role_id = $1
+           WHERE organization_id = $2 AND role_id IS NULL AND role = 'member'`,
+          [memberRole.rows[0].id, organizationId]
+        );
+      }
 
       if (viewerRole.rows.length > 0) {
         await client.query(

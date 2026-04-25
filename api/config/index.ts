@@ -92,6 +92,20 @@ export interface Config {
   AUTO_CREATE_ORG: boolean;
   // Validation-only override for safe local production boot checks
   STARTUP_SIDE_EFFECTS_ENABLED: boolean;
+  // Enhance Web Hosting integration
+  ENHANCE_ENABLED: boolean;
+  ENHANCE_API_URL: string;
+  ENHANCE_MASTER_ORG_ID: string;
+  ENHANCE_API_KEY: string;
+  ENHANCE_DEFAULT_SERVER_GROUP_ID: string;
+  // FraudLabsPro anti-fraud integration
+  FRAUDLABSPRO_ENABLED: boolean;
+  FRAUDLABSPRO_API_KEY: string;
+  FRAUDLABSPRO_REJECT_SCORE: number;
+  FRAUDLABSPRO_REJECT_VPN: boolean;
+  FRAUDLABSPRO_REJECT_PROXY: boolean;
+  FRAUDLABSPRO_REJECT_TOR: boolean;
+  FRAUDLABSPRO_REJECT_DISPOSABLE_EMAIL: boolean;
 }
 
 /**
@@ -396,6 +410,20 @@ function getConfig(): Config {
       process.env.STARTUP_SIDE_EFFECTS_ENABLED,
       true,
     ),
+    // Enhance Web Hosting integration
+    ENHANCE_ENABLED: parseBoolean(process.env.ENHANCE_ENABLED, false),
+    ENHANCE_API_URL: process.env.ENHANCE_API_URL || "",
+    ENHANCE_MASTER_ORG_ID: process.env.ENHANCE_MASTER_ORG_ID || "",
+    ENHANCE_API_KEY: process.env.ENHANCE_API_KEY || "",
+    ENHANCE_DEFAULT_SERVER_GROUP_ID: process.env.ENHANCE_DEFAULT_SERVER_GROUP_ID || "",
+    // FraudLabsPro anti-fraud integration
+    FRAUDLABSPRO_ENABLED: parseBoolean(process.env.FRAUDLABSPRO_ENABLED, false),
+    FRAUDLABSPRO_API_KEY: process.env.FRAUDLABSPRO_API_KEY || "",
+    FRAUDLABSPRO_REJECT_SCORE: parseInt(process.env.FRAUDLABSPRO_REJECT_SCORE || "80", 10),
+    FRAUDLABSPRO_REJECT_VPN: parseBoolean(process.env.FRAUDLABSPRO_REJECT_VPN, true),
+    FRAUDLABSPRO_REJECT_PROXY: parseBoolean(process.env.FRAUDLABSPRO_REJECT_PROXY, true),
+    FRAUDLABSPRO_REJECT_TOR: parseBoolean(process.env.FRAUDLABSPRO_REJECT_TOR, true),
+    FRAUDLABSPRO_REJECT_DISPOSABLE_EMAIL: parseBoolean(process.env.FRAUDLABSPRO_REJECT_DISPOSABLE_EMAIL, true),
   };
 
   return config;
