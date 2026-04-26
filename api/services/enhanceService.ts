@@ -441,4 +441,117 @@ export class EnhanceService {
       method: 'POST',
     });
   }
+
+  // ============================================================
+  // MySQL
+  // ============================================================
+  static async getWebsiteMysqlDbs(orgId: string, websiteId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs`);
+  }
+
+  static async createWebsiteMysqlDb(orgId: string, websiteId: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs`, { method: 'POST', body: data });
+  }
+
+  static async getWebsiteMysqlDb(orgId: string, websiteId: string, dbName: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${dbName}`);
+  }
+
+  static async deleteWebsiteMysqlDb(orgId: string, websiteId: string, dbName: string) {
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${dbName}`, { method: 'DELETE' });
+  }
+
+  static async getWebsiteMysqlDbSso(orgId: string, websiteId: string, dbName: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${dbName}/sso`);
+  }
+
+  static async executeWebsiteMysqlSql(orgId: string, websiteId: string, dbName: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${dbName}/sql`, { method: 'POST', body: data });
+  }
+
+  static async getWebsiteMysqlUsers(orgId: string, websiteId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users`);
+  }
+
+  static async createWebsiteMysqlUser(orgId: string, websiteId: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users`, { method: 'POST', body: data });
+  }
+
+  static async getWebsiteMysqlUser(orgId: string, websiteId: string, username: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}`);
+  }
+
+  static async updateWebsiteMysqlUser(orgId: string, websiteId: string, username: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}`, { method: 'PUT', body: data });
+  }
+
+  static async deleteWebsiteMysqlUser(orgId: string, websiteId: string, username: string) {
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}`, { method: 'DELETE' });
+  }
+
+  static async getWebsiteMysqlUserPrivileges(orgId: string, websiteId: string, username: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}/privileges`);
+  }
+
+  static async updateWebsiteMysqlUserPrivileges(orgId: string, websiteId: string, username: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}/privileges`, { method: 'PUT', body: data });
+  }
+
+  static async getWebsiteMysqlUserAccessHosts(orgId: string, websiteId: string, username: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}/access-hosts`);
+  }
+
+  static async updateWebsiteMysqlUserAccessHosts(orgId: string, websiteId: string, username: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}/access-hosts`, { method: 'PUT', body: data });
+  }
+
+  // ============================================================
+  // FTP
+  // ============================================================
+  static async getWebsiteFtpUsers(orgId: string, websiteId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users`);
+  }
+
+  static async createWebsiteFtpUser(orgId: string, websiteId: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users`, { method: 'POST', body: data });
+  }
+
+  static async getWebsiteFtpUser(orgId: string, websiteId: string, username: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${username}`);
+  }
+
+  static async updateWebsiteFtpUser(orgId: string, websiteId: string, username: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${username}`, { method: 'PUT', body: data });
+  }
+
+  static async deleteWebsiteFtpUser(orgId: string, websiteId: string, username: string) {
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${username}`, { method: 'DELETE' });
+  }
+
+  // ============================================================
+  // SSL
+  // ============================================================
+  static async generateWebsiteSsl(orgId: string, websiteId: string, domainId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/ssl`, { method: 'POST' });
+  }
+
+  static async generateWebsiteMailSsl(orgId: string, websiteId: string, domainId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/mail_ssl`, { method: 'POST' });
+  }
+
+  static async getWebsiteDomainSsl(_orgId: string, _websiteId: string, domainId: string) {
+    return this.request<any>(`/v2/domains/${domainId}/ssl`);
+  }
+
+  static async uploadWebsiteDomainSsl(_orgId: string, _websiteId: string, domainId: string, data: any) {
+    return this.request<any>(`/v2/domains/${domainId}/ssl`, { method: 'POST', body: data });
+  }
+
+  static async getWebsiteDomainMailSsl(_orgId: string, _websiteId: string, domainId: string) {
+    return this.request<any>(`/v2/domains/${domainId}/mail_ssl`);
+  }
+
+  static async setWebsiteDomainForceSsl(_orgId: string, _websiteId: string, domainId: string, data: any) {
+    return this.request<any>(`/v2/domains/${domainId}/ssl/force_ssl`, { method: 'POST', body: data });
+  }
 }

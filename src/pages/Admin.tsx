@@ -40,6 +40,8 @@ import { UserProfileModal } from "@/components/admin/UserProfileModal";
 import { UserEditModal } from "@/components/admin/UserEditModal";
 import { CategoryManager } from "@/components/admin/CategoryManager";
 import { EnhanceIntegrationCard } from "@/components/admin/EnhanceIntegrationCard";
+import { EnhancePlans } from "@/components/admin/EnhancePlans";
+import { UserHostingList } from "@/components/admin/UserHostingList";
 import { FraudCheckList } from "@/components/admin/FraudCheckList";
 import { RefundList } from "@/components/admin/RefundList";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
@@ -212,6 +214,8 @@ type AdminSection =
   | "email-templates"
   | "activity-log"
   | "enhance-hosting"
+  | "enhance-plans"
+  | "enhance-subscriptions"
   | "fraud-protection"
   | "refunds";
 
@@ -249,6 +253,8 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "email-templates",
   "activity-log",
   "enhance-hosting",
+  "enhance-plans",
+  "enhance-subscriptions",
   "fraud-protection",
   "refunds"
 ];
@@ -3692,6 +3698,18 @@ const Admin: React.FC = () => {
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Enhance Web Hosting</h2>
             <EnhanceIntegrationCard />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="enhance-plans" activeSection={activeTab}>
+          <div className="space-y-6">
+            <EnhancePlans />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="enhance-subscriptions" activeSection={activeTab}>
+          <div className="space-y-6">
+            <UserHostingList />
           </div>
         </SectionPanel>
 

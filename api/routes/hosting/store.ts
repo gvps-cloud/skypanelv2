@@ -103,6 +103,8 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
     return res.status(400).json({ error: "planId and domain are required" });
   }
 
+  let subscriptionId: string | undefined;
+
   try {
     const result = await transaction(async (client) => {
       // 1. Lock org wallet and verify balance
@@ -138,10 +140,10 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
 
       // 4. Insert wallet debit transaction
       const debitResult = await client.query(
-        `INSERT INTO payment_transactions (organization_id, user_id, amount, payment_method, payment_provider, status, description, metadata)
-         VALUES ($1, $2, $3, 'wallet_debit', 'internal', 'completed', $4, $5)
+        `INSERT INTO payment_transactions (organization_id, amount, payment_method, payment_provider, status, description, metadata)
+         VALUES ($1, $2, 'wallet_debit', 'internal', 'completed', $3, $4)
          RETURNING id`,
-        [organizationId, userId, -amount, `Hosting purchase: ${plan.name}`, JSON.stringify({ plan_id: planId, domain })]
+        [organizationId, -amount, `Hosting purchase: ${plan.name}`, JSON.stringify({ plan_id: planId, domain })]
       );
       const debitTransactionId = debitResult.rows[0].id;
 
@@ -159,6 +161,7 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
 
     // Remote Enhance calls (outside the initial DB transaction)
     const { subscription, plan } = result;
+    subscriptionId = subscription.id;
 
     // Ensure org has Enhance customer id
     const orgResult = await query(
@@ -198,14 +201,16 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       `UPDATE hosting_subscriptions
        SET enhance_subscription_id = $1,
            enhance_website_id = $2,
+           primary_ip = $3,
            status = 'active',
            last_billed_at = now(),
            next_billing_at = now() + interval '1 month',
-           settings = settings || $3
-       WHERE id = $4`,
+           settings = settings || $4
+       WHERE id = $5`,
       [
         enhanceSubscription.id,
         enhanceWebsite.id,
+        enhanceWebsite.primary_ip || null,
         JSON.stringify({ primary_ip: enhanceWebsite.primary_ip }),
         subscription.id,
       ]
@@ -226,6 +231,18 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
   } catch (error: any) {
     console.error("Hosting purchase failed:", error);
 
+    // Mark subscription as error if it was created
+    if (subscriptionId) {
+      try {
+        await query(
+          `UPDATE hosting_subscriptions SET status = 'error', updated_at = now() WHERE id = $1`,
+          [subscriptionId]
+        );
+      } catch (subUpdateError) {
+        console.error("Failed to update subscription status to error:", subUpdateError);
+      }
+    }
+
     // Compensating credit on failure
     try {
       const planResult = await query(`SELECT price_monthly FROM hosting_plans WHERE id = $1`, [planId]);
@@ -236,9 +253,9 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
           [amount, organizationId]
         );
         await query(
-          `INSERT INTO payment_transactions (organization_id, user_id, amount, payment_method, payment_provider, status, description, metadata)
-           VALUES ($1, $2, $3, 'wallet_credit', 'internal', 'completed', $4, $5)`,
-          [organizationId, userId, amount, "Hosting purchase rollback", JSON.stringify({ reason: error.message })]
+          `INSERT INTO payment_transactions (organization_id, amount, payment_method, payment_provider, status, description, metadata)
+           VALUES ($1, $2, 'wallet_credit', 'internal', 'completed', $3, $4)`,
+          [organizationId, amount, "Hosting purchase rollback", JSON.stringify({ reason: error.message })]
         );
       }
     } catch (rollbackError) {

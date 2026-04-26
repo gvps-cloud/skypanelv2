@@ -194,9 +194,11 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             title: "Web Hosting",
             icon: Globe,
             url: `/admin#enhance-hosting`,
-            isActive: ["enhance-hosting"].includes(activeAnchor),
+            isActive: ["enhance-hosting", "enhance-plans", "enhance-subscriptions"].includes(activeAnchor),
             items: [
               { title: "Integration", url: `/admin#enhance-hosting`, isActive: activeAnchor === "enhance-hosting" },
+              { title: "Plans", url: `/admin#enhance-plans`, isActive: activeAnchor === "enhance-plans" },
+              { title: "Subscriptions", url: `/admin#enhance-subscriptions`, isActive: activeAnchor === "enhance-subscriptions" },
             ],
           },
         ];

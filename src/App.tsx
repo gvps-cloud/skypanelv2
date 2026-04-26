@@ -68,6 +68,7 @@ import Organizations from "./pages/Organizations";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import Hosting from "./pages/Hosting";
 import HostingStore from "./pages/HostingStore";
+import HostingDetail from "./pages/HostingDetail";
 
 // Component to handle impersonation banner display
 function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
@@ -294,6 +295,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <HostingStore />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hosting/:id"
+          element={
+            <ProtectedRoute>
+              <HostingDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hosting/:id"
+          element={
+            <ProtectedRoute>
+              <HostingDetail />
             </ProtectedRoute>
           }
         />

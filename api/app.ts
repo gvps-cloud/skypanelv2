@@ -57,6 +57,9 @@ import hostingNodeRoutes from "./routes/hosting/node.js";
 import hostingEmailRoutes from "./routes/hosting/email.js";
 import hostingDnsRoutes from "./routes/hosting/dns.js";
 import hostingWordpressRoutes from "./routes/hosting/wordpress.js";
+import hostingMysqlRoutes from "./routes/hosting/mysql.js";
+import hostingFtpRoutes from "./routes/hosting/ftp.js";
+import hostingSslRoutes from "./routes/hosting/ssl.js";
 import {
   initializeMetricsCollection,
   startMetricsPersistence,
@@ -316,16 +319,22 @@ app.use("/api/egress", egressRoutes);
 app.use("/api/api-keys", apiKeysRoutes);
 app.use("/api/documentation", documentationRoutes);
 app.use("/api/announcements", announcementsRoutes);
+
+// Hosting public status route MUST mount before notesRoutes (which has global authenticateToken)
+app.use("/api/hosting", hostingPublicRoutes);
+
 app.use("/api", notesRoutes);
 
-// Hosting routes: public status first, then authenticated routes
-app.use("/api/hosting", hostingPublicRoutes);
+// Hosting authenticated routes
 app.use("/api/hosting", hostingAuthenticatedRoutes);
 app.use("/api/hosting/web", hostingWebRoutes);
 app.use("/api/hosting/node", hostingNodeRoutes);
 app.use("/api/hosting/email", hostingEmailRoutes);
 app.use("/api/hosting/dns", hostingDnsRoutes);
 app.use("/api/hosting/wordpress", hostingWordpressRoutes);
+app.use("/api/hosting/mysql", hostingMysqlRoutes);
+app.use("/api/hosting/ftp", hostingFtpRoutes);
+app.use("/api/hosting/ssl", hostingSslRoutes);
 
 // Health check routes are now handled by the dedicated health router
 

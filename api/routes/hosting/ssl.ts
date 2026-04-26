@@ -1,0 +1,95 @@
+import express, { type Request, type Response } from "express";
+import { authenticateToken } from "../../middleware/auth.js";
+import { requireOrganization } from "../../middleware/auth.js";
+import { requireHostingEnabledForUsers, requireOrgPermission } from "../../middleware/hosting.js";
+import { query } from "../../lib/database.js";
+import { EnhanceService } from "../../services/enhanceService.js";
+import { config } from "../../config/index.js";
+import type { AuthenticatedRequest } from "../../middleware/auth.js";
+
+const router = express.Router();
+
+router.use(authenticateToken, requireOrganization, requireHostingEnabledForUsers);
+
+async function resolveSubscription(req: Request, res: Response) {
+  const { organizationId } = (req as AuthenticatedRequest).user;
+  const { id } = req.params;
+  const result = await query(
+    `SELECT * FROM hosting_subscriptions WHERE id = $1 AND organization_id = $2`,
+    [id, organizationId]
+  );
+  if (result.rows.length === 0) {
+    res.status(404).json({ error: "Service not found" });
+    return null;
+  }
+  return result.rows[0];
+}
+
+// SSL
+router.post("/:id/domains/:domainId/ssl", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const result = await EnhanceService.generateWebsiteSsl(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to generate SSL" });
+  }
+});
+
+router.post("/:id/domains/:domainId/mail_ssl", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const result = await EnhanceService.generateWebsiteMailSsl(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to generate mail SSL" });
+  }
+});
+
+router.get("/:id/domains/:domainId/ssl", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const result = await EnhanceService.getWebsiteDomainSsl(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get SSL status" });
+  }
+});
+
+router.post("/:id/domains/:domainId/ssl/upload", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const result = await EnhanceService.uploadWebsiteDomainSsl(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId, req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to upload SSL certificate" });
+  }
+});
+
+router.get("/:id/domains/:domainId/mail_ssl", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const result = await EnhanceService.getWebsiteDomainMailSsl(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get mail SSL status" });
+  }
+});
+
+router.post("/:id/domains/:domainId/force_ssl", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const result = await EnhanceService.setWebsiteDomainForceSsl(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId, req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to set force SSL" });
+  }
+});
+
+export default router;

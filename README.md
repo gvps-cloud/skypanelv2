@@ -646,6 +646,17 @@ The database schema is managed through **51 sequential SQL migrations** in the `
 - **White-Label Categories** — Admin-defined category mappings for plan display names
 - **StackScript Support** — Curated marketplace apps with user-defined field configuration
 
+### 🌐 Web Hosting (Enhance Integration)
+
+- **Managed Website Hosting** — Provisioning via the Enhance control panel API with lazy customer creation per organization
+- **Plan Catalog Sync** — Admin-synced hosting plans with local commercial overrides (`price_monthly`, `is_active`, `service_type`)
+- **Domain Lifecycle** — Primary domains, mapped domains, DNS zones, and forced SSL
+- **Email Hosting** — Mailboxes, autoresponders, and client configuration retrieval
+- **Database Hosting** — MySQL databases, users, privileges, and SQL execution
+- **Application Hosting** — PHP (LSAPI), Node.js persistent apps, and WordPress installations
+- **Monthly Recurring Billing** — Automated wallet debit with remote suspension on insufficient balance
+- **Automatic Rollback** — Compensating wallet credit on provisioning failure
+
 ### 💰 Billing & Payments
 
 - **Prepaid Wallet System** — Organization-scoped wallets funded via PayPal
