@@ -327,6 +327,7 @@ Auth (redirect if logged in)
 Protected (auth required)
   /dashboard              /vps              /vps/:id
   /vps/:id/ssh (standalone terminal)
+  /hosting                /hosting/store    /hosting/:id
   /ssh-keys               /organizations    /organizations/:id
   /billing                /billing/invoice/:id
   /billing/transaction/:id
@@ -404,6 +405,13 @@ Core
   /api/auth, /api/vps, /api/payments, /api/organizations,
   /api/support, /api/ssh-keys, /api/invoices, /api/egress, /api/api-keys
 
+Hosting
+  /api/hosting/status (public), /api/hosting/plans, /api/hosting/regions,
+  /api/hosting/services, /api/hosting/purchase,
+  /api/hosting/web, /api/hosting/node, /api/hosting/email,
+  /api/hosting/dns, /api/hosting/wordpress, /api/hosting/mysql,
+  /api/hosting/ftp, /api/hosting/ssl
+
 Activity & Notifications
   /api/activity, /api/activities, /api/notifications
 
@@ -419,7 +427,8 @@ Admin Surface
   /api/admin/billing, /api/admin/volume-billing, /api/admin/email-templates,
   /api/admin/contact, /api/admin/activity, /api/admin/announcements,
   /api/admin/ssh-keys, /api/admin/category-mappings, /api/admin/platform,
-  /api/admin/faq, /api/admin/documentation, /api/admin/github
+  /api/admin/faq, /api/admin/documentation, /api/admin/github,
+  /api/admin/enhance, /api/admin/fraud-checks, /api/admin/refunds
 ```
 
 **Core Routes:**
@@ -602,7 +611,7 @@ Relationship highlights
 
 ### Migration History
 
-The database schema is managed through **51 sequential SQL migrations** in the `migrations/` directory:
+The database schema is managed through **59 sequential SQL migrations** in the `migrations/` directory:
 
 
 | Migration | Description |
@@ -630,6 +639,11 @@ The database schema is managed through **51 sequential SQL migrations** in the `
 | `049` | Fix org role migration for unknown roles |
 | `050` | Create announcements system |
 | `051` | Add low-balance email template |
+| `052–055` | VPS backup system, egress billing v2, invoice PDF, contact reply notifications |
+| `056` | Add member + hosting_manager roles, hosting/egress permissions, update seed function |
+| `057` | Enhance hosting schema — platform_integrations, hosting_plans, hosting_subscriptions, RLS |
+| `058` | Fraud checks table for FraudLabsPro integration |
+| `059` | Refunds table with PayPal capture support |
 
 
 ---
@@ -666,6 +680,21 @@ The database schema is managed through **51 sequential SQL migrations** in the `
 - **Invoice Generation** — Automatic invoice creation linked to billing cycles
 - **Billing Summary** — Real-time dashboard showing monthly spend, all-time spend, active VPS count, monthly estimate, and transfer usage
 - **Low Balance Alerts** — Daily cron checks for wallets below $5 with active services
+
+### 🛡️ Fraud Protection
+
+- **FraudLabsPro Integration** — Real-time transaction screening via IP reputation, email validation, and proxy/VPN/TOR detection
+- **Configurable Policies** — Score threshold, VPN/proxy/TOR blocking, disposable email rejection
+- **Registration Screening** — New signups are screened before account creation
+- **Payment Screening** — Wallet top-ups are screened before PayPal order creation
+- **Admin Review Queue** — Flagged transactions are reviewable by admins with manual allow/block override
+
+### 💸 Refunds
+
+- **Structured Refund Records** — Linked to original transactions, VPS billing cycles, or hosting subscriptions
+- **PayPal Capture Refunds** — True PayPal API refunds using capture IDs
+- **Admin Refund Management** — Create, process, and track refund status from the admin dashboard
+- **Automatic Prorated Refunds** — VPS deletion and hosting cancellation trigger automatic wallet credit refunds
 
 ### 👥 Organizations & Multi-Tenancy
 
@@ -740,6 +769,9 @@ Seven predefined roles control access across 19 granular permissions. Orgs can a
 - **Rate Limit Monitoring** — View and configure rate limit metrics and per-user overrides
 - **GitHub Integration** — Optional GitHub token for update checking
 - **Billing Administration** — View all billing cycles, failed charges, wallet balances
+- **Fraud Protection** — Review flagged transactions, manual allow/block override
+- **Refund Management** — Create and process refunds via PayPal
+- **Web Hosting** — Enhance integration status, plan sync, subscription oversight
 
 ### 📱 UI/UX
 
@@ -859,6 +891,22 @@ CLIENT_URL=http://localhost:5173
 
 # Linode (required for VPS)
 LINODE_API_TOKEN=your-linode-api-token
+
+# Enhance Web Hosting (optional)
+ENHANCE_ENABLED=false
+ENHANCE_API_URL=https://api.enhance.com
+ENHANCE_MASTER_ORG_ID=your-master-org-id
+ENHANCE_API_KEY=your-enhance-api-key
+ENHANCE_DEFAULT_SERVER_GROUP_ID=default-server-group
+
+# FraudLabsPro Anti-Fraud (optional)
+FRAUDLABSPRO_ENABLED=false
+FRAUDLABSPRO_API_KEY=your-api-key
+FRAUDLABSPRO_REJECT_SCORE=80
+FRAUDLABSPRO_REJECT_VPN=true
+FRAUDLABSPRO_REJECT_PROXY=true
+FRAUDLABSPRO_REJECT_TOR=true
+FRAUDLABSPRO_REJECT_DISPOSABLE_EMAIL=true
 
 # Branding
 VITE_COMPANY_NAME=YourBrand
