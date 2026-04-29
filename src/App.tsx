@@ -307,14 +307,6 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/hosting/:id"
-          element={
-            <ProtectedRoute>
-              <HostingDetail />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/ssh-keys"
           element={
             <ProtectedRoute>
