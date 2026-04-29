@@ -457,13 +457,7 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
-    "method": "GET",
-    "path": "/api/hosting/ftp/:id/ftp-users/:username",
-    "protected": true,
-    "admin": false
-  },
-  {
-    "method": "PUT",
+    "method": "PATCH",
     "path": "/api/hosting/ftp/:id/ftp-users/:username",
     "protected": true,
     "admin": false
@@ -487,7 +481,7 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
-    "method": "POST",
+    "method": "GET",
     "path": "/api/hosting/mysql/:id/mysql-dbs/:dbName/sql",
     "protected": true,
     "admin": false
@@ -517,32 +511,20 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
-    "method": "GET",
-    "path": "/api/hosting/mysql/:id/mysql-users/:username",
-    "protected": true,
-    "admin": false
-  },
-  {
     "method": "PUT",
     "path": "/api/hosting/mysql/:id/mysql-users/:username",
     "protected": true,
     "admin": false
   },
   {
-    "method": "GET",
+    "method": "DELETE",
     "path": "/api/hosting/mysql/:id/mysql-users/:username/access-hosts",
     "protected": true,
     "admin": false
   },
   {
-    "method": "PUT",
+    "method": "POST",
     "path": "/api/hosting/mysql/:id/mysql-users/:username/access-hosts",
-    "protected": true,
-    "admin": false
-  },
-  {
-    "method": "GET",
-    "path": "/api/hosting/mysql/:id/mysql-users/:username/privileges",
     "protected": true,
     "admin": false
   },
@@ -613,7 +595,7 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
-    "method": "POST",
+    "method": "PUT",
     "path": "/api/hosting/ssl/:id/domains/:domainId/force_ssl",
     "protected": true,
     "admin": false
@@ -680,19 +662,37 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/hosting/wordpress/:id/wordpress/:appId/plugins",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/hosting/wordpress/:id/wordpress/:appId/settings",
     "protected": true,
     "admin": false
   },
   {
-    "method": "PUT",
+    "method": "PATCH",
     "path": "/api/hosting/wordpress/:id/wordpress/:appId/settings",
     "protected": true,
     "admin": false
   },
   {
     "method": "GET",
+    "path": "/api/hosting/wordpress/:id/wordpress/:appId/themes",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/hosting/wordpress/:id/wordpress/:appId/users",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/wordpress/:id/wordpress/:appId/users/:userId/sso",
     "protected": true,
     "admin": false
   },

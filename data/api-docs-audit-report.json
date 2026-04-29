@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-04-19T17:53:26.888Z",
-  "actualCount": 139,
-  "actualProtectedCount": 113,
-  "docsCount": 139,
-  "docsProtectedCount": 113,
+  "generatedAt": "2026-04-29T17:40:35.929Z",
+  "actualCount": 191,
+  "actualProtectedCount": 164,
+  "docsCount": 191,
+  "docsProtectedCount": 164,
   "missingInDocs": [],
   "staleInDocs": [],
   "authMismatches": [],
@@ -11,6 +11,414 @@
     {
       "key": "GET /api/auth/debug/user",
       "section": "Authentication & Profile",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/dns/:id/domains",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/dns/:id/domains",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/dns/:id/domains/:domainId/dns",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/dns/:id/domains/:domainId/dns/records",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/email/:id/emails",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/email/:id/emails",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/email/:id/emails/:emailAddress",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/email/:id/emails/:emailAddress",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/ftp/:id/ftp-users",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/ftp/:id/ftp-users",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/ftp/:id/ftp-users/:username",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PATCH /api/hosting/ftp/:id/ftp-users/:username",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/mysql/:id/mysql-dbs",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/mysql/:id/mysql-dbs",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/mysql/:id/mysql-dbs/:dbName",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/mysql/:id/mysql-dbs/:dbName/sql",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/mysql/:id/mysql-dbs/:dbName/sso",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/mysql/:id/mysql-users",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/mysql/:id/mysql-users",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/mysql/:id/mysql-users/:username",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PUT /api/hosting/mysql/:id/mysql-users/:username",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/mysql/:id/mysql-users/:username/access-hosts",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/mysql/:id/mysql-users/:username/access-hosts",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PUT /api/hosting/mysql/:id/mysql-users/:username/privileges",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/node/:id/apps",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/node/:id/apps",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/node/:id/apps/:appId",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/node/:id/persistent-apps",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/plans",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/purchase",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/regions",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/services",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/services/:id",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/services/:id/cancel",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PUT /api/hosting/ssl/:id/domains/:domainId/force_ssl",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/ssl/:id/domains/:domainId/mail_ssl",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/ssl/:id/domains/:domainId/mail_ssl",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/ssl/:id/domains/:domainId/ssl",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/ssl/:id/domains/:domainId/ssl",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/ssl/:id/domains/:domainId/ssl/upload",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/status",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/web/:id/php",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PUT /api/hosting/web/:id/php",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/web/:id/php/restart",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress/:appId/plugins",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress/:appId/settings",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PATCH /api/hosting/wordpress/:id/wordpress/:appId/settings",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress/:appId/themes",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress/:appId/users",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress/:appId/users/:userId/sso",
+      "section": "Hosting",
       "issues": [
         "missing_params",
         "missing_response"
@@ -87,6 +495,13 @@
       "protected": true,
       "admin": false,
       "source": "api\\routes\\activity.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/impersonation/exit",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\admin\\index.ts"
     },
     {
       "method": "GET",
@@ -458,6 +873,363 @@
       "protected": false,
       "admin": false,
       "source": "api\\routes\\health.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/dns/:id/domains",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\dns.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/dns/:id/domains",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\dns.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/dns/:id/domains/:domainId/dns",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\dns.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/dns/:id/domains/:domainId/dns/records",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\dns.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/email/:id/emails",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\email.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/email/:id/emails",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\email.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/hosting/email/:id/emails/:emailAddress",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\email.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/email/:id/emails/:emailAddress",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\email.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/ftp/:id/ftp-users",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\ftp.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/ftp/:id/ftp-users",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\ftp.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/hosting/ftp/:id/ftp-users/:username",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\ftp.ts"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/hosting/ftp/:id/ftp-users/:username",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\ftp.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/mysql/:id/mysql-dbs",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/mysql/:id/mysql-dbs",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/hosting/mysql/:id/mysql-dbs/:dbName",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/mysql/:id/mysql-dbs/:dbName/sql",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/mysql/:id/mysql-dbs/:dbName/sso",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/mysql/:id/mysql-users",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/mysql/:id/mysql-users",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/hosting/mysql/:id/mysql-users/:username",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/hosting/mysql/:id/mysql-users/:username",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/hosting/mysql/:id/mysql-users/:username/access-hosts",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/mysql/:id/mysql-users/:username/access-hosts",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/hosting/mysql/:id/mysql-users/:username/privileges",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\mysql.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/node/:id/apps",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\node.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/node/:id/apps",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\node.ts"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/hosting/node/:id/apps/:appId",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\node.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/node/:id/persistent-apps",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\node.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/plans",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\store.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/purchase",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\store.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/regions",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\store.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/services",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\store.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/services/:id",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\store.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/services/:id/cancel",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\store.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/force_ssl",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\ssl.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/mail_ssl",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\ssl.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/mail_ssl",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\ssl.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/ssl",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\ssl.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/ssl",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\ssl.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/ssl/upload",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\ssl.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/status",
+      "protected": false,
+      "admin": false,
+      "source": "api\\routes\\hosting\\public.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/web/:id/php",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\web.ts"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/hosting/web/:id/php",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\web.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/hosting/web/:id/php/restart",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\web.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/wordpress/:id/wordpress",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\wordpress.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/plugins",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\wordpress.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/settings",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\wordpress.ts"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/settings",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\wordpress.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/themes",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\wordpress.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/users",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\wordpress.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/users/:userId/sso",
+      "protected": true,
+      "admin": false,
+      "source": "api\\routes\\hosting\\wordpress.ts"
     },
     {
       "method": "GET",
@@ -1114,6 +1886,18 @@
       "admin": false
     },
     {
+      "sectionTitle": "Admin Platform Management",
+      "sectionBase": "/api/admin",
+      "method": "POST",
+      "relativePath": "/impersonation/exit",
+      "path": "/api/admin/impersonation/exit",
+      "auth": true,
+      "hasBody": true,
+      "hasResponse": true,
+      "isPlaceholderResponse": false,
+      "admin": false
+    },
+    {
       "sectionTitle": "Announcements",
       "sectionBase": "/api/announcements",
       "method": "GET",
@@ -1749,6 +2533,669 @@
       "hasResponse": true,
       "isPlaceholderResponse": false,
       "admin": false
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/dns/:id/domains",
+      "path": "/api/hosting/dns/:id/domains",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/dns/:id/domains",
+      "path": "/api/hosting/dns/:id/domains",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/dns/:id/domains/:domainId/dns",
+      "path": "/api/hosting/dns/:id/domains/:domainId/dns",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/dns/:id/domains/:domainId/dns/records",
+      "path": "/api/hosting/dns/:id/domains/:domainId/dns/records",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/email/:id/emails",
+      "path": "/api/hosting/email/:id/emails",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/email/:id/emails",
+      "path": "/api/hosting/email/:id/emails",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "DELETE",
+      "relativePath": "/email/:id/emails/:emailAddress",
+      "path": "/api/hosting/email/:id/emails/:emailAddress",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/email/:id/emails/:emailAddress",
+      "path": "/api/hosting/email/:id/emails/:emailAddress",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/ftp/:id/ftp-users",
+      "path": "/api/hosting/ftp/:id/ftp-users",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/ftp/:id/ftp-users",
+      "path": "/api/hosting/ftp/:id/ftp-users",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "DELETE",
+      "relativePath": "/ftp/:id/ftp-users/:username",
+      "path": "/api/hosting/ftp/:id/ftp-users/:username",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "PATCH",
+      "relativePath": "/ftp/:id/ftp-users/:username",
+      "path": "/api/hosting/ftp/:id/ftp-users/:username",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/mysql/:id/mysql-dbs",
+      "path": "/api/hosting/mysql/:id/mysql-dbs",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/mysql/:id/mysql-dbs",
+      "path": "/api/hosting/mysql/:id/mysql-dbs",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "DELETE",
+      "relativePath": "/mysql/:id/mysql-dbs/:dbName",
+      "path": "/api/hosting/mysql/:id/mysql-dbs/:dbName",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/mysql/:id/mysql-dbs/:dbName/sql",
+      "path": "/api/hosting/mysql/:id/mysql-dbs/:dbName/sql",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/mysql/:id/mysql-dbs/:dbName/sso",
+      "path": "/api/hosting/mysql/:id/mysql-dbs/:dbName/sso",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/mysql/:id/mysql-users",
+      "path": "/api/hosting/mysql/:id/mysql-users",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/mysql/:id/mysql-users",
+      "path": "/api/hosting/mysql/:id/mysql-users",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "DELETE",
+      "relativePath": "/mysql/:id/mysql-users/:username",
+      "path": "/api/hosting/mysql/:id/mysql-users/:username",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "PUT",
+      "relativePath": "/mysql/:id/mysql-users/:username",
+      "path": "/api/hosting/mysql/:id/mysql-users/:username",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "DELETE",
+      "relativePath": "/mysql/:id/mysql-users/:username/access-hosts",
+      "path": "/api/hosting/mysql/:id/mysql-users/:username/access-hosts",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/mysql/:id/mysql-users/:username/access-hosts",
+      "path": "/api/hosting/mysql/:id/mysql-users/:username/access-hosts",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "PUT",
+      "relativePath": "/mysql/:id/mysql-users/:username/privileges",
+      "path": "/api/hosting/mysql/:id/mysql-users/:username/privileges",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/node/:id/apps",
+      "path": "/api/hosting/node/:id/apps",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/node/:id/apps",
+      "path": "/api/hosting/node/:id/apps",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "DELETE",
+      "relativePath": "/node/:id/apps/:appId",
+      "path": "/api/hosting/node/:id/apps/:appId",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/node/:id/persistent-apps",
+      "path": "/api/hosting/node/:id/persistent-apps",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/plans",
+      "path": "/api/hosting/plans",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/purchase",
+      "path": "/api/hosting/purchase",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/regions",
+      "path": "/api/hosting/regions",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/services",
+      "path": "/api/hosting/services",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/services/:id",
+      "path": "/api/hosting/services/:id",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/services/:id/cancel",
+      "path": "/api/hosting/services/:id/cancel",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "PUT",
+      "relativePath": "/ssl/:id/domains/:domainId/force_ssl",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/force_ssl",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/ssl/:id/domains/:domainId/mail_ssl",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/mail_ssl",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/ssl/:id/domains/:domainId/mail_ssl",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/mail_ssl",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/ssl/:id/domains/:domainId/ssl",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/ssl",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/ssl/:id/domains/:domainId/ssl",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/ssl",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/ssl/:id/domains/:domainId/ssl/upload",
+      "path": "/api/hosting/ssl/:id/domains/:domainId/ssl/upload",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/status",
+      "path": "/api/hosting/status",
+      "auth": false,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/web/:id/php",
+      "path": "/api/hosting/web/:id/php",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "PUT",
+      "relativePath": "/web/:id/php",
+      "path": "/api/hosting/web/:id/php",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "POST",
+      "relativePath": "/web/:id/php/restart",
+      "path": "/api/hosting/web/:id/php/restart",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/wordpress/:id/wordpress",
+      "path": "/api/hosting/wordpress/:id/wordpress",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/wordpress/:id/wordpress/:appId/plugins",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/plugins",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/wordpress/:id/wordpress/:appId/settings",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/settings",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "PATCH",
+      "relativePath": "/wordpress/:id/wordpress/:appId/settings",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/settings",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/wordpress/:id/wordpress/:appId/themes",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/themes",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/wordpress/:id/wordpress/:appId/users",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/users",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
+    },
+    {
+      "sectionTitle": "Hosting",
+      "sectionBase": "/api/hosting",
+      "method": "GET",
+      "relativePath": "/wordpress/:id/wordpress/:appId/users/:userId/sso",
+      "path": "/api/hosting/wordpress/:id/wordpress/:appId/users/:userId/sso",
+      "auth": true,
+      "admin": false,
+      "hasBody": false,
+      "hasParams": false,
+      "hasResponse": true,
+      "isPlaceholderResponse": true
     },
     {
       "sectionTitle": "Invoices & Financial Records",

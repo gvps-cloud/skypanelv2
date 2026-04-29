@@ -11,6 +11,33 @@ const router = express.Router();
 
 router.use(authenticateToken, requireOrganization, requireHostingEnabledForUsers);
 
+import { unwrapItems } from "../../lib/unwrapItems.js";
+
+function normalizeEmail(email: any) {
+  const quota = email?.quota;
+  return {
+    address: String(email?.address ?? ""),
+    aliases: Array.isArray(email?.aliases) ? email.aliases : [],
+    status: email?.status ?? null,
+    hasMailbox: Boolean(email?.hasMailbox),
+    quota: typeof quota === "object" && quota !== null ? quota.total : quota ?? null,
+    quotaUsage: typeof quota === "object" && quota !== null ? quota.usage : null,
+    forwardersCount: Number(email?.forwardersCount ?? 0),
+    createdAt: email?.createdAt ?? null,
+    ssoAvailable: Boolean(email?.ssoAvailable),
+  };
+}
+
+function splitEmailAddress(address: string) {
+  const trimmed = address.trim();
+  const atIndex = trimmed.lastIndexOf("@");
+  if (atIndex <= 0 || atIndex === trimmed.length - 1) return null;
+  return {
+    username: trimmed.slice(0, atIndex),
+    domain: trimmed.slice(atIndex + 1).toLowerCase(),
+  };
+}
+
 async function resolveSubscription(req: Request, res: Response) {
   const { organizationId } = (req as AuthenticatedRequest).user;
   const { id } = req.params;
@@ -31,7 +58,7 @@ router.get("/:id/emails", requireOrgPermission("hosting_view"), async (req: Requ
   if (!sub) return;
   try {
     const emails = await EnhanceService.getWebsiteEmails(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id);
-    res.json(emails);
+    res.json({ emails: unwrapItems(emails).map(normalizeEmail) });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get emails" });
   }
@@ -41,8 +68,29 @@ router.post("/:id/emails", requireOrgPermission("hosting_manage"), async (req: R
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const result = await EnhanceService.createWebsiteEmail(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.body);
-    res.json(result);
+    const parsed = splitEmailAddress(String(req.body?.address ?? req.body?.username ?? ""));
+    if (!parsed) {
+      return res.status(400).json({ error: "A valid email address is required" });
+    }
+
+    const domains = await EnhanceService.getWebsiteDomainMappings(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id);
+    const domain = unwrapItems(domains).find((item) => String(item?.domain ?? "").toLowerCase() === parsed.domain);
+    const domainId = domain?.domainId ?? domain?.id ?? domain?.domain_id;
+    if (!domainId) {
+      return res.status(400).json({ error: "Email domain is not mapped to this hosting service" });
+    }
+
+    const result = await EnhanceService.createWebsiteEmail(
+      config.ENHANCE_MASTER_ORG_ID,
+      sub.enhance_website_id,
+      String(domainId),
+      {
+        username: parsed.username,
+        mailboxPassword: req.body?.password,
+        quota: req.body?.quota,
+      },
+    );
+    res.status(201).json({ success: true, result });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to create email" });
   }

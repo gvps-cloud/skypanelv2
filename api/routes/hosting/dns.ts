@@ -11,6 +11,22 @@ const router = express.Router();
 
 router.use(authenticateToken, requireOrganization, requireHostingEnabledForUsers);
 
+import { unwrapItems } from "../../lib/unwrapItems.js";
+
+function normalizeDomainMapping(domain: any) {
+  const cert = domain?.cert ?? null;
+  return {
+    id: String(domain?.id ?? domain?.domainId ?? domain?.domain_id ?? ""),
+    domain: String(domain?.domain ?? domain?.name ?? ""),
+    is_primary: Boolean(domain?.is_primary ?? domain?.mappingKind === "primary"),
+    mappingKind: domain?.mappingKind ?? null,
+    documentRoot: domain?.documentRoot ?? domain?.document_root ?? null,
+    cert,
+    sslActive: Boolean(cert),
+    forceSsl: Boolean(cert?.forceHttps ?? cert?.force_https),
+  };
+}
+
 async function resolveSubscription(req: Request, res: Response) {
   const { organizationId } = (req as AuthenticatedRequest).user;
   const { id } = req.params;
@@ -30,8 +46,12 @@ router.get("/:id/domains", requireOrgPermission("hosting_view"), async (req: Req
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const domains = await EnhanceService.getWebsiteDomainMappings(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id);
-    res.json(domains);
+    const domains = await EnhanceService.getWebsiteDomainMappings(
+      config.ENHANCE_MASTER_ORG_ID,
+      sub.enhance_website_id,
+      { withSsl: req.query.withSsl === "true" },
+    );
+    res.json({ domains: unwrapItems(domains).map(normalizeDomainMapping) });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get domains" });
   }

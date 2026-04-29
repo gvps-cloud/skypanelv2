@@ -93,6 +93,7 @@ function getMarkerColor(state: LatencyState[string]): string {
 function createRegionIcon(regionId: string, state: LatencyState[string]): L.DivIcon {
   const color = getMarkerColor(state);
   const countryCode = getCountryCode(regionId);
+  const flagUrl = `https://hatscripts.github.io/circle-flags/flags/${countryCode}.svg`;
 
   const html = `
     <div class="region-marker" style="
@@ -117,12 +118,7 @@ function createRegionIcon(regionId: string, state: LatencyState[string]): L.DivI
         border: 2px solid ${color};
         overflow: hidden;
       ">
-        <img
-          src="https://hatscripts.github.io/circle-flags/flags/${countryCode}.svg"
-          alt="${countryCode}"
-          style="width: 28px; height: 28px;"
-          onerror="this.style.display='none'"
-        />
+        <img src="${flagUrl}" alt="${countryCode} flag" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none'" />
       </div>
       <div style="
         background: ${color};
@@ -250,16 +246,12 @@ function createPopupContent(
     in: "India", jp: "Japan", sg: "Singapore", id: "Indonesia",
     au: "Australia", kr: "South Korea", hk: "Hong Kong", tw: "Taiwan",
   };
+  const flagUrl = `https://flagcdn.com/w80/${countryCode}.png`;
 
   return `
     <div style="width: 260px; padding: 16px; font-family: inherit;">
       <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 12px;">
-        <img
-          src="https://flagcdn.com/w40/${countryCode}.png"
-          alt="${countryCode}"
-          style="width: 40px; height: 27px; border-radius: 4px; object-fit: cover; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"
-          onerror="this.style.display='none'"
-        />
+        <img src="${flagUrl}" alt="${countryCode} flag" style="height: 27px; width: 40px; object-fit: contain; border-radius: 4px;" onerror="this.style.display='none'" />
         <div style="flex: 1; min-width: 0;">
           <h3 style="font-weight: 700; font-size: 15px; margin: 0; color: #0f172a;">
             ${region.label}

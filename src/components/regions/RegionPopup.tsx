@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { Wifi, Loader2, AlertCircle, TrendingUp, TrendingDown, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { COUNTRY_NAMES, REGION_TO_COUNTRY } from "./RegionMarker";
+import { FlagIcon } from "./countryFlags";
 
 interface RegionPopupProps {
   regionId: string;
@@ -21,25 +22,6 @@ interface RegionPopupProps {
   error?: boolean;
   onTest?: () => void;
 }
-
-const FlagIcon: React.FC<{ countryCode: string; size?: number }> = ({ countryCode, size = 24 }) => {
-  const [failed, setFailed] = useState(false);
-  const imageUrl = `https://flagcdn.com/w${Math.floor(size / 2)}/${countryCode}.png`;
-
-  if (failed) {
-    return <MapPin className="text-muted-foreground" style={{ width: size, height: size * 0.75 }} />;
-  }
-
-  return (
-    <img
-      src={imageUrl}
-      alt={`${countryCode} flag`}
-      className="rounded-sm object-cover shadow-sm"
-      style={{ width: size * 1.2, height: size * 0.8 }}
-      onError={() => setFailed(true)}
-    />
-  );
-};
 
 const getLatencyColor = (latency: number | undefined, loading: boolean, error: boolean): { bg: string; text: string } => {
   if (loading) return { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400" };
@@ -76,7 +58,7 @@ export const RegionPopup: React.FC<RegionPopupProps> = ({
       <div className="flex items-start gap-3 mb-3">
         {countryCode && (
           <div className="flex-shrink-0 mt-0.5">
-            <FlagIcon countryCode={countryCode} size={28} />
+            <FlagIcon countryCode={countryCode} className="h-5 w-8" />
           </div>
         )}
         <div className="flex-1 min-w-0">

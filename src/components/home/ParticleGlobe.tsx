@@ -65,7 +65,7 @@ const flagImageCache = new Map<string, HTMLImageElement>();
 const flagLoadingPromises = new Map<string, Promise<HTMLImageElement | null>>();
 
 /**
- * Load a flag image from hatscripts.github.io/circle-flags
+ * Load a locally generated country flag image.
  */
 function loadFlagImage(countryCode: string): Promise<HTMLImageElement | null> {
   if (flagImageCache.has(countryCode)) {

@@ -385,11 +385,11 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
       const trigger = container.querySelector('[role="combobox"]');
 
       // Verify US flag is displayed in the trigger button
-      const flagImage = trigger?.querySelector('img[src*="flagcdn.com"][src*="/us.png"]');
-      expect(flagImage).toBeTruthy();
+      const flagIcon = trigger?.querySelector('img[src*="flagcdn.com/w40/us.png"]');
+      expect(flagIcon).toBeTruthy();
 
       // Verify Globe icon is NOT displayed (flag should be shown)
-      const globeIcon = trigger?.querySelector('svg[class*="lucide-globe"]');
+      const globeIcon = trigger?.querySelector('svg.lucide-globe');
       expect(globeIcon).toBeFalsy();
     });
 
@@ -420,8 +420,8 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
       const trigger = container.querySelector('[role="combobox"]');
 
       // Verify US flag is displayed
-      const flagImage = trigger?.querySelector('img[src*="flagcdn.com"][src*="/us.png"]');
-      expect(flagImage).toBeTruthy();
+      const flagIcon = trigger?.querySelector('img[src*="flagcdn.com/w40/us.png"]');
+      expect(flagIcon).toBeTruthy();
     });
   });
 
@@ -463,16 +463,16 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
       const trigger = container.querySelector('[role="combobox"]');
 
       // Verify Globe icon IS displayed (fallback behavior)
-      const globeIcon = trigger?.querySelector('svg[class*="lucide-globe"]');
+      const globeIcon = trigger?.querySelector('svg.lucide-globe');
       expect(globeIcon).toBeTruthy();
 
       // Verify no flag image is displayed
-      const flagImage = trigger?.querySelector('img[src*="flagcdn.com"]');
-      expect(flagImage).toBeFalsy();
+      const flagIcon = trigger?.querySelector('img[src*="flagcdn.com"]');
+      expect(flagIcon).toBeFalsy();
     });
 
-    it('displays Globe icon when flag image fails to load', async () => {
-      // Mock regions API response with valid country but simulate image load failure
+    it('renders known region icons locally without external flag images', async () => {
+      // Mock regions API response with valid country data.
       mockFetch.mockResolvedValueOnce(mockApiResponse({
         regions: [
           { id: 'test-region', label: 'Test Location', country: 'United States', capabilities: ['VPS'] },
@@ -497,18 +497,11 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
 
       const trigger = container.querySelector('[role="combobox"]');
 
-      // Find the flag image and trigger error event
-      const flagImage = trigger?.querySelector('img[src*="flagcdn.com"]') as HTMLImageElement;
-      if (flagImage) {
-        // Simulate image load failure
-        flagImage.dispatchEvent(new Event('error'));
-      }
+      const externalFlagImage = trigger?.querySelector('img[src*="flagcdn.com"]');
+      const localFlagIcon = trigger?.querySelector('img[src*="flagcdn.com/w40/us.png"]');
 
-      // Wait for Globe icon to appear after image error
-      await waitFor(() => {
-        const globeIcon = trigger?.querySelector('svg[class*="lucide-globe"]');
-        expect(globeIcon).toBeTruthy();
-      });
+      expect(externalFlagImage).toBeFalsy();
+      expect(localFlagIcon).toBeTruthy();
     });
   });
 

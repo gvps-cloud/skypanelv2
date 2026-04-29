@@ -35,13 +35,18 @@ export class EnhanceService {
       body: options.body ? JSON.stringify(options.body) : undefined,
     });
 
-    if (!response.ok) {
-      let body: any;
+    const responseText = await response.text();
+    const parseBody = () => {
+      if (!responseText.trim()) return undefined;
       try {
-        body = await response.json();
+        return JSON.parse(responseText);
       } catch {
-        body = await response.text();
+        return responseText;
       }
+    };
+
+    if (!response.ok) {
+      const body = parseBody();
       throw new EnhanceApiError(
         `Enhance API error: ${response.status} ${response.statusText}`,
         response.status,
@@ -49,11 +54,11 @@ export class EnhanceService {
       );
     }
 
-    if (response.status === 204) {
+    if (response.status === 204 || !responseText.trim()) {
       return undefined as T;
     }
 
-    return (await response.json()) as T;
+    return parseBody() as T;
   }
 
   // ============================================================
@@ -142,8 +147,9 @@ export class EnhanceService {
   // ============================================================
   // Domain Mappings
   // ============================================================
-  static async getWebsiteDomainMappings(orgId: string, websiteId: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains`);
+  static async getWebsiteDomainMappings(orgId: string, websiteId: string, options?: { withSsl?: boolean }) {
+    const params = options?.withSsl ? '?withSsl=true' : '';
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains${params}`);
   }
 
   static async createWebsiteMappedDomain(orgId: string, websiteId: string, data: any) {
@@ -218,8 +224,8 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/emails`);
   }
 
-  static async createWebsiteEmail(orgId: string, websiteId: string, data: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/emails`, {
+  static async createWebsiteEmail(orgId: string, websiteId: string, domainId: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/emails`, {
       method: 'POST',
       body: data,
     });
@@ -231,7 +237,7 @@ export class EnhanceService {
 
   static async updateWebsiteEmail(orgId: string, websiteId: string, emailAddress: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/emails/${encodeURIComponent(emailAddress)}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }
@@ -340,15 +346,14 @@ export class EnhanceService {
 
   static async updateWordpressSettings(orgId: string, websiteId: string, appId: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }
 
-  static async updateWordpressAppVersion(orgId: string, websiteId: string, appId: string, data: any) {
+  static async updateWordpressAppVersion(orgId: string, websiteId: string, appId: string, _data?: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/version`, {
-      method: 'PUT',
-      body: data,
+      method: 'PATCH',
     });
   }
 
@@ -369,7 +374,7 @@ export class EnhanceService {
 
   static async updateWordpressUser(orgId: string, websiteId: string, appId: string, userId: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/users/${userId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }
@@ -384,12 +389,12 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/users/${userId}/sso`);
   }
 
-  static async getWordpressConfig(orgId: string, websiteId: string, appId: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/config`);
+  static async getWordpressConfig(orgId: string, websiteId: string, appId: string, wpOption: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/wp-config/${encodeURIComponent(wpOption)}`);
   }
 
   static async setWordpressConfig(orgId: string, websiteId: string, appId: string, data: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/config`, {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/wp-config`, {
       method: 'PUT',
       body: data,
     });
@@ -429,10 +434,9 @@ export class EnhanceService {
     });
   }
 
-  static async updateWordpressTheme(orgId: string, websiteId: string, appId: string, themeId: string, data: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/themes/${themeId}`, {
-      method: 'PUT',
-      body: data,
+  static async updateWordpressTheme(orgId: string, websiteId: string, appId: string, themeId: string, _data?: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/themes/${encodeURIComponent(themeId)}/update`, {
+      method: 'POST',
     });
   }
 
@@ -454,19 +458,19 @@ export class EnhanceService {
   }
 
   static async getWebsiteMysqlDb(orgId: string, websiteId: string, dbName: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${dbName}`);
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${encodeURIComponent(dbName)}`);
   }
 
   static async deleteWebsiteMysqlDb(orgId: string, websiteId: string, dbName: string) {
-    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${dbName}`, { method: 'DELETE' });
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${encodeURIComponent(dbName)}`, { method: 'DELETE' });
   }
 
   static async getWebsiteMysqlDbSso(orgId: string, websiteId: string, dbName: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${dbName}/sso`);
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${encodeURIComponent(dbName)}/sso`);
   }
 
-  static async executeWebsiteMysqlSql(orgId: string, websiteId: string, dbName: string, data: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${dbName}/sql`, { method: 'POST', body: data });
+  static async downloadWebsiteMysqlSql(orgId: string, websiteId: string, dbName: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${encodeURIComponent(dbName)}/sql`);
   }
 
   static async getWebsiteMysqlUsers(orgId: string, websiteId: string) {
@@ -477,32 +481,24 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users`, { method: 'POST', body: data });
   }
 
-  static async getWebsiteMysqlUser(orgId: string, websiteId: string, username: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}`);
-  }
-
   static async updateWebsiteMysqlUser(orgId: string, websiteId: string, username: string, data: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}`, { method: 'PUT', body: data });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${encodeURIComponent(username)}`, { method: 'PUT', body: data });
   }
 
   static async deleteWebsiteMysqlUser(orgId: string, websiteId: string, username: string) {
-    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}`, { method: 'DELETE' });
-  }
-
-  static async getWebsiteMysqlUserPrivileges(orgId: string, websiteId: string, username: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}/privileges`);
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${encodeURIComponent(username)}`, { method: 'DELETE' });
   }
 
   static async updateWebsiteMysqlUserPrivileges(orgId: string, websiteId: string, username: string, data: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}/privileges`, { method: 'PUT', body: data });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${encodeURIComponent(username)}/privileges`, { method: 'PUT', body: data });
   }
 
-  static async getWebsiteMysqlUserAccessHosts(orgId: string, websiteId: string, username: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}/access-hosts`);
+  static async createWebsiteMysqlUserAccessHosts(orgId: string, websiteId: string, username: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${encodeURIComponent(username)}/access-hosts`, { method: 'POST', body: data });
   }
 
-  static async updateWebsiteMysqlUserAccessHosts(orgId: string, websiteId: string, username: string, data: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${username}/access-hosts`, { method: 'PUT', body: data });
+  static async deleteWebsiteMysqlUserAccessHosts(orgId: string, websiteId: string, username: string, data: any) {
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${encodeURIComponent(username)}/access-hosts`, { method: 'DELETE', body: data });
   }
 
   // ============================================================
@@ -517,26 +513,26 @@ export class EnhanceService {
   }
 
   static async getWebsiteFtpUser(orgId: string, websiteId: string, username: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${username}`);
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${encodeURIComponent(username)}`);
   }
 
   static async updateWebsiteFtpUser(orgId: string, websiteId: string, username: string, data: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${username}`, { method: 'PUT', body: data });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${encodeURIComponent(username)}`, { method: 'PATCH', body: data });
   }
 
   static async deleteWebsiteFtpUser(orgId: string, websiteId: string, username: string) {
-    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${username}`, { method: 'DELETE' });
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
   }
 
   // ============================================================
   // SSL
   // ============================================================
-  static async generateWebsiteSsl(orgId: string, websiteId: string, domainId: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/ssl`, { method: 'POST' });
+  static async createWebsiteDomainLetsencryptCerts(_orgId: string, _websiteId: string, domainId: string) {
+    return this.request<any>(`/v2/domains/${domainId}/letsencrypt`, { method: 'POST' });
   }
 
-  static async generateWebsiteMailSsl(orgId: string, websiteId: string, domainId: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/mail_ssl`, { method: 'POST' });
+  static async createWebsiteMailDomainLetsencryptCerts(_orgId: string, _websiteId: string, domainId: string) {
+    return this.request<any>(`/v2/domains/${domainId}/letsencrypt_mail`, { method: 'POST' });
   }
 
   static async getWebsiteDomainSsl(_orgId: string, _websiteId: string, domainId: string) {
@@ -551,7 +547,7 @@ export class EnhanceService {
     return this.request<any>(`/v2/domains/${domainId}/mail_ssl`);
   }
 
-  static async setWebsiteDomainForceSsl(_orgId: string, _websiteId: string, domainId: string, data: any) {
-    return this.request<any>(`/v2/domains/${domainId}/ssl/force_ssl`, { method: 'POST', body: data });
+  static async setWebsiteDomainForceSsl(_orgId: string, _websiteId: string, domainId: string, enabled: boolean) {
+    return this.request<any>(`/v2/domains/${domainId}/ssl/force_ssl`, { method: 'PUT', body: { enabled } });
   }
 }

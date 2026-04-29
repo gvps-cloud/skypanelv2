@@ -20,16 +20,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -682,112 +672,124 @@ const AdminUserDetail: React.FC = () => {
       />
 
       {/* Impersonation Confirmation Dialog */}
-      <AlertDialog open={showImpersonationDialog} onOpenChange={setShowImpersonationDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Admin Impersonation</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                You are about to impersonate <strong>{impersonationTarget?.name}</strong>, who is also an administrator.
-              </p>
-              <div className="rounded-lg bg-muted p-3 space-y-1">
-                <p className="text-sm font-medium">Target User Details:</p>
-                <p className="text-sm">Name: {impersonationTarget?.name}</p>
-                <p className="text-sm">Email: {impersonationTarget?.email}</p>
-                <p className="text-sm">Role: {impersonationTarget?.role}</p>
+      <Dialog open={showImpersonationDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowImpersonationDialog(false);
+          setImpersonationTarget(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Admin Impersonation</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  You are about to impersonate <strong>{impersonationTarget?.name}</strong>, who is also an administrator.
+                </p>
+                <div className="rounded-lg bg-muted p-3 space-y-1">
+                  <p className="text-sm font-medium">Target User Details:</p>
+                  <p className="text-sm">Name: {impersonationTarget?.name}</p>
+                  <p className="text-sm">Email: {impersonationTarget?.email}</p>
+                  <p className="text-sm">Role: {impersonationTarget?.role}</p>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  This action will be logged for security purposes. You will have full access to their account and data.
+                </p>
+                <p className="font-semibold text-amber-600">
+                  Are you sure you want to proceed?
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                This action will be logged for security purposes. You will have full access to their account and data.
-              </p>
-              <p className="font-semibold text-amber-600">
-                Are you sure you want to proceed?
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+            </DialogDescription>
+          </DialogHeader>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowImpersonationDialog(false);
-              setImpersonationTarget(null);
-            }}>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowImpersonationDialog(false);
+                setImpersonationTarget(null);
+              }}
+            >
               Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
+            </Button>
+            <Button
+              type="button"
               onClick={handleConfirmImpersonation}
               className="bg-amber-600 text-white hover:bg-amber-700"
             >
               Confirm Impersonation
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete User Account</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-4">
-              <p>
-                This will permanently delete <strong>{user?.name || 'this user'}</strong> and all associated data.
-              </p>
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Delete User Account</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-4">
+                <p>
+                  This will permanently delete <strong>{user?.name || 'this user'}</strong> and all associated data.
+                </p>
 
-              {/* Resource Impact Summary */}
-              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 space-y-3">
-                <h4 className="font-semibold text-destructive">Resources to be deleted:</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="font-medium">VPS Instances</p>
-                    <p className="text-muted-foreground">{vpsInstances?.length || 0} instances</p>
-                    {vpsInstances && vpsInstances.length > 0 && (
-                      <p className="text-xs text-destructive">
-                        {vpsInstances.filter(v => v.status === 'running').length} currently running
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium">Wallet Balance</p>
-                    <p className="text-muted-foreground">${(billing?.wallet_balance || 0).toFixed(6)}</p>
-                    {billing && billing.wallet_balance > 0 && (
-                      <p className="text-xs text-destructive">Funds will be lost</p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium">Support Tickets</p>
-                    <p className="text-muted-foreground">{supportTickets?.length || 0} tickets</p>
-                    {supportTickets && supportTickets.filter(t => t.status === 'open').length > 0 && (
-                      <p className="text-xs text-destructive">
-                        {supportTickets.filter(t => t.status === 'open').length} open tickets
-                      </p>
-                    )}
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 space-y-3">
+                  <h4 className="font-semibold text-destructive">Resources to be deleted:</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="font-medium">VPS Instances</p>
+                      <p className="text-muted-foreground">{vpsInstances?.length || 0} instances</p>
+                      {vpsInstances && vpsInstances.length > 0 && (
+                        <p className="text-xs text-destructive">
+                          {vpsInstances.filter(v => v.status === 'running').length} currently running
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium">Wallet Balance</p>
+                      <p className="text-muted-foreground">${(billing?.wallet_balance || 0).toFixed(6)}</p>
+                      {billing && billing.wallet_balance > 0 && (
+                        <p className="text-xs text-destructive">Funds will be lost</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium">Support Tickets</p>
+                      <p className="text-muted-foreground">{supportTickets?.length || 0} tickets</p>
+                      {supportTickets && supportTickets.filter(t => t.status === 'open').length > 0 && (
+                        <p className="text-xs text-destructive">
+                          {supportTickets.filter(t => t.status === 'open').length} open tickets
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {user?.role === 'admin' && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Warning:</strong> This user is an administrator. Deleting this account will remove their admin privileges and access to the admin panel.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {vpsInstances && vpsInstances.filter(v => v.status === 'running').length > 0 && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Warning:</strong> This user has {vpsInstances.filter(v => v.status === 'running').length} running VPS instance(s) that will be permanently destroyed.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <p className="font-semibold text-destructive">
+                  This action cannot be undone. All data will be permanently lost.
+                </p>
               </div>
-
-              {/* Special warnings */}
-              {user?.role === 'admin' && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Warning:</strong> This user is an administrator. Deleting this account will remove their admin privileges and access to the admin panel.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {vpsInstances && vpsInstances.filter(v => v.status === 'running').length > 0 && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Warning:</strong> This user has {vpsInstances.filter(v => v.status === 'running').length} running VPS instance(s) that will be permanently destroyed.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <p className="font-semibold text-destructive">
-                This action cannot be undone. All data will be permanently lost.
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+            </DialogDescription>
+          </DialogHeader>
 
           <div className="space-y-3">
             <div className="space-y-2">
@@ -803,6 +805,7 @@ const AdminUserDetail: React.FC = () => {
                 onChange={(e) => setDeleteConfirmEmail(e.target.value)}
                 placeholder="Type the email address above"
                 className="font-mono"
+                disabled={isDeleting || deleteUserMutation.isPending}
               />
             </div>
 
@@ -813,12 +816,20 @@ const AdminUserDetail: React.FC = () => {
             )}
           </div>
 
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting || deleteUserMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
               onClick={handleDeleteUser}
               disabled={deleteConfirmEmail !== (user?.email || '') || isDeleting || deleteUserMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting || deleteUserMutation.isPending ? (
                 <>
@@ -828,10 +839,10 @@ const AdminUserDetail: React.FC = () => {
               ) : (
                 'Delete User Permanently'
               )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Adjust Balance Modal */}
       <Dialog open={showAdjustBalanceModal} onOpenChange={setShowAdjustBalanceModal}>

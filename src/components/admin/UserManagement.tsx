@@ -1,7 +1,3 @@
-/**
- * User Management Component
- * Flat user list for admin management with pagination and search
- */
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -22,6 +18,7 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+    Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api';
@@ -32,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Table,
     TableBody,
@@ -48,8 +46,15 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     AlertDialog,
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
@@ -79,7 +84,6 @@ interface AdminUser {
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
-// Helper to format date
 const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -96,10 +100,19 @@ interface UserRowProps {
     onImpersonate: (user: AdminUser) => void;
     onDelete: (user: AdminUser) => void;
     isImpersonating: boolean;
+    selected: boolean;
+    onToggleSelect: (userId: string) => void;
 }
 
-const UserRow: React.FC<UserRowProps> = ({ user, onView, onEdit, onImpersonate, onDelete, isImpersonating }) => (
-    <TableRow className="group">
+const UserRow: React.FC<UserRowProps> = ({ user, onView, onEdit, onImpersonate, onDelete, isImpersonating, selected, onToggleSelect }) => (
+    <TableRow className="group" data-state={selected ? 'selected' : undefined}>
+        <TableCell className="w-12">
+            <Checkbox
+                checked={selected}
+                onCheckedChange={() => onToggleSelect(user.id)}
+                aria-label={`Select ${user.name}`}
+            />
+        </TableCell>
         <TableCell>
             <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
@@ -177,7 +190,7 @@ const UserRow: React.FC<UserRowProps> = ({ user, onView, onEdit, onImpersonate, 
 );
 
 export const UserManagement: React.FC = () => {
-    const { token } = useAuth();
+    const { token, user: currentUser } = useAuth();
     const { startImpersonation, isStarting } = useImpersonation();
     const navigate = useNavigate();
     const [users, setUsers] = useState<AdminUser[]>([]);
@@ -186,18 +199,21 @@ export const UserManagement: React.FC = () => {
     const [roleFilter, setRoleFilter] = useState<string>('all');
     const [error, setError] = useState<string>('');
 
-    // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    // Modal states
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
     const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Impersonation confirmation for admin users
+    const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+
+    const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+    const [bulkDeleteConfirmText, setBulkDeleteConfirmText] = useState('');
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
     const [impersonationConfirmDialog, setImpersonationConfirmDialog] = useState<{
         isOpen: boolean;
         targetUser: AdminUser | null;
@@ -226,7 +242,6 @@ export const UserManagement: React.FC = () => {
         fetchUsers();
     }, [fetchUsers]);
 
-    // Filter users based on search and role
     const filteredUsers = useMemo(() => {
         return users.filter((user) => {
             const matchesSearch =
@@ -238,12 +253,10 @@ export const UserManagement: React.FC = () => {
         });
     }, [users, searchTerm, roleFilter]);
 
-    // Reset to first page when filters change
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, roleFilter]);
 
-    // Split users by role
     const adminUsers = useMemo(() => {
         return filteredUsers.filter(u => u.role === 'admin');
     }, [filteredUsers]);
@@ -252,14 +265,22 @@ export const UserManagement: React.FC = () => {
         return filteredUsers.filter(u => u.role !== 'admin');
     }, [filteredUsers]);
 
-    // Pagination calculations (for regular users)
     const totalItems = regularUsers.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const paginatedRegularUsers = regularUsers.slice(startIndex, endIndex);
 
-    // Pagination handlers
+    const allDisplayedUserIds = useMemo(() => {
+        const ids = new Set<string>();
+        adminUsers.forEach(u => ids.add(u.id));
+        paginatedRegularUsers.forEach(u => ids.add(u.id));
+        return ids;
+    }, [adminUsers, paginatedRegularUsers]);
+
+    const allCurrentPageSelected = allDisplayedUserIds.size > 0 && [...allDisplayedUserIds].every(id => selectedUserIds.has(id));
+    const someCurrentPageSelected = [...allDisplayedUserIds].some(id => selectedUserIds.has(id)) && !allCurrentPageSelected;
+
     const goToPage = (page: number) => {
         setCurrentPage(Math.max(1, Math.min(page, totalPages)));
     };
@@ -275,8 +296,36 @@ export const UserManagement: React.FC = () => {
         setCurrentPage(1);
     };
 
+    const handleToggleSelect = useCallback((userId: string) => {
+        setSelectedUserIds(prev => {
+            const next = new Set(prev);
+            if (next.has(userId)) {
+                next.delete(userId);
+            } else {
+                next.add(userId);
+            }
+            return next;
+        });
+    }, []);
 
-    // Handlers
+    const handleToggleAllCurrentPage = useCallback(() => {
+        setSelectedUserIds(prev => {
+            const next = new Set(prev);
+            if (allCurrentPageSelected) {
+                allDisplayedUserIds.forEach(id => next.delete(id));
+            } else {
+                allDisplayedUserIds.forEach(id => next.add(id));
+            }
+            return next;
+        });
+    }, [allCurrentPageSelected, allDisplayedUserIds]);
+
+    const handleClearSelection = useCallback(() => {
+        setSelectedUserIds(new Set());
+    }, []);
+
+    const selectedUserCount = selectedUserIds.size;
+
     const handleViewUser = (user: AdminUser) => {
         navigate(`/admin/user/${user.id}`);
     };
@@ -292,6 +341,14 @@ export const UserManagement: React.FC = () => {
         setDeleteDialogOpen(true);
     };
 
+    const handleDeleteDialogClose = useCallback((open: boolean) => {
+        if (!open) {
+            setDeleteDialogOpen(false);
+            setSelectedUser(null);
+            setDeleteConfirmEmail('');
+        }
+    }, []);
+
     const handleDeleteUser = async () => {
         if (!selectedUser || deleteConfirmEmail !== selectedUser.email) {
             toast.error('Please type the user email exactly to confirm deletion');
@@ -305,12 +362,84 @@ export const UserManagement: React.FC = () => {
             setDeleteDialogOpen(false);
             setSelectedUser(null);
             setDeleteConfirmEmail('');
-            fetchUsers();
+            setSelectedUserIds(prev => {
+                const next = new Set(prev);
+                next.delete(selectedUser.id);
+                return next;
+            });
+            await fetchUsers();
         } catch (error: any) {
             toast.error(error.message || 'Failed to delete user');
         } finally {
             setIsDeleting(false);
         }
+    };
+
+    const handleBulkDeleteClick = () => {
+        if (selectedUserIds.size === 0) return;
+        setBulkDeleteConfirmText('');
+        setBulkDeleteDialogOpen(true);
+    };
+
+    const handleBulkDeleteDialogClose = useCallback((open: boolean) => {
+        if (!open) {
+            setBulkDeleteDialogOpen(false);
+            setBulkDeleteConfirmText('');
+        }
+    }, []);
+
+    const handleBulkDeleteConfirm = async () => {
+        if (bulkDeleteConfirmText !== 'DELETE') {
+            toast.error('Please type DELETE to confirm bulk deletion');
+            return;
+        }
+
+        setIsBulkDeleting(true);
+        const userIds = [...selectedUserIds].filter(id => id !== currentUser?.id);
+        let succeeded = 0;
+        let failed = 0;
+        const errors: string[] = [];
+
+        if (userIds.length === 0) {
+            toast.error('Cannot delete your own account');
+            setIsBulkDeleting(false);
+            return;
+        }
+
+        for (const userId of userIds) {
+            try {
+                await apiClient.delete(`/admin/users/${userId}`);
+                succeeded++;
+            } catch (error: any) {
+                failed++;
+                const user = users.find(u => u.id === userId);
+                const userName = user?.name || userId;
+                errors.push(`${userName}: ${error.message || 'Failed to delete'}`);
+            }
+        }
+
+        setBulkDeleteDialogOpen(false);
+        setBulkDeleteConfirmText('');
+        setSelectedUserIds(new Set());
+
+        try {
+            await fetchUsers();
+        } catch {
+        }
+
+        if (failed === 0) {
+            toast.success(`Successfully deleted ${succeeded} user${succeeded !== 1 ? 's' : ''}`);
+        } else if (succeeded === 0) {
+            toast.error(`Failed to delete all ${failed} users`);
+        } else {
+            toast.success(`Deleted ${succeeded} user${succeeded !== 1 ? 's' : ''}. ${failed} failed.`);
+        }
+
+        if (errors.length > 0) {
+            console.warn('Bulk delete errors:', errors);
+        }
+
+        setIsBulkDeleting(false);
     };
 
     const handleImpersonate = async (user: AdminUser) => {
@@ -350,14 +479,12 @@ export const UserManagement: React.FC = () => {
         await fetchUsers();
     };
 
-    // Stats
     const totalUsers = users.length;
     const adminCount = users.filter((u) => u.role === 'admin').length;
     const userCount = users.filter((u) => u.role === 'user').length;
 
     return (
         <>
-            {/* Hero Section */}
             <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
                 <div className="relative z-10">
                     <Badge variant="secondary" className="mb-3">
@@ -371,7 +498,6 @@ export const UserManagement: React.FC = () => {
                     </p>
                 </div>
 
-                {/* Stats */}
                 <div className="mt-6 grid grid-cols-3 gap-4 max-w-md">
                     <div className="rounded-lg bg-background/50 backdrop-blur-sm border p-3 text-center">
                         <p className="text-2xl font-bold">{totalUsers}</p>
@@ -387,11 +513,42 @@ export const UserManagement: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Background decoration */}
                 <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
                     <Users className="absolute right-10 top-10 h-32 w-32 rotate-12" />
                 </div>
             </div>
+
+            {/* Bulk Actions Toolbar */}
+            {selectedUserCount > 0 && (
+                <Card className="mb-4">
+                    <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div className="flex items-center gap-2">
+                                <Badge variant="secondary">
+                                    {selectedUserCount} user{selectedUserCount !== 1 ? 's' : ''} selected
+                                </Badge>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                    onClick={handleBulkDeleteClick}
+                                    variant="destructive"
+                                    size="sm"
+                                >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Delete Selected
+                                </Button>
+                                <Button
+                                    onClick={handleClearSelection}
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    Clear
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             <Card>
                 <CardHeader className="flex flex-col gap-4 border-b border-border pb-4 lg:flex-row lg:items-center lg:justify-between">
@@ -419,7 +576,6 @@ export const UserManagement: React.FC = () => {
                 </CardHeader>
 
                 <CardContent className="space-y-4 pt-6">
-                    {/* Search and Filters */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                         <div className="flex-1">
                             <Label htmlFor="user-search" className="sr-only">
@@ -453,7 +609,6 @@ export const UserManagement: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Results info */}
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>
                             {searchTerm || roleFilter !== 'all' ? (
@@ -469,7 +624,6 @@ export const UserManagement: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Error Display */}
                     {error && (
                         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
                             <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
@@ -503,7 +657,6 @@ export const UserManagement: React.FC = () => {
                         </div>
                     ) : (
                         <div className="space-y-8">
-                            {/* Administrators Table */}
                             {adminUsers.length > 0 && (
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2">
@@ -515,6 +668,13 @@ export const UserManagement: React.FC = () => {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
+                                                    <TableHead className="w-12">
+                                                        <Checkbox
+                                                            checked={someCurrentPageSelected ? 'indeterminate' : allCurrentPageSelected}
+                                                            onCheckedChange={handleToggleAllCurrentPage}
+                                                            aria-label="Select all users on this page"
+                                                        />
+                                                    </TableHead>
                                                     <TableHead>User</TableHead>
                                                     <TableHead>Role</TableHead>
                                                     <TableHead className="hidden md:table-cell">Created</TableHead>
@@ -531,6 +691,8 @@ export const UserManagement: React.FC = () => {
                                                         onImpersonate={handleImpersonate}
                                                         onDelete={handleDeleteClick}
                                                         isImpersonating={isStarting}
+                                                        selected={selectedUserIds.has(user.id)}
+                                                        onToggleSelect={handleToggleSelect}
                                                     />
                                                 ))}
                                             </TableBody>
@@ -539,7 +701,6 @@ export const UserManagement: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Regular Users Table */}
                             {(paginatedRegularUsers.length > 0 || (adminUsers.length === 0 && !loading)) && (
                                 <div className="space-y-3">
                                     {adminUsers.length > 0 && (
@@ -553,6 +714,13 @@ export const UserManagement: React.FC = () => {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
+                                                    <TableHead className="w-12">
+                                                        <Checkbox
+                                                            checked={someCurrentPageSelected ? 'indeterminate' : allCurrentPageSelected}
+                                                            onCheckedChange={handleToggleAllCurrentPage}
+                                                            aria-label="Select all users on this page"
+                                                        />
+                                                    </TableHead>
                                                     <TableHead>User</TableHead>
                                                     <TableHead>Role</TableHead>
                                                     <TableHead className="hidden md:table-cell">Created</TableHead>
@@ -570,11 +738,13 @@ export const UserManagement: React.FC = () => {
                                                             onImpersonate={handleImpersonate}
                                                             onDelete={handleDeleteClick}
                                                             isImpersonating={isStarting}
+                                                            selected={selectedUserIds.has(user.id)}
+                                                            onToggleSelect={handleToggleSelect}
                                                         />
                                                     ))
                                                 ) : (
                                                     <TableRow>
-                                                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                                                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                                                             No users found on this page.
                                                         </TableCell>
                                                     </TableRow>
@@ -587,10 +757,8 @@ export const UserManagement: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Pagination Controls */}
                     {!loading && totalItems > 0 && (
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-4 border-t">
-                            {/* Items per page selector */}
                             <div className="flex items-center gap-2">
                                 <Label htmlFor="items-per-page" className="text-sm text-muted-foreground whitespace-nowrap">
                                     Show:
@@ -610,7 +778,6 @@ export const UserManagement: React.FC = () => {
                                 <span className="text-sm text-muted-foreground">per page</span>
                             </div>
 
-                            {/* Page info and navigation */}
                             <div className="flex items-center gap-2">
                                 <span className="text-sm text-muted-foreground">
                                     {startIndex + 1}–{endIndex} of {totalItems}
@@ -666,7 +833,6 @@ export const UserManagement: React.FC = () => {
                 </CardContent>
             </Card>
 
-            {/* Edit User Modal */}
             <UserEditModal
                 user={selectedUser}
                 isOpen={editModalOpen}
@@ -677,12 +843,12 @@ export const UserManagement: React.FC = () => {
                 onSuccess={handleModalSuccess}
             />
 
-            {/* Delete Confirmation Dialog */}
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete User Account</AlertDialogTitle>
-                        <AlertDialogDescription asChild>
+            {/* Single Delete Confirmation Dialog - using Dialog instead of AlertDialog to avoid auto-close */}
+            <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteDialogClose}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Delete User Account</DialogTitle>
+                        <DialogDescription asChild>
                             <div className="space-y-4">
                                 <p>
                                     This will permanently delete <strong>{selectedUser?.name}</strong> and all associated data.
@@ -707,6 +873,7 @@ export const UserManagement: React.FC = () => {
                                         onChange={(e) => setDeleteConfirmEmail(e.target.value)}
                                         placeholder="Type the email address above"
                                         className="font-mono"
+                                        disabled={isDeleting}
                                     />
                                 </div>
 
@@ -716,21 +883,113 @@ export const UserManagement: React.FC = () => {
                                     </p>
                                 )}
                             </div>
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
+                        </DialogDescription>
+                    </DialogHeader>
 
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
+                    <DialogFooter className="gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleDeleteDialogClose(false)}
+                            disabled={isDeleting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
                             onClick={handleDeleteUser}
                             disabled={deleteConfirmEmail !== selectedUser?.email || isDeleting}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                            {isDeleting ? 'Deleting...' : 'Delete User Permanently'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                            {isDeleting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Deleting...
+                                </>
+                            ) : (
+                                'Delete User Permanently'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Delete Confirmation Dialog */}
+            <Dialog open={bulkDeleteDialogOpen} onOpenChange={handleBulkDeleteDialogClose}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-destructive" />
+                            Delete {selectedUserCount} User{selectedUserCount !== 1 ? 's' : ''}
+                        </DialogTitle>
+                        <DialogDescription>
+                            This action cannot be undone. The following users will be permanently deleted:
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <div className="max-h-40 overflow-y-auto rounded-md border p-3">
+                            <ul className="space-y-1">
+                                {[...selectedUserIds].map(userId => {
+                                    const user = users.find(u => u.id === userId);
+                                    return (
+                                        <li key={userId} className="text-sm flex items-center gap-2">
+                                            <span className="font-medium">{user?.name || 'Unknown'}</span>
+                                            <span className="text-muted-foreground">{user?.email || userId}</span>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+
+                        <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4">
+                            <p className="text-sm font-medium text-destructive">
+                                Users with active VPS instances, negative wallet balances, or open support tickets cannot be deleted and will be skipped.
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="bulk-confirm-delete" className="text-sm font-medium">
+                                Type <span className="font-mono font-bold">DELETE</span> to confirm:
+                            </Label>
+                            <Input
+                                id="bulk-confirm-delete"
+                                value={bulkDeleteConfirmText}
+                                onChange={(e) => setBulkDeleteConfirmText(e.target.value)}
+                                placeholder="Type DELETE to confirm"
+                                className="font-mono"
+                                disabled={isBulkDeleting}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleBulkDeleteDialogClose(false)}
+                            disabled={isBulkDeleting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={handleBulkDeleteConfirm}
+                            disabled={bulkDeleteConfirmText !== 'DELETE' || isBulkDeleting}
+                        >
+                            {isBulkDeleting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Deleting...
+                                </>
+                            ) : (
+                                `Delete ${selectedUserCount} User${selectedUserCount !== 1 ? 's' : ''}`
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Impersonation Confirmation Dialog for Admin Users */}
             <AlertDialog
@@ -769,12 +1028,13 @@ export const UserManagement: React.FC = () => {
                         <AlertDialogCancel onClick={() => setImpersonationConfirmDialog({ isOpen: false, targetUser: null })}>
                             Cancel
                         </AlertDialogCancel>
-                        <AlertDialogAction
+                        <Button
+                            type="button"
                             onClick={handleConfirmAdminImpersonation}
                             className="bg-amber-600 text-white hover:bg-amber-700"
                         >
                             Confirm Impersonation
-                        </AlertDialogAction>
+                        </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

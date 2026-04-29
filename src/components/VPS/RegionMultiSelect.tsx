@@ -6,7 +6,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Globe, Search, ChevronDown, X } from 'lucide-react';
+import { Search, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,82 +14,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { CountryFlag } from '@/components/regions/countryFlags';
 
 export interface RegionOption {
   id: string;
   label: string;
   country?: string;
-}
-
-// Country code mapping from RegionAccordionSelect
-const COUNTRY_CODES: Record<string, string> = {
-  "united states": "us",
-  "united states of america": "us",
-  usa: "us",
-  us: "us",
-  canada: "ca",
-  brazil: "br",
-  brasil: "br",
-  "united kingdom": "gb",
-  uk: "gb",
-  britain: "gb",
-  "great britain": "gb",
-  netherlands: "nl",
-  "the netherlands": "nl",
-  germany: "de",
-  deutschland: "de",
-  france: "fr",
-  spain: "es",
-  españa: "es",
-  italy: "it",
-  italia: "it",
-  sweden: "se",
-  sverige: "se",
-  finland: "fi",
-  belgium: "be",
-  switzerland: "ch",
-  norway: "no",
-  india: "in",
-  japan: "jp",
-  singapore: "sg",
-  indonesia: "id",
-  "south korea": "kr",
-  southkorea: "kr",
-  australia: "au",
-  "south africa": "za",
-  southafrica: "za",
-};
-
-const getCountryCode = (country?: string): string | null => {
-  const normalizedCountry = country?.trim().toLowerCase();
-  if (!normalizedCountry) return null;
-  if (normalizedCountry.length === 2 && /^[a-z]{2}$/.test(normalizedCountry)) {
-    return normalizedCountry;
-  }
-  return COUNTRY_CODES[normalizedCountry] ?? null;
-};
-
-/**
- * Country Flag Component
- */
-function CountryFlag({ country }: { country?: string }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const countryCode = getCountryCode(country);
-  const imageUrl = countryCode ? `https://flagcdn.com/w40/${countryCode}.png` : null;
-
-  if (!imageUrl || imageFailed) {
-    return <Globe className="h-4 w-4 text-muted-foreground" />;
-  }
-
-  return (
-    <img
-      src={imageUrl}
-      alt={`${country} flag`}
-      className="h-4 w-6 rounded-sm object-cover shadow-sm"
-      loading="lazy"
-      onError={() => setImageFailed(true)}
-    />
-  );
 }
 
 /**

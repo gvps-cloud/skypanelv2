@@ -36,18 +36,43 @@ import { Label } from "@/components/ui/label";
 
 interface MysqlDatabase {
   name: string;
-  status: string;
-  size?: string;
+  size: number;
+  createdAt?: string | null;
 }
 
 interface MysqlUser {
   username: string;
-  host: string;
-  privileges: string[];
+  accessHosts: string[];
+  grants: Record<string, string[]>;
+  authPlugin?: string | null;
+  createdAt?: string | null;
 }
 
 interface MysqlTabProps {
   subscriptionId: string;
+}
+
+function formatDatabaseSize(size: number | null | undefined): string {
+  const value = Number(size ?? 0);
+  if (!Number.isFinite(value) || value <= 0) return "0 B";
+  if (value >= 1024 ** 3) return `${(value / 1024 ** 3).toFixed(2)} GB`;
+  if (value >= 1024 ** 2) return `${(value / 1024 ** 2).toFixed(2)} MB`;
+  if (value >= 1024) return `${(value / 1024).toFixed(2)} KB`;
+  return `${value} B`;
+}
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString();
+}
+
+function getGrantLabels(grants: Record<string, string[]> | null | undefined): string[] {
+  if (!grants || typeof grants !== "object") return [];
+  return Object.entries(grants).flatMap(([dbName, privileges]) => {
+    if (!Array.isArray(privileges) || privileges.length === 0) return [];
+    return privileges.map((privilege) => `${dbName}: ${privilege}`);
+  });
 }
 
 export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
@@ -283,8 +308,8 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Size</TableHead>
+                  <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -292,12 +317,8 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
                 {databases.map((db) => (
                   <TableRow key={db.name}>
                     <TableCell className="font-medium">{db.name}</TableCell>
-                    <TableCell>
-                      <Badge variant={db.status === "active" ? "default" : "secondary"}>
-                        {db.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{db.size ?? "—"}</TableCell>
+                    <TableCell>{formatDatabaseSize(db.size)}</TableCell>
+                    <TableCell>{formatDate(db.createdAt)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
@@ -408,23 +429,42 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Username</TableHead>
-                  <TableHead>Host</TableHead>
-                  <TableHead>Privileges</TableHead>
+                  <TableHead>Access Hosts</TableHead>
+                  <TableHead>Grants</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
-                  <TableRow key={`${user.username}@${user.host}`}>
+                  <TableRow key={user.username}>
                     <TableCell className="font-medium">{user.username}</TableCell>
-                    <TableCell>{user.host}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {user.privileges?.map((priv, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
-                            {priv}
-                          </Badge>
-                        )) ?? <span className="text-xs text-muted-foreground">—</span>}
+                        {user.accessHosts?.length ? (
+                          user.accessHosts.map((host) => (
+                            <Badge key={host} variant="outline" className="text-xs">
+                              {host}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const labels = getGrantLabels(user.grants);
+                          return labels.length ? (
+                            labels.map((grant) => (
+                              <Badge key={grant} variant="outline" className="text-xs">
+                                {grant}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">

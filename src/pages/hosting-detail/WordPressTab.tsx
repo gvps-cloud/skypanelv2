@@ -32,39 +32,50 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface WordPressInstallation {
   id: string;
   name: string;
-  version: string;
-  url: string;
-  status: string;
+  path?: string | null;
+  version?: string | null;
+  status?: string | null;
 }
 
 interface WordPressUser {
   id: string;
   username: string;
   email: string;
-  role: string;
-  ssoUrl?: string;
+  role?: string | null;
 }
 
 interface WordPressPlugin {
   name: string;
-  version: string;
-  status: string;
+  title?: string | null;
+  version?: string | null;
+  status?: string | null;
+  update?: string | null;
+  autoUpdate?: string | null;
 }
 
 interface WordPressTheme {
   name: string;
-  version: string;
-  active: boolean;
+  version?: string | null;
+  status?: string | null;
+  update?: string | null;
+  autoUpdate?: string | null;
 }
 
 interface WordPressSettings {
-  autoUpdate: boolean;
-  cacheEnabled: boolean;
-  debugMode: boolean;
+  autoUpdateCore?: "major" | "minor";
+  disallowNonWpPhp: boolean;
+  loginAccess: string[];
 }
 
 interface WordPressTabProps {
@@ -112,24 +123,27 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
       if (!subscriptionId) return;
       setSettingsLoading((prev) => ({ ...prev, [appId]: true }));
       try {
-        const [usersRes, settingsRes] = await Promise.all([
+        const [usersRes, settingsRes, pluginsRes, themesRes] = await Promise.all([
           apiClient.get<{ users?: WordPressUser[] }>(
             `/hosting/wordpress/${subscriptionId}/wordpress/${appId}/users`
           ),
           apiClient.get<{ settings?: WordPressSettings }>(
             `/hosting/wordpress/${subscriptionId}/wordpress/${appId}/settings`
           ),
+          apiClient.get<{ plugins?: WordPressPlugin[] }>(
+            `/hosting/wordpress/${subscriptionId}/wordpress/${appId}/plugins`
+          ),
+          apiClient.get<{ themes?: WordPressTheme[] }>(
+            `/hosting/wordpress/${subscriptionId}/wordpress/${appId}/themes`
+          ),
         ]);
 
         setUsers((prev) => ({ ...prev, [appId]: usersRes.users ?? [] }));
-        setSettings((prev) => ({
-          ...prev,
-          [appId]: settingsRes.settings ?? { autoUpdate: false, cacheEnabled: false, debugMode: false },
-        }));
-
-        // Plugins and themes are read-only for now; use empty arrays as fallback
-        setPlugins((prev) => ({ ...prev, [appId]: [] }));
-        setThemes((prev) => ({ ...prev, [appId]: [] }));
+        if (settingsRes.settings) {
+          setSettings((prev) => ({ ...prev, [appId]: settingsRes.settings! }));
+        }
+        setPlugins((prev) => ({ ...prev, [appId]: pluginsRes.plugins ?? [] }));
+        setThemes((prev) => ({ ...prev, [appId]: themesRes.themes ?? [] }));
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to load app details");
       } finally {
@@ -150,7 +164,7 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
   const handleSettingChange = (
     appId: string,
     key: keyof WordPressSettings,
-    value: boolean
+    value: WordPressSettings[keyof WordPressSettings]
   ) => {
     setSettings((prev) => ({
       ...prev,
@@ -160,9 +174,13 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
 
   const saveSettings = async (appId: string) => {
     if (!subscriptionId) return;
+    if (!settings[appId]) {
+      toast.error("WordPress settings are not loaded");
+      return;
+    }
     setSettingsSaving((prev) => ({ ...prev, [appId]: true }));
     try {
-      await apiClient.put(
+      await apiClient.patch(
         `/hosting/wordpress/${subscriptionId}/wordpress/${appId}/settings`,
         settings[appId]
       );
@@ -174,11 +192,19 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
     }
   };
 
-  const handleSso = (url?: string) => {
-    if (url) {
+  const handleSso = async (appId: string, userId: string) => {
+    try {
+      const res = await apiClient.get<{ url?: string }>(
+        `/hosting/wordpress/${subscriptionId}/wordpress/${appId}/users/${encodeURIComponent(userId)}/sso`
+      );
+      const url = res.url;
+      if (!url) {
+        toast.error("SSO URL not available");
+        return;
+      }
       window.open(url, "_blank", "noopener,noreferrer");
-    } else {
-      toast.error("SSO URL not available");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to get SSO URL");
     }
   };
 
@@ -240,8 +266,10 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                 <AccordionTrigger>
                   <div className="flex items-center gap-3">
                     <span className="font-medium text-sm">{app.name}</span>
-                    <Badge variant="outline">v{app.version}</Badge>
-                    <Badge variant={app.status === "active" ? "default" : "secondary"}>{app.status}</Badge>
+                    {app.version && <Badge variant="outline">v{app.version}</Badge>}
+                    {app.status && (
+                      <Badge variant={app.status === "active" ? "default" : "secondary"}>{app.status}</Badge>
+                    )}
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -262,48 +290,71 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <div className="space-y-0.5">
-                                <Label className="text-sm">Auto-update</Label>
-                                <p className="text-xs text-muted-foreground">Automatically update WordPress core</p>
-                              </div>
-                              <Switch
-                                checked={settings[app.id]?.autoUpdate ?? false}
-                                onCheckedChange={(v) => handleSettingChange(app.id, "autoUpdate", v)}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="space-y-0.5">
-                                <Label className="text-sm">Cache</Label>
-                                <p className="text-xs text-muted-foreground">Enable server-side caching</p>
-                              </div>
-                              <Switch
-                                checked={settings[app.id]?.cacheEnabled ?? false}
-                                onCheckedChange={(v) => handleSettingChange(app.id, "cacheEnabled", v)}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="space-y-0.5">
-                                <Label className="text-sm">Debug Mode</Label>
-                                <p className="text-xs text-muted-foreground">Enable WordPress debug logging</p>
-                              </div>
-                              <Switch
-                                checked={settings[app.id]?.debugMode ?? false}
-                                onCheckedChange={(v) => handleSettingChange(app.id, "debugMode", v)}
-                              />
-                            </div>
-                            <div className="flex justify-end">
-                              <Button
-                                size="sm"
-                                onClick={() => saveSettings(app.id)}
-                                disabled={settingsSaving[app.id]}
-                              >
-                                {settingsSaving[app.id] ? (
-                                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                ) : null}
-                                Save Settings
-                              </Button>
-                            </div>
+                            {!settings[app.id] ? (
+                              <p className="text-sm text-muted-foreground">Settings are unavailable for this installation.</p>
+                            ) : (
+                              <>
+                                <div className="grid gap-2 sm:grid-cols-[1fr_180px] sm:items-center">
+                                  <div className="space-y-0.5">
+                                    <Label className="text-sm">Core auto-update</Label>
+                                    <p className="text-xs text-muted-foreground">Enhance-supported WordPress core update policy.</p>
+                                  </div>
+                                  <Select
+                                    value={settings[app.id]?.autoUpdateCore ?? "minor"}
+                                    onValueChange={(value) =>
+                                      handleSettingChange(app.id, "autoUpdateCore", value as "major" | "minor")
+                                    }
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="minor">Minor releases</SelectItem>
+                                      <SelectItem value="major">Major releases</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="space-y-0.5">
+                                    <Label className="text-sm">Disallow non-WordPress PHP</Label>
+                                    <p className="text-xs text-muted-foreground">Block PHP files outside WordPress core paths.</p>
+                                  </div>
+                                  <Switch
+                                    checked={Boolean(settings[app.id]?.disallowNonWpPhp)}
+                                    onCheckedChange={(value) => handleSettingChange(app.id, "disallowNonWpPhp", value)}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-sm">Login access allowlist</Label>
+                                  <Input
+                                    value={(settings[app.id]?.loginAccess ?? []).join(", ")}
+                                    onChange={(event) =>
+                                      handleSettingChange(
+                                        app.id,
+                                        "loginAccess",
+                                        event.target.value
+                                          .split(",")
+                                          .map((item) => item.trim())
+                                          .filter(Boolean),
+                                      )
+                                    }
+                                    placeholder="192.0.2.10, 198.51.100.0/24"
+                                  />
+                                </div>
+                                <div className="flex justify-end">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => saveSettings(app.id)}
+                                    disabled={settingsSaving[app.id]}
+                                  >
+                                    {settingsSaving[app.id] ? (
+                                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                    ) : null}
+                                    Save Settings
+                                  </Button>
+                                </div>
+                              </>
+                            )}
                           </CardContent>
                         </Card>
 
@@ -334,13 +385,13 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                                       <TableCell className="font-medium">{user.username}</TableCell>
                                       <TableCell>{user.email}</TableCell>
                                       <TableCell>
-                                        <Badge variant="secondary">{user.role}</Badge>
+                                        {user.role ? <Badge variant="secondary">{user.role}</Badge> : "—"}
                                       </TableCell>
                                       <TableCell className="text-right">
                                         <Button
                                           variant="outline"
                                           size="sm"
-                                          onClick={() => handleSso(user.ssoUrl)}
+                                          onClick={() => handleSso(app.id, user.id)}
                                         >
                                           <ExternalLink className="h-3 w-3 mr-1" />
                                           SSO
@@ -367,9 +418,9 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                               <p className="text-sm text-muted-foreground">No plugins found.</p>
                             ) : (
                               <div className="flex flex-wrap gap-2">
-                                {plugins[app.id]?.map((plugin, idx) => (
-                                  <Badge key={idx} variant="outline">
-                                    {plugin.name} v{plugin.version}
+                                {plugins[app.id]?.map((plugin) => (
+                                  <Badge key={plugin.name} variant={plugin.status === "active" ? "default" : "outline"}>
+                                    {plugin.title || plugin.name}{plugin.version ? ` v${plugin.version}` : ""}
                                   </Badge>
                                 ))}
                               </div>
@@ -390,9 +441,9 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                               <p className="text-sm text-muted-foreground">No themes found.</p>
                             ) : (
                               <div className="flex flex-wrap gap-2">
-                                {themes[app.id]?.map((theme, idx) => (
-                                  <Badge key={idx} variant={theme.active ? "default" : "outline"}>
-                                    {theme.name} v{theme.version}
+                                {themes[app.id]?.map((theme) => (
+                                  <Badge key={theme.name} variant={theme.status === "active" ? "default" : "outline"}>
+                                    {theme.name}{theme.version ? ` v${theme.version}` : ""}
                                   </Badge>
                                 ))}
                               </div>

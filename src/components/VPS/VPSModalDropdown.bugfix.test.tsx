@@ -179,15 +179,15 @@ describe('Bug Condition Exploration: VPS Modal Dropdown Scrolling and Flag Displ
 
     // BUG CONDITION: Netherlands flag SHOULD be displayed in the trigger button
     // Look for flag image with Netherlands country code
-    const flagImage = trigger?.querySelector('img[src*="flagcdn.com"][src*="/nl.png"]');
+    const flagIcon = trigger?.querySelector('img[src*="flagcdn.com/w40/nl.png"]');
     
     // This assertion will FAIL on unfixed code because COUNTRY_CODES doesn't have
     // a mapping for "Netherlands" (only lowercase "netherlands" exists, but the
     // actual issue is the mapping might be missing entirely)
-    expect(flagImage).toBeTruthy(); // WILL FAIL - no flag image found
+    expect(flagIcon).toBeTruthy(); // WILL FAIL - no flag image found
 
     // Verify Globe icon IS NOT displayed (after fix)
-    const globeIcon = trigger?.querySelector('svg[class*="lucide-globe"]');
+    const globeIcon = trigger?.querySelector('svg.lucide-globe');
     // On unfixed code, Globe icon will be present (this is the bug)
     expect(globeIcon).toBeFalsy(); // WILL FAIL - Globe icon is shown instead of flag
   });
@@ -229,13 +229,13 @@ describe('Bug Condition Exploration: VPS Modal Dropdown Scrolling and Flag Displ
     const trigger = container.querySelector('[role="combobox"]');
 
     // BUG CONDITION: Brazil flag SHOULD be displayed
-    const brazilFlagImage = trigger?.querySelector('img[src*="flagcdn.com"][src*="/br.png"]');
+    const brazilFlagIcon = trigger?.querySelector('img[src*="flagcdn.com/w40/br.png"]');
     
     // This will FAIL on unfixed code - Brazil is not in COUNTRY_CODES
-    expect(brazilFlagImage).toBeTruthy(); // WILL FAIL - no Brazil mapping
+    expect(brazilFlagIcon).toBeTruthy(); // WILL FAIL - no Brazil mapping
 
     // Verify Globe icon is NOT displayed
-    const globeIcon = trigger?.querySelector('svg[class*="lucide-globe"]');
+    const globeIcon = trigger?.querySelector('svg.lucide-globe');
     expect(globeIcon).toBeFalsy(); // WILL FAIL - Globe icon shown instead
   });
 
@@ -276,13 +276,13 @@ describe('Bug Condition Exploration: VPS Modal Dropdown Scrolling and Flag Displ
     const trigger = container.querySelector('[role="combobox"]');
 
     // BUG CONDITION: Indonesia flag SHOULD be displayed
-    const indonesiaFlagImage = trigger?.querySelector('img[src*="flagcdn.com"][src*="/id.png"]');
+    const indonesiaFlagIcon = trigger?.querySelector('img[src*="flagcdn.com/w40/id.png"]');
     
     // This will FAIL on unfixed code - Indonesia is not in COUNTRY_CODES
-    expect(indonesiaFlagImage).toBeTruthy(); // WILL FAIL - no Indonesia mapping
+    expect(indonesiaFlagIcon).toBeTruthy(); // WILL FAIL - no Indonesia mapping
 
     // Verify Globe icon is NOT displayed
-    const globeIcon = trigger?.querySelector('svg[class*="lucide-globe"]');
+    const globeIcon = trigger?.querySelector('svg.lucide-globe');
     expect(globeIcon).toBeFalsy(); // WILL FAIL - Globe icon shown instead
   });
 });

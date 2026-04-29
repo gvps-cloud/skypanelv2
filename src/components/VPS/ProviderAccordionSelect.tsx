@@ -5,62 +5,48 @@
  * Wraps the shared AccordionSelect component for consistent UI.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Server } from 'lucide-react';
 import { AccordionSelect, type AccordionSelectGroup } from '@/components/ui/AccordionSelect';
 import type { Provider } from '@/types/provider';
+
+const PROVIDER_LOGO_URLS: Record<string, string[]> = {
+  linode: ['https://cdn.simpleicons.org/linode/00A95C', 'https://cdn.simpleicons.org/akamai/00A95C'],
+  aws: ['https://cdn.simpleicons.org/amazonaws/FF9900', 'https://cdn.simpleicons.org/amazon/FF9900'],
+  digitalocean: ['https://cdn.simpleicons.org/digitalocean/0080FF'],
+  gcp: ['https://cdn.simpleicons.org/googlecloud/4285F4'],
+  azure: ['https://cdn.simpleicons.org/microsoftazure/0078D4'],
+};
 
 /**
  * Get provider icon based on provider type
  */
 function getProviderIcon(type: string) {
-  switch (type?.toLowerCase()) {
-    case 'linode':
-      return (
-        <img
-          src="https://www.linode.com/wp-content/uploads/2021/01/Linode-Logo-Black.svg"
-          alt="Linode"
-          className="h-4 w-4 object-contain"
-          onError={(e) => {
-            e.currentTarget.src = 'https://cdn.simpleicons.org/linode/00A95C';
-          }}
-        />
-      );
-    case 'aws':
-      return (
-        <img
-          src="https://cdn.simpleicons.org/aws/FF9900"
-          alt="AWS"
-          className="h-4 w-4 object-contain"
-        />
-      );
-    case 'digitalocean':
-      return (
-        <img
-          src="https://cdn.simpleicons.org/digitalocean/0080FF"
-          alt="DigitalOcean"
-          className="h-4 w-4 object-contain"
-        />
-      );
-    case 'gcp':
-      return (
-        <img
-          src="https://cdn.simpleicons.org/googlecloud/4285F4"
-          alt="GCP"
-          className="h-4 w-4 object-contain"
-        />
-      );
-    case 'azure':
-      return (
-        <img
-          src="https://cdn.simpleicons.org/microsoftazure/0078D4"
-          alt="Azure"
-          className="h-4 w-4 object-contain"
-        />
-      );
-    default:
-      return <Server className="h-4 w-4 text-muted-foreground" />;
+  const normalizedType = type?.toLowerCase();
+  const urls = PROVIDER_LOGO_URLS[normalizedType];
+  if (!urls || urls.length === 0) {
+    return <Server className="h-4 w-4 text-muted-foreground" />;
   }
+
+  return <ProviderImage urls={urls} alt={type} />;
+}
+
+function ProviderImage({ urls, alt }: { urls: string[]; alt: string }) {
+  const [attempt, setAttempt] = useState(0);
+
+  if (attempt >= urls.length) {
+    return <Server className="h-4 w-4 text-muted-foreground" />;
+  }
+
+  return (
+    <img
+      src={urls[attempt]}
+      alt={`${alt} logo`}
+      className="h-4 w-4 object-contain flex-shrink-0"
+      loading="lazy"
+      onError={() => setAttempt((prev) => prev + 1)}
+    />
+  );
 }
 
 /**

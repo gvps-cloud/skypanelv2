@@ -30,8 +30,8 @@ router.post("/:id/domains/:domainId/ssl", requireOrgPermission("hosting_manage")
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const result = await EnhanceService.generateWebsiteSsl(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId);
-    res.json(result);
+    await EnhanceService.createWebsiteDomainLetsencryptCerts(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId);
+    res.status(202).json({ success: true, message: "Let's Encrypt certificate generation started" });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to generate SSL" });
   }
@@ -41,8 +41,8 @@ router.post("/:id/domains/:domainId/mail_ssl", requireOrgPermission("hosting_man
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const result = await EnhanceService.generateWebsiteMailSsl(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId);
-    res.json(result);
+    await EnhanceService.createWebsiteMailDomainLetsencryptCerts(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId);
+    res.status(202).json({ success: true, message: "Mail Let's Encrypt certificate generation started" });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to generate mail SSL" });
   }
@@ -53,7 +53,11 @@ router.get("/:id/domains/:domainId/ssl", requireOrgPermission("hosting_view"), a
   if (!sub) return;
   try {
     const result = await EnhanceService.getWebsiteDomainSsl(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId);
-    res.json(result);
+    res.json({
+      ssl: result ?? null,
+      sslActive: Boolean(result),
+      forceSsl: Boolean(result?.forceHttps ?? result?.force_https),
+    });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get SSL status" });
   }
@@ -81,12 +85,13 @@ router.get("/:id/domains/:domainId/mail_ssl", requireOrgPermission("hosting_view
   }
 });
 
-router.post("/:id/domains/:domainId/force_ssl", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+router.put("/:id/domains/:domainId/force_ssl", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const result = await EnhanceService.setWebsiteDomainForceSsl(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId, req.body);
-    res.json(result);
+    const enabled = typeof req.body === "boolean" ? req.body : Boolean(req.body?.enabled ?? req.body?.forceSsl);
+    await EnhanceService.setWebsiteDomainForceSsl(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.domainId, enabled);
+    res.json({ success: true, forceSsl: enabled });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to set force SSL" });
   }

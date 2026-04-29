@@ -1,10 +1,418 @@
 {
-  "generatedAt": "2026-04-19T17:53:26.890Z",
-  "totalIncomplete": 1,
+  "generatedAt": "2026-04-29T17:40:35.937Z",
+  "totalIncomplete": 52,
   "endpoints": [
     {
       "key": "GET /api/auth/debug/user",
       "section": "Authentication & Profile",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/dns/:id/domains",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/dns/:id/domains",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/dns/:id/domains/:domainId/dns",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/dns/:id/domains/:domainId/dns/records",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/email/:id/emails",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/email/:id/emails",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/email/:id/emails/:emailAddress",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/email/:id/emails/:emailAddress",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/ftp/:id/ftp-users",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/ftp/:id/ftp-users",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/ftp/:id/ftp-users/:username",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PATCH /api/hosting/ftp/:id/ftp-users/:username",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/mysql/:id/mysql-dbs",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/mysql/:id/mysql-dbs",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/mysql/:id/mysql-dbs/:dbName",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/mysql/:id/mysql-dbs/:dbName/sql",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/mysql/:id/mysql-dbs/:dbName/sso",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/mysql/:id/mysql-users",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/mysql/:id/mysql-users",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/mysql/:id/mysql-users/:username",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PUT /api/hosting/mysql/:id/mysql-users/:username",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/mysql/:id/mysql-users/:username/access-hosts",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/mysql/:id/mysql-users/:username/access-hosts",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PUT /api/hosting/mysql/:id/mysql-users/:username/privileges",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/node/:id/apps",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/node/:id/apps",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "DELETE /api/hosting/node/:id/apps/:appId",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/node/:id/persistent-apps",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/plans",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/purchase",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/regions",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/services",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/services/:id",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/services/:id/cancel",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PUT /api/hosting/ssl/:id/domains/:domainId/force_ssl",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/ssl/:id/domains/:domainId/mail_ssl",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/ssl/:id/domains/:domainId/mail_ssl",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/ssl/:id/domains/:domainId/ssl",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/ssl/:id/domains/:domainId/ssl",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/ssl/:id/domains/:domainId/ssl/upload",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/status",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/web/:id/php",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PUT /api/hosting/web/:id/php",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "POST /api/hosting/web/:id/php/restart",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress/:appId/plugins",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress/:appId/settings",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "PATCH /api/hosting/wordpress/:id/wordpress/:appId/settings",
+      "section": "Hosting",
+      "issues": [
+        "missing_body",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress/:appId/themes",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress/:appId/users",
+      "section": "Hosting",
+      "issues": [
+        "missing_params",
+        "missing_response"
+      ]
+    },
+    {
+      "key": "GET /api/hosting/wordpress/:id/wordpress/:appId/users/:userId/sso",
+      "section": "Hosting",
       "issues": [
         "missing_params",
         "missing_response"

@@ -132,23 +132,20 @@ export const CountryFlag: React.FC<{ countryCode: string; size?: number; classNa
   size = 24,
   className = "",
 }) => {
-  const [imageFailed, setImageFailed] = useState(false);
-  
-  // Use circle-flags which works reliably in SVG foreignObject
-  const imageUrl = `https://hatscripts.github.io/circle-flags/flags/${countryCode}.svg`;
+  const [failed, setFailed] = useState(false);
 
-  if (imageFailed) {
+  if (failed) {
     return <MapPin className={`text-muted-foreground ${className}`} style={{ width: size, height: size }} />;
   }
 
   return (
     <img
-      src={imageUrl}
+      src={`https://hatscripts.github.io/circle-flags/flags/${countryCode}.svg`}
       alt={`${countryCode} flag`}
       className={`rounded-full ${className}`}
-      style={{ width: size, height: size, display: "block" }}
+      style={{ width: size * 1.25, height: size, display: "block" }}
       loading="lazy"
-      onError={() => setImageFailed(true)}
+      onError={() => setFailed(true)}
     />
   );
 };

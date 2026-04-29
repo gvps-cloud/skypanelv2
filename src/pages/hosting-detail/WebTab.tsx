@@ -5,32 +5,15 @@ import { apiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 interface PhpSettings {
-  version: string;
-  memory_limit: string;
-  max_execution_time: number;
-  max_input_time: number;
-  max_input_vars: number;
-  post_max_size: string;
-  upload_max_filesize: string;
-  display_errors: boolean;
-  opcache_enabled: boolean;
+  lsapiChildren: number;
 }
 
 interface WebTabProps {
   subscriptionId: string;
 }
-
-const PHP_VERSIONS = ["8.3", "8.2", "8.1", "8.0", "7.4"];
 
 export default function WebTab({ subscriptionId }: WebTabProps) {
   const [settings, setSettings] = useState<PhpSettings | null>(null);
@@ -163,163 +146,17 @@ export default function WebTab({ subscriptionId }: WebTabProps) {
         {settings ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="php-version">PHP Version</Label>
-              {isEditing ? (
-                <Select value={settings.version} onValueChange={(v) => updateField("version", v)}>
-                  <SelectTrigger id="php-version">
-                    <SelectValue placeholder="Select version" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PHP_VERSIONS.map((v) => (
-                      <SelectItem key={v} value={v}>
-                        PHP {v}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="h-10 flex items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-foreground">
-                  {settings.version}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="memory-limit">Memory Limit</Label>
+              <Label htmlFor="lsapi-children">LSAPI Children</Label>
               {isEditing ? (
                 <Input
-                  id="memory-limit"
-                  value={settings.memory_limit}
-                  onChange={(e) => updateField("memory_limit", e.target.value)}
-                  placeholder="256M"
-                />
-              ) : (
-                <div className="h-10 flex items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-foreground">
-                  {settings.memory_limit}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="max-execution-time">Max Execution Time (seconds)</Label>
-              {isEditing ? (
-                <Input
-                  id="max-execution-time"
+                  id="lsapi-children"
                   type="number"
-                  value={settings.max_execution_time}
-                  onChange={(e) => updateField("max_execution_time", Number(e.target.value))}
+                  value={settings.lsapiChildren}
+                  onChange={(e) => updateField("lsapiChildren", Number(e.target.value))}
                 />
               ) : (
                 <div className="h-10 flex items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-foreground">
-                  {settings.max_execution_time}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="max-input-time">Max Input Time (seconds)</Label>
-              {isEditing ? (
-                <Input
-                  id="max-input-time"
-                  type="number"
-                  value={settings.max_input_time}
-                  onChange={(e) => updateField("max_input_time", Number(e.target.value))}
-                />
-              ) : (
-                <div className="h-10 flex items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-foreground">
-                  {settings.max_input_time}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="max-input-vars">Max Input Vars</Label>
-              {isEditing ? (
-                <Input
-                  id="max-input-vars"
-                  type="number"
-                  value={settings.max_input_vars}
-                  onChange={(e) => updateField("max_input_vars", Number(e.target.value))}
-                />
-              ) : (
-                <div className="h-10 flex items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-foreground">
-                  {settings.max_input_vars}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="post-max-size">Post Max Size</Label>
-              {isEditing ? (
-                <Input
-                  id="post-max-size"
-                  value={settings.post_max_size}
-                  onChange={(e) => updateField("post_max_size", e.target.value)}
-                  placeholder="64M"
-                />
-              ) : (
-                <div className="h-10 flex items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-foreground">
-                  {settings.post_max_size}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="upload-max-filesize">Upload Max Filesize</Label>
-              {isEditing ? (
-                <Input
-                  id="upload-max-filesize"
-                  value={settings.upload_max_filesize}
-                  onChange={(e) => updateField("upload_max_filesize", e.target.value)}
-                  placeholder="64M"
-                />
-              ) : (
-                <div className="h-10 flex items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-foreground">
-                  {settings.upload_max_filesize}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="display-errors">Display Errors</Label>
-              {isEditing ? (
-                <Select
-                  value={settings.display_errors ? "true" : "false"}
-                  onValueChange={(v) => updateField("display_errors", v === "true")}
-                >
-                  <SelectTrigger id="display-errors">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">On</SelectItem>
-                    <SelectItem value="false">Off</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="h-10 flex items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-foreground">
-                  {settings.display_errors ? "On" : "Off"}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="opcache-enabled">OPcache Enabled</Label>
-              {isEditing ? (
-                <Select
-                  value={settings.opcache_enabled ? "true" : "false"}
-                  onValueChange={(v) => updateField("opcache_enabled", v === "true")}
-                >
-                  <SelectTrigger id="opcache-enabled">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="true">On</SelectItem>
-                    <SelectItem value="false">Off</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="h-10 flex items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-foreground">
-                  {settings.opcache_enabled ? "On" : "Off"}
+                  {settings.lsapiChildren}
                 </div>
               )}
             </div>

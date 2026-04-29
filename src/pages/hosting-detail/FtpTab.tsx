@@ -9,10 +9,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -37,9 +35,8 @@ import {
 } from "@/components/ui/card";
 
 interface FtpUser {
-  username: string;
-  homeDirectory: string;
-  active: boolean;
+  account: string;
+  homeDir: string;
 }
 
 interface FtpTabProps {
@@ -53,16 +50,16 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
-    username: "",
+    account: "",
     password: "",
-    homeDirectory: "",
+    homeDir: "",
   });
   const [creating, setCreating] = useState(false);
 
   const [editUser, setEditUser] = useState<FtpUser | null>(null);
   const [editForm, setEditForm] = useState({
     password: "",
-    homeDirectory: "",
+    homeDir: "",
   });
   const [editing, setEditing] = useState(false);
 
@@ -89,8 +86,8 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
   }, [subscriptionId]);
 
   const handleCreate = async () => {
-    if (!createForm.username.trim()) {
-      toast.error("Username is required");
+    if (!createForm.account.trim()) {
+      toast.error("Account is required");
       return;
     }
     if (!createForm.password.trim()) {
@@ -100,12 +97,12 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
     try {
       setCreating(true);
       await apiClient.post(`/hosting/ftp/${subscriptionId}/ftp-users`, {
-        username: createForm.username.trim(),
+        account: createForm.account.trim(),
         password: createForm.password,
-        homeDirectory: createForm.homeDirectory.trim() || undefined,
+        homeDir: createForm.homeDir.trim(),
       });
       toast.success("FTP user created");
-      setCreateForm({ username: "", password: "", homeDirectory: "" });
+      setCreateForm({ account: "", password: "", homeDir: "" });
       setIsCreateOpen(false);
       await fetchUsers();
     } catch (err: any) {
@@ -117,18 +114,18 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
 
   const openEdit = (user: FtpUser) => {
     setEditUser(user);
-    setEditForm({ password: "", homeDirectory: user.homeDirectory || "" });
+    setEditForm({ password: "", homeDir: user.homeDir || "" });
   };
 
   const handleEdit = async () => {
     if (!editUser) return;
     try {
       setEditing(true);
-      await apiClient.put(
-        `/hosting/ftp/${subscriptionId}/ftp-users/${editUser.username}`,
+      await apiClient.patch(
+        `/hosting/ftp/${subscriptionId}/ftp-users/${encodeURIComponent(editUser.account)}`,
         {
           password: editForm.password || undefined,
-          homeDirectory: editForm.homeDirectory.trim() || undefined,
+          homeDir: editForm.homeDir.trim(),
         }
       );
       toast.success("FTP user updated");
@@ -145,7 +142,7 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
     try {
       setDeletingUser(username);
       await apiClient.delete(
-        `/hosting/ftp/${subscriptionId}/ftp-users/${username}`
+        `/hosting/ftp/${subscriptionId}/ftp-users/${encodeURIComponent(username)}`
       );
       toast.success("FTP user deleted");
       await fetchUsers();
@@ -192,34 +189,21 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Username</TableHead>
+                    <TableHead>Account</TableHead>
                     <TableHead>Home Directory</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
-                    <TableRow key={user.username}>
+                    <TableRow key={user.account}>
                       <TableCell className="font-medium">
-                        {user.username}
+                        {user.account}
                       </TableCell>
                       <TableCell>
-                        {user.homeDirectory || (
+                        {user.homeDir || (
                           <span className="text-muted-foreground">—</span>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={user.active ? "default" : "secondary"}
-                          className={cn(
-                            user.active
-                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-200"
-                              : undefined
-                          )}
-                        >
-                          {user.active ? "Active" : "Inactive"}
-                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="inline-flex items-center gap-2">
@@ -234,10 +218,10 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => handleDelete(user.username)}
-                            disabled={deletingUser === user.username}
+                            onClick={() => handleDelete(user.account)}
+                            disabled={deletingUser === user.account}
                           >
-                            {deletingUser === user.username ? (
+                            {deletingUser === user.account ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                               <Trash2 className="h-3.5 w-3.5 mr-1" />
@@ -266,13 +250,13 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Username</label>
+              <label className="text-sm font-medium">Account</label>
               <Input
-                value={createForm.username}
+                value={createForm.account}
                 onChange={(e) =>
                   setCreateForm((prev) => ({
                     ...prev,
-                    username: e.target.value,
+                    account: e.target.value,
                   }))
                 }
                 placeholder="ftpuser"
@@ -295,11 +279,11 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Home Directory</label>
               <Input
-                value={createForm.homeDirectory}
+                value={createForm.homeDir}
                 onChange={(e) =>
                   setCreateForm((prev) => ({
                     ...prev,
-                    homeDirectory: e.target.value,
+                    homeDir: e.target.value,
                   }))
                 }
                 placeholder="/public_html"
@@ -336,7 +320,7 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
             <DialogTitle>Edit FTP User</DialogTitle>
             <DialogDescription>
               Update password or home directory for{" "}
-              <span className="font-medium">{editUser?.username}</span>.
+              <span className="font-medium">{editUser?.account}</span>.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -357,11 +341,11 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Home Directory</label>
               <Input
-                value={editForm.homeDirectory}
+                value={editForm.homeDir}
                 onChange={(e) =>
                   setEditForm((prev) => ({
                     ...prev,
-                    homeDirectory: e.target.value,
+                    homeDir: e.target.value,
                   }))
                 }
                 placeholder="/public_html"

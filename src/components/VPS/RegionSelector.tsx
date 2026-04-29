@@ -4,59 +4,29 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Globe, MapPin } from "lucide-react";
+import { MapPin, Globe } from "lucide-react";
 
 import { SearchableOptionSelect } from "@/components/VPS/SearchableOptionSelect";
 import { apiClient } from "@/lib/api";
 import type { ProviderRegion } from "@/types/vps";
+import { countryToCode } from "@/components/regions/countryFlags";
 
-const COUNTRY_CODES: Record<string, string> = {
-  // North America
-  "united states": "us",
-  "united states of america": "us",
-  usa: "us",
-  us: "us",
-  canada: "ca",
-  // South America
-  brazil: "br",
-  brasil: "br",
-  // Europe
-  "united kingdom": "gb",
-  uk: "gb",
-  britain: "gb",
-  "great britain": "gb",
-  netherlands: "nl",
-  "the netherlands": "nl",
-  germany: "de",
-  deutschland: "de",
-  france: "fr",
-  spain: "es",
-  españa: "es",
-  italy: "it",
-  italia: "it",
-  sweden: "se",
-  sverige: "se",
-  // Asia
-  india: "in",
-  japan: "jp",
-  singapore: "sg",
-  indonesia: "id",
-  // Oceania
-  australia: "au",
-};
-
-const getCountryCode = (country?: string): string | null => {
-  const normalizedCountry = country?.trim().toLowerCase();
-  if (!normalizedCountry) return null;
-  
-  // If it's already a 2-letter ISO code, return it directly
-  if (normalizedCountry.length === 2 && /^[a-z]{2}$/.test(normalizedCountry)) {
-    return normalizedCountry;
+function CountryIcon({ country, label }: { country?: string; label: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const code = country ? countryToCode(country) : null;
+  if (!code || imageFailed) {
+    return <Globe className="h-4 w-4 text-muted-foreground" />;
   }
-  
-  // Otherwise, look it up in the COUNTRY_CODES dictionary
-  return COUNTRY_CODES[normalizedCountry] ?? null;
-};
+  return (
+    <img
+      src={`https://flagcdn.com/w40/${code}.png`}
+      alt={`${label} flag`}
+      className="h-4 w-6 object-contain flex-shrink-0"
+      loading="lazy"
+      onError={() => setImageFailed(true)}
+    />
+  );
+}
 
 const getRegionMeta = (region?: ProviderRegion): string => {
   if (!region) {
@@ -71,33 +41,7 @@ const getRegionMeta = (region?: ProviderRegion): string => {
   return parts.join(" • ") || "Available region";
 };
 
-export const CountryIcon: React.FC<{ country?: string; label?: string }> = ({
-  country,
-  label,
-}) => {
-  const [imageFailed, setImageFailed] = useState(false);
-  const countryCode = useMemo(() => getCountryCode(country), [country]);
-  const imageUrl = countryCode ? `https://flagcdn.com/w40/${countryCode}.png` : null;
-  const altText = `${country || label || "Region"} region icon`;
-
-  useEffect(() => {
-    setImageFailed(false);
-  }, [imageUrl]);
-
-  if (!imageUrl || imageFailed) {
-    return <Globe className="h-4 w-4 text-muted-foreground" aria-label={altText} />;
-  }
-
-  return (
-    <img
-      src={imageUrl}
-      alt={altText}
-      className="h-4 w-6 rounded-sm object-cover shadow-sm"
-      loading="lazy"
-      onError={() => setImageFailed(true)}
-    />
-  );
-};
+export { CountryIcon };
 
 interface RegionSelectorProps {
   providerId: string;

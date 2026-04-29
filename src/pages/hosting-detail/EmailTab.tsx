@@ -26,9 +26,13 @@ import { cn } from "@/lib/utils";
 
 interface EmailMailbox {
   address: string;
-  quota: number;
-  forwards: string[];
-  created_at?: string;
+  quota?: number | null;
+  quotaUsage?: number | null;
+  aliases: string[];
+  status?: string | null;
+  hasMailbox: boolean;
+  forwardersCount: number;
+  createdAt?: string | null;
 }
 
 interface EmailTabProps {
@@ -232,32 +236,19 @@ export default function EmailTab({ subscriptionId }: EmailTabProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Address</TableHead>
-                <TableHead>Quota (MB)</TableHead>
-                <TableHead>Forwards</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Quota</TableHead>
+                <TableHead>Forwarders</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {emails.map((email) => (
-                <TableRow key={email.address}>
-                  <TableCell className="font-medium">{email.address}</TableCell>
-                  <TableCell>{email.quota}</TableCell>
-                  <TableCell>
-                    {email.forwards && email.forwards.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {email.forwards.map((fwd, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium"
-                          >
-                            {fwd}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
-                  </TableCell>
+                  <TableRow key={email.address}>
+                    <TableCell className="font-medium">{email.address}</TableCell>
+                    <TableCell>{email.status ?? (email.hasMailbox ? "mailbox" : "forwarder")}</TableCell>
+                    <TableCell>{email.quota ?? "—"}</TableCell>
+                    <TableCell>{email.forwardersCount}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="outline"

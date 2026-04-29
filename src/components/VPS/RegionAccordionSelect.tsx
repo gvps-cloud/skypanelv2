@@ -5,91 +5,9 @@
  * Provides a more organized and compact interface compared to flat lists.
  */
 
-import { useMemo, useState } from 'react';
-import { Globe } from 'lucide-react';
+import { useMemo } from 'react';
 import { AccordionSelect, type AccordionSelectGroup } from '@/components/ui/AccordionSelect';
-
-const COUNTRY_CODES: Record<string, string> = {
-  // North America
-  "united states": "us",
-  "united states of america": "us",
-  usa: "us",
-  us: "us",
-  canada: "ca",
-  // South America
-  brazil: "br",
-  brasil: "br",
-  // Europe
-  "united kingdom": "gb",
-  uk: "gb",
-  britain: "gb",
-  "great britain": "gb",
-  netherlands: "nl",
-  "the netherlands": "nl",
-  germany: "de",
-  deutschland: "de",
-  france: "fr",
-  spain: "es",
-  españa: "es",
-  italy: "it",
-  italia: "it",
-  sweden: "se",
-  sverige: "se",
-  finland: "fi",
-  belgium: "be",
-  switzerland: "ch",
-  norway: "no",
-  // Asia
-  india: "in",
-  japan: "jp",
-  singapore: "sg",
-  indonesia: "id",
-  "south korea": "kr",
-  southkorea: "kr",
-  // Oceania
-  australia: "au",
-  // Africa
-  "south africa": "za",
-  southafrica: "za",
-};
-
-/**
- * Get ISO country code from country name
- */
-const getCountryCode = (country?: string): string | null => {
-  const normalizedCountry = country?.trim().toLowerCase();
-  if (!normalizedCountry) return null;
-
-  if (normalizedCountry.length === 2 && /^[a-z]{2}$/.test(normalizedCountry)) {
-    return normalizedCountry;
-  }
-
-  return COUNTRY_CODES[normalizedCountry] ?? null;
-};
-
-/**
- * Country Flag Icon Component
- */
-function CountryFlag({ country, label }: { country?: string; label?: string }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const countryCode = getCountryCode(country);
-  const imageUrl = countryCode ? `https://flagcdn.com/w40/${countryCode}.png` : null;
-  const altText = `${country || label || "Region"} flag`;
-
-  if (!imageUrl || imageFailed) {
-    return <Globe className="h-4 w-4 text-muted-foreground" aria-label={altText} />;
-  }
-
-  return (
-    <img
-      src={imageUrl}
-      alt={altText}
-      className="h-4 w-6 rounded-sm object-cover shadow-sm"
-      loading="lazy"
-      onError={() => setImageFailed(true)}
-    />
-  );
-}
+import { CountryFlag } from '@/components/regions/countryFlags';
 
 /**
  * Region type that works with both ProviderRegion and CreateRegionOption

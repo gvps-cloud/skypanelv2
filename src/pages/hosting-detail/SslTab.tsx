@@ -34,6 +34,8 @@ import {
 interface Domain {
   id: string;
   domain: string;
+  sslActive?: boolean;
+  forceSsl?: boolean;
 }
 
 interface DomainSslStatus {
@@ -64,15 +66,17 @@ export default function SslTab({ subscriptionId }: SslTabProps) {
       setLoading(true);
       setError(null);
       const data = await apiClient.get<{ domains?: Domain[] }>(
-        `/hosting/dns/${subscriptionId}/domains`
+        `/hosting/dns/${subscriptionId}/domains?withSsl=true`
       );
       const list = data.domains || [];
       setDomains(list);
 
-      // Initialise status map optimistically (backend may enrich later)
       const initialMap: Record<string, DomainSslStatus> = {};
       for (const d of list) {
-        initialMap[d.id] = { sslActive: false, forceSsl: false };
+        initialMap[d.id] = {
+          sslActive: Boolean(d.sslActive),
+          forceSsl: Boolean(d.forceSsl),
+        };
       }
       setSslStatusMap(initialMap);
     } catch (err: any) {
@@ -94,10 +98,7 @@ export default function SslTab({ subscriptionId }: SslTabProps) {
         `/hosting/ssl/${subscriptionId}/domains/${domainId}/ssl`
       );
       toast.success(res.message || "SSL certificate generated");
-      setSslStatusMap((prev) => ({
-        ...prev,
-        [domainId]: { ...(prev[domainId] || { forceSsl: false }), sslActive: true },
-      }));
+      await fetchDomains();
     } catch (err: any) {
       toast.error(err?.message || "Failed to generate SSL certificate");
     } finally {
@@ -108,7 +109,7 @@ export default function SslTab({ subscriptionId }: SslTabProps) {
   const handleToggleForceSsl = async (domainId: string, enabled: boolean) => {
     try {
       setTogglingDomainId(domainId);
-      const res = await apiClient.post<{ success?: boolean; message?: string }>(
+      const res = await apiClient.put<{ success?: boolean; message?: string }>(
         `/hosting/ssl/${subscriptionId}/domains/${domainId}/force_ssl`,
         { enabled }
       );
@@ -143,14 +144,8 @@ export default function SslTab({ subscriptionId }: SslTabProps) {
         { cert: certText.trim(), key: keyText.trim() }
       );
       toast.success(res.message || "Custom certificate uploaded");
-      setSslStatusMap((prev) => ({
-        ...prev,
-        [uploadDomain.id]: {
-          ...(prev[uploadDomain.id] || { forceSsl: false }),
-          sslActive: true,
-        },
-      }));
       setUploadDomain(null);
+      await fetchDomains();
     } catch (err: any) {
       toast.error(err?.message || "Failed to upload certificate");
     } finally {

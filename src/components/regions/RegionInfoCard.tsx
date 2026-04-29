@@ -4,30 +4,11 @@
  */
 
 import React, { useState } from "react";
-import { MapPin, Wifi, Loader2, AlertCircle, X, TrendingUp, TrendingDown } from "lucide-react";
+import { Wifi, Loader2, AlertCircle, X, TrendingUp, TrendingDown, MapPin } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { COUNTRY_NAMES, REGION_TO_COUNTRY } from "./RegionMarker";
-
-// Flag component for HTML context (uses img tag)
-const FlagIcon: React.FC<{ countryCode: string; size?: number }> = ({ countryCode, size = 32 }) => {
-  const [failed, setFailed] = useState(false);
-  const imageUrl = `https://flagcdn.com/w${size}/${countryCode}.png`;
-  
-  if (failed) {
-    return <MapPin className="text-muted-foreground" style={{ width: size, height: size * 0.6 }} />;
-  }
-  
-  return (
-    <img
-      src={imageUrl}
-      alt={`${countryCode} flag`}
-      className="rounded-sm object-cover shadow-sm"
-      style={{ width: size * 1.2, height: size * 0.8 }}
-      onError={() => setFailed(true)}
-    />
-  );
-};
+import { FlagIcon } from "./countryFlags";
 
 interface RegionInfoCardProps {
   regionId: string;
@@ -99,7 +80,7 @@ export const RegionInfoCard: React.FC<RegionInfoCardProps> = ({
       <div className="flex items-start gap-3 mb-3">
         {countryCode && (
           <div className="flex-shrink-0 mt-0.5">
-            <FlagIcon countryCode={countryCode} size={32} />
+            <FlagIcon countryCode={countryCode} className="h-6 w-9" />
           </div>
         )}
         <div className="flex-1 min-w-0">
