@@ -125,9 +125,9 @@ Custom roles can be created with any combination of the two permissions.
 | Variable | Purpose |
 |---|---|
 | `ENHANCE_ENABLED` | Master toggle (`true` / `false`). |
-| `ENHANCE_API_URL` | Base URL of the Enhance API (e.g., `https://api.enhance.com/v1`). |
+| `ENHANCE_API_URL` | Base URL of your Enhance panel — domain only, e.g. `https://panel.yourdomain.com`. **Do not** append `/api`; the application adds that path prefix automatically. |
 | `ENHANCE_MASTER_ORG_ID` | Enhance organization ID that owns the plans and customers. |
-| `ENHANCE_API_KEY` | API key with permissions to manage customers, subscriptions, and websites. |
+| `ENHANCE_API_KEY` | Raw API token — **do not** include the `Bearer ` prefix. The application prepends it automatically. Example: `acc9d0f4-xxxx_xxxx`, not `Bearer acc9d0f4-xxxx_xxxx`. |
 
 ### Optional
 

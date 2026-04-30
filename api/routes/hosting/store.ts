@@ -173,7 +173,6 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
     if (!enhanceCustomerId) {
       const customer = await EnhanceService.createCustomer(config.ENHANCE_MASTER_ORG_ID, {
         name: domain,
-        org: { name: domain },
       });
       enhanceCustomerId = customer.id;
       await query(
@@ -186,14 +185,14 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
     const enhanceSubscription = await EnhanceService.createCustomerSubscription(
       config.ENHANCE_MASTER_ORG_ID,
       enhanceCustomerId,
-      { plan_id: plan.enhance_plan_id }
+      { planId: Number(plan.enhance_plan_id) }
     );
 
     // Create website
     const enhanceWebsite = await EnhanceService.createWebsite(config.ENHANCE_MASTER_ORG_ID, {
-      subscription_id: enhanceSubscription.id,
+      subscriptionId: Number(enhanceSubscription.id),
       domain,
-      server_group_id: regionId || config.ENHANCE_DEFAULT_SERVER_GROUP_ID,
+      serverGroupId: regionId || config.ENHANCE_DEFAULT_SERVER_GROUP_ID,
     });
 
     // Success: update local row

@@ -894,9 +894,9 @@ LINODE_API_TOKEN=your-linode-api-token
 
 # Enhance Web Hosting (optional)
 ENHANCE_ENABLED=false
-ENHANCE_API_URL=https://api.enhance.com
+ENHANCE_API_URL=https://panel.yourdomain.com   # Domain only — no /api suffix, the app adds it automatically
 ENHANCE_MASTER_ORG_ID=your-master-org-id
-ENHANCE_API_KEY=your-enhance-api-key
+ENHANCE_API_KEY=your-token-here                # Raw token only — do NOT include the "Bearer " prefix
 ENHANCE_DEFAULT_SERVER_GROUP_ID=default-server-group
 
 # FraudLabsPro Anti-Fraud (optional)
