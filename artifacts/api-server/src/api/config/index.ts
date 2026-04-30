@@ -98,6 +98,10 @@ export interface Config {
   ENHANCE_MASTER_ORG_ID: string;
   ENHANCE_API_KEY: string;
   ENHANCE_DEFAULT_SERVER_GROUP_ID: string;
+  // Suffix used when generating free auto-subdomains for new hosting customers
+  // (e.g. "staging.gvps.cloud"). When empty, falls back to the master org's
+  // staging-domain registration in Enhance.
+  HOSTING_AUTO_SUBDOMAIN_SUFFIX: string;
   // FraudLabsPro anti-fraud integration
   FRAUDLABSPRO_ENABLED: boolean;
   FRAUDLABSPRO_API_KEY: string;
@@ -428,6 +432,7 @@ function getConfig(): Config {
     ENHANCE_MASTER_ORG_ID: process.env.ENHANCE_MASTER_ORG_ID || "",
     ENHANCE_API_KEY: process.env.ENHANCE_API_KEY || "",
     ENHANCE_DEFAULT_SERVER_GROUP_ID: process.env.ENHANCE_DEFAULT_SERVER_GROUP_ID || "",
+    HOSTING_AUTO_SUBDOMAIN_SUFFIX: process.env.HOSTING_AUTO_SUBDOMAIN_SUFFIX || "",
     // FraudLabsPro anti-fraud integration
     FRAUDLABSPRO_ENABLED: parseBoolean(process.env.FRAUDLABSPRO_ENABLED, false),
     FRAUDLABSPRO_API_KEY: process.env.FRAUDLABSPRO_API_KEY || "",

@@ -27,3 +27,8 @@ externalPort = 80
 
 [deployment]
 deploymentTarget = "cloudrun"
+
+[userenv]
+
+[userenv.shared]
+HOSTING_AUTO_SUBDOMAIN_SUFFIX = "staging.gvps.cloud"

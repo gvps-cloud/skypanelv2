@@ -252,27 +252,29 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         .slice(0, 8)
         .padEnd(8, '0');
 
-    // Resolve the staging domain suffix once (if needed).
-    // Each customer org needs its own staging domain entry in Enhance —
-    // it isn't inherited from the master org automatically. Mirror the master
-    // org's staging suffix onto the customer org so they can create staging
-    // websites. setStagingDomain is idempotent (POST creates or updates).
+    // Resolve the auto-subdomain suffix once.
+    // We treat the configured staging suffix (e.g. staging.gvps.cloud) purely as
+    // a DNS-controlled namespace from which we hand out free subdomains. The
+    // resulting website is created as a *normal* customer website that consumes
+    // one of the subscription's regular `websites` slots — there is no Enhance
+    // "staging website" semantics involved.
+    //
+    // IMPORTANT: For Enhance to accept these subdomains as normal customer
+    // domains, the suffix must NOT be registered as the master org's
+    // `staging-domain` in Enhance — otherwise Enhance reserves it for
+    // kind=staging websites and rejects normal-website creation with 403.
     let stagingSuffix: string | null = null;
     if (!domain && useStagingDomain) {
-      stagingSuffix = await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID);
+      // Prefer the env-var-configured suffix (decoupled from Enhance) so the
+      // suffix can be served as a normal customer domain. Fall back to the
+      // master org's staging-domain registration only if the env var is empty.
+      stagingSuffix =
+        config.HOSTING_AUTO_SUBDOMAIN_SUFFIX ||
+        (await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID));
       if (!stagingSuffix) {
-        throw new Error("Staging domain is not configured on the hosting platform");
-      }
-      try {
-        await EnhanceService.setStagingDomain(onboardingResult.enhanceCustomerId, stagingSuffix);
-      } catch (setStagingError: any) {
-        // Non-fatal: if it's already set or the API call fails, log and continue.
-        // The website creation step will surface a clear error if it really
-        // can't proceed.
-        console.warn(
-          `[Hosting purchase] Could not set staging domain on customer org ${onboardingResult.enhanceCustomerId}:`,
-          `status=${setStagingError?.statusCode}`,
-          `body=${JSON.stringify(setStagingError?.responseBody)}`
+        throw new Error(
+          "No auto-subdomain suffix configured. Set HOSTING_AUTO_SUBDOMAIN_SUFFIX " +
+          "(e.g. staging.gvps.cloud) or register a staging domain on the master org in Enhance."
         );
       }
     }
@@ -303,15 +305,10 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         websitePayload.serverGroupId = serverGroupId;
       }
 
-      // Staging subdomains require kind=staging so Enhance validates the
-      // subscription's stagingWebsites resource instead of websites resource.
-      const websiteKind = (!domain && useStagingDomain) ? 'staging' : undefined;
-
       try {
         enhanceWebsite = await EnhanceService.createWebsite(
           onboardingResult.enhanceCustomerId,
           websitePayload,
-          websiteKind,
         );
         break; // success — exit retry loop
       } catch (websiteError: any) {
