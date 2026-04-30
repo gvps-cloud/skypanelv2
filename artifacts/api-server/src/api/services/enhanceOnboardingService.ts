@@ -201,9 +201,46 @@ export class EnhanceOnboardingService {
       );
     }
 
-    const orgLogins = extractCollection<EnhanceLoginRecord>(
-      await EnhanceService.getOrgLogins(enhanceCustomerId)
-    );
+    // Fetch logins for the customer org. If Enhance returns 404 (org deleted
+    // from the Enhance panel), clear the stale enhance_customer_id and
+    // re-create the customer so the purchase can continue.
+    let orgLogins: EnhanceLoginRecord[] = [];
+    try {
+      orgLogins = extractCollection<EnhanceLoginRecord>(
+        await EnhanceService.getOrgLogins(enhanceCustomerId)
+      );
+    } catch (error) {
+      const orgNotFound =
+        error instanceof EnhanceApiError &&
+        error.statusCode === 404 &&
+        error.responseBody?.detail === 'org';
+
+      if (!orgNotFound) {
+        throw error;
+      }
+
+      // The customer org was deleted directly in Enhance — clear the stale ID
+      // and create a fresh customer.
+      await query(
+        `UPDATE organizations SET enhance_customer_id = NULL, updated_at = now() WHERE id = $1`,
+        [organizationId]
+      );
+
+      const freshCustomer = await EnhanceService.createCustomer(config.ENHANCE_MASTER_ORG_ID, {
+        name: context.organization_name,
+        org: { name: context.organization_name },
+      });
+
+      enhanceCustomerId = requireRemoteId('Enhance customer (re-created)', freshCustomer);
+
+      await query(
+        `UPDATE organizations SET enhance_customer_id = $1, updated_at = now() WHERE id = $2`,
+        [enhanceCustomerId, organizationId]
+      );
+
+      // Fresh customer has no logins; orgLogins stays []
+    }
+
     const matchedLogin = orgLogins.find(
       (login) => normalizeEmail(login.email) === normalizeEmail(context.purchaser_email)
     );

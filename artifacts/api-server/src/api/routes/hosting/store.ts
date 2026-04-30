@@ -213,12 +213,45 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       throw new Error("A hosting region is required because no default Enhance server group is configured");
     }
 
-    // Create subscription
-    const enhanceSubscription = await EnhanceService.createCustomerSubscription(
-      config.ENHANCE_MASTER_ORG_ID,
-      onboardingResult.enhanceCustomerId,
-      { planId: enhancePlanId }
-    );
+    // Create subscription — if one already exists for this customer (409),
+    // fetch and reuse the existing subscription instead of failing.
+    let enhanceSubscription: any;
+    try {
+      enhanceSubscription = await EnhanceService.createCustomerSubscription(
+        config.ENHANCE_MASTER_ORG_ID,
+        onboardingResult.enhanceCustomerId,
+        { planId: enhancePlanId }
+      );
+    } catch (subError: any) {
+      const subscriptionAlreadyExists =
+        subError?.statusCode === 409 &&
+        subError?.responseBody?.detail === 'subscription';
+
+      if (!subscriptionAlreadyExists) {
+        throw subError;
+      }
+
+      // Customer already has a subscription — find the matching one.
+      const existingSubs = await EnhanceService.getCustomerSubscriptions(
+        config.ENHANCE_MASTER_ORG_ID,
+        onboardingResult.enhanceCustomerId
+      );
+      const subItems: any[] = Array.isArray(existingSubs)
+        ? existingSubs
+        : existingSubs?.items || existingSubs?.subscriptions || [];
+
+      // Prefer the subscription for the requested plan; fall back to the first available.
+      const matchedSub =
+        subItems.find((s: any) => Number(s.planId) === enhancePlanId || Number(s.plan?.id) === enhancePlanId)
+        ?? subItems[0];
+
+      if (!matchedSub?.id) {
+        throw new Error("Customer already has a subscription in Enhance but it could not be retrieved");
+      }
+
+      enhanceSubscription = matchedSub;
+    }
+
     const enhanceSubscriptionId = Number(enhanceSubscription.id);
     if (!Number.isInteger(enhanceSubscriptionId) || enhanceSubscriptionId <= 0) {
       throw new Error("Enhance subscription creation returned an invalid subscription id");
@@ -233,10 +266,26 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       websitePayload.serverGroupId = serverGroupId;
     }
 
-    const enhanceWebsite = await EnhanceService.createWebsite(
-      onboardingResult.enhanceCustomerId,
-      websitePayload,
-    );
+    let enhanceWebsite: any;
+    try {
+      enhanceWebsite = await EnhanceService.createWebsite(
+        onboardingResult.enhanceCustomerId,
+        websitePayload,
+      );
+    } catch (websiteError: any) {
+      const domainClaimedElsewhere =
+        websiteError?.statusCode === 403 &&
+        websiteError?.responseBody?.detail === 'domain';
+
+      if (domainClaimedElsewhere) {
+        throw new Error(
+          `The domain "${resolvedDomain}" is already in use on the hosting platform. ` +
+          `Please choose a different domain.`
+        );
+      }
+
+      throw websiteError;
+    }
 
     let credentialsEmailed = false;
     if (onboardingResult.credentialsEmail) {
