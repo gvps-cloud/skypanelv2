@@ -276,13 +276,14 @@ Key services: `egressCreditService.ts`, `egressHourlyBillingService.ts`, `egress
 
 ## Migrations
 
-55 total (001–055, sequential). Located in `migrations/`. Each runs in a transaction with SHA256 checksum validation.
+59 total (001–059, sequential). Located in `migrations/`. Each runs in a transaction with SHA256 checksum validation.
 
 ## App Structure (top-level)
 
 ```text
 api/            Express backend (routes, services, middleware, config)
 src/            React frontend (pages, components, hooks, services, contexts)
+git-docs/       Split documentation (architecture, features, dev setup, etc.)
 migrations/     SQL migrations (never modify existing)
 scripts/        DB, admin, diagnostics, maintenance utilities
 public/         Static assets (favicon.svg is logo source of truth)
