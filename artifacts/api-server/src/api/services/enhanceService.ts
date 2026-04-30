@@ -208,7 +208,7 @@ export class EnhanceService {
 
   static async updateWebsite(orgId: string, websiteId: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }

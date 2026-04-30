@@ -252,22 +252,21 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         .slice(0, 8)
         .padEnd(8, '0');
 
-    // Resolve the auto-subdomain suffix once.
-    // We treat the configured staging suffix (e.g. staging.gvps.cloud) purely as
-    // a DNS-controlled namespace from which we hand out free subdomains. The
-    // resulting website is created as a *normal* customer website that consumes
-    // one of the subscription's regular `websites` slots — there is no Enhance
-    // "staging website" semantics involved.
+    // Resolve the auto-subdomain suffix once. We hand out free subdomains
+    // under this suffix (e.g. staging.gvps.cloud) as ordinary customer
+    // websites consuming one regular `websites` slot.
     //
-    // IMPORTANT: For Enhance to accept these subdomains as normal customer
-    // domains, the suffix must NOT be registered as the master org's
-    // `staging-domain` in Enhance — otherwise Enhance reserves it for
-    // kind=staging websites and rejects normal-website creation with 403.
+    // Because the suffix is registered on the MASTER org's domain namespace
+    // inside Enhance, Enhance refuses direct customer-org creation on it
+    // ("Unable to create website outside of the org"). The supported way to
+    // hand a subdomain of a master-owned suffix to a customer is to:
+    //   1. Create the website on the MASTER org (which owns the suffix).
+    //   2. PATCH the website with `orgId` + `subscriptionId` to transfer it to
+    //      the customer's org & subscription. The MO is allowed to reassign
+    //      websites between orgs/subscriptions even if quotas would otherwise
+    //      block it.
     let stagingSuffix: string | null = null;
     if (!domain && useStagingDomain) {
-      // Prefer the env-var-configured suffix (decoupled from Enhance) so the
-      // suffix can be served as a normal customer domain. Fall back to the
-      // master org's staging-domain registration only if the env var is empty.
       stagingSuffix =
         config.HOSTING_AUTO_SUBDOMAIN_SUFFIX ||
         (await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID));
@@ -279,17 +278,20 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       }
     }
 
-    // Create the website under the customer's own Enhance org.
-    // When using an auto-generated staging subdomain, retry with a fresh slug
-    // if the randomly chosen name collides with a stale website left from a
-    // previous failed purchase attempt.
+    const usingMasterOwnedSuffix = !domain && useStagingDomain && !!stagingSuffix;
+
+    // For user-supplied domains: create directly on the customer org.
+    // For master-owned-suffix subdomains: create on master org, then transfer.
+    // Retry on staging-subdomain collisions with fresh slugs.
     const MAX_DOMAIN_RETRIES = 5;
     let enhanceWebsite: any;
     let resolvedDomain = domain ?? '';
+    const creationOrgId = usingMasterOwnedSuffix
+      ? config.ENHANCE_MASTER_ORG_ID
+      : onboardingResult.enhanceCustomerId;
 
     for (let attempt = 1; attempt <= MAX_DOMAIN_RETRIES; attempt++) {
-      // Generate a new slug on every attempt when in staging-subdomain mode.
-      if (!domain && useStagingDomain && stagingSuffix) {
+      if (usingMasterOwnedSuffix && stagingSuffix) {
         resolvedDomain = `${generateSlug()}.${stagingSuffix}`;
       }
 
@@ -297,17 +299,20 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         throw new Error("No domain provided and staging domain mode is not enabled");
       }
 
-      const websitePayload: Record<string, any> = {
-        domain: resolvedDomain,
-        subscriptionId: enhanceSubscriptionId,
-      };
+      // When creating under MO, omit subscriptionId — MO does not need one and
+      // including a customer subscription id here would be rejected. The
+      // subscription assignment happens in the subsequent PATCH/transfer step.
+      const websitePayload: Record<string, any> = { domain: resolvedDomain };
+      if (!usingMasterOwnedSuffix) {
+        websitePayload.subscriptionId = enhanceSubscriptionId;
+      }
       if (allowServerGroupSelection && serverGroupId) {
         websitePayload.serverGroupId = serverGroupId;
       }
 
       try {
         enhanceWebsite = await EnhanceService.createWebsite(
-          onboardingResult.enhanceCustomerId,
+          creationOrgId,
           websitePayload,
         );
         break; // success — exit retry loop
@@ -316,7 +321,7 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
           `[Hosting purchase] createWebsite attempt ${attempt}/${MAX_DOMAIN_RETRIES} failed:`,
           `status=${websiteError?.statusCode}`,
           `body=${JSON.stringify(websiteError?.responseBody)}`,
-          `org=${onboardingResult.enhanceCustomerId}`,
+          `org=${creationOrgId}`,
           `domain=${resolvedDomain}`,
           `subscriptionId=${enhanceSubscriptionId}`
         );
@@ -326,15 +331,12 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
           websiteError?.responseBody?.detail === 'domain';
 
         if (domainTaken) {
-          // If this was a user-supplied domain, surface a clear error immediately.
           if (domain) {
             throw new Error(
               `The domain "${resolvedDomain}" is already in use on the hosting platform. ` +
               `Please choose a different domain.`
             );
           }
-          // For auto-generated staging subdomains, the slug collided with a
-          // stale website.  Log and try a fresh one on the next iteration.
           if (attempt === MAX_DOMAIN_RETRIES) {
             throw new Error(
               "Could not allocate a free staging subdomain after several attempts. Please try again."
@@ -344,6 +346,38 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         }
 
         throw websiteError;
+      }
+    }
+
+    // If we created under the master org, transfer ownership to the customer
+    // org and attach to their subscription so the website counts against
+    // their plan and shows up in their panel.
+    if (usingMasterOwnedSuffix && enhanceWebsite?.id) {
+      try {
+        await EnhanceService.updateWebsite(
+          config.ENHANCE_MASTER_ORG_ID,
+          enhanceWebsite.id,
+          {
+            orgId: onboardingResult.enhanceCustomerId,
+            subscriptionId: enhanceSubscriptionId,
+          },
+        );
+      } catch (transferError: any) {
+        console.error(
+          `[Hosting purchase] Failed to transfer website ${enhanceWebsite.id} to customer org:`,
+          `status=${transferError?.statusCode}`,
+          `body=${JSON.stringify(transferError?.responseBody)}`,
+        );
+        // Best-effort cleanup: delete the master-owned website to avoid orphans.
+        try {
+          await EnhanceService.deleteWebsite(config.ENHANCE_MASTER_ORG_ID, enhanceWebsite.id);
+        } catch (cleanupError) {
+          console.error(
+            `[Hosting purchase] Cleanup of orphaned master-owned website ${enhanceWebsite.id} failed:`,
+            cleanupError,
+          );
+        }
+        throw transferError;
       }
     }
 
