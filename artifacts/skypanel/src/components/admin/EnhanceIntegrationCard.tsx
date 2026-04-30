@@ -64,7 +64,7 @@ export function EnhanceIntegrationCard() {
           Enhance Web Hosting Integration
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-6 space-y-4 text-center">
+      <CardContent className="p-6 space-y-4 text-left">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Hard Gate</p>
