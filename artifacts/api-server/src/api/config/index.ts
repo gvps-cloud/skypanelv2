@@ -194,6 +194,18 @@ function parseCorsOrigins(value?: string): string[] {
   // when CLIENT_URL is set to a remote/prod URL.
   if (process.env.NODE_ENV !== "production") {
     localDevOrigins.forEach((origin) => deduped.add(origin));
+
+    // Include Replit dev domains so the preview iframe can reach the API
+    const replitDomains = process.env.REPLIT_DOMAINS;
+    if (replitDomains) {
+      replitDomains.split(",").forEach((domain) => {
+        const trimmed = domain.trim();
+        if (trimmed) {
+          deduped.add(`https://${trimmed}`);
+          deduped.add(`http://${trimmed}`);
+        }
+      });
+    }
   }
 
   if (deduped.size === 0) {

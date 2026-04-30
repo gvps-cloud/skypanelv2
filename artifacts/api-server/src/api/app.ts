@@ -357,7 +357,7 @@ app.use((error: Error, req: Request, res: Response, _next: NextFunction) => {
  * regardless of NODE_ENV. In dev mode Vite runs on its own port (5173)
  * so this only affects requests hitting the Express server directly.
  */
-const distExists = fs.existsSync(clientBuildPath);
+const distExists = fs.existsSync(clientBuildPath) && fs.existsSync(clientIndexFile);
 if (distExists) {
   app.use(
     express.static(clientBuildPath, {
