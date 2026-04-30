@@ -1,0 +1,729 @@
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Plus,
+  RotateCcw,
+  Send,
+  Ticket,
+  Info,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import { apiClient, buildApiUrl } from "@/lib/api";
+import {
+  SupportTicket,
+  TicketMessage,
+  TicketStatus,
+} from "@/types/support";
+import { TicketList } from "./shared/TicketList";
+import { TicketDetailHeader } from "./shared/TicketDetailHeader";
+import { MessageBubble } from "./shared/MessageBubble";
+import { CreateTicketDialog, CreateTicketData } from "./shared/CreateTicketDialog";
+import { TicketInfoSidebar } from "./shared/TicketInfoSidebar";
+
+import { useAuth } from "@/contexts/AuthContext";
+
+interface UserSupportViewProps {
+  token: string;
+  pendingFocusTicketId?: string | null;
+  pendingCreateTicket?: boolean;
+  onFocusTicketHandled?: () => void;
+  onCreateTicketHandled?: () => void;
+}
+
+export const UserSupportView: React.FC<UserSupportViewProps> = ({
+  token,
+  pendingFocusTicketId,
+  pendingCreateTicket = false,
+  onFocusTicketHandled,
+  onCreateTicketHandled,
+}) => {
+  const { user } = useAuth();
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [reopenRequestMessage, setReopenRequestMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [ticketsInitialized, setTicketsInitialized] = useState(false);
+  const [requestingReopen, setRequestingReopen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const ticketStatusRef = useRef<TicketStatus | undefined>(undefined);
+  const createTicketHandledRef = useRef(false);
+
+  const [vpsInstances, setVpsInstances] = useState<
+    Array<{ id: string; label: string }>
+  >([]);
+
+  const fetchWalletBalance = useCallback(async () => {
+    try {
+      const data = await apiClient.get<{ balance: number; success: boolean }>("/payments/wallet/balance");
+      if (data.success) {
+        setWalletBalance(data.balance);
+      }
+    } catch {
+      // Ignore wallet balance fetch failures because this is only a
+      // non-critical background UI enhancement for the support view.
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchWalletBalance();
+  }, [fetchWalletBalance]);
+
+  const fetchVpsInstances = useCallback(async () => {
+    try {
+      const data = await apiClient.get<{ instances: any[] }>("/vps");
+      if (data.instances) {
+        setVpsInstances(
+          data.instances.map((i: any) => ({ id: i.id, label: i.label }))
+        );
+      }
+    } catch {
+      // Ignore errors when fetching VPS instances for ticket creation because
+      // the create-ticket flow can still proceed without optional VPS options.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isCreateModalOpen) {
+      fetchVpsInstances();
+    }
+  }, [isCreateModalOpen, fetchVpsInstances]);
+
+  useEffect(() => {
+    if (!pendingCreateTicket) {
+      createTicketHandledRef.current = false;
+      return;
+    }
+
+    if (createTicketHandledRef.current) {
+      return;
+    }
+
+    createTicketHandledRef.current = true;
+    setIsCreateModalOpen(true);
+    onCreateTicketHandled?.();
+  }, [pendingCreateTicket, onCreateTicketHandled]);
+
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, []);
+
+  const getTicketCreatorName = useCallback((ticket: SupportTicket) => {
+    return ticket.creator?.displayName || ticket.creator?.email || ticket.created_by || "Unknown";
+  }, []);
+
+  const isCurrentUserTicketAuthor = useCallback(
+    (ticket: SupportTicket) => Boolean(user?.id && ticket.created_by === user.id),
+    [user?.id],
+  );
+
+  const getInitials = useCallback((value: string) => {
+    const initials = value
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+    return initials || "??";
+  }, []);
+
+  const fetchTickets = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiClient.get<{ tickets: any[]; error?: string }>("/support/tickets");
+
+      const mapped: SupportTicket[] = (data.tickets || []).map((t: any) => ({
+        id: t.id,
+        subject: t.subject,
+        description: t.message, // Map message to description for list view
+        message: t.message,
+        status: t.status,
+        priority: t.priority,
+        category: t.category,
+        created_at: t.created_at,
+        updated_at: t.updated_at,
+        has_staff_reply: t.has_staff_reply || false,
+        vps_id: t.vps_id,
+        vps_label: t.vps_label,
+        organization_id: t.organization_id,
+        organization_name: t.organization_name,
+        organization_slug: t.organization_slug,
+        created_by: t.created_by,
+        creator: t.creator,
+        messages: [],
+      }));
+
+      setTickets(mapped);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load tickets");
+    } finally {
+      setLoading(false);
+      setTicketsInitialized(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
+
+  // Clear selected ticket when organization changes to prevent confusion
+  useEffect(() => {
+    setSelectedTicket(null);
+  }, [user?.organizationId]);
+
+  useEffect(() => {
+    ticketStatusRef.current = selectedTicket?.status;
+  }, [selectedTicket?.status]);
+
+  useEffect(() => {
+    setReplyMessage("");
+    setReopenRequestMessage("");
+  }, [selectedTicket?.id]);
+
+  // Set up real-time updates for selected ticket
+  useEffect(() => {
+    if (!selectedTicket || !token) return;
+
+    // Close existing connection if any
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    const es = new EventSource(
+      buildApiUrl(
+        `/api/support/tickets/${selectedTicket.id}/stream?token=${token}`
+      )
+    );
+    eventSourceRef.current = es;
+
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (
+          data.type === "ticket_message" &&
+          data.ticket_id === selectedTicket.id
+        ) {
+          const newMsg: TicketMessage = {
+            id: data.message_id,
+            ticket_id: data.ticket_id,
+            sender_type: data.is_staff_reply ? "admin" : "user",
+            sender_user_id: data.is_staff_reply ? undefined : data.sender_user_id,
+            sender_name: data.is_staff_reply
+              ? "Support Team"
+              : (data.sender_name || "Unknown"),
+            message: data.message,
+            created_at: data.created_at,
+          };
+
+          setSelectedTicket((prev) => {
+            if (!prev || prev.id !== data.ticket_id) return prev;
+            if (prev.messages.some((m) => m.id === newMsg.id)) return prev;
+
+            const updated = {
+              ...prev,
+              messages: [...prev.messages, newMsg],
+              has_staff_reply: prev.has_staff_reply || data.is_staff_reply,
+            };
+
+            if (data.is_staff_reply) {
+              toast.info("New reply received");
+            }
+
+            return updated;
+          });
+
+          setTickets((prev) =>
+            prev.map((t) =>
+              t.id === data.ticket_id
+                ? {
+                    ...t,
+                    has_staff_reply: t.has_staff_reply || data.is_staff_reply,
+                  }
+                : t
+            )
+          );
+
+          setTimeout(scrollToBottom, 100);
+        }
+
+        if (
+          data.type === "ticket_status_change" &&
+          data.ticket_id === selectedTicket.id
+        ) {
+          // Skip if we already have this status
+          if (data.new_status === ticketStatusRef.current) return;
+
+          setSelectedTicket((prev) =>
+            prev ? { ...prev, status: data.new_status } : prev
+          );
+          setTickets((prev) =>
+            prev.map((t) =>
+              t.id === data.ticket_id ? { ...t, status: data.new_status } : t
+            )
+          );
+          toast.info(
+            `Ticket status updated to: ${data.new_status.replace("_", " ")}`
+          );
+        }
+      } catch (err) {
+        console.error("Error parsing SSE message:", err);
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+    };
+
+    return () => {
+      es.close();
+      eventSourceRef.current = null;
+    };
+  }, [selectedTicket?.id, token, scrollToBottom]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openTicket = useCallback(
+    async (ticket: SupportTicket) => {
+      // Don't reload if already selected (optional optimization, but good for avoiding flicker)
+      // But we do want to load messages if they aren't loaded.
+      // For now, let's just set it.
+
+      if (selectedTicket?.id !== ticket.id) {
+        setSelectedTicket({ ...ticket, messages: [] });
+      }
+
+      try {
+        const data = await apiClient.get<{ replies: any[]; error?: string }>(`/support/tickets/${ticket.id}/replies`);
+
+        const msgs: TicketMessage[] = (data.replies || []).map((m: any) => ({
+          id: m.id,
+          ticket_id: m.ticket_id,
+          sender_type: m.sender_type,
+          sender_user_id: m.sender_user_id,
+          sender_name: m.sender_type === "admin"
+            ? "Support Team"
+            : (m.sender_name || "Unknown"),
+          message: m.message,
+          created_at: m.created_at,
+        }));
+
+        setSelectedTicket((prev) =>
+          prev ? { ...prev, messages: msgs } : prev
+        );
+        setTimeout(scrollToBottom, 100);
+      } catch (e: any) {
+        toast.error(e.message || "Failed to load messages");
+      }
+    },
+    [scrollToBottom, selectedTicket?.id]
+  );
+
+  useEffect(() => {
+    if (!pendingFocusTicketId) {
+      return;
+    }
+
+    if (tickets.length === 0) {
+      if (ticketsInitialized) {
+        onFocusTicketHandled?.();
+      }
+      return;
+    }
+
+    const matchingTicket = tickets.find(
+      (ticket) => ticket.id === pendingFocusTicketId
+    );
+    if (!matchingTicket) {
+      onFocusTicketHandled?.();
+      return;
+    }
+
+    void openTicket(matchingTicket);
+    onFocusTicketHandled?.();
+  }, [
+    pendingFocusTicketId,
+    tickets,
+    openTicket,
+    onFocusTicketHandled,
+    ticketsInitialized,
+  ]);
+
+  const sendReply = useCallback(async () => {
+    if (!selectedTicket || !replyMessage.trim()) return;
+    if (selectedTicket.status === "closed") {
+      toast.error("This ticket is closed. Request a reopen to continue.");
+      return;
+    }
+
+    try {
+      const data = await apiClient.post<{ reply: any; error?: string }>(
+        `/support/tickets/${selectedTicket.id}/replies`,
+        { message: replyMessage }
+      );
+
+      toast.success("Reply sent successfully");
+      setReplyMessage("");
+
+      const newReply = data.reply;
+      if (newReply) {
+        const newMsg: TicketMessage = {
+          id: newReply.id,
+          ticket_id: newReply.ticket_id,
+          sender_type: newReply.sender_type,
+          sender_name: newReply.sender_name,
+          message: newReply.message,
+          created_at: newReply.created_at,
+        };
+
+        setSelectedTicket((prev) => {
+          if (!prev || prev.id !== newReply.ticket_id) return prev;
+          if (prev.messages.some(m => m.id === newMsg.id)) return prev;
+          return {
+            ...prev,
+            messages: [...prev.messages, newMsg]
+          };
+        });
+        setTimeout(scrollToBottom, 100);
+      } else {
+        await openTicket(selectedTicket);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send reply");
+    }
+  }, [selectedTicket, replyMessage, openTicket, scrollToBottom]);
+
+  const requestReopen = useCallback(async () => {
+    if (!selectedTicket) return;
+    if (selectedTicket.status !== "closed") {
+      toast.error("Only closed tickets can be reopened.");
+      return;
+    }
+
+    setRequestingReopen(true);
+    try {
+      const note = reopenRequestMessage.trim();
+      const payload = note ? { message: note } : {};
+      const data = await apiClient.post<{ reply: any; error?: string }>(
+        `/support/tickets/${selectedTicket.id}/reopen-request`,
+        payload
+      );
+
+      toast.success("Re-open request sent to support staff");
+      setReopenRequestMessage("");
+
+      const newReply = data.reply;
+      if (newReply) {
+        const newMsg: TicketMessage = {
+          id: newReply.id,
+          ticket_id: newReply.ticket_id,
+          sender_type: newReply.sender_type,
+          sender_name: newReply.sender_name,
+          message: newReply.message,
+          created_at: newReply.created_at,
+        };
+
+        setSelectedTicket((prev) => {
+          if (!prev || prev.id !== newReply.ticket_id) return prev;
+          if (prev.messages.some(m => m.id === newMsg.id)) return prev;
+          return {
+            ...prev,
+            status: "open", // Reopen request usually reopens or updates status
+            messages: [...prev.messages, newMsg]
+          };
+        });
+        setTimeout(scrollToBottom, 100);
+      } else {
+        await openTicket(selectedTicket);
+      }
+      await fetchTickets(); // Still need to refresh list status
+    } catch (error: any) {
+      toast.error(error.message || "Failed to request reopen");
+    } finally {
+      setRequestingReopen(false);
+    }
+  }, [
+    selectedTicket,
+    reopenRequestMessage,
+    openTicket,
+    fetchTickets,
+    scrollToBottom,
+  ]);
+
+  const handleCreateTicket = async (data: CreateTicketData) => {
+    try {
+      const resData = await apiClient.post<{ error?: string }>("/support/tickets", {
+        subject: data.subject,
+        message: data.description, // Backend expects 'message' not 'description'
+        priority: data.priority,
+        category: data.category,
+        vpsId: data.vpsId,
+      });
+
+      toast.success("Support ticket created successfully");
+      setIsCreateModalOpen(false);
+      await fetchTickets();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create support ticket");
+      throw error; // Re-throw for dialog to handle state
+    }
+  };
+
+  return (
+    <>
+      <div className="flex h-[calc(100vh-12rem)] overflow-hidden rounded-xl border border-border bg-background shadow-sm">
+        {/* Sidebar - Ticket List */}
+        <div
+          className={cn(
+            "flex flex-col border-r border-border bg-muted/10 w-full md:w-80 lg:w-96 shrink-0 transition-all duration-300 ease-in-out",
+            selectedTicket ? "hidden md:flex" : "flex"
+          )}
+        >
+          <TicketList
+            tickets={tickets}
+            selectedTicketId={selectedTicket?.id || null}
+            onSelectTicket={openTicket}
+            onCreateTicket={() => setIsCreateModalOpen(true)}
+            isLoading={loading}
+            showCustomer={true}
+            title="Support Tickets"
+          />
+        </div>
+
+        {/* Main Content - Ticket Detail */}
+        <div
+          className={cn(
+            "flex flex-1 flex-col bg-background transition-all duration-300 ease-in-out",
+            !selectedTicket ? "hidden md:flex" : "flex"
+          )}
+        >
+          {!selectedTicket ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center p-8 bg-muted/5">
+              <div className="rounded-full bg-primary/5 p-6 ring-1 ring-primary/10">
+                <Ticket className="h-12 w-12 text-primary/40" />
+              </div>
+              <div className="max-w-sm space-y-2">
+                <h3 className="text-xl font-semibold tracking-tight">Select a ticket</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Choose a ticket from the list to view details and respond, or create a new one to get help.
+                </p>
+              </div>
+              <Button onClick={() => setIsCreateModalOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create New Ticket
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-1 h-full overflow-hidden">
+              <div className="flex flex-col flex-1 min-w-0 h-full">
+                {/* Ticket Header */}
+                <TicketDetailHeader
+                  ticket={selectedTicket}
+                  onBack={() => setSelectedTicket(null)}
+                  showCustomer={true}
+                >
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="lg:hidden w-full mb-2 border-dashed border-primary/20 text-primary hover:bg-primary/5" 
+                    onClick={() => setIsInfoOpen(true)}
+                  >
+                    <Info className="mr-2 h-4 w-4" /> View Ticket Details & Balance
+                  </Button>
+                </TicketDetailHeader>
+
+                {/* Messages */}
+              <ScrollArea className="flex-1 p-6 bg-muted/5">
+                <div className="space-y-6 max-w-5xl mx-auto w-full px-4 md:px-8">
+                  {/* Original Message */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                      <div className="w-full border-t border-border"></div>
+                    </div>
+                    <div className="relative flex justify-center">
+                      <span className="bg-background px-2 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                        Original Request
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-xl border border-border bg-background p-5 shadow-sm max-w-3xl mx-auto w-full">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium text-xs">
+                        {isCurrentUserTicketAuthor(selectedTicket)
+                          ? "You"
+                          : getInitials(getTicketCreatorName(selectedTicket))}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">
+                          {isCurrentUserTicketAuthor(selectedTicket)
+                            ? "You"
+                            : getTicketCreatorName(selectedTicket)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {[
+                            !isCurrentUserTicketAuthor(selectedTicket)
+                              ? selectedTicket.creator?.email
+                              : null,
+                            selectedTicket.organization_name || selectedTicket.organization_slug,
+                            new Date(selectedTicket.created_at).toLocaleString(),
+                          ]
+                            .filter(Boolean)
+                            .join(" • ")}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                      {selectedTicket.description || selectedTicket.message}
+                    </p>
+                  </div>
+
+                  {/* Replies */}
+                  {selectedTicket.messages.length > 0 && (
+                    <div className="space-y-6 pt-4 max-w-3xl mx-auto w-full">
+                      {selectedTicket.messages.map((msg) => (
+                        <MessageBubble
+                          key={msg.id}
+                          message={msg}
+                          isCurrentUser={
+                            msg.sender_type === "user" &&
+                            Boolean(user?.id && msg.sender_user_id === user.id)
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+
+              {/* Reply Box */}
+              <div className="border-t border-border bg-background p-4 md:p-6">
+                <div className="max-w-3xl mx-auto w-full">
+                  {selectedTicket.status === "closed" ? (
+                    <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        This ticket is closed. You can request to re-open it or create a new ticket.
+                      </p>
+                      
+                      <div className="flex flex-col sm:flex-row gap-3 items-center justify-center max-w-xl mx-auto w-full">
+                        <Textarea
+                          rows={2}
+                          value={reopenRequestMessage}
+                          onChange={(e) => setReopenRequestMessage(e.target.value)}
+                          placeholder="Optional reason for re-opening..."
+                          className="resize-none flex-1 min-h-[80px]"
+                        />
+                        <div className="flex flex-col gap-2 w-full sm:w-auto">
+                          <Button
+                            onClick={requestReopen}
+                            disabled={requestingReopen}
+                            className="w-full whitespace-nowrap"
+                          >
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            {requestingReopen ? "Requesting..." : "Re-open Ticket"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="w-full"
+                          >
+                            New Ticket
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Textarea
+                          rows={4}
+                          value={replyMessage}
+                          onChange={(e) => setReplyMessage(e.target.value)}
+                          placeholder="Type your reply here..."
+                          className="resize-none pr-12 min-h-[100px] shadow-sm focus-visible:ring-primary/20"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                              e.preventDefault();
+                              sendReply();
+                            }
+                          }}
+                        />
+                        <div className="absolute bottom-3 right-3 flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={sendReply}
+                            disabled={!replyMessage.trim()}
+                            className="h-8 w-8 p-0 rounded-full"
+                            title="Send Reply (Ctrl+Enter)"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex justify-end items-center text-xs text-muted-foreground px-1">
+                        <span>Press Ctrl+Enter to send</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              </div>
+              <TicketInfoSidebar 
+                ticket={selectedTicket}
+                walletBalance={walletBalance}
+                showRequester={true}
+                clientName={selectedTicket.creator?.displayName}
+                clientEmail={selectedTicket.creator?.email || undefined}
+                className="hidden lg:flex w-80 shrink-0"
+              />
+
+              <Sheet open={isInfoOpen} onOpenChange={setIsInfoOpen}>
+                <SheetContent side="right" className="p-0 sm:max-w-md w-full border-l border-border">
+                  <SheetHeader className="px-6 py-4 border-b border-border">
+                    <SheetTitle>Ticket Details</SheetTitle>
+                  </SheetHeader>
+                  <TicketInfoSidebar 
+                    ticket={selectedTicket}
+                    walletBalance={walletBalance}
+                    showRequester={true}
+                    clientName={selectedTicket.creator?.displayName}
+                    clientEmail={selectedTicket.creator?.email || undefined}
+                    className="w-full border-none bg-background"
+                  />
+                </SheetContent>
+              </Sheet>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <CreateTicketDialog
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        onSubmit={handleCreateTicket}
+        vpsInstances={vpsInstances}
+      />
+    </>
+  );
+};

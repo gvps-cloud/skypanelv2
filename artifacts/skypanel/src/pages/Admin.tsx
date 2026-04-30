@@ -1,0 +1,4252 @@
+/**
+ * Admin Dashboard
+ * Manage support tickets and VPS plans
+ */
+import React, { Suspense, lazy, useEffect, useMemo, useState, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Building2,
+  Calendar,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  Edit,
+  FileCode,
+  Globe,
+  HardDrive,
+  HelpCircle,
+  LifeBuoy,
+  Megaphone,
+  Palette,
+  Plus,
+  RefreshCw,
+  Server,
+  ServerCog,
+  Settings,
+  Shield,
+  Trash2,
+  Users,
+  Tags,
+  Mail,
+  Database,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { toast } from "sonner";
+import { apiClient } from "@/lib/api";
+import { useAuth } from "../contexts/AuthContext";
+import { UserProfileModal } from "@/components/admin/UserProfileModal";
+import { UserEditModal } from "@/components/admin/UserEditModal";
+import { CategoryManager } from "@/components/admin/CategoryManager";
+import { EnhanceIntegrationCard } from "@/components/admin/EnhanceIntegrationCard";
+import { EnhancePlans } from "@/components/admin/EnhancePlans";
+import { UserHostingList } from "@/components/admin/UserHostingList";
+import { FraudCheckList } from "@/components/admin/FraudCheckList";
+import { RefundList } from "@/components/admin/RefundList";
+import { useImpersonation } from "@/contexts/ImpersonationContext";
+import { useCategoryDisplayName } from "@/hooks/useCategoryMappings";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
+import { buildApiUrl } from "@/lib/api";
+import { BRAND_NAME } from "@/lib/brand";
+import { formatCurrency as formatCurrencyDisplay } from "@/lib/formatters";
+import { DEFAULT_THEME_ID, type ThemePreset } from "@/theme/presets";
+import { AdminContactManagementSection } from "@/pages/admin/AdminContactManagementSection";
+import { AdminNetworkingSection } from "@/pages/admin/AdminNetworkingSection";
+import { AdminProvidersSection } from "@/pages/admin/AdminProvidersSection";
+import { AdminServersSection } from "@/pages/admin/AdminServersSection";
+import { AdminThemeSection } from "@/pages/admin/AdminThemeSection";
+
+const BillingDashboard = lazy(async () => {
+  const mod = await import("@/components/admin/billing/BillingDashboard");
+  return { default: mod.BillingDashboard };
+});
+const UserManagement = lazy(async () => {
+  const mod = await import("@/components/admin/UserManagement");
+  return { default: mod.UserManagement };
+});
+const SSHKeyManagement = lazy(async () => {
+  const mod = await import("@/components/admin/SSHKeyManagement");
+  return { default: mod.SSHKeyManagement };
+});
+const OrganizationManagement = lazy(async () => {
+  const mod = await import("@/components/admin/OrganizationManagement");
+  return { default: mod.OrganizationManagement };
+});
+const EmailTemplatesManager = lazy(async () => {
+  const mod = await import("@/components/admin/email/EmailTemplatesManager");
+  return { default: mod.EmailTemplatesManager };
+});
+const RateLimitMonitoring = lazy(async () => {
+  const mod = await import("@/components/admin/rate-limit-monitoring");
+  return { default: mod.RateLimitMonitoring };
+});
+const FAQItemManager = lazy(async () => {
+  const mod = await import("@/components/admin/FAQItemManager");
+  return { default: mod.FAQItemManager };
+});
+const UpdatesManager = lazy(async () => {
+  const mod = await import("@/components/admin/UpdatesManager");
+  return { default: mod.UpdatesManager };
+});
+const PlatformAvailabilityManager = lazy(
+  () => import("@/components/admin/PlatformAvailabilityManager"),
+);
+const CategoryMappingManager = lazy(async () => {
+  const mod = await import("@/components/admin/CategoryMappingManager");
+  return { default: mod.CategoryMappingManager };
+});
+const RegionAccessManager = lazy(async () => {
+  const mod = await import("@/components/admin/RegionAccessManager");
+  return { default: mod.RegionAccessManager };
+});
+const RegionLabelManager = lazy(
+  () => import("@/components/admin/RegionLabelManager"),
+);
+const AdminSupportView = lazy(async () => {
+  const mod = await import("@/components/admin/AdminSupportView");
+  return { default: mod.AdminSupportView };
+});
+const VPSPlanWizard = lazy(async () => {
+  const mod = await import("@/components/admin/VPSPlanWizard");
+  return { default: mod.VPSPlanWizard };
+});
+const EgressCreditManager = lazy(
+  () => import("@/components/admin/EgressCreditManager"),
+);
+const DocumentationManager = lazy(
+  () => import("@/components/admin/documentation/DocumentationManager"),
+);
+const AnnouncementsManager = lazy(async () => {
+  const mod = await import("@/components/admin/AnnouncementsManager");
+  return { default: mod.AnnouncementsManager };
+});
+const AdminActivityLog = lazy(async () => {
+  const mod = await import("@/components/admin/AdminActivityLog");
+  return { default: mod.AdminActivityLog };
+});
+const VolumePricing = lazy(async () => {
+  const mod = await import("@/components/admin/billing/VolumePricing");
+  return { default: mod.VolumePricing };
+});
+
+type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
+type TicketPriority = "low" | "medium" | "high" | "urgent";
+type AdminSection =
+  | "dashboard"
+  | "announcements"
+  | "support"
+  | "vps-plans"
+  | "category-mappings"
+  | "servers"
+  | "providers"
+  | "regions"
+  | "stackscripts"
+  | "networking"
+  | "theme"
+  | "organizations"
+  | "user-management"
+  | "ssh-keys"
+  | "rate-limiting"
+  | "faq-management"
+  | "documentation"
+  | "platform"
+  | "egress-credits"
+  | "contact-management"
+  | "volume-pricing"
+  | "billing"
+  | "email-templates"
+  | "activity-log"
+  | "enhance-hosting"
+  | "enhance-plans"
+  | "enhance-subscriptions"
+  | "fraud-protection"
+  | "refunds";
+
+type AdminNetworkingTab =
+  | "rdns"
+  | "ips"
+  | "vlans"
+  | "firewalls"
+  | "assign"
+  | "share";
+
+const ADMIN_SECTIONS: AdminSection[] = [
+  "dashboard",
+  "announcements",
+  "support",
+  "vps-plans",
+  "category-mappings",
+  "servers",
+  "providers",
+  "regions",
+  "stackscripts",
+  "networking",
+  "theme",
+  "organizations",
+  "user-management",
+  "ssh-keys",
+  "egress-credits",
+  "rate-limiting",
+  "faq-management",
+  "documentation",
+  "platform",
+  "contact-management",
+  "volume-pricing",
+  "billing",
+  "email-templates",
+  "activity-log",
+  "enhance-hosting",
+  "enhance-plans",
+  "enhance-subscriptions",
+  "fraud-protection",
+  "refunds"
+];
+
+const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
+const DEFAULT_NETWORKING_TAB: AdminNetworkingTab = "rdns";
+const ADMIN_NETWORKING_TABS: AdminNetworkingTab[] = [
+  "rdns",
+  "ips",
+  "vlans",
+  "firewalls",
+  "assign",
+  "share",
+];
+
+const isAdminNetworkingTab = (value: string | null): value is AdminNetworkingTab =>
+  value !== null && ADMIN_NETWORKING_TABS.includes(value as AdminNetworkingTab);
+
+interface StrategicPanel {
+  id: AdminSection;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  accent: string;
+  summary: Array<{ label: string; value: string }>;
+  actionLabel: string;
+}
+
+const formatCurrency = (value: number | null | undefined, currency = "USD") => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return null;
+  }
+
+  try {
+    return formatCurrencyDisplay(value, { currency });
+  } catch (error) {
+    console.warn("Currency format failed", error);
+    return Number.isFinite(value) ? value.toFixed(6) : null;
+  }
+};
+
+const formatCountValue = (value: number | null | undefined): string =>
+  value === null || value === undefined ? "—" : value.toString();
+
+interface SectionPanelProps {
+  section: AdminSection;
+  activeSection: AdminSection;
+  children: React.ReactNode;
+  className?: string;
+}
+
+const AdminSectionFallback: React.FC = () => (
+  <Card className="border-dashed">
+    <CardContent className="flex min-h-[160px] items-center justify-center text-sm text-muted-foreground">
+      Loading section...
+    </CardContent>
+  </Card>
+);
+
+const SectionPanel: React.FC<SectionPanelProps> = ({
+  section,
+  activeSection,
+  children,
+  className,
+}) => {
+  if (activeSection !== section) {
+    return null;
+  }
+
+  return (
+    <section
+      id={section}
+      aria-labelledby={`admin-section-${section}`}
+      data-section={section}
+      className={cn(
+        "space-y-6 rounded-xl border border-border/70 bg-card/20 p-5 sm:p-6 lg:p-7",
+        className,
+      )}
+    >
+      <Suspense fallback={<AdminSectionFallback />}>{children}</Suspense>
+    </section>
+  );
+};
+
+interface TicketMessage {
+  id: string;
+  ticket_id: string;
+  sender_type: "user" | "admin";
+  sender_name: string;
+  message: string;
+  created_at: string;
+}
+
+interface SupportTicket {
+  id: string;
+  created_by: string;
+  subject: string;
+  message: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  category: string;
+  created_at: string;
+  updated_at: string;
+  messages: TicketMessage[];
+}
+
+type ProviderType = "linode";
+
+interface Provider {
+  id: string;
+  name: string;
+  type: ProviderType;
+  api_key_encrypted?: string;
+  configuration?: Record<string, unknown> | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+  last_api_call?: string | null;
+  validation_status?: "valid" | "invalid" | "pending" | "unknown";
+  validation_message?: string | null;
+  allowed_regions?: string[] | null;
+}
+
+interface VPSPlan {
+  id: string;
+  provider_id: string;
+  name: string;
+  provider_plan_id: string;
+  base_price: number;
+  markup_price: number;
+  backup_price_monthly?: number;
+  backup_price_hourly?: number;
+  backup_upcharge_monthly?: number;
+  backup_upcharge_hourly?: number;
+  daily_backups_enabled?: boolean;
+  weekly_backups_enabled?: boolean;
+  specifications: Record<string, unknown>;
+  type_class?: string;
+  regions?: Array<{ region_id: string }>;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+  provider_name?: string;
+  provider_type?: string;
+}
+
+interface AdminServerInstance {
+  id: string;
+  plan_id: string;
+  provider_instance_id: string;
+  label: string;
+  status: string;
+  ip_address: string | null;
+  configuration: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+
+  owner_id?: string | null;
+  owner_name?: string | null;
+  owner_email?: string | null;
+  plan_record_id?: string | null;
+  plan_name?: string | null;
+  plan_provider_plan_id?: string | null;
+  plan_specifications?: Record<string, unknown> | null;
+  provider_name?: string | null;
+  region_label?: string | null;
+}
+
+interface AdminUserRecord {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface LinodeStackScriptSummary {
+  id: number;
+  label: string;
+  description?: string;
+  images?: string[];
+  rev_note?: string;
+  is_public?: boolean;
+  mine?: boolean;
+  user_defined_fields?: unknown[];
+}
+
+interface StackscriptConfigRecord {
+  stackscript_id: number;
+  label: string | null;
+  description: string | null;
+  is_enabled: boolean;
+  display_order: number;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+  script?: LinodeStackScriptSummary | null;
+}
+
+interface LinodeType {
+  id: string;
+  label: string;
+  disk: number;
+  memory: number;
+  vcpus: number;
+  transfer: number;
+  price: {
+    hourly: number;
+    monthly: number;
+  };
+  backup_price_monthly?: number;
+  backup_price_hourly?: number;
+  type_class: string;
+}
+
+interface LinodeRegion {
+  id: string;
+  label: string;
+  country: string;
+  capabilities: string[];
+  status: string;
+}
+
+interface RegionEgressPricing {
+  id: string;
+  provider_type: string;
+  region_id: string;
+  region_label?: string | null;
+  pricing_scope: "global" | "region";
+  pricing_category: "core" | "special" | "distributed";
+  base_price_per_gb: number;
+  upcharge_price_per_gb: number;
+  final_price_per_gb: number;
+  billing_enabled: boolean;
+  source: string;
+  sync_status: "pending" | "synced" | "manual" | "error";
+  synced_at?: string | null;
+}
+
+interface EgressAllocationItem {
+  organizationId: string;
+  organizationName: string;
+  vpsInstanceId: string;
+  providerInstanceId: string;
+  label: string;
+  regionId: string;
+  measuredUsageGb: number;
+  usageShare: number;
+  allocatedPoolQuotaGb: number;
+  allocatedBillableGb: number;
+  unitPricePerGb: number;
+  amount: number;
+}
+
+interface EgressAllocationPool {
+  poolId: string;
+  poolScope: "global" | "region";
+  regionId?: string | null;
+  regionLabel?: string | null;
+  pricingCategory: "core" | "special" | "distributed";
+  billingEnabled: boolean;
+  basePricePerGb: number;
+  upchargePricePerGb: number;
+  finalPricePerGb: number;
+  accountUsageGb: number;
+  accountQuotaGb: number;
+  accountBillableGb: number;
+  totalMeasuredUsageGb: number;
+  totalAllocatedQuotaGb: number;
+  totalAllocatedBillableGb: number;
+  items: EgressAllocationItem[];
+}
+
+interface EgressBillingHistoryRecord {
+  id: string;
+  billingMonth: string;
+  poolId: string;
+  poolScope: "global" | "region";
+  regionId?: string | null;
+  organizationId: string;
+  organizationName?: string | null;
+  totalMeasuredUsageGb: number;
+  allocatedPoolQuotaGb: number;
+  allocatedBillableGb: number;
+  unitPricePerGb: number;
+  totalAmount: number;
+  status: "projected" | "pending" | "billed" | "failed" | "void";
+  billedTransactionId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+type ProviderValidationStatus = "valid" | "invalid" | "pending" | "unknown";
+
+interface AdminProvider extends Provider {
+  configuration: Record<string, unknown> | null;
+  validation_status?: ProviderValidationStatus;
+  validation_message?: string | null;
+  last_api_call?: string | null;
+  priority?: number | null;
+}
+
+interface ProviderFormState {
+  name: string;
+  type: string;
+  apiKey: string;
+  active: boolean;
+}
+
+interface NewVPSPlanState {
+  name: string;
+  description: string;
+  selectedProviderId: string;
+  selectedType: string;
+  markupPrice: number;
+  backupPriceMonthly: number | string;
+  backupPriceHourly: number | string;
+  backupUpchargeMonthly: number | string;
+  backupUpchargeHourly: number | string;
+  dailyBackupsEnabled: boolean;
+  weeklyBackupsEnabled: boolean;
+  active: boolean;
+  selectedRegions: string[];
+}
+
+type EditablePlanState = Partial<VPSPlan>;
+
+const API_BASE_URL = "/api";
+
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) {
+    return "—";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString();
+};
+
+const formatStatusLabel = (status: string | null | undefined) => {
+  if (!status) {
+    return "Unknown";
+  }
+  return status
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const statusBadgeClass = (status: string | null | undefined) => {
+  if (!status) {
+    return "border-muted-foreground/20 bg-muted text-muted-foreground";
+  }
+  const normalized = status.toLowerCase();
+  if (
+    normalized === "running" ||
+    normalized === "active" ||
+    normalized === "provisioned"
+  ) {
+    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-500";
+  }
+  if (
+    normalized === "provisioning" ||
+    normalized === "pending" ||
+    normalized === "in progress"
+  ) {
+    return "border-blue-500/20 bg-blue-500/10 text-blue-500";
+  }
+  if (normalized === "error" || normalized === "failed") {
+    return "border-red-500/20 bg-red-500/10 text-red-500";
+  }
+  if (normalized === "stopped" || normalized === "offline") {
+    return "border-slate-400/20 bg-slate-400/10 text-slate-400";
+  }
+  return "border-muted-foreground/20 bg-muted text-muted-foreground";
+};
+
+const parseSpecNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
+};
+
+const formatPlanMemory = (memoryMb: number): string => {
+  if (memoryMb >= 1024 && memoryMb % 1024 === 0) {
+    return `${memoryMb / 1024} GB RAM`;
+  }
+  return `${memoryMb} MB RAM`;
+};
+
+const formatPlanDisk = (diskMb: number): string => {
+  if (diskMb >= 1024) {
+    return `${Math.round(diskMb / 1024)} GB Storage`;
+  }
+  return `${diskMb} MB Storage`;
+};
+
+const formatPlanTransfer = (transferGb: number): string => {
+  if (transferGb >= 1000) {
+    return `${transferGb / 1000} TB Transfer`;
+  }
+  return `${transferGb} GB Transfer`;
+};
+
+const getPlanResourceSummary = (
+  plan: VPSPlan,
+  linodeTypes: LinodeType[],
+): string[] => {
+  const specRecord =
+    plan.specifications && typeof plan.specifications === "object"
+      ? (plan.specifications as Record<string, unknown>)
+      : null;
+  const upstreamType = linodeTypes.find(
+    (type) => type.id === plan.provider_plan_id,
+  );
+
+  const vcpus =
+    parseSpecNumber(specRecord?.vcpus) ??
+    parseSpecNumber(specRecord?.cpu) ??
+    parseSpecNumber(specRecord?.cores) ??
+    upstreamType?.vcpus;
+  const memory =
+    parseSpecNumber(specRecord?.memory) ??
+    parseSpecNumber(specRecord?.memory_mb) ??
+    parseSpecNumber(specRecord?.ram) ??
+    upstreamType?.memory;
+  const disk =
+    parseSpecNumber(specRecord?.disk) ??
+    parseSpecNumber(specRecord?.storage) ??
+    parseSpecNumber(specRecord?.storage_gb) ??
+    upstreamType?.disk;
+  const transfer =
+    parseSpecNumber(specRecord?.transfer) ??
+    parseSpecNumber(specRecord?.bandwidth) ??
+    upstreamType?.transfer;
+
+  return [
+    typeof vcpus === "number" ? `${vcpus} vCPU` : null,
+    typeof memory === "number" ? formatPlanMemory(memory) : null,
+    typeof disk === "number" ? formatPlanDisk(disk) : null,
+    typeof transfer === "number" ? formatPlanTransfer(transfer) : null,
+  ].filter((value): value is string => Boolean(value));
+};
+
+// Helper component to get category display name
+const CategoryLabel: React.FC<{ category: string }> = ({ category }) => {
+  const displayName = useCategoryDisplayName(category);
+  return <>{displayName}</>;
+};
+
+const Admin: React.FC = () => {
+  const { token } = useAuth();
+  const { themeId, setTheme, themes, reloadTheme } = useTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<AdminSection>("dashboard");
+  const isDashboardView = activeTab === "dashboard";
+  const [, setLoading] = useState(false);
+
+  // Tickets state
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [pendingFocusTicketId, setPendingFocusTicketId] = useState<
+    string | null
+  >(null);
+  const [pendingFocusUserId, setPendingFocusUserId] = useState<string | null>(
+    null,
+  );
+
+  const [stackscriptConfigs, setStackscriptConfigs] = useState<
+    StackscriptConfigRecord[]
+  >([]);
+  const [availableStackscripts, setAvailableStackscripts] = useState<
+    LinodeStackScriptSummary[]
+  >([]);
+  const [stackscriptDrafts, setStackscriptDrafts] = useState<
+    Record<
+      number,
+      {
+        label: string;
+        description: string;
+        display_order: number;
+        is_enabled: boolean;
+      }
+    >
+  >({});
+  const [stackscriptSearch, setStackscriptSearch] = useState("");
+  const [savingStackscriptId, setSavingStackscriptId] = useState<number | null>(
+    null,
+  );
+  const [loadingStackscripts, setLoadingStackscripts] = useState(false);
+  const [themeConfigLoading, setThemeConfigLoading] = useState(false);
+  const [themeConfigLoaded, setThemeConfigLoaded] = useState(false);
+  const [savingPresetId, setSavingPresetId] = useState<string | null>(null);
+  const [themeUpdatedAt, setThemeUpdatedAt] = useState<string | null>(null);
+  const [servers, setServers] = useState<AdminServerInstance[]>([]);
+  const [serversLoading, setServersLoading] = useState(false);
+  const [serverStatusFilter, setServerStatusFilter] = useState<string>("all");
+  const [serverSearch, setServerSearch] = useState("");
+  const [adminUsers, setAdminUsers] = useState<AdminUserRecord[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [selectedUserForProfile, setSelectedUserForProfile] =
+    useState<any>(null);
+  const [userProfileModalOpen, setUserProfileModalOpen] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] =
+    useState<AdminUserRecord | null>(null);
+  const [userEditModalOpen, setUserEditModalOpen] = useState(false);
+
+  const [providers, setProviders] = useState<AdminProvider[]>([]);
+  const [validatingProviderId, setValidatingProviderId] = useState<
+    string | null
+  >(null);
+  const [showAddProvider, setShowAddProvider] = useState(false);
+  const [newProvider, setNewProvider] = useState<ProviderFormState>({
+    name: "",
+    type: "linode",
+    apiKey: "",
+    active: true,
+  });
+  const [editProviderId, setEditProviderId] = useState<string | null>(null);
+  const [editProvider, setEditProvider] = useState<Partial<AdminProvider>>({});
+  const [deleteProviderId, setDeleteProviderId] = useState<string | null>(null);
+  const [providerPlanPages, setProviderPlanPages] = useState<
+    Record<string, number>
+  >({});
+  const [plans, setPlans] = useState<VPSPlan[]>([]);
+  const [planProviderFilter, setPlanProviderFilter] = useState<string>("all");
+  const [planTypeFilter, setPlanTypeFilter] = useState<string>("all");
+  const [linodeTypes, setLinodeTypes] = useState<LinodeType[]>([]);
+  const [linodeRegions, setLinodeRegions] = useState<LinodeRegion[]>([]);
+  const [showAddVPSPlan, setShowAddVPSPlan] = useState(false);
+  const [newVPSPlan, setNewVPSPlan] = useState<NewVPSPlanState>({
+    name: "",
+    description: "",
+    selectedProviderId: "",
+    selectedType: "",
+    markupPrice: 0,
+    backupPriceMonthly: '',
+    backupPriceHourly: "",
+    backupUpchargeMonthly: "",
+    backupUpchargeHourly: "",
+    dailyBackupsEnabled: false,
+    weeklyBackupsEnabled: true,
+    active: true,
+    selectedRegions: [],
+  });
+  const [editPlanId, setEditPlanId] = useState<string | null>(null);
+  const [editPlan, setEditPlan] = useState<EditablePlanState>({});
+  const [deletePlanId, setDeletePlanId] = useState<string | null>(null);
+  const plansPerPage = 10;
+
+  // User action handlers
+  const handleViewUser = useCallback(
+    (user: AdminUserRecord) => {
+      navigate(`/admin/user/${user.id}`);
+    },
+    [navigate],
+  );
+
+  const handleCloseUserProfileModal = useCallback(() => {
+    setUserProfileModalOpen(false);
+    setSelectedUserForProfile(null);
+  }, []);
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleEditUser = useCallback((user: AdminUserRecord) => {
+    setSelectedUserForEdit(user);
+    setUserEditModalOpen(true);
+  }, []);
+
+  const handleCloseUserEditModal = useCallback(() => {
+    setUserEditModalOpen(false);
+    setSelectedUserForEdit(null);
+  }, []);
+
+  const { startImpersonation } = useImpersonation();
+  const [impersonationConfirmDialog, setImpersonationConfirmDialog] = useState<{
+    isOpen: boolean;
+    targetUser: AdminUserRecord | null;
+  }>({ isOpen: false, targetUser: null });
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleImpersonateUser = useCallback(
+    async (user: AdminUserRecord) => {
+      try {
+        await startImpersonation(user.id);
+      } catch (error: any) {
+        if (error.requiresConfirmation) {
+          // Show confirmation dialog for admin-to-admin impersonation
+          setImpersonationConfirmDialog({
+            isOpen: true,
+            targetUser: user,
+          });
+        } else {
+          console.error("Impersonation error:", error);
+          toast.error(error.message || "Failed to start impersonation");
+        }
+      }
+    },
+    [startImpersonation],
+  );
+
+  const handleConfirmAdminImpersonation = useCallback(async () => {
+    if (!impersonationConfirmDialog.targetUser) return;
+
+    try {
+      await startImpersonation(impersonationConfirmDialog.targetUser.id, true);
+      setImpersonationConfirmDialog({ isOpen: false, targetUser: null });
+    } catch (error: any) {
+      console.error("Admin impersonation error:", error);
+      toast.error(error.message || "Failed to start admin impersonation");
+    }
+  }, [startImpersonation, impersonationConfirmDialog.targetUser]);
+
+  const handleCancelAdminImpersonation = useCallback(() => {
+    setImpersonationConfirmDialog({ isOpen: false, targetUser: null });
+  }, []);
+
+  // Networking rDNS state
+  const [networkingTab, setNetworkingTab] =
+    useState<AdminNetworkingTab>(DEFAULT_NETWORKING_TAB);
+  const [rdnsBaseDomain, setRdnsBaseDomain] = useState<string>("");
+  const [rdnsLoading, setRdnsLoading] = useState<boolean>(false);
+  const [rdnsSaving, setRdnsSaving] = useState<boolean>(false);
+  const [egressPricing, setEgressPricing] = useState<RegionEgressPricing[]>([]);
+  const [egressPricingLoading, setEgressPricingLoading] = useState(false);
+  const [egressPricingSyncing, setEgressPricingSyncing] = useState(false);
+  const [savingEgressRegionId, setSavingEgressRegionId] = useState<string | null>(null);
+  const [liveEgressUsage, setLiveEgressUsage] = useState<EgressAllocationPool[]>([]);
+  const [liveEgressUsageLoading, setLiveEgressUsageLoading] = useState(false);
+  const [egressHistory, setEgressHistory] = useState<EgressBillingHistoryRecord[]>([]);
+  const [egressHistoryLoading, setEgressHistoryLoading] = useState(false);
+  const [egressExecuting, setEgressExecuting] = useState(false);
+  const [egressHistoryMonth, setEgressHistoryMonth] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+
+
+
+  const updateAdminHash = useCallback(
+    (section: AdminSection) => {
+      if (section === "dashboard") {
+        // Dashboard should have no hash
+        if (location.hash) {
+          navigate({ pathname: "/admin" }, { replace: true });
+        }
+      } else {
+        const expectedHash = `#${section}`;
+        if (location.hash !== expectedHash) {
+          navigate(
+            { pathname: "/admin", hash: expectedHash },
+            { replace: true },
+          );
+        }
+      }
+    },
+    [location.hash, navigate],
+  );
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const focusTicketId = searchParams.get("ticketId");
+    if (!focusTicketId) {
+      return;
+    }
+
+    setPendingFocusTicketId(focusTicketId);
+    setActiveTab((prev) => (prev === "support" ? prev : "support"));
+
+    navigate({ pathname: "/admin", hash: "#support" }, { replace: true });
+  }, [location.search, navigate]);
+
+  useEffect(() => {
+    const hashValueRaw = location.hash ? location.hash.slice(1) : "";
+
+    if (!hashValueRaw) {
+      // No hash means we're on the dashboard
+      if (activeTab !== DEFAULT_ADMIN_SECTION) {
+        setActiveTab(DEFAULT_ADMIN_SECTION);
+      }
+      return;
+    }
+
+    const normalized = hashValueRaw.toLowerCase() as AdminSection;
+    if (!ADMIN_SECTIONS.includes(normalized)) {
+      return;
+    }
+
+    if (normalized !== activeTab) {
+      setActiveTab(normalized);
+    }
+  }, [activeTab, location.hash]);
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      const normalized = value.toLowerCase() as AdminSection;
+      if (!ADMIN_SECTIONS.includes(normalized)) {
+        return;
+      }
+
+      if (normalized !== activeTab) {
+        setActiveTab(normalized);
+      }
+
+      updateAdminHash(normalized);
+    },
+    [activeTab, updateAdminHash],
+  );
+
+  const handleNetworkingTabChange = useCallback(
+    (value: string) => {
+      if (!isAdminNetworkingTab(value)) {
+        return;
+      }
+
+      setNetworkingTab(value);
+
+      const params = new URLSearchParams(location.search);
+      params.set("netTab", value);
+      const nextSearch = `?${params.toString()}`;
+      if (location.hash !== "#networking" || location.search !== nextSearch) {
+        navigate(
+          { pathname: "/admin", hash: "#networking", search: nextSearch },
+          { replace: true },
+        );
+      }
+    },
+    [location.hash, location.search, navigate],
+  );
+
+  useEffect(() => {
+    if (activeTab !== "networking") {
+      return;
+    }
+
+    const searchParams = new URLSearchParams(location.search);
+    const requestedTab = searchParams.get("netTab");
+    const normalizedTab = isAdminNetworkingTab(requestedTab)
+      ? requestedTab
+      : DEFAULT_NETWORKING_TAB;
+
+    if (networkingTab !== normalizedTab) {
+      setNetworkingTab(normalizedTab);
+    }
+  }, [activeTab, location.search, networkingTab]);
+
+  useEffect(() => {
+    if (!pendingFocusUserId || activeTab !== "user-management") {
+      return;
+    }
+
+    const matched = adminUsers.find((user) => user.id === pendingFocusUserId);
+    if (matched) {
+      void handleViewUser(matched);
+      setPendingFocusUserId(null);
+      return;
+    }
+
+    if (!usersLoading && adminUsers.length > 0) {
+      setPendingFocusUserId(null);
+    }
+  }, [pendingFocusUserId, adminUsers, activeTab, handleViewUser, usersLoading]);
+
+  // Allowed regions strictly from admin provider configuration
+  const allowedRegionIds = useMemo(() => {
+    const linodeProvider = providers.find(
+      (p) => p.type === "linode" && p.active,
+    );
+    const list =
+      linodeProvider && Array.isArray(linodeProvider.allowed_regions)
+        ? (linodeProvider.allowed_regions as string[])
+        : [];
+    return list;
+  }, [providers]);
+
+  const _allowedLinodeRegions = useMemo(() => {
+    if (!allowedRegionIds || allowedRegionIds.length === 0) {
+      return [];
+    }
+    const set = new Set(allowedRegionIds);
+    return linodeRegions.filter((r) => set.has(r.id));
+  }, [linodeRegions, allowedRegionIds]);
+
+  const allowedRegionSet = useMemo(() => {
+    if (!allowedRegionIds || allowedRegionIds.length === 0) return null;
+    return new Set(allowedRegionIds.map((id) => id.toLowerCase()));
+  }, [allowedRegionIds]);
+
+  const filteredEgressPricing = useMemo(() => {
+    if (!allowedRegionSet) return egressPricing;
+    return egressPricing.filter((region) =>
+      allowedRegionSet.has((region.region_id || "").toLowerCase()),
+    );
+  }, [egressPricing, allowedRegionSet]);
+
+  const filteredLiveEgressUsage = useMemo(() => {
+    if (!allowedRegionSet) return liveEgressUsage;
+    return liveEgressUsage.filter(
+      (pool) =>
+        pool.poolScope === "global" ||
+        (pool.regionId && allowedRegionSet.has(pool.regionId.toLowerCase())),
+    );
+  }, [liveEgressUsage, allowedRegionSet]);
+
+  const filteredEgressHistory = useMemo(() => {
+    if (!allowedRegionSet) return egressHistory;
+    return egressHistory.filter(
+      (cycle) =>
+        cycle.poolScope === "global" ||
+        (cycle.regionId && allowedRegionSet.has(cycle.regionId.toLowerCase())),
+    );
+  }, [egressHistory, allowedRegionSet]);
+
+
+  const filteredAvailableStackscripts = useMemo(() => {
+    const searchTerm = stackscriptSearch.trim().toLowerCase();
+    return availableStackscripts
+      .filter((script) => {
+        if (!searchTerm) return true;
+        const haystack = `${script.label} ${
+          script.description ?? ""
+        }`.toLowerCase();
+        return haystack.includes(searchTerm);
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [availableStackscripts, stackscriptSearch]);
+
+  const filteredPlans = useMemo(() => {
+    let result = plans;
+
+    if (planProviderFilter !== "all") {
+      result = result.filter((plan) => plan.provider_id === planProviderFilter);
+    }
+
+    if (planTypeFilter !== "all") {
+      result = result.filter((plan) => {
+        const planTypeClass = (plan.type_class || "").toLowerCase().trim();
+        return planTypeClass === planTypeFilter.toLowerCase();
+      });
+    }
+
+    return result;
+  }, [plans, planProviderFilter, planTypeFilter]);
+
+  const groupedPlans = useMemo(() => {
+    const groups: Record<string, VPSPlan[]> = {};
+    filteredPlans.forEach((plan) => {
+      const providerId = plan.provider_id || "unknown";
+      const typeClass = plan.type_class || "standard";
+      const groupKey = `${providerId}-${typeClass}`;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(plan);
+    });
+    return groups;
+  }, [filteredPlans]);
+
+  const serverStatusOptions = useMemo(() => {
+    const statuses = new Set<string>();
+    servers.forEach((server) => {
+      if (server.status) {
+        statuses.add(server.status);
+      }
+    });
+    return Array.from(statuses).sort();
+  }, [servers]);
+
+  const filteredServers = useMemo(() => {
+    const term = serverSearch.trim().toLowerCase();
+    return servers.filter((server) => {
+      const matchesStatus =
+        serverStatusFilter === "all" ||
+        (server.status ?? "").toLowerCase() ===
+          serverStatusFilter.toLowerCase();
+      if (!matchesStatus) {
+        return false;
+      }
+
+      if (!term) {
+        return true;
+      }
+
+      const haystack = [
+        server.label,
+        server.ip_address,
+
+        server.owner_email,
+        server.owner_name,
+        server.plan_name,
+        server.provider_name,
+        server.region_label,
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).toLowerCase())
+        .join(" ");
+
+      return haystack.includes(term);
+    });
+  }, [serverSearch, serverStatusFilter, servers]);
+
+  const [serverPage, setServerPage] = useState(1);
+  const serverItemsPerPage = 5;
+  const [serverActionLoading, setServerActionLoading] = useState<{
+    serverId: string;
+    action: "boot" | "reboot" | "shutdown";
+  } | null>(null);
+  const [sshModalOpen, setSshModalOpen] = useState(false);
+  const [selectedSshServerId, setSelectedSshServerId] = useState<string | null>(
+    null,
+  );
+
+  const handleSshAction = (serverId: string) => {
+    setSelectedSshServerId(serverId);
+    setSshModalOpen(true);
+  };
+
+  useEffect(() => {
+    setServerPage(1);
+  }, [serverSearch, serverStatusFilter]);
+
+  const paginatedServers = useMemo(() => {
+    const start = (serverPage - 1) * serverItemsPerPage;
+    return filteredServers.slice(start, start + serverItemsPerPage);
+  }, [filteredServers, serverPage, serverItemsPerPage]);
+
+  const totalServerPages = Math.ceil(
+    filteredServers.length / serverItemsPerPage,
+  );
+
+  const handleServerAction = async (
+    serverId: string,
+    action: "boot" | "reboot" | "shutdown",
+  ) => {
+    if (!token || serverActionLoading) return;
+    setServerActionLoading({ serverId, action });
+    try {
+      await apiClient.post(`/vps/${serverId}/${action}`);
+      toast.success(`Server ${action} command sent successfully`);
+      setTimeout(() => fetchServers(), 2000);
+    } catch (error: any) {
+      toast.error(error.message || `Failed to ${action} server`);
+    } finally {
+      setServerActionLoading(null);
+    }
+  };
+
+  const formattedThemeUpdatedAt = useMemo(() => {
+    if (!themeUpdatedAt) {
+      return "Not yet applied";
+    }
+    const parsed = new Date(themeUpdatedAt);
+    if (Number.isNaN(parsed.getTime())) {
+      return themeUpdatedAt;
+    }
+    return parsed.toLocaleString();
+  }, [themeUpdatedAt]);
+
+  const orderedThemes = useMemo(() => {
+    const defaultPreset = themes.find(
+      (preset) => preset.id === DEFAULT_THEME_ID,
+    );
+    if (!defaultPreset) {
+      return themes;
+    }
+
+    return [
+      defaultPreset,
+      ...themes.filter((preset) => preset.id !== DEFAULT_THEME_ID),
+    ];
+  }, [themes]);
+
+  const fetchThemeConfiguration = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+
+    try {
+      setThemeConfigLoading(true);
+      const payload = await apiClient.get<{ theme?: { updatedAt?: string } }>('/admin/theme');
+      const theme = payload?.theme as { updatedAt?: string } | undefined;
+
+      setThemeUpdatedAt(
+        typeof theme?.updatedAt === "string" ? theme.updatedAt : null,
+      );
+      setThemeConfigLoaded(true);
+    } catch (error) {
+      console.error("Theme configuration fetch failed:", error);
+      toast.error("Unable to load theme configuration");
+    } finally {
+      setThemeConfigLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (activeTab === "theme" && token && !themeConfigLoaded) {
+      fetchThemeConfiguration();
+    }
+  }, [activeTab, fetchThemeConfiguration, themeConfigLoaded, token]);
+
+  const handlePresetSelection = useCallback(
+    async (preset: ThemePreset) => {
+      if (!token) {
+        toast.error("Authentication required");
+        return;
+      }
+
+      try {
+        setSavingPresetId(preset.id);
+        setTheme(preset.id);
+
+        const payload = await apiClient.put<{ theme?: { updatedAt?: string } }>('/admin/theme', { presetId: preset.id });
+        const theme = payload?.theme as { updatedAt?: string } | undefined;
+        setThemeUpdatedAt(
+          typeof theme?.updatedAt === "string" ? theme.updatedAt : null,
+        );
+
+        await reloadTheme();
+        setThemeConfigLoaded(false);
+        await fetchThemeConfiguration();
+
+        toast.success(`${preset.label} theme applied for all users.`);
+      } catch (error) {
+        console.error("Theme preset apply failed:", error);
+        toast.error("Failed to apply theme preset");
+        await reloadTheme();
+      } finally {
+        setSavingPresetId(null);
+      }
+    },
+    [token, setTheme, reloadTheme, fetchThemeConfiguration],
+  );
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    switch (activeTab) {
+      case "dashboard":
+        // Fetch data for dashboard overview
+        fetchTickets();
+        fetchPlans();
+        fetchServers();
+        fetchAdminUsers();
+        fetchProviders();
+        break;
+      case "support":
+        fetchTickets();
+        break;
+      case "vps-plans":
+        fetchPlans();
+        fetchProviders();
+        fetchLinodeTypes();
+        fetchLinodeRegions();
+        break;
+      case "stackscripts":
+        fetchStackscriptConfigs();
+        break;
+      case "providers":
+        fetchProviders();
+        break;
+      case "regions":
+        fetchProviders();
+        break;
+      case "networking":
+        fetchNetworkingRdns();
+        break;
+      case "billing":
+        fetchProviders();
+        fetchEgressPricing();
+        fetchLiveEgressUsage();
+        fetchEgressHistory();
+        break;
+      case "volume-pricing":
+        break;
+      case "theme":
+        break;
+      case "servers":
+        fetchServers();
+        break;
+      case "user-management":
+        fetchAdminUsers();
+        break;
+      case "faq-management":
+        // FAQ management will handle its own data fetching
+        break;
+      case "platform":
+        // Platform settings page - no specific data fetching needed
+        break;
+      case "contact-management":
+        // Contact management will handle its own data fetching
+        break;
+      case "documentation":
+        // Documentation manager handles its own data fetching
+        break;
+      case "activity-log":
+        // Activity log handles its own data fetching
+        break;
+      default:
+        fetchTickets();
+        break;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, token]);
+
+  const fetchTickets = async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const data = await apiClient.get<{ tickets: SupportTicket[] }>('/admin/tickets');
+      const mapped: SupportTicket[] = (data.tickets || []).map((t: any) => ({
+        id: t.id,
+        created_by: t.created_by,
+        subject: t.subject,
+        message: t.message,
+        status: t.status,
+        priority: t.priority,
+        category: t.category,
+        created_at: t.created_at,
+        updated_at: t.updated_at,
+        messages: [],
+      }));
+      setTickets(mapped);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProviders = async () => {
+    if (!token) return;
+    try {
+      const data = await apiClient.get<{ providers: AdminProvider[] }>('/admin/providers');
+      setProviders(data.providers || []);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  // Networking: rDNS config
+  const fetchNetworkingRdns = async () => {
+    if (!token) return;
+    setRdnsLoading(true);
+    try {
+      const data = await apiClient.get<{ config?: { rdns_base_domain?: string }, warning?: string }>('/admin/networking/rdns');
+      const base = (data.config?.rdns_base_domain ??
+        "ip.rev.example.com") as string;
+      setRdnsBaseDomain(base);
+      if (data.warning) {
+        toast.message(data.warning);
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setRdnsLoading(false);
+    }
+  };
+
+  const saveNetworkingRdns = async () => {
+    if (!rdnsBaseDomain || !rdnsBaseDomain.trim()) {
+      toast.error("Please enter a base domain");
+      return;
+    }
+    setRdnsSaving(true);
+    try {
+      await apiClient.put('/admin/networking/rdns', { rdns_base_domain: rdnsBaseDomain.trim() });
+      setRdnsBaseDomain(rdnsBaseDomain.trim());
+      toast.success("rDNS configuration updated");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setRdnsSaving(false);
+    }
+  };
+
+  const fetchEgressPricing = async () => {
+    if (!token) return;
+    setEgressPricingLoading(true);
+    try {
+      const data = await apiClient.get<{ pricing: any[], warning?: string }>('/admin/egress/pricing');
+      setEgressPricing(Array.isArray(data.pricing) ? data.pricing : []);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load egress pricing");
+    } finally {
+      setEgressPricingLoading(false);
+    }
+  };
+
+  const syncEgressPricing = async () => {
+    if (!token) return;
+    setEgressPricingSyncing(true);
+    try {
+      const data = await apiClient.post<{ pricing: any[] }>('/admin/egress/pricing/sync');
+      setEgressPricing(Array.isArray(data.pricing) ? data.pricing : []);
+      toast.success("Egress pricing synced");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to sync egress pricing");
+    } finally {
+      setEgressPricingSyncing(false);
+    }
+  };
+
+  const fetchLiveEgressUsage = async () => {
+    if (!token) return;
+    setLiveEgressUsageLoading(true);
+    try {
+      const data = await apiClient.get<{ pools: any[] }>('/admin/egress/live-usage');
+      setLiveEgressUsage(Array.isArray(data.pools) ? data.pools : []);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load live egress usage");
+    } finally {
+      setLiveEgressUsageLoading(false);
+    }
+  };
+
+  const fetchEgressHistory = async () => {
+    if (!token) return;
+    setEgressHistoryLoading(true);
+    try {
+      const data = await apiClient.get<{ cycles: any[] }>(`/admin/egress/history?month=${egressHistoryMonth}`);
+      setEgressHistory(Array.isArray(data.cycles) ? data.cycles : []);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load egress billing history");
+    } finally {
+      setEgressHistoryLoading(false);
+    }
+  };
+
+  const executeEgressBilling = async () => {
+    if (!token) return;
+    setEgressExecuting(true);
+    try {
+      const data = await apiClient.post<{ result?: { billedCount?: number, failedCount?: number } }>('/admin/egress/execute');
+      const result = data.result;
+      toast.success(
+        `Egress billing executed: ${result?.billedCount ?? 0} billed, ${result?.failedCount ?? 0} failed`,
+      );
+      await Promise.all([fetchLiveEgressUsage(), fetchEgressHistory()]);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to execute egress billing");
+    } finally {
+      setEgressExecuting(false);
+    }
+  };
+
+  const updateEgressPricingRegion = async (
+    regionId: string,
+    payload: Partial<
+      Pick<RegionEgressPricing, "upcharge_price_per_gb" | "billing_enabled">
+    >,
+  ) => {
+    if (!token) return;
+    setSavingEgressRegionId(regionId);
+    try {
+      const data = await apiClient.put<{ pricing: any }>(`/admin/egress/pricing/${regionId}`, payload);
+      setEgressPricing((prev) =>
+        prev.map((item) => (item.region_id === regionId ? data.pricing : item)),
+      );
+      await fetchLiveEgressUsage();
+      toast.success(`Updated egress pricing for ${regionId}`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update egress pricing");
+    } finally {
+      setSavingEgressRegionId(null);
+    }
+  };
+
+  const fetchStackscriptConfigs = async () => {
+    if (!token) return;
+    setLoadingStackscripts(true);
+    try {
+      const [configData, scriptData] = await Promise.all([
+        apiClient.get<{ configs: StackscriptConfigRecord[] }>('/admin/stackscripts/configs'),
+        apiClient.get<{ stackscripts: LinodeStackScriptSummary[] }>('/admin/upstream/stackscripts?mine=true'),
+      ]);
+
+      const configured: StackscriptConfigRecord[] = Array.isArray(
+        configData.configs,
+      )
+        ? configData.configs
+        : [];
+      const available: LinodeStackScriptSummary[] = Array.isArray(
+        scriptData.stackscripts,
+      )
+        ? scriptData.stackscripts
+        : [];
+
+      setStackscriptConfigs(configured);
+      setAvailableStackscripts(available);
+
+      const drafts: Record<
+        number,
+        {
+          label: string;
+          description: string;
+          display_order: number;
+          is_enabled: boolean;
+        }
+      > = {};
+      configured.forEach((cfg) => {
+        const script =
+          available.find((item) => item.id === cfg.stackscript_id) || null;
+        drafts[cfg.stackscript_id] = {
+          label: cfg.label ?? script?.label ?? "",
+          description:
+            cfg.description ?? script?.description ?? script?.rev_note ?? "",
+          display_order:
+            typeof cfg.display_order === "number"
+              ? cfg.display_order
+              : Number(cfg.display_order) || 0,
+          is_enabled: cfg.is_enabled !== false,
+        };
+      });
+      setStackscriptDrafts(drafts);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load StackScripts");
+    } finally {
+      setLoadingStackscripts(false);
+    }
+  };
+
+  const fetchStackscriptsAndConfigs = async () => {
+    await fetchStackscriptConfigs();
+  };
+
+  const saveStackscriptConfig = async (
+    stackscriptId: number,
+    draft: {
+      label: string;
+      description: string;
+      display_order: number;
+      is_enabled: boolean;
+    },
+  ) => {
+    try {
+      setSavingStackscriptId(stackscriptId);
+      await apiClient.post('/admin/stackscripts/configs', {
+        stackscript_id: stackscriptId,
+        label: draft.label,
+        description: draft.description,
+        is_enabled: draft.is_enabled,
+        display_order: draft.display_order,
+        metadata: {},
+      });
+      toast.success("StackScript configuration saved");
+      await fetchStackscriptConfigs();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save StackScript config");
+    } finally {
+      setSavingStackscriptId(null);
+    }
+  };
+  const fetchPlans = async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const data = await apiClient.get<{ plans: VPSPlan[] }>('/admin/plans');
+      setPlans(data.plans);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLinodeTypes = async () => {
+    if (!token) return;
+    try {
+      const data = await apiClient.get<{ plans: LinodeType[] }>('/admin/upstream/plans');
+      setLinodeTypes(data.plans || []);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const fetchLinodeRegions = async () => {
+    if (!token) return;
+    try {
+      const data = await apiClient.get<{ regions: LinodeRegion[] }>('/admin/upstream/regions');
+      setLinodeRegions(data.regions);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const fetchServers = async () => {
+    if (!token) return;
+    setServersLoading(true);
+    try {
+      const data = await apiClient.get<{ servers: any[] }>('/admin/servers');
+      const rows: AdminServerInstance[] = Array.isArray(data.servers)
+        ? data.servers.map((server: any) => ({
+            ...server,
+            configuration:
+              server.configuration && typeof server.configuration === "object"
+                ? server.configuration
+                : null,
+            plan_specifications:
+              server.plan_specifications &&
+              typeof server.plan_specifications === "object"
+                ? server.plan_specifications
+                : null,
+          }))
+        : [];
+      setServers(rows);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load servers");
+    } finally {
+      setServersLoading(false);
+    }
+  };
+
+  const fetchAdminUsers = useCallback(async () => {
+    if (!token) return;
+    setUsersLoading(true);
+    try {
+      const data = await apiClient.get<{ users: AdminUserRecord[] }>('/admin/users');
+      const rows: AdminUserRecord[] = Array.isArray(data.users)
+        ? data.users
+        : [];
+      setAdminUsers(rows);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load users");
+    } finally {
+      setUsersLoading(false);
+    }
+  }, [token]);
+
+  const savePlan = async () => {
+    if (!editPlanId) return;
+
+    // Find the plan being edited to get its provider
+    try {
+      const data = await apiClient.put<{ plan: VPSPlan }>(`/admin/plans/${editPlanId}`, {
+        name: editPlan.name,
+        base_price: editPlan.base_price,
+        markup_price: editPlan.markup_price,
+        backup_price_monthly: editPlan.backup_price_monthly || 0,
+        backup_price_hourly: editPlan.backup_price_hourly || 0,
+        backup_upcharge_monthly: editPlan.backup_upcharge_monthly || 0,
+        backup_upcharge_hourly: editPlan.backup_upcharge_hourly || 0,
+        daily_backups_enabled: editPlan.daily_backups_enabled,
+        weekly_backups_enabled: editPlan.weekly_backups_enabled,
+        active: editPlan.active,
+      });
+      setPlans((prev) =>
+        prev.map((p) => (p.id === editPlanId ? data.plan : p)),
+      );
+      setEditPlanId(null);
+      setEditPlan({});
+      toast.success("Plan updated");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const createVPSPlan = async () => {
+    if (!newVPSPlan.selectedProviderId) {
+      toast.error("Please select a provider");
+      return;
+    }
+
+    if (!newVPSPlan.selectedType) {
+      toast.error("Please select a plan type");
+      return;
+    }
+
+    const selectedType = linodeTypes.find(
+      (t) => t.id === newVPSPlan.selectedType,
+    );
+    if (!selectedType) {
+      toast.error("Selected plan type not found");
+      return;
+    }
+
+    const selectedProvider = providers.find(
+      (p) => p.id === newVPSPlan.selectedProviderId,
+    );
+    if (!selectedProvider) {
+      toast.error("Selected provider not found. Please refresh and try again.");
+      return;
+    }
+
+    try {
+      const data = await apiClient.post<{ plan: VPSPlan }>('/admin/plans', {
+        provider_id: selectedProvider.id,
+        name:
+          newVPSPlan.name && newVPSPlan.name.trim().length > 0
+            ? newVPSPlan.name.trim()
+            : selectedType.label,
+        provider_plan_id: selectedType.id,
+        base_price: selectedType.price.monthly,
+        markup_price: newVPSPlan.markupPrice,
+        backup_price_monthly:
+          parseFloat(String(newVPSPlan.backupPriceMonthly)) ||
+          selectedType.backup_price_monthly ||
+          0,
+        backup_price_hourly:
+          parseFloat(String(newVPSPlan.backupPriceHourly)) ||
+          selectedType.backup_price_hourly ||
+          0,
+        backup_upcharge_monthly:
+          parseFloat(String(newVPSPlan.backupUpchargeMonthly)) || 0,
+        backup_upcharge_hourly:
+          parseFloat(String(newVPSPlan.backupUpchargeHourly)) || 0,
+        daily_backups_enabled: newVPSPlan.dailyBackupsEnabled,
+        weekly_backups_enabled: newVPSPlan.weeklyBackupsEnabled,
+        specifications: {
+          vcpus: selectedType.vcpus,
+          memory: selectedType.memory,
+          disk: selectedType.disk,
+          transfer: selectedType.transfer,
+          type_class: selectedType.type_class,
+        },
+        type_class: selectedType.type_class,
+        regions: newVPSPlan.selectedRegions,
+        active: newVPSPlan.active,
+      });
+      setPlans((prev) => [data.plan, ...prev]);
+      setNewVPSPlan({
+        name: "",
+        description: "",
+        selectedProviderId: "",
+        selectedType: "",
+        markupPrice: 0,
+        backupPriceMonthly: 0,
+        backupPriceHourly: 0,
+        backupUpchargeMonthly: 0,
+        backupUpchargeHourly: 0,
+        dailyBackupsEnabled: false,
+        weeklyBackupsEnabled: true,
+        active: true,
+        selectedRegions: [],
+      });
+      setShowAddVPSPlan(false);
+      toast.success("VPS plan created successfully");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const createProvider = async () => {
+    if (!newProvider.name || !newProvider.type || !newProvider.apiKey) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    try {
+      const data = await apiClient.post<{ provider: AdminProvider }>('/admin/providers', {
+        name: newProvider.name,
+        type: newProvider.type,
+        apiKey: newProvider.apiKey,
+        active: newProvider.active,
+      });
+      setProviders((prev) => [data.provider, ...prev]);
+      setNewProvider({
+        name: "",
+        type: "linode",
+        apiKey: "",
+        active: true,
+      });
+      setShowAddProvider(false);
+      toast.success("Provider added successfully");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  // Delete VPS plan
+  const deleteVPSPlan = async (planId: string) => {
+    try {
+      await apiClient.delete(`/admin/plans/${planId}`);
+      setPlans(plans.filter((p) => p.id !== planId));
+      setDeletePlanId(null);
+      toast.success("VPS plan deleted");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  // Update provider
+  const updateProvider = async () => {
+    if (!editProviderId) return;
+    try {
+      const data = await apiClient.put<{ provider: AdminProvider }>(`/admin/providers/${editProviderId}`, editProvider);
+      setProviders(
+        providers.map((p) => (p.id === editProviderId ? data.provider : p)),
+      );
+      setEditProviderId(null);
+      setEditProvider({});
+      toast.success("Provider updated");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  // Delete provider
+  const deleteProvider = async (providerId: string) => {
+    try {
+      await apiClient.delete(`/admin/providers/${providerId}`);
+      setProviders(providers.filter((p) => p.id !== providerId));
+      setDeleteProviderId(null);
+      toast.success("Provider deleted");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  // Validate provider credentials
+  const validateProvider = async (providerId: string) => {
+    try {
+      setValidatingProviderId(providerId);
+      const data = await apiClient.post<{ validation_status?: ProviderValidationStatus, validation_message?: string, last_api_call?: string }>(`/admin/providers/${providerId}/validate`);
+      // Update provider in state with validation results
+      setProviders(
+        providers.map((p) =>
+          p.id === providerId
+            ? {
+                ...p,
+                validation_status: data.validation_status,
+                validation_message: data.validation_message,
+                last_api_call: data.last_api_call,
+              }
+            : p,
+        ),
+      );
+
+      if (data.validation_status === "valid") {
+        toast.success("Provider credentials validated successfully");
+      } else {
+        toast.error(`Validation failed: ${data.validation_message}`);
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setValidatingProviderId(null);
+    }
+  };
+
+  // Reorder providers
+  const reorderProviders = async (providerIds: string[]) => {
+    try {
+      console.log("Reordering providers:", providerIds);
+      await apiClient.put('/admin/providers/reorder', { providerIds });
+      toast.success("Provider order updated successfully");
+    } catch (e: any) {
+      console.error("Reorder exception:", e);
+      toast.error(e.message);
+      // Revert the order on error
+      fetchProviders();
+    }
+  };
+
+  const openTicketCount = useMemo(
+    () => tickets.filter((ticket) => ticket.status === "open").length,
+    [tickets],
+  );
+  const ticketStats = useMemo(
+    () =>
+      tickets.reduce(
+        (acc, ticket) => {
+          switch (ticket.status) {
+            case "open":
+              acc.open += 1;
+              break;
+            case "in_progress":
+              acc.inProgress += 1;
+              break;
+            case "resolved":
+              acc.resolved += 1;
+              break;
+            default:
+              break;
+          }
+          if (ticket.priority === "urgent") {
+            acc.urgent += 1;
+          }
+          return acc;
+        },
+        { open: 0, inProgress: 0, resolved: 0, urgent: 0 },
+      ),
+    [tickets],
+  );
+
+  const planStats = useMemo(() => {
+    if (!plans.length) {
+      return { active: 0, inactive: 0, avgMarkup: null as number | null };
+    }
+    let active = 0;
+    let markupSum = 0;
+    plans.forEach((plan) => {
+      if (plan.active) {
+        active += 1;
+        markupSum += Number(plan.markup_price ?? 0);
+      }
+    });
+    return {
+      active,
+      inactive: plans.length - active,
+      avgMarkup: active ? markupSum / active : null,
+    };
+  }, [plans]);
+
+  const serverStats = useMemo(() => {
+    if (!servers.length) {
+      return { active: 0, provisioning: 0, attention: 0 };
+    }
+    let active = 0;
+    let provisioning = 0;
+    let attention = 0;
+    servers.forEach((server) => {
+      const status = (server.status || "").toLowerCase();
+      if (["running", "active", "online", "powered_on"].includes(status)) {
+        active += 1;
+      } else if (
+        status.includes("provision") ||
+        status === "pending" ||
+        status === "building"
+      ) {
+        provisioning += 1;
+      } else if (status) {
+        attention += 1;
+      }
+    });
+    return { active, provisioning, attention };
+  }, [servers]);
+
+  const providerStats = useMemo(() => {
+    if (!providers.length) {
+      return { active: 0, inactive: 0 };
+    }
+    let active = 0;
+    providers.forEach((provider) => {
+      if (provider.active) {
+        active += 1;
+      }
+    });
+    return { active, inactive: providers.length - active };
+  }, [providers]);
+
+  const adminStats = useMemo(() => {
+    if (!adminUsers.length) {
+      return { total: 0, admins: 0 };
+    }
+    let admins = 0;
+    adminUsers.forEach((user) => {
+      if ((user.role || "").toLowerCase() === "admin") {
+        admins += 1;
+      }
+    });
+    return { total: adminUsers.length, admins };
+  }, [adminUsers]);
+
+  const { inProgress: inProgressTickets, urgent: urgentTickets } = ticketStats;
+  const {
+    active: activePlanCount,
+    inactive: inactivePlanCount,
+    avgMarkup: averagePlanMarkup,
+  } = planStats;
+  const {
+    active: activeServers,
+    provisioning: provisioningServers,
+    attention: attentionServers,
+  } = serverStats;
+  const { active: activeProviders, inactive: inactiveProviders } =
+    providerStats;
+  const { total: totalAdminUsers, admins: adminUserCount } = adminStats;
+
+  const strategicPanels = useMemo<StrategicPanel[]>(() => {
+    const markupText =
+      averagePlanMarkup !== null
+        ? (formatCurrency(averagePlanMarkup) ?? "—")
+        : "—";
+
+    return [
+      {
+        id: "support",
+        title: "Support Operations",
+        description:
+          "Orchestrate escalations and keep customer promises on track.",
+        icon: LifeBuoy,
+        accent: "text-amber-600",
+        summary: [
+          { label: "Open", value: formatCountValue(openTicketCount) },
+          { label: "Urgent", value: formatCountValue(urgentTickets) },
+          { label: "In Progress", value: formatCountValue(inProgressTickets) },
+        ],
+        actionLabel: "Open queue",
+      },
+      {
+        id: "servers",
+        title: "Compute Fleet",
+        description:
+          "Track dedicated infrastructure health and lifecycle status.",
+        icon: Server,
+        accent: "text-blue-600",
+        summary: [
+          { label: "Active", value: formatCountValue(activeServers) },
+          {
+            label: "Provisioning",
+            value: formatCountValue(provisioningServers),
+          },
+          { label: "Attention", value: formatCountValue(attentionServers) },
+        ],
+        actionLabel: "Manage servers",
+      },
+      {
+        id: "volume-pricing",
+        title: "Volume Pricing",
+        description: "Manage block storage tiers, region pricing, and attached volumes.",
+        icon: HardDrive,
+        accent: "text-sky-600",
+        summary: [
+          { label: "Storage", value: "Pricing" },
+          { label: "Fleet", value: "Volumes" },
+        ],
+        actionLabel: "Manage storage",
+      },
+      {
+        id: "vps-plans",
+        title: "Plan Catalog",
+        description: "Balance pricing, capacity tiers, and backup coverage.",
+        icon: ServerCog,
+        accent: "text-emerald-600",
+        summary: [
+          {
+            label: "Active plans",
+            value: formatCountValue(activePlanCount),
+          },
+          {
+            label: "Hidden",
+            value: formatCountValue(inactivePlanCount),
+          },
+          { label: "Avg markup", value: markupText },
+        ],
+        actionLabel: "Curate catalog",
+      },
+      {
+        id: "organizations",
+        title: "Organizations",
+        description: "Create teams, assign owners, and move members between orgs.",
+        icon: Building2,
+        accent: "text-cyan-600",
+        summary: [
+          { label: "Create", value: "New teams" },
+          { label: "Access", value: "Manage roles" },
+        ],
+        actionLabel: "Manage orgs",
+      },
+      {
+        id: "user-management",
+        title: "User Management",
+        description: "Grant least-privilege access and monitor impersonations.",
+        icon: Users,
+        accent: "text-purple-600",
+        summary: [
+          { label: "Members", value: formatCountValue(totalAdminUsers) },
+          { label: "Admins", value: formatCountValue(adminUserCount) },
+        ],
+        actionLabel: "Manage access",
+      },
+      {
+        id: "egress-credits",
+        title: "Egress Credits",
+        description: "Manage pre-paid egress credits for customer organizations.",
+        icon: Database,
+        accent: "text-blue-600",
+        summary: [
+          { label: "Pre-paid", value: "Credits" },
+          { label: "Transfer", value: "Billing" },
+        ],
+        actionLabel: "Manage credits",
+      },
+      {
+        id: "category-mappings",
+        title: "Category Mappings",
+        description:
+          "White-label VPS categories with custom names and descriptions.",
+        icon: Tags,
+        accent: "text-teal-600",
+        summary: [
+          { label: "Custom", value: "Mappings" },
+          { label: "VPS", value: "Categories" },
+        ],
+        actionLabel: "Customize names",
+      },
+      {
+        id: "providers",
+        title: "Cloud Providers",
+        description: "Validate credentials and enforce deployment guardrails.",
+        icon: Globe,
+        accent: "text-slate-600",
+        summary: [
+          { label: "Active", value: formatCountValue(activeProviders) },
+          { label: "Inactive", value: formatCountValue(inactiveProviders) },
+        ],
+        actionLabel: "Review integrations",
+      },
+      {
+        id: "billing",
+        title: "Billing & Finance",
+        description: "Manage transactions, invoices, and client balances.",
+        icon: DollarSign,
+        accent: "text-green-600",
+        summary: [
+          { label: "Revenue", value: "View Stats" },
+          { label: "Invoices", value: "Manage" },
+        ],
+        actionLabel: "Manage billing",
+      },
+      {
+        id: "email-templates",
+        title: "Email Templates",
+        description: "Customize system emails and notifications.",
+        icon: Mail,
+        accent: "text-rose-600",
+        summary: [
+          { label: "Templates", value: "Manage" },
+          { label: "Content", value: "Edit" },
+        ],
+        actionLabel: "Edit templates",
+      },
+      {
+        id: "announcements",
+        title: "Announcements",
+        description: "Broadcast messages across the platform to specific audiences.",
+        icon: Megaphone,
+        accent: "text-blue-600",
+        summary: [
+          { label: "Broadcast", value: "Messages" },
+          { label: "Target", value: "Audiences" },
+        ],
+        actionLabel: "Manage announcements",
+      },
+    ];
+  }, [
+    activePlanCount,
+    activeProviders,
+    activeServers,
+    adminUserCount,
+    attentionServers,
+    averagePlanMarkup,
+    inactivePlanCount,
+    inactiveProviders,
+    inProgressTickets,
+    openTicketCount,
+    provisioningServers,
+    totalAdminUsers,
+    urgentTickets,
+  ]);
+
+  const quickActions: Array<{ label: string; section: AdminSection }> = [
+    { label: "Support Queue", section: "support" },
+    { label: "Contact Management", section: "contact-management" },
+    { label: "Servers", section: "servers" },
+    { label: "VPS Plans", section: "vps-plans" },
+    { label: "Billing Overview", section: "billing" },
+    { label: "User Management", section: "user-management" },
+    { label: "Organizations", section: "organizations" },
+    { label: "Activity Log", section: "activity-log" },
+  ];
+  const sectionGroups: Array<{ title: string; ids: AdminSection[] }> = [
+    { title: "Support & Intake", ids: ["support"] },
+    { title: "Infrastructure", ids: ["servers", "providers"] },
+    { title: "Products & Pricing", ids: ["vps-plans", "volume-pricing", "category-mappings"] },
+    { title: "Billing", ids: ["billing", "egress-credits"] },
+    { title: "Users & Organizations", ids: ["user-management", "organizations"] },
+    { title: "Brand & Communications", ids: ["announcements", "email-templates"] },
+  ];
+
+  return (
+    <div className={isDashboardView ? "space-y-8" : "min-h-full"}>
+      {isDashboardView ? (
+        <>
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-5 sm:p-7 md:p-9">
+            <div className="relative z-10">
+              <Badge
+                variant="outline"
+                className="mb-3 text-xs sm:text-sm border-primary/30 bg-primary/10 text-primary"
+              >
+                Admin Panel
+              </Badge>
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+                {BRAND_NAME} Administration
+              </h1>
+              <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+                Manage support operations, infrastructure, billing, and platform
+                configuration from a single workspace with clearer priorities.
+              </p>
+            </div>
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <Settings className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
+              <Shield className="absolute bottom-4 sm:bottom-10 right-8 sm:right-20 h-16 w-16 sm:h-24 sm:w-24 -rotate-6" />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Support Tickets
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">{formatCountValue(openTicketCount)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatCountValue(urgentTickets)} urgent and {formatCountValue(inProgressTickets)} in progress
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Active Servers
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">{formatCountValue(activeServers)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatCountValue(attentionServers)} attention and {formatCountValue(provisioningServers)} provisioning
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Active Providers
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">{formatCountValue(activeProviders)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatCountValue(inactiveProviders)} inactive integrations
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Avg Plan Markup
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight">{formatCurrency(averagePlanMarkup || 0)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatCountValue(activePlanCount)} active plans
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Quick Actions</CardTitle>
+              <CardDescription>Open frequently used admin sections.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {quickActions.map((action) => (
+                <Button
+                  key={action.section}
+                  variant="outline"
+                  className="justify-between"
+                  onClick={() => handleTabChange(action.section)}
+                >
+                  {action.label}
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+
+          <div className="space-y-5">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                Administration Sections
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Jump directly into each operational area.
+              </p>
+            </div>
+            <div className="grid gap-4 xl:grid-cols-3">
+              {sectionGroups.map((group) => (
+                <Card key={group.title}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">{group.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {group.ids.map((id) => {
+                      const panel = strategicPanels.find((p) => p.id === id);
+                      if (!panel) return null;
+                      const Icon = panel.icon;
+                      return (
+                        <button
+                          key={panel.id}
+                          type="button"
+                          onClick={() => handleTabChange(panel.id)}
+                          className="flex w-full items-start gap-3 rounded-lg border border-border/70 bg-card/40 p-3 text-left transition-colors hover:bg-accent"
+                        >
+                          <span className="rounded-md bg-primary/10 p-2">
+                            <Icon className="h-4 w-4 text-primary" />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium text-foreground">{panel.title}</span>
+                            <span className="block text-xs text-muted-foreground">{panel.actionLabel}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      <div
+        className={isDashboardView ? "space-y-12" : "space-y-7 px-1 sm:px-0"}
+      >
+        <SectionPanel section="theme" activeSection={activeTab}>
+          <AdminThemeSection
+            themeConfigLoading={themeConfigLoading}
+            formattedThemeUpdatedAt={formattedThemeUpdatedAt}
+            orderedThemes={orderedThemes}
+            themeId={themeId}
+            savingPresetId={savingPresetId}
+            onSelectPreset={handlePresetSelection}
+          />
+        </SectionPanel>
+
+        <SectionPanel section="support" activeSection={activeTab}>
+          <AdminSupportView
+            token={token!}
+            pendingFocusTicketId={pendingFocusTicketId}
+            onFocusTicketHandled={() => setPendingFocusTicketId(null)}
+          />
+        </SectionPanel>
+
+        <SectionPanel section="vps-plans" activeSection={activeTab}>
+          {/* Integrated VPS Plans Section */}
+          <div className="space-y-4">
+            {/* Header with integrated filters */}
+            <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20">
+              <div className="relative z-10 p-4 sm:p-6 md:p-8">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+                  <div>
+                    <Badge variant="secondary" className="mb-3 text-xs">
+                      Infrastructure
+                    </Badge>
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                      VPS Plans
+                    </h2>
+                    <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
+                      Curate what customers see when provisioning infrastructure
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setShowAddVPSPlan(true)}
+                    className="gap-2 sm:self-start shrink-0"
+                  >
+                    <Plus className="h-4 w-4" /> Add VPS Plan
+                  </Button>
+                </div>
+
+                {/* Integrated Filters */}
+                <div className="grid gap-3 sm:grid-cols-2 bg-background/50 rounded-lg p-4 border">
+                  <div className="flex flex-col gap-2">
+                    <Label
+                      htmlFor="plan-provider-filter"
+                      className="text-xs font-medium"
+                    >
+                      Filter by Provider
+                    </Label>
+                    <Select
+                      value={planProviderFilter}
+                      onValueChange={setPlanProviderFilter}
+                    >
+                      <SelectTrigger
+                        id="plan-provider-filter"
+                        className="w-full"
+                      >
+                        <SelectValue placeholder="All providers" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Providers</SelectItem>
+                        {providers.map((provider) => (
+                          <SelectItem key={provider.id} value={provider.id}>
+                              {provider.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label
+                      htmlFor="plan-type-filter"
+                      className="text-xs font-medium"
+                    >
+                      Filter by Category
+                    </Label>
+                    <Select
+                      value={planTypeFilter}
+                      onValueChange={setPlanTypeFilter}
+                    >
+                      <SelectTrigger id="plan-type-filter" className="w-full">
+                        <SelectValue placeholder="All categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="dedicated">Dedicated</SelectItem>
+                        <SelectItem value="premium">Premium</SelectItem>
+                        <SelectItem value="gpu">GPU</SelectItem>
+                        <SelectItem value="accelerated">Accelerated</SelectItem>
+                        <SelectItem value="highmem">High Memory</SelectItem>
+                        <SelectItem value="nanode">Nanode</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Background decoration */}
+              <div className="absolute right-0 top-0 h-full w-1/3 opacity-5 pointer-events-none">
+                <DollarSign className="absolute right-4 sm:right-10 top-4 sm:top-10 h-20 w-20 sm:h-32 sm:w-32 rotate-12" />
+              </div>
+            </div>
+
+            {/* Plans Content */}
+            <div className="px-0">
+              {/* Mobile/Card View (keep active through tablet sizes) */}
+              <div className="2xl:hidden space-y-4">
+                {filteredPlans.length === 0 ? (
+                  <div className="py-10 text-center text-muted-foreground">
+                    {planProviderFilter === "all" && planTypeFilter === "all"
+                      ? "No plans available"
+                      : planProviderFilter !== "all" && planTypeFilter !== "all"
+                        ? "No plans for selected provider and category"
+                        : planProviderFilter !== "all"
+                          ? "No plans for selected provider"
+                          : "No plans for selected category"}
+                  </div>
+                ) : (
+                  // Grouped mobile view
+                  Object.entries(groupedPlans).map(([groupKey, groupPlans]) => {
+                    const currentPage = providerPlanPages[groupKey] || 1;
+                    const totalPages = Math.ceil(
+                      groupPlans.length / plansPerPage,
+                    );
+                    const startIndex = (currentPage - 1) * plansPerPage;
+                    const endIndex = startIndex + plansPerPage;
+                    const paginatedPlans = groupPlans.slice(
+                      startIndex,
+                      endIndex,
+                    );
+
+                    return (
+                      <div key={groupKey} className="space-y-3">
+                        {/* Group Header */}
+                        <div className="flex items-center justify-between px-2">
+                          <div className="flex items-center gap-2">
+                            <Server className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-semibold text-sm">
+                              {groupPlans[0]?.provider_name || "Cloud Provider"}
+                            </span>
+                            <Badge variant="outline" className="ml-1">
+                              {groupPlans.length}{" "}
+                              {groupPlans.length === 1 ? "plan" : "plans"}
+                            </Badge>
+                          </div>
+                          {totalPages > 1 && (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  setProviderPlanPages((prev) => ({
+                                    ...prev,
+                                    [groupKey]: Math.max(1, currentPage - 1),
+                                  }))
+                                }
+                                disabled={currentPage === 1}
+                                className="h-7 px-2"
+                              >
+                                Previous
+                              </Button>
+                              <span className="text-xs text-muted-foreground px-1">
+                                {currentPage}/{totalPages}
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  setProviderPlanPages((prev) => ({
+                                    ...prev,
+                                    [groupKey]: Math.min(
+                                      totalPages,
+                                      currentPage + 1,
+                                    ),
+                                  }))
+                                }
+                                disabled={currentPage === totalPages}
+                                className="h-7 px-2"
+                              >
+                                Next
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Mobile Cards */}
+                        {paginatedPlans.map((plan) => {
+                          const isEditing = editPlanId === plan.id;
+                          const planProvider = providers.find(
+                            (p) => p.id === plan.provider_id,
+                          );
+                          const resourceSummary = getPlanResourceSummary(
+                            plan,
+                            linodeTypes,
+                          );
+
+                          return (
+                            <Card key={plan.id} className="overflow-hidden">
+                              <CardContent className="p-4 space-y-3">
+                                {/* Plan Name & Status */}
+                                <div className="flex items-start justify-between gap-2">
+                                  {isEditing ? (
+                                    <Input
+                                      value={
+                                        (editPlan.name as string | undefined) ??
+                                        plan.name
+                                      }
+                                      onChange={(e) =>
+                                        setEditPlan((prev) => ({
+                                          ...prev,
+                                          name: e.target.value,
+                                        }))
+                                      }
+                                      className="flex-1"
+                                    />
+                                  ) : (
+                                    <div className="flex-1">
+                                      <h3 className="font-semibold text-sm">
+                                        {plan.name}
+                                      </h3>
+                                      {(planProvider?.name || plan.provider_name) && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          {planProvider?.name || plan.provider_name}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                  <Badge
+                                    variant={
+                                      plan.active ? "default" : "secondary"
+                                    }
+                                    className="shrink-0"
+                                  >
+                                    {plan.active ? "Active" : "Inactive"}
+                                  </Badge>
+                                </div>
+
+                                {/* Category */}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    Category:
+                                  </span>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    <CategoryLabel
+                                      category={plan.type_class || "standard"}
+                                    />
+                                  </Badge>
+                                </div>
+
+                                {resourceSummary.length > 0 && (
+                                  <div className="flex flex-wrap gap-2">
+                                    {resourceSummary.map((item) => (
+                                      <Badge
+                                        key={`${plan.id}-${item}`}
+                                        variant="outline"
+                                        className="text-[11px]"
+                                      >
+                                        {item}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Pricing */}
+                                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground mb-1">
+                                      Base Price
+                                    </p>
+                                    {isEditing ? (
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={
+                                          (editPlan.base_price as
+                                            | number
+                                            | undefined) ?? plan.base_price
+                                        }
+                                        onChange={(e) =>
+                                          setEditPlan((prev) => ({
+                                            ...prev,
+                                            base_price: parseFloat(
+                                              e.target.value,
+                                            ),
+                                          }))
+                                        }
+                                        className="h-8"
+                                      />
+                                    ) : (
+                                      <p className="text-sm font-medium">
+                                        ${Number(plan.base_price).toFixed(6)}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground mb-1">
+                                      Markup
+                                    </p>
+                                    {isEditing ? (
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={
+                                          (editPlan.markup_price as
+                                            | number
+                                            | undefined) ?? plan.markup_price
+                                        }
+                                        onChange={(e) =>
+                                          setEditPlan((prev) => ({
+                                            ...prev,
+                                            markup_price: parseFloat(
+                                              e.target.value,
+                                            ),
+                                          }))
+                                        }
+                                        className="h-8"
+                                      />
+                                    ) : (
+                                      <p className="text-sm font-medium">
+                                        ${Number(plan.markup_price).toFixed(6)}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="pt-2 border-t space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs text-muted-foreground">
+                                      Transfer Overage
+                                    </p>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            type="button"
+                                            className="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px] text-muted-foreground transition-colors hover:bg-background"
+                                          >
+                                            ?
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs text-xs">
+                                          Backup pricing configuration
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  </div>
+                                  {isEditing ? (
+                                    <div className="space-y-3">
+                                    </div>
+                                  ) : null}
+                                </div>
+
+                                {/* Additional Info */}
+                                {planProvider && (
+                                  <div className="pt-2 border-t">
+                                    <p className="text-xs text-muted-foreground">
+                                      Provider ID:{" "}
+                                      <span className="font-mono text-foreground">
+                                        {plan.provider_plan_id}
+                                      </span>
+                                    </p>
+                                    {(Number(plan.backup_price_monthly) || 0) >
+                                      0 && (
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        Backups:{" "}
+                                        <span className="text-foreground">
+                                          $
+                                          {(
+                                            Number(plan.backup_price_monthly) +
+                                            Number(
+                                              plan.backup_upcharge_monthly || 0,
+                                            )
+                                          ).toFixed(6)}
+                                          /mo
+                                        </span>
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Actions */}
+                                <div className="flex gap-2 pt-2 border-t">
+                                  {isEditing ? (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        onClick={savePlan}
+                                        className="flex-1"
+                                      >
+                                        Save
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditPlanId(null);
+                                          setEditPlan({});
+                                        }}
+                                        className="flex-1"
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditPlanId(plan.id);
+                                          setEditPlan({
+                                            name: plan.name,
+                                            base_price: plan.base_price,
+                                            markup_price: plan.markup_price,
+                                            backup_price_monthly:
+                                              plan.backup_price_monthly || 0,
+                                            backup_price_hourly:
+                                              plan.backup_price_hourly || 0,
+                                            backup_upcharge_monthly:
+                                              plan.backup_upcharge_monthly || 0,
+                                            backup_upcharge_hourly:
+                                              plan.backup_upcharge_hourly || 0,
+                                            daily_backups_enabled:
+                                              plan.daily_backups_enabled ??
+                                              false,
+                                            weekly_backups_enabled:
+                                              plan.weekly_backups_enabled ??
+                                              true,
+                                            active: plan.active,
+                                          });
+                                        }}
+                                        className="flex-1"
+                                      >
+                                        <Edit className="h-4 w-4 mr-1" /> Edit
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => setDeletePlanId(plan.id)}
+                                        className="flex-1"
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-1" />{" "}
+                                        Delete
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Table View for large/desktop only (use 2xl breakpoint) */}
+              <div className="hidden 2xl:block overflow-x-auto">
+                {filteredPlans.length === 0 ? (
+                  <div className="py-10 text-center text-muted-foreground">
+                    {planProviderFilter === "all" && planTypeFilter === "all"
+                      ? "No plans available"
+                      : planProviderFilter !== "all" && planTypeFilter !== "all"
+                        ? "No plans for selected provider and category"
+                        : planProviderFilter !== "all"
+                          ? "No plans for selected provider"
+                          : "No plans for selected category"}
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[10rem]">Name</TableHead>
+                        <TableHead className="min-w-[8rem]">Provider</TableHead>
+                        <TableHead className="min-w-[14rem]">
+                          Resources
+                        </TableHead>
+                        <TableHead className="min-w-[6rem]">Category</TableHead>
+                        <TableHead className="min-w-[6rem]">
+                          Base Price
+                        </TableHead>
+                        <TableHead className="min-w-[6rem]">Markup</TableHead>
+                        <TableHead className="min-w-[8rem]">
+                          Backup Price
+                        </TableHead>
+                        <TableHead className="min-w-[6rem]">Backups</TableHead>
+                        <TableHead className="w-24">Active</TableHead>
+                        <TableHead className="w-28 text-right">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {/* Grouped view with pagination */}
+                      <React.Fragment>
+                        {Object.entries(groupedPlans).map(
+                          ([groupKey, groupPlans]) => {
+                            const currentPage =
+                              providerPlanPages[groupKey] || 1;
+                            const totalPages = Math.ceil(
+                              groupPlans.length / plansPerPage,
+                            );
+                            const startIndex = (currentPage - 1) * plansPerPage;
+                            const endIndex = startIndex + plansPerPage;
+                            const paginatedPlans = groupPlans.slice(
+                              startIndex,
+                              endIndex,
+                            );
+
+                            return (
+                              <React.Fragment key={groupKey}>
+                                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                  <TableCell
+                                    colSpan={11}
+                                    className="py-3 font-semibold"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <Server className="h-4 w-4 text-muted-foreground" />
+                                        {groupPlans[0]?.provider_name ||
+                                          "Cloud Provider"}
+                                        <Badge
+                                          variant="outline"
+                                          className="ml-2"
+                                        >
+                                          {groupPlans.length}{" "}
+                                          {groupPlans.length === 1
+                                            ? "plan"
+                                            : "plans"}
+                                        </Badge>
+                                      </div>
+                                      {totalPages > 1 && (
+                                        <div className="flex items-center gap-2">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() =>
+                                              setProviderPlanPages((prev) => ({
+                                                ...prev,
+                                                [groupKey]: Math.max(
+                                                  1,
+                                                  currentPage - 1,
+                                                ),
+                                              }))
+                                            }
+                                            disabled={currentPage === 1}
+                                          >
+                                            Previous
+                                          </Button>
+                                          <span className="text-xs text-muted-foreground">
+                                            Page {currentPage} of {totalPages}
+                                          </span>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() =>
+                                              setProviderPlanPages((prev) => ({
+                                                ...prev,
+                                                [groupKey]: Math.min(
+                                                  totalPages,
+                                                  currentPage + 1,
+                                                ),
+                                              }))
+                                            }
+                                            disabled={
+                                              currentPage === totalPages
+                                            }
+                                          >
+                                            Next
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                                {paginatedPlans.map((plan) => {
+                                  const isEditing = editPlanId === plan.id;
+                                  const planProvider = providers.find(
+                                    (p) => p.id === plan.provider_id,
+                                  );
+                                  const resourceSummary =
+                                    getPlanResourceSummary(plan, linodeTypes);
+
+                                  return (
+                                    <TableRow
+                                      key={plan.id}
+                                      className="align-top"
+                                    >
+                                      <TableCell>
+                                        {isEditing ? (
+                                          <Input
+                                            value={
+                                              (editPlan.name as
+                                                | string
+                                                | undefined) ?? plan.name
+                                            }
+                                            onChange={(e) =>
+                                              setEditPlan((prev) => ({
+                                                ...prev,
+                                                name: e.target.value,
+                                              }))
+                                            }
+                                            className="w-full"
+                                          />
+                                        ) : (
+                                          <span className="text-sm text-foreground">
+                                            {plan.name}
+                                          </span>
+                                        )}
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex flex-col gap-1">
+                                          <span className="text-sm text-foreground font-medium">
+                                            {planProvider?.name ||
+                                              plan.provider_name ||
+                                              "Unknown"}
+                                          </span>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        {resourceSummary.length > 0 ? (
+                                          <div className="flex flex-wrap gap-2">
+                                            {resourceSummary.map((item) => (
+                                              <Badge
+                                                key={`${plan.id}-${item}`}
+                                                variant="outline"
+                                                className="text-[11px]"
+                                              >
+                                                {item}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <span className="text-sm text-muted-foreground">
+                                            No specs available
+                                          </span>
+                                        )}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge variant="secondary">
+                                          <CategoryLabel
+                                            category={
+                                              plan.type_class || "standard"
+                                            }
+                                          />
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell>
+                                        {isEditing ? (
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={
+                                              (editPlan.base_price as
+                                                | number
+                                                | undefined) ?? plan.base_price
+                                            }
+                                            onChange={(e) =>
+                                              setEditPlan((prev) => ({
+                                                ...prev,
+                                                base_price: parseFloat(
+                                                  e.target.value,
+                                                ),
+                                              }))
+                                            }
+                                            className="max-w-[6rem]"
+                                          />
+                                        ) : (
+                                          <span className="text-sm text-muted-foreground">
+                                            $
+                                            {Number(plan.base_price).toFixed(6)}
+                                          </span>
+                                        )}
+                                      </TableCell>
+                                      <TableCell>
+                                        {isEditing ? (
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            value={
+                                              (editPlan.markup_price as
+                                                | number
+                                                | undefined) ??
+                                              plan.markup_price
+                                            }
+                                            onChange={(e) =>
+                                              setEditPlan((prev) => ({
+                                                ...prev,
+                                                markup_price: parseFloat(
+                                                  e.target.value,
+                                                ),
+                                              }))
+                                            }
+                                            className="max-w-[6rem]"
+                                          />
+                                        ) : (
+                                          <span className="text-sm text-muted-foreground">
+                                            $
+                                            {Number(plan.markup_price).toFixed(
+                                              6,
+                                            )}
+                                          </span>
+                                        )}
+                                      </TableCell>
+                                      <TableCell>
+                                        {isEditing ? (
+                                          <div className="space-y-3">
+                                            <div className="text-xs text-muted-foreground mt-2 mb-1">
+                                              Base Price
+                                            </div>
+                                            <Input
+                                              type="number"
+                                              step="0.01"
+                                              placeholder="Monthly"
+                                              value={
+                                                (editPlan.backup_price_monthly as
+                                                  | number
+                                                  | undefined) ??
+                                                plan.backup_price_monthly ??
+                                                0
+                                              }
+                                              onChange={(e) =>
+                                                setEditPlan((prev) => ({
+                                                  ...prev,
+                                                  backup_price_monthly:
+                                                    parseFloat(
+                                                      e.target.value,
+                                                    ) || 0,
+                                                }))
+                                              }
+                                              className="max-w-[8rem]"
+                                            />
+                                            <Input
+                                              type="number"
+                                              step="0.000001"
+                                              placeholder="Hourly"
+                                              value={
+                                                (editPlan.backup_price_hourly as
+                                                  | number
+                                                  | undefined) ??
+                                                plan.backup_price_hourly ??
+                                                0
+                                              }
+                                              onChange={(e) =>
+                                                setEditPlan((prev) => ({
+                                                  ...prev,
+                                                  backup_price_hourly:
+                                                    parseFloat(
+                                                      e.target.value,
+                                                    ) || 0,
+                                                }))
+                                              }
+                                              className="max-w-[8rem]"
+                                            />
+                                            <div className="text-xs text-muted-foreground mt-2 mb-1">
+                                              Upcharge
+                                            </div>
+                                            <Input
+                                              type="number"
+                                              step="0.01"
+                                              placeholder="Monthly upcharge"
+                                              value={
+                                                (editPlan.backup_upcharge_monthly as
+                                                  | number
+                                                  | undefined) ??
+                                                plan.backup_upcharge_monthly ??
+                                                0
+                                              }
+                                              onChange={(e) => {
+                                                const monthlyUpcharge =
+                                                  parseFloat(e.target.value) ||
+                                                  0;
+                                                setEditPlan((prev) => ({
+                                                  ...prev,
+                                                  backup_upcharge_monthly:
+                                                    monthlyUpcharge,
+                                                  backup_upcharge_hourly:
+                                                    monthlyUpcharge / 730,
+                                                }));
+                                              }}
+                                              className="max-w-[8rem]"
+                                            />
+                                          </div>
+                                        ) : (
+                                          <div className="text-sm">
+                                            {(Number(
+                                              plan.backup_price_monthly,
+                                            ) || 0) > 0 ||
+                                            (Number(
+                                              plan.backup_upcharge_monthly,
+                                            ) || 0) > 0 ? (
+                                              <>
+                                                <div className="text-muted-foreground">
+                                                  $
+                                                  {(
+                                                    (Number(
+                                                      plan.backup_price_monthly,
+                                                    ) || 0) +
+                                                    (Number(
+                                                      plan.backup_upcharge_monthly,
+                                                    ) || 0)
+                                                  ).toFixed(6)}
+                                                  /mo
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                  Base: $
+                                                  {(
+                                                    Number(
+                                                      plan.backup_price_monthly,
+                                                    ) || 0
+                                                  ).toFixed(6)}{" "}
+                                                  + Upcharge: $
+                                                  {(
+                                                    Number(
+                                                      plan.backup_upcharge_monthly,
+                                                    ) || 0
+                                                  ).toFixed(6)}
+                                                </div>
+                                              </>
+                                            ) : (
+                                              <span className="text-xs text-muted-foreground">
+                                                Not configured
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
+                                      </TableCell>
+                                      <TableCell>
+                                        {/* Backups are always daily via Linode - just show enabled status */}
+                                        <Badge
+                                          variant="outline"
+                                          className="w-fit text-xs bg-green-500/10 text-green-500 border-green-500/30"
+                                        >
+                                          Daily
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell>
+                                        {isEditing ? (
+                                          <div className="flex items-center gap-2">
+                                            <Switch
+                                              checked={
+                                                (editPlan.active as
+                                                  | boolean
+                                                  | undefined) ?? plan.active
+                                              }
+                                              onCheckedChange={(checked) =>
+                                                setEditPlan((prev) => ({
+                                                  ...prev,
+                                                  active: checked,
+                                                }))
+                                              }
+                                            />
+                                            <span className="text-xs text-muted-foreground">
+                                              {((editPlan.active as
+                                                | boolean
+                                                | undefined) ?? plan.active)
+                                                ? "Active"
+                                                : "Inactive"}
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <Badge
+                                            variant={
+                                              plan.active
+                                                ? "default"
+                                                : "secondary"
+                                            }
+                                          >
+                                            {plan.active
+                                              ? "Active"
+                                              : "Inactive"}
+                                          </Badge>
+                                        )}
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        {isEditing ? (
+                                          <div className="flex justify-end gap-2">
+                                            <Button
+                                              size="sm"
+                                              onClick={savePlan}
+                                            >
+                                              Save
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                setEditPlanId(null);
+                                                setEditPlan({});
+                                              }}
+                                            >
+                                              Cancel
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex justify-end gap-2">
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => {
+                                                setEditPlanId(plan.id);
+                                                setEditPlan({
+                                                  name: plan.name,
+                                                  base_price: plan.base_price,
+                                                  markup_price:
+                                                    plan.markup_price,
+                                                  backup_price_monthly:
+                                                    plan.backup_price_monthly ||
+                                                    0,
+                                                  backup_price_hourly:
+                                                    plan.backup_price_hourly ||
+                                                    0,
+                                                  backup_upcharge_monthly:
+                                                    plan.backup_upcharge_monthly ||
+                                                    0,
+                                                  backup_upcharge_hourly:
+                                                    plan.backup_upcharge_hourly ||
+                                                    0,
+                                                  daily_backups_enabled:
+                                                    plan.daily_backups_enabled ??
+                                                    false,
+                                                  weekly_backups_enabled:
+                                                    plan.weekly_backups_enabled ??
+                                                    true,
+                                                  active: plan.active,
+                                                });
+                                              }}
+                                              className="gap-1"
+                                            >
+                                              <Edit className="h-4 w-4" /> Edit
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="destructive"
+                                              onClick={() =>
+                                                setDeletePlanId(plan.id)
+                                              }
+                                              className="gap-1"
+                                            >
+                                              <Trash2 className="h-4 w-4" />{" "}
+                                              Delete
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </React.Fragment>
+                            );
+                          },
+                        )}
+                      </React.Fragment>
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <VPSPlanWizard
+            open={showAddVPSPlan}
+            onOpenChange={setShowAddVPSPlan}
+            providers={providers}
+            linodeTypes={linodeTypes}
+            planTypeFilter={planTypeFilter}
+            setPlanTypeFilter={setPlanTypeFilter}
+            newVPSPlan={newVPSPlan}
+            setNewVPSPlan={setNewVPSPlan}
+            onProviderChange={(value) => {
+              setNewVPSPlan((prev) => ({
+                ...prev,
+                selectedProviderId: value,
+                selectedType: "",
+                selectedRegions: [],
+              }));
+              const provider = providers.find((p) => p.id === value);
+              if (provider) {
+                fetchLinodeTypes();
+              }
+            }}
+            onSubmit={createVPSPlan}
+            regions={_allowedLinodeRegions}
+          />
+        </SectionPanel>
+
+        <SectionPanel section="user-management" activeSection={activeTab}>
+          <UserManagement />
+        </SectionPanel>
+
+        <SectionPanel section="ssh-keys" activeSection={activeTab}>
+          <SSHKeyManagement />
+        </SectionPanel>
+
+        <SectionPanel section="activity-log" activeSection={activeTab}>
+          <AdminActivityLog />
+        </SectionPanel>
+
+        <SectionPanel section="egress-credits" activeSection={activeTab}>
+          <EgressCreditManager />
+        </SectionPanel>
+
+        <SectionPanel section="organizations" activeSection={activeTab}>
+          <OrganizationManagement />
+        </SectionPanel>
+
+        <SectionPanel section="category-mappings" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8 mb-6">
+            <div className="relative z-10">
+              <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
+                White-Label
+              </Badge>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
+                Category Mappings
+              </h2>
+              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
+                Customize how VPS plan categories appear to your customers with
+                branded names and descriptions.
+              </p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Tags className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">
+                  White-label your infrastructure offerings
+                </span>
+              </div>
+            </div>
+            <Tags className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12 text-teal-600/20" />
+          </div>
+
+          <CategoryMappingManager />
+        </SectionPanel>
+
+        <SectionPanel section="rate-limiting" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8 mb-6">
+            <div className="relative z-10">
+              <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
+                Security
+              </Badge>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
+                Rate Limiting
+              </h2>
+              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
+                Monitor and manage API rate limits across the platform
+              </p>
+            </div>
+
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <Shield className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
+            </div>
+          </div>
+
+          <RateLimitMonitoring />
+        </SectionPanel>
+
+        <SectionPanel section="faq-management" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-4 sm:p-6 md:p-8 mb-6">
+            <div className="relative z-10">
+              <Badge variant="secondary" className="mb-3 text-xs sm:text-sm">
+                Support
+              </Badge>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
+                FAQ Management
+              </h2>
+              <p className="text-sm sm:text-base mt-2 max-w-2xl text-muted-foreground">
+                Manage FAQ categories, items, and latest updates for the public
+                FAQ page
+              </p>
+            </div>
+
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <HelpCircle className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <CategoryManager token={token || ""} />
+            <FAQItemManager token={token || ""} />
+            <UpdatesManager token={token || ""} />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="documentation" activeSection={activeTab}>
+          <DocumentationManager />
+        </SectionPanel>
+
+        <SectionPanel section="platform" activeSection={activeTab}>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <Settings className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Platform Settings
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Configure platform-wide settings including availability
+                  schedules and general configuration.
+                </p>
+              </div>
+            </div>
+
+            <Tabs defaultValue="availability" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:w-auto lg:inline-grid">
+                <TabsTrigger value="availability">Availability</TabsTrigger>
+                <TabsTrigger value="theme">Theme</TabsTrigger>
+                <TabsTrigger value="category-mappings">
+                  Category Mappings
+                </TabsTrigger>
+                <TabsTrigger value="region-labels">
+                  Region Labels
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="availability">
+                <PlatformAvailabilityManager />
+              </TabsContent>
+
+              <TabsContent value="category-mappings">
+                <CategoryMappingManager />
+              </TabsContent>
+
+              <TabsContent value="region-labels">
+                <RegionLabelManager />
+              </TabsContent>
+
+              <TabsContent value="theme">
+                <div className="bg-card shadow sm:rounded-lg">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <Palette className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <h2 className="text-lg font-medium text-foreground">
+                          Theme Manager
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                          Choose a theme preset. Updates roll out to every user
+                          instantly.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {themeConfigLoading
+                        ? "Syncing..."
+                        : `Last updated: ${formattedThemeUpdatedAt}`}
+                    </div>
+                  </div>
+                  <div className="space-y-10 px-6 py-6">
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Presets
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Choose a built-in palette. Applying a preset changes the
+                        experience for every organization member.
+                      </p>
+                      <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                        {orderedThemes.map((preset) => {
+                          const isActive = preset.id === themeId;
+                          const isDefault = preset.id === DEFAULT_THEME_ID;
+                          const isSaving = savingPresetId === preset.id;
+                          const disabled =
+                            (savingPresetId !== null &&
+                              savingPresetId !== preset.id) ||
+                            themeConfigLoading;
+
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => handlePresetSelection(preset)}
+                              disabled={disabled}
+                              className={`relative w-full rounded-lg border p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                                isActive
+                                  ? "border-primary ring-2 ring-primary ring-opacity-20"
+                                  : "border-border hover:border-primary"
+                              } ${
+                                disabled ? "cursor-not-allowed opacity-60" : ""
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div>
+                                  <h3 className="text-base font-semibold text-foreground">
+                                    {preset.label}
+                                  </h3>
+                                  <p className="mt-1 text-sm text-muted-foreground">
+                                    {preset.description}
+                                  </p>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                  {isDefault && (
+                                    <Badge variant="secondary">Default</Badge>
+                                  )}
+                                  <Badge
+                                    variant={isActive ? "default" : "outline"}
+                                  >
+                                    {isSaving
+                                      ? "Saving..."
+                                      : isActive
+                                        ? "Active"
+                                        : "Preview"}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="mt-4 flex gap-4">
+                                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                                  <span>Primary</span>
+                                  <span
+                                    className="h-10 w-10 rounded-md border shadow-sm"
+                                    style={{
+                                      backgroundColor: `hsl(${preset.light.primary})`,
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                                  <span>Surface</span>
+                                  <span
+                                    className="h-10 w-10 rounded-md border shadow-sm"
+                                    style={{
+                                      backgroundColor: `hsl(${preset.light.background})`,
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                                  <span>Dark Primary</span>
+                                  <span
+                                    className="h-10 w-10 rounded-md border shadow-sm"
+                                    style={{
+                                      backgroundColor: `hsl(${preset.dark.primary})`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="contact-management" activeSection={activeTab}>
+          <AdminContactManagementSection token={token || ""} />
+        </SectionPanel>
+
+        <SectionPanel section="billing" activeSection={activeTab}>
+          <BillingDashboard
+            filteredEgressPricing={filteredEgressPricing}
+            filteredLiveEgressUsage={filteredLiveEgressUsage}
+            filteredEgressHistory={filteredEgressHistory}
+            egressPricingLoading={egressPricingLoading}
+            liveEgressUsageLoading={liveEgressUsageLoading}
+            egressHistoryLoading={egressHistoryLoading}
+            egressPricingSyncing={egressPricingSyncing}
+            egressExecuting={egressExecuting}
+            savingEgressRegionId={savingEgressRegionId}
+            egressHistoryMonth={egressHistoryMonth}
+            onFetchLiveEgressUsage={fetchLiveEgressUsage}
+            onSyncEgressPricing={syncEgressPricing}
+            onExecuteEgressBilling={executeEgressBilling}
+            onUpdateEgressPricingRegion={updateEgressPricingRegion}
+            onFetchEgressHistory={fetchEgressHistory}
+            onSetEgressHistoryMonth={setEgressHistoryMonth}
+            formatCurrency={formatCurrency}
+            formatDateTime={formatDateTime}
+          />
+        </SectionPanel>
+
+        <SectionPanel section="volume-pricing" activeSection={activeTab}>
+          <div className="space-y-4">
+            <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20">
+              <div className="relative z-10 p-4 sm:p-6 md:p-8">
+                <Badge variant="secondary" className="mb-3 text-xs">
+                  Operations
+                </Badge>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                      Volume Pricing
+                    </h2>
+                    <p className="mt-2 max-w-3xl text-sm text-muted-foreground sm:text-base">
+                      Manage block storage pricing tiers and review all provisioned volumes in one place.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <VolumePricing />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="email-templates" activeSection={activeTab}>
+          <EmailTemplatesManager />
+        </SectionPanel>
+
+        <SectionPanel section="announcements" activeSection={activeTab}>
+          <AnnouncementsManager token={token || ""} />
+        </SectionPanel>
+
+        <SectionPanel section="enhance-hosting" activeSection={activeTab}>
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold">Enhance Web Hosting</h2>
+            <EnhanceIntegrationCard />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="enhance-plans" activeSection={activeTab}>
+          <div className="space-y-6">
+            <EnhancePlans />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="enhance-subscriptions" activeSection={activeTab}>
+          <div className="space-y-6">
+            <UserHostingList />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="fraud-protection" activeSection={activeTab}>
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold">Fraud Protection</h2>
+            <FraudCheckList />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="refunds" activeSection={activeTab}>
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold">Refund Management</h2>
+            <RefundList />
+          </div>
+        </SectionPanel>
+
+        {/* Legacy application sections removed */}
+
+        <SectionPanel section="stackscripts" activeSection={activeTab}>
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8 mb-6">
+            <div className="relative z-10 flex items-start justify-between">
+              <div>
+                <Badge variant="secondary" className="mb-3">
+                  Automation
+                </Badge>
+                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
+                  StackScripts
+                </h2>
+                <p className="mt-2 max-w-2xl text-muted-foreground">
+                  Configure which scripts show up when provisioning new VPS
+                  instances
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchStackscriptsAndConfigs}
+                disabled={loadingStackscripts}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                {loadingStackscripts ? "Refreshing…" : "Refresh"}
+              </Button>
+            </div>
+
+            {/* Background decoration */}
+            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
+              <FileCode className="absolute right-10 top-10 h-32 w-32 rotate-12" />
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Available StackScripts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="stackscript-search">Search StackScripts</Label>
+                <Input
+                  id="stackscript-search"
+                  placeholder="Search StackScripts by name or description"
+                  value={stackscriptSearch}
+                  onChange={(e) => setStackscriptSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-4">
+                {loadingStackscripts ? (
+                  <div className="flex items-center gap-3 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                    Loading StackScripts…
+                  </div>
+                ) : filteredAvailableStackscripts.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                    No StackScripts match your search.
+                  </div>
+                ) : (
+                  filteredAvailableStackscripts.map((script) => {
+                    const config = stackscriptConfigs.find(
+                      (c) => c.stackscript_id === script.id,
+                    );
+                    const draft = stackscriptDrafts[script.id] || {
+                      label: config?.label || script.label,
+                      description:
+                        config?.description || script.description || "",
+                      display_order: config?.display_order ?? 0,
+                      is_enabled: config?.is_enabled ?? false,
+                    };
+                    const hasChanges =
+                      config &&
+                      (draft.label !== (config.label || script.label) ||
+                        draft.description !== (config.description || "") ||
+                        draft.display_order !== config.display_order ||
+                        draft.is_enabled !== config.is_enabled);
+                    const isNew = !config;
+
+                    return (
+                      <div
+                        key={script.id}
+                        className="rounded-lg border border-border bg-muted/40 p-4"
+                      >
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+                          <div className="flex items-start gap-3 lg:col-span-2">
+                            <Checkbox
+                              id={`stackscript-${script.id}`}
+                              checked={draft.is_enabled}
+                              onCheckedChange={(checked) => {
+                                const updated = {
+                                  ...draft,
+                                  is_enabled: Boolean(checked),
+                                };
+                                setStackscriptDrafts((prev) => ({
+                                  ...prev,
+                                  [script.id]: updated,
+                                }));
+                              }}
+                            />
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor={`stackscript-${script.id}`}
+                                className="text-sm font-medium text-foreground"
+                              >
+                                {script.label}
+                              </Label>
+                              <Badge
+                                variant={
+                                  draft.is_enabled ? "default" : "secondary"
+                                }
+                              >
+                                {draft.is_enabled ? "Enabled" : "Hidden"}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="space-y-3 lg:col-span-7">
+                            <div className="grid gap-2">
+                              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Display Label
+                              </Label>
+                              <Input
+                                value={draft.label}
+                                onChange={(e) => {
+                                  const updated = {
+                                    ...draft,
+                                    label: e.target.value,
+                                  };
+                                  setStackscriptDrafts((prev) => ({
+                                    ...prev,
+                                    [script.id]: updated,
+                                  }));
+                                }}
+                                placeholder={script.label}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Description
+                              </Label>
+                              <Textarea
+                                value={draft.description}
+                                onChange={(e) => {
+                                  const updated = {
+                                    ...draft,
+                                    description: e.target.value,
+                                  };
+                                  setStackscriptDrafts((prev) => ({
+                                    ...prev,
+                                    [script.id]: updated,
+                                  }));
+                                }}
+                                placeholder={
+                                  script.description || "No description"
+                                }
+                                rows={2}
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              ID {script.id} • Images{" "}
+                              {script.images
+                                ?.map((img: string) =>
+                                  img.replace(/^linode\//i, ""),
+                                )
+                                .join(", ") || "Any"}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-3 lg:col-span-3">
+                            <div className="grid gap-2">
+                              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Display order
+                              </Label>
+                              <Input
+                                type="number"
+                                value={draft.display_order}
+                                onChange={(e) => {
+                                  const updated = {
+                                    ...draft,
+                                    display_order: Number(e.target.value),
+                                  };
+                                  setStackscriptDrafts((prev) => ({
+                                    ...prev,
+                                    [script.id]: updated,
+                                  }));
+                                }}
+                              />
+                            </div>
+                            <Button
+                              onClick={() =>
+                                saveStackscriptConfig(script.id, draft)
+                              }
+                              disabled={
+                                savingStackscriptId === script.id ||
+                                (!hasChanges && !isNew)
+                              }
+                            >
+                              {savingStackscriptId === script.id
+                                ? "Saving…"
+                                : isNew
+                                  ? "Save & Enable"
+                                  : "Save changes"}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </SectionPanel>
+
+        <SectionPanel section="servers" activeSection={activeTab}>
+          <AdminServersSection
+            serversLoading={serversLoading}
+            serverSearch={serverSearch}
+            setServerSearch={setServerSearch}
+            serverStatusFilter={serverStatusFilter}
+            setServerStatusFilter={setServerStatusFilter}
+            serverStatusOptions={serverStatusOptions}
+            filteredServers={filteredServers}
+            paginatedServers={paginatedServers}
+            totalServerPages={totalServerPages}
+            serverPage={serverPage}
+            setServerPage={setServerPage}
+            serverItemsPerPage={serverItemsPerPage}
+            serverActionLoading={serverActionLoading}
+            sshModalOpen={sshModalOpen}
+            setSshModalOpen={setSshModalOpen}
+            selectedSshServerId={selectedSshServerId}
+            onRefresh={fetchServers}
+            onSshAction={handleSshAction}
+            onServerAction={handleServerAction}
+            formatDateTime={formatDateTime}
+            formatStatusLabel={formatStatusLabel}
+            statusBadgeClass={statusBadgeClass}
+          />
+        </SectionPanel>
+
+        <SectionPanel section="networking" activeSection={activeTab}>
+          <AdminNetworkingSection
+            networkingTab={networkingTab}
+            rdnsBaseDomain={rdnsBaseDomain}
+            rdnsLoading={rdnsLoading}
+            rdnsSaving={rdnsSaving}
+            onNetworkingTabChange={handleNetworkingTabChange}
+            onRdnsBaseDomainChange={setRdnsBaseDomain}
+            onSaveNetworkingRdns={saveNetworkingRdns}
+          />
+        </SectionPanel>
+
+        <SectionPanel section="providers" activeSection={activeTab}>
+          <AdminProvidersSection
+            providers={providers}
+            validatingProviderId={validatingProviderId}
+            showAddProvider={showAddProvider}
+            setShowAddProvider={setShowAddProvider}
+            newProvider={newProvider}
+            setNewProvider={setNewProvider}
+            setEditProviderId={setEditProviderId}
+            setEditProvider={setEditProvider}
+            setDeleteProviderId={setDeleteProviderId}
+            onCreateProvider={createProvider}
+            onValidateProvider={validateProvider}
+            onReorderProviders={(nextProviders) => {
+              setProviders(nextProviders);
+              void reorderProviders(nextProviders.map((provider) => provider.id));
+            }}
+          />
+        </SectionPanel>
+        <SectionPanel section="regions" activeSection={activeTab}>
+          <RegionAccessManager token={token || ""} />
+        </SectionPanel>
+      </div>
+
+      <Dialog
+        open={Boolean(editProviderId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditProviderId(null);
+            setEditProvider({});
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Provider</DialogTitle>
+            <DialogDescription>
+              Update metadata or disable this provider without removing
+              credentials.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-provider-name">Name</Label>
+              <Input
+                id="edit-provider-name"
+                value={(editProvider.name as string) || ""}
+                onChange={(e) =>
+                  setEditProvider((prev) => ({ ...prev, name: e.target.value }))
+                }
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Provider Type</Label>
+              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
+                <span className="text-sm font-medium capitalize">
+                  {editProvider.type}
+                </span>
+              </div>
+            </div>
+
+            {editProvider.validation_status && (
+              <div className="grid gap-2">
+                <Label>Validation Status</Label>
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
+                  {editProvider.validation_status === "valid" && (
+                    <Badge
+                      variant="default"
+                      className="gap-1 bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                    >
+                      <CheckCircle className="h-3 w-3" /> Valid
+                    </Badge>
+                  )}
+                  {editProvider.validation_status === "invalid" && (
+                    <Badge variant="destructive" className="gap-1">
+                      <AlertCircle className="h-3 w-3" /> Invalid
+                    </Badge>
+                  )}
+                  {editProvider.validation_status === "pending" && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Clock className="h-3 w-3" /> Pending
+                    </Badge>
+                  )}
+                  {editProvider.validation_message && (
+                    <span className="text-xs text-muted-foreground ml-2">
+                      {editProvider.validation_message}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {editProvider.last_api_call && (
+              <div className="grid gap-2">
+                <Label>Last API Call</Label>
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    {new Date(editProvider.last_api_call).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-2">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Enable Provider
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Only active providers are available during provisioning.
+                </p>
+              </div>
+              <Switch
+                checked={Boolean(editProvider.active ?? false)}
+                onCheckedChange={(checked) =>
+                  setEditProvider((prev) => ({ ...prev, active: checked }))
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setEditProviderId(null);
+                setEditProvider({});
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={updateProvider}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={Boolean(deletePlanId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeletePlanId(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete VPS plan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Removing this plan hides it from customers immediately. You can
+              recreate it later if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeletePlanId(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletePlanId) {
+                  void deleteVPSPlan(deletePlanId);
+                }
+              }}
+              className={buttonVariants({ variant: "destructive" })}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={Boolean(deleteProviderId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteProviderId(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove provider?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deleting a provider wipes stored credentials. Running workloads
+              remain active but new deployments cannot target this provider.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteProviderId(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteProviderId) {
+                  void deleteProvider(deleteProviderId);
+                }
+              }}
+              className={buttonVariants({ variant: "destructive" })}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        user={selectedUserForProfile}
+        isOpen={userProfileModalOpen}
+        onClose={handleCloseUserProfileModal}
+      />
+
+      {/* User Edit Modal */}
+      <UserEditModal
+        user={selectedUserForEdit}
+        isOpen={userEditModalOpen}
+        onClose={handleCloseUserEditModal}
+        onSuccess={() => {
+          // Refresh the users list
+          fetchAdminUsers();
+          // Close the modal
+          handleCloseUserEditModal();
+        }}
+      />
+
+      {/* Admin Impersonation Confirmation Dialog */}
+      <AlertDialog
+        open={impersonationConfirmDialog.isOpen}
+        onOpenChange={(open) => !open && handleCancelAdminImpersonation()}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirm Admin Impersonation
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to impersonate another administrator account. This
+              action will:
+              <ul className="mt-2 ml-4 list-disc space-y-1">
+                <li>Give you full access to their admin privileges</li>
+                <li>Log this activity for security audit purposes</li>
+                <li>Allow you to perform actions as this admin user</li>
+              </ul>
+              <div className="mt-3 p-3 bg-muted rounded-md">
+                <strong>Target Admin:</strong>{" "}
+                {impersonationConfirmDialog.targetUser?.name} (
+                {impersonationConfirmDialog.targetUser?.email})
+              </div>
+              Are you sure you want to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelAdminImpersonation}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmAdminImpersonation}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Yes, Impersonate Admin
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+};
+
+export default Admin;

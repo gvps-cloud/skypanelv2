@@ -4,6 +4,8 @@
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
+This project hosts **SkyPanel v2**, a cloud service reseller billing panel ported from Vercel. The frontend lives in `artifacts/skypanel/` (React + Vite, react-router-dom). The original Express API (in `.migration-backup/api/`) has not yet been ported into `artifacts/api-server/` — UI loads but data fetches fail with 502 until a backend is implemented.
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
