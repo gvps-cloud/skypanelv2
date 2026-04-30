@@ -194,19 +194,6 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       : {};
     const allowServerGroupSelection = planFeatures.allowServerGroupSelection === true;
 
-    // Resolve the final domain (staging or custom)
-    let resolvedDomain = domain;
-    if (!resolvedDomain && useStagingDomain) {
-      const stagingSuffix = await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID);
-      if (!stagingSuffix) {
-        throw new Error("Staging domain is not configured on the hosting platform");
-      }
-      const slug = crypto.getRandomValues(new Uint8Array(4))
-        .reduce((acc: string, b: number) => acc + b.toString(36).padStart(2, '0').slice(-2), '')
-        .replace(/[^a-z0-9]/g, '');
-      resolvedDomain = `${slug}.${stagingSuffix}`;
-    }
-
     // Only include serverGroupId when the plan explicitly allows selection
     const serverGroupId = regionId || config.ENHANCE_DEFAULT_SERVER_GROUP_ID;
     if (allowServerGroupSelection && !serverGroupId) {
@@ -257,37 +244,84 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       throw new Error("Enhance subscription creation returned an invalid subscription id");
     }
 
-    // Create website under the customer's own Enhance org.
-    // Each customer gets their own org in Enhance (enhance_customer_id).
-    // The subscriptionId links the website to the plan the master org assigned
-    // to this customer, so Enhance enforces the correct resource limits.
-    const websitePayload: Record<string, any> = {
-      domain: resolvedDomain,
-      subscriptionId: enhanceSubscriptionId,
-    };
-    if (allowServerGroupSelection && serverGroupId) {
-      websitePayload.serverGroupId = serverGroupId;
+    // Helper to generate a random staging subdomain slug (8 lowercase alphanumeric chars).
+    const generateSlug = () =>
+      crypto.getRandomValues(new Uint8Array(6))
+        .reduce((acc: string, b: number) => acc + b.toString(36).padStart(2, '0').slice(-2), '')
+        .replace(/[^a-z0-9]/g, '')
+        .slice(0, 8)
+        .padEnd(8, '0');
+
+    // Resolve the staging domain suffix once (if needed).
+    let stagingSuffix: string | null = null;
+    if (!domain && useStagingDomain) {
+      stagingSuffix = await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID);
+      if (!stagingSuffix) {
+        throw new Error("Staging domain is not configured on the hosting platform");
+      }
     }
 
+    // Create the website under the customer's own Enhance org.
+    // When using an auto-generated staging subdomain, retry with a fresh slug
+    // if the randomly chosen name collides with a stale website left from a
+    // previous failed purchase attempt.
+    const MAX_DOMAIN_RETRIES = 5;
     let enhanceWebsite: any;
-    try {
-      enhanceWebsite = await EnhanceService.createWebsite(
-        onboardingResult.enhanceCustomerId,
-        websitePayload,
-      );
-    } catch (websiteError: any) {
-      const domainClaimedElsewhere =
-        websiteError?.statusCode === 403 &&
-        websiteError?.responseBody?.detail === 'domain';
+    let resolvedDomain = domain ?? '';
 
-      if (domainClaimedElsewhere) {
-        throw new Error(
-          `The domain "${resolvedDomain}" is already in use on the hosting platform. ` +
-          `Please choose a different domain.`
-        );
+    for (let attempt = 1; attempt <= MAX_DOMAIN_RETRIES; attempt++) {
+      // Generate a new slug on every attempt when in staging-subdomain mode.
+      if (!domain && useStagingDomain && stagingSuffix) {
+        resolvedDomain = `${generateSlug()}.${stagingSuffix}`;
       }
 
-      throw websiteError;
+      if (!resolvedDomain) {
+        throw new Error("No domain provided and staging domain mode is not enabled");
+      }
+
+      const websitePayload: Record<string, any> = {
+        domain: resolvedDomain,
+        subscriptionId: enhanceSubscriptionId,
+      };
+      if (allowServerGroupSelection && serverGroupId) {
+        websitePayload.serverGroupId = serverGroupId;
+      }
+
+      try {
+        enhanceWebsite = await EnhanceService.createWebsite(
+          onboardingResult.enhanceCustomerId,
+          websitePayload,
+        );
+        break; // success — exit retry loop
+      } catch (websiteError: any) {
+        const domainTaken =
+          websiteError?.statusCode === 403 &&
+          websiteError?.responseBody?.detail === 'domain';
+
+        if (domainTaken) {
+          // If this was a user-supplied domain, surface a clear error immediately.
+          if (domain) {
+            throw new Error(
+              `The domain "${resolvedDomain}" is already in use on the hosting platform. ` +
+              `Please choose a different domain.`
+            );
+          }
+          // For auto-generated staging subdomains, the slug collided with a
+          // stale website.  Log and try a fresh one on the next iteration.
+          console.warn(
+            `[Hosting purchase] Generated subdomain "${resolvedDomain}" is already taken on Enhance ` +
+            `(attempt ${attempt}/${MAX_DOMAIN_RETRIES}); retrying with a new slug…`
+          );
+          if (attempt === MAX_DOMAIN_RETRIES) {
+            throw new Error(
+              "Could not allocate a free staging subdomain after several attempts. Please try again."
+            );
+          }
+          continue;
+        }
+
+        throw websiteError;
+      }
     }
 
     let credentialsEmailed = false;
