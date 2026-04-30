@@ -19,7 +19,7 @@ interface RequestOptions {
 
 export class EnhanceService {
   private static baseUrl(): string {
-    return config.ENHANCE_API_URL.replace(/\/$/, '');
+    return config.ENHANCE_API_URL.replace(/\/$/, '') + '/api';
   }
 
   private static async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -27,7 +27,7 @@ export class EnhanceService {
     const response = await fetch(url, {
       method: options.method || 'GET',
       headers: {
-        'Authorization': `Bearer ${config.ENHANCE_API_KEY}`,
+        'Authorization': `Bearer ${config.ENHANCE_API_KEY.replace(/^Bearer\s+/i, '')}`,
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         ...options.headers,
@@ -68,8 +68,9 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}`);
   }
 
-  static async getServerGroups(orgId: string) {
-    return this.request<any>(`/orgs/${orgId}/servers/groups`);
+  static async getServerGroups(_orgId?: string) {
+    // Enhance API: /servers/groups is a global endpoint (not org-scoped)
+    return this.request<any>(`/servers/groups`);
   }
 
   static async getPlans(orgId: string) {

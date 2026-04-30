@@ -92,10 +92,10 @@ export class EnhanceToggleService {
 
     try {
       // Basic connectivity check: attempt to reach the API root
-      const response = await fetch(`${config.ENHANCE_API_URL}/orgs/${config.ENHANCE_MASTER_ORG_ID}`, {
+      const response = await fetch(`${config.ENHANCE_API_URL.replace(/\/$/, '')}/api/orgs/${config.ENHANCE_MASTER_ORG_ID}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${config.ENHANCE_API_KEY}`,
+          'Authorization': `Bearer ${config.ENHANCE_API_KEY.replace(/^Bearer\s+/i, '')}`,
           'Accept': 'application/json',
         },
       });

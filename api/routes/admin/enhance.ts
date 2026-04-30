@@ -69,42 +69,98 @@ router.post("/plans/sync", async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   try {
     const remotePlans = await EnhanceService.getPlans(config.ENHANCE_MASTER_ORG_ID);
+    // Enhance API returns { items: Plan[], total: integer } (PlansListing schema)
     const plans = Array.isArray(remotePlans) ? remotePlans : remotePlans?.items || [];
 
     const upserted: any[] = [];
     const seenIds = new Set<string>();
 
+    if (plans.length === 0) {
+      res.json({
+        synced: 0,
+        plans: [],
+        warning: "Enhance returned 0 plans — verify your ENHANCE_MASTER_ORG_ID is correct and plans exist in your Enhance panel",
+      });
+      return;
+    }
+
     for (const plan of plans) {
-      const planId = plan.id;
+      // Enhance Plan.id is integer — store as string for varchar column
+      const planId = String(plan.id);
       seenIds.add(planId);
+
+      // Map Enhance planType (shared|dedicated) → service_type
+      const planType = plan.planType || "shared";
+      const serviceType = "web"; // Both shared and dedicated are web hosting
+
+      // Build structured features JSONB from Enhance plan data
+      // Enhance Plan has: resources, allowances, selections, allowedPhpVersions, etc.
+      const resourcesMap: Record<string, { total?: number }> = {};
+      if (Array.isArray(plan.resources)) {
+        for (const r of plan.resources) {
+          resourcesMap[r.name] = r.total !== undefined ? { total: r.total } : {};
+        }
+      }
+
+      const allowancesList: string[] = [];
+      if (Array.isArray(plan.allowances)) {
+        for (const a of plan.allowances) {
+          allowancesList.push(a.name);
+        }
+      }
+
+      const selectionsMap: Record<string, string> = {};
+      if (Array.isArray(plan.selections)) {
+        for (const s of plan.selections) {
+          selectionsMap[s.name] = s.value;
+        }
+      }
+
+      const features = {
+        planType,
+        resources: resourcesMap,
+        allowances: allowancesList,
+        selections: selectionsMap,
+        subscriptionsCount: plan.subscriptionsCount ?? 0,
+        serverGroupIds: plan.serverGroupIds || [],
+        allowedPhpVersions: plan.allowedPhpVersions || [],
+        defaultPhpVersion: plan.defaultPhpVersion || null,
+        redisAllowed: plan.redisAllowed ?? false,
+        persistentAppsAllowed: plan.persistentAppsAllowed ?? false,
+        cgroupLimits: plan.cgroupLimits || null,
+        fsQuotaLimit: plan.fsQuotaLimit || null,
+        allowServerGroupSelection: plan.allowServerGroupSelection ?? false,
+        createdAt: plan.createdAt || null,
+      };
 
       const result = await query(
         `INSERT INTO hosting_plans (enhance_plan_id, name, description, features, service_type, price_monthly, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, true)
+         VALUES ($1, $2, NULL, $3, $4, 0, true)
          ON CONFLICT (enhance_plan_id) DO UPDATE SET
            name = EXCLUDED.name,
-           description = EXCLUDED.description,
            features = EXCLUDED.features,
+           service_type = EXCLUDED.service_type,
+           is_active = true,
            updated_at = now()
          RETURNING *`,
         [
           planId,
-          plan.name || planId,
-          plan.description || null,
-          JSON.stringify(plan.features || {}),
-          plan.service_type || "web",
-          plan.price_monthly || 0,
+          plan.name || `Plan ${planId}`,
+          JSON.stringify(features),
+          serviceType,
         ]
       );
       upserted.push(result.rows[0]);
     }
 
     // Mark missing remote plans as inactive
-    await query(
-      `UPDATE hosting_plans SET is_active = false
-       WHERE enhance_plan_id IS NOT NULL AND enhance_plan_id <> ALL($1)`,
-      [Array.from(seenIds)]
-    );
+    if (seenIds.size > 0) {
+      await query(
+        `UPDATE hosting_plans SET is_active = false
+         WHERE enhance_plan_id IS NOT NULL AND NOT (enhance_plan_id = ANY($1))`,
+        [Array.from(seenIds)]
+      );
+    }
 
     await logActivity({
       userId,
@@ -186,6 +242,54 @@ router.put("/plans/:id", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Failed to update plan:", error);
     res.status(500).json({ error: error?.message || "Failed to update plan" });
+  }
+});
+
+/**
+ * DELETE /api/admin/enhance/plans/purge-orphans
+ * Delete all hosting_plans rows that have no enhance_plan_id (leaked test data, etc.)
+ * Must be declared before /:id to avoid route conflict
+ */
+router.delete("/plans/purge-orphans", async (_req: Request, res: Response) => {
+  try {
+    const result = await query(
+      `DELETE FROM hosting_plans WHERE enhance_plan_id IS NULL RETURNING id, name`
+    );
+    res.json({ deleted: result.rows.length, plans: result.rows });
+  } catch (error: any) {
+    console.error("Failed to purge orphan plans:", error);
+    res.status(500).json({ error: error?.message || "Failed to purge orphan plans" });
+  }
+});
+
+/**
+ * DELETE /api/admin/enhance/plans/:id
+ * Hard-delete a single hosting plan. Blocked if active subscriptions reference it.
+ */
+router.delete("/plans/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const subCheck = await query(
+      `SELECT id FROM hosting_subscriptions WHERE plan_id = $1 AND status = 'active' LIMIT 1`,
+      [id]
+    );
+    if (subCheck.rows.length > 0) {
+      return res.status(409).json({ error: "Cannot delete a plan that has active subscriptions" });
+    }
+
+    const result = await query(
+      `DELETE FROM hosting_plans WHERE id = $1 RETURNING id, name`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+
+    res.json({ deleted: result.rows[0] });
+  } catch (error: any) {
+    console.error("Failed to delete plan:", error);
+    res.status(500).json({ error: error?.message || "Failed to delete plan" });
   }
 });
 
