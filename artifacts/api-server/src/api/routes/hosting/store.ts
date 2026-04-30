@@ -266,10 +266,15 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       websitePayload.serverGroupId = serverGroupId;
     }
 
+    // Per the Enhance OAS3 spec, the Master Organization (MO) can create
+    // websites without the "outside the org" domain restriction that applies
+    // to customer orgs. We bind the website to the customer's plan via
+    // `subscriptionId` in the payload, so the customer still owns the
+    // resource limits/billing — the website just lives under the MO context.
     let enhanceWebsite: any;
     try {
       enhanceWebsite = await EnhanceService.createWebsite(
-        onboardingResult.enhanceCustomerId,
+        config.ENHANCE_MASTER_ORG_ID,
         websitePayload,
       );
     } catch (websiteError: any) {
@@ -398,10 +403,28 @@ router.post("/services/:id/cancel", requireOrgPermission("hosting_manage"), asyn
       return res.status(404).json({ error: "Service not found" });
     }
     const sub = result.rows[0];
-    const enhanceWebsiteOrgId = sub.enhance_customer_org_id || config.ENHANCE_MASTER_ORG_ID;
 
+    // Websites are created under the Master Organization (see purchase route),
+    // so deletion must also be performed in that org context. Older records
+    // that were created under the customer org still resolve correctly because
+    // the MO has visibility into all websites it provisioned.
     if (sub.enhance_website_id) {
-      await EnhanceService.deleteWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
+      try {
+        await EnhanceService.deleteWebsite(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id);
+      } catch (deleteWebsiteError: any) {
+        // Fallback for legacy rows that may have been provisioned under the
+        // customer org context. Enhance can return either 404 (not visible)
+        // or 403 (forbidden) when the website lives in a different org scope.
+        const tryLegacyFallback =
+          (deleteWebsiteError?.statusCode === 404 || deleteWebsiteError?.statusCode === 403) &&
+          sub.enhance_customer_org_id;
+
+        if (tryLegacyFallback) {
+          await EnhanceService.deleteWebsite(sub.enhance_customer_org_id, sub.enhance_website_id);
+        } else {
+          throw deleteWebsiteError;
+        }
+      }
     }
     if (sub.enhance_subscription_id) {
       await EnhanceService.deleteSubscription(config.ENHANCE_MASTER_ORG_ID, sub.enhance_subscription_id);
