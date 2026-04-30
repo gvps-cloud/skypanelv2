@@ -4,7 +4,12 @@
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
-This project hosts **SkyPanel v2**, a cloud service reseller billing panel ported from Vercel. The frontend lives in `artifacts/skypanel/` (React + Vite, react-router-dom). The original Express API (in `.migration-backup/api/`) has not yet been ported into `artifacts/api-server/` — UI loads but data fetches fail with 502 until a backend is implemented.
+This project hosts **SkyPanel v2**, a cloud service reseller billing panel ported from Vercel.
+
+- Frontend: `artifacts/skypanel/` (React + Vite, react-router-dom), served at `/`.
+- Backend: `artifacts/api-server/` (Express 4, ported from `.migration-backup/api/`), served at `/api`. Source lives under `src/api/`. Database access via `pg` against the Replit Postgres `DATABASE_URL`. Migrations are SQL files under `artifacts/api-server/migrations/` and were applied via `node run-migrations.mjs` (59 files, tracked in `schema_migrations`).
+- Dev defaults set in the api-server `dev` script: `NODE_ENV=development`, `STARTUP_SIDE_EFFECTS_ENABLED=false` (skips billing cron, BunnyCDN refresh, SSH bridge, notification schedulers), `JWT_SECRET=...` (dev placeholder; override via env for real use).
+- Optional integrations not configured by default: Linode (`LINODE_API_TOKEN`), PayPal (`PAYPAL_CLIENT_*`), Resend/SMTP, BetterStack, BunnyCDN, Redis. Auth, theme, announcements, pricing list, and registration/login flows work without them; VPS provisioning, payments, and email delivery require their respective secrets.
 
 ## Stack
 

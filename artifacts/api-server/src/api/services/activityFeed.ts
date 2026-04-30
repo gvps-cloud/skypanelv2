@@ -1,0 +1,238 @@
+import { v4 as uuidv4 } from 'uuid';
+import { query } from '../lib/database.js';
+
+export interface Activity {
+  id: string;
+  user_id: string;
+  organization_id: string | null;
+  type: string;
+  title: string;
+  description: string | null;
+  data: Record<string, any>;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface CreateActivityData {
+  userId: string;
+  organizationId?: string;
+  type: string;
+  title: string;
+  description?: string;
+  data?: Record<string, any>;
+}
+
+export class ActivityFeedService {
+  static async createActivity({
+    userId,
+    organizationId,
+    type,
+    title,
+    description,
+    data = {}
+  }: CreateActivityData): Promise<Activity> {
+    const now = new Date().toISOString();
+    const activityId = uuidv4();
+
+    const result = await query(
+      `INSERT INTO activity_feed 
+       (id, user_id, organization_id, type, title, description, data, is_read, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING *`,
+      [activityId, userId, organizationId || null, type, title, description || null, JSON.stringify(data), false, now]
+    );
+
+    return result.rows[0];
+  }
+
+  static async createActivities(activities: CreateActivityData[]): Promise<Activity[]> {
+    if (!activities || activities.length === 0) {
+      return [];
+    }
+
+    const now = new Date().toISOString();
+    const allInsertedActivities: Activity[] = [];
+
+    // Batch inserts to respect PostgreSQL parameter limits (max 65535 parameters)
+    // 9 parameters per activity -> max ~7281 activities per batch.
+    // We'll use 1000 for safety and performance.
+    const BATCH_SIZE = 1000;
+
+    for (let i = 0; i < activities.length; i += BATCH_SIZE) {
+      const batch = activities.slice(i, i + BATCH_SIZE);
+      const values: any[] = [];
+      const placeholders: string[] = [];
+
+      batch.forEach((activity, index) => {
+        const activityId = uuidv4();
+        const offset = index * 9;
+
+        placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9})`);
+
+        values.push(
+          activityId,
+          activity.userId,
+          activity.organizationId || null,
+          activity.type,
+          activity.title,
+          activity.description || null,
+          JSON.stringify(activity.data || {}),
+          false,
+          now
+        );
+      });
+
+      const result = await query(
+        `INSERT INTO activity_feed
+         (id, user_id, organization_id, type, title, description, data, is_read, created_at)
+         VALUES ${placeholders.join(', ')}
+         RETURNING *`,
+        values
+      );
+
+      allInsertedActivities.push(...result.rows);
+    }
+
+    return allInsertedActivities;
+  }
+
+  static async getUserActivities(userId: string, unreadOnly = false, organizationId?: string | null): Promise<Activity[]> {
+    const orgFilter = organizationId ? 'AND af.organization_id = $3' : '';
+    const result = await query(
+      `SELECT 
+         af.id,
+         af.user_id,
+         af.organization_id,
+         af.type,
+         af.title,
+         af.description,
+         af.data,
+         af.is_read,
+         af.created_at,
+         o.name as organization_name
+       FROM activity_feed af
+       LEFT JOIN organizations o ON af.organization_id = o.id
+       WHERE af.user_id = $1
+         AND ($2 = false OR af.is_read = false)
+         ${orgFilter}
+       ORDER BY af.created_at DESC
+       LIMIT 50`,
+      organizationId ? [userId, unreadOnly, organizationId] : [userId, unreadOnly]
+    );
+
+    return result.rows;
+  }
+
+  static async markAsRead(activityId: string, userId: string): Promise<void> {
+    const result = await query(
+      `UPDATE activity_feed 
+       SET is_read = true 
+       WHERE id = $1 AND user_id = $2`,
+      [activityId, userId]
+    );
+
+    if (result.rowCount === 0) {
+      throw new Error('Activity not found or access denied');
+    }
+  }
+
+  static async markAllAsRead(userId: string, organizationId?: string | null): Promise<void> {
+    if (organizationId) {
+      await query(
+        `UPDATE activity_feed 
+         SET is_read = true 
+         WHERE user_id = $1 AND organization_id = $2 AND is_read = false`,
+        [userId, organizationId]
+      );
+    } else {
+      await query(
+        `UPDATE activity_feed 
+         SET is_read = true 
+         WHERE user_id = $1 AND is_read = false`,
+        [userId]
+      );
+    }
+  }
+
+  static async getUnreadCount(userId: string, organizationId?: string | null): Promise<number> {
+    if (organizationId) {
+      const result = await query(
+        `SELECT COUNT(*) as count 
+         FROM activity_feed 
+         WHERE user_id = $1 AND organization_id = $2 AND is_read = false`,
+        [userId, organizationId]
+      );
+      return parseInt(result.rows[0].count, 10);
+    }
+    const result = await query(
+      `SELECT COUNT(*) as count 
+       FROM activity_feed 
+       WHERE user_id = $1 AND is_read = false`,
+      [userId]
+    );
+
+    return parseInt(result.rows[0].count, 10);
+  }
+
+  static async deleteActivity(activityId: string, userId: string): Promise<void> {
+    const result = await query(
+      `DELETE FROM activity_feed 
+       WHERE id = $1 AND user_id = $2`,
+      [activityId, userId]
+    );
+
+    if (result.rowCount === 0) {
+      throw new Error('Activity not found or access denied');
+    }
+  }
+
+  static async getActivitiesByOrganization(userId: string, organizationId: string): Promise<Activity[]> {
+    const result = await query(
+      `SELECT 
+         af.id,
+         af.user_id,
+         af.organization_id,
+         af.type,
+         af.title,
+         af.description,
+         af.data,
+         af.is_read,
+         af.created_at,
+         o.name as organization_name
+       FROM activity_feed af
+       LEFT JOIN organizations o ON af.organization_id = o.id
+       WHERE af.user_id = $1 AND af.organization_id = $2
+       ORDER BY af.created_at DESC
+       LIMIT 50`,
+      [userId, organizationId]
+    );
+
+    return result.rows;
+  }
+
+  static async getActivityById(activityId: string, userId: string): Promise<Activity> {
+    const result = await query(
+      `SELECT 
+         af.id,
+         af.user_id,
+         af.organization_id,
+         af.type,
+         af.title,
+         af.description,
+         af.data,
+         af.is_read,
+         af.created_at,
+         o.name as organization_name
+       FROM activity_feed af
+       LEFT JOIN organizations o ON af.organization_id = o.id
+       WHERE af.id = $1 AND af.user_id = $2`,
+      [activityId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error('Activity not found');
+    }
+
+    return result.rows[0];
+  }
+}

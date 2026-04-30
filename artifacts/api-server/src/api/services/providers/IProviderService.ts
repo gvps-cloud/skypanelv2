@@ -1,0 +1,607 @@
+/**
+ * Provider Service Interface
+ *
+ * Defines the contract that all provider implementations must follow.
+ * This interface ensures consistency across different cloud providers
+ * and enables the system to work with multiple providers through a
+ * unified API.
+ *
+ * @module IProviderService
+ */
+
+/**
+ * Supported cloud provider types
+ *
+ * @typedef {('linode')} ProviderType
+ */
+export type ProviderType = "linode";
+
+/**
+ * Common normalized instance representation
+ *
+ * All provider-specific instance formats are normalized to this structure
+ * to provide a consistent interface across providers.
+ *
+ * @interface ProviderInstance
+ * @property {string} id - Unique identifier for the instance
+ * @property {string} label - Human-readable name for the instance
+ * @property {('running'|'stopped'|'provisioning'|'rebooting'|'error'|'unknown')} status - Current instance status
+ * @property {string[]} ipv4 - Array of IPv4 addresses assigned to the instance
+ * @property {string} [ipv6] - IPv6 address if enabled
+ * @property {string} region - Region/datacenter where instance is located
+ * @property {Object} specs - Instance specifications
+ * @property {number} specs.vcpus - Number of virtual CPUs
+ * @property {number} specs.memory - RAM in megabytes
+ * @property {number} specs.disk - Disk space in gigabytes
+ * @property {number} specs.transfer - Monthly transfer quota in gigabytes
+ * @property {string} created - ISO 8601 timestamp of instance creation
+ * @property {string} [image] - Operating system image identifier
+ * @property {string[]} [tags] - Optional tags for organization
+ */
+export interface ProviderInstance {
+  id: string;
+  label: string;
+  status:
+    | "running"
+    | "stopped"
+    | "provisioning"
+    | "rebooting"
+    | "error"
+    | "unknown";
+  ipv4: string[];
+  ipv6?: string;
+  region: string;
+  specs: {
+    vcpus: number;
+    memory: number; // MB
+    disk: number; // GB
+    transfer: number; // GB
+  };
+  created: string;
+  image?: string;
+  tags?: string[];
+}
+
+/**
+ * Common normalized plan representation
+ *
+ * Represents a VPS plan/size with standardized pricing and specifications.
+ *
+ * @interface ProviderPlan
+ * @property {string} id - Unique identifier for the plan
+ * @property {string} label - Human-readable plan name
+ * @property {number} vcpus - Number of virtual CPUs
+ * @property {number} memory - RAM in megabytes
+ * @property {number} disk - Disk space in gigabytes
+ * @property {number} transfer - Monthly transfer quota in gigabytes
+ * @property {Object} price - Pricing information
+ * @property {number} price.hourly - Hourly rate in USD
+ * @property {number} price.monthly - Monthly rate in USD
+ * @property {string[]} regions - Array of region IDs where plan is available
+ * @property {string} [type_class] - Optional plan class/category
+ */
+export interface ProviderPlan {
+  id: string;
+  label: string;
+  vcpus: number;
+  memory: number; // MB
+  disk: number; // GB
+  transfer: number; // GB
+  price: {
+    hourly: number;
+    monthly: number;
+  };
+  regions: string[];
+  network_out?: number;
+  type_class?: string;
+}
+
+/**
+ * Common normalized image representation
+ *
+ * Represents an operating system or application image.
+ *
+ * @interface ProviderImage
+ * @property {string} id - Unique identifier for the image
+ * @property {string} [slug] - URL-friendly identifier
+ * @property {string} label - Human-readable image name
+ * @property {string} [description] - Detailed description of the image
+ * @property {string} [distribution] - OS distribution (Ubuntu, Debian, etc.)
+ * @property {string} [version] - OS version number
+ * @property {number} [minDiskSize] - Minimum disk size required in GB
+ * @property {boolean} public - Whether image is publicly available
+ */
+export interface ProviderImage {
+  id: string;
+  slug?: string;
+  label: string;
+  description?: string;
+  distribution?: string;
+  version?: string;
+  minDiskSize?: number;
+  public: boolean;
+}
+
+/**
+ * Common normalized region representation
+ *
+ * Represents a datacenter region where instances can be deployed.
+ *
+ * @interface ProviderRegion
+ * @property {string} id - Unique identifier for the region
+ * @property {string} label - Human-readable region name
+ * @property {string} [country] - Country code or name
+ * @property {boolean} available - Whether region is currently available
+ * @property {string[]} [capabilities] - Array of supported features
+ */
+export interface ProviderRegion {
+  id: string;
+  label: string;
+  country?: string;
+  available: boolean;
+  capabilities?: string[];
+}
+
+/**
+ * Parameters for creating an instance
+ *
+ * Contains all configuration options for creating a new VPS instance.
+ * Provider-specific options are included as optional fields.
+ *
+ * @interface CreateInstanceParams
+ * @property {string} label - Human-readable name for the instance
+ * @property {string} type - Plan/size identifier
+ * @property {string} region - Region identifier where instance will be created
+ * @property {string} image - Operating system image identifier
+ * @property {string} rootPassword - Root user password
+ * @property {string[]} [sshKeys] - Array of SSH key identifiers or public keys
+ * @property {boolean} [backups] - Enable automated backups
+ * @property {boolean} [privateIP] - Enable private IP address (Linode)
+ * @property {string[]} [tags] - Tags for organization
+ * @property {number} [stackscriptId] - Linode StackScript ID
+ * @property {Record<string, any>} [stackscriptData] - StackScript user-defined fields
+ */
+export interface CreateInstanceParams {
+  label: string;
+  type: string; // Plan ID
+  region: string;
+  image: string;
+  rootPassword: string;
+  sshKeys?: string[];
+  backups?: boolean;
+  privateIP?: boolean;
+  tags?: string[];
+  // Provider-specific options
+  stackscriptId?: number;
+  stackscriptData?: Record<string, any>;
+}
+
+/**
+ * Standardized error structure
+ *
+ * All provider-specific errors are normalized to this format for
+ * consistent error handling across the application.
+ *
+ * @interface ProviderError
+ * @property {string} code - Standardized error code (e.g., 'INVALID_CREDENTIALS')
+ * @property {string} message - Human-readable error message
+ * @property {string} [field] - Field name that caused the error (for validation errors)
+ * @property {ProviderType} provider - Provider that generated the error
+ * @property {any} [originalError] - Original error object for debugging
+ */
+export interface ProviderError {
+  code: string;
+  message: string;
+  field?: string;
+  provider: ProviderType;
+  originalError?: any;
+}
+
+// ── Firewall Types ──
+
+export type FirewallProtocol = 'TCP' | 'UDP' | 'ICMP' | 'IPENCAP' | 'GRE';
+export type FirewallAction = 'ACCEPT' | 'DROP';
+export type FirewallStatus = 'enabled' | 'disabled';
+
+export interface FirewallRule {
+  protocol: FirewallProtocol;
+  ports?: string;
+  addresses: { ipv4?: string[]; ipv6?: string[] };
+  action: FirewallAction;
+  label?: string;
+  description?: string;
+}
+
+export interface FirewallRules {
+  inbound: FirewallRule[];
+  outbound: FirewallRule[];
+  inbound_policy: FirewallAction;
+  outbound_policy: FirewallAction;
+}
+
+export interface FirewallEntity {
+  id: number;
+  type: 'linode' | 'linode_interface' | 'nodebalancer';
+  label: string;
+  url: string;
+}
+
+export interface ProviderFirewall {
+  id: number;
+  label: string;
+  status: FirewallStatus;
+  rules: FirewallRules;
+  entities: FirewallEntity[];
+  tags: string[];
+  created: string;
+  updated: string;
+}
+
+export interface FirewallDevice {
+  id: number;
+  entity: FirewallEntity;
+  created: string;
+  updated: string;
+}
+
+export interface FirewallSettings {
+  default_firewall_ids: {
+    linode: number | null;
+    nodebalancer: number | null;
+  };
+}
+
+export interface FirewallTemplate {
+  slug: string;
+  label: string;
+  description: string;
+  rules: FirewallRules;
+}
+
+export interface CreateFirewallParams {
+  label: string;
+  rules: {
+    inbound_policy: FirewallAction;
+    outbound_policy: FirewallAction;
+    inbound?: FirewallRule[];
+    outbound?: FirewallRule[];
+  };
+  tags?: string[];
+}
+
+// ── IP Address Management Types ──
+
+export interface ProviderIPAddress {
+  address: string;
+  gateway?: string;
+  subnetMask?: string;
+  prefix: number;
+  type: 'ipv4' | 'ipv6' | 'ipv6/pool' | 'ipv6/range';
+  public: boolean;
+  rdns: string | null;
+  instanceId: string | null;
+  region: string;
+}
+
+export interface ProviderIPv6Range {
+  range: string;
+  instanceId: string | null;
+  instanceIds: string[];
+  routeTarget: string | null;
+  region: string;
+  prefixLength: number;
+  created: string;
+}
+
+export interface ProviderIPv6Pool {
+  range: string;
+  instanceId: string | null;
+  region: string;
+  prefixLength: number;
+}
+
+export interface ProviderVLAN {
+  label: string;
+  region: string;
+  instanceIds: string[];
+  created: string;
+}
+
+export interface ProviderAllocateIPRequest {
+  instanceId: string;
+  public: boolean;
+  type: 'ipv4' | 'ipv6';
+}
+
+export interface ProviderAssignIPsRequest {
+  assignments: Array<{ address: string; instanceId: string }>;
+  region: string;
+}
+
+export interface ProviderShareIPsRequest {
+  instanceId: string;
+  ips: string[];
+}
+
+export interface ProviderCreateIPv6RangeRequest {
+  instanceId?: string;
+  routeTarget?: string;
+  prefixLength: number;
+}
+
+// ── Disk Management Types ──
+
+export interface ProviderDisk {
+  id: number;
+  label: string;
+  status: string;
+  size: number;
+  filesystem: string;
+  created: string;
+  updated: string;
+}
+
+export interface CreateDiskParams {
+  label: string;
+  size: number;
+  filesystem?: string;
+  image?: string;
+  rootPassword?: string;
+  authorizedKeys?: string[];
+  stackscriptId?: number;
+  stackscriptData?: Record<string, string>;
+}
+
+export interface UpdateDiskParams {
+  label?: string;
+  filesystem?: string;
+}
+
+/**
+ * Interface that all provider implementations must implement
+ *
+ * This interface defines the contract for all cloud provider integrations.
+ * Each provider must implement these methods to work with the system.
+ *
+ * @interface IProviderService
+ */
+export interface IProviderService {
+  /**
+   * Get the provider type
+   *
+   * @returns {ProviderType} The provider type identifier
+   * @example
+   * const type = provider.getProviderType(); // 'linode'
+   */
+  getProviderType(): ProviderType;
+
+  /**
+   * Create a new VPS instance
+   *
+   * Creates a new virtual private server with the specified configuration.
+   * The instance will be provisioned asynchronously by the provider.
+   *
+   * @param {CreateInstanceParams} params - Instance configuration parameters
+   * @returns {Promise<ProviderInstance>} Normalized instance details
+   * @throws {ProviderError} If creation fails or validation errors occur
+   * @example
+   * const instance = await provider.createInstance({
+   *   label: 'web-server',
+   *   type: 's-1vcpu-1gb',
+   *   region: 'nyc3',
+   *   image: 'ubuntu-22-04-x64',
+   *   rootPassword: 'SecurePassword123!'
+   * });
+   */
+  createInstance(params: CreateInstanceParams): Promise<ProviderInstance>;
+
+  /**
+   * Get details of a specific instance
+   *
+   * Fetches current status and configuration of an existing instance.
+   *
+   * @param {string} instanceId - Provider-specific instance identifier
+   * @returns {Promise<ProviderInstance>} Normalized instance details
+   * @throws {ProviderError} If instance not found or API error occurs
+   * @example
+   * const instance = await provider.getInstance('12345');
+   */
+  getInstance(instanceId: string): Promise<ProviderInstance>;
+
+  /**
+   * List all instances for this provider
+   *
+   * Retrieves all VPS instances associated with the provider account.
+   *
+   * @returns {Promise<ProviderInstance[]>} Array of normalized instances
+   * @throws {ProviderError} If API error occurs
+   * @example
+   * const instances = await provider.listInstances();
+   * console.log(`Found ${instances.length} instances`);
+   */
+  listInstances(): Promise<ProviderInstance[]>;
+
+  /**
+   * Perform an action on an instance
+   *
+   * Executes a power or lifecycle action on the specified instance.
+   *
+   * @param {string} instanceId - Provider-specific instance identifier
+   * @param {string} action - Action to perform (boot, shutdown, reboot, delete, etc.)
+   * @param {Record<string, any>} [params] - Optional action-specific parameters
+   * @returns {Promise<void>}
+   * @throws {ProviderError} If action fails or is not supported
+   * @example
+   * await provider.performAction('12345', 'reboot');
+   * await provider.performAction('12345', 'delete');
+   */
+  performAction(
+    instanceId: string,
+    action: string,
+    params?: Record<string, any>,
+  ): Promise<void>;
+
+  /**
+   * Get available plans/sizes for this provider
+   *
+   * Retrieves all available VPS plans with pricing and specifications.
+   * Results are typically cached to reduce API calls.
+   *
+   * @returns {Promise<ProviderPlan[]>} Array of normalized plans
+   * @throws {ProviderError} If API error occurs
+   * @example
+   * const plans = await provider.getPlans();
+   * const cheapest = plans.sort((a, b) => a.price.monthly - b.price.monthly)[0];
+   */
+  getPlans(): Promise<ProviderPlan[]>;
+
+  /**
+   * Get available images for this provider
+   *
+   * Retrieves all available operating system and application images.
+   * Results are typically cached to reduce API calls.
+   *
+   * @returns {Promise<ProviderImage[]>} Array of normalized images
+   * @throws {ProviderError} If API error occurs
+   * @example
+   * const images = await provider.getImages();
+   * const ubuntu = images.filter(img => img.distribution === 'Ubuntu');
+   */
+  getImages(): Promise<ProviderImage[]>;
+
+  /**
+   * Get available regions for this provider
+   *
+   * Retrieves all datacenter regions where instances can be deployed.
+   * Results are typically cached to reduce API calls.
+   *
+   * @returns {Promise<ProviderRegion[]>} Array of normalized regions
+   * @throws {ProviderError} If API error occurs
+   * @example
+   * const regions = await provider.getRegions();
+   * const usRegions = regions.filter(r => r.id.startsWith('us-'));
+   */
+  getRegions(): Promise<ProviderRegion[]>;
+
+  /**
+   * Validate API credentials
+   *
+   * Tests whether the configured API credentials are valid and have
+   * sufficient permissions to perform operations.
+   *
+   * @returns {Promise<boolean>} True if credentials are valid, false otherwise
+   * @example
+   * const isValid = await provider.validateCredentials();
+   * if (!isValid) {
+   *   console.error('Invalid API credentials');
+   * }
+   */
+  validateCredentials(): Promise<boolean>;
+
+  // ── IP Address Management ──
+
+  listIPs(page?: number, pageSize?: number): Promise<{ data: ProviderIPAddress[]; pages: number; total: number }>;
+  getIPAddress(address: string): Promise<ProviderIPAddress>;
+  allocateIP(request: ProviderAllocateIPRequest): Promise<ProviderIPAddress>;
+  deleteIPAddress(instanceId: string, address: string): Promise<void>;
+  assignIPs(request: ProviderAssignIPsRequest): Promise<void>;
+  shareIPs(request: ProviderShareIPsRequest): Promise<void>;
+  updateIPReverseDNS(address: string, rdns: string | null): Promise<ProviderIPAddress>;
+
+  // ── IPv6 Management ──
+
+  listIPv6Pools(): Promise<ProviderIPv6Pool[]>;
+  listIPv6Ranges(): Promise<ProviderIPv6Range[]>;
+  createIPv6Range(request: ProviderCreateIPv6RangeRequest): Promise<{ range: string; routeTarget: string }>;
+  deleteIPv6Range(range: string): Promise<void>;
+
+  // ── VLAN Management ──
+
+  listVLANs(): Promise<ProviderVLAN[]>;
+  deleteVLAN(regionId: string, label: string): Promise<void>;
+
+  // ── Firewall Management ──
+
+  listFirewalls(): Promise<{ data: ProviderFirewall[]; pages: number; total: number }>;
+  createFirewall(params: CreateFirewallParams): Promise<ProviderFirewall>;
+  getFirewall(firewallId: number): Promise<ProviderFirewall>;
+  updateFirewall(firewallId: number, updates: { label?: string; status?: FirewallStatus; tags?: string[] }): Promise<ProviderFirewall>;
+  deleteFirewall(firewallId: number): Promise<void>;
+  getFirewallRules(firewallId: number): Promise<FirewallRules>;
+  updateFirewallRules(firewallId: number, rules: FirewallRules): Promise<FirewallRules>;
+  getFirewallDevices(firewallId: number): Promise<FirewallDevice[]>;
+  attachFirewallDevice(firewallId: number, type: string, entityId: number): Promise<FirewallDevice>;
+  detachFirewallDevice(firewallId: number, deviceId: number): Promise<void>;
+  getFirewallSettings(): Promise<FirewallSettings>;
+  updateFirewallSettings(settings: FirewallSettings): Promise<FirewallSettings>;
+  listFirewallTemplates(): Promise<FirewallTemplate[]>;
+  getFirewallTemplate(slug: string): Promise<FirewallTemplate>;
+
+  // ── Disk Management ──
+
+  listDisks(instanceId: string): Promise<ProviderDisk[]>;
+  getDisk(instanceId: string, diskId: number): Promise<ProviderDisk>;
+  createDisk(instanceId: string, params: CreateDiskParams): Promise<ProviderDisk>;
+  updateDisk(instanceId: string, diskId: number, params: UpdateDiskParams): Promise<ProviderDisk>;
+  resizeDisk(instanceId: string, diskId: number, size: number): Promise<void>;
+  cloneDisk(instanceId: string, diskId: number): Promise<ProviderDisk>;
+  resetDiskPassword(instanceId: string, diskId: number, password: string): Promise<void>;
+  deleteDisk(instanceId: string, diskId: number): Promise<void>;
+
+  // ── Volume Management ──
+
+  listVolumes(page?: number, pageSize?: number): Promise<{ data: ProviderVolume[]; pages: number; total: number }>;
+  createVolume(params: CreateVolumeParams): Promise<ProviderVolume>;
+  getVolume(volumeId: number): Promise<ProviderVolume>;
+  updateVolume(volumeId: number, params: { label?: string; tags?: string[] }): Promise<ProviderVolume>;
+  deleteVolume(volumeId: number): Promise<void>;
+  attachVolume(volumeId: number, linodeId: number): Promise<ProviderVolume>;
+  detachVolume(volumeId: number): Promise<ProviderVolume>;
+  resizeVolume(volumeId: number, size: number): Promise<ProviderVolume>;
+  cloneVolume(volumeId: number, label: string): Promise<ProviderVolume>;
+  listVolumeTypes(): Promise<ProviderVolumeType[]>;
+}
+
+export interface ProviderVolume {
+  id: number;
+  label: string;
+  status: 'creating' | 'active' | 'resizing' | 'key_rotating';
+  size: number;
+  region: string;
+  linode_id: number | null;
+  linode_label: string | null;
+  filesystem_path: string;
+  created: string;
+  updated: string;
+  encryption: 'enabled' | 'disabled';
+  hardware_type: 'hdd' | 'nvme';
+  io_ready: boolean;
+  tags: string[];
+}
+
+export interface CreateVolumeParams {
+  label: string;
+  size: number;
+  region: string;
+  linode_id?: number;
+  config_id?: number;
+  encryption?: 'enabled' | 'disabled';
+  tags?: string[];
+}
+
+export interface ProviderVolumeType {
+  id: string;
+  label: string;
+  description: string;
+  storage_bytes: number;
+  price: {
+    hourly: number | null;
+    monthly: number | null;
+    region_prices?: Array<{
+      region: string;
+      hourly: number | null;
+      monthly: number | null;
+    }>;
+  };
+  capabilities: string[];
+}
