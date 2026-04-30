@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useHostingPlans, useHostingRegions, useHostingStatus } from "@/hooks/useHosting";
+import { useHostingPlans, useHostingRegions, useHostingStatus, useHostingStagingDomain } from "@/hooks/useHosting";
 import { apiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,26 +22,57 @@ export default function HostingStore() {
   const { data: statusData } = useHostingStatus();
   const { data: plansData, isLoading: plansLoading } = useHostingPlans();
   const { data: regionsData } = useHostingRegions();
+  const { data: stagingDomainData } = useHostingStagingDomain();
 
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [domain, setDomain] = useState("");
+  const [useStaging, setUseStaging] = useState(false);
   const [regionId, setRegionId] = useState("");
   const [purchasing, setPurchasing] = useState(false);
 
+  const stagingSuffix = stagingDomainData?.stagingDomain || null;
+  const canUseStaging = !!stagingSuffix;
+  const effectiveDomain = useStaging ? "" : domain;
+  const hasDomain = useStaging || domain.trim().length > 0;
+
   const handlePurchase = async () => {
-    if (!selectedPlan || !domain) {
-      toast.error("Please select a plan and enter a domain");
+    if (!selectedPlan) {
+      toast.error("Please select a plan");
+      return;
+    }
+    if (!useStaging && !domain.trim()) {
+      toast.error("Please enter a domain or use a free staging domain");
       return;
     }
 
     setPurchasing(true);
     try {
-      await apiClient.post("/hosting/purchase", {
+      const payload: Record<string, any> = {
         planId: selectedPlan,
-        domain,
         regionId: regionId || undefined,
-      });
-      toast.success("Hosting subscription purchased successfully");
+      };
+
+      if (useStaging) {
+        payload.useStagingDomain = true;
+      } else {
+        payload.domain = domain.trim();
+      }
+
+      const response = await apiClient.post<{
+        credentialsCreated?: boolean;
+        credentialsEmailed?: boolean;
+        stagingDomain?: string;
+      }>("/hosting/purchase", payload);
+
+      if (response?.stagingDomain) {
+        toast.success(`Hosting subscription purchased! Your staging domain: ${response.stagingDomain}`);
+      } else if (response?.credentialsCreated && response?.credentialsEmailed) {
+        toast.success("Hosting subscription purchased. Your hosting panel credentials were emailed.");
+      } else if (response?.credentialsCreated) {
+        toast.success("Hosting subscription purchased. Your hosting account was created; if the email does not arrive, use the panel password reset.");
+      } else {
+        toast.success("Hosting subscription purchased successfully");
+      }
       navigate("/hosting");
     } catch (error: any) {
       toast.error(error?.message || "Failed to purchase hosting");
@@ -101,15 +132,36 @@ export default function HostingStore() {
           <CardTitle>Configure Your Subscription</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="domain">Domain</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="domain">
+              {useStaging ? "Staging Domain" : "Domain"}
+            </Label>
+            {canUseStaging && (
+              <button
+                type="button"
+                onClick={() => setUseStaging(!useStaging)}
+                className="text-sm text-primary hover:underline"
+              >
+                {useStaging ? "I have my own domain" : "I don't have a domain"}
+              </button>
+            )}
+          </div>
+
+          {useStaging ? (
+            <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+              <Globe className="h-4 w-4" />
+              <span>A random subdomain on </span>
+              <code className="font-mono text-foreground">{stagingSuffix}</code>
+              <span> will be assigned automatically</span>
+            </div>
+          ) : (
             <Input
               id="domain"
               placeholder="example.com"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
             />
-          </div>
+          )}
 
           {regionsData?.regions && regionsData.regions.length > 0 && (
             <div>
@@ -131,7 +183,7 @@ export default function HostingStore() {
 
           <Button
             onClick={handlePurchase}
-            disabled={purchasing || !selectedPlan || !domain}
+            disabled={purchasing || !selectedPlan || !hasDomain}
             className="w-full"
           >
             {purchasing ? (

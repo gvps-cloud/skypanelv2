@@ -2,9 +2,8 @@ import express, { type Request, type Response } from "express";
 import { authenticateToken } from "../../middleware/auth.js";
 import { requireOrganization } from "../../middleware/auth.js";
 import { requireHostingEnabledForUsers, requireOrgPermission } from "../../middleware/hosting.js";
-import { query } from "../../lib/database.js";
+import { getEnhanceWebsiteOrgId, getHostingSubscriptionForOrganization } from "../../lib/hostingEnhanceOrg.js";
 import { EnhanceService } from "../../services/enhanceService.js";
-import { config } from "../../config/index.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
 
 const router = express.Router();
@@ -40,15 +39,12 @@ function toEnhanceFtpUserUpdatePayload(body: any) {
 async function resolveSubscription(req: Request, res: Response) {
   const { organizationId } = (req as AuthenticatedRequest).user;
   const { id } = req.params;
-  const result = await query(
-    `SELECT * FROM hosting_subscriptions WHERE id = $1 AND organization_id = $2`,
-    [id, organizationId]
-  );
-  if (result.rows.length === 0) {
+  const subscription = await getHostingSubscriptionForOrganization(id, organizationId);
+  if (!subscription) {
     res.status(404).json({ error: "Service not found" });
     return null;
   }
-  return result.rows[0];
+  return subscription;
 }
 
 // FTP Users
@@ -56,7 +52,8 @@ router.get("/:id/ftp-users", requireOrgPermission("hosting_view"), async (req: R
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const users = await EnhanceService.getWebsiteFtpUsers(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id);
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const users = await EnhanceService.getWebsiteFtpUsers(enhanceWebsiteOrgId, sub.enhance_website_id);
     res.json({ users: unwrapItems(users).map(normalizeFtpUser) });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get FTP users" });
@@ -67,8 +64,9 @@ router.post("/:id/ftp-users", requireOrgPermission("hosting_manage"), async (req
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.createWebsiteFtpUser(
-      config.ENHANCE_MASTER_ORG_ID,
+      enhanceWebsiteOrgId,
       sub.enhance_website_id,
       toEnhanceFtpUserPayload(req.body),
     );
@@ -82,8 +80,9 @@ router.patch("/:id/ftp-users/:username", requireOrgPermission("hosting_manage"),
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     await EnhanceService.updateWebsiteFtpUser(
-      config.ENHANCE_MASTER_ORG_ID,
+      enhanceWebsiteOrgId,
       sub.enhance_website_id,
       req.params.username,
       toEnhanceFtpUserUpdatePayload(req.body),
@@ -98,7 +97,8 @@ router.delete("/:id/ftp-users/:username", requireOrgPermission("hosting_manage")
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    await EnhanceService.deleteWebsiteFtpUser(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.username);
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.deleteWebsiteFtpUser(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.username);
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to delete FTP user" });

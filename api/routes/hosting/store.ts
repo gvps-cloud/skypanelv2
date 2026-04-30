@@ -6,6 +6,8 @@ import { query, transaction } from "../../lib/database.js";
 import { EnhanceService } from "../../services/enhanceService.js";
 import { logActivity } from "../../services/activityLogger.js";
 import { config } from "../../config/index.js";
+import { sendEnhanceCredentialsEmail } from "../../services/emailService.js";
+import { EnhanceOnboardingService } from "../../services/enhanceOnboardingService.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
 
 const router = express.Router();
@@ -35,11 +37,25 @@ router.get("/plans", async (req: Request, res: Response) => {
  */
 router.get("/regions", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   try {
-    const groups = await EnhanceService.getServerGroups(config.ENHANCE_MASTER_ORG_ID);
+    const groups = await EnhanceService.getServerGroups();
     res.json({ regions: groups });
   } catch (error: any) {
     console.error("Failed to get hosting regions:", error);
     res.status(500).json({ error: "Failed to get hosting regions" });
+  }
+});
+
+/**
+ * GET /api/hosting/staging-domain
+ * Return the platform staging domain suffix for free subdomains
+ */
+router.get("/staging-domain", requireOrgPermission("hosting_view"), async (_req: Request, res: Response) => {
+  try {
+    const stagingDomain = await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID);
+    res.json({ stagingDomain: stagingDomain || null });
+  } catch (error: any) {
+    console.error("Failed to get staging domain:", error);
+    res.status(500).json({ error: "Failed to get staging domain" });
   }
 });
 
@@ -97,10 +113,10 @@ router.get("/services/:id", requireOrgPermission("hosting_view"), async (req: Re
  */
 router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
-  const { planId, domain, regionId } = req.body;
+  const { planId, domain, regionId, useStagingDomain } = req.body;
 
-  if (!planId || !domain) {
-    return res.status(400).json({ error: "planId and domain are required" });
+  if (!planId || (!domain && !useStagingDomain)) {
+    return res.status(400).json({ error: "planId and domain are required (or set useStagingDomain)" });
   }
 
   let subscriptionId: string | undefined;
@@ -117,9 +133,9 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       }
       const wallet = walletResult.rows[0];
 
-      // 2. Get plan pricing
+      // 2. Get plan pricing and features
       const planResult = await client.query(
-        `SELECT price_monthly, enhance_plan_id, name FROM hosting_plans WHERE id = $1 AND is_active = true`,
+        `SELECT price_monthly, enhance_plan_id, name, features FROM hosting_plans WHERE id = $1 AND is_active = true`,
         [planId]
       );
       if (planResult.rows.length === 0) {
@@ -162,38 +178,81 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
     // Remote Enhance calls (outside the initial DB transaction)
     const { subscription, plan } = result;
     subscriptionId = subscription.id;
+    const onboardingResult = await EnhanceOnboardingService.ensureEnhanceCustomerForPurchase({
+      organizationId,
+      purchaserUserId: userId,
+    });
 
-    // Ensure org has Enhance customer id
-    const orgResult = await query(
-      `SELECT enhance_customer_id FROM organizations WHERE id = $1`,
-      [organizationId]
-    );
-    let enhanceCustomerId = orgResult.rows[0]?.enhance_customer_id;
+    const enhancePlanId = Number(plan.enhance_plan_id);
+    if (!Number.isInteger(enhancePlanId) || enhancePlanId <= 0) {
+      throw new Error("Hosting plan is not synced to a valid Enhance plan");
+    }
 
-    if (!enhanceCustomerId) {
-      const customer = await EnhanceService.createCustomer(config.ENHANCE_MASTER_ORG_ID, {
-        name: domain,
-      });
-      enhanceCustomerId = customer.id;
-      await query(
-        `UPDATE organizations SET enhance_customer_id = $1 WHERE id = $2`,
-        [enhanceCustomerId, organizationId]
-      );
+    // Resolve plan features for server group handling
+    const planFeatures = plan.features
+      ? (typeof plan.features === 'string' ? JSON.parse(plan.features) : plan.features)
+      : {};
+    const allowServerGroupSelection = planFeatures.allowServerGroupSelection === true;
+
+    // Resolve the final domain (staging or custom)
+    let resolvedDomain = domain;
+    if (!resolvedDomain && useStagingDomain) {
+      const stagingSuffix = await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID);
+      if (!stagingSuffix) {
+        throw new Error("Staging domain is not configured on the hosting platform");
+      }
+      const slug = crypto.getRandomValues(new Uint8Array(4))
+        .reduce((acc: string, b: number) => acc + b.toString(36).padStart(2, '0').slice(-2), '')
+        .replace(/[^a-z0-9]/g, '');
+      resolvedDomain = `${slug}.${stagingSuffix}`;
+    }
+
+    // Only include serverGroupId when the plan explicitly allows selection
+    const serverGroupId = regionId || config.ENHANCE_DEFAULT_SERVER_GROUP_ID;
+    if (allowServerGroupSelection && !serverGroupId) {
+      throw new Error("A hosting region is required because no default Enhance server group is configured");
     }
 
     // Create subscription
     const enhanceSubscription = await EnhanceService.createCustomerSubscription(
       config.ENHANCE_MASTER_ORG_ID,
-      enhanceCustomerId,
-      { planId: Number(plan.enhance_plan_id) }
+      onboardingResult.enhanceCustomerId,
+      { planId: enhancePlanId }
+    );
+    const enhanceSubscriptionId = Number(enhanceSubscription.id);
+    if (!Number.isInteger(enhanceSubscriptionId) || enhanceSubscriptionId <= 0) {
+      throw new Error("Enhance subscription creation returned an invalid subscription id");
+    }
+
+    // Create website — conditionally include serverGroupId only when the plan allows selection
+    const websitePayload: Record<string, any> = {
+      subscriptionId: enhanceSubscriptionId,
+      domain: resolvedDomain,
+    };
+    if (allowServerGroupSelection && serverGroupId) {
+      websitePayload.serverGroupId = serverGroupId;
+    }
+
+    const enhanceWebsite = await EnhanceService.createWebsite(
+      onboardingResult.enhanceCustomerId,
+      websitePayload,
     );
 
-    // Create website
-    const enhanceWebsite = await EnhanceService.createWebsite(config.ENHANCE_MASTER_ORG_ID, {
-      subscriptionId: Number(enhanceSubscription.id),
-      domain,
-      serverGroupId: regionId || config.ENHANCE_DEFAULT_SERVER_GROUP_ID,
-    });
+    let credentialsEmailed = false;
+    if (onboardingResult.credentialsEmail) {
+      try {
+        await sendEnhanceCredentialsEmail({
+          to: onboardingResult.credentialsEmail.recipient,
+          displayName: onboardingResult.credentialsEmail.displayName,
+          firstName: onboardingResult.credentialsEmail.firstName,
+          organizationName: onboardingResult.credentialsEmail.organizationName,
+          password: onboardingResult.credentialsEmail.password,
+        });
+        credentialsEmailed = true;
+      } catch (emailError) {
+        console.error("Failed to send Enhance credentials email:", emailError);
+      }
+    }
 
     // Success: update local row
     await query(
@@ -221,12 +280,17 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       eventType: "hosting.purchase.completed",
       entityType: "hosting_subscription",
       entityId: subscription.id,
-      message: `Purchased hosting plan ${plan.name} for ${domain}`,
+      message: `Purchased hosting plan ${plan.name} for ${resolvedDomain}`,
       status: "success",
-      metadata: { plan_id: planId, domain, enhance_subscription_id: enhanceSubscription.id },
+      metadata: { plan_id: planId, domain: resolvedDomain, enhance_subscription_id: enhanceSubscription.id },
     });
 
-    res.status(201).json({ subscription: { ...subscription, status: "active" } });
+    res.status(201).json({
+      subscription: { ...subscription, status: "active", domain: resolvedDomain },
+      credentialsCreated: onboardingResult.credentialsCreated,
+      credentialsEmailed,
+      stagingDomain: useStagingDomain ? resolvedDomain : undefined,
+    });
   } catch (error: any) {
     console.error("Hosting purchase failed:", error);
 
@@ -275,16 +339,20 @@ router.post("/services/:id/cancel", requireOrgPermission("hosting_manage"), asyn
 
   try {
     const result = await query(
-      `SELECT * FROM hosting_subscriptions WHERE id = $1 AND organization_id = $2`,
+      `SELECT hs.*, org.enhance_customer_id AS enhance_customer_org_id
+       FROM hosting_subscriptions hs
+       JOIN organizations org ON org.id = hs.organization_id
+       WHERE hs.id = $1 AND hs.organization_id = $2`,
       [id, organizationId]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Service not found" });
     }
     const sub = result.rows[0];
+    const enhanceWebsiteOrgId = sub.enhance_customer_org_id || config.ENHANCE_MASTER_ORG_ID;
 
     if (sub.enhance_website_id) {
-      await EnhanceService.deleteWebsite(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id);
+      await EnhanceService.deleteWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
     }
     if (sub.enhance_subscription_id) {
       await EnhanceService.deleteSubscription(config.ENHANCE_MASTER_ORG_ID, sub.enhance_subscription_id);

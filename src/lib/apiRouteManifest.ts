@@ -632,6 +632,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/hosting/staging-domain",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/hosting/status",
     "protected": false,
     "admin": false

@@ -1,5 +1,6 @@
 import express, { type Request, type Response } from "express";
 import { authenticateToken, requireAdmin } from "../../middleware/auth.js";
+import { getEnhanceWebsiteOrgId, getHostingSubscriptionById } from "../../lib/hostingEnhanceOrg.js";
 import { query } from "../../lib/database.js";
 import { EnhanceToggleService } from "../../services/enhanceToggle.js";
 import { EnhanceService } from "../../services/enhanceService.js";
@@ -385,14 +386,13 @@ router.post("/subscriptions/:id/suspend", async (req: Request, res: Response) =>
   const userId = (req as any).user?.id;
 
   try {
-    const subResult = await query(`SELECT * FROM hosting_subscriptions WHERE id = $1`, [id]);
-    if (subResult.rows.length === 0) {
+    const sub = await getHostingSubscriptionById(id);
+    if (!sub) {
       return res.status(404).json({ error: "Subscription not found" });
     }
-    const sub = subResult.rows[0];
 
     if (sub.enhance_website_id) {
-      await EnhanceService.updateWebsite(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, {
+      await EnhanceService.updateWebsite(getEnhanceWebsiteOrgId(sub), sub.enhance_website_id, {
         status: "suspended",
       });
     }
@@ -425,14 +425,13 @@ router.post("/subscriptions/:id/unsuspend", async (req: Request, res: Response) 
   const userId = (req as any).user?.id;
 
   try {
-    const subResult = await query(`SELECT * FROM hosting_subscriptions WHERE id = $1`, [id]);
-    if (subResult.rows.length === 0) {
+    const sub = await getHostingSubscriptionById(id);
+    if (!sub) {
       return res.status(404).json({ error: "Subscription not found" });
     }
-    const sub = subResult.rows[0];
 
     if (sub.enhance_website_id) {
-      await EnhanceService.updateWebsite(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, {
+      await EnhanceService.updateWebsite(getEnhanceWebsiteOrgId(sub), sub.enhance_website_id, {
         status: "active",
       });
     }

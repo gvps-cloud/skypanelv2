@@ -68,9 +68,73 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}`);
   }
 
+  static async getOrgLogins(orgId: string) {
+    return this.request<any>(`/orgs/${orgId}/logins`);
+  }
+
+  static async getOrgMembers(orgId: string) {
+    return this.request<any>(`/orgs/${orgId}/members`);
+  }
+
+  static async createOrgMember(orgId: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/members`, {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  static async updateOrgOwner(orgId: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/owner`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
   static async getServerGroups(_orgId?: string) {
     // Enhance API: /servers/groups is a global endpoint (not org-scoped)
     return this.request<any>(`/servers/groups`);
+  }
+
+  // ============================================================
+  // Staging Domains
+  // ============================================================
+  static async getStagingDomain(orgId: string): Promise<string | null> {
+    try {
+      const result = await this.request<{ domain?: string }>(`/orgs/${orgId}/staging-domain`);
+      return typeof result?.domain === 'string' && result.domain.trim().length > 0
+        ? result.domain.trim()
+        : null;
+    } catch (error) {
+      // 404 means staging domain has not been set
+      if (error instanceof EnhanceApiError && error.statusCode === 404) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  // ============================================================
+  // Logins
+  // ============================================================
+  static async getLogins(options?: { limit?: number; offset?: number }) {
+    const params = new URLSearchParams();
+    if (typeof options?.limit === 'number') {
+      params.set('limit', String(options.limit));
+    }
+    if (typeof options?.offset === 'number') {
+      params.set('offset', String(options.offset));
+    }
+
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    return this.request<any>(`/logins${suffix}`);
+  }
+
+  static async createLogin(orgId: string, data: any) {
+    const params = new URLSearchParams({ orgId });
+    return this.request<any>(`/logins?${params.toString()}`, {
+      method: 'POST',
+      body: data,
+    });
   }
 
   static async getPlans(orgId: string) {

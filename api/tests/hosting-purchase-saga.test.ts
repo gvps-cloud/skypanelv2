@@ -12,6 +12,9 @@ import { query } from '../lib/database.js';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 
+const mockEnsureEnhanceCustomerForPurchase = vi.hoisted(() => vi.fn());
+const mockSendEnhanceCredentialsEmail = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
 // Mock EnhanceToggleService so hosting routes are accessible
 vi.mock('../services/enhanceToggle.js', () => ({
   EnhanceToggleService: {
@@ -23,13 +26,23 @@ vi.mock('../services/enhanceToggle.js', () => ({
 // Mock EnhanceService methods; per-test behavior set via vi.mocked(...)
 vi.mock('../services/enhanceService.js', () => ({
   EnhanceService: {
-    createCustomer: vi.fn(),
     createCustomerSubscription: vi.fn(),
     createWebsite: vi.fn(),
     deleteWebsite: vi.fn().mockResolvedValue(undefined),
     deleteSubscription: vi.fn().mockResolvedValue(undefined),
     getServerGroups: vi.fn().mockResolvedValue([]),
+    getStagingDomain: vi.fn().mockResolvedValue(null),
   },
+}));
+
+vi.mock('../services/enhanceOnboardingService.js', () => ({
+  EnhanceOnboardingService: {
+    ensureEnhanceCustomerForPurchase: mockEnsureEnhanceCustomerForPurchase,
+  },
+}));
+
+vi.mock('../services/emailService.js', () => ({
+  sendEnhanceCredentialsEmail: mockSendEnhanceCredentialsEmail,
 }));
 
 // Mock activity logger
@@ -96,7 +109,7 @@ describe('Hosting Purchase Saga', () => {
     await query(
       `INSERT INTO hosting_plans (id, enhance_plan_id, name, description, features, service_type, price_monthly, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, true)`,
-      [hostingPlanId, `enhance-plan-saga-${Date.now()}`, 'Saga Plan', 'Test plan for saga', '{}', 'web', 10.00]
+      [hostingPlanId, '201', 'Saga Plan', 'Test plan for saga', '{}', 'web', 10.00]
     );
 
     // Generate auth token
@@ -112,9 +125,26 @@ describe('Hosting Purchase Saga', () => {
     await query('DELETE FROM hosting_subscriptions WHERE organization_id = $1', [testOrgId]);
     await query('DELETE FROM payment_transactions WHERE organization_id = $1', [testOrgId]);
     await query('UPDATE wallets SET balance = 100.00 WHERE organization_id = $1', [testOrgId]);
+    await query('DELETE FROM hosting_plans WHERE id = $1', [hostingPlanId]);
+
+    hostingPlanId = uuidv4();
+    await query(
+      `INSERT INTO hosting_plans (id, enhance_plan_id, name, description, features, service_type, price_monthly, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, true)`,
+      [hostingPlanId, '201', 'Saga Plan', 'Test plan for saga', '{}', 'web', 10.00]
+    );
 
     // Reset mocks
     vi.clearAllMocks();
+
+    mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
+      enhanceCustomerId: 'fake-customer-id',
+      purchaserLoginId: 'fake-login-id',
+      purchaserMemberId: 'fake-member-id',
+      credentialsCreated: false,
+      credentialsEmail: null,
+      ownerAssigned: false,
+    });
   });
 
   afterAll(async () => {
@@ -135,8 +165,7 @@ describe('Hosting Purchase Saga', () => {
       const testApp = await getApp();
 
       // Mock remote Enhance calls
-      vi.mocked(EnhanceService.createCustomer).mockResolvedValue({ id: 'fake-customer-id' });
-      vi.mocked(EnhanceService.createCustomerSubscription).mockResolvedValue({ id: 'fake-subscription-id' });
+      vi.mocked(EnhanceService.createCustomerSubscription).mockResolvedValue({ id: '123' });
       vi.mocked(EnhanceService.createWebsite).mockResolvedValue({
         id: 'fake-website-id',
         primary_ip: '203.0.113.1',
@@ -153,6 +182,12 @@ describe('Hosting Purchase Saga', () => {
       expect(response.status).toBe(201);
       expect(response.body.subscription).toBeDefined();
       expect(response.body.subscription.status).toBe('active');
+      expect(response.body.credentialsCreated).toBe(false);
+      expect(response.body.credentialsEmailed).toBe(false);
+      expect(EnhanceService.createWebsite).toHaveBeenCalledWith('fake-customer-id', {
+        subscriptionId: 123,
+        domain: 'saga-test.example.com',
+      });
 
       // Assert wallet debited to $90
       const walletResult = await query(
@@ -178,7 +213,7 @@ describe('Hosting Purchase Saga', () => {
       );
       expect(subResult.rows.length).toBe(1);
       expect(subResult.rows[0].status).toBe('active');
-      expect(subResult.rows[0].enhance_subscription_id).toBe('fake-subscription-id');
+      expect(subResult.rows[0].enhance_subscription_id).toBe('123');
       expect(subResult.rows[0].enhance_website_id).toBe('fake-website-id');
       expect(subResult.rows[0].primary_ip).toBe('203.0.113.1');
     });
@@ -191,8 +226,7 @@ describe('Hosting Purchase Saga', () => {
       const testApp = await getApp();
 
       // Mock remote calls: createCustomer and createSubscription succeed, createWebsite fails
-      vi.mocked(EnhanceService.createCustomer).mockResolvedValue({ id: 'fake-customer-id' });
-      vi.mocked(EnhanceService.createCustomerSubscription).mockResolvedValue({ id: 'fake-subscription-id' });
+      vi.mocked(EnhanceService.createCustomerSubscription).mockResolvedValue({ id: '123' });
       vi.mocked(EnhanceService.createWebsite).mockRejectedValue(new Error('Remote website creation failed'));
 
       const response = await request(testApp)

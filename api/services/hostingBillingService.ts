@@ -1,8 +1,8 @@
 import { query, transaction } from '../lib/database.js';
+import { getEnhanceWebsiteOrgId } from '../lib/hostingEnhanceOrg.js';
 import { EnhanceService } from './enhanceService.js';
 import { EnhanceToggleService } from './enhanceToggle.js';
 import { logActivity } from './activityLogger.js';
-import { config } from '../config/index.js';
 
 export class HostingBillingService {
   static async runMonthlyHostingBilling(runType: string = 'scheduled'): Promise<void> {
@@ -16,8 +16,11 @@ export class HostingBillingService {
 
     try {
       const result = await query(
-        `SELECT id, organization_id, plan_id, enhance_subscription_id, enhance_website_id, domain, next_billing_at, last_billed_at
-         FROM hosting_subscriptions
+        `SELECT hs.id, hs.organization_id, hs.plan_id, hs.enhance_subscription_id, hs.enhance_website_id,
+                hs.domain, hs.next_billing_at, hs.last_billed_at, hs.created_by,
+                org.enhance_customer_id AS enhance_customer_org_id
+         FROM hosting_subscriptions hs
+         JOIN organizations org ON org.id = hs.organization_id
          WHERE status = 'active' AND next_billing_at <= now()`
       );
 
@@ -110,7 +113,7 @@ export class HostingBillingService {
     try {
       // Suspend remote website
       if (sub.enhance_website_id) {
-        await EnhanceService.updateWebsite(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, {
+        await EnhanceService.updateWebsite(getEnhanceWebsiteOrgId(sub), sub.enhance_website_id, {
           status: 'suspended',
         });
       }

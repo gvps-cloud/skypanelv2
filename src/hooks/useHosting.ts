@@ -6,6 +6,7 @@ export const hostingKeys = {
   status: () => ["hosting", "status"] as const,
   plans: () => ["hosting", "plans"] as const,
   regions: () => ["hosting", "regions"] as const,
+  stagingDomain: () => ["hosting", "staging-domain"] as const,
   services: () => ["hosting", "services"] as const,
   service: (id: string) => ["hosting", "services", id] as const,
 };
@@ -58,5 +59,15 @@ export function useHostingService(id: string) {
       return res as { service: any };
     },
     enabled: !!id,
+  });
+}
+
+export function useHostingStagingDomain() {
+  return useQuery({
+    queryKey: hostingKeys.stagingDomain(),
+    queryFn: async () => {
+      const res = await apiClient.get("/hosting/staging-domain");
+      return res as { stagingDomain: string | null };
+    },
   });
 }

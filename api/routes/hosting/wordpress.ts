@@ -2,9 +2,8 @@ import express, { type Request, type Response } from "express";
 import { authenticateToken } from "../../middleware/auth.js";
 import { requireOrganization } from "../../middleware/auth.js";
 import { requireHostingEnabledForUsers, requireOrgPermission } from "../../middleware/hosting.js";
-import { query } from "../../lib/database.js";
+import { getEnhanceWebsiteOrgId, getHostingSubscriptionForOrganization } from "../../lib/hostingEnhanceOrg.js";
 import { EnhanceService } from "../../services/enhanceService.js";
-import { config } from "../../config/index.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
 
 const router = express.Router();
@@ -58,15 +57,12 @@ function normalizeWordpressTheme(theme: any) {
 async function resolveSubscription(req: Request, res: Response) {
   const { organizationId } = (req as AuthenticatedRequest).user;
   const { id } = req.params;
-  const result = await query(
-    `SELECT * FROM hosting_subscriptions WHERE id = $1 AND organization_id = $2`,
-    [id, organizationId]
-  );
-  if (result.rows.length === 0) {
+  const subscription = await getHostingSubscriptionForOrganization(id, organizationId);
+  if (!subscription) {
     res.status(404).json({ error: "Service not found" });
     return null;
   }
-  return result.rows[0];
+  return subscription;
 }
 
 // WordPress Installations
@@ -74,7 +70,8 @@ router.get("/:id/wordpress", requireOrgPermission("hosting_view"), async (req: R
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const apps = await EnhanceService.getWebsiteApps(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id);
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const apps = await EnhanceService.getWebsiteApps(enhanceWebsiteOrgId, sub.enhance_website_id);
     res.json({
       installations: unwrapItems(apps)
         .filter((app) => app?.app === "wordpress")
@@ -90,7 +87,8 @@ router.get("/:id/wordpress/:appId/settings", requireOrgPermission("hosting_view"
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const settings = await EnhanceService.getWordpressSettings(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.appId);
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const settings = await EnhanceService.getWordpressSettings(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId);
     res.json({ settings });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get WordPress settings" });
@@ -101,7 +99,8 @@ router.patch("/:id/wordpress/:appId/settings", requireOrgPermission("hosting_man
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    await EnhanceService.updateWordpressSettings(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.appId, req.body);
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.updateWordpressSettings(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.body);
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to update WordPress settings" });
@@ -112,7 +111,8 @@ router.get("/:id/wordpress/:appId/users", requireOrgPermission("hosting_view"), 
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const users = await EnhanceService.getWordpressUsers(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.appId);
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const users = await EnhanceService.getWordpressUsers(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId);
     res.json({ users: unwrapItems(users).map(normalizeWordpressUser) });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get WordPress users" });
@@ -123,8 +123,9 @@ router.get("/:id/wordpress/:appId/users/:userId/sso", requireOrgPermission("host
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.getWordpressUserSsoUrl(
-      config.ENHANCE_MASTER_ORG_ID,
+      enhanceWebsiteOrgId,
       sub.enhance_website_id,
       req.params.appId,
       req.params.userId,
@@ -139,7 +140,8 @@ router.get("/:id/wordpress/:appId/plugins", requireOrgPermission("hosting_view")
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const plugins = await EnhanceService.getWordpressPlugins(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.appId);
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const plugins = await EnhanceService.getWordpressPlugins(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId);
     res.json({ plugins: unwrapItems(plugins).map(normalizeWordpressPlugin) });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get WordPress plugins" });
@@ -150,7 +152,8 @@ router.get("/:id/wordpress/:appId/themes", requireOrgPermission("hosting_view"),
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const themes = await EnhanceService.getWordpressThemes(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id, req.params.appId);
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const themes = await EnhanceService.getWordpressThemes(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId);
     res.json({ themes: unwrapItems(themes).map(normalizeWordpressTheme) });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get WordPress themes" });

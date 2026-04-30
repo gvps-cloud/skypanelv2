@@ -1,7 +1,7 @@
 import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
 import { Resend } from "resend";
 import { config, type EmailProvider } from "../config/index.js";
-import { renderTemplate } from "./emailTemplateService.js";
+import { renderAdHocTemplate, renderTemplate } from "./emailTemplateService.js";
 
 let transporter: Transporter | null = null;
 
@@ -197,6 +197,52 @@ export async function sendWelcomeEmail(
   });
 
   await sendEmail({ to, subject, html, text });
+}
+
+export async function sendEnhanceCredentialsEmail(input: {
+  to: string;
+  displayName?: string;
+  firstName?: string;
+  organizationName: string;
+  password: string;
+  panelUrl?: string;
+}): Promise<void> {
+  const displayName = input.displayName || input.firstName || "there";
+  const companyName = config.COMPANY_BRAND_NAME;
+  const panelUrl = (input.panelUrl || config.ENHANCE_API_URL || "").replace(/\/$/, "");
+
+  const { subject, html, text } = await renderAdHocTemplate({
+    subject: "Your {{companyName}} Hosting Panel Access",
+    html: `
+      <p>Hi {{displayName}},</p>
+      <p>Your hosting panel account for <strong>{{organizationName}}</strong> is ready.</p>
+      <p><strong>Panel URL:</strong> <a href="{{panelUrl}}">{{panelUrl}}</a><br /><strong>Email:</strong> {{to}}<br /><strong>Temporary password:</strong> {{password}}</p>
+      <p>Please sign in as soon as possible and change this password. If you cannot find this email later, use the password reset flow on the hosting panel sign-in page.</p>
+      <p>Thanks,<br />The {{companyName}} Team</p>
+    `,
+    text: `Hi {{displayName}},
+
+Your hosting panel account for {{organizationName}} is ready.
+
+Panel URL: {{panelUrl}}
+Email: {{to}}
+Temporary password: {{password}}
+
+Please sign in as soon as possible and change this password. If you cannot find this email later, use the password reset flow on the hosting panel sign-in page.
+
+Thanks,
+The {{companyName}} Team`,
+    data: {
+      companyName,
+      displayName,
+      organizationName: input.organizationName,
+      panelUrl,
+      to: input.to,
+      password: input.password,
+    },
+  });
+
+  await sendEmail({ to: input.to, subject, html, text });
 }
 
 export async function sendTemplate(

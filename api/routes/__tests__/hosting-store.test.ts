@@ -1,24 +1,36 @@
 import { randomUUID } from 'crypto';
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { Pool } from 'pg';
 import request from 'supertest';
 import app from '../../app.js';
 
-const mockCreateCustomer = vi.hoisted(() => vi.fn());
+const mockEnsureEnhanceCustomerForPurchase = vi.hoisted(() => vi.fn());
 const mockCreateCustomerSubscription = vi.hoisted(() => vi.fn());
 const mockCreateWebsite = vi.hoisted(() => vi.fn());
 const mockDeleteWebsite = vi.hoisted(() => vi.fn());
 const mockDeleteSubscription = vi.hoisted(() => vi.fn());
+const mockGetStagingDomain = vi.hoisted(() => vi.fn().mockResolvedValue(null));
+const mockSendEnhanceCredentialsEmail = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockIsEffectivelyEnabled = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 
 vi.mock('../../services/enhanceService.js', () => ({
   EnhanceService: {
-    createCustomer: (...args: any[]) => mockCreateCustomer(...args),
     createCustomerSubscription: (...args: any[]) => mockCreateCustomerSubscription(...args),
     createWebsite: (...args: any[]) => mockCreateWebsite(...args),
     deleteWebsite: (...args: any[]) => mockDeleteWebsite(...args),
     deleteSubscription: (...args: any[]) => mockDeleteSubscription(...args),
+    getStagingDomain: (...args: any[]) => mockGetStagingDomain(...args),
   },
+}));
+
+vi.mock('../../services/enhanceOnboardingService.js', () => ({
+  EnhanceOnboardingService: {
+    ensureEnhanceCustomerForPurchase: (...args: any[]) => mockEnsureEnhanceCustomerForPurchase(...args),
+  },
+}));
+
+vi.mock('../../services/emailService.js', () => ({
+  sendEnhanceCredentialsEmail: (...args: any[]) => mockSendEnhanceCredentialsEmail(...args),
 }));
 
 vi.mock('../../services/enhanceToggle.js', () => ({
@@ -35,6 +47,12 @@ describe('Hosting Store Routes', () => {
   let jwt: typeof import('jsonwebtoken');
   let planId: string;
   let inactivePlanId: string;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsEffectivelyEnabled.mockResolvedValue(true);
+    mockSendEnhanceCredentialsEmail.mockResolvedValue(undefined);
+  });
 
   beforeAll(async () => {
     jwt = await import('jsonwebtoken');
@@ -96,7 +114,7 @@ describe('Hosting Store Routes', () => {
       `INSERT INTO hosting_plans (id, enhance_plan_id, name, description, features, service_type, price_monthly, is_active, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW(), NOW())
        RETURNING id`,
-      [randomUUID(), 'enh-plan-1', 'Basic Hosting', 'Basic plan', '{}', 'web', 10.00]
+      [randomUUID(), '101', 'Basic Hosting', 'Basic plan', '{}', 'web', 10.00]
     );
     planId = planResult.rows[0].id;
 
@@ -105,7 +123,7 @@ describe('Hosting Store Routes', () => {
       `INSERT INTO hosting_plans (id, enhance_plan_id, name, description, features, service_type, price_monthly, is_active, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, false, NOW(), NOW())
        RETURNING id`,
-      [randomUUID(), 'enh-plan-2', 'Pro Hosting', 'Pro plan', '{}', 'web', 25.00]
+      [randomUUID(), '102', 'Pro Hosting', 'Pro plan', '{}', 'web', 25.00]
     );
     inactivePlanId = inactivePlanResult.rows[0].id;
 
@@ -150,6 +168,50 @@ describe('Hosting Store Routes', () => {
   });
 
   describe('POST /api/hosting/purchase', () => {
+    it('returns first-time onboarding flags when credentials are created and emailed', async () => {
+      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+
+      mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
+        enhanceCustomerId: 'cust-123',
+        purchaserLoginId: 'login-123',
+        purchaserMemberId: 'member-123',
+        credentialsCreated: true,
+        credentialsEmail: {
+          recipient: 'buyer@example.com',
+          displayName: 'Buyer User',
+          firstName: 'Buyer',
+          organizationName: 'Hosting Store Org',
+          password: 'Password123!',
+        },
+        ownerAssigned: true,
+      });
+      mockCreateCustomerSubscription.mockResolvedValue({ id: '123' });
+      mockCreateWebsite.mockResolvedValue({ id: 'web-123', primary_ip: '1.2.3.4' });
+
+      const response = await request(app)
+        .post('/api/hosting/purchase')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ planId, domain: 'first-purchase.com' })
+        .expect(201);
+
+      expect(response.body.credentialsCreated).toBe(true);
+      expect(response.body.credentialsEmailed).toBe(true);
+      expect(mockEnsureEnhanceCustomerForPurchase).toHaveBeenCalledWith({
+        organizationId: testOrgId,
+        purchaserUserId: testUserId,
+      });
+      expect(mockSendEnhanceCredentialsEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'buyer@example.com',
+          organizationName: 'Hosting Store Org',
+        })
+      );
+      expect(mockCreateWebsite).toHaveBeenCalledWith('cust-123', {
+        subscriptionId: 123,
+        domain: 'first-purchase.com',
+      });
+    });
+
     it('rejects missing planId', async () => {
       const response = await request(app)
         .post('/api/hosting/purchase')
@@ -160,7 +222,7 @@ describe('Hosting Store Routes', () => {
       expect(response.body.error).toContain('planId and domain are required');
     });
 
-    it('rejects missing domain', async () => {
+    it('rejects missing domain (and no useStagingDomain)', async () => {
       const response = await request(app)
         .post('/api/hosting/purchase')
         .set('Authorization', `Bearer ${authToken}`)
@@ -194,8 +256,15 @@ describe('Hosting Store Routes', () => {
       // Restore balance
       await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
 
-      mockCreateCustomer.mockResolvedValue({ id: 'cust-123' });
-      mockCreateCustomerSubscription.mockResolvedValue({ id: 'sub-123' });
+      mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
+        enhanceCustomerId: 'cust-123',
+        purchaserLoginId: 'login-123',
+        purchaserMemberId: 'member-123',
+        credentialsCreated: false,
+        credentialsEmail: null,
+        ownerAssigned: false,
+      });
+      mockCreateCustomerSubscription.mockResolvedValue({ id: '123' });
       mockCreateWebsite.mockResolvedValue({ id: 'web-123', primary_ip: '1.2.3.4' });
 
       const response = await request(app)
@@ -205,6 +274,12 @@ describe('Hosting Store Routes', () => {
         .expect(201);
 
       expect(response.body.subscription.status).toBe('active');
+      expect(response.body.credentialsCreated).toBe(false);
+      expect(response.body.credentialsEmailed).toBe(false);
+      expect(mockCreateWebsite).toHaveBeenCalledWith('cust-123', {
+        subscriptionId: 123,
+        domain: 'purchase-test.com',
+      });
 
       // Verify wallet was debited
       const walletResult = await pool.query(
@@ -221,10 +296,90 @@ describe('Hosting Store Routes', () => {
       expect(subResult.rows.length).toBe(1);
       expect(subResult.rows[0].status).toBe('active');
     });
+
+    it('includes serverGroupId when plan allows server group selection', async () => {
+      // Create a plan that allows server group selection
+      const sgPlanResult = await pool.query(
+        `INSERT INTO hosting_plans (id, enhance_plan_id, name, description, features, service_type, price_monthly, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+         RETURNING id`,
+        [randomUUID(), 'ep-999', 'SG Plan', 'Plan allowing server group selection',
+         '{"allowServerGroupSelection":true}', 'web', 10.00]
+      );
+      const sgPlanId = sgPlanResult.rows[0].id;
+
+      await pool.query('UPDATE wallets SET balance = 100 WHERE organization_id = $1', [testOrgId]);
+
+      mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
+        enhanceCustomerId: 'cust-123',
+        purchaserLoginId: 'login-123',
+        purchaserMemberId: 'member-123',
+        credentialsCreated: false,
+        credentialsEmail: null,
+        ownerAssigned: false,
+      });
+      mockCreateCustomerSubscription.mockResolvedValue({ id: 456 });
+      mockCreateWebsite.mockResolvedValue({ id: 'web-sg-1' });
+
+      const response = await request(app)
+        .post('/api/hosting/purchase')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ planId: sgPlanId, domain: 'sg-test.com' });
+
+      expect(response.status).toBe(201);
+      expect(mockCreateWebsite).toHaveBeenCalledWith('cust-123', {
+        subscriptionId: 456,
+        domain: 'sg-test.com',
+        serverGroupId: expect.any(String),
+      });
+
+      // Cleanup
+      await pool.query('DELETE FROM hosting_subscriptions WHERE plan_id = $1', [sgPlanId]);
+      await pool.query('DELETE FROM hosting_plans WHERE id = $1', [sgPlanId]);
+    });
+
+    it('resolves staging domain when useStagingDomain is true', async () => {
+      await pool.query('UPDATE wallets SET balance = 100 WHERE organization_id = $1', [testOrgId]);
+
+      mockGetStagingDomain.mockResolvedValue('staging.examplehost.com');
+      mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
+        enhanceCustomerId: 'cust-123',
+        purchaserLoginId: 'login-123',
+        purchaserMemberId: 'member-123',
+        credentialsCreated: false,
+        credentialsEmail: null,
+        ownerAssigned: false,
+      });
+      mockCreateCustomerSubscription.mockResolvedValue({ id: 789 });
+      mockCreateWebsite.mockResolvedValue({ id: 'web-staging-1' });
+
+      const response = await request(app)
+        .post('/api/hosting/purchase')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ planId, useStagingDomain: true });
+
+      expect(response.status).toBe(201);
+      expect(response.body.stagingDomain).toBe(true);
+      // The domain should end with the staging suffix
+      expect(response.body.subscription.domain).toMatch(/\.staging\.examplehost\.com$/);
+      // serverGroupId should NOT be in the payload (features='{}' → allowServerGroupSelection=false)
+      expect(mockCreateWebsite).toHaveBeenCalledWith('cust-123', {
+        subscriptionId: 789,
+        domain: expect.stringMatching(/\.staging\.examplehost\.com$/),
+      });
+
+      // Cleanup
+      await pool.query('DELETE FROM hosting_subscriptions WHERE domain LIKE $1', ['%.staging.examplehost.com']);
+    });
   });
 
   describe('POST /api/hosting/services/:id/cancel', () => {
     it('resolves org-scoped subscription', async () => {
+      await pool.query(
+        'UPDATE organizations SET enhance_customer_id = $1 WHERE id = $2',
+        ['cust-org-999', testOrgId]
+      );
+
       // Create a subscription for the org
       const subResult = await pool.query(
         `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, enhance_website_id, enhance_subscription_id)
@@ -243,6 +398,8 @@ describe('Hosting Store Routes', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
+      expect(mockDeleteWebsite).toHaveBeenCalledWith('cust-org-999', 'web-999');
+      expect(mockDeleteSubscription).toHaveBeenCalledWith(expect.any(String), 'sub-999');
 
       // Verify subscription was cancelled
       const updatedSub = await pool.query(
