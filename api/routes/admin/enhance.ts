@@ -352,7 +352,6 @@ router.post("/orgs/:orgId/sync-customer", async (req: Request, res: Response) =>
 
     const customer = await EnhanceService.createCustomer(config.ENHANCE_MASTER_ORG_ID, {
       name: org.name,
-      org: { name: org.name },
     });
 
     await query(

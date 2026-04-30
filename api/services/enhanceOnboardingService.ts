@@ -187,7 +187,6 @@ export class EnhanceOnboardingService {
     if (!enhanceCustomerId) {
       const customer = await EnhanceService.createCustomer(config.ENHANCE_MASTER_ORG_ID, {
         name: context.organization_name,
-        org: { name: context.organization_name },
       });
 
       enhanceCustomerId = requireRemoteId('Enhance customer', customer);
