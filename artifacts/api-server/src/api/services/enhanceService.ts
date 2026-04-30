@@ -190,8 +190,9 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites`);
   }
 
-  static async createWebsite(orgId: string, data: any) {
-    return this.request<any>(`/orgs/${orgId}/websites`, { method: 'POST', body: data });
+  static async createWebsite(orgId: string, data: any, kind?: string) {
+    const qs = kind ? `?kind=${encodeURIComponent(kind)}` : '';
+    return this.request<any>(`/orgs/${orgId}/websites${qs}`, { method: 'POST', body: data });
   }
 
   static async getWebsite(orgId: string, websiteId: string) {

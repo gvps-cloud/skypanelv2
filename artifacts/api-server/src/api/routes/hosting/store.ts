@@ -287,13 +287,27 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         websitePayload.serverGroupId = serverGroupId;
       }
 
+      // Staging subdomains require kind=staging so Enhance validates the
+      // subscription's stagingWebsites resource instead of websites resource.
+      const websiteKind = (!domain && useStagingDomain) ? 'staging' : undefined;
+
       try {
         enhanceWebsite = await EnhanceService.createWebsite(
           onboardingResult.enhanceCustomerId,
           websitePayload,
+          websiteKind,
         );
         break; // success — exit retry loop
       } catch (websiteError: any) {
+        console.error(
+          `[Hosting purchase] createWebsite attempt ${attempt}/${MAX_DOMAIN_RETRIES} failed:`,
+          `status=${websiteError?.statusCode}`,
+          `body=${JSON.stringify(websiteError?.responseBody)}`,
+          `org=${onboardingResult.enhanceCustomerId}`,
+          `domain=${resolvedDomain}`,
+          `subscriptionId=${enhanceSubscriptionId}`
+        );
+
         const domainTaken =
           websiteError?.statusCode === 403 &&
           websiteError?.responseBody?.detail === 'domain';
@@ -308,10 +322,6 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
           }
           // For auto-generated staging subdomains, the slug collided with a
           // stale website.  Log and try a fresh one on the next iteration.
-          console.warn(
-            `[Hosting purchase] Generated subdomain "${resolvedDomain}" is already taken on Enhance ` +
-            `(attempt ${attempt}/${MAX_DOMAIN_RETRIES}); retrying with a new slug…`
-          );
           if (attempt === MAX_DOMAIN_RETRIES) {
             throw new Error(
               "Could not allocate a free staging subdomain after several attempts. Please try again."
