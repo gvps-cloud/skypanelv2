@@ -46,12 +46,44 @@ router.get("/regions", requireOrgPermission("hosting_view"), async (req: Request
 });
 
 /**
+ * Resolve the platform's auto-subdomain suffix. Prefers the env-configured
+ * value (HOSTING_AUTO_SUBDOMAIN_SUFFIX) because that's what the purchase flow
+ * actually uses; falls back to the master org's staging-domain registration.
+ */
+async function resolveAutoSubdomainSuffix(): Promise<string | null> {
+  const envSuffix = config.HOSTING_AUTO_SUBDOMAIN_SUFFIX?.trim();
+  if (envSuffix) return envSuffix;
+  try {
+    return await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Return true if `domain` looks like one of the auto-assigned staging
+ * subdomains we hand out (8-char slug under the configured suffix).
+ */
+function isAutoAssignedDomain(domain: string | null | undefined, suffix: string | null): boolean {
+  if (!domain || !suffix) return false;
+  const lowerDomain = domain.toLowerCase();
+  const lowerSuffix = suffix.toLowerCase();
+  if (!lowerDomain.endsWith(`.${lowerSuffix}`)) return false;
+  const head = lowerDomain.slice(0, lowerDomain.length - lowerSuffix.length - 1);
+  // Auto-assigned slugs are exactly 8 lowercase alphanumerics with no dots.
+  return /^[a-z0-9]{8}$/.test(head);
+}
+
+/**
  * GET /api/hosting/staging-domain
- * Return the platform staging domain suffix for free subdomains
+ * Return the platform staging domain suffix for free subdomains.
+ * Prefers the configured HOSTING_AUTO_SUBDOMAIN_SUFFIX over the master org's
+ * staging-domain registration so the value matches what the purchase flow
+ * actually uses.
  */
 router.get("/staging-domain", requireOrgPermission("hosting_view"), async (_req: Request, res: Response) => {
   try {
-    const stagingDomain = await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID);
+    const stagingDomain = await resolveAutoSubdomainSuffix();
     res.json({ stagingDomain: stagingDomain || null });
   } catch (error: any) {
     console.error("Failed to get staging domain:", error);
@@ -61,21 +93,39 @@ router.get("/staging-domain", requireOrgPermission("hosting_view"), async (_req:
 
 /**
  * GET /api/hosting/services
- * List organization's hosting subscriptions
+ * List organization's hosting subscriptions (all statuses; the client filters).
+ *
+ * Each row includes:
+ *   - price_monthly        from the linked plan
+ *   - is_auto_domain       true when `domain` is one of the *.<staging-suffix>
+ *                          slugs we auto-allocate (hides slug from the UI)
+ *   - cancelled_at         updated_at when status='cancelled', else null
  */
 router.get("/services", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const { organizationId } = (req as AuthenticatedRequest).user;
   try {
-    const result = await query(
-      `SELECT hs.id, hs.domain, hs.status, hs.primary_ip, hs.next_billing_at, hs.created_at,
-              hp.id as plan_id, hp.name as plan_name, hp.service_type
-       FROM hosting_subscriptions hs
-       JOIN hosting_plans hp ON hp.id = hs.plan_id
-       WHERE hs.organization_id = $1
-       ORDER BY hs.created_at DESC`,
-      [organizationId]
-    );
-    res.json({ services: result.rows });
+    const [result, autoSuffix] = await Promise.all([
+      query(
+        `SELECT hs.id, hs.domain, hs.status, hs.primary_ip, hs.next_billing_at,
+                hs.created_at, hs.updated_at,
+                hp.id as plan_id, hp.name as plan_name, hp.service_type,
+                hp.price_monthly
+         FROM hosting_subscriptions hs
+         JOIN hosting_plans hp ON hp.id = hs.plan_id
+         WHERE hs.organization_id = $1
+         ORDER BY hs.created_at DESC`,
+        [organizationId]
+      ),
+      resolveAutoSubdomainSuffix(),
+    ]);
+
+    const services = result.rows.map((row: any) => ({
+      ...row,
+      is_auto_domain: isAutoAssignedDomain(row.domain, autoSuffix),
+      cancelled_at: row.status === "cancelled" ? row.updated_at : null,
+    }));
+
+    res.json({ services, autoSubdomainSuffix: autoSuffix || null });
   } catch (error) {
     console.error("Failed to get hosting services:", error);
     res.status(500).json({ error: "Failed to get hosting services" });
