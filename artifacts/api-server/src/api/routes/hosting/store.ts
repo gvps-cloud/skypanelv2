@@ -257,25 +257,22 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       throw new Error("Enhance subscription creation returned an invalid subscription id");
     }
 
-    // Build the website creation payload.
-    // Per the Enhance OAS3 spec, when creating under the MO the subscription ID
-    // is not required (and must NOT be provided — customer subscription IDs are
-    // scoped to the customer org, not to the MO, so passing one causes a 404).
-    // We persist the customer's enhanceSubscriptionId in our local DB record
-    // so we can reference it for billing and cancellation.
+    // Create website under the customer's own Enhance org.
+    // Each customer gets their own org in Enhance (enhance_customer_id).
+    // The subscriptionId links the website to the plan the master org assigned
+    // to this customer, so Enhance enforces the correct resource limits.
     const websitePayload: Record<string, any> = {
       domain: resolvedDomain,
+      subscriptionId: enhanceSubscriptionId,
     };
     if (allowServerGroupSelection && serverGroupId) {
       websitePayload.serverGroupId = serverGroupId;
     }
 
-    // The Master Organization (MO) can create websites for any domain without
-    // a "outside the org" subscription-scope restriction.
     let enhanceWebsite: any;
     try {
       enhanceWebsite = await EnhanceService.createWebsite(
-        config.ENHANCE_MASTER_ORG_ID,
+        onboardingResult.enhanceCustomerId,
         websitePayload,
       );
     } catch (websiteError: any) {
@@ -404,31 +401,37 @@ router.post("/services/:id/cancel", requireOrgPermission("hosting_manage"), asyn
       return res.status(404).json({ error: "Service not found" });
     }
     const sub = result.rows[0];
+    // Websites live under the customer's own Enhance org. Subscriptions are
+    // managed at the master org level.
+    const customerEnhanceOrgId = sub.enhance_customer_org_id;
 
-    // Websites are created under the Master Organization (see purchase route),
-    // so deletion must also be performed in that org context. Older records
-    // that were created under the customer org still resolve correctly because
-    // the MO has visibility into all websites it provisioned.
     if (sub.enhance_website_id) {
-      try {
-        await EnhanceService.deleteWebsite(config.ENHANCE_MASTER_ORG_ID, sub.enhance_website_id);
-      } catch (deleteWebsiteError: any) {
-        // Fallback for legacy rows that may have been provisioned under the
-        // customer org context. Enhance can return either 404 (not visible)
-        // or 403 (forbidden) when the website lives in a different org scope.
-        const tryLegacyFallback =
-          (deleteWebsiteError?.statusCode === 404 || deleteWebsiteError?.statusCode === 403) &&
-          sub.enhance_customer_org_id;
-
-        if (tryLegacyFallback) {
-          await EnhanceService.deleteWebsite(sub.enhance_customer_org_id, sub.enhance_website_id);
-        } else {
-          throw deleteWebsiteError;
+      if (!customerEnhanceOrgId) {
+        console.warn(`[Hosting cancel] No enhance_customer_org_id for subscription ${sub.id}; skipping website deletion`);
+      } else {
+        try {
+          await EnhanceService.deleteWebsite(customerEnhanceOrgId, sub.enhance_website_id);
+        } catch (deleteWebsiteError: any) {
+          if (deleteWebsiteError?.statusCode === 404 || deleteWebsiteError?.statusCode === 410) {
+            // Website was already deleted directly in the Enhance panel — treat as gone.
+            console.warn(`[Hosting cancel] Website ${sub.enhance_website_id} not found on Enhance (already removed); continuing cancellation`);
+          } else {
+            throw deleteWebsiteError;
+          }
         }
       }
     }
+
     if (sub.enhance_subscription_id) {
-      await EnhanceService.deleteSubscription(config.ENHANCE_MASTER_ORG_ID, sub.enhance_subscription_id);
+      try {
+        await EnhanceService.deleteSubscription(config.ENHANCE_MASTER_ORG_ID, sub.enhance_subscription_id);
+      } catch (deleteSubError: any) {
+        if (deleteSubError?.statusCode === 404 || deleteSubError?.statusCode === 410) {
+          console.warn(`[Hosting cancel] Subscription ${sub.enhance_subscription_id} not found on Enhance (already removed); continuing cancellation`);
+        } else {
+          throw deleteSubError;
+        }
+      }
     }
 
     await query(
