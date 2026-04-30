@@ -880,6 +880,145 @@ router.put(
   },
 );
 
+router.post(
+  "/bulk-delete",
+  authenticateToken,
+  requireAdmin,
+  [
+    body("userIds").isArray({ min: 1 }).withMessage("userIds must be a non-empty array"),
+    body("userIds.*").isUUID().withMessage("Each userId must be a valid UUID"),
+  ],
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { userIds }: { userIds: string[] } = req.body;
+      const adminId = req.user?.id;
+
+      if (userIds.includes(adminId!)) {
+        res.status(400).json({ error: "Cannot include your own account in bulk deletion" });
+        return;
+      }
+
+      const usersResult = await query(
+        "SELECT id, email, name, role FROM users WHERE id = ANY($1)",
+        [userIds],
+      );
+
+      const foundMap = new Map<string, any>(usersResult.rows.map((u: any) => [u.id as string, u]));
+      const deleted: { id: string; name: string; email: string }[] = [];
+      const skipped: { id: string; name: string; email: string; reason: string }[] = [];
+
+      for (const userId of userIds) {
+        const user: any = foundMap.get(userId);
+        if (!user) {
+          skipped.push({ id: userId, name: "Unknown", email: "", reason: "User not found" });
+          continue;
+        }
+
+        const orgsResult = await query(
+          "SELECT DISTINCT om.organization_id FROM organization_members om WHERE om.user_id = $1",
+          [userId],
+        );
+        const organizationIds = orgsResult.rows.map((row: any) => row.organization_id);
+
+        if (organizationIds.length > 0) {
+          const walletCheck = await query(
+            "SELECT organization_id FROM wallets WHERE organization_id = ANY($1) AND balance < 0",
+            [organizationIds],
+          );
+          if (walletCheck.rows.length > 0) {
+            skipped.push({ id: userId, name: user.name, email: user.email, reason: "Negative wallet balance" });
+            continue;
+          }
+
+          const activeVpsCheck = await query(
+            "SELECT COUNT(*) as count FROM vps_instances WHERE organization_id = ANY($1) AND status NOT IN ('deleted', 'terminated')",
+            [organizationIds],
+          );
+          if (parseInt(activeVpsCheck.rows[0].count) > 0) {
+            skipped.push({ id: userId, name: user.name, email: user.email, reason: "Has active VPS instances" });
+            continue;
+          }
+        }
+
+        const openTicketsCheck = await query(
+          "SELECT COUNT(*) as count FROM support_tickets WHERE created_by = $1 AND status NOT IN ('resolved', 'closed')",
+          [userId],
+        );
+        if (parseInt(openTicketsCheck.rows[0].count) > 0) {
+          skipped.push({ id: userId, name: user.name, email: user.email, reason: "Has open support tickets" });
+          continue;
+        }
+
+        await query("BEGIN");
+        try {
+          if (organizationIds.length > 0) {
+            await query("DELETE FROM organization_invitations WHERE inviter_id = $1", [userId]);
+            await query("DELETE FROM support_ticket_replies WHERE ticket_id IN (SELECT id FROM support_tickets WHERE created_by = $1)", [userId]);
+            await query("DELETE FROM support_tickets WHERE created_by = $1", [userId]);
+            await query("DELETE FROM activity_logs WHERE user_id = $1", [userId]);
+            await query("DELETE FROM vps_instances WHERE organization_id = ANY($1)", [organizationIds]);
+            await query("DELETE FROM payment_transactions WHERE organization_id = ANY($1)", [organizationIds]);
+            await query("DELETE FROM wallets WHERE organization_id = ANY($1)", [organizationIds]);
+          } else {
+            await query("DELETE FROM organization_invitations WHERE inviter_id = $1", [userId]);
+            await query("DELETE FROM support_ticket_replies WHERE ticket_id IN (SELECT id FROM support_tickets WHERE created_by = $1)", [userId]);
+            await query("DELETE FROM support_tickets WHERE created_by = $1", [userId]);
+            await query("DELETE FROM activity_logs WHERE user_id = $1", [userId]);
+          }
+
+          await query("DELETE FROM organization_members WHERE user_id = $1", [userId]);
+
+          if (organizationIds.length > 0) {
+            await query(
+              "DELETE FROM organizations WHERE id = ANY($1) AND owner_id = $2 AND NOT EXISTS (SELECT 1 FROM organization_members WHERE organization_id = organizations.id)",
+              [organizationIds, userId],
+            );
+          }
+
+          await query("DELETE FROM users WHERE id = $1", [userId]);
+          await query("COMMIT");
+          deleted.push({ id: userId, name: user.name, email: user.email });
+        } catch (deleteErr: any) {
+          await query("ROLLBACK");
+          skipped.push({ id: userId, name: user.name, email: user.email, reason: deleteErr.message || "Deletion failed" });
+        }
+      }
+
+      if (req.user?.id && deleted.length > 0) {
+        await logActivity(
+          {
+            userId: req.user.id,
+            organizationId: req.user.organizationId ?? null,
+            eventType: "users_bulk_deleted",
+            entityType: "user",
+            entityId: deleted.map((u) => u.id).join(","),
+            message: `Bulk deleted ${deleted.length} user(s): ${deleted.map((u) => u.email).join(", ")}`,
+            status: "success",
+            metadata: {
+              deleted_count: deleted.length,
+              skipped_count: skipped.length,
+              deleted_emails: deleted.map((u) => u.email),
+              skipped: skipped.map((s) => ({ email: s.email, reason: s.reason })),
+            },
+          },
+          req,
+        );
+      }
+
+      res.json({ deleted, skipped });
+    } catch (err: any) {
+      console.error("Admin bulk delete error:", err);
+      res.status(500).json({ error: err.message || "Failed to bulk delete users" });
+    }
+  },
+);
+
 router.delete(
   "/:id",
   authenticateToken,
