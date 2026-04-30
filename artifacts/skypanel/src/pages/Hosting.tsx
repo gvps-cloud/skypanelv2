@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type AriaAttributes } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -62,7 +62,7 @@ type ServiceStatus =
   | "cancelled"
   | "error";
 
-type SortKey = "plan_name" | "domain" | "status" | "created_at" | "price_monthly";
+type SortKey = "plan_name" | "domain" | "region" | "status" | "created_at" | "price_monthly";
 type SortDir = "asc" | "desc";
 type SortState = { key: SortKey; dir: SortDir };
 
@@ -74,12 +74,14 @@ interface HostingServiceRow {
   next_billing_at: string | null;
   created_at: string;
   updated_at: string;
+  cancelled_at: string | null;
+  server_group_id: string | null;
+  region_name: string | null;
   plan_id: string;
   plan_name: string;
   service_type: string | null;
   price_monthly: string | number | null;
   is_auto_domain: boolean;
-  cancelled_at: string | null;
 }
 
 type FilterKey = "active" | "suspended" | "cancelled" | "all";
@@ -213,10 +215,14 @@ function SortableHead({
 }) {
   const active = sort.key === sortKey;
   const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
-  const ariaSort = !active ? "none" : sort.dir === "asc" ? "ascending" : "descending";
+  const ariaSort: AriaAttributes["aria-sort"] = !active
+    ? "none"
+    : sort.dir === "asc"
+      ? "ascending"
+      : "descending";
 
   return (
-    <TableHead className={className} aria-sort={ariaSort as any}>
+    <TableHead className={className} aria-sort={ariaSort}>
       <button
         type="button"
         onClick={() => onToggle(sortKey)}
@@ -306,6 +312,9 @@ export default function Hosting() {
       case "domain":
         // Auto-assigned rows sort together at the bottom (alphabetically last)
         return svc.is_auto_domain ? "\uffff" : (svc.domain ?? "").toLowerCase();
+      case "region":
+        // Unknown regions sort to the end
+        return (svc.region_name ?? "\uffff").toLowerCase();
       case "status":
         return svc.status;
       case "created_at":
@@ -435,10 +444,11 @@ export default function Hosting() {
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHead className="w-[28%]" sortKey="plan_name" label="Plan" sort={sort} onToggle={toggleSort} />
-                <SortableHead className="w-[28%]" sortKey="domain" label="Domain" sort={sort} onToggle={toggleSort} />
-                <SortableHead className="w-[12%]" sortKey="status" label="Status" sort={sort} onToggle={toggleSort} />
-                <SortableHead className="w-[14%]" sortKey="created_at" label="Created" sort={sort} onToggle={toggleSort} />
+                <SortableHead className="w-[22%]" sortKey="plan_name" label="Plan" sort={sort} onToggle={toggleSort} />
+                <SortableHead className="w-[24%]" sortKey="domain" label="Domain" sort={sort} onToggle={toggleSort} />
+                <SortableHead className="w-[14%]" sortKey="region" label="Region" sort={sort} onToggle={toggleSort} />
+                <SortableHead className="w-[10%]" sortKey="status" label="Status" sort={sort} onToggle={toggleSort} />
+                <SortableHead className="w-[12%]" sortKey="created_at" label="Created" sort={sort} onToggle={toggleSort} />
                 <SortableHead className="w-[10%]" sortKey="price_monthly" label="Price" sort={sort} onToggle={toggleSort} />
                 <TableHead className="w-[8%] text-right">Actions</TableHead>
               </TableRow>
@@ -447,7 +457,7 @@ export default function Hosting() {
               {servicesLoading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <TableRow key={`skeleton-${i}`}>
-                    {Array.from({ length: 6 }).map((__, j) => (
+                    {Array.from({ length: 7 }).map((__, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
@@ -456,7 +466,7 @@ export default function Hosting() {
                 ))
               ) : servicesError ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-12">
+                  <TableCell colSpan={7} className="py-12">
                     <div className="flex flex-col items-center text-center gap-3">
                       <AlertCircle className="w-8 h-8 text-destructive" />
                       <div>
@@ -474,7 +484,7 @@ export default function Hosting() {
                 </TableRow>
               ) : visibleServices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-12">
+                  <TableCell colSpan={7} className="py-12">
                     <div className="flex flex-col items-center text-center gap-3">
                       <Globe className="w-10 h-10 text-muted-foreground" />
                       <div>
@@ -523,6 +533,13 @@ export default function Hosting() {
                       </TableCell>
                       <TableCell>
                         <DomainCell service={service} />
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {service.region_name ? (
+                          <span className="text-foreground">{service.region_name}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={service.status} cancelledAt={service.cancelled_at} />

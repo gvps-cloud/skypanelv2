@@ -92,6 +92,25 @@ router.get("/staging-domain", requireOrgPermission("hosting_view"), async (_req:
 });
 
 /**
+ * Build a Map of server-group-id -> display name from Enhance.
+ * Failure here is non-fatal — the list endpoint must still serve subscriptions
+ * even if Enhance is briefly unavailable; we just won't have region labels.
+ */
+async function loadServerGroupLabels(): Promise<Map<string, string>> {
+  const labels = new Map<string, string>();
+  try {
+    const groups = await EnhanceService.getServerGroups();
+    const items: any[] = Array.isArray(groups) ? groups : groups?.items ?? groups?.groups ?? [];
+    for (const g of items) {
+      if (g?.id != null) labels.set(String(g.id), g.name ?? String(g.id));
+    }
+  } catch (err) {
+    console.warn("[hosting] Failed to load server groups for region labels:", err);
+  }
+  return labels;
+}
+
+/**
  * GET /api/hosting/services
  * List organization's hosting subscriptions (all statuses; the client filters).
  *
@@ -99,15 +118,17 @@ router.get("/staging-domain", requireOrgPermission("hosting_view"), async (_req:
  *   - price_monthly        from the linked plan
  *   - is_auto_domain       true when `domain` is one of the *.<staging-suffix>
  *                          slugs we auto-allocate (hides slug from the UI)
- *   - cancelled_at         updated_at when status='cancelled', else null
+ *   - server_group_id      the Enhance server-group id chosen at purchase time
+ *   - region_name          human-readable label resolved from Enhance (or null)
+ *   - cancelled_at         real cancellation timestamp (column added in 060)
  */
 router.get("/services", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const { organizationId } = (req as AuthenticatedRequest).user;
   try {
-    const [result, autoSuffix] = await Promise.all([
+    const [result, autoSuffix, regionLabels] = await Promise.all([
       query(
         `SELECT hs.id, hs.domain, hs.status, hs.primary_ip, hs.next_billing_at,
-                hs.created_at, hs.updated_at,
+                hs.created_at, hs.updated_at, hs.cancelled_at, hs.server_group_id,
                 hp.id as plan_id, hp.name as plan_name, hp.service_type,
                 hp.price_monthly
          FROM hosting_subscriptions hs
@@ -117,12 +138,13 @@ router.get("/services", requireOrgPermission("hosting_view"), async (req: Reques
         [organizationId]
       ),
       resolveAutoSubdomainSuffix(),
+      loadServerGroupLabels(),
     ]);
 
     const services = result.rows.map((row: any) => ({
       ...row,
       is_auto_domain: isAutoAssignedDomain(row.domain, autoSuffix),
-      cancelled_at: row.status === "cancelled" ? row.updated_at : null,
+      region_name: row.server_group_id ? regionLabels.get(String(row.server_group_id)) ?? null : null,
     }));
 
     res.json({ services, autoSubdomainSuffix: autoSuffix || null });
@@ -447,21 +469,25 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       }
     }
 
-    // Success: update local row
+    // Success: update local row.
+    // Persist `server_group_id` so the customer-facing list/detail pages can
+    // display the hosting region without round-tripping to Enhance per-row.
     await query(
       `UPDATE hosting_subscriptions
        SET enhance_subscription_id = $1,
            enhance_website_id = $2,
            primary_ip = $3,
+           server_group_id = $4,
            status = 'active',
            last_billed_at = now(),
            next_billing_at = now() + interval '1 month',
-           settings = settings || $4
-       WHERE id = $5`,
+           settings = settings || $5
+       WHERE id = $6`,
       [
         enhanceSubscription.id,
         enhanceWebsite.id,
         enhanceWebsite.primary_ip || null,
+        serverGroupId ? String(serverGroupId) : null,
         JSON.stringify({ primary_ip: enhanceWebsite.primary_ip }),
         subscription.id,
       ]
@@ -576,7 +602,11 @@ router.post("/services/:id/cancel", requireOrgPermission("hosting_manage"), asyn
     }
 
     await query(
-      `UPDATE hosting_subscriptions SET status = 'cancelled', updated_at = now() WHERE id = $1`,
+      `UPDATE hosting_subscriptions
+          SET status = 'cancelled',
+              cancelled_at = now(),
+              updated_at = now()
+        WHERE id = $1`,
       [id]
     );
 
