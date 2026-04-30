@@ -257,20 +257,21 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       throw new Error("Enhance subscription creation returned an invalid subscription id");
     }
 
-    // Create website — conditionally include serverGroupId only when the plan allows selection
+    // Build the website creation payload.
+    // Per the Enhance OAS3 spec, when creating under the MO the subscription ID
+    // is not required (and must NOT be provided — customer subscription IDs are
+    // scoped to the customer org, not to the MO, so passing one causes a 404).
+    // We persist the customer's enhanceSubscriptionId in our local DB record
+    // so we can reference it for billing and cancellation.
     const websitePayload: Record<string, any> = {
-      subscriptionId: enhanceSubscriptionId,
       domain: resolvedDomain,
     };
     if (allowServerGroupSelection && serverGroupId) {
       websitePayload.serverGroupId = serverGroupId;
     }
 
-    // Per the Enhance OAS3 spec, the Master Organization (MO) can create
-    // websites without the "outside the org" domain restriction that applies
-    // to customer orgs. We bind the website to the customer's plan via
-    // `subscriptionId` in the payload, so the customer still owns the
-    // resource limits/billing — the website just lives under the MO context.
+    // The Master Organization (MO) can create websites for any domain without
+    // a "outside the org" subscription-scope restriction.
     let enhanceWebsite: any;
     try {
       enhanceWebsite = await EnhanceService.createWebsite(
