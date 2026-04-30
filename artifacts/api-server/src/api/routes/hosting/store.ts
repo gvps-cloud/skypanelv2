@@ -253,11 +253,27 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         .padEnd(8, '0');
 
     // Resolve the staging domain suffix once (if needed).
+    // Each customer org needs its own staging domain entry in Enhance —
+    // it isn't inherited from the master org automatically. Mirror the master
+    // org's staging suffix onto the customer org so they can create staging
+    // websites. setStagingDomain is idempotent (POST creates or updates).
     let stagingSuffix: string | null = null;
     if (!domain && useStagingDomain) {
       stagingSuffix = await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID);
       if (!stagingSuffix) {
         throw new Error("Staging domain is not configured on the hosting platform");
+      }
+      try {
+        await EnhanceService.setStagingDomain(onboardingResult.enhanceCustomerId, stagingSuffix);
+      } catch (setStagingError: any) {
+        // Non-fatal: if it's already set or the API call fails, log and continue.
+        // The website creation step will surface a clear error if it really
+        // can't proceed.
+        console.warn(
+          `[Hosting purchase] Could not set staging domain on customer org ${onboardingResult.enhanceCustomerId}:`,
+          `status=${setStagingError?.statusCode}`,
+          `body=${JSON.stringify(setStagingError?.responseBody)}`
+        );
       }
     }
 

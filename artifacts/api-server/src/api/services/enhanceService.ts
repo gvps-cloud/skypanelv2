@@ -98,6 +98,13 @@ export class EnhanceService {
   // ============================================================
   // Staging Domains
   // ============================================================
+  static async setStagingDomain(orgId: string, domain: string): Promise<void> {
+    await this.request<void>(`/orgs/${orgId}/staging-domain`, {
+      method: 'POST',
+      body: { domain },
+    });
+  }
+
   static async getStagingDomain(orgId: string): Promise<string | null> {
     try {
       const result = await this.request<{ domain?: string }>(`/orgs/${orgId}/staging-domain`);
