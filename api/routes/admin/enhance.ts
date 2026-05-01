@@ -69,14 +69,15 @@ router.post("/status/test", async (req: Request, res: Response) => {
 router.post("/plans/sync", async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   try {
-    const remotePlans = await EnhanceService.getPlans(config.ENHANCE_MASTER_ORG_ID);
-    // Enhance API returns { items: Plan[], total: integer } (PlansListing schema)
-    const plans = Array.isArray(remotePlans) ? remotePlans : remotePlans?.items || [];
+    console.log(`[EnhanceSync] Starting sync for master org: ${config.ENHANCE_MASTER_ORG_ID}`);
+    const plans = await EnhanceService.getAllPlans(config.ENHANCE_MASTER_ORG_ID);
+    console.log(`[EnhanceSync] Fetched ${plans.length} plans from Enhance`);
 
     const upserted: any[] = [];
     const seenIds = new Set<string>();
 
     if (plans.length === 0) {
+      console.log(`[EnhanceSync] Enhance returned 0 plans — aborting sync to avoid data loss`);
       res.json({
         synced: 0,
         plans: [],
@@ -154,14 +155,40 @@ router.post("/plans/sync", async (req: Request, res: Response) => {
       upserted.push(result.rows[0]);
     }
 
-    // Mark missing remote plans as inactive
+    // Cleanup: hard-delete stale plans with no active subscriptions,
+    // soft-deactivate stale plans that still have active subscriptions
+    let deletedCount = 0;
+    let deactivatedCount = 0;
+
     if (seenIds.size > 0) {
-      await query(
-        `UPDATE hosting_plans SET is_active = false
-         WHERE enhance_plan_id IS NOT NULL AND NOT (enhance_plan_id = ANY($1))`,
+      const deleteResult = await query(
+        `DELETE FROM hosting_plans
+         WHERE enhance_plan_id IS NOT NULL
+           AND NOT (enhance_plan_id = ANY($1))
+           AND NOT EXISTS (
+             SELECT 1 FROM hosting_subscriptions
+             WHERE plan_id = hosting_plans.id AND status = 'active'
+           )
+         RETURNING id`,
         [Array.from(seenIds)]
       );
+      deletedCount = deleteResult.rows.length;
+
+      const deactivateResult = await query(
+        `UPDATE hosting_plans SET is_active = false, updated_at = now()
+         WHERE enhance_plan_id IS NOT NULL
+           AND NOT (enhance_plan_id = ANY($1))
+           AND EXISTS (
+             SELECT 1 FROM hosting_subscriptions
+             WHERE plan_id = hosting_plans.id AND status = 'active'
+           )
+         RETURNING id`,
+        [Array.from(seenIds)]
+      );
+      deactivatedCount = deactivateResult.rows.length;
     }
+
+    console.log(`[EnhanceSync] Synced ${upserted.length}, deleted ${deletedCount}, deactivated ${deactivatedCount}`);
 
     await logActivity({
       userId,
@@ -170,10 +197,10 @@ router.post("/plans/sync", async (req: Request, res: Response) => {
       entityId: "enhance",
       message: `Synced ${upserted.length} hosting plans from Enhance`,
       status: "success",
-      metadata: { count: upserted.length },
+      metadata: { count: upserted.length, deleted: deletedCount, deactivated: deactivatedCount },
     });
 
-    res.json({ synced: upserted.length, plans: upserted });
+    res.json({ synced: upserted.length, deleted: deletedCount, deactivated: deactivatedCount, plans: upserted });
   } catch (error: any) {
     console.error("Failed to sync enhance plans:", error);
     res.status(500).json({ error: error?.message || "Failed to sync plans" });
@@ -248,18 +275,25 @@ router.put("/plans/:id", async (req: Request, res: Response) => {
 
 /**
  * DELETE /api/admin/enhance/plans/purge-orphans
- * Delete all hosting_plans rows that have no enhance_plan_id (leaked test data, etc.)
+ * Delete all hosting_plans rows that are orphaned (no enhance_plan_id) or inactive,
+ * provided they have no active subscriptions.
  * Must be declared before /:id to avoid route conflict
  */
 router.delete("/plans/purge-orphans", async (_req: Request, res: Response) => {
   try {
     const result = await query(
-      `DELETE FROM hosting_plans WHERE enhance_plan_id IS NULL RETURNING id, name`
+      `DELETE FROM hosting_plans
+       WHERE (enhance_plan_id IS NULL OR is_active = false)
+         AND NOT EXISTS (
+           SELECT 1 FROM hosting_subscriptions
+           WHERE plan_id = hosting_plans.id AND status = 'active'
+         )
+       RETURNING id, name`
     );
     res.json({ deleted: result.rows.length, plans: result.rows });
   } catch (error: any) {
-    console.error("Failed to purge orphan plans:", error);
-    res.status(500).json({ error: error?.message || "Failed to purge orphan plans" });
+    console.error("Failed to purge inactive plans:", error);
+    res.status(500).json({ error: error?.message || "Failed to purge inactive plans" });
   }
 });
 
@@ -270,11 +304,11 @@ router.delete("/plans/purge-orphans", async (_req: Request, res: Response) => {
 router.delete("/plans/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    const subCheck = await query(
+    const activeSubCheck = await query(
       `SELECT id FROM hosting_subscriptions WHERE plan_id = $1 AND status = 'active' LIMIT 1`,
       [id]
     );
-    if (subCheck.rows.length > 0) {
+    if (activeSubCheck.rows.length > 0) {
       return res.status(409).json({ error: "Cannot delete a plan that has active subscriptions" });
     }
 
@@ -304,7 +338,7 @@ router.get("/subscriptions", async (req: Request, res: Response) => {
     let sql = `SELECT hs.*, org.name as organization_name, hp.name as plan_name
                FROM hosting_subscriptions hs
                JOIN organizations org ON org.id = hs.organization_id
-               JOIN hosting_plans hp ON hp.id = hs.plan_id
+               LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
                WHERE 1=1`;
     const params: any[] = [];
     let paramIndex = 1;

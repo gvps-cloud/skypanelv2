@@ -184,12 +184,33 @@ export class EnhanceOnboardingService {
     const firstName = getFirstName(context.purchaser_name, context.purchaser_email);
 
     let enhanceCustomerId = context.enhance_customer_id;
+
+    if (enhanceCustomerId) {
+      console.log(`[EnhanceOnboarding] Checking if customer org ${enhanceCustomerId} exists...`);
+      const exists = await EnhanceService.orgExists(enhanceCustomerId);
+      if (!exists) {
+        console.log(`[EnhanceOnboarding] Customer org ${enhanceCustomerId} is stale (deleted from Enhance), clearing...`);
+        await query(
+          `UPDATE organizations
+           SET enhance_customer_id = NULL,
+               updated_at = now()
+           WHERE id = $1`,
+          [organizationId]
+        );
+        enhanceCustomerId = null;
+      } else {
+        console.log(`[EnhanceOnboarding] Customer org ${enhanceCustomerId} exists`);
+      }
+    }
+
     if (!enhanceCustomerId) {
+      console.log(`[EnhanceOnboarding] Creating new customer org for "${context.organization_name}"...`);
       const customer = await EnhanceService.createCustomer(config.ENHANCE_MASTER_ORG_ID, {
         name: context.organization_name,
       });
 
       enhanceCustomerId = requireRemoteId('Enhance customer', customer);
+      console.log(`[EnhanceOnboarding] Created customer org: ${enhanceCustomerId}`);
 
       await query(
         `UPDATE organizations
@@ -203,6 +224,7 @@ export class EnhanceOnboardingService {
     const orgLogins = extractCollection<EnhanceLoginRecord>(
       await EnhanceService.getOrgLogins(enhanceCustomerId)
     );
+    console.log(`[EnhanceOnboarding] Found ${orgLogins.length} existing logins in customer org`);
     const matchedLogin = orgLogins.find(
       (login) => normalizeEmail(login.email) === normalizeEmail(context.purchaser_email)
     );
@@ -229,21 +251,32 @@ export class EnhanceOnboardingService {
           throw error;
         }
 
+        console.log(`[EnhanceOnboarding] Login 409 conflict for ${context.purchaser_email}, searching realm...`);
         const existingRealmLogin = await findRealmLoginByEmail(context.purchaser_email);
-        if (!existingRealmLogin?.id) {
-          throw new Error(
-            `Enhance login already exists for ${context.purchaser_email} but could not be resolved`
-          );
-        }
 
-        purchaserLoginId = existingRealmLogin.id;
-        generatedPassword = null;
+        if (existingRealmLogin?.id) {
+          purchaserLoginId = existingRealmLogin.id;
+          generatedPassword = null;
+          console.log(`[EnhanceOnboarding] Resolved existing login: ${purchaserLoginId}`);
+        } else {
+          // Login was likely deleted with the old customer org; retry creation.
+          console.log(`[EnhanceOnboarding] Login not found in realm, retrying creation...`);
+          generatedPassword = generateEnhancePassword();
+          const retryLogin = await EnhanceService.createLogin(enhanceCustomerId, {
+            email: context.purchaser_email,
+            name: firstName,
+            password: generatedPassword,
+          });
+          purchaserLoginId = requireRemoteId('Enhance login (retry)', retryLogin);
+          console.log(`[EnhanceOnboarding] Retry succeeded: ${purchaserLoginId}`);
+        }
       }
     }
 
     const orgMembers = extractCollection<EnhanceMemberRecord>(
       await EnhanceService.getOrgMembers(enhanceCustomerId)
     );
+    console.log(`[EnhanceOnboarding] Found ${orgMembers.length} existing members in customer org`);
     const matchedMember = orgMembers.find(
       (member) =>
         member.loginId === purchaserLoginId ||
@@ -252,20 +285,26 @@ export class EnhanceOnboardingService {
 
     let purchaserMemberId = matchedMember?.id;
     if (!purchaserMemberId) {
+      console.log(`[EnhanceOnboarding] Creating org member with login ${purchaserLoginId}...`);
       const newMember = await EnhanceService.createOrgMember(enhanceCustomerId, {
         loginId: purchaserLoginId,
         roles: ENHANCE_DEFAULT_MEMBER_ROLES,
       });
       purchaserMemberId = requireRemoteId('Enhance member', newMember);
+      console.log(`[EnhanceOnboarding] Created member: ${purchaserMemberId}`);
+    } else {
+      console.log(`[EnhanceOnboarding] Matched existing member: ${purchaserMemberId}`);
     }
 
     let ownerAssigned = false;
     if (!hasOwner(orgMembers)) {
+      console.log(`[EnhanceOnboarding] No owner found, assigning ${purchaserMemberId} as owner...`);
       try {
         await EnhanceService.updateOrgOwner(enhanceCustomerId, {
           memberId: purchaserMemberId,
         });
         ownerAssigned = true;
+        console.log(`[EnhanceOnboarding] Owner assigned successfully`);
       } catch (error) {
         const ownerAssignmentUnauthorized =
           error instanceof EnhanceApiError && error.statusCode === 403;
@@ -273,8 +312,11 @@ export class EnhanceOnboardingService {
         if (!ownerAssignmentUnauthorized) {
           throw error;
         }
+        console.log(`[EnhanceOnboarding] Owner assignment skipped (403 - already owner or insufficient perms)`);
       }
     }
+
+    console.log(`[EnhanceOnboarding] Onboarding complete: customer=${enhanceCustomerId}, login=${purchaserLoginId}, member=${purchaserMemberId}, owner=${ownerAssigned}`);
 
     return {
       enhanceCustomerId,

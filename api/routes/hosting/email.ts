@@ -118,4 +118,60 @@ router.delete("/:id/emails/:emailAddress", requireOrgPermission("hosting_manage"
   }
 });
 
+router.patch("/:id/emails/:emailAddress", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.updateWebsiteEmail(
+      enhanceWebsiteOrgId, sub.enhance_website_id, req.params.emailAddress, req.body,
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to update email" });
+  }
+});
+
+router.get("/:id/emails/:emailAddress/client-conf", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.getWebsiteEmailClientConf(
+      enhanceWebsiteOrgId, sub.enhance_website_id, req.params.emailAddress,
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get email client config" });
+  }
+});
+
+router.post("/:id/emails/:emailAddress/autoresponder", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.createWebsiteEmailAutoresponder(
+      enhanceWebsiteOrgId, sub.enhance_website_id, req.params.emailAddress, req.body,
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to create autoresponder" });
+  }
+});
+
+router.delete("/:id/emails/:emailAddress/autoresponder", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.deleteWebsiteEmailAutoresponder(
+      enhanceWebsiteOrgId, sub.enhance_website_id, req.params.emailAddress,
+    );
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to delete autoresponder" });
+  }
+});
+
 export default router;

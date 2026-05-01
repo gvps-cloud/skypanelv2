@@ -160,4 +160,153 @@ router.get("/:id/wordpress/:appId/themes", requireOrgPermission("hosting_view"),
   }
 });
 
+// WordPress Version
+router.get("/:id/wordpress/:appId/version", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.getWordpressAppVersion(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get WordPress version" });
+  }
+});
+
+router.patch("/:id/wordpress/:appId/version", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.updateWordpressAppVersion(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to update WordPress version" });
+  }
+});
+
+// WordPress User CRUD
+router.post("/:id/wordpress/:appId/users", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.createWordpressUser(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to create WordPress user" });
+  }
+});
+
+router.patch("/:id/wordpress/:appId/users/:userId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.updateWordpressUser(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.params.userId, req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to update WordPress user" });
+  }
+});
+
+router.delete("/:id/wordpress/:appId/users/:userId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.deleteWordpressUser(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.params.userId);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to delete WordPress user" });
+  }
+});
+
+// WordPress Plugins
+router.post("/:id/wordpress/:appId/plugins", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.installWordpressPlugin(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to install WordPress plugin" });
+  }
+});
+
+router.delete("/:id/wordpress/:appId/plugins/:pluginId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.deleteWordpressPlugin(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.params.pluginId);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to delete WordPress plugin" });
+  }
+});
+
+// WordPress Themes
+router.post("/:id/wordpress/:appId/themes", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.installWordpressTheme(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to install WordPress theme" });
+  }
+});
+
+router.delete("/:id/wordpress/:appId/themes/:themeId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.deleteWordpressTheme(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.params.themeId);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to delete WordPress theme" });
+  }
+});
+
+router.post("/:id/wordpress/:appId/themes/:themeId/activate", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.activateWordpressTheme(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.params.themeId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to activate WordPress theme" });
+  }
+});
+
+// WordPress wp-config
+router.get("/:id/wordpress/:appId/wp-config/:wpOption", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.getWordpressConfig(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.params.wpOption);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get WordPress config" });
+  }
+});
+
+router.put("/:id/wordpress/:appId/wp-config", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.setWordpressConfig(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId, req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to set WordPress config" });
+  }
+});
+
 export default router;

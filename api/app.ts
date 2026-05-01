@@ -60,6 +60,10 @@ import hostingWordpressRoutes from "./routes/hosting/wordpress.js";
 import hostingMysqlRoutes from "./routes/hosting/mysql.js";
 import hostingFtpRoutes from "./routes/hosting/ftp.js";
 import hostingSslRoutes from "./routes/hosting/ssl.js";
+import hostingAppsRoutes from "./routes/hosting/apps.js";
+import hostingBackupsRoutes from "./routes/hosting/backups.js";
+import hostingCronRoutes from "./routes/hosting/cron.js";
+import hostingSshRoutes from "./routes/hosting/ssh.js";
 import {
   initializeMetricsCollection,
   startMetricsPersistence,
@@ -328,6 +332,7 @@ app.use("/api", notesRoutes);
 // Hosting authenticated routes
 app.use("/api/hosting", hostingAuthenticatedRoutes);
 app.use("/api/hosting/web", hostingWebRoutes);
+app.use("/api/hosting/apps", hostingAppsRoutes);
 app.use("/api/hosting/node", hostingNodeRoutes);
 app.use("/api/hosting/email", hostingEmailRoutes);
 app.use("/api/hosting/dns", hostingDnsRoutes);
@@ -335,6 +340,9 @@ app.use("/api/hosting/wordpress", hostingWordpressRoutes);
 app.use("/api/hosting/mysql", hostingMysqlRoutes);
 app.use("/api/hosting/ftp", hostingFtpRoutes);
 app.use("/api/hosting/ssl", hostingSslRoutes);
+app.use("/api/hosting/backups", hostingBackupsRoutes);
+app.use("/api/hosting/cron", hostingCronRoutes);
+app.use("/api/hosting/ssh", hostingSshRoutes);
 
 // Health check routes are now handled by the dedicated health router
 

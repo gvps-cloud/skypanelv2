@@ -37,12 +37,20 @@ import { TicketInfoSidebar } from "./shared/TicketInfoSidebar";
 
 import { useAuth } from "@/contexts/AuthContext";
 
+interface PrefilledTicketData {
+  subject?: string;
+  description?: string;
+  category?: string;
+  hostingSubscriptionId?: string;
+}
+
 interface UserSupportViewProps {
   token: string;
   pendingFocusTicketId?: string | null;
   pendingCreateTicket?: boolean;
   onFocusTicketHandled?: () => void;
   onCreateTicketHandled?: () => void;
+  prefilledTicket?: PrefilledTicketData;
 }
 
 export const UserSupportView: React.FC<UserSupportViewProps> = ({
@@ -51,6 +59,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
   pendingCreateTicket = false,
   onFocusTicketHandled,
   onCreateTicketHandled,
+  prefilledTicket,
 }) => {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -472,13 +481,17 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
 
   const handleCreateTicket = async (data: CreateTicketData) => {
     try {
-      const resData = await apiClient.post<{ error?: string }>("/support/tickets", {
+      const payload: Record<string, unknown> = {
         subject: data.subject,
-        message: data.description, // Backend expects 'message' not 'description'
+        message: data.description,
         priority: data.priority,
         category: data.category,
         vpsId: data.vpsId,
-      });
+      };
+      if (prefilledTicket?.hostingSubscriptionId) {
+        payload.hostingSubscriptionId = prefilledTicket.hostingSubscriptionId;
+      }
+      const resData = await apiClient.post<{ error?: string }>("/support/tickets", payload);
 
       toast.success("Support ticket created successfully");
       setIsCreateModalOpen(false);
@@ -723,6 +736,11 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         onOpenChange={setIsCreateModalOpen}
         onSubmit={handleCreateTicket}
         vpsInstances={vpsInstances}
+        prefilled={prefilledTicket ? {
+          subject: prefilledTicket.subject,
+          description: prefilledTicket.description,
+          category: prefilledTicket.category,
+        } : undefined}
       />
     </>
   );

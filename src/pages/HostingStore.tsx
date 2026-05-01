@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useHostingPlans, useHostingRegions, useHostingStatus, useHostingStagingDomain } from "@/hooks/useHosting";
+import {
+  useHostingPlans,
+  useHostingRegions,
+  useHostingStatus,
+  useHostingStagingDomain,
+  hostingKeys,
+} from "@/hooks/useHosting";
 import { apiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,30 +19,79 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Globe, Check } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Loader2, Globe, Check, ArrowLeft, Server } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
+import { formatBillingAmount } from "@/lib/formatters";
+
+interface PlanFeatures {
+  planType?: string;
+  resources?: Record<string, { total?: number | null }>;
+  allowances?: string[];
+  selections?: Record<string, string>;
+  subscriptionsCount?: number;
+  allowedPhpVersions?: string[];
+  defaultPhpVersion?: string | null;
+  redisAllowed?: boolean;
+  persistentAppsAllowed?: boolean;
+  allowServerGroupSelection?: boolean;
+  serverGroupIds?: string[];
+}
+
+interface HostingPlan {
+  id: string;
+  name: string;
+  description?: string | null;
+  features?: PlanFeatures;
+  service_type: string;
+  price_monthly: number;
+  is_active: boolean;
+}
+
+const formatResource = (value: number | null | undefined) => {
+  if (value === null || value === undefined || value === -1) return "∞";
+  return String(value);
+};
+
+const phpDisplay = (version?: string | null) => {
+  if (!version) return "—";
+  return version.replace("php", "PHP ").replace(/(\d)(\d)/, "$1.$2");
+};
 
 export default function HostingStore() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: statusData } = useHostingStatus();
   const { data: plansData, isLoading: plansLoading } = useHostingPlans();
   const { data: regionsData } = useHostingRegions();
   const { data: stagingDomainData } = useHostingStagingDomain();
 
-  const [selectedPlan, setSelectedPlan] = useState<string>("");
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [domain, setDomain] = useState("");
   const [useStaging, setUseStaging] = useState(false);
   const [regionId, setRegionId] = useState("");
   const [purchasing, setPurchasing] = useState(false);
 
   const stagingSuffix = stagingDomainData?.stagingDomain || null;
-  const canUseStaging = !!stagingSuffix;
-  const effectiveDomain = useStaging ? "" : domain;
+  const canUseStaging = false;
   const hasDomain = useStaging || domain.trim().length > 0;
 
+  const plans: HostingPlan[] = plansData?.plans ?? [];
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+  const features = selectedPlan?.features;
+
   const handlePurchase = async () => {
-    if (!selectedPlan) {
+    if (!selectedPlanId) {
       toast.error("Please select a plan");
       return;
     }
@@ -48,7 +103,7 @@ export default function HostingStore() {
     setPurchasing(true);
     try {
       const payload: Record<string, any> = {
-        planId: selectedPlan,
+        planId: selectedPlanId,
         regionId: regionId || undefined,
       };
 
@@ -73,6 +128,8 @@ export default function HostingStore() {
       } else {
         toast.success("Hosting subscription purchased successfully");
       }
+
+      await queryClient.invalidateQueries({ queryKey: hostingKeys.services() });
       navigate("/hosting");
     } catch (error: any) {
       toast.error(error?.message || "Failed to purchase hosting");
@@ -91,112 +148,239 @@ export default function HostingStore() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-6">Hosting Store</h1>
+    <div className="container mx-auto py-8 space-y-6">
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/hosting")}>
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Back
+        </Button>
+        <h1 className="text-2xl font-bold">Hosting Store</h1>
+      </div>
 
-      {plansLoading && (
+      {plansLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-3 mb-8">
-        {plansData?.plans?.map((plan: any) => (
-          <Card
-            key={plan.id}
-            className={`cursor-pointer transition-all ${selectedPlan === plan.id ? "ring-2 ring-primary" : ""}`}
-            onClick={() => setSelectedPlan(plan.id)}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{plan.name}</span>
-                {selectedPlan === plan.id && <Check className="w-5 h-5 text-primary" />}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold mb-2">
-                ${plan.price_monthly}
-                <span className="text-sm font-normal text-muted-foreground">/mo</span>
-              </p>
-              <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
-              <Badge variant="outline" className="capitalize">
-                {plan.service_type}
-              </Badge>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Configure Your Subscription</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="domain">
-              {useStaging ? "Staging Domain" : "Domain"}
-            </Label>
-            {canUseStaging && (
-              <button
-                type="button"
-                onClick={() => setUseStaging(!useStaging)}
-                className="text-sm text-primary hover:underline"
-              >
-                {useStaging ? "I have my own domain" : "I don't have a domain"}
-              </button>
-            )}
+      ) : plans.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-12 text-center">
+          <Server className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-lg font-medium mb-2">No plans available</h3>
+          <p className="text-muted-foreground">
+            There are no active hosting plans at the moment. Please check back later.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Plan Table */}
+          <div className="overflow-x-auto rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead>Plan</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Websites</TableHead>
+                  <TableHead>Disk</TableHead>
+                  <TableHead>Mail</TableHead>
+                  <TableHead>DBs</TableHead>
+                  <TableHead>Transfer</TableHead>
+                  <TableHead>PHP</TableHead>
+                  <TableHead>Redis</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {plans.map((plan) => {
+                  const f = plan.features;
+                  const r = f?.resources;
+                  const isSelected = selectedPlanId === plan.id;
+                  return (
+                    <TableRow
+                      key={plan.id}
+                      className={cn("cursor-pointer", isSelected && "bg-muted/50")}
+                      onClick={() => {
+                        setSelectedPlanId(plan.id);
+                        setRegionId("");
+                      }}
+                    >
+                      <TableCell>
+                        <div
+                          className={cn(
+                            "w-5 h-5 rounded-full border-2 flex items-center justify-center",
+                            isSelected
+                              ? "border-primary bg-primary"
+                              : "border-muted-foreground"
+                          )}
+                        >
+                          {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{plan.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">
+                          {f?.planType || plan.service_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatResource(r?.websites?.total)}</TableCell>
+                      <TableCell>
+                        {r?.diskspace?.total != null
+                          ? `${formatResource(r.diskspace.total)} MB`
+                          : "∞"}
+                      </TableCell>
+                      <TableCell>{formatResource(r?.mailboxes?.total)}</TableCell>
+                      <TableCell>{formatResource(r?.mysqlDbs?.total)}</TableCell>
+                      <TableCell>
+                        {r?.transfer?.total != null
+                          ? `${formatResource(r.transfer.total)} MB`
+                          : "∞"}
+                      </TableCell>
+                      <TableCell>{phpDisplay(f?.defaultPhpVersion)}</TableCell>
+                      <TableCell>
+                        {f?.redisAllowed ? (
+                          <Badge variant="secondary" className="text-xs">
+                            Yes
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {formatBillingAmount(plan.price_monthly)}
+                        <span className="text-muted-foreground font-normal text-xs">/mo</span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
 
-          {useStaging ? (
-            <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-              <Globe className="h-4 w-4" />
-              <span>A random subdomain on </span>
-              <code className="font-mono text-foreground">{stagingSuffix}</code>
-              <span> will be assigned automatically</span>
-            </div>
-          ) : (
-            <Input
-              id="domain"
-              placeholder="example.com"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-            />
-          )}
+          {/* Checkout Panel */}
+          {selectedPlan && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Configure Subscription</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Selected plan summary */}
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{selectedPlan.name}</span>
+                    <span className="font-semibold">
+                      {formatBillingAmount(selectedPlan.price_monthly)}/mo
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                    {features?.planType && (
+                      <Badge variant="outline" className="capitalize">
+                        {features.planType}
+                      </Badge>
+                    )}
+                    {features?.redisAllowed && (
+                      <Badge variant="secondary" className="text-xs">
+                        Redis
+                      </Badge>
+                    )}
+                    {features?.persistentAppsAllowed && (
+                      <Badge variant="secondary" className="text-xs">
+                        Persistent Apps
+                      </Badge>
+                    )}
+                  </div>
+                </div>
 
-          {regionsData?.regions && regionsData.regions.length > 0 && (
-            <div>
-              <Label htmlFor="region">Region (optional)</Label>
-              <Select value={regionId} onValueChange={setRegionId}>
-                <SelectTrigger id="region">
-                  <SelectValue placeholder="Select a region" />
-                </SelectTrigger>
-                <SelectContent>
-                  {regionsData.regions.map((region: any) => (
-                    <SelectItem key={region.id} value={region.id}>
-                      {region.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+                {/* Domain section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="domain">
+                      {useStaging ? "Staging Domain" : "Domain"}
+                    </Label>
+                    {canUseStaging && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUseStaging(!useStaging);
+                          setDomain("");
+                        }}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        {useStaging ? "I have my own domain" : "I don't have a domain"}
+                      </button>
+                    )}
+                  </div>
 
-          <Button
-            onClick={handlePurchase}
-            disabled={purchasing || !selectedPlan || !hasDomain}
-            className="w-full"
-          >
-            {purchasing ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>Purchase Subscription</>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
+                  {useStaging ? (
+                    <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                      <Globe className="h-4 w-4" />
+                      <span>A random subdomain on </span>
+                      <code className="font-mono text-foreground">{stagingSuffix}</code>
+                      <span> will be assigned automatically</span>
+                    </div>
+                  ) : (
+                    <Input
+                      id="domain"
+                      placeholder="example.com"
+                      value={domain}
+                      onChange={(e) => setDomain(e.target.value)}
+                    />
+                  )}
+                </div>
+
+                {/* Region selector - only if plan allows server group selection */}
+                {features?.allowServerGroupSelection && regionsData?.regions && regionsData.regions.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="region">Region</Label>
+                    <Select value={regionId} onValueChange={setRegionId}>
+                      <SelectTrigger id="region">
+                        <SelectValue placeholder="Select a region" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {regionsData.regions.map((region: any) => (
+                          <SelectItem key={region.id} value={region.id}>
+                            {region.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Info box */}
+                <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground space-y-1">
+                  <p className="font-medium text-foreground">What happens next?</p>
+                  <p>Purchasing creates your hosting account and provisions:</p>
+                  <ul className="list-disc list-inside space-y-0.5 ml-1">
+                    <li>An Enhance customer organization</li>
+                    <li>Your login and member access</li>
+                    <li>A subscription to the selected plan</li>
+                    <li>A website with your chosen domain</li>
+                  </ul>
+                  <p className="pt-1">
+                    Your hosting panel credentials will be emailed to you automatically.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={handlePurchase}
+                  disabled={purchasing || !selectedPlanId || !hasDomain}
+                  className="w-full"
+                >
+                  {purchasing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Purchase Subscription
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
     </div>
   );
 }

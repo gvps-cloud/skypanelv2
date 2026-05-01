@@ -19,13 +19,20 @@ interface RequestOptions {
 
 export class EnhanceService {
   private static baseUrl(): string {
-    return config.ENHANCE_API_URL.replace(/\/$/, '') + '/api';
+    const url = config.ENHANCE_API_URL.replace(/\/$/, '');
+    return url.endsWith('/api') ? url : `${url}/api`;
   }
 
   private static async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const url = `${this.baseUrl()}${path}`;
+    const method = options.method || 'GET';
+
+    if (config.NODE_ENV !== 'production') {
+      console.log(`[EnhanceAPI] ${method} ${url}`);
+    }
+
     const response = await fetch(url, {
-      method: options.method || 'GET',
+      method,
       headers: {
         'Authorization': `Bearer ${config.ENHANCE_API_KEY.replace(/^Bearer\s+/i, '')}`,
         'Accept': 'application/json',
@@ -36,6 +43,15 @@ export class EnhanceService {
     });
 
     const responseText = await response.text();
+
+    if (config.NODE_ENV !== 'production') {
+      const bodyPreview = responseText.trim().slice(0, 500);
+      console.log(`[EnhanceAPI] ${method} ${url} → ${response.status} (body ${responseText.length} chars)`);
+      if (bodyPreview) {
+        console.log(`[EnhanceAPI] Response preview:`, bodyPreview);
+      }
+    }
+
     const parseBody = () => {
       if (!responseText.trim()) return undefined;
       try {
@@ -92,7 +108,8 @@ export class EnhanceService {
 
   static async getServerGroups(_orgId?: string) {
     // Enhance API: /servers/groups is a global endpoint (not org-scoped)
-    return this.request<any>(`/servers/groups`);
+    const response = await this.request<any>(`/servers/groups`);
+    return Array.isArray(response) ? response : (response?.items ?? []);
   }
 
   // ============================================================
@@ -137,8 +154,37 @@ export class EnhanceService {
     });
   }
 
-  static async getPlans(orgId: string) {
-    return this.request<any>(`/orgs/${orgId}/plans`);
+  static async getPlans(orgId: string, options?: { limit?: number; offset?: number }) {
+    const params = new URLSearchParams();
+    if (typeof options?.limit === 'number') {
+      params.set('limit', String(options.limit));
+    }
+    if (typeof options?.offset === 'number') {
+      params.set('offset', String(options.offset));
+    }
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    return this.request<any>(`/orgs/${orgId}/plans${suffix}`);
+  }
+
+  static async getAllPlans(orgId: string): Promise<any[]> {
+    const allPlans: any[] = [];
+    const limit = 100;
+    let offset = 0;
+
+    while (true) {
+      const response = await this.getPlans(orgId, { limit, offset });
+      const items = Array.isArray(response) ? response : response?.items || [];
+      allPlans.push(...items);
+
+      const total = typeof response?.total === 'number' ? response.total : items.length;
+      offset += items.length;
+
+      if (items.length === 0 || offset >= total) {
+        break;
+      }
+    }
+
+    return allPlans;
   }
 
   // ============================================================
@@ -207,6 +253,10 @@ export class EnhanceService {
 
   static async deleteWebsite(orgId: string, websiteId: string) {
     return this.request<void>(`/orgs/${orgId}/websites/${websiteId}`, { method: 'DELETE' });
+  }
+
+  static async getInstallableApps(orgId: string, subscriptionId: string | number) {
+    return this.request<any>(`/orgs/${orgId}/subscriptions/${subscriptionId}/installable-apps`);
   }
 
   // ============================================================
@@ -383,7 +433,7 @@ export class EnhanceService {
 
   static async updateWebsitePersistentApp(websiteId: string, appId: string, data: any) {
     return this.request<any>(`/websites/${websiteId}/apps/persistent/${appId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }
@@ -614,5 +664,120 @@ export class EnhanceService {
 
   static async setWebsiteDomainForceSsl(_orgId: string, _websiteId: string, domainId: string, enabled: boolean) {
     return this.request<any>(`/v2/domains/${domainId}/ssl/force_ssl`, { method: 'PUT', body: { enabled } });
+  }
+
+  // ============================================================
+  // SSO
+  // ============================================================
+  static async getMemberSsoLink(orgId: string, memberId: string) {
+    return this.request<string>(`/orgs/${orgId}/members/${memberId}/sso`);
+  }
+
+  // ============================================================
+  // Backups
+  // ============================================================
+  static async getWebsiteBackups(orgId: string, websiteId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups`);
+  }
+
+  static async backupWebsite(orgId: string, websiteId: string, data?: { includeEmails?: boolean }) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups`, {
+      method: 'POST',
+      body: data ?? {},
+    });
+  }
+
+  static async getWebsiteBackup(orgId: string, websiteId: string, backupId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}`);
+  }
+
+  static async restoreWebsiteBackup(orgId: string, websiteId: string, backupId: string, data?: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}/restore`, {
+      method: 'POST',
+      body: data ?? {},
+    });
+  }
+
+  static async deleteWebsiteBackup(orgId: string, websiteId: string, backupId: string) {
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  static async getWebsiteBackupStatus(orgId: string, websiteId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/status/backup`);
+  }
+
+  static async getBackupsDisabled(websiteId: string) {
+    return this.request<any>(`/websites/${websiteId}/backups_disabled`);
+  }
+
+  static async setBackupsDisabled(websiteId: string, disabled: boolean) {
+    return this.request<any>(`/websites/${websiteId}/backups_disabled`, {
+      method: 'PUT',
+      body: { disabled },
+    });
+  }
+
+  // ============================================================
+  // Cron
+  // ============================================================
+  static async getCrontab(orgId: string, websiteId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/crontab`);
+  }
+
+  static async updateCrontab(orgId: string, websiteId: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/crontab`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  static async deleteCrontab(orgId: string, websiteId: string) {
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/crontab`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============================================================
+  // SSH Keys (per-website)
+  // ============================================================
+  static async getWebsiteSshKeys(orgId: string, websiteId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ssh/keys`);
+  }
+
+  static async createWebsiteSshKey(orgId: string, websiteId: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ssh/keys`, {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  static async deleteWebsiteSshKey(orgId: string, websiteId: string, keyId: string) {
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/ssh/keys/${keyId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============================================================
+  // Bandwidth
+  // ============================================================
+  static async getSubscriptionBandwidth(orgId: string, subscriptionId: string | number) {
+    return this.request<any>(`/orgs/${orgId}/subscriptions/${subscriptionId}/bandwidth`);
+  }
+
+  // ============================================================
+  // Org Verification
+  // ============================================================
+  static async orgExists(orgId: string): Promise<boolean> {
+    try {
+      await this.getOrg(orgId);
+      return true;
+    } catch (error) {
+      if (error instanceof EnhanceApiError && error.statusCode === 404) {
+        return false;
+      }
+      throw error;
+    }
   }
 }

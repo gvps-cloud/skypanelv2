@@ -1,6 +1,7 @@
 import { config } from '../config/index.js';
 import { query } from '../lib/database.js';
 import { logActivity } from './activityLogger.js';
+import { EnhanceApiError, EnhanceService } from './enhanceService.js';
 
 export interface EnhanceStatus {
   hardEnabled: boolean;
@@ -91,41 +92,21 @@ export class EnhanceToggleService {
     }
 
     try {
-      // Basic connectivity check: attempt to reach the API root
-      const response = await fetch(`${config.ENHANCE_API_URL.replace(/\/$/, '')}/api/orgs/${config.ENHANCE_MASTER_ORG_ID}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${config.ENHANCE_API_KEY.replace(/^Bearer\s+/i, '')}`,
-          'Accept': 'application/json',
-        },
-      });
+      await EnhanceService.getOrg(config.ENHANCE_MASTER_ORG_ID);
 
-      if (response.ok) {
-        await this.persistHealthCheck('healthy', 'API connectivity confirmed');
-        await logActivity({
-          userId: actorUserId,
-          eventType: 'enhance.health_check',
-          entityType: 'platform_integration',
-          entityId: 'enhance',
-          message: 'Enhance health check passed',
-          status: 'success',
-        });
-        return { success: true, message: 'API connectivity confirmed' };
-      }
-
-      const msg = `API returned ${response.status}`;
-      await this.persistHealthCheck('error', msg);
+      await this.persistHealthCheck('healthy', 'API connectivity confirmed');
       await logActivity({
         userId: actorUserId,
         eventType: 'enhance.health_check',
         entityType: 'platform_integration',
         entityId: 'enhance',
-        message: `Enhance health check failed: ${msg}`,
-        status: 'error',
+        message: 'Enhance health check passed',
+        status: 'success',
       });
-      return { success: false, message: msg };
+      return { success: true, message: 'API connectivity confirmed' };
     } catch (error: any) {
-      const msg = error?.message || 'Unknown error during health check';
+      const status = error instanceof EnhanceApiError ? error.statusCode : undefined;
+      const msg = status ? `API returned ${status}` : (error?.message || 'Unknown error during health check');
       await this.persistHealthCheck('error', msg);
       await logActivity({
         userId: actorUserId,

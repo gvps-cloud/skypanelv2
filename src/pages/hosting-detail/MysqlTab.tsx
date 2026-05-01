@@ -8,12 +8,12 @@ import {
   Database,
   UserCircle,
   ExternalLink,
+  Pencil,
+  Globe,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -93,6 +94,17 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
   const [newPassword, setNewPassword] = useState("");
   const [creatingUser, setCreatingUser] = useState(false);
 
+  const [editUserOpen, setEditUserOpen] = useState(false);
+  const [editUsername, setEditUsername] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [savingUser, setSavingUser] = useState(false);
+
+  const [accessHostOpen, setAccessHostOpen] = useState(false);
+  const [accessHostUsername, setAccessHostUsername] = useState("");
+  const [newHost, setNewHost] = useState("");
+  const [addingHost, setAddingHost] = useState(false);
+  const [removingHost, setRemovingHost] = useState<string | null>(null);
+
   const loadData = useCallback(async () => {
     if (!subscriptionId) return;
     setRefreshing(true);
@@ -119,15 +131,10 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
 
   const handleCreateDb = async () => {
     if (!subscriptionId) return;
-    if (!newDbName.trim()) {
-      toast.error("Database name is required");
-      return;
-    }
+    if (!newDbName.trim()) { toast.error("Database name is required"); return; }
     setCreatingDb(true);
     try {
-      await apiClient.post(`/hosting/mysql/${subscriptionId}/mysql-dbs`, {
-        name: newDbName.trim(),
-      });
+      await apiClient.post(`/hosting/mysql/${subscriptionId}/mysql-dbs`, { name: newDbName.trim() });
       toast.success("Database created");
       setNewDbName("");
       setDbDialogOpen(false);
@@ -141,7 +148,7 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
 
   const handleDeleteDb = async (dbName: string) => {
     if (!subscriptionId) return;
-    if (!confirm(`Are you sure you want to delete database "${dbName}"?`)) return;
+    if (!confirm(`Delete database "${dbName}"?`)) return;
     setDbActionLoading(dbName);
     try {
       await apiClient.delete(`/hosting/mysql/${subscriptionId}/mysql-dbs/${encodeURIComponent(dbName)}`);
@@ -159,7 +166,7 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
     setDbActionLoading(dbName);
     try {
       const res = await apiClient.get<{ url?: string }>(
-        `/hosting/mysql/${subscriptionId}/mysql-dbs/${encodeURIComponent(dbName)}/sso`
+        `/hosting/mysql/${subscriptionId}/mysql-dbs/${encodeURIComponent(dbName)}/sso`,
       );
       if (res.url) {
         window.open(res.url, "_blank", "noopener,noreferrer");
@@ -175,10 +182,7 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
 
   const handleCreateUser = async () => {
     if (!subscriptionId) return;
-    if (!newUsername.trim() || !newPassword.trim()) {
-      toast.error("Username and password are required");
-      return;
-    }
+    if (!newUsername.trim() || !newPassword.trim()) { toast.error("Username and password are required"); return; }
     setCreatingUser(true);
     try {
       await apiClient.post(`/hosting/mysql/${subscriptionId}/mysql-users`, {
@@ -199,7 +203,7 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
 
   const handleDeleteUser = async (username: string) => {
     if (!subscriptionId) return;
-    if (!confirm(`Are you sure you want to delete user "${username}"?`)) return;
+    if (!confirm(`Delete user "${username}"?`)) return;
     setUserActionLoading(username);
     try {
       await apiClient.delete(`/hosting/mysql/${subscriptionId}/mysql-users/${encodeURIComponent(username)}`);
@@ -209,6 +213,69 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
       toast.error(err instanceof Error ? err.message : "Failed to delete user");
     } finally {
       setUserActionLoading(null);
+    }
+  };
+
+  const handleEditUser = (user: MysqlUser) => {
+    setEditUsername(user.username);
+    setEditPassword("");
+    setEditUserOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    if (!subscriptionId || !editPassword) return;
+    setSavingUser(true);
+    try {
+      await apiClient.put(`/hosting/mysql/${subscriptionId}/mysql-users/${encodeURIComponent(editUsername)}`, {
+        password: editPassword,
+      });
+      toast.success(`Password updated for ${editUsername}`);
+      setEditUserOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update user");
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const handleOpenAccessHosts = (user: MysqlUser) => {
+    setAccessHostUsername(user.username);
+    setNewHost("");
+    setAccessHostOpen(true);
+  };
+
+  const handleAddHost = async () => {
+    if (!subscriptionId || !newHost.trim()) return;
+    setAddingHost(true);
+    try {
+      await apiClient.post(
+        `/hosting/mysql/${subscriptionId}/mysql-users/${encodeURIComponent(accessHostUsername)}/access-hosts`,
+        { hosts: [newHost.trim()] },
+      );
+      toast.success("Access host added");
+      setNewHost("");
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add access host");
+    } finally {
+      setAddingHost(false);
+    }
+  };
+
+  const handleRemoveHost = async (host: string) => {
+    if (!subscriptionId) return;
+    setRemovingHost(host);
+    try {
+      await apiClient.delete(
+        `/hosting/mysql/${subscriptionId}/mysql-users/${encodeURIComponent(accessHostUsername)}/access-hosts`,
+        { data: { hosts: [host] } },
+      );
+      toast.success("Access host removed");
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove access host");
+    } finally {
+      setRemovingHost(null);
     }
   };
 
@@ -237,6 +304,8 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
     );
   }
 
+  const currentUser = users.find((u) => u.username === accessHostUsername);
+
   return (
     <div className="space-y-6">
       {/* Databases */}
@@ -248,55 +317,38 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
                 <Database className="h-5 w-5 text-primary" />
                 <span>Databases</span>
               </h2>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Manage MySQL databases for this subscription.
-              </p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage MySQL databases.</p>
             </div>
             <div className="flex items-center gap-2">
               <Dialog open={dbDialogOpen} onOpenChange={setDbDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="h-4 w-4 mr-1" />
-                    New DB
-                  </Button>
+                  <Button size="sm"><Plus className="h-4 w-4 mr-1" />New DB</Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Create Database</DialogTitle>
-                    <DialogDescription>
-                      Add a new MySQL database.
-                    </DialogDescription>
+                    <DialogDescription>Add a new MySQL database.</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-2">
                     <div className="space-y-2">
                       <Label htmlFor="db-name">Database Name</Label>
-                      <Input
-                        id="db-name"
-                        value={newDbName}
-                        onChange={(e) => setNewDbName(e.target.value)}
-                        placeholder="my_database"
-                      />
+                      <Input id="db-name" value={newDbName} onChange={(e) => setNewDbName(e.target.value)} placeholder="my_database" />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setDbDialogOpen(false)}>
-                      Cancel
-                    </Button>
+                    <Button variant="outline" onClick={() => setDbDialogOpen(false)}>Cancel</Button>
                     <Button onClick={handleCreateDb} disabled={creatingDb}>
-                      {creatingDb && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-                      Create
+                      {creatingDb && <Loader2 className="h-4 w-4 animate-spin mr-1" />}Create
                     </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
               <Button variant="outline" size="sm" onClick={loadData} disabled={refreshing}>
-                <RefreshCw className={cn("h-3 w-3 mr-1.5", refreshing && "animate-spin")} />
-                Refresh
+                <RefreshCw className={cn("h-3 w-3 mr-1.5", refreshing && "animate-spin")} />Refresh
               </Button>
             </div>
           </div>
         </div>
-
         <div className="px-6 sm:px-8 py-5">
           {databases.length === 0 ? (
             <div className="text-center py-8">
@@ -321,28 +373,12 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
                     <TableCell>{formatDate(db.createdAt)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDbSso(db.name)}
-                          disabled={dbActionLoading === db.name}
-                        >
-                          {dbActionLoading === db.name ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <ExternalLink className="h-3 w-3" />
-                          )}
+                        <Button variant="outline" size="sm" onClick={() => handleDbSso(db.name)} disabled={dbActionLoading === db.name}>
+                          {dbActionLoading === db.name ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
                           <span className="ml-1">SSO</span>
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteDb(db.name)}
-                          disabled={dbActionLoading === db.name}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span className="ml-1">Delete</span>
+                        <Button variant="outline" size="sm" onClick={() => handleDeleteDb(db.name)} disabled={dbActionLoading === db.name} className="text-destructive hover:text-destructive">
+                          <Trash2 className="h-3 w-3" /><span className="ml-1">Delete</span>
                         </Button>
                       </div>
                     </TableCell>
@@ -360,64 +396,39 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
-                <UserCircle className="h-5 w-5 text-primary" />
-                <span>Users</span>
+                <UserCircle className="h-5 w-5 text-primary" /><span>Users</span>
               </h2>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Manage MySQL users and privileges.
-              </p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage MySQL users and privileges.</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="h-4 w-4 mr-1" />
-                    New User
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create MySQL User</DialogTitle>
-                    <DialogDescription>
-                      Add a new MySQL user.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="user-name">Username</Label>
-                      <Input
-                        id="user-name"
-                        value={newUsername}
-                        onChange={(e) => setNewUsername(e.target.value)}
-                        placeholder="db_user"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="user-password">Password</Label>
-                      <Input
-                        id="user-password"
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="••••••••"
-                      />
-                    </div>
+            <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="h-4 w-4 mr-1" />New User</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create MySQL User</DialogTitle>
+                  <DialogDescription>Add a new MySQL user.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="user-name">Username</Label>
+                    <Input id="user-name" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="db_user" />
                   </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setUserDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleCreateUser} disabled={creatingUser}>
-                      {creatingUser && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-                      Create
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="user-password">Password</Label>
+                    <Input id="user-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setUserDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleCreateUser} disabled={creatingUser}>
+                    {creatingUser && <Loader2 className="h-4 w-4 animate-spin mr-1" />}Create
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
-
         <div className="px-6 sm:px-8 py-5">
           {users.length === 0 ? (
             <div className="text-center py-8">
@@ -442,9 +453,7 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
                       <div className="flex flex-wrap gap-1">
                         {user.accessHosts?.length ? (
                           user.accessHosts.map((host) => (
-                            <Badge key={host} variant="outline" className="text-xs">
-                              {host}
-                            </Badge>
+                            <Badge key={host} variant="outline" className="text-xs">{host}</Badge>
                           ))
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
@@ -457,9 +466,7 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
                           const labels = getGrantLabels(user.grants);
                           return labels.length ? (
                             labels.map((grant) => (
-                              <Badge key={grant} variant="outline" className="text-xs">
-                                {grant}
-                              </Badge>
+                              <Badge key={grant} variant="outline" className="text-xs">{grant}</Badge>
                             ))
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
@@ -468,20 +475,24 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteUser(user.username)}
-                        disabled={userActionLoading === user.username}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        {userActionLoading === user.username ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3 w-3" />
-                        )}
-                        <span className="ml-1">Delete</span>
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)} title="Change password">
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenAccessHosts(user)} title="Access hosts">
+                          <Globe className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteUser(user.username)}
+                          disabled={userActionLoading === user.username}
+                          className="text-destructive hover:text-destructive"
+                          title="Delete user"
+                        >
+                          {userActionLoading === user.username ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -490,6 +501,75 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
           )}
         </div>
       </section>
+
+      {/* Edit User Password Dialog */}
+      <Dialog open={editUserOpen} onOpenChange={setEditUserOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+            <DialogDescription>Update password for {editUsername}.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>New Password</Label>
+              <Input type="password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} placeholder="••••••••" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditUserOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleSaveUser} disabled={savingUser || !editPassword}>
+              {savingUser && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Access Hosts Dialog */}
+      <Dialog open={accessHostOpen} onOpenChange={setAccessHostOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Access Hosts</DialogTitle>
+            <DialogDescription>Manage allowed hosts for {accessHostUsername}.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex flex-wrap gap-2">
+              {currentUser?.accessHosts?.length ? (
+                currentUser.accessHosts.map((host) => (
+                  <div key={host} className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs">
+                    <span>{host}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 text-destructive hover:text-destructive"
+                      onClick={() => handleRemoveHost(host)}
+                      disabled={removingHost === host}
+                    >
+                      {removingHost === host ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-muted-foreground">No access hosts configured.</p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={newHost}
+                onChange={(e) => setNewHost(e.target.value)}
+                placeholder="e.g. 192.168.1.0/24 or %"
+                className="flex-1"
+                onKeyDown={(e) => { if (e.key === "Enter") handleAddHost(); }}
+              />
+              <Button size="sm" onClick={handleAddHost} disabled={addingHost || !newHost.trim()}>
+                {addingHost ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setAccessHostOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

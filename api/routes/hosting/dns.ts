@@ -91,4 +91,56 @@ router.post("/:id/domains/:domainId/dns/records", requireOrgPermission("hosting_
   }
 });
 
+router.put("/:id/domains/:domainId/dns/records/:recordId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.updateWebsiteDomainDnsZoneRecord(
+      enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId, req.params.recordId, req.body,
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to update DNS record" });
+  }
+});
+
+router.delete("/:id/domains/:domainId/dns/records/:recordId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.deleteWebsiteDomainDnsZoneRecord(
+      enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId, req.params.recordId,
+    );
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to delete DNS record" });
+  }
+});
+
+router.delete("/:id/domains/:domainId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.deleteWebsiteDomainMapping(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to delete domain" });
+  }
+});
+
+router.put("/:id/domains/primary", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.updateWebsitePrimaryDomain(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to set primary domain" });
+  }
+});
+
 export default router;

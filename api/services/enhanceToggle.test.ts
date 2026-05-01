@@ -8,6 +8,7 @@ const mockConfig = vi.hoisted(() => ({
 }));
 
 const mockQuery = vi.hoisted(() => vi.fn());
+const mockGetOrg = vi.hoisted(() => vi.fn());
 
 vi.mock('../config/index.js', () => ({
   config: mockConfig,
@@ -19,6 +20,22 @@ vi.mock('../lib/database.js', () => ({
 
 vi.mock('../services/activityLogger.js', () => ({
   logActivity: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('./enhanceService.js', () => ({
+  EnhanceApiError: class EnhanceApiError extends Error {
+    statusCode?: number;
+    responseBody?: any;
+    constructor(message: string, statusCode?: number, responseBody?: any) {
+      super(message);
+      this.name = 'EnhanceApiError';
+      this.statusCode = statusCode;
+      this.responseBody = responseBody;
+    }
+  },
+  EnhanceService: {
+    getOrg: mockGetOrg,
+  },
 }));
 
 import { EnhanceToggleService } from './enhanceToggle.js';
@@ -190,53 +207,39 @@ describe('EnhanceToggleService', () => {
   });
 
   describe('runHealthCheck', () => {
-    it('returns success when fetch returns 200', async () => {
+    it('returns success when getOrg returns 200', async () => {
       mockConfig.ENHANCE_ENABLED = true;
       mockConfig.ENHANCE_API_URL = 'https://api.enhance.test';
       mockConfig.ENHANCE_MASTER_ORG_ID = 'org-123';
       mockConfig.ENHANCE_API_KEY = 'key-123';
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-      });
+      mockGetOrg.mockResolvedValue({ id: 'org-123', name: 'Test Org' });
 
       const result = await EnhanceToggleService.runHealthCheck('user-123');
       expect(result.success).toBe(true);
       expect(result.message).toBe('API connectivity confirmed');
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.enhance.test/orgs/org-123',
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'Authorization': 'Bearer key-123',
-          }),
-        })
-      );
+      expect(mockGetOrg).toHaveBeenCalledWith('org-123');
     });
 
-    it('returns failure when fetch returns 4xx', async () => {
+    it('returns failure when getOrg returns 4xx', async () => {
       mockConfig.ENHANCE_ENABLED = true;
       mockConfig.ENHANCE_API_URL = 'https://api.enhance.test';
       mockConfig.ENHANCE_MASTER_ORG_ID = 'org-123';
       mockConfig.ENHANCE_API_KEY = 'key-123';
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 404,
-      });
+      const { EnhanceApiError } = await import('./enhanceService.js');
+      mockGetOrg.mockRejectedValue(new EnhanceApiError('Not Found', 404));
 
       const result = await EnhanceToggleService.runHealthCheck('user-123');
       expect(result.success).toBe(false);
       expect(result.message).toBe('API returned 404');
     });
 
-    it('returns failure when fetch returns 5xx', async () => {
+    it('returns failure when getOrg returns 5xx', async () => {
       mockConfig.ENHANCE_ENABLED = true;
       mockConfig.ENHANCE_API_URL = 'https://api.enhance.test';
       mockConfig.ENHANCE_MASTER_ORG_ID = 'org-123';
       mockConfig.ENHANCE_API_KEY = 'key-123';
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 503,
-      });
+      const { EnhanceApiError } = await import('./enhanceService.js');
+      mockGetOrg.mockRejectedValue(new EnhanceApiError('Service Unavailable', 503));
 
       const result = await EnhanceToggleService.runHealthCheck('user-123');
       expect(result.success).toBe(false);
@@ -248,7 +251,7 @@ describe('EnhanceToggleService', () => {
       mockConfig.ENHANCE_API_URL = 'https://api.enhance.test';
       mockConfig.ENHANCE_MASTER_ORG_ID = 'org-123';
       mockConfig.ENHANCE_API_KEY = 'key-123';
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network failure'));
+      mockGetOrg.mockRejectedValue(new Error('Network failure'));
 
       const result = await EnhanceToggleService.runHealthCheck('user-123');
       expect(result.success).toBe(false);
