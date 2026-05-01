@@ -25,7 +25,51 @@ async function resolveSubscription(req: Request, res: Response) {
   return result.rows[0];
 }
 
-// PHP Settings
+// ============================================================
+// Website status / suspend + PHP version
+// ============================================================
+
+router.get("/:id/website", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.getWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get website" });
+  }
+});
+
+router.patch("/:id/website", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.updateWebsite(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to update website" });
+  }
+});
+
+// Legacy PUT for backward compat
+router.put("/:id/website", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.updateWebsite(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to update website" });
+  }
+});
+
+// ============================================================
+// PHP Settings (LSPHP)
+// ============================================================
+
 router.get("/:id/php", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
@@ -52,35 +96,394 @@ router.post("/:id/php/restart", requireOrgPermission("hosting_manage"), async (r
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const result = await EnhanceService.restartWebsitePhp(sub.enhance_website_id);
-    res.json(result);
+    await EnhanceService.restartWebsitePhp(sub.enhance_website_id);
+    res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to restart PHP" });
   }
 });
 
-// Website status / suspend
-router.get("/:id/website", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+// ============================================================
+// PHP Error Log
+// ============================================================
+
+router.get("/:id/php/error-log", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.getWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
-    res.json(result);
+    const log = await EnhanceService.getWebsitePhpErrorLog(sub.enhance_website_id);
+    res.json({ log });
   } catch (error: any) {
-    res.status(500).json({ error: error?.message || "Failed to get website" });
+    res.status(500).json({ error: error?.message || "Failed to get PHP error log" });
   }
 });
 
-router.put("/:id/website", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+// ============================================================
+// PHP Extensions
+// ============================================================
+
+router.get("/:id/php/extensions", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enabled = await EnhanceService.getWebsiteEnabledPhpExtensions(sub.enhance_website_id);
+    res.json({ extensions: enabled });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get PHP extensions" });
+  }
+});
+
+router.get("/:id/php/extensions/available", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const available = await EnhanceService.getWebsiteAvailablePhpExtensions(sub.enhance_website_id);
+    res.json({ extensions: available });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get available PHP extensions" });
+  }
+});
+
+router.get("/:id/php/extensions/built-in", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const builtIn = await EnhanceService.getBuiltInPhpExtensions(sub.enhance_website_id);
+    res.json({ extensions: builtIn });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get built-in PHP extensions" });
+  }
+});
+
+router.post("/:id/php/extensions/:name", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    await EnhanceService.enableWebsitePhpExtension(sub.enhance_website_id, req.params.name);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to enable PHP extension" });
+  }
+});
+
+router.delete("/:id/php/extensions/:name", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    await EnhanceService.disableWebsitePhpExtension(sub.enhance_website_id, req.params.name);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to disable PHP extension" });
+  }
+});
+
+// ============================================================
+// PHP.ini Settings
+// ============================================================
+
+router.get("/:id/php/ini", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.updateWebsite(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
+    const settings = await EnhanceService.getWebsiteSetting(enhanceWebsiteOrgId, sub.enhance_website_id, "phpIni");
+    res.json(settings);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get PHP.ini settings" });
+  }
+});
+
+router.put("/:id/php/ini/:key", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.setWebsiteSetting(enhanceWebsiteOrgId, sub.enhance_website_id, "phpIni", req.params.key, req.body);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to set PHP.ini setting" });
+  }
+});
+
+router.delete("/:id/php/ini/:key", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.deleteWebsiteSetting(enhanceWebsiteOrgId, sub.enhance_website_id, "phpIni", req.params.key);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to delete PHP.ini setting" });
+  }
+});
+
+// ============================================================
+// Ioncube
+// ============================================================
+
+router.get("/:id/ioncube", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enabled = await EnhanceService.getWebsiteIoncubeStatus(sub.enhance_website_id);
+    res.json({ enabled });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get ioncube status" });
+  }
+});
+
+router.put("/:id/ioncube", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enabled = typeof req.body === "boolean" ? req.body : Boolean(req.body?.enabled);
+    await EnhanceService.setWebsiteIoncubeStatus(sub.enhance_website_id, enabled);
+    res.json({ success: true, enabled });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to set ioncube status" });
+  }
+});
+
+// ============================================================
+// Redis
+// ============================================================
+
+router.get("/:id/redis", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enabled = await EnhanceService.getWebsiteRedisState(sub.enhance_website_id);
+    res.json({ enabled });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get redis status" });
+  }
+});
+
+router.put("/:id/redis", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enabled = typeof req.body === "boolean" ? req.body : Boolean(req.body?.enabled);
+    await EnhanceService.setWebsiteRedisState(sub.enhance_website_id, enabled);
+    res.json({ success: true, enabled });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to set redis status" });
+  }
+});
+
+// ============================================================
+// Metrics
+// ============================================================
+
+router.get("/:id/metrics", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const { start, end, granularity } = req.query;
+    const params: Record<string, string> = {};
+    if (start) params.start = String(start);
+    if (end) params.end = String(end);
+    if (granularity) params.granularity = String(granularity);
+    const result = await EnhanceService.getWebsiteMetrics(enhanceWebsiteOrgId, sub.enhance_website_id, params);
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error?.message || "Failed to update website" });
+    res.status(500).json({ error: error?.message || "Failed to get metrics" });
+  }
+});
+
+// ============================================================
+// .htaccess Rewrites
+// ============================================================
+
+router.get("/:id/htaccess", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.getWebsiteHtaccessRewrites(enhanceWebsiteOrgId, sub.enhance_website_id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get .htaccess rewrites" });
+  }
+});
+
+router.patch("/:id/htaccess", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.updateWebsiteHtaccessRewrites(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to update .htaccess rewrites" });
+  }
+});
+
+// ============================================================
+// .htaccess IP Rules
+// ============================================================
+
+router.get("/:id/htaccess/ips", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.getWebsiteHtaccessIpsRule(enhanceWebsiteOrgId, sub.enhance_website_id);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get IP rules" });
+  }
+});
+
+router.put("/:id/htaccess/ips", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.updateWebsiteHtaccessIpsRule(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to update IP rules" });
+  }
+});
+
+// ============================================================
+// Nginx FastCGI Cache (domain-scoped)
+// ============================================================
+
+router.get("/:id/domains/:domainId/nginx-fastcgi", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enabled = await EnhanceService.getDomainNginxFastCgi(req.params.domainId);
+    res.json({ enabled });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get FastCGI status" });
+  }
+});
+
+router.put("/:id/domains/:domainId/nginx-fastcgi", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enabled = typeof req.body === "boolean" ? req.body : Boolean(req.body?.enabled);
+    await EnhanceService.setDomainNginxFastCgi(req.params.domainId, enabled);
+    res.json({ success: true, enabled });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to set FastCGI status" });
+  }
+});
+
+router.delete("/:id/domains/:domainId/nginx-fastcgi", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    await EnhanceService.clearDomainNginxFastCgi(req.params.domainId);
+    res.json({ success: true, message: "FastCGI cache purged" });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to purge FastCGI cache" });
+  }
+});
+
+router.get("/:id/domains/:domainId/nginx-fastcgi/excluded-paths", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const paths = await EnhanceService.getDomainNginxFastCgiExcludedPaths(req.params.domainId);
+    res.json({ paths });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get excluded paths" });
+  }
+});
+
+router.post("/:id/domains/:domainId/nginx-fastcgi/excluded-paths", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const path = typeof req.body === "string" ? req.body : req.body?.path;
+    if (!path) {
+      res.status(400).json({ error: "Path is required" });
+      return;
+    }
+    await EnhanceService.addDomainNginxFastCgiExcludedPath(req.params.domainId, path);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to add excluded path" });
+  }
+});
+
+router.delete("/:id/domains/:domainId/nginx-fastcgi/excluded-paths", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const path = req.query.path as string;
+    if (!path) {
+      res.status(400).json({ error: "Path query parameter is required" });
+      return;
+    }
+    await EnhanceService.deleteDomainNginxFastCgiExcludedPath(req.params.domainId, path);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to delete excluded path" });
+  }
+});
+
+// ============================================================
+// Webserver Rewrites (domain-scoped)
+// ============================================================
+
+router.get("/:id/domains/:domainId/webserver-rewrites", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const rewrites = await EnhanceService.getDomainWebserverRewrites(req.params.domainId);
+    res.json({ rewrites });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to get webserver rewrites" });
+  }
+});
+
+router.put("/:id/domains/:domainId/webserver-rewrites", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    await EnhanceService.setDomainWebserverRewrite(req.params.domainId, req.body);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to set webserver rewrite" });
+  }
+});
+
+router.delete("/:id/domains/:domainId/webserver-rewrites", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const path = req.query.path as string;
+    if (!path) {
+      res.status(400).json({ error: "Path query parameter is required" });
+      return;
+    }
+    await EnhanceService.deleteDomainWebserverRewrite(req.params.domainId, path);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to delete webserver rewrite" });
+  }
+});
+
+// ============================================================
+// Mail Domain SSL (domain-scoped)
+// ============================================================
+
+router.post("/:id/domains/:domainId/mail-ssl", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.createWebsiteMailDomainLetsencryptCerts(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId);
+    res.status(202).json({ success: true, message: "Mail SSL certificate generation started" });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to generate mail SSL" });
   }
 });
 
