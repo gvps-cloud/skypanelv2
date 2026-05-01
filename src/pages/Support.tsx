@@ -46,13 +46,40 @@ const Support: React.FC = () => {
     return searchParams.get("create") === "1";
   }, [location.search]);
 
+  const prefilledTicket = useMemo(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const subject = searchParams.get("subject");
+    const description = searchParams.get("description");
+    const category = searchParams.get("category");
+    const hostingSubscriptionId = searchParams.get("hostingSubscriptionId");
+
+    if (!subject && !description && !hostingSubscriptionId) return undefined;
+
+    return {
+      subject: subject || "",
+      description: description || "",
+      category: category || "general",
+      hostingSubscriptionId: hostingSubscriptionId || undefined,
+    };
+  }, [location.search]);
+
   const handleFocusTicketHandled = useCallback(() => {
     clearSearchParam("ticketId");
   }, [clearSearchParam]);
 
   const handleCreateTicketHandled = useCallback(() => {
-    clearSearchParam("create");
-  }, [clearSearchParam]);
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.delete("create");
+    searchParams.delete("subject");
+    searchParams.delete("description");
+    searchParams.delete("category");
+    searchParams.delete("hostingSubscriptionId");
+    const nextSearch = searchParams.toString();
+    navigate(
+      { pathname: "/support", search: nextSearch ? `?${nextSearch}` : "" },
+      { replace: true },
+    );
+  }, [location.search, navigate]);
 
   if (!token) {
     return null;
@@ -73,6 +100,7 @@ const Support: React.FC = () => {
           onFocusTicketHandled={handleFocusTicketHandled}
           pendingCreateTicket={pendingCreateTicket}
           onCreateTicketHandled={handleCreateTicketHandled}
+          prefilledTicket={prefilledTicket}
         />
       </div>
     </div>

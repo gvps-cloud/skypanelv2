@@ -7,6 +7,7 @@ const mockCreateLogin = vi.hoisted(() => vi.fn());
 const mockGetOrgMembers = vi.hoisted(() => vi.fn());
 const mockCreateOrgMember = vi.hoisted(() => vi.fn());
 const mockUpdateOrgOwner = vi.hoisted(() => vi.fn());
+const mockOrgExists = vi.hoisted(() => vi.fn());
 
 vi.mock('../lib/database.js', () => ({
   query: mockQuery,
@@ -38,6 +39,7 @@ vi.mock('./enhanceService.js', () => ({
     getOrgMembers: mockGetOrgMembers,
     createOrgMember: mockCreateOrgMember,
     updateOrgOwner: mockUpdateOrgOwner,
+    orgExists: mockOrgExists,
   },
 }));
 
@@ -79,7 +81,6 @@ describe('EnhanceOnboardingService', () => {
 
     expect(mockCreateCustomer).toHaveBeenCalledWith('master-org-123', {
       name: 'SkyPanel Org',
-      org: { name: 'SkyPanel Org' },
     });
     expect(mockCreateLogin).toHaveBeenCalledWith(
       'customer-1',
@@ -127,6 +128,7 @@ describe('EnhanceOnboardingService', () => {
       ],
     });
 
+    mockOrgExists.mockResolvedValue(true);
     mockGetOrgLogins.mockResolvedValue({
       items: [{ id: 'login-1', email: 'buyer@example.com', name: 'Jane' }],
     });
@@ -175,6 +177,7 @@ describe('EnhanceOnboardingService', () => {
       ],
     });
 
+    mockOrgExists.mockResolvedValue(true);
     mockGetOrgLogins.mockResolvedValue({ items: [] });
     mockCreateLogin.mockRejectedValue(
       new EnhanceApiError('Enhance API error: 409 Conflict', 409, {
@@ -209,6 +212,52 @@ describe('EnhanceOnboardingService', () => {
     );
   });
 
+  it('clears stale customer ID and re-creates when the Enhance org no longer exists', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            organization_id: 'org-1',
+            organization_name: 'SkyPanel Org',
+            enhance_customer_id: 'stale-customer-id',
+            purchaser_user_id: 'user-1',
+            purchaser_email: 'buyer@example.com',
+            purchaser_name: 'Jane Doe',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    mockOrgExists.mockResolvedValue(false);
+    mockCreateCustomer.mockResolvedValue({ id: 'new-customer-1' });
+    mockGetOrgLogins.mockResolvedValue({ items: [] });
+    mockCreateLogin.mockResolvedValue({ id: 'login-1' });
+    mockGetOrgMembers.mockResolvedValue({ items: [] });
+    mockCreateOrgMember.mockResolvedValue({ id: 'member-1' });
+    mockUpdateOrgOwner.mockResolvedValue(undefined);
+
+    const result = await EnhanceOnboardingService.ensureEnhanceCustomerForPurchase({
+      organizationId: 'org-1',
+      purchaserUserId: 'user-1',
+    });
+
+    expect(mockOrgExists).toHaveBeenCalledWith('stale-customer-id');
+    expect(mockQuery).toHaveBeenNthCalledWith(2,
+      expect.stringContaining('SET enhance_customer_id = NULL'),
+      ['org-1'],
+    );
+    expect(mockCreateCustomer).toHaveBeenCalledWith('master-org-123', {
+      name: 'SkyPanel Org',
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        enhanceCustomerId: 'new-customer-1',
+        credentialsCreated: true,
+      }),
+    );
+  });
+
   it('does not fail purchase onboarding when owner assignment is forbidden', async () => {
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -223,6 +272,7 @@ describe('EnhanceOnboardingService', () => {
       ],
     });
 
+    mockOrgExists.mockResolvedValue(true);
     mockGetOrgLogins.mockResolvedValue({
       items: [{ id: 'login-1', email: 'buyer@example.com', name: 'Jane' }],
     });

@@ -28,6 +28,7 @@ vi.mock('../services/enhanceService.js', () => ({
   EnhanceService: {
     createCustomerSubscription: vi.fn(),
     createWebsite: vi.fn(),
+    getWebsite: vi.fn(),
     deleteWebsite: vi.fn().mockResolvedValue(undefined),
     deleteSubscription: vi.fn().mockResolvedValue(undefined),
     getServerGroups: vi.fn().mockResolvedValue([]),
@@ -167,6 +168,9 @@ describe('Hosting Purchase Saga', () => {
       // Mock remote Enhance calls
       vi.mocked(EnhanceService.createCustomerSubscription).mockResolvedValue({ id: '123' });
       vi.mocked(EnhanceService.createWebsite).mockResolvedValue({
+        id: 'fake-website-id',
+      });
+      vi.mocked(EnhanceService.getWebsite).mockResolvedValue({
         id: 'fake-website-id',
         primary_ip: '203.0.113.1',
       });

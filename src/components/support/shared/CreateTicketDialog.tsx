@@ -47,6 +47,11 @@ interface CreateTicketDialogProps {
   onSubmit: (data: CreateTicketData) => Promise<void>;
   vpsInstances?: Array<{ id: string; label: string }>;
   isLoading?: boolean;
+  prefilled?: {
+    subject?: string;
+    description?: string;
+    category?: string;
+  };
 }
 
 export interface CreateTicketData {
@@ -85,6 +90,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
   onSubmit,
   vpsInstances = [],
   isLoading = false,
+  prefilled,
 }) => {
   const [data, setData] = useState<CreateTicketData>({
     subject: "",
@@ -122,10 +128,10 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
   useEffect(() => {
     if (open) {
       setData({
-        subject: "",
-        description: "",
+        subject: prefilled?.subject || "",
+        description: prefilled?.description || "",
         priority: "medium",
-        category: "general",
+        category: (prefilled?.category as TicketCategory) || "general",
         vpsId: undefined,
       });
       setCurrentStep(0);
@@ -133,7 +139,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
       setServiceSearch("");
       setServicePage(1);
     }
-  }, [open]);
+  }, [open, prefilled]);
 
   useEffect(() => {
     setServicePage(1);

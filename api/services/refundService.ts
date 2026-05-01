@@ -159,12 +159,14 @@ export class RefundService {
 
   static async calculateProratedHostingRefund(subscriptionId: string): Promise<number> {
     const result = await query(
-      `SELECT plan_id, last_billed_at FROM hosting_subscriptions WHERE id = $1`,
+      `SELECT plan_id, last_billed_at, created_at FROM hosting_subscriptions WHERE id = $1`,
       [subscriptionId]
     );
     if (result.rows.length === 0) return 0;
 
     const sub = result.rows[0];
+    if (!sub.plan_id) return 0;
+
     const planResult = await query(
       `SELECT price_monthly FROM hosting_plans WHERE id = $1`,
       [sub.plan_id]
@@ -172,7 +174,11 @@ export class RefundService {
     if (planResult.rows.length === 0) return 0;
 
     const monthlyPrice = parseFloat(planResult.rows[0].price_monthly);
+    if (isNaN(monthlyPrice) || monthlyPrice <= 0) return 0;
+
     const lastBilled = new Date(sub.last_billed_at || sub.created_at);
+    if (isNaN(lastBilled.getTime())) return 0;
+
     const now = new Date();
     const daysSinceLastBill = Math.max(0, (now.getTime() - lastBilled.getTime()) / (1000 * 60 * 60 * 24));
     const daysInMonth = 30;

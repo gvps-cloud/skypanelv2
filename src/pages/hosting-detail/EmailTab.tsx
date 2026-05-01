@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle, RefreshCw, Mail, Plus, Trash2, X } from "lucide-react";
+import {
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
+  Mail,
+  Plus,
+  Trash2,
+  X,
+  Pencil,
+  Settings2,
+} from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,13 +55,20 @@ export default function EmailTab({ subscriptionId }: EmailTabProps) {
   const [error, setError] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [newEmail, setNewEmail] = useState({
-    address: "",
-    password: "",
-    quota: 1024,
-  });
+  const [newEmail, setNewEmail] = useState({ address: "", password: "", quota: 1024 });
   const [creating, setCreating] = useState(false);
   const [deletingAddress, setDeletingAddress] = useState<string | null>(null);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editAddress, setEditAddress] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editQuota, setEditQuota] = useState<number>(1024);
+  const [saving, setSaving] = useState(false);
+
+  const [configOpen, setConfigOpen] = useState(false);
+  const [configAddress, setConfigAddress] = useState("");
+  const [configData, setConfigData] = useState<Record<string, any> | null>(null);
+  const [configLoading, setConfigLoading] = useState(false);
 
   const loadEmails = useCallback(async () => {
     if (!subscriptionId) return;
@@ -78,7 +95,6 @@ export default function EmailTab({ subscriptionId }: EmailTabProps) {
       toast.error("Please fill in all required fields");
       return;
     }
-
     setCreating(true);
     try {
       await apiClient.post(`/hosting/email/${subscriptionId}/emails`, {
@@ -86,7 +102,7 @@ export default function EmailTab({ subscriptionId }: EmailTabProps) {
         password: newEmail.password,
         quota: newEmail.quota,
       });
-      toast.success(`Mailbox ${newEmail.address} created successfully`);
+      toast.success(`Mailbox ${newEmail.address} created`);
       setCreateOpen(false);
       setNewEmail({ address: "", password: "", quota: 1024 });
       await loadEmails();
@@ -99,19 +115,59 @@ export default function EmailTab({ subscriptionId }: EmailTabProps) {
 
   const handleDelete = async (emailAddress: string) => {
     if (!subscriptionId) return;
-    if (!confirm(`Are you sure you want to delete mailbox "${emailAddress}"? This action cannot be undone.`)) {
-      return;
-    }
-
+    if (!confirm(`Delete mailbox "${emailAddress}"?`)) return;
     setDeletingAddress(emailAddress);
     try {
       await apiClient.delete(`/hosting/email/${subscriptionId}/emails/${encodeURIComponent(emailAddress)}`);
-      toast.success(`Mailbox ${emailAddress} deleted successfully`);
+      toast.success(`Mailbox ${emailAddress} deleted`);
       await loadEmails();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete mailbox");
     } finally {
       setDeletingAddress(null);
+    }
+  };
+
+  const handleEdit = (email: EmailMailbox) => {
+    setEditAddress(email.address);
+    setEditPassword("");
+    setEditQuota(email.quota ?? 1024);
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!subscriptionId) return;
+    setSaving(true);
+    try {
+      const payload: Record<string, any> = {};
+      if (editPassword) payload.password = editPassword;
+      if (editQuota) payload.quota = editQuota;
+      await apiClient.patch(`/hosting/email/${subscriptionId}/emails/${encodeURIComponent(editAddress)}`, payload);
+      toast.success(`Mailbox ${editAddress} updated`);
+      setEditOpen(false);
+      await loadEmails();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update mailbox");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClientConfig = async (emailAddress: string) => {
+    if (!subscriptionId) return;
+    setConfigAddress(emailAddress);
+    setConfigOpen(true);
+    setConfigLoading(true);
+    setConfigData(null);
+    try {
+      const data = await apiClient.get<Record<string, any>>(
+        `/hosting/email/${subscriptionId}/emails/${encodeURIComponent(emailAddress)}/client-conf`,
+      );
+      setConfigData(data);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load client config");
+    } finally {
+      setConfigLoading(false);
     }
   };
 
@@ -169,9 +225,7 @@ export default function EmailTab({ subscriptionId }: EmailTabProps) {
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Create Mailbox</DialogTitle>
-                  <DialogDescription>
-                    Add a new email mailbox to this hosting subscription.
-                  </DialogDescription>
+                  <DialogDescription>Add a new email mailbox.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                   <div className="space-y-2">
@@ -211,11 +265,7 @@ export default function EmailTab({ subscriptionId }: EmailTabProps) {
                     Cancel
                   </Button>
                   <Button size="sm" onClick={handleCreate} disabled={creating}>
-                    {creating ? (
-                      <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                    ) : (
-                      <Plus className="h-3 w-3 mr-1.5" />
-                    )}
+                    {creating ? <Loader2 className="h-3 w-3 mr-1.5 animate-spin" /> : <Plus className="h-3 w-3 mr-1.5" />}
                     Create Mailbox
                   </Button>
                 </DialogFooter>
@@ -244,26 +294,33 @@ export default function EmailTab({ subscriptionId }: EmailTabProps) {
             </TableHeader>
             <TableBody>
               {emails.map((email) => (
-                  <TableRow key={email.address}>
-                    <TableCell className="font-medium">{email.address}</TableCell>
-                    <TableCell>{email.status ?? (email.hasMailbox ? "mailbox" : "forwarder")}</TableCell>
-                    <TableCell>{email.quota ?? "—"}</TableCell>
-                    <TableCell>{email.forwardersCount}</TableCell>
+                <TableRow key={email.address}>
+                  <TableCell className="font-medium">{email.address}</TableCell>
+                  <TableCell>{email.status ?? (email.hasMailbox ? "mailbox" : "forwarder")}</TableCell>
+                  <TableCell>{email.quota ? `${email.quota} MB` : "—"}</TableCell>
+                  <TableCell>{email.forwardersCount}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(email.address)}
-                      disabled={deletingAddress === email.address}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      {deletingAddress === email.address ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3 w-3" />
-                      )}
-                      <span className="ml-1">Delete</span>
-                    </Button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(email)}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleClientConfig(email.address)}>
+                        <Settings2 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(email.address)}
+                        disabled={deletingAddress === email.address}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        {deletingAddress === email.address ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -271,6 +328,71 @@ export default function EmailTab({ subscriptionId }: EmailTabProps) {
           </Table>
         )}
       </div>
+
+      {/* Edit Mailbox Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Mailbox</DialogTitle>
+            <DialogDescription>Update password or quota for {editAddress}.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>New Password</Label>
+              <Input
+                type="password"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+                placeholder="Leave blank to keep current"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Quota (MB)</Label>
+              <Input
+                type="number"
+                value={editQuota}
+                onChange={(e) => setEditQuota(Number(e.target.value))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleSaveEdit} disabled={saving}>
+              {saving && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Client Config Dialog */}
+      <Dialog open={configOpen} onOpenChange={setConfigOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Email Client Setup</DialogTitle>
+            <DialogDescription>IMAP/SMTP/POP3 settings for {configAddress}.</DialogDescription>
+          </DialogHeader>
+          {configLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : configData ? (
+            <div className="space-y-3 py-2">
+              {Object.entries(configData).map(([key, value]) => (
+                <div key={key} className="flex justify-between text-sm">
+                  <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, " $1")}</span>
+                  <span className="font-mono">{String(value)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-4 text-center">No client config available.</p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setConfigOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

@@ -175,6 +175,7 @@ router.post(
     body("category").isLength({ min: 2 }).withMessage("Category is required"),
     body("vpsId").optional().isUUID().withMessage("Invalid VPS ID"),
     body("organizationId").optional().isUUID().withMessage("Invalid Organization ID"),
+    body("hostingSubscriptionId").optional().isUUID().withMessage("Invalid hosting subscription ID"),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -210,7 +211,7 @@ router.post(
 
       const organizationId = targetOrganizationId;
 
-      const { subject, message, priority, category, vpsId } = req.body;
+      const { subject, message, priority, category, vpsId, hostingSubscriptionId } = req.body;
 
     // If a VPS is linked, fetch its details first to store a snapshot
     let vpsLabelSnapshot = null;
@@ -232,8 +233,8 @@ router.post(
     }
 
     const result = await query(
-      `INSERT INTO support_tickets (organization_id, created_by, subject, message, priority, category, status, vps_id, vps_label_snapshot, vps_ip_snapshot)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO support_tickets (organization_id, created_by, subject, message, priority, category, status, vps_id, vps_label_snapshot, vps_ip_snapshot, hosting_subscription_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         organizationId,
@@ -246,6 +247,7 @@ router.post(
         vpsId || null,
         vpsLabelSnapshot,
         vpsIpSnapshot,
+        hostingSubscriptionId || null,
       ],
     );
 

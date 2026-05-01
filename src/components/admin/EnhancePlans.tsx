@@ -118,15 +118,15 @@ export function EnhancePlans() {
     }
   };
 
-  const handlePurgeOrphans = async () => {
+  const handlePurgeInactive = async () => {
     setPurgingOrphans(true);
     try {
       const result: any = await apiClient.delete("/admin/enhance/plans/purge-orphans");
       const count = result?.deleted ?? 0;
-      toast.success(`Removed ${count} orphaned plan${count !== 1 ? "s" : ""}`);
+      toast.success(`Removed ${count} inactive plan${count !== 1 ? "s" : ""}`);
       await queryClient.invalidateQueries({ queryKey: enhanceAdminKeys.plans() });
     } catch (error: any) {
-      toast.error(error?.message || "Failed to purge orphan plans");
+      toast.error(error?.message || "Failed to purge inactive plans");
     } finally {
       setPurgingOrphans(false);
     }
@@ -161,20 +161,20 @@ export function EnhancePlans() {
                 ) : (
                   <Trash2 className="mr-2 h-4 w-4" />
                 )}
-                Purge Orphans
+                Purge Inactive
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Purge orphaned plans?</AlertDialogTitle>
+                <AlertDialogTitle>Purge inactive plans?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete all plans that have no Enhance plan ID (e.g. test data seeded by automated tests). This cannot be undone.
+                  This will permanently delete all inactive plans and orphaned plans that have no active subscriptions. Plans with active subscriptions will not be removed. This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handlePurgeOrphans} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Delete orphans
+                <AlertDialogAction onClick={handlePurgeInactive} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Delete inactive
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
