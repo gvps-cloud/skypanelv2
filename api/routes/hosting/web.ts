@@ -77,6 +77,10 @@ router.get("/:id/php", requireOrgPermission("hosting_view"), async (req: Request
     const settings = await EnhanceService.getWebsiteLsphpSettings(sub.enhance_website_id);
     res.json(settings);
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({});
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get PHP settings" });
   }
 });
@@ -114,6 +118,10 @@ router.get("/:id/php/error-log", requireOrgPermission("hosting_view"), async (re
     const log = await EnhanceService.getWebsitePhpErrorLog(sub.enhance_website_id);
     res.json({ log });
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ log: "" });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get PHP error log" });
   }
 });
@@ -129,6 +137,10 @@ router.get("/:id/php/extensions", requireOrgPermission("hosting_view"), async (r
     const enabled = await EnhanceService.getWebsiteEnabledPhpExtensions(sub.enhance_website_id);
     res.json({ extensions: enabled });
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ extensions: [] });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get PHP extensions" });
   }
 });
@@ -140,6 +152,10 @@ router.get("/:id/php/extensions/available", requireOrgPermission("hosting_view")
     const available = await EnhanceService.getWebsiteAvailablePhpExtensions(sub.enhance_website_id);
     res.json({ extensions: available });
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ extensions: [] });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get available PHP extensions" });
   }
 });
@@ -151,6 +167,10 @@ router.get("/:id/php/extensions/built-in", requireOrgPermission("hosting_view"),
     const builtIn = await EnhanceService.getBuiltInPhpExtensions(sub.enhance_website_id);
     res.json({ extensions: builtIn });
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ extensions: [] });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get built-in PHP extensions" });
   }
 });
@@ -187,8 +207,24 @@ router.get("/:id/php/ini", requireOrgPermission("hosting_view"), async (req: Req
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const settings = await EnhanceService.getWebsiteSetting(enhanceWebsiteOrgId, sub.enhance_website_id, "phpIni");
-    res.json(settings);
+    
+    const items = [];
+    if (settings && typeof settings === 'object') {
+      for (const [key, obj] of Object.entries(settings)) {
+        if (obj && typeof obj === 'object' && 'value' in obj) {
+          items.push({ key, value: String((obj as any).value) });
+        } else {
+          items.push({ key, value: String(obj) });
+        }
+      }
+    }
+    
+    res.json({ items });
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ items: [] });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get PHP.ini settings" });
   }
 });
@@ -198,7 +234,8 @@ router.put("/:id/php/ini/:key", requireOrgPermission("hosting_manage"), async (r
   if (!sub) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    await EnhanceService.setWebsiteSetting(enhanceWebsiteOrgId, sub.enhance_website_id, "phpIni", req.params.key, req.body);
+    const value = typeof req.body === 'object' && req.body !== null && 'value' in req.body ? req.body.value : req.body;
+    await EnhanceService.setWebsiteSetting(enhanceWebsiteOrgId, sub.enhance_website_id, "phpIni", req.params.key, value);
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to set PHP.ini setting" });
@@ -228,6 +265,10 @@ router.get("/:id/ioncube", requireOrgPermission("hosting_view"), async (req: Req
     const enabled = await EnhanceService.getWebsiteIoncubeStatus(sub.enhance_website_id);
     res.json({ enabled });
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ enabled: false });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get ioncube status" });
   }
 });
@@ -255,6 +296,10 @@ router.get("/:id/redis", requireOrgPermission("hosting_view"), async (req: Reque
     const enabled = await EnhanceService.getWebsiteRedisState(sub.enhance_website_id);
     res.json({ enabled });
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ enabled: false });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get redis status" });
   }
 });
@@ -304,6 +349,10 @@ router.get("/:id/htaccess", requireOrgPermission("hosting_view"), async (req: Re
     const result = await EnhanceService.getWebsiteHtaccessRewrites(enhanceWebsiteOrgId, sub.enhance_website_id);
     res.json(result);
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ items: [] });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get .htaccess rewrites" });
   }
 });
@@ -332,6 +381,10 @@ router.get("/:id/htaccess/ips", requireOrgPermission("hosting_view"), async (req
     const result = await EnhanceService.getWebsiteHtaccessIpsRule(enhanceWebsiteOrgId, sub.enhance_website_id);
     res.json(result);
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ items: [] });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get IP rules" });
   }
 });
@@ -359,6 +412,10 @@ router.get("/:id/domains/:domainId/nginx-fastcgi", requireOrgPermission("hosting
     const enabled = await EnhanceService.getDomainNginxFastCgi(req.params.domainId);
     res.json({ enabled });
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ enabled: false });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get FastCGI status" });
   }
 });
@@ -393,6 +450,10 @@ router.get("/:id/domains/:domainId/nginx-fastcgi/excluded-paths", requireOrgPerm
     const paths = await EnhanceService.getDomainNginxFastCgiExcludedPaths(req.params.domainId);
     res.json({ paths });
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ paths: [] });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get excluded paths" });
   }
 });
@@ -440,6 +501,10 @@ router.get("/:id/domains/:domainId/webserver-rewrites", requireOrgPermission("ho
     const rewrites = await EnhanceService.getDomainWebserverRewrites(req.params.domainId);
     res.json({ rewrites });
   } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ rewrites: [] });
+      return;
+    }
     res.status(500).json({ error: error?.message || "Failed to get webserver rewrites" });
   }
 });

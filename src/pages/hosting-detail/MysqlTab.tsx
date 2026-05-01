@@ -34,6 +34,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface MysqlDatabase {
   name: string;
@@ -104,6 +111,12 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
   const [newHost, setNewHost] = useState("");
   const [addingHost, setAddingHost] = useState(false);
   const [removingHost, setRemovingHost] = useState<string | null>(null);
+
+  const [manageAccessOpen, setManageAccessOpen] = useState(false);
+  const [accessUser, setAccessUser] = useState<MysqlUser | null>(null);
+  const [accessDb, setAccessDb] = useState("");
+  const [accessPrivileges, setAccessPrivileges] = useState("ALL PRIVILEGES");
+  const [managingAccess, setManagingAccess] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!subscriptionId) return;
@@ -276,6 +289,40 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
       toast.error(err instanceof Error ? err.message : "Failed to remove access host");
     } finally {
       setRemovingHost(null);
+    }
+  };
+
+  const handleManageAccess = async () => {
+    if (!subscriptionId || !accessUser || !accessDb) return;
+    setManagingAccess(true);
+    try {
+      await apiClient.put(`/hosting/mysql/${subscriptionId}/mysql-users/${encodeURIComponent(accessUser.username)}/privileges`, {
+        [accessDb]: [accessPrivileges]
+      });
+      toast.success("User access updated");
+      setManageAccessOpen(false);
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update access");
+    } finally {
+      setManagingAccess(false);
+    }
+  };
+
+  const handleRevokeAccess = async (username: string, dbName: string) => {
+    if (!subscriptionId) return;
+    if (!confirm(`Revoke access to ${dbName} for user ${username}?`)) return;
+    setUserActionLoading(username);
+    try {
+      await apiClient.put(`/hosting/mysql/${subscriptionId}/mysql-users/${encodeURIComponent(username)}/privileges`, {
+        [dbName]: []
+      });
+      toast.success("User access revoked");
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to revoke access");
+    } finally {
+      setUserActionLoading(null);
     }
   };
 
@@ -476,6 +523,18 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            setAccessUser(user);
+                            setAccessDb(databases.length > 0 ? databases[0].name : "");
+                            setManageAccessOpen(true);
+                          }} 
+                          title="Manage database access"
+                        >
+                          <Database className="h-3 w-3" />
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleEditUser(user)} title="Change password">
                           <Pencil className="h-3 w-3" />
                         </Button>
@@ -567,6 +626,71 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setAccessHostOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Access Dialog */}
+      <Dialog open={manageAccessOpen} onOpenChange={setManageAccessOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage Access</DialogTitle>
+            <DialogDescription>
+              Grant <span className="font-medium text-foreground">{accessUser?.username}</span> access to a database.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Database</Label>
+              <Select value={accessDb} onValueChange={setAccessDb}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a database" />
+                </SelectTrigger>
+                <SelectContent>
+                  {databases.length === 0 && <SelectItem value="none" disabled>No databases available</SelectItem>}
+                  {databases.map((db) => (
+                    <SelectItem key={db.name} value={db.name}>{db.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Privileges</Label>
+              <Select value={accessPrivileges} onValueChange={setAccessPrivileges}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL PRIVILEGES">All Privileges</SelectItem>
+                  <SelectItem value="SELECT, INSERT, UPDATE, DELETE">Read & Write</SelectItem>
+                  <SelectItem value="SELECT">Read Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {accessUser?.grants && Object.keys(accessUser.grants).length > 0 && (
+              <div className="mt-4 border rounded-md p-3">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block">Current Access</Label>
+                <ul className="space-y-2">
+                  {Object.entries(accessUser.grants).map(([dbName, privs]) => (
+                    <li key={dbName} className="flex items-center justify-between text-sm">
+                      <div>
+                        <span className="font-medium text-foreground">{dbName}</span>
+                        <span className="text-xs text-muted-foreground block">{privs.join(", ")}</span>
+                      </div>
+                      <Button variant="ghost" size="sm" className="h-6 text-destructive px-2" onClick={() => handleRevokeAccess(accessUser.username, dbName)}>
+                        Revoke
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setManageAccessOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleManageAccess} disabled={managingAccess || !accessDb || accessDb === "none"}>
+              {managingAccess && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}Save Access
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

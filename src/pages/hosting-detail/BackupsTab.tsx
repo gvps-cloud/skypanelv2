@@ -30,7 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 
 interface Backup {
   id: string;
@@ -68,7 +68,7 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [includeEmails, setIncludeEmails] = useState(false);
+  const [backupDescription, setBackupDescription] = useState("");
   const [creating, setCreating] = useState(false);
 
   const [restoreOpen, setRestoreOpen] = useState(false);
@@ -111,7 +111,9 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
     if (!subscriptionId) return;
     setCreating(true);
     try {
-      await apiClient.post(`/hosting/backups/${subscriptionId}/backups`, { includeEmails });
+      await apiClient.post(`/hosting/backups/${subscriptionId}/backups`, { 
+        description: backupDescription.trim() || undefined 
+      });
       toast.success("Backup initiated");
       setCreateOpen(false);
       await loadData();
@@ -267,15 +269,6 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
                         <RotateCcw className="h-3 w-3" />
                         <span className="ml-1">Restore</span>
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(backup.id)}
-                        disabled={actionLoading === backup.id}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        {actionLoading === backup.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -292,13 +285,16 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
             <DialogTitle>Create Backup</DialogTitle>
             <DialogDescription>Create a full website backup.</DialogDescription>
           </DialogHeader>
-          <div className="flex items-center gap-3 py-2">
-            <Checkbox
-              id="include-emails"
-              checked={includeEmails}
-              onCheckedChange={(checked) => setIncludeEmails(checked === true)}
-            />
-            <Label htmlFor="include-emails" className="text-sm">Include emails in backup</Label>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="backup-note">Note (Optional)</Label>
+              <Input
+                id="backup-note"
+                placeholder="Before upgrading WordPress"
+                value={backupDescription}
+                onChange={(e) => setBackupDescription(e.target.value)}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setCreateOpen(false)}>Cancel</Button>

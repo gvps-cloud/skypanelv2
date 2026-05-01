@@ -73,7 +73,7 @@ export default function NginxCacheCard({ subscriptionId, domains }: Props) {
     setToggling(true);
     try {
       const newVal = !enabled;
-      await apiClient.put(basePath, newVal);
+      await apiClient.put(basePath, { enabled: newVal });
       setEnabled(newVal);
       toast.success(`FastCGI cache ${newVal ? "enabled" : "disabled"}`);
     } catch (err) {
@@ -168,11 +168,11 @@ export default function NginxCacheCard({ subscriptionId, domains }: Props) {
             <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div>
                 <Label className="text-sm font-medium">FastCGI Cache</Label>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   <Badge variant={enabled ? "default" : "secondary"} className="mr-1.5">
                     {enabled ? "Enabled" : "Disabled"}
                   </Badge>
-                </p>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <Switch checked={enabled} onCheckedChange={handleToggle} disabled={toggling} />

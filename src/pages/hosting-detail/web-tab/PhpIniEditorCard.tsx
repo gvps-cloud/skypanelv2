@@ -50,7 +50,7 @@ export default function PhpIniEditorCard({ subscriptionId }: Props) {
     if (!key) return;
     setSaving(key);
     try {
-      await apiClient.put(`/hosting/web/${subscriptionId}/php/ini/${encodeURIComponent(key)}`, value);
+      await apiClient.put(`/hosting/web/${subscriptionId}/php/ini/${encodeURIComponent(key)}`, { value });
       toast.success(`Set ${key}`);
       await load();
     } catch (err) {

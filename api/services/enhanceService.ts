@@ -39,7 +39,7 @@ export class EnhanceService {
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      body: options.body ? JSON.stringify(options.body) : undefined,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
 
     const responseText = await response.text();

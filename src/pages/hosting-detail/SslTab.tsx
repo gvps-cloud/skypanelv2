@@ -30,6 +30,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import MailSslCard from "./ssl-tab/MailSslCard";
 
 interface Domain {
   id: string;
@@ -304,6 +305,9 @@ export default function SslTab({ subscriptionId }: SslTabProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Mail SSL Section */}
+      <MailSslCard subscriptionId={subscriptionId} domains={domains} />
     </div>
   );
 }

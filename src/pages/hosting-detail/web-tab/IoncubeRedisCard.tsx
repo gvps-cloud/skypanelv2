@@ -38,7 +38,7 @@ export default function IoncubeRedisCard({ subscriptionId }: Props) {
     setToggling("ioncube");
     try {
       const newVal = !ioncube;
-      await apiClient.put(`/hosting/web/${subscriptionId}/ioncube`, newVal);
+      await apiClient.put(`/hosting/web/${subscriptionId}/ioncube`, { enabled: newVal });
       setIoncube(newVal);
       toast.success(`Ioncube ${newVal ? "enabled" : "disabled"}`);
     } catch (err) {
@@ -52,7 +52,7 @@ export default function IoncubeRedisCard({ subscriptionId }: Props) {
     setToggling("redis");
     try {
       const newVal = !redis;
-      await apiClient.put(`/hosting/web/${subscriptionId}/redis`, newVal);
+      await apiClient.put(`/hosting/web/${subscriptionId}/redis`, { enabled: newVal });
       setRedis(newVal);
       toast.success(`Redis ${newVal ? "enabled" : "disabled"}`);
     } catch (err) {

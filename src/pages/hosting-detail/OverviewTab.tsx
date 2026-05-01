@@ -56,32 +56,36 @@ export default function OverviewTab({ service }: OverviewTabProps) {
   const [bandwidth, setBandwidth] = useState<Record<string, any> | null>(null);
   const [bandwidthLoading, setBandwidthLoading] = useState(false);
   const [bandwidthError, setBandwidthError] = useState<string | null>(null);
+  const [website, setWebsite] = useState<Record<string, any> | null>(null);
 
-  // Fetch bandwidth data
+  // Fetch bandwidth data and website details
   useEffect(() => {
-    if (!service?.id || !service?.enhance_subscription_id) {
+    if (!service?.id) {
       setBandwidth(null);
+      setWebsite(null);
       return;
     }
 
-    const fetchBandwidth = async () => {
+    if (service.enhance_subscription_id) {
       setBandwidthLoading(true);
       setBandwidthError(null);
-      try {
-        const data = await apiClient.get<{ bandwidth: Record<string, any> | null }>(
-          `/hosting/services/${service.id}/bandwidth`
-        );
-        setBandwidth(data.bandwidth ?? null);
-      } catch (error) {
-        console.error("Failed to fetch bandwidth:", error);
-        setBandwidthError(error instanceof Error ? error.message : "Failed to load bandwidth");
-      } finally {
-        setBandwidthLoading(false);
-      }
-    };
+      apiClient.get<{ bandwidth: Record<string, any> | null }>(
+        `/hosting/services/${service.id}/bandwidth`
+      )
+        .then(data => setBandwidth(data.bandwidth ?? null))
+        .catch(error => {
+          console.error("Failed to fetch bandwidth:", error);
+          setBandwidthError(error instanceof Error ? error.message : "Failed to load bandwidth");
+        })
+        .finally(() => setBandwidthLoading(false));
+    }
 
-    fetchBandwidth();
-  }, [service?.id, service?.enhance_subscription_id]);
+    if (service.enhance_website_id) {
+      apiClient.get<Record<string, any>>(`/hosting/web/${service.id}/website`)
+        .then(data => setWebsite(data))
+        .catch(console.error);
+    }
+  }, [service?.id, service?.enhance_subscription_id, service?.enhance_website_id]);
 
   const status = service.status || "unknown";
 
@@ -93,6 +97,11 @@ export default function OverviewTab({ service }: OverviewTabProps) {
         : status === "provisioning"
           ? "secondary"
           : "outline";
+
+  const primaryIp = website?.serverIps?.find((ip: any) => ip.kind === 'primary')?.ip 
+    || website?.serverIps?.[0]?.ip 
+    || service.primary_ip 
+    || "—";
 
   const fields = [
     { label: "Plan Name", value: service.plan_name || "—" },
@@ -106,7 +115,7 @@ export default function OverviewTab({ service }: OverviewTabProps) {
         </Badge>
       ),
     },
-    { label: "Primary IP", value: service.primary_ip || "—" },
+    { label: "Primary IP", value: primaryIp },
     { label: "Next Billing Date", value: formatDate(service.next_billing_at) },
     { label: "Last Billed Date", value: formatDate(service.last_billed_at) },
     {
@@ -190,7 +199,7 @@ export default function OverviewTab({ service }: OverviewTabProps) {
                 {bandwidth.limit !== undefined && (
                   <div className="flex justify-between items-center">
                     <dt className="text-sm font-medium text-muted-foreground">Limit</dt>
-                    <dd className="text-sm text-foreground">{formatBytes(bandwidth.limit)}</dd>
+                    <dd className="text-sm text-foreground">{bandwidth.limit === 0 ? "Unlimited" : formatBytes(bandwidth.limit)}</dd>
                   </div>
                 )}
                 {bandwidth.percentage !== undefined && (
