@@ -303,7 +303,6 @@ export class PayPalService {
           const description = `PayPal payment ${orderId}`;
 
           const metadata: Record<string, unknown> = {
-            wallet_type: 'main',
             capture_id: capture.id,
             capture_status: capture.status,
             capture_amount: capture.amount?.value ?? null,
@@ -359,7 +358,7 @@ export class PayPalService {
                 amount,
                 currency,
                 description,
-                { reconciliation: 'ORDER_ALREADY_CAPTURED', wallet_type: 'main' }
+                { reconciliation: 'ORDER_ALREADY_CAPTURED' }
               );
 
               if (reconciliationResult.success) {
