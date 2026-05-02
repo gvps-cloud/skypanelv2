@@ -1132,7 +1132,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <div
           className={cn(
             "flex-1 overflow-auto",
-            isDashboardRoute && "pb-24",
+            isDashboardRoute && "md:pb-24",
           )}
         >
           <Card className="h-full">
@@ -1147,7 +1147,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             "border-t border-border/60 bg-background px-4 py-3 sm:px-6",
             isDashboardRoute &&
               cn(
-                "pointer-events-none fixed bottom-4 left-4 right-4 z-40 border-0 bg-transparent p-0 transition-[left] duration-200 ease-linear md:right-6",
+                "md:pointer-events-none md:fixed md:bottom-4 md:left-4 md:right-6 md:z-40 md:border-0 md:bg-transparent md:p-0 md:transition-[left] md:duration-200 md:ease-linear",
                 isSidebarOpen
                   ? "md:left-[calc(var(--sidebar-width)_+_1.5rem)]"
                   : "md:left-[calc(var(--sidebar-width-icon)_+_1.5rem)]",
@@ -1158,7 +1158,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             className={cn(
               "flex items-center justify-center sm:justify-end",
               isDashboardRoute &&
-                "pointer-events-auto mx-auto w-fit max-w-full rounded-2xl border border-border/70 bg-card/95 px-3 py-2 shadow-lg shadow-foreground/5 backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:mx-0 sm:ml-auto",
+                "md:pointer-events-auto md:mx-0 md:ml-auto md:w-fit md:max-w-full md:rounded-2xl md:border md:border-border/70 md:bg-card/95 md:px-3 md:py-2 md:shadow-lg md:shadow-foreground/5 md:backdrop-blur md:supports-[backdrop-filter]:bg-card/85",
             )}
           >
             <FooterPartnerLinks className={cn(isDashboardRoute && "justify-center")} />
