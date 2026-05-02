@@ -28,7 +28,11 @@ export default function WebsiteStatusCard({ subscriptionId }: Props) {
 
   useEffect(() => { load(); }, [load]);
 
-  const isSuspended = website?.status === "disabled" || website?.isSuspended === true;
+  const isSuspended =
+    website?.normalizedStatus === "suspended" ||
+    website?.status === "disabled" ||
+    website?.isSuspended === true ||
+    (typeof website?.suspendedBy === "string" && website.suspendedBy.trim().length > 0);
 
   const handleToggleSuspend = async () => {
     if (!subscriptionId) return;
@@ -36,11 +40,11 @@ export default function WebsiteStatusCard({ subscriptionId }: Props) {
     if (!confirm(`${isSuspended ? "Unsuspend" : "Suspend"} this website?`)) return;
     setTogglingSuspend(true);
     try {
-      await apiClient.patch(`/hosting/web/${subscriptionId}/website`, {
+      const data = await apiClient.patch<Record<string, any>>(`/hosting/web/${subscriptionId}/website`, {
         isSuspended: !isSuspended,
       });
+      setWebsite(data);
       toast.success(`Website ${action === "suspend" ? "suspended" : "unsuspended"}`);
-      await load();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : `Failed to ${action} website`);
     } finally {

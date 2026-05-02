@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Copy, Check, HardDrive } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Copy, Check, HardDrive, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,12 +40,22 @@ function truncateId(value: string | null | undefined): string {
 }
 
 function formatBytes(bytes: number | null | undefined): string {
-  const value = Number(bytes ?? 0);
-  if (!Number.isFinite(value) || value <= 0) return "—";
+  if (bytes === null || typeof bytes === "undefined") return "—";
+  const value = Number(bytes);
+  if (!Number.isFinite(value)) return "—";
+  if (value <= 0) return "0 B";
   if (value >= 1024 ** 3) return `${(value / 1024 ** 3).toFixed(2)} GB`;
   if (value >= 1024 ** 2) return `${(value / 1024 ** 2).toFixed(2)} MB`;
   if (value >= 1024) return `${(value / 1024).toFixed(2)} KB`;
   return `${value} B`;
+}
+
+function formatPercent(value: number | null | undefined): string {
+  return typeof value === "number" && Number.isFinite(value) ? `${value}%` : "—";
+}
+
+function formatCount(value: number | null | undefined): string {
+  return typeof value === "number" && Number.isFinite(value) ? value.toLocaleString() : "—";
 }
 
 interface OverviewTabProps {
@@ -58,7 +68,26 @@ export default function OverviewTab({ service }: OverviewTabProps) {
   const [bandwidthError, setBandwidthError] = useState<string | null>(null);
   const [website, setWebsite] = useState<Record<string, any> | null>(null);
 
-  // Fetch bandwidth data and website details
+  const loadBandwidth = useCallback(async (refreshCache = false) => {
+    if (!service?.id || !service.enhance_subscription_id) {
+      setBandwidth(null);
+      return;
+    }
+
+    setBandwidthLoading(true);
+    setBandwidthError(null);
+    try {
+      const path = `/hosting/services/${service.id}/bandwidth${refreshCache ? "?refreshCache=true" : ""}`;
+      const data = await apiClient.get<{ bandwidth: Record<string, any> | null }>(path);
+      setBandwidth(data.bandwidth ?? null);
+    } catch (error) {
+      console.error("Failed to fetch bandwidth:", error);
+      setBandwidthError(error instanceof Error ? error.message : "Failed to load bandwidth");
+    } finally {
+      setBandwidthLoading(false);
+    }
+  }, [service?.id, service?.enhance_subscription_id]);
+
   useEffect(() => {
     if (!service?.id) {
       setBandwidth(null);
@@ -66,26 +95,14 @@ export default function OverviewTab({ service }: OverviewTabProps) {
       return;
     }
 
-    if (service.enhance_subscription_id) {
-      setBandwidthLoading(true);
-      setBandwidthError(null);
-      apiClient.get<{ bandwidth: Record<string, any> | null }>(
-        `/hosting/services/${service.id}/bandwidth`
-      )
-        .then(data => setBandwidth(data.bandwidth ?? null))
-        .catch(error => {
-          console.error("Failed to fetch bandwidth:", error);
-          setBandwidthError(error instanceof Error ? error.message : "Failed to load bandwidth");
-        })
-        .finally(() => setBandwidthLoading(false));
-    }
+    loadBandwidth();
 
     if (service.enhance_website_id) {
       apiClient.get<Record<string, any>>(`/hosting/web/${service.id}/website`)
         .then(data => setWebsite(data))
         .catch(console.error);
     }
-  }, [service?.id, service?.enhance_subscription_id, service?.enhance_website_id]);
+  }, [loadBandwidth, service?.id, service?.enhance_website_id]);
 
   const status = service.status || "unknown";
 
@@ -102,6 +119,13 @@ export default function OverviewTab({ service }: OverviewTabProps) {
     || website?.serverIps?.[0]?.ip
     || service.primary_ip
     || "—";
+
+  const monthlyTransferBytes = bandwidth?.monthlyTransferBytes ?? bandwidth?.used ?? null;
+  const transferQuotaBytes = bandwidth?.transferQuotaBytes ?? bandwidth?.limit ?? null;
+  const transferUnlimited = bandwidth?.transferUnlimited ?? transferQuotaBytes === null;
+  const transferTrackedUsageBytes = bandwidth?.transferTrackedUsageBytes ?? null;
+  const bandwidthPercentage = bandwidth?.percentage ?? null;
+  const metricsMonthToDate = bandwidth?.metricsMonthToDate ?? null;
 
   const fields = [
     { label: "Plan Name", value: service.plan_name || "—" },
@@ -173,10 +197,26 @@ export default function OverviewTab({ service }: OverviewTabProps) {
       {service?.enhance_subscription_id && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <HardDrive className="h-4 w-4" />
-              Bandwidth
-            </CardTitle>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <HardDrive className="h-4 w-4" />
+                  Bandwidth
+                </CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Current-month subscription bandwidth from Enhance, plus month-to-date website metrics when available.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadBandwidth(true)}
+                disabled={bandwidthLoading}
+              >
+                <RefreshCw className={`mr-1.5 h-3 w-3 ${bandwidthLoading ? "animate-spin" : ""}`} />
+                Refresh Usage
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {bandwidthLoading && (
@@ -191,26 +231,26 @@ export default function OverviewTab({ service }: OverviewTabProps) {
             {!bandwidthLoading && !bandwidthError && bandwidth && (
               <div className="space-y-4">
                 {/* Progress bar */}
-                {bandwidth.limit != null && bandwidth.limit > 0 && bandwidth.used != null && (
+                {transferQuotaBytes != null && transferQuotaBytes > 0 && monthlyTransferBytes != null && (
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {formatBytes(bandwidth.used)} of {formatBytes(bandwidth.limit)}
+                        {formatBytes(monthlyTransferBytes)} of {formatBytes(transferQuotaBytes)}
                       </span>
                       <span className="font-medium">
-                        {bandwidth.percentage != null ? `${bandwidth.percentage}%` : "—"}
+                        {formatPercent(bandwidthPercentage)}
                       </span>
                     </div>
                     <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${
-                          bandwidth.percentage != null && bandwidth.percentage >= 90
+                          bandwidthPercentage != null && bandwidthPercentage >= 90
                             ? "bg-destructive"
-                            : bandwidth.percentage != null && bandwidth.percentage >= 75
+                            : bandwidthPercentage != null && bandwidthPercentage >= 75
                               ? "bg-yellow-500"
                               : "bg-primary"
                         }`}
-                        style={{ width: `${Math.min(bandwidth.percentage ?? 0, 100)}%` }}
+                        style={{ width: `${Math.min(bandwidthPercentage ?? 0, 100)}%` }}
                       />
                     </div>
                   </div>
@@ -218,27 +258,75 @@ export default function OverviewTab({ service }: OverviewTabProps) {
 
                 {/* Detail rows */}
                 <dl className="space-y-3">
-                  {bandwidth.used != null && (
-                    <div className="flex justify-between items-center">
-                      <dt className="text-sm font-medium text-muted-foreground">Used this month</dt>
-                      <dd className="text-sm text-foreground">{formatBytes(bandwidth.used)}</dd>
-                    </div>
-                  )}
                   <div className="flex justify-between items-center">
-                    <dt className="text-sm font-medium text-muted-foreground">Plan limit</dt>
-                    <dd className="text-sm text-foreground">
-                      {bandwidth.limit != null && bandwidth.limit > 0
-                        ? formatBytes(bandwidth.limit)
-                        : "Unlimited"}
-                    </dd>
+                    <dt className="text-sm font-medium text-muted-foreground">Monthly transfer used</dt>
+                    <dd className="text-sm text-foreground">{formatBytes(monthlyTransferBytes)}</dd>
                   </div>
-                  {bandwidth.limit != null && bandwidth.limit > 0 && bandwidth.percentage != null && (
+                  <div className="flex justify-between items-center">
+                    <dt className="text-sm font-medium text-muted-foreground">Plan transfer limit</dt>
+                    <dd className="text-sm text-foreground">{transferUnlimited ? "Unlimited" : formatBytes(transferQuotaBytes)}</dd>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <dt className="text-sm font-medium text-muted-foreground">Quota usage</dt>
+                    <dd className="text-sm text-foreground">{formatPercent(bandwidthPercentage)}</dd>
+                  </div>
+                  {transferTrackedUsageBytes != null && (
                     <div className="flex justify-between items-center">
-                      <dt className="text-sm font-medium text-muted-foreground">Usage</dt>
-                      <dd className="text-sm text-foreground">{bandwidth.percentage}%</dd>
+                      <dt className="text-sm font-medium text-muted-foreground">Tracked transfer usage</dt>
+                      <dd className="text-sm text-foreground">{formatBytes(transferTrackedUsageBytes)}</dd>
                     </div>
                   )}
                 </dl>
+
+                <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+                  <p>{bandwidth.billingPeriod?.label ?? "Current calendar month"} · {bandwidth.cacheNote}</p>
+                  <p className="mt-1">{bandwidth.resellerNote}</p>
+                  {bandwidth.refreshRequested && <p className="mt-1 text-foreground">A fresh Enhance cache refresh was requested.</p>}
+                </div>
+
+                {metricsMonthToDate && (
+                  <div className="space-y-3 rounded-lg border p-4">
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground">Website traffic month-to-date</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(metricsMonthToDate.start)} to {formatDate(metricsMonthToDate.end)} · {metricsMonthToDate.granularity}
+                      </p>
+                    </div>
+                    <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-sm text-muted-foreground">Received</dt>
+                        <dd className="text-sm text-foreground">{formatBytes(metricsMonthToDate.bytesReceived)}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-sm text-muted-foreground">Sent</dt>
+                        <dd className="text-sm text-foreground">{formatBytes(metricsMonthToDate.bytesSent)}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-sm text-muted-foreground">Combined traffic</dt>
+                        <dd className="text-sm text-foreground">{formatBytes(metricsMonthToDate.totalBytes)}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-sm text-muted-foreground">Total hits</dt>
+                        <dd className="text-sm text-foreground">{formatCount(metricsMonthToDate.totalHits)}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-sm text-muted-foreground">Unique hits</dt>
+                        <dd className="text-sm text-foreground">{formatCount(metricsMonthToDate.uniqueHits)}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="text-sm text-muted-foreground">Bot hits</dt>
+                        <dd className="text-sm text-foreground">{formatCount(metricsMonthToDate.botHits)}</dd>
+                      </div>
+                    </dl>
+                    <p className="text-xs text-muted-foreground">
+                      Enhance notes that the latest metrics bucket may still be incomplete.
+                    </p>
+                  </div>
+                )}
+
+                {bandwidth.metricsError && (
+                  <p className="text-xs text-muted-foreground">Website traffic metrics unavailable: {bandwidth.metricsError}</p>
+                )}
               </div>
             )}
           </CardContent>

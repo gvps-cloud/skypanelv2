@@ -54,8 +54,22 @@ interface RuntimeTabProps {
   subscriptionId: string;
 }
 
+function readPersistentApps(data: any): PersistentApp[] {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.apps)) return data.apps;
+  return [];
+}
+
+function nodeVersionOptions(possibleVersions: string[], installedVersions: string[]) {
+  return [...new Set(["default", "stable", ...installedVersions, ...possibleVersions])];
+}
+
 export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
   const [apps, setApps] = useState<PersistentApp[]>([]);
+  const [possibleNodeVersions, setPossibleNodeVersions] = useState<string[]>([]);
+  const [installedNodeVersions, setInstalledNodeVersions] = useState<string[]>([]);
+  const [selectedNodeVersion, setSelectedNodeVersion] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,10 +78,12 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [command, setCommand] = useState("");
   const [startMode, setStartMode] = useState<"automatic" | "manual">("automatic");
+  const [createNodeVersion, setCreateNodeVersion] = useState("default");
   const [workingDirectory, setWorkingDirectory] = useState("");
   const [proxyPath, setProxyPath] = useState("");
   const [proxyPort, setProxyPort] = useState("");
   const [creating, setCreating] = useState(false);
+  const [nodeAction, setNodeAction] = useState<string | null>(null);
 
   const [logOpen, setLogOpen] = useState(false);
   const [logAppName, setLogAppName] = useState("");
@@ -79,8 +95,15 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
     setRefreshing(true);
     setError(null);
     try {
-      const data = await apiClient.get<{ items?: PersistentApp[] }>(`/hosting/node/${subscriptionId}/persistent-apps`);
-      setApps(data.items ?? []);
+      const [appData, possibleData, installedData] = await Promise.all([
+        apiClient.get<PersistentApp[] | { items?: PersistentApp[]; apps?: PersistentApp[] }>(`/hosting/node/${subscriptionId}/persistent-apps`),
+        apiClient.get<{ versions?: string[] }>(`/hosting/node/${subscriptionId}/node/possible-versions`).catch(() => ({ versions: [] })),
+        apiClient.get<{ versions?: string[] }>(`/hosting/node/${subscriptionId}/node/versions`).catch(() => ({ versions: [] })),
+      ]);
+      setApps(readPersistentApps(appData));
+      setPossibleNodeVersions(possibleData.versions ?? []);
+      setInstalledNodeVersions(installedData.versions ?? []);
+      setSelectedNodeVersion((prev) => prev || possibleData.versions?.[0] || installedData.versions?.[0] || "");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load runtime apps";
       setError(message);
@@ -102,6 +125,7 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
       const body: Record<string, any> = {
         command: command.trim(),
         startMode,
+        nodeVersion: createNodeVersion,
       };
       if (workingDirectory.trim()) body.workingDirectory = workingDirectory.trim();
       if (proxyPath.trim() && proxyPort.trim()) {
@@ -112,6 +136,7 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
       setDialogOpen(false);
       setCommand("");
       setStartMode("automatic");
+      setCreateNodeVersion("default");
       setWorkingDirectory("");
       setProxyPath("");
       setProxyPort("");
@@ -120,6 +145,48 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
       toast.error(err instanceof Error ? err.message : "Failed to create app");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleInstallNvm = async () => {
+    if (!subscriptionId) return;
+    setNodeAction("nvm");
+    try {
+      await apiClient.post(`/hosting/node/${subscriptionId}/nvm`);
+      toast.success("Node.js runtime installed");
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to install Node.js runtime");
+    } finally {
+      setNodeAction(null);
+    }
+  };
+
+  const handleInstallNodeVersion = async () => {
+    if (!subscriptionId || !selectedNodeVersion) return;
+    setNodeAction("install-version");
+    try {
+      await apiClient.post(`/hosting/node/${subscriptionId}/node/versions`, { version: selectedNodeVersion });
+      toast.success(`Node.js ${selectedNodeVersion} installed`);
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to install Node.js version");
+    } finally {
+      setNodeAction(null);
+    }
+  };
+
+  const handleSetDefaultNodeVersion = async () => {
+    if (!subscriptionId || !selectedNodeVersion) return;
+    setNodeAction("default-version");
+    try {
+      await apiClient.put(`/hosting/node/${subscriptionId}/node/versions/default`, { version: selectedNodeVersion });
+      toast.success(`Default Node.js version set to ${selectedNodeVersion}`);
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to set default Node.js version");
+    } finally {
+      setNodeAction(null);
     }
   };
 
@@ -182,13 +249,55 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
     <div className="space-y-6">
       <section className={cn("rounded-2xl border bg-card shadow-sm")}>
         <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6">
+          <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
+            <Zap className="h-5 w-5 text-primary" />
+            <span>Node.js Runtime</span>
+          </h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Install NVM, manage Node.js versions, and choose the default runtime.</p>
+        </div>
+        <div className="grid gap-4 px-6 sm:px-8 py-5 md:grid-cols-[1fr_auto]">
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {installedNodeVersions.length === 0 ? (
+                <Badge variant="outline">No installed versions detected</Badge>
+              ) : (
+                installedNodeVersions.map((version) => <Badge key={version} variant="secondary">{version}</Badge>)
+              )}
+            </div>
+            <div className="max-w-sm">
+              <Select value={selectedNodeVersion} onValueChange={setSelectedNodeVersion}>
+                <SelectTrigger><SelectValue placeholder="Select a Node.js version" /></SelectTrigger>
+                <SelectContent>
+                  {[...new Set([...possibleNodeVersions, ...installedNodeVersions])].map((version) => (
+                    <SelectItem key={version} value={version}>{version}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-start gap-2 md:justify-end">
+            <Button variant="outline" size="sm" onClick={handleInstallNvm} disabled={nodeAction !== null}>
+              {nodeAction === "nvm" && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}Install NVM
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleInstallNodeVersion} disabled={!selectedNodeVersion || nodeAction !== null}>
+              {nodeAction === "install-version" && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}Install Version
+            </Button>
+            <Button size="sm" onClick={handleSetDefaultNodeVersion} disabled={!selectedNodeVersion || nodeAction !== null}>
+              {nodeAction === "default-version" && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}Set Default
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <section className={cn("rounded-2xl border bg-card shadow-sm")}>
+        <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
                 <Zap className="h-5 w-5 text-primary" />
                 <span>Persistent Apps</span>
               </h2>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1">Background processes and runtime services.</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">Node.js and persistent background processes.</p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={loadData} disabled={refreshing}>
@@ -212,6 +321,7 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
                 <TableRow>
                   <TableHead>Command</TableHead>
                   <TableHead>Start Mode</TableHead>
+                  <TableHead>Node Version</TableHead>
                   <TableHead>Proxy</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -223,6 +333,7 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
                     <TableCell>
                       <Badge variant={app.startMode === "automatic" ? "default" : "secondary"}>{app.startMode}</Badge>
                     </TableCell>
+                    <TableCell>{app.nodeVersion || "default"}</TableCell>
                     <TableCell>
                       {app.proxyDetails ? `${app.proxyDetails.path}:${app.proxyDetails.port}` : "—"}
                     </TableCell>
@@ -260,8 +371,8 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Command</Label>
-              <Input value={command} onChange={(e) => setCommand(e.target.value)} placeholder="node server.js" />
+              <Label htmlFor="persistent-command">Command</Label>
+              <Input id="persistent-command" value={command} onChange={(e) => setCommand(e.target.value)} placeholder="node server.js" />
             </div>
             <div className="space-y-2">
               <Label>Start Mode</Label>
@@ -274,17 +385,33 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Working Directory (optional)</Label>
-              <Input value={workingDirectory} onChange={(e) => setWorkingDirectory(e.target.value)} placeholder="/app" />
+              <Label>Node Version</Label>
+              <Select value={createNodeVersion} onValueChange={setCreateNodeVersion}>
+                <SelectTrigger><SelectValue placeholder="Select Node.js version" /></SelectTrigger>
+                <SelectContent>
+                  {nodeVersionOptions(possibleNodeVersions, installedNodeVersions).map((version) => (
+                    <SelectItem key={version} value={version}>
+                      {version === "default" ? "Default" : version === "stable" ? "Stable" : version}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Enhance accepts default, stable, or a specific NVM-installed Node.js version.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="persistent-working-dir">Working Directory (optional)</Label>
+              <Input id="persistent-working-dir" value={workingDirectory} onChange={(e) => setWorkingDirectory(e.target.value)} placeholder="/app" />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-2">
-                <Label>Proxy Path</Label>
-                <Input value={proxyPath} onChange={(e) => setProxyPath(e.target.value)} placeholder="/api" />
+                <Label htmlFor="persistent-proxy-path">Proxy Path</Label>
+                <Input id="persistent-proxy-path" value={proxyPath} onChange={(e) => setProxyPath(e.target.value)} placeholder="/api" />
               </div>
               <div className="space-y-2">
-                <Label>Proxy Port</Label>
-                <Input value={proxyPort} onChange={(e) => setProxyPort(e.target.value)} placeholder="3000" />
+                <Label htmlFor="persistent-proxy-port">Proxy Port</Label>
+                <Input id="persistent-proxy-port" value={proxyPort} onChange={(e) => setProxyPort(e.target.value)} placeholder="3000" />
               </div>
             </div>
           </div>

@@ -6,6 +6,8 @@ import {
   Trash2,
   Plus,
   Key,
+  Pencil,
+  Lock,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -51,13 +53,18 @@ export default function SshKeysTab({ subscriptionId }: SshKeysTabProps) {
   const [keyName, setKeyName] = useState("");
   const [publicKey, setPublicKey] = useState("");
   const [creating, setCreating] = useState(false);
+  const [editKey, setEditKey] = useState<SshKey | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPublicKey, setEditPublicKey] = useState("");
+  const [sshPassword, setSshPassword] = useState("");
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!subscriptionId) return;
     setRefreshing(true);
     setError(null);
     try {
-      const data = await apiClient.get<{ keys?: SshKey[] }>(`/hosting/ssh/${subscriptionId}/ssh-keys`);
+      const data = await apiClient.get<{ keys?: SshKey[] }>(`/hosting/ssh/${subscriptionId}/ssh-keys?sanitize=true`);
       setKeys(data.keys ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load SSH keys");
@@ -107,6 +114,45 @@ export default function SshKeysTab({ subscriptionId }: SshKeysTabProps) {
     }
   };
 
+  const openEdit = (key: SshKey) => {
+    setEditKey(key);
+    setEditName(key.name ?? "");
+    setEditPublicKey("");
+  };
+
+  const handleUpdate = async () => {
+    if (!subscriptionId || !editKey) return;
+    setActionLoading(editKey.id);
+    try {
+      await apiClient.patch(`/hosting/ssh/${subscriptionId}/ssh-keys/${editKey.id}`, {
+        name: editName.trim() || undefined,
+        value: editPublicKey.trim() || undefined,
+      });
+      toast.success("SSH key updated");
+      setEditKey(null);
+      await loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update SSH key");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSetPassword = async () => {
+    if (!subscriptionId || !sshPassword.trim()) return;
+    setActionLoading("ssh-password");
+    try {
+      await apiClient.post(`/hosting/ssh/${subscriptionId}/ssh-password`, { newPassword: sshPassword });
+      toast.success("SSH password updated");
+      setSshPassword("");
+      setPasswordOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to set SSH password");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading) {
     return (
       <section className={cn("rounded-2xl border bg-card shadow-sm")}>
@@ -149,6 +195,9 @@ export default function SshKeysTab({ subscriptionId }: SshKeysTabProps) {
             <Button size="sm" onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />Add Key
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setPasswordOpen(true)}>
+              <Lock className="h-4 w-4 mr-1" />SSH Password
+            </Button>
           </div>
         </div>
       </div>
@@ -174,15 +223,20 @@ export default function SshKeysTab({ subscriptionId }: SshKeysTabProps) {
                   <TableCell className="font-medium">{key.name || "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{key.fingerprint || "—"}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(key.id)}
-                      disabled={actionLoading === key.id}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      {actionLoading === key.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                    </Button>
+                    <div className="inline-flex items-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(key)}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(key.id)}
+                        disabled={actionLoading === key.id}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        {actionLoading === key.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -217,6 +271,55 @@ export default function SshKeysTab({ subscriptionId }: SshKeysTabProps) {
             <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button size="sm" onClick={handleCreate} disabled={creating || !publicKey.trim()}>
               {creating && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}Add Key
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editKey} onOpenChange={(open) => !open && setEditKey(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit SSH Key</DialogTitle>
+            <DialogDescription>Rename this key or replace its public key value.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="My Laptop" />
+            </div>
+            <div className="space-y-2">
+              <Label>New Public Key (optional)</Label>
+              <textarea
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+                value={editPublicKey}
+                onChange={(e) => setEditPublicKey(e.target.value)}
+                placeholder="Leave blank to keep current key"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEditKey(null)}>Cancel</Button>
+            <Button size="sm" onClick={handleUpdate} disabled={actionLoading === editKey?.id}>
+              {actionLoading === editKey?.id && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set SSH Password</DialogTitle>
+            <DialogDescription>Authorize or replace password access for the website Unix user.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>New Password</Label>
+            <Input type="password" value={sshPassword} onChange={(e) => setSshPassword(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setPasswordOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleSetPassword} disabled={!sshPassword.trim() || actionLoading === "ssh-password"}>
+              {actionLoading === "ssh-password" && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}Set Password
             </Button>
           </DialogFooter>
         </DialogContent>

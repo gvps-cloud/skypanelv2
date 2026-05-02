@@ -17,6 +17,9 @@ const mockSendEnhanceCredentialsEmail = vi.hoisted(() => vi.fn().mockResolvedVal
 const mockIsEffectivelyEnabled = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 const mockGetOrgMembers = vi.hoisted(() => vi.fn().mockResolvedValue([{ id: 'member-123', roles: ['Owner'] }]));
 const mockGetMemberSsoLink = vi.hoisted(() => vi.fn().mockResolvedValue('https://sso.enhance.test/login'));
+const mockGetSubscriptionBandwidth = vi.hoisted(() => vi.fn());
+const mockGetSubscription = vi.hoisted(() => vi.fn());
+const mockGetWebsiteMetrics = vi.hoisted(() => vi.fn());
 
 vi.mock('../../services/enhanceService.js', () => ({
   EnhanceApiError: class EnhanceApiError extends Error {
@@ -41,6 +44,9 @@ vi.mock('../../services/enhanceService.js', () => ({
     getStagingDomain: (...args: any[]) => mockGetStagingDomain(...args),
     getOrgMembers: (...args: any[]) => mockGetOrgMembers(...args),
     getMemberSsoLink: (...args: any[]) => mockGetMemberSsoLink(...args),
+    getSubscriptionBandwidth: (...args: any[]) => mockGetSubscriptionBandwidth(...args),
+    getSubscription: (...args: any[]) => mockGetSubscription(...args),
+    getWebsiteMetrics: (...args: any[]) => mockGetWebsiteMetrics(...args),
   },
 }));
 
@@ -76,6 +82,9 @@ describe('Hosting Store Routes', () => {
     mockGetCustomerSubscriptions.mockResolvedValue({ items: [] });
     mockGetWebsites.mockResolvedValue({ items: [] });
     mockGetWebsite.mockResolvedValue({ id: 'web-123', serverIps: [{ ip: '1.2.3.4', isPrimary: true }] });
+    mockGetSubscriptionBandwidth.mockResolvedValue(0);
+    mockGetSubscription.mockResolvedValue({ resources: [] });
+    mockGetWebsiteMetrics.mockResolvedValue({ items: [] });
   });
 
   beforeAll(async () => {
@@ -188,6 +197,66 @@ describe('Hosting Store Routes', () => {
       const planIds = response.body.plans.map((p: any) => p.id);
       expect(planIds).toContain(planId);
       expect(planIds).not.toContain(inactivePlanId);
+    });
+  });
+
+  describe('GET /api/hosting/services/:id/bandwidth', () => {
+    it('returns Enhance monthly bandwidth, transfer resource usage, and website metrics', async () => {
+      await pool.query(
+        'UPDATE organizations SET enhance_customer_id = $1 WHERE id = $2',
+        ['cust-org-123', testOrgId]
+      );
+
+      const subResult = await pool.query(
+        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, enhance_website_id, enhance_subscription_id)
+         VALUES ($1, $2, $3, $4, 'active', NOW() + interval '1 month', 'web-bandwidth', '15')
+         RETURNING id`,
+        [testOrgId, testUserId, planId, 'bandwidth-test.com']
+      );
+      const subId = subResult.rows[0].id;
+
+      mockGetSubscriptionBandwidth.mockResolvedValue(0);
+      mockGetSubscription.mockResolvedValue({
+        resources: [{ name: 'transfer', total: 10_000, usage: 1234 }],
+      });
+      mockGetWebsiteMetrics.mockResolvedValue({
+        items: [
+          { bytesReceived: 100, bytesSent: 200, uniqueHits: 3, botHits: 4, totalHits: 7 },
+          { bytesReceived: 50, bytesSent: 70, uniqueHits: 1, botHits: 2, totalHits: 3 },
+        ],
+      });
+
+      const response = await request(app)
+        .get(`/api/hosting/services/${subId}/bandwidth?refreshCache=true`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.bandwidth).toMatchObject({
+        used: 0,
+        monthlyTransferBytes: 0,
+        limit: 10_000,
+        transferQuotaBytes: 10_000,
+        transferTrackedUsageBytes: 1234,
+        percentage: 0,
+        refreshRequested: true,
+        metricsMonthToDate: {
+          bytesReceived: 150,
+          bytesSent: 270,
+          totalBytes: 420,
+          uniqueHits: 4,
+          botHits: 6,
+          totalHits: 10,
+          granularity: 'day',
+        },
+      });
+      expect(mockGetSubscriptionBandwidth).toHaveBeenCalledWith('cust-org-123', '15', { refreshCache: true });
+      expect(mockGetWebsiteMetrics).toHaveBeenCalledWith(
+        'cust-org-123',
+        'web-bandwidth',
+        expect.objectContaining({ granularity: 'day' }),
+      );
+
+      await pool.query('DELETE FROM hosting_subscriptions WHERE id = $1', [subId]);
     });
   });
 

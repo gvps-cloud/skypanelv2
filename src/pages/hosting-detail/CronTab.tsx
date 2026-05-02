@@ -62,6 +62,14 @@ const PRESETS: { label: string; expr: string }[] = [
   { label: "Every month (1st midnight)", expr: "0 0 1 * *" },
 ];
 
+function validateCronLine(value: string): string | null {
+  const parts = value.trim().split(/\s+/);
+  if (parts.length < 6) {
+    return "Enter five schedule fields followed by the command to run.";
+  }
+  return null;
+}
+
 export default function CronTab({ subscriptionId }: CronTabProps) {
   const [items, setItems] = useState<CronItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,6 +130,8 @@ export default function CronTab({ subscriptionId }: CronTabProps) {
 
   const handleSave = async () => {
     if (!expr.trim()) { toast.error("Expression is required"); return; }
+    const validationError = validateCronLine(expr);
+    if (validationError) { toast.error(validationError); return; }
     const updated = [...items];
     if (editLineNumber !== null) {
       const idx = updated.findIndex((i) => i.cronCmd?.lineNumber === editLineNumber);

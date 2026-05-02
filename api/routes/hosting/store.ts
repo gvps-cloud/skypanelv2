@@ -35,6 +35,76 @@ const createHttpError = (message: string, statusCode: number, responseBody?: any
 
 router.use(authenticateToken, requireOrganization, requireHostingEnabledForUsers);
 
+function readBooleanQuery(value: unknown): boolean | undefined {
+  if (typeof value === "string") {
+    if (["1", "true", "yes", "on"].includes(value.toLowerCase())) return true;
+    if (["0", "false", "no", "off"].includes(value.toLowerCase())) return false;
+  }
+  return undefined;
+}
+
+function readNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function normalizeBandwidthBytes(value: unknown): number | null {
+  const scalar = readNumber(value);
+  if (scalar !== null) {
+    return scalar;
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return readNumber(record.bandwidth ?? record.usage ?? record.used ?? record.bytes);
+  }
+
+  return null;
+}
+
+function getCurrentMonthUtcRange(now = new Date()) {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+  return {
+    start: start.toISOString(),
+    end: now.toISOString(),
+  };
+}
+
+function aggregateMetricsResponse(response: any, range: { start: string; end: string }, granularity: "hour" | "day") {
+  const items = extractCollection<any>(response);
+  const totals = items.reduce(
+    (acc, item) => {
+      acc.bytesReceived += readNumber(item?.bytesReceived) ?? 0;
+      acc.bytesSent += readNumber(item?.bytesSent) ?? 0;
+      acc.uniqueHits += readNumber(item?.uniqueHits) ?? 0;
+      acc.botHits += readNumber(item?.botHits) ?? 0;
+      acc.totalHits += readNumber(item?.totalHits) ?? 0;
+      return acc;
+    },
+    {
+      bytesReceived: 0,
+      bytesSent: 0,
+      uniqueHits: 0,
+      botHits: 0,
+      totalHits: 0,
+    },
+  );
+
+  return {
+    ...range,
+    granularity,
+    items,
+    ...totals,
+    totalBytes: totals.bytesReceived + totals.bytesSent,
+  };
+}
+
 /**
  * GET /api/hosting/plans
  * List active hosting plans
@@ -217,33 +287,69 @@ router.get(
 
       const enhanceOrgId = getEnhanceWebsiteOrgId(subscription as any);
       const subId = String(subscription.enhance_subscription_id);
+      const refreshCache = readBooleanQuery(req.query.refreshCache);
+      const metricsRange = getCurrentMonthUtcRange();
 
-      // Fetch bandwidth used this month and subscription details (for plan limit) in parallel
-      const [rawBandwidth, subscriptionDetails] = await Promise.all([
-        EnhanceService.getSubscriptionBandwidth(enhanceOrgId, subId),
+      // Fetch subscription-level current-month bandwidth, quota, and website metrics in parallel.
+      const [rawBandwidth, subscriptionDetails, metricsResult] = await Promise.all([
+        EnhanceService.getSubscriptionBandwidth(enhanceOrgId, subId, { refreshCache }),
         EnhanceService.getSubscription(enhanceOrgId, subId).catch(() => null),
+        subscription.enhance_website_id
+          ? EnhanceService.getWebsiteMetrics(enhanceOrgId, String(subscription.enhance_website_id), {
+              ...metricsRange,
+              granularity: "day",
+            }).catch((error) => ({ __error: error?.message || "Failed to load website metrics" }))
+          : Promise.resolve(null),
       ]);
 
-      const used = typeof rawBandwidth === "number" ? rawBandwidth : null;
+      const used = normalizeBandwidthBytes(rawBandwidth);
 
-      // Extract the transfer resource limit from the subscription's plan resources
+      // Extract transfer quota and tracked usage from the subscription resources.
       let limit: number | null = null;
+      let transferTrackedUsageBytes: number | null = null;
       if (subscriptionDetails?.resources && Array.isArray(subscriptionDetails.resources)) {
         const transferResource = subscriptionDetails.resources.find(
-          (r: any) => r.name === "transfer"
+          (r: any) => String(r?.name ?? "").toLowerCase() === "transfer"
         );
         if (transferResource) {
           // total is null/undefined when the plan has unlimited transfer
-          limit = typeof transferResource.total === "number" ? transferResource.total : null;
+          limit = readNumber(transferResource.total);
+          transferTrackedUsageBytes = readNumber(transferResource.usage);
         }
       }
+
+      const metricsMonthToDate = metricsResult && !(metricsResult as any).__error
+        ? aggregateMetricsResponse(metricsResult, metricsRange, "day")
+        : null;
 
       const percentage = used !== null && limit !== null && limit > 0
         ? Math.round((used / limit) * 10000) / 100
         : null;
 
       res.json({
-        bandwidth: used !== null ? { used, limit, percentage } : null,
+        bandwidth: used !== null || limit !== null || transferTrackedUsageBytes !== null || metricsMonthToDate
+          ? {
+              // Backward-compatible names used by the existing card.
+              used,
+              limit,
+              percentage,
+
+              // Explicit Enhance/OpenAPI names for the richer Overview UI.
+              monthlyTransferBytes: used,
+              transferQuotaBytes: limit,
+              transferUnlimited: limit === null,
+              transferTrackedUsageBytes,
+              refreshRequested: refreshCache === true,
+              cacheNote: "Enhance caches current-month subscription bandwidth for up to 12 hours unless refreshCache=true.",
+              billingPeriod: {
+                label: "Current calendar month",
+                source: "Enhance subscription bandwidth endpoint",
+              },
+              resellerNote: "For reseller subscriptions, Enhance may include all customer subscriptions.",
+              metricsMonthToDate,
+              metricsError: metricsResult && (metricsResult as any).__error ? (metricsResult as any).__error : null,
+            }
+          : null,
       });
     } catch (error: any) {
       console.error("Failed to get hosting bandwidth:", error);

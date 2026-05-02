@@ -2,6 +2,7 @@ import express, { type Request, type Response } from "express";
 import { authenticateToken } from "../../middleware/auth.js";
 import { requireOrganization } from "../../middleware/auth.js";
 import { requireHostingEnabledForUsers, requireOrgPermission } from "../../middleware/hosting.js";
+import { config } from "../../config/index.js";
 import { getEnhanceWebsiteOrgId, getHostingSubscriptionForOrganization } from "../../lib/hostingEnhanceOrg.js";
 import { EnhanceApiError, EnhanceService } from "../../services/enhanceService.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
@@ -23,6 +24,91 @@ async function resolveSubscription(req: Request, res: Response) {
     return null;
   }
   return sub;
+}
+
+function getEnhancePanelOrigin(): string {
+  const panelUrl = config.ENHANCE_API_URL.replace(/\/api\/?$/i, "");
+  return new URL(panelUrl).origin;
+}
+
+function readAccessToken(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (value && typeof value === "object") {
+    const token = (value as Record<string, unknown>).accessToken ?? (value as Record<string, unknown>).token;
+    if (typeof token === "string") return token.trim();
+  }
+  return "";
+}
+
+function buildFileManagerUrl(filerdAddress: string, rawAccessToken: unknown): string {
+  const accessToken = readAccessToken(rawAccessToken);
+  if (!accessToken) {
+    throw new EnhanceApiError("Enhance did not return a site access token", 502);
+  }
+
+  const address = filerdAddress.trim();
+  if (!address) {
+    throw new EnhanceApiError("File manager is not available for this website", 404);
+  }
+
+  const url = /^https?:\/\//i.test(address)
+    ? new URL(address)
+    : new URL(address.startsWith("/") ? address : `/${address}`, getEnhancePanelOrigin());
+  url.searchParams.set("accessToken", accessToken);
+  return url.toString();
+}
+
+function normalizeWebsiteStatus(website: any) {
+  if (!website || typeof website !== "object" || Array.isArray(website)) {
+    return website;
+  }
+
+  const status = typeof website.status === "string" ? website.status.toLowerCase() : "";
+  const suspendedBy = typeof website.suspendedBy === "string" ? website.suspendedBy.trim() : "";
+  const isSuspended = website.isSuspended === true || status === "disabled" || suspendedBy.length > 0;
+  const normalizedStatus = status === "deleted"
+    ? "deleted"
+    : isSuspended
+      ? "suspended"
+      : status === "active"
+        ? "active"
+        : "unknown";
+
+  return {
+    ...website,
+    isSuspended,
+    normalizedStatus,
+  };
+}
+
+function normalizeWebsiteUpdatePayload(body: any) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return body;
+  }
+
+  const payload = { ...body };
+  if (typeof payload.isSuspended === "boolean") {
+    payload.status = payload.isSuspended ? "disabled" : "active";
+  } else if (payload.status === "suspended") {
+    payload.status = "disabled";
+    payload.isSuspended = true;
+  } else if (payload.status === "disabled") {
+    payload.isSuspended = true;
+  } else if (payload.status === "active") {
+    payload.isSuspended = false;
+  }
+  return payload;
+}
+
+async function updateWebsiteAndReadFresh(sub: any, body: any) {
+  const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+  await EnhanceService.updateWebsite(
+    enhanceWebsiteOrgId,
+    sub.enhance_website_id,
+    normalizeWebsiteUpdatePayload(body),
+  );
+  const website = await EnhanceService.getWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
+  return normalizeWebsiteStatus(website);
 }
 
 async function ensureDomainBelongsToWebsite(sub: any, domainId: string, res: Response) {
@@ -50,7 +136,7 @@ router.get("/:id/website", requireOrgPermission("hosting_view"), async (req: Req
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.getWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
-    res.json(result);
+    res.json(normalizeWebsiteStatus(result));
   } catch (error: any) {
     if (error instanceof EnhanceApiError && (error.statusCode === 400 || error.statusCode === 403 || error.statusCode === 404)) {
       return res.status(error.statusCode).json({ error: error.message });
@@ -59,14 +145,37 @@ router.get("/:id/website", requireOrgPermission("hosting_view"), async (req: Req
   }
 });
 
-router.patch("/:id/website", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+router.post("/:id/file-manager", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    await EnhanceService.updateWebsite(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
-    res.json({ success: true });
+    const [website, accessToken] = await Promise.all([
+      EnhanceService.getWebsite(enhanceWebsiteOrgId, sub.enhance_website_id),
+      EnhanceService.getSiteAccessToken(enhanceWebsiteOrgId, sub.enhance_website_id),
+    ]);
+
+    const filerdAddress = String(website?.filerdAddress ?? website?.filerd_address ?? "").trim();
+    const fileManagerUrl = buildFileManagerUrl(filerdAddress, accessToken);
+    res.json({ url: fileManagerUrl, filerdAddress });
   } catch (error: any) {
+    if (error instanceof EnhanceApiError && (error.statusCode === 400 || error.statusCode === 403 || error.statusCode === 404)) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    res.status(500).json({ error: error?.message || "Failed to open file manager" });
+  }
+});
+
+router.patch("/:id/website", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const website = await updateWebsiteAndReadFresh(sub, req.body);
+    res.json(website);
+  } catch (error: any) {
+    if (error instanceof EnhanceApiError && (error.statusCode === 400 || error.statusCode === 403 || error.statusCode === 404)) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
     res.status(500).json({ error: error?.message || "Failed to update website" });
   }
 });
@@ -76,10 +185,12 @@ router.put("/:id/website", requireOrgPermission("hosting_manage"), async (req: R
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    await EnhanceService.updateWebsite(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
-    res.json({ success: true });
+    const website = await updateWebsiteAndReadFresh(sub, req.body);
+    res.json(website);
   } catch (error: any) {
+    if (error instanceof EnhanceApiError && (error.statusCode === 400 || error.statusCode === 403 || error.statusCode === 404)) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
     res.status(500).json({ error: error?.message || "Failed to update website" });
   }
 });

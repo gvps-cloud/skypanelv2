@@ -3,6 +3,7 @@ import { authenticateToken } from "../../middleware/auth.js";
 import { requireOrganization } from "../../middleware/auth.js";
 import { requireHostingEnabledForUsers, requireOrgPermission } from "../../middleware/hosting.js";
 import { getEnhanceWebsiteOrgId, getHostingSubscriptionForOrganization } from "../../lib/hostingEnhanceOrg.js";
+import { booleanQuery } from "../../lib/hostingRouteHelpers.js";
 import { EnhanceApiError, EnhanceService } from "../../services/enhanceService.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
 
@@ -123,7 +124,9 @@ router.get("/:id/mysql-dbs/:dbName/sso", requireOrgPermission("hosting_view"), a
   if (!sub) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.getWebsiteMysqlDbSso(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.dbName);
+    const result = await EnhanceService.getWebsiteMysqlDbSso(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.dbName, {
+      shouldRedirect: booleanQuery(req.query.shouldRedirect),
+    });
     res.json({ url: typeof result === "string" ? result : result?.url ?? result?.ssoUrl ?? null });
   } catch (error: any) {
     sendMysqlError(res, error, "Failed to get MySQL SSO URL");

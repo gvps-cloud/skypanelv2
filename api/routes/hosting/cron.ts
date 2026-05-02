@@ -52,7 +52,7 @@ router.patch("/:id/crontab", requireOrgPermission("hosting_manage"), async (req:
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.updateCrontab(enhanceWebsiteOrgId, websiteId, req.body);
-    res.json(result);
+    res.json(typeof result === "undefined" ? { success: true } : result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to update crontab" });
   }

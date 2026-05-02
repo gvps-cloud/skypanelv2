@@ -6,11 +6,17 @@ const mockResponse = (options: {
   status: number;
   statusText?: string;
   body?: unknown;
+  headers?: Record<string, string>;
+  binaryBody?: Uint8Array;
 }) => ({
   ok: options.ok,
   status: options.status,
   statusText: options.statusText ?? '',
+  headers: {
+    get: (name: string) => options.headers?.[name.toLowerCase()] ?? options.headers?.[name] ?? null,
+  },
   text: () => Promise.resolve(options.body == null ? '' : JSON.stringify(options.body)),
+  arrayBuffer: () => Promise.resolve((options.binaryBody ?? new Uint8Array()).buffer),
 });
 
 describe('EnhanceService', () => {
@@ -192,6 +198,42 @@ describe('EnhanceService', () => {
     );
   });
 
+  it('should query website server domains using the documented endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: true,
+        status: 200,
+        body: { emailServerDomains: ['mail.example.com'] },
+      })
+    );
+    global.fetch = fetchMock;
+
+    await EnhanceService.getWebsiteServerDomains('org-123', 'web-123');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/server_domains',
+      expect.objectContaining({ method: 'GET' })
+    );
+  });
+
+  it('should query email hostname overrides using the documented endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockResponse({
+        ok: true,
+        status: 200,
+        body: { domain: 'mail.example.com' },
+      })
+    );
+    global.fetch = fetchMock;
+
+    await EnhanceService.getEmailServerHostnameOverride('server-123');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.enhance.test/api/servers/server-123/email/hostname_override',
+      expect.objectContaining({ method: 'GET' })
+    );
+  });
+
   it('should patch DNS records using the documented endpoint', async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 204 }));
     global.fetch = fetchMock;
@@ -244,6 +286,96 @@ describe('EnhanceService', () => {
     );
   });
 
+  it('should apply backup storageKind and includeEmails as query parameters', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200, body: {} }));
+    global.fetch = fetchMock;
+
+    await EnhanceService.getWebsiteBackup('org-123', 'web-123', 'backup-123', { storageKind: 's3' });
+    await EnhanceService.restoreWebsiteBackup('org-123', 'web-123', 'backup-123', {
+      includeEmails: true,
+      storageKind: 'enhance',
+      restoreFiles: false,
+    });
+    await EnhanceService.deleteWebsiteBackup('org-123', 'web-123', 'backup-123', { storageKind: 's3' });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/backups/backup-123?storageKind=s3',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/backups/backup-123?includeEmails=true&storageKind=enhance',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ restoreFiles: false }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/backups/backup-123?storageKind=s3',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('should call restore status and backup directory tree endpoints', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200, body: [] }));
+    global.fetch = fetchMock;
+
+    await EnhanceService.getWebsiteRestoreStatus('org-123', 'web-123', 'backup-123');
+    await EnhanceService.getWebsiteBackupDirectoryTree('org-123', 'web-123', 'backup-123', 'public_html');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/backups/backup-123/restore_status',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/backups/backup-123/directory_tree?offset=public_html',
+      expect.objectContaining({ method: 'GET' }),
+    );
+  });
+
+  it('should download and upload website backup archives as gzip', async () => {
+    const archive = new Uint8Array([31, 139, 8]);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        mockResponse({
+          ok: true,
+          status: 200,
+          headers: {
+            'content-type': 'application/gzip',
+            'content-disposition': 'attachment; filename="website.tar.gz"',
+          },
+          binaryBody: archive,
+        }),
+      )
+      .mockResolvedValueOnce(mockResponse({ ok: true, status: 200, binaryBody: new Uint8Array() }));
+    global.fetch = fetchMock;
+
+    const download = await EnhanceService.downloadWebsiteBackup('web-123', 'email');
+    await EnhanceService.uploadWebsiteBackup('web-123', Buffer.from(archive));
+
+    expect(download.data).toEqual(Buffer.from(archive));
+    expect(download.contentDisposition).toBe('attachment; filename="website.tar.gz"');
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api.enhance.test/api/websites/web-123/backup/download?backupDownloadKind=email',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.enhance.test/api/websites/web-123/backup/upload',
+      expect.objectContaining({
+        method: 'POST',
+        body: Buffer.from(archive),
+        headers: expect.objectContaining({ 'Content-Type': 'application/gzip' }),
+      }),
+    );
+  });
+
   it('should send backups disabled and force SSL as bare booleans', async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200, body: {} }));
     global.fetch = fetchMock;
@@ -266,6 +398,83 @@ describe('EnhanceService', () => {
         method: 'PUT',
         body: JSON.stringify(false),
       })
+    );
+  });
+
+  it('should use documented WordPress refresh cache and theme auto-update payloads', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200, body: {} }));
+    global.fetch = fetchMock;
+
+    await EnhanceService.getWordpressPlugins('org-123', 'web-123', 'wp-app', { refreshCache: true });
+    await EnhanceService.getWordpressThemes('org-123', 'web-123', 'wp-app', { refreshCache: true });
+    await EnhanceService.setWordpressThemeAutoUpdateStatus('org-123', 'web-123', 'wp-app', 'twentytwentyfive', true);
+    await EnhanceService.getWordpressMaintenanceMode('wp-app');
+    await EnhanceService.setWordpressMaintenanceMode('wp-app', 'activate');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/apps/wp-app/wordpress/plugins?refreshCache=true',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/apps/wp-app/wordpress/themes?refreshCache=true',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/apps/wp-app/wordpress/themes/twentytwentyfive/auto_update',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify(true),
+      })
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      'https://api.enhance.test/api/v2/apps/wp-app/wordpress/maintenance-mode',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      5,
+      'https://api.enhance.test/api/v2/apps/wp-app/wordpress/maintenance-mode',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify('activate'),
+      }),
+    );
+  });
+
+  it('should use documented WordPress wp-config endpoints for debug flags', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200, body: { WpDebug: false } }));
+    global.fetch = fetchMock;
+
+    await EnhanceService.getWordpressConfig('org-123', 'web-123', 'wp-app', 'WpDebug');
+    await EnhanceService.setWordpressConfig('org-123', 'web-123', 'wp-app', { WpDebugLog: true });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/apps/wp-app/wordpress/wp-config/WpDebug',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/apps/wp-app/wordpress/wp-config',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ WpDebugLog: true }),
+      }),
+    );
+  });
+
+  it('should pass refreshCache to subscription bandwidth endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200, body: 0 }));
+    global.fetch = fetchMock;
+
+    await EnhanceService.getSubscriptionBandwidth('org-123', 'sub-123', { refreshCache: true });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.enhance.test/api/orgs/org-123/subscriptions/sub-123/bandwidth?refreshCache=true',
+      expect.objectContaining({ method: 'GET' }),
     );
   });
 

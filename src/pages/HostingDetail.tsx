@@ -30,6 +30,7 @@ import SslTab from "./hosting-detail/SslTab";
 import MysqlTab from "./hosting-detail/MysqlTab";
 import AppsTab from "./hosting-detail/AppsTab";
 import WordPressTab from "./hosting-detail/WordPressTab";
+import JoomlaTab from "./hosting-detail/JoomlaTab";
 import RuntimeTab from "./hosting-detail/RuntimeTab";
 import BackupsTab from "./hosting-detail/BackupsTab";
 import CronTab from "./hosting-detail/CronTab";
@@ -45,7 +46,8 @@ const tabs = [
   { id: "mysql", label: "MySQL", icon: Database },
   { id: "apps", label: "Apps", icon: Puzzle },
   { id: "wordpress", label: "WordPress", icon: Globe },
-  { id: "runtime", label: "Runtime", icon: Zap },
+  { id: "joomla", label: "Joomla", icon: Puzzle },
+  { id: "runtime", label: "Node.js", icon: Zap },
   { id: "backups", label: "Backups", icon: Archive },
   { id: "cron", label: "Cron", icon: Clock },
   { id: "ssh", label: "SSH", icon: Key },
@@ -173,6 +175,7 @@ export default function HostingDetail() {
             {activeTab === "mysql" && <MysqlTab subscriptionId={id} />}
             {activeTab === "apps" && <AppsTab subscriptionId={id} />}
             {activeTab === "wordpress" && <WordPressTab subscriptionId={id} />}
+            {activeTab === "joomla" && <JoomlaTab subscriptionId={id} />}
             {activeTab === "runtime" && <RuntimeTab subscriptionId={id} />}
             {activeTab === "backups" && <BackupsTab subscriptionId={id} />}
             {activeTab === "cron" && <CronTab subscriptionId={id} />}

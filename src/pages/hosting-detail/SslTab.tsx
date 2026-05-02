@@ -31,12 +31,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import MailSslCard from "./ssl-tab/MailSslCard";
+import { mergeDomainsForMailSsl } from "./ssl-tab/mergeMailSslDomainLists";
 
 interface Domain {
   id: string;
   domain: string;
   sslActive?: boolean;
   forceSsl?: boolean;
+  is_primary?: boolean;
 }
 
 interface DomainSslStatus {
@@ -50,6 +52,8 @@ interface SslTabProps {
 
 export default function SslTab({ subscriptionId }: SslTabProps) {
   const [domains, setDomains] = useState<Domain[]>([]);
+  /** Full mapping list for mail TLS; may include aliases/previews omitted from `withSsl` listing. */
+  const [mailSslDomains, setMailSslDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,11 +70,14 @@ export default function SslTab({ subscriptionId }: SslTabProps) {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiClient.get<{ domains?: Domain[] }>(
-        `/hosting/dns/${subscriptionId}/domains?withSsl=true`
-      );
-      const list = data.domains || [];
+      const [withSslPayload, allPayload] = await Promise.all([
+        apiClient.get<{ domains?: Domain[] }>(`/hosting/dns/${subscriptionId}/domains?withSsl=true`),
+        apiClient.get<{ domains?: Domain[] }>(`/hosting/dns/${subscriptionId}/domains`),
+      ]);
+      const list = withSslPayload.domains || [];
+      const allMappings = allPayload.domains || [];
       setDomains(list);
+      setMailSslDomains(mergeDomainsForMailSsl(list, allMappings));
 
       const initialMap: Record<string, DomainSslStatus> = {};
       for (const d of list) {
@@ -82,6 +89,7 @@ export default function SslTab({ subscriptionId }: SslTabProps) {
       setSslStatusMap(initialMap);
     } catch (err: any) {
       setError(err?.message || "Failed to load domains");
+      setMailSslDomains([]);
     } finally {
       setLoading(false);
     }
@@ -307,7 +315,7 @@ export default function SslTab({ subscriptionId }: SslTabProps) {
       </Dialog>
       
       {/* Mail SSL Section */}
-      <MailSslCard subscriptionId={subscriptionId} domains={domains} />
+      <MailSslCard subscriptionId={subscriptionId} domains={mailSslDomains} />
     </div>
   );
 }

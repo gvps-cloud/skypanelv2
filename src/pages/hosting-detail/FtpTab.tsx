@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Loader2,
   Plus,
@@ -33,6 +33,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface FtpUser {
   account: string;
@@ -41,6 +42,16 @@ interface FtpUser {
 
 interface FtpTabProps {
   subscriptionId: string;
+}
+
+function normalizeFtpAccount(value: string) {
+  const trimmed = value.trim();
+  const atIndex = trimmed.indexOf("@");
+  return atIndex >= 0 ? trimmed.slice(0, atIndex).trim() : trimmed;
+}
+
+function normalizeFtpHomeDir(value: string) {
+  return value.trim().replace(/\\/g, "/").replace(/^\/+/, "");
 }
 
 export default function FtpTab({ subscriptionId }: FtpTabProps) {
@@ -53,6 +64,7 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
     account: "",
     password: "",
     homeDir: "",
+    createHome: true,
   });
   const [creating, setCreating] = useState(false);
 
@@ -65,7 +77,7 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
 
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -78,14 +90,18 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [subscriptionId]);
+
   useEffect(() => {
     if (!subscriptionId) return;
     fetchUsers();
-  }, [subscriptionId]);
+  }, [subscriptionId, fetchUsers]);
 
   const handleCreate = async () => {
-    if (!createForm.account.trim()) {
+    const account = normalizeFtpAccount(createForm.account);
+    const homeDir = normalizeFtpHomeDir(createForm.homeDir);
+
+    if (!account) {
       toast.error("Account is required");
       return;
     }
@@ -95,13 +111,13 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
     }
     try {
       setCreating(true);
-      await apiClient.post(`/hosting/ftp/${subscriptionId}/ftp-users`, {
-        account: createForm.account.trim(),
+      await apiClient.post(`/hosting/ftp/${subscriptionId}/ftp-users?createHome=${createForm.createHome ? "true" : "false"}`, {
+        account,
         password: createForm.password,
-        homeDir: createForm.homeDir.trim(),
+        homeDir,
       });
       toast.success("FTP user created");
-      setCreateForm({ account: "", password: "", homeDir: "" });
+      setCreateForm({ account: "", password: "", homeDir: "", createHome: true });
       setIsCreateOpen(false);
       await fetchUsers();
     } catch (err: any) {
@@ -118,13 +134,14 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
 
   const handleEdit = async () => {
     if (!editUser) return;
+    const homeDir = normalizeFtpHomeDir(editForm.homeDir);
     try {
       setEditing(true);
       await apiClient.patch(
         `/hosting/ftp/${subscriptionId}/ftp-users/${encodeURIComponent(editUser.account)}`,
         {
           password: editForm.password || undefined,
-          homeDir: editForm.homeDir.trim(),
+          homeDir,
         }
       );
       toast.success("FTP user updated");
@@ -140,8 +157,9 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
   const handleDelete = async (username: string) => {
     try {
       setDeletingUser(username);
+      const deleteHome = confirm("Delete this user's home directory too? This is only allowed when it is inside the website home.");
       await apiClient.delete(
-        `/hosting/ftp/${subscriptionId}/ftp-users/${encodeURIComponent(username)}`
+        `/hosting/ftp/${subscriptionId}/ftp-users/${encodeURIComponent(username)}?deleteHome=${deleteHome ? "true" : "false"}`
       );
       toast.success("FTP user deleted");
       await fetchUsers();
@@ -249,8 +267,9 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Account</label>
+              <label htmlFor="ftp-account" className="text-sm font-medium">Account</label>
               <Input
+                id="ftp-account"
                 value={createForm.account}
                 onChange={(e) =>
                   setCreateForm((prev) => ({
@@ -260,10 +279,14 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
                 }
                 placeholder="ftpuser"
               />
+              <p className="text-xs text-muted-foreground">
+                Enter only the username. Enhance appends the website primary domain automatically.
+              </p>
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Password</label>
+              <label htmlFor="ftp-password" className="text-sm font-medium">Password</label>
               <Input
+                id="ftp-password"
                 type="password"
                 value={createForm.password}
                 onChange={(e) =>
@@ -276,17 +299,36 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Home Directory</label>
+              <label htmlFor="ftp-home-dir" className="text-sm font-medium">Home Directory</label>
               <Input
+                id="ftp-home-dir"
                 value={createForm.homeDir}
                 onChange={(e) =>
                   setCreateForm((prev) => ({
                     ...prev,
-                    homeDir: e.target.value,
+                    homeDir: normalizeFtpHomeDir(e.target.value),
                   }))
                 }
-                placeholder="/public_html"
+                placeholder="public_html"
               />
+              <p className="text-xs text-muted-foreground">
+                Use a relative path. Leave blank to use the website base directory.
+              </p>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg border p-3">
+              <Checkbox
+                id="ftp-create-home"
+                checked={createForm.createHome}
+                onCheckedChange={(checked) =>
+                  setCreateForm((prev) => ({ ...prev, createHome: checked === true }))
+                }
+              />
+              <div className="space-y-1">
+                <label htmlFor="ftp-create-home" className="text-sm font-medium">Create home directory if missing</label>
+                <p className="text-xs text-muted-foreground">
+                  Enhance will try to create the requested home directory during user creation.
+                </p>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -324,8 +366,9 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">New Password</label>
+              <label htmlFor="ftp-edit-password" className="text-sm font-medium">New Password</label>
               <Input
+                id="ftp-edit-password"
                 type="password"
                 value={editForm.password}
                 onChange={(e) =>
@@ -338,17 +381,21 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Home Directory</label>
+              <label htmlFor="ftp-edit-home-dir" className="text-sm font-medium">Home Directory</label>
               <Input
+                id="ftp-edit-home-dir"
                 value={editForm.homeDir}
                 onChange={(e) =>
                   setEditForm((prev) => ({
                     ...prev,
-                    homeDir: e.target.value,
+                    homeDir: normalizeFtpHomeDir(e.target.value),
                   }))
                 }
-                placeholder="/public_html"
+                placeholder="public_html"
               />
+              <p className="text-xs text-muted-foreground">
+                Use a relative path. Leave blank to use the website base directory.
+              </p>
             </div>
           </div>
           <DialogFooter>

@@ -54,6 +54,11 @@ interface InstalledApp {
   path?: string;
 }
 
+interface Domain {
+  id: string;
+  domain: string;
+}
+
 interface AppsTabProps {
   subscriptionId: string;
 }
@@ -61,17 +66,19 @@ interface AppsTabProps {
 export default function AppsTab({ subscriptionId }: AppsTabProps) {
   const [installable, setInstallable] = useState<InstallableApp[]>([]);
   const [installed, setInstalled] = useState<InstalledApp[]>([]);
+  const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const [installOpen, setInstallOpen] = useState(false);
-  const [selectedApp, setSelectedApp] = useState("");
+  const [selectedAppKey, setSelectedAppKey] = useState("");
   const [adminUsername, setAdminUsername] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [installPath, setInstallPath] = useState("");
+  const [domainId, setDomainId] = useState("");
   const [installing, setInstalling] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -79,12 +86,16 @@ export default function AppsTab({ subscriptionId }: AppsTabProps) {
     setRefreshing(true);
     setError(null);
     try {
-      const [instRes, installedRes] = await Promise.all([
+      const [instRes, installedRes, domainRes] = await Promise.all([
         apiClient.get<{ apps?: InstallableApp[] }>(`/hosting/apps/${subscriptionId}/installable`),
         apiClient.get<{ apps?: InstalledApp[] }>(`/hosting/apps/${subscriptionId}/apps`),
+        apiClient.get<{ domains?: Domain[] }>(`/hosting/dns/${subscriptionId}/domains`),
       ]);
       setInstallable(instRes.apps ?? []);
       setInstalled(installedRes.apps ?? []);
+      const mappedDomains = domainRes.domains ?? [];
+      setDomains(mappedDomains);
+      setDomainId((prev) => prev || mappedDomains[0]?.id || "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load apps");
     } finally {
@@ -98,6 +109,7 @@ export default function AppsTab({ subscriptionId }: AppsTabProps) {
   }, [loadData]);
 
   const handleInstall = async () => {
+    const selectedApp = installable.find((app) => `${app.app}:${app.version}` === selectedAppKey);
     if (!subscriptionId || !selectedApp || !adminUsername || !adminPassword || !adminEmail) {
       toast.error("All fields are required");
       return;
@@ -105,19 +117,22 @@ export default function AppsTab({ subscriptionId }: AppsTabProps) {
     setInstalling(true);
     try {
       await apiClient.post(`/hosting/apps/${subscriptionId}/apps`, {
-        app: selectedApp,
+        app: selectedApp.app,
+        version: selectedApp.version,
         adminUsername: adminUsername.trim(),
         adminPassword: adminPassword.trim(),
         adminEmail: adminEmail.trim(),
         path: installPath.trim() || undefined,
+        domainId: domainId || undefined,
       });
-      toast.success(`${selectedApp} installed successfully`);
+      toast.success(`${selectedApp.app} ${selectedApp.version} installed successfully`);
       setInstallOpen(false);
-      setSelectedApp("");
+      setSelectedAppKey("");
       setAdminUsername("");
       setAdminPassword("");
       setAdminEmail("");
       setInstallPath("");
+      setDomainId(domains[0]?.id ?? "");
       await loadData();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to install app");
@@ -129,9 +144,10 @@ export default function AppsTab({ subscriptionId }: AppsTabProps) {
   const handleDelete = async (appId: string, appName: string) => {
     if (!subscriptionId) return;
     if (!confirm(`Delete ${appName} installation? This will remove all data.`)) return;
+    const backupBeforeOperation = confirm("Create an Enhance backup before deleting this app?");
     setActionLoading(appId);
     try {
-      await apiClient.delete(`/hosting/apps/${subscriptionId}/apps/${appId}`);
+      await apiClient.delete(`/hosting/apps/${subscriptionId}/apps/${appId}?backupBeforeOperation=${backupBeforeOperation ? "true" : "false"}`);
       toast.success(`${appName} deleted`);
       await loadData();
     } catch (err) {
@@ -267,11 +283,24 @@ export default function AppsTab({ subscriptionId }: AppsTabProps) {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Application</Label>
-              <Select value={selectedApp} onValueChange={setSelectedApp}>
+              <Select value={selectedAppKey} onValueChange={setSelectedAppKey}>
                 <SelectTrigger><SelectValue placeholder="Select app" /></SelectTrigger>
                 <SelectContent>
                   {installable.map((app) => (
-                    <SelectItem key={app.app} value={app.app}>{app.app} {app.version}</SelectItem>
+                    <SelectItem key={`${app.app}-${app.version}`} value={`${app.app}:${app.version}`}>
+                      {app.app} {app.version}{app.isLatest ? " (latest)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Domain</Label>
+              <Select value={domainId} onValueChange={setDomainId}>
+                <SelectTrigger><SelectValue placeholder="Select domain" /></SelectTrigger>
+                <SelectContent>
+                  {domains.map((domain) => (
+                    <SelectItem key={domain.id} value={domain.id}>{domain.domain}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -296,7 +325,7 @@ export default function AppsTab({ subscriptionId }: AppsTabProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setInstallOpen(false)}>Cancel</Button>
-            <Button size="sm" onClick={handleInstall} disabled={installing || !selectedApp || !adminUsername || !adminPassword || !adminEmail}>
+            <Button size="sm" onClick={handleInstall} disabled={installing || !selectedAppKey || !adminUsername || !adminPassword || !adminEmail}>
               {installing && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}Install
             </Button>
           </DialogFooter>

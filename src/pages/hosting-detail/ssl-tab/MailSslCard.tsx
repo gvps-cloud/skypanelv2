@@ -12,7 +12,11 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-interface Domain { id: string; domain: string; }
+interface Domain {
+  id: string;
+  domain: string;
+  is_primary?: boolean;
+}
 
 interface Props {
   subscriptionId: string;
@@ -24,9 +28,12 @@ export default function MailSslCard({ subscriptionId, domains }: Props) {
   const [issuing, setIssuing] = useState(false);
 
   useEffect(() => {
-    if (domains.length > 0 && !selectedDomainId) {
-      setSelectedDomainId(domains[0].id);
+    if (domains.length === 0) {
+      setSelectedDomainId("");
+      return;
     }
+    const exists = domains.some((d) => d.id === selectedDomainId);
+    if (!exists) setSelectedDomainId(domains[0].id);
   }, [domains, selectedDomainId]);
 
   const handleIssue = async () => {
@@ -51,7 +58,9 @@ export default function MailSslCard({ subscriptionId, domains }: Props) {
           <Mail className="h-5 w-5 text-primary" />
           <span>Mail Domain SSL</span>
         </h2>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-1">Issue a Let's Encrypt certificate for mail.yourdomain.</p>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+          Issue Let&apos;s Encrypt for the mail host <span className="font-medium">mail.</span> plus each mapped hostname below (primary, aliases, preview/staging).
+        </p>
       </div>
       <div className="px-6 sm:px-8 py-5 sm:py-6">
         <div className="flex items-end gap-3">
@@ -65,6 +74,7 @@ export default function MailSslCard({ subscriptionId, domains }: Props) {
                 {domains.map((d) => (
                   <SelectItem key={d.id} value={d.id}>
                     mail.{d.domain}
+                    {d.is_primary ? " (Primary)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

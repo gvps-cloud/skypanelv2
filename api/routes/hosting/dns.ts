@@ -109,11 +109,73 @@ router.get("/:id/domains/:domainId/dns", requireOrgPermission("hosting_view"), a
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const zone = await EnhanceService.getWebsiteDomainDnsZone(enhanceWebsiteOrgId, websiteId, req.params.domainId);
     res.json({
-      domain: zone?.domain ?? "",
+      domain: zone?.domain ?? zone?.origin ?? "",
+      origin: zone?.origin ?? zone?.domain ?? "",
+      soa: zone?.soa ?? null,
+      dnssecDsRecords: zone?.dnssecDsRecords ?? null,
+      dnssecDnskeyRecords: zone?.dnssecDnskeyRecords ?? null,
       records: Array.isArray(zone?.records) ? zone.records.map(normalizeDnsRecord) : [],
     });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get DNS zone" });
+  }
+});
+
+router.patch("/:id/domains/:domainId/dns", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.updateWebsiteDomainDnsZone(enhanceWebsiteOrgId, websiteId, req.params.domainId, req.body);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to update DNS zone" });
+  }
+});
+
+router.get("/:id/domains/:domainId/dns-query", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.getWebsiteDomainDnsQuery(enhanceWebsiteOrgId, websiteId, req.params.domainId, {
+      resolveDepth: typeof req.query.resolveDepth === "string" ? req.query.resolveDepth : undefined,
+    });
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to query DNS" });
+  }
+});
+
+router.post("/:id/domains/:domainId/dnssec", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.enableWebsiteDomainDnssec(enhanceWebsiteOrgId, websiteId, req.params.domainId);
+    res.json(result ?? { success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to enable DNSSEC" });
+  }
+});
+
+router.delete("/:id/domains/:domainId/dnssec", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.disableWebsiteDomainDnssec(enhanceWebsiteOrgId, websiteId, req.params.domainId);
+    res.json(result ?? { success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to disable DNSSEC" });
   }
 });
 
@@ -141,7 +203,7 @@ router.patch("/:id/domains/:domainId/dns/records/:recordId", requireOrgPermissio
     const result = await EnhanceService.updateWebsiteDomainDnsZoneRecord(
       enhanceWebsiteOrgId, websiteId, req.params.domainId, req.params.recordId, toEnhanceDnsRecord(req.body),
     );
-    res.json(normalizeDnsRecord(result));
+    res.json(result ? normalizeDnsRecord(result) : { success: true });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to update DNS record" });
   }

@@ -110,6 +110,19 @@ router.get("/:id/domains/:domainId/mail_ssl", requireOrgPermission("hosting_view
   }
 });
 
+router.post("/:id/domains/:domainId/mail_ssl/upload", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const result = await EnhanceService.uploadWebsiteDomainMailSsl(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId, req.body);
+    res.status(201).json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to upload mail SSL certificate" });
+  }
+});
+
 router.put("/:id/domains/:domainId/force_ssl", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
