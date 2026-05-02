@@ -3715,7 +3715,12 @@ const Admin: React.FC = () => {
 
         <SectionPanel section="fraud-protection" activeSection={activeTab}>
           <div className="space-y-6">
-            <h2 className="text-xl font-semibold">Fraud Protection</h2>
+            <div>
+              <h2 className="text-xl font-semibold">Fraud Protection</h2>
+              <p className="text-sm text-muted-foreground">
+                Monitor and manage FraudLabs Pro fraud screening results
+              </p>
+            </div>
             <FraudCheckList />
           </div>
         </SectionPanel>

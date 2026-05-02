@@ -6,7 +6,7 @@ export interface FraudScreenData {
   email?: string;
   amount?: number;
   currency?: string;
-  checkType: 'registration' | 'wallet_topup' | 'vps_purchase' | 'hosting_purchase';
+  checkType: 'registration' | 'wallet_topup';
   userId?: string;
   organizationId?: string;
 }
