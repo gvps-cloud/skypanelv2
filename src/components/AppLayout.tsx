@@ -251,6 +251,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     () => location.pathname.startsWith("/admin"),
     [location.pathname],
   );
+  const isDashboardRoute = location.pathname === "/dashboard";
 
   // State for VPS and related search data
   const [vpsInstances, setVpsInstances] = useState<VPSInstance[]>([]);
@@ -1128,7 +1129,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </header>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-auto">
+        <div
+          className={cn(
+            "flex-1 overflow-auto",
+            isDashboardRoute && "pb-16",
+          )}
+        >
           <Card className="h-full">
             <CardContent className="flex flex-1 flex-col gap-4 p-3 sm:p-4 md:p-6 pt-4 sm:pt-6 md:pt-6">
               <main className="flex-1 min-h-0">{children}</main>
@@ -1136,7 +1142,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </Card>
         </div>
 
-        <footer className="border-t border-border/60 bg-background px-4 py-3 sm:px-6">
+        <footer
+          className={cn(
+            "border-t border-border/60 bg-background px-4 py-3 sm:px-6",
+            isDashboardRoute &&
+              cn(
+                "fixed bottom-0 left-0 right-0 z-40 bg-background/95 shadow-[0_-12px_30px_-24px_hsl(var(--foreground))] backdrop-blur supports-[backdrop-filter]:bg-background/80",
+                isSidebarOpen
+                  ? "md:left-[--sidebar-width]"
+                  : "md:left-[--sidebar-width-icon]",
+              ),
+          )}
+        >
           <div className="flex items-center justify-center sm:justify-end">
             <FooterPartnerLinks />
           </div>
