@@ -113,6 +113,41 @@ export class EnhanceService {
   }
 
   // ============================================================
+  // DNS Nameservers
+  // ============================================================
+
+  /**
+   * Get DNS nameserver info: returns the DNS pool IPs (from /v2/servers/dns_pool)
+   * and server hostnames/IPs for servers with the DNS role (from /servers).
+   */
+  static async getDnsNameservers(): Promise<{ ips: string[]; servers: { hostname: string; ips: string[] }[] }> {
+    // Fetch both in parallel
+    const [dnsPoolIps, serversResponse] = await Promise.all([
+      this.request<string[]>(`/v2/servers/dns_pool`).catch(() => []),
+      this.request<{ items?: any[]; total?: number } | any[]>(`/servers`),
+    ]);
+
+    const ips: string[] = Array.isArray(dnsPoolIps) ? dnsPoolIps : [];
+
+    // Normalize servers response
+    const serverList = Array.isArray(serversResponse)
+      ? serversResponse
+      : serversResponse?.items ?? [];
+
+    // Filter to servers that have the DNS role enabled
+    const dnsServers = serverList
+      .filter((s: any) => s.roles?.dns === 'enabled' || s.roles?.dns?.state === 'enabled')
+      .map((s: any) => ({
+        hostname: s.hostname || '',
+        ips: (Array.isArray(s.ips) ? s.ips : [])
+          .filter((ip: any) => ip.isPrimary || true) // include all IPs
+          .map((ip: any) => typeof ip === 'string' ? ip : ip.ip),
+      }));
+
+    return { ips, servers: dnsServers };
+  }
+
+  // ============================================================
   // Staging Domains
   // ============================================================
   static async getStagingDomain(orgId: string): Promise<string | null> {

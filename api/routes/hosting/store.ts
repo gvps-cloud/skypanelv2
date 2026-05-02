@@ -81,6 +81,20 @@ router.get("/staging-domain", requireOrgPermission("hosting_view"), async (_req:
 });
 
 /**
+ * GET /api/hosting/nameservers
+ * Return DNS nameserver IPs and server hostnames for domain configuration
+ */
+router.get("/nameservers", requireOrgPermission("hosting_view"), async (_req: Request, res: Response) => {
+  try {
+    const nameservers = await EnhanceService.getDnsNameservers();
+    res.json(nameservers);
+  } catch (error: any) {
+    console.error("Failed to get DNS nameservers (non-fatal):", error?.message || error);
+    res.json({ ips: [], servers: [] });
+  }
+});
+
+/**
  * GET /api/hosting/services
  * List organization's hosting subscriptions
  */
