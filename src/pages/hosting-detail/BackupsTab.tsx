@@ -143,7 +143,7 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
     if (!subscriptionId || !restoreBackupId) return;
     setRestoring(true);
     try {
-      await apiClient.post(`/hosting/backups/${subscriptionId}/backups/${restoreBackupId}/restore`, {});
+      await apiClient.put(`/hosting/backups/${subscriptionId}/backups/${restoreBackupId}`, {});
       toast.success("Restore initiated");
       setRestoreOpen(false);
     } catch (err) {

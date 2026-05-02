@@ -45,6 +45,10 @@ async function resolveSubscription(req: Request, res: Response) {
     res.status(404).json({ error: "Service not found" });
     return null;
   }
+  if (!subscription.enhance_website_id) {
+    res.status(400).json({ error: "Website not yet provisioned" });
+    return null;
+  }
   return subscription;
 }
 

@@ -14,9 +14,13 @@ import {
   Archive,
   Clock,
   Key,
+  ExternalLink,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import OverviewTab from "./hosting-detail/OverviewTab";
 import WebTab from "./hosting-detail/WebTab";
 import DnsTab from "./hosting-detail/DnsTab";
@@ -52,6 +56,7 @@ export default function HostingDetail() {
   const [activeTab, setActiveTab] = useState("overview");
   const [service, setService] = useState<Record<string, any> | null>(null);
   const [serviceLoading, setServiceLoading] = useState(true);
+  const [ssoLoading, setSsoLoading] = useState(false);
 
   const loadService = useCallback(async () => {
     if (!id) return;
@@ -72,6 +77,23 @@ export default function HostingDetail() {
     loadService();
   }, [loadService]);
 
+  const handleSso = async () => {
+    setSsoLoading(true);
+    try {
+      const data = await apiClient.post<{ url: string }>("/hosting/sso", {});
+      if (data.url) {
+        window.open(data.url, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      toast.error("No Enhance panel link was returned");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to open hosting panel");
+    } finally {
+      setSsoLoading(false);
+    }
+  };
+
   if (!id) {
     return (
       <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -82,16 +104,26 @@ export default function HostingDetail() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="flex items-center gap-2 mb-8">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-card text-card-foreground shadow-sm">
-          <Activity className="h-5 w-5 text-primary" />
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-card text-card-foreground shadow-sm">
+            <Activity className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {service?.domain || service?.plan_name || "Hosting Details"}
+            </h1>
+            <p className="text-sm text-muted-foreground">Manage your hosting subscription and website settings.</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {service?.domain || service?.plan_name || "Hosting Details"}
-          </h1>
-          <p className="text-sm text-muted-foreground">Manage your hosting subscription and website settings.</p>
-        </div>
+        <Button variant="outline" onClick={handleSso} disabled={serviceLoading || ssoLoading || !service}>
+          {ssoLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <ExternalLink className="mr-2 h-4 w-4" />
+          )}
+          Open Enhance Panel
+        </Button>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">

@@ -21,12 +21,23 @@ async function resolveSubscription(req: Request, res: Response) {
   return subscription;
 }
 
+function requireWebsiteId(subscription: any, res: Response): string | null {
+  if (!subscription.enhance_website_id) {
+    res.status(400).json({ error: "Website not yet provisioned" });
+    return null;
+  }
+
+  return String(subscription.enhance_website_id);
+}
+
 router.get("/:id/crontab", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.getCrontab(enhanceWebsiteOrgId, sub.enhance_website_id);
+    const result = await EnhanceService.getCrontab(enhanceWebsiteOrgId, websiteId);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get crontab" });
@@ -36,9 +47,11 @@ router.get("/:id/crontab", requireOrgPermission("hosting_view"), async (req: Req
 router.patch("/:id/crontab", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.updateCrontab(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
+    const result = await EnhanceService.updateCrontab(enhanceWebsiteOrgId, websiteId, req.body);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to update crontab" });
@@ -48,9 +61,11 @@ router.patch("/:id/crontab", requireOrgPermission("hosting_manage"), async (req:
 router.delete("/:id/crontab", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    await EnhanceService.deleteCrontab(enhanceWebsiteOrgId, sub.enhance_website_id);
+    await EnhanceService.deleteCrontab(enhanceWebsiteOrgId, websiteId);
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to delete crontab" });

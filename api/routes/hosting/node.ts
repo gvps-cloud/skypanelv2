@@ -21,12 +21,23 @@ async function resolveSubscription(req: Request, res: Response) {
   return subscription;
 }
 
+function requireWebsiteId(subscription: any, res: Response): string | null {
+  if (!subscription.enhance_website_id) {
+    res.status(400).json({ error: "Website not yet provisioned" });
+    return null;
+  }
+
+  return String(subscription.enhance_website_id);
+}
+
 // Persistent Apps (Runtime / Background processes)
 router.get("/:id/persistent-apps", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
-    const apps = await EnhanceService.getWebsitePersistentApps(sub.enhance_website_id);
+    const apps = await EnhanceService.getWebsitePersistentApps(websiteId);
     res.json(apps);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get persistent apps" });
@@ -36,8 +47,10 @@ router.get("/:id/persistent-apps", requireOrgPermission("hosting_view"), async (
 router.post("/:id/persistent-apps", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
-    const result = await EnhanceService.createWebsitePersistentApp(sub.enhance_website_id, req.body);
+    const result = await EnhanceService.createWebsitePersistentApp(websiteId, req.body);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to create persistent app" });
@@ -47,8 +60,10 @@ router.post("/:id/persistent-apps", requireOrgPermission("hosting_manage"), asyn
 router.patch("/:id/persistent-apps/:appId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
-    const result = await EnhanceService.updateWebsitePersistentApp(sub.enhance_website_id, req.params.appId, req.body);
+    const result = await EnhanceService.updateWebsitePersistentApp(websiteId, req.params.appId, req.body);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to update persistent app" });
@@ -58,8 +73,10 @@ router.patch("/:id/persistent-apps/:appId", requireOrgPermission("hosting_manage
 router.delete("/:id/persistent-apps/:appId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
-    await EnhanceService.deleteWebsitePersistentApp(sub.enhance_website_id, req.params.appId);
+    await EnhanceService.deleteWebsitePersistentApp(websiteId, req.params.appId);
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to delete persistent app" });
@@ -69,8 +86,10 @@ router.delete("/:id/persistent-apps/:appId", requireOrgPermission("hosting_manag
 router.get("/:id/persistent-apps/:appId/log", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
-    const result = await EnhanceService.getWebsitePersistentAppLog(sub.enhance_website_id, req.params.appId);
+    const result = await EnhanceService.getWebsitePersistentAppLog(websiteId, req.params.appId);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get persistent app log" });

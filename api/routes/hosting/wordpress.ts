@@ -15,7 +15,7 @@ import { unwrapItems } from "../../lib/unwrapItems.js";
 function normalizeWordpressApp(app: any) {
   const path = app?.path ?? "";
   return {
-    id: String(app?.id ?? ""),
+    id: String(app?.id ?? app?.appId ?? app?.app_id ?? ""),
     name: path ? `WordPress (${path})` : "WordPress",
     path,
     version: app?.version ?? null,
@@ -62,6 +62,10 @@ async function resolveSubscription(req: Request, res: Response) {
     res.status(404).json({ error: "Service not found" });
     return null;
   }
+  if (!subscription.enhance_website_id) {
+    res.status(400).json({ error: "Website not yet provisioned" });
+    return null;
+  }
   return subscription;
 }
 
@@ -71,6 +75,15 @@ router.get("/:id/wordpress", requireOrgPermission("hosting_view"), async (req: R
   if (!sub) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const discovered = await EnhanceService.getWordpressInstallations(enhanceWebsiteOrgId, sub.enhance_website_id);
+    const discoveredInstallations = unwrapItems(discovered)
+      .map(normalizeWordpressApp)
+      .filter((app) => app.id);
+
+    if (discoveredInstallations.length > 0) {
+      return res.json({ installations: discoveredInstallations });
+    }
+
     const apps = await EnhanceService.getWebsiteApps(enhanceWebsiteOrgId, sub.enhance_website_id);
     res.json({
       installations: unwrapItems(apps)

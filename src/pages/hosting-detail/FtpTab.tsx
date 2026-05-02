@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Loader2,
   Plus,
@@ -33,7 +33,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import FileManagerCard from "./web-tab/FileManagerCard";
 
 interface FtpUser {
   account: string;
@@ -65,8 +64,6 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
   const [editing, setEditing] = useState(false);
 
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
-  
-  const [filerdAddress, setFilerdAddress] = useState<string | undefined>();
 
   const fetchUsers = async () => {
     try {
@@ -82,23 +79,10 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
       setLoading(false);
     }
   };
-  
-  const loadWebsiteMeta = useCallback(async () => {
-    if (!subscriptionId) return;
-    try {
-      const data = await apiClient.get<Record<string, any>>(
-        `/hosting/web/${subscriptionId}/website`
-      );
-      setFilerdAddress(data?.filerdAddress);
-    } catch {
-    }
-  }, [subscriptionId]);
-
   useEffect(() => {
     if (!subscriptionId) return;
     fetchUsers();
-    loadWebsiteMeta();
-  }, [subscriptionId, loadWebsiteMeta]);
+  }, [subscriptionId]);
 
   const handleCreate = async () => {
     if (!createForm.account.trim()) {
@@ -170,8 +154,6 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
 
   return (
     <div className="space-y-6">
-      <FileManagerCard filerdAddress={filerdAddress} />
-
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">

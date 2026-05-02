@@ -18,7 +18,26 @@ async function resolveSubscription(req: Request, res: Response) {
     res.status(404).json({ error: "Service not found" });
     return null;
   }
+  if (!sub.enhance_website_id) {
+    res.status(400).json({ error: "Website not yet provisioned" });
+    return null;
+  }
   return sub;
+}
+
+async function ensureDomainBelongsToWebsite(sub: any, domainId: string, res: Response) {
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.getWebsiteDomainMapping(enhanceWebsiteOrgId, sub.enhance_website_id, domainId);
+    return true;
+  } catch (error) {
+    if (error instanceof EnhanceApiError && error.statusCode === 404) {
+      res.status(404).json({ error: "Domain not found" });
+      return false;
+    }
+
+    throw error;
+  }
 }
 
 // ============================================================
@@ -28,9 +47,6 @@ async function resolveSubscription(req: Request, res: Response) {
 router.get("/:id/website", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
-  if (!sub.enhance_website_id) {
-    return res.status(400).json({ error: "Website not yet provisioned" });
-  }
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.getWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
@@ -411,6 +427,7 @@ router.get("/:id/domains/:domainId/nginx-fastcgi", requireOrgPermission("hosting
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enabled = await EnhanceService.getDomainNginxFastCgi(req.params.domainId);
     res.json({ enabled });
   } catch (error: any) {
@@ -426,6 +443,7 @@ router.put("/:id/domains/:domainId/nginx-fastcgi", requireOrgPermission("hosting
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enabled = typeof req.body === "boolean" ? req.body : Boolean(req.body?.enabled);
     await EnhanceService.setDomainNginxFastCgi(req.params.domainId, enabled);
     res.json({ success: true, enabled });
@@ -438,6 +456,7 @@ router.delete("/:id/domains/:domainId/nginx-fastcgi", requireOrgPermission("host
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     await EnhanceService.clearDomainNginxFastCgi(req.params.domainId);
     res.json({ success: true, message: "FastCGI cache purged" });
   } catch (error: any) {
@@ -449,6 +468,7 @@ router.get("/:id/domains/:domainId/nginx-fastcgi/excluded-paths", requireOrgPerm
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const paths = await EnhanceService.getDomainNginxFastCgiExcludedPaths(req.params.domainId);
     res.json({ paths });
   } catch (error: any) {
@@ -464,6 +484,7 @@ router.post("/:id/domains/:domainId/nginx-fastcgi/excluded-paths", requireOrgPer
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const path = typeof req.body === "string" ? req.body : req.body?.path;
     if (!path) {
       res.status(400).json({ error: "Path is required" });
@@ -480,6 +501,7 @@ router.delete("/:id/domains/:domainId/nginx-fastcgi/excluded-paths", requireOrgP
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const path = req.query.path as string;
     if (!path) {
       res.status(400).json({ error: "Path query parameter is required" });
@@ -500,6 +522,7 @@ router.get("/:id/domains/:domainId/webserver-rewrites", requireOrgPermission("ho
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const rewrites = await EnhanceService.getDomainWebserverRewrites(req.params.domainId);
     res.json({ rewrites });
   } catch (error: any) {
@@ -515,6 +538,7 @@ router.put("/:id/domains/:domainId/webserver-rewrites", requireOrgPermission("ho
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     await EnhanceService.setDomainWebserverRewrite(req.params.domainId, req.body);
     res.json({ success: true });
   } catch (error: any) {
@@ -526,6 +550,7 @@ router.delete("/:id/domains/:domainId/webserver-rewrites", requireOrgPermission(
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const path = req.query.path as string;
     if (!path) {
       res.status(400).json({ error: "Path query parameter is required" });
@@ -546,6 +571,7 @@ router.post("/:id/domains/:domainId/mail-ssl", requireOrgPermission("hosting_man
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     await EnhanceService.createWebsiteMailDomainLetsencryptCerts(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId);
     res.status(202).json({ success: true, message: "Mail SSL certificate generation started" });

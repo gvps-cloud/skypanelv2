@@ -191,4 +191,103 @@ describe('EnhanceService', () => {
       })
     );
   });
+
+  it('should patch DNS records using the documented endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 204 }));
+    global.fetch = fetchMock;
+
+    await EnhanceService.updateWebsiteDomainDnsZoneRecord('org-123', 'web-123', 'domain-123', 'record-123', {
+      value: '203.0.113.10',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/domains/domain-123/dns-zone/records/record-123',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ value: '203.0.113.10' }),
+      })
+    );
+  });
+
+  it('should create backups with includeEmails as a query parameter', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 201, body: { id: 'backup-123' } }));
+    global.fetch = fetchMock;
+
+    await EnhanceService.backupWebsite('org-123', 'web-123', {
+      includeEmails: true,
+      description: 'Manual backup',
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/backups?includeEmails=true',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ description: 'Manual backup' }),
+      })
+    );
+  });
+
+  it('should restore backups with PUT on the backup resource', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200, body: {} }));
+    global.fetch = fetchMock;
+
+    await EnhanceService.restoreWebsiteBackup('org-123', 'web-123', 'backup-123', {
+      restoreFiles: true,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/backups/backup-123',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ restoreFiles: true }),
+      })
+    );
+  });
+
+  it('should send backups disabled and force SSL as bare booleans', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200, body: {} }));
+    global.fetch = fetchMock;
+
+    await EnhanceService.setBackupsDisabled('web-123', true);
+    await EnhanceService.setWebsiteDomainForceSsl('org-123', 'web-123', 'domain-123', false);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api.enhance.test/api/websites/web-123/backups_disabled',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify(true),
+      })
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.enhance.test/api/v2/domains/domain-123/ssl/force_ssl',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify(false),
+      })
+    );
+  });
+
+  it('should use documented crontab and persistent app log endpoints', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 200, body: {} }));
+    global.fetch = fetchMock;
+
+    await EnhanceService.updateCrontab('org-123', 'web-123', { items: [] });
+    await EnhanceService.getWebsitePersistentAppLog('web-123', 'app-123');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api.enhance.test/api/orgs/org-123/websites/web-123/crontab',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ items: [] }),
+      })
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.enhance.test/api/websites/web-123/apps/persistent/app-123',
+      expect.objectContaining({ method: 'GET' })
+    );
+  });
 });

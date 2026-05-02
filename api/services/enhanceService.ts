@@ -315,7 +315,7 @@ export class EnhanceService {
 
   static async updateWebsiteDomainMapping(orgId: string, websiteId: string, domainId: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }
@@ -342,7 +342,7 @@ export class EnhanceService {
 
   static async updateWebsiteDomainDnsZone(orgId: string, websiteId: string, domainId: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/dns-zone`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }
@@ -356,7 +356,7 @@ export class EnhanceService {
 
   static async updateWebsiteDomainDnsZoneRecord(orgId: string, websiteId: string, domainId: string, recordId: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/dns-zone/records/${recordId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }
@@ -625,7 +625,7 @@ export class EnhanceService {
   }
 
   static async getWebsitePersistentAppLog(websiteId: string, appId: string) {
-    return this.request<any>(`/websites/${websiteId}/apps/persistent/${appId}/log`);
+    return this.request<any>(`/websites/${websiteId}/apps/persistent/${appId}`);
   }
 
   static async deleteWebsitePersistentApp(websiteId: string, appId: string) {
@@ -849,7 +849,7 @@ export class EnhanceService {
   }
 
   static async setWebsiteDomainForceSsl(_orgId: string, _websiteId: string, domainId: string, enabled: boolean) {
-    return this.request<any>(`/v2/domains/${domainId}/ssl/force_ssl`, { method: 'PUT', body: { enabled } });
+    return this.request<any>(`/v2/domains/${domainId}/ssl/force_ssl`, { method: 'PUT', body: enabled });
   }
 
   // ============================================================
@@ -866,10 +866,12 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups`);
   }
 
-  static async backupWebsite(orgId: string, websiteId: string, data?: { includeEmails?: boolean }) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups`, {
+  static async backupWebsite(orgId: string, websiteId: string, data?: { includeEmails?: boolean; [key: string]: any }) {
+    const { includeEmails, ...body } = data ?? {};
+    const params = typeof includeEmails === 'boolean' ? `?includeEmails=${includeEmails ? 'true' : 'false'}` : '';
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups${params}`, {
       method: 'POST',
-      body: data ?? {},
+      body,
     });
   }
 
@@ -878,9 +880,11 @@ export class EnhanceService {
   }
 
   static async restoreWebsiteBackup(orgId: string, websiteId: string, backupId: string, data?: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}/restore`, {
-      method: 'POST',
-      body: data ?? {},
+    const { includeEmails, ...body } = data ?? {};
+    const params = typeof includeEmails === 'boolean' ? `?includeEmails=${includeEmails ? 'true' : 'false'}` : '';
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}${params}`, {
+      method: 'PUT',
+      body,
     });
   }
 
@@ -901,7 +905,7 @@ export class EnhanceService {
   static async setBackupsDisabled(websiteId: string, disabled: boolean) {
     return this.request<any>(`/websites/${websiteId}/backups_disabled`, {
       method: 'PUT',
-      body: { disabled },
+      body: disabled,
     });
   }
 
@@ -914,7 +918,7 @@ export class EnhanceService {
 
   static async updateCrontab(orgId: string, websiteId: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/crontab`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }

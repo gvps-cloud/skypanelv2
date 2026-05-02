@@ -23,13 +23,33 @@ async function resolveSubscription(req: Request, res: Response) {
   return subscription;
 }
 
+function requireWebsiteId(subscription: any, res: Response): string | null {
+  if (!subscription.enhance_website_id) {
+    res.status(400).json({ error: "Website not yet provisioned" });
+    return null;
+  }
+
+  return String(subscription.enhance_website_id);
+}
+
+function requireEnhanceSubscriptionId(subscription: any, res: Response): string | null {
+  if (!subscription.enhance_subscription_id) {
+    res.status(400).json({ error: "Enhance subscription not yet provisioned" });
+    return null;
+  }
+
+  return String(subscription.enhance_subscription_id);
+}
+
 // Installable apps for this subscription
 router.get("/:id/installable", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const enhanceSubscriptionId = requireEnhanceSubscriptionId(sub, res);
+  if (!enhanceSubscriptionId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.getInstallableApps(enhanceWebsiteOrgId, sub.enhance_subscription_id);
+    const result = await EnhanceService.getInstallableApps(enhanceWebsiteOrgId, enhanceSubscriptionId);
     res.json({ apps: unwrapItems(result) });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get installable apps" });
@@ -40,9 +60,11 @@ router.get("/:id/installable", requireOrgPermission("hosting_view"), async (req:
 router.get("/:id/apps", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.getWebsiteApps(enhanceWebsiteOrgId, sub.enhance_website_id);
+    const result = await EnhanceService.getWebsiteApps(enhanceWebsiteOrgId, websiteId);
     res.json({ apps: unwrapItems(result) });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get installed apps" });
@@ -53,9 +75,11 @@ router.get("/:id/apps", requireOrgPermission("hosting_view"), async (req: Reques
 router.post("/:id/apps", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.createWebsiteApp(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
+    const result = await EnhanceService.createWebsiteApp(enhanceWebsiteOrgId, websiteId, req.body);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to install app" });
@@ -66,9 +90,11 @@ router.post("/:id/apps", requireOrgPermission("hosting_manage"), async (req: Req
 router.delete("/:id/apps/:appId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    await EnhanceService.deleteWebsiteApp(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.appId);
+    await EnhanceService.deleteWebsiteApp(enhanceWebsiteOrgId, websiteId, req.params.appId);
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to delete app" });

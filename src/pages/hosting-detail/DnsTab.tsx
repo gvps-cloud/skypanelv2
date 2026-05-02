@@ -173,7 +173,7 @@ export default function DnsTab({ subscriptionId }: DnsTabProps) {
     if (!subscriptionId || !selectedDomain || !editRecord?.id) return;
     setSavingRecord(true);
     try {
-      await apiClient.put(
+      await apiClient.patch(
         `/hosting/dns/${subscriptionId}/domains/${selectedDomain.id}/dns/records/${editRecord.id}`,
         { type: editRecord.type, name: editRecord.name, value: editRecord.value, ttl: editRecord.ttl },
       );

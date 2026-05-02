@@ -3,7 +3,7 @@ import { authenticateToken } from "../../middleware/auth.js";
 import { requireOrganization } from "../../middleware/auth.js";
 import { requireHostingEnabledForUsers, requireOrgPermission } from "../../middleware/hosting.js";
 import { getEnhanceWebsiteOrgId, getHostingSubscriptionForOrganization } from "../../lib/hostingEnhanceOrg.js";
-import { EnhanceService } from "../../services/enhanceService.js";
+import { EnhanceApiError, EnhanceService } from "../../services/enhanceService.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
 
 const router = express.Router();
@@ -18,7 +18,26 @@ async function resolveSubscription(req: Request, res: Response) {
     res.status(404).json({ error: "Service not found" });
     return null;
   }
+  if (!subscription.enhance_website_id) {
+    res.status(400).json({ error: "Website not yet provisioned" });
+    return null;
+  }
   return subscription;
+}
+
+async function ensureDomainBelongsToWebsite(sub: any, domainId: string, res: Response) {
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.getWebsiteDomainMapping(enhanceWebsiteOrgId, sub.enhance_website_id, domainId);
+    return true;
+  } catch (error) {
+    if (error instanceof EnhanceApiError && error.statusCode === 404) {
+      res.status(404).json({ error: "Domain not found" });
+      return false;
+    }
+
+    throw error;
+  }
 }
 
 // SSL
@@ -26,6 +45,7 @@ router.post("/:id/domains/:domainId/ssl", requireOrgPermission("hosting_manage")
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     await EnhanceService.createWebsiteDomainLetsencryptCerts(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId);
     res.status(202).json({ success: true, message: "Let's Encrypt certificate generation started" });
@@ -38,6 +58,7 @@ router.post("/:id/domains/:domainId/mail_ssl", requireOrgPermission("hosting_man
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     await EnhanceService.createWebsiteMailDomainLetsencryptCerts(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId);
     res.status(202).json({ success: true, message: "Mail Let's Encrypt certificate generation started" });
@@ -50,6 +71,7 @@ router.get("/:id/domains/:domainId/ssl", requireOrgPermission("hosting_view"), a
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.getWebsiteDomainSsl(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId);
     res.json({
@@ -66,6 +88,7 @@ router.post("/:id/domains/:domainId/ssl/upload", requireOrgPermission("hosting_m
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.uploadWebsiteDomainSsl(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId, req.body);
     res.json(result);
@@ -78,6 +101,7 @@ router.get("/:id/domains/:domainId/mail_ssl", requireOrgPermission("hosting_view
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.getWebsiteDomainMailSsl(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId);
     res.json(result);
@@ -90,6 +114,7 @@ router.put("/:id/domains/:domainId/force_ssl", requireOrgPermission("hosting_man
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const enabled = typeof req.body === "boolean" ? req.body : Boolean(req.body?.enabled ?? req.body?.forceSsl);
     await EnhanceService.setWebsiteDomainForceSsl(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId, enabled);

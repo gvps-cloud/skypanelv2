@@ -23,12 +23,23 @@ async function resolveSubscription(req: Request, res: Response) {
   return subscription;
 }
 
+function requireWebsiteId(subscription: any, res: Response): string | null {
+  if (!subscription.enhance_website_id) {
+    res.status(400).json({ error: "Website not yet provisioned" });
+    return null;
+  }
+
+  return String(subscription.enhance_website_id);
+}
+
 router.get("/:id/backups", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.getWebsiteBackups(enhanceWebsiteOrgId, sub.enhance_website_id);
+    const result = await EnhanceService.getWebsiteBackups(enhanceWebsiteOrgId, websiteId);
     res.json({ backups: unwrapItems(result) });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get backups" });
@@ -38,9 +49,11 @@ router.get("/:id/backups", requireOrgPermission("hosting_view"), async (req: Req
 router.post("/:id/backups", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.backupWebsite(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
+    const result = await EnhanceService.backupWebsite(enhanceWebsiteOrgId, websiteId, req.body);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to create backup" });
@@ -50,21 +63,25 @@ router.post("/:id/backups", requireOrgPermission("hosting_manage"), async (req: 
 router.get("/:id/backups/:backupId", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.getWebsiteBackup(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.backupId);
+    const result = await EnhanceService.getWebsiteBackup(enhanceWebsiteOrgId, websiteId, req.params.backupId);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get backup" });
   }
 });
 
-router.put("/:id/backups/:backupId/restore", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+router.put("/:id/backups/:backupId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.restoreWebsiteBackup(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.backupId, req.body);
+    const result = await EnhanceService.restoreWebsiteBackup(enhanceWebsiteOrgId, websiteId, req.params.backupId, req.body);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to restore backup" });
@@ -74,9 +91,11 @@ router.put("/:id/backups/:backupId/restore", requireOrgPermission("hosting_manag
 router.delete("/:id/backups/:backupId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    await EnhanceService.deleteWebsiteBackup(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.backupId);
+    await EnhanceService.deleteWebsiteBackup(enhanceWebsiteOrgId, websiteId, req.params.backupId);
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to delete backup" });
@@ -86,9 +105,11 @@ router.delete("/:id/backups/:backupId", requireOrgPermission("hosting_manage"), 
 router.get("/:id/backup-status", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.getWebsiteBackupStatus(enhanceWebsiteOrgId, sub.enhance_website_id);
+    const result = await EnhanceService.getWebsiteBackupStatus(enhanceWebsiteOrgId, websiteId);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get backup status" });
@@ -98,9 +119,11 @@ router.get("/:id/backup-status", requireOrgPermission("hosting_view"), async (re
 router.get("/:id/backups-disabled", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
-    const result = await EnhanceService.getBackupsDisabled(sub.enhance_website_id);
-    res.json(result);
+    const result = await EnhanceService.getBackupsDisabled(websiteId);
+    res.json({ disabled: Boolean(result) });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get backups disabled status" });
   }
@@ -109,9 +132,12 @@ router.get("/:id/backups-disabled", requireOrgPermission("hosting_view"), async 
 router.put("/:id/backups-disabled", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
-    const result = await EnhanceService.setBackupsDisabled(sub.enhance_website_id, req.body);
-    res.json(result);
+    const disabled = typeof req.body === "boolean" ? req.body : Boolean(req.body?.disabled);
+    await EnhanceService.setBackupsDisabled(websiteId, disabled);
+    res.json({ disabled });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to set backups disabled" });
   }

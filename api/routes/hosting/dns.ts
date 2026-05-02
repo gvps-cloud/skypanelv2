@@ -37,15 +37,26 @@ async function resolveSubscription(req: Request, res: Response) {
   return subscription;
 }
 
+function requireWebsiteId(subscription: any, res: Response): string | null {
+  if (!subscription.enhance_website_id) {
+    res.status(400).json({ error: "Website not yet provisioned" });
+    return null;
+  }
+
+  return String(subscription.enhance_website_id);
+}
+
 // Domain Mappings
 router.get("/:id/domains", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const domains = await EnhanceService.getWebsiteDomainMappings(
       enhanceWebsiteOrgId,
-      sub.enhance_website_id,
+      websiteId,
       { withSsl: req.query.withSsl === "true" },
     );
     res.json({ domains: unwrapItems(domains).map(normalizeDomainMapping) });
@@ -57,9 +68,11 @@ router.get("/:id/domains", requireOrgPermission("hosting_view"), async (req: Req
 router.post("/:id/domains", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.createWebsiteMappedDomain(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
+    const result = await EnhanceService.createWebsiteMappedDomain(enhanceWebsiteOrgId, websiteId, req.body);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to add domain" });
@@ -70,9 +83,11 @@ router.post("/:id/domains", requireOrgPermission("hosting_manage"), async (req: 
 router.get("/:id/domains/:domainId/dns", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const zone = await EnhanceService.getWebsiteDomainDnsZone(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId);
+    const zone = await EnhanceService.getWebsiteDomainDnsZone(enhanceWebsiteOrgId, websiteId, req.params.domainId);
     res.json(zone);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get DNS zone" });
@@ -82,22 +97,26 @@ router.get("/:id/domains/:domainId/dns", requireOrgPermission("hosting_view"), a
 router.post("/:id/domains/:domainId/dns/records", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.createWebsiteDomainDnsZoneRecord(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId, req.body);
+    const result = await EnhanceService.createWebsiteDomainDnsZoneRecord(enhanceWebsiteOrgId, websiteId, req.params.domainId, req.body);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to create DNS record" });
   }
 });
 
-router.put("/:id/domains/:domainId/dns/records/:recordId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+router.patch("/:id/domains/:domainId/dns/records/:recordId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.updateWebsiteDomainDnsZoneRecord(
-      enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId, req.params.recordId, req.body,
+      enhanceWebsiteOrgId, websiteId, req.params.domainId, req.params.recordId, req.body,
     );
     res.json(result);
   } catch (error: any) {
@@ -108,10 +127,12 @@ router.put("/:id/domains/:domainId/dns/records/:recordId", requireOrgPermission(
 router.delete("/:id/domains/:domainId/dns/records/:recordId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     await EnhanceService.deleteWebsiteDomainDnsZoneRecord(
-      enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId, req.params.recordId,
+      enhanceWebsiteOrgId, websiteId, req.params.domainId, req.params.recordId,
     );
     res.json({ success: true });
   } catch (error: any) {
@@ -122,9 +143,11 @@ router.delete("/:id/domains/:domainId/dns/records/:recordId", requireOrgPermissi
 router.delete("/:id/domains/:domainId", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    await EnhanceService.deleteWebsiteDomainMapping(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId);
+    await EnhanceService.deleteWebsiteDomainMapping(enhanceWebsiteOrgId, websiteId, req.params.domainId);
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to delete domain" });
@@ -134,9 +157,11 @@ router.delete("/:id/domains/:domainId", requireOrgPermission("hosting_manage"), 
 router.put("/:id/domains/primary", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  const websiteId = requireWebsiteId(sub, res);
+  if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.updateWebsitePrimaryDomain(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
+    const result = await EnhanceService.updateWebsitePrimaryDomain(enhanceWebsiteOrgId, websiteId, req.body);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to set primary domain" });

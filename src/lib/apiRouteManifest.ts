@@ -458,7 +458,7 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "PUT",
-    "path": "/api/hosting/backups/:id/backups/:backupId/restore",
+    "path": "/api/hosting/backups/:id/backups/:backupId",
     "protected": true,
     "admin": false
   },
@@ -517,7 +517,7 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
-    "method": "PUT",
+    "method": "PATCH",
     "path": "/api/hosting/dns/:id/domains/:domainId/dns/records/:recordId",
     "protected": true,
     "admin": false
@@ -669,6 +669,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "PUT",
     "path": "/api/hosting/mysql/:id/mysql-users/:username/privileges",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/nameservers",
     "protected": true,
     "admin": false
   },
