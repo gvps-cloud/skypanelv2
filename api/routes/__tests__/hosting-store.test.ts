@@ -446,46 +446,14 @@ describe('Hosting Store Routes', () => {
       expect(subResult.rows[0].settings.enhance_subscription_id).toBe('987');
     });
 
-    it('auto-generates a staging subdomain when useStagingDomain is true', async () => {
-      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
-
-      mockGetStagingDomain.mockResolvedValue('staging.cp.gvps.cloud');
-      mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
-        enhanceCustomerId: 'cust-123',
-        purchaserLoginId: 'login-123',
-        purchaserMemberId: 'member-123',
-        credentialsCreated: false,
-        credentialsEmail: null,
-        ownerAssigned: false,
-      });
-      mockCreateCustomerSubscription.mockResolvedValue({ id: '123' });
-      mockCreateWebsite.mockResolvedValue({ id: 'web-123', primary_ip: '1.2.3.4' });
-
-      const response = await request(app)
-        .post('/api/hosting/purchase')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ planId, useStagingDomain: true })
-        .expect(201);
-
-      expect(response.body.subscription.status).toBe('active');
-      expect(response.body.stagingDomain).toMatch(/^[a-z0-9]{6}\.staging\.cp\.gvps\.cloud$/);
-      expect(response.body.subscription.domain).toMatch(/^[a-z0-9]{6}\.staging\.cp\.gvps\.cloud$/);
-      expect(mockCreateWebsite).toHaveBeenCalledWith('cust-123', {
-        subscriptionId: 123,
-        domain: expect.stringMatching(/^[a-z0-9]{6}\.staging\.cp\.gvps\.cloud$/),
-      });
-    });
-
-    it('rejects useStagingDomain when no staging suffix is configured', async () => {
-      mockGetStagingDomain.mockResolvedValue(null);
-
+    it('rejects staging-domain purchases for initial checkout', async () => {
       const response = await request(app)
         .post('/api/hosting/purchase')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ planId, useStagingDomain: true })
         .expect(400);
 
-      expect(response.body.error).toContain('Free subdomains are not available');
+      expect(response.body.error).toContain('Free staging domains are not available for initial hosting purchases');
       expect(mockCreateCustomerSubscription).not.toHaveBeenCalled();
     });
   });

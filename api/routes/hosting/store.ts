@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import express, { type Request, type Response } from "express";
 import { authenticateToken } from "../../middleware/auth.js";
 import { requireOrganization } from "../../middleware/auth.js";
@@ -33,9 +32,6 @@ const extractCollection = <T,>(value: any): T[] => {
 
 const createHttpError = (message: string, statusCode: number, responseBody?: any) =>
   Object.assign(new Error(message), { statusCode, responseBody });
-
-const generateSubdomainPrefix = (length = 6): string =>
-  crypto.randomBytes(length).toString("base64url").slice(0, length).toLowerCase();
 
 router.use(authenticateToken, requireOrganization, requireHostingEnabledForUsers);
 
@@ -172,30 +168,17 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
   const { id: userId, organizationId } = (req as AuthenticatedRequest).user;
   const { planId, domain, regionId, useStagingDomain } = req.body;
 
-  if (!planId || (!domain && !useStagingDomain)) {
-    return res.status(400).json({ error: "planId and domain are required (or set useStagingDomain)" });
-  }
-
   if (useStagingDomain) {
-    try {
-      const stagingSuffix = await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID);
-      if (!stagingSuffix?.trim()) {
-        return res.status(400).json({
-          error: "Free subdomains are not available at this time. Please enter your own domain.",
-        });
-      }
-      req.body._generatedDomain = `${generateSubdomainPrefix()}.${stagingSuffix.trim().toLowerCase()}`;
-    } catch (error: any) {
-      console.error("Failed to resolve staging domain suffix:", error?.message || error);
-      return res.status(400).json({
-        error: "Free subdomains are not available at this time. Please enter your own domain.",
-      });
-    }
+    return res.status(400).json({
+      error: "Free staging domains are not available for initial hosting purchases. Please enter your own domain.",
+    });
   }
 
-  const requestedDomain = useStagingDomain
-    ? req.body._generatedDomain
-    : (typeof domain === 'string' ? domain.trim().toLowerCase() : '');
+  if (!planId || !domain) {
+    return res.status(400).json({ error: "planId and domain are required" });
+  }
+
+  const requestedDomain = typeof domain === 'string' ? domain.trim().toLowerCase() : '';
 
   let subscriptionId: string | undefined;
   let enhanceCustomerOrgId: string | undefined;
@@ -441,7 +424,6 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       subscription: { ...subscription, status: "active", domain: resolvedDomain },
       credentialsCreated: onboardingResult.credentialsCreated,
       credentialsEmailed,
-      stagingDomain: useStagingDomain ? resolvedDomain : undefined,
     });
   } catch (error: any) {
     console.error("Hosting purchase failed:", error);

@@ -2,9 +2,8 @@ import express, { type Request, type Response } from "express";
 import { authenticateToken } from "../../middleware/auth.js";
 import { requireOrganization } from "../../middleware/auth.js";
 import { requireHostingEnabledForUsers, requireOrgPermission } from "../../middleware/hosting.js";
-import { query } from "../../lib/database.js";
-import { getEnhanceWebsiteOrgId } from "../../lib/hostingEnhanceOrg.js";
-import { EnhanceService } from "../../services/enhanceService.js";
+import { getEnhanceWebsiteOrgId, getHostingSubscriptionForOrganization } from "../../lib/hostingEnhanceOrg.js";
+import { EnhanceApiError, EnhanceService } from "../../services/enhanceService.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
 
 const router = express.Router();
@@ -14,15 +13,12 @@ router.use(authenticateToken, requireOrganization, requireHostingEnabledForUsers
 async function resolveSubscription(req: Request, res: Response) {
   const { organizationId } = (req as AuthenticatedRequest).user;
   const { id } = req.params;
-  const result = await query(
-    `SELECT * FROM hosting_subscriptions WHERE id = $1 AND organization_id = $2`,
-    [id, organizationId]
-  );
-  if (result.rows.length === 0) {
+  const sub = await getHostingSubscriptionForOrganization(id, organizationId);
+  if (!sub) {
     res.status(404).json({ error: "Service not found" });
     return null;
   }
-  return result.rows[0];
+  return sub;
 }
 
 // ============================================================
@@ -32,11 +28,17 @@ async function resolveSubscription(req: Request, res: Response) {
 router.get("/:id/website", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
+  if (!sub.enhance_website_id) {
+    return res.status(400).json({ error: "Website not yet provisioned" });
+  }
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.getWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
     res.json(result);
   } catch (error: any) {
+    if (error instanceof EnhanceApiError && (error.statusCode === 400 || error.statusCode === 403 || error.statusCode === 404)) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
     res.status(500).json({ error: error?.message || "Failed to get website" });
   }
 });
