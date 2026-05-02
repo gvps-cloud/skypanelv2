@@ -13,6 +13,25 @@ router.use(authenticateToken, requireOrganization, requireHostingEnabledForUsers
 
 import { unwrapItems } from "../../lib/unwrapItems.js";
 
+function normalizeDnsRecord(record: any) {
+  return {
+    id: record?.id ?? undefined,
+    type: record?.kind ?? record?.type ?? "",
+    name: record?.name ?? "",
+    value: record?.value ?? "",
+    ttl: typeof record?.ttl === "number" ? record.ttl : (typeof record?.ttl === "string" ? parseInt(record.ttl, 10) : 3600),
+    proxy: record?.proxy ?? false,
+  };
+}
+
+function toEnhanceDnsRecord(body: any) {
+  const { type, ...rest } = body;
+  return {
+    ...rest,
+    kind: type ?? body.kind,
+  };
+}
+
 function normalizeDomainMapping(domain: any) {
   const cert = domain?.cert ?? null;
   return {
@@ -89,7 +108,10 @@ router.get("/:id/domains/:domainId/dns", requireOrgPermission("hosting_view"), a
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const zone = await EnhanceService.getWebsiteDomainDnsZone(enhanceWebsiteOrgId, websiteId, req.params.domainId);
-    res.json(zone);
+    res.json({
+      domain: zone?.domain ?? "",
+      records: Array.isArray(zone?.records) ? zone.records.map(normalizeDnsRecord) : [],
+    });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to get DNS zone" });
   }
@@ -102,8 +124,8 @@ router.post("/:id/domains/:domainId/dns/records", requireOrgPermission("hosting_
   if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.createWebsiteDomainDnsZoneRecord(enhanceWebsiteOrgId, websiteId, req.params.domainId, req.body);
-    res.json(result);
+    const result = await EnhanceService.createWebsiteDomainDnsZoneRecord(enhanceWebsiteOrgId, websiteId, req.params.domainId, toEnhanceDnsRecord(req.body));
+    res.json(normalizeDnsRecord(result));
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to create DNS record" });
   }
@@ -117,9 +139,9 @@ router.patch("/:id/domains/:domainId/dns/records/:recordId", requireOrgPermissio
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.updateWebsiteDomainDnsZoneRecord(
-      enhanceWebsiteOrgId, websiteId, req.params.domainId, req.params.recordId, req.body,
+      enhanceWebsiteOrgId, websiteId, req.params.domainId, req.params.recordId, toEnhanceDnsRecord(req.body),
     );
-    res.json(result);
+    res.json(normalizeDnsRecord(result));
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to update DNS record" });
   }

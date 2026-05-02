@@ -856,7 +856,7 @@ export class EnhanceService {
   // SSO
   // ============================================================
   static async getMemberSsoLink(orgId: string, memberId: string) {
-    return this.request<string>(`/orgs/${orgId}/members/${memberId}/sso`);
+    return this.request<string>(`/orgs/${orgId}/members/${memberId}/sso`, { method: 'GET' });
   }
 
   // ============================================================

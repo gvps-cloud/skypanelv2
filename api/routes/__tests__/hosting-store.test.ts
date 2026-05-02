@@ -15,6 +15,8 @@ const mockGetWebsites = vi.hoisted(() => vi.fn());
 const mockGetStagingDomain = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockSendEnhanceCredentialsEmail = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockIsEffectivelyEnabled = vi.hoisted(() => vi.fn().mockResolvedValue(true));
+const mockGetOrgMembers = vi.hoisted(() => vi.fn().mockResolvedValue([{ id: 'member-123', roles: ['Owner'] }]));
+const mockGetMemberSsoLink = vi.hoisted(() => vi.fn().mockResolvedValue('https://sso.enhance.test/login'));
 
 vi.mock('../../services/enhanceService.js', () => ({
   EnhanceApiError: class EnhanceApiError extends Error {
@@ -37,6 +39,8 @@ vi.mock('../../services/enhanceService.js', () => ({
     getCustomerSubscriptions: (...args: any[]) => mockGetCustomerSubscriptions(...args),
     getWebsites: (...args: any[]) => mockGetWebsites(...args),
     getStagingDomain: (...args: any[]) => mockGetStagingDomain(...args),
+    getOrgMembers: (...args: any[]) => mockGetOrgMembers(...args),
+    getMemberSsoLink: (...args: any[]) => mockGetMemberSsoLink(...args),
   },
 }));
 
@@ -561,6 +565,82 @@ describe('Hosting Store Routes', () => {
       // Cleanup
       await pool.query('DELETE FROM hosting_subscriptions WHERE id = $1', [otherSubId]);
       await pool.query('DELETE FROM organizations WHERE id = $1', [otherOrgId]);
+    });
+  });
+
+  describe('POST /api/hosting/sso', () => {
+    it('falls back to discovered Enhance member and returns SSO URL', async () => {
+      await pool.query(
+        `UPDATE organizations SET enhance_customer_id = $1, enhance_member_id = NULL WHERE id = $2`,
+        ['enhance-org-123', testOrgId],
+      );
+
+      mockGetOrgMembers.mockResolvedValue([{ id: 'member-aaa', roles: ['Support'] }]);
+      mockGetMemberSsoLink.mockResolvedValue('https://sso.enhance.test/otp/aaa');
+
+      const response = await request(app)
+        .post('/api/hosting/sso')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.url).toBe('https://sso.enhance.test/otp/aaa');
+      expect(mockGetOrgMembers).toHaveBeenCalledWith('enhance-org-123');
+      expect(mockGetMemberSsoLink).toHaveBeenCalledWith('enhance-org-123', 'member-aaa');
+
+      const updatedOrg = await pool.query(
+        `SELECT enhance_member_id FROM organizations WHERE id = $1`,
+        [testOrgId],
+      );
+      expect(updatedOrg.rows[0].enhance_member_id).toBe('member-aaa');
+
+      await pool.query(
+        `UPDATE organizations SET enhance_customer_id = NULL, enhance_member_id = NULL WHERE id = $1`,
+        [testOrgId],
+      );
+    });
+
+    it('returns 502 when Enhance SSO endpoint returns empty response', async () => {
+      await pool.query(
+        `UPDATE organizations SET enhance_customer_id = $1, enhance_member_id = $2 WHERE id = $3`,
+        ['enhance-org-456', 'member-456', testOrgId],
+      );
+
+      mockGetMemberSsoLink.mockResolvedValue('');
+
+      const response = await request(app)
+        .post('/api/hosting/sso')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(502);
+
+      expect(response.body.error).toBe('Enhance did not return an SSO link');
+      expect(mockGetOrgMembers).not.toHaveBeenCalled();
+
+      await pool.query(
+        `UPDATE organizations SET enhance_customer_id = NULL, enhance_member_id = NULL WHERE id = $1`,
+        [testOrgId],
+      );
+    });
+
+    it('returns 400 when no Enhance members exist', async () => {
+      await pool.query(
+        `UPDATE organizations SET enhance_customer_id = $1, enhance_member_id = NULL WHERE id = $2`,
+        ['enhance-org-789', testOrgId],
+      );
+
+      mockGetOrgMembers.mockResolvedValue({ items: [] });
+
+      const response = await request(app)
+        .post('/api/hosting/sso')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(400);
+
+      expect(response.body.error).toBe('No Enhance member found for this organization');
+      expect(mockGetMemberSsoLink).not.toHaveBeenCalled();
+
+      await pool.query(
+        `UPDATE organizations SET enhance_customer_id = NULL, enhance_member_id = NULL WHERE id = $1`,
+        [testOrgId],
+      );
     });
   });
 });

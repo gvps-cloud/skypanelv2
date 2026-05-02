@@ -265,6 +265,14 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         purchaserUserId: userId,
       });
       enhanceCustomerOrgId = onboardingResult.enhanceCustomerId;
+
+      // Belt-and-suspenders: also persist member id from purchase flow
+      if (onboardingResult.purchaserMemberId) {
+        await query(
+          `UPDATE organizations SET enhance_member_id = $1 WHERE id = $2`,
+          [onboardingResult.purchaserMemberId, organizationId]
+        );
+      }
     } catch (onboardingError: any) {
       throw new Error(`Failed to prepare hosting account: ${onboardingError?.message || 'unknown error'}`);
     }
@@ -600,27 +608,86 @@ router.post("/sso", requireOrgPermission("hosting_view"), async (req: Request, r
     }
 
     let memberId = orgResult.rows[0].enhance_member_id;
+    let memberIdWasStale = false;
 
-    if (!memberId) {
-      const members = await EnhanceService.getOrgMembers(enhanceCustomerOrgId);
-      const items = Array.isArray(members) ? members : (members?.items || []);
-      const owner = items.find((m: any) => m.roles?.includes('Owner') || m.roles?.includes('SuperAdmin'));
-      memberId = owner?.id || items?.[0]?.id;
+    async function resolveMemberId(): Promise<boolean> {
+      if (memberId) return true;
+      try {
+        const members = await EnhanceService.getOrgMembers(enhanceCustomerOrgId);
+        const items = Array.isArray(members) ? members : (members?.items || []);
+        const preferred = items.find((m: any) => Array.isArray(m.roles) && (m.roles.includes('Owner') || m.roles.includes('SuperAdmin')));
+        memberId = preferred?.id || items?.[0]?.id;
 
-      if (memberId) {
-        await query(
-          `UPDATE organizations SET enhance_member_id = $1 WHERE id = $2`,
-          [memberId, organizationId]
-        );
+        if (memberId) {
+          await query(
+            `UPDATE organizations SET enhance_member_id = $1 WHERE id = $2`,
+            [memberId, organizationId]
+          );
+          return true;
+        }
+        return false;
+      } catch (memberError: any) {
+        if (memberError instanceof EnhanceApiError) {
+          const status = memberError.statusCode || 502;
+          const message = memberError.statusCode === 403
+            ? "Unable to access Enhance organization members. The API key may not have permission for this customer org."
+            : `Unable to list Enhance organization members: ${memberError.message}`;
+          res.status(status).json({ error: message });
+          return false;
+        }
+        throw memberError;
       }
     }
 
-    if (!memberId) {
+    if (!await resolveMemberId()) {
       return res.status(400).json({ error: "No Enhance member found for this organization" });
     }
 
-    const ssoUrl = await EnhanceService.getMemberSsoLink(enhanceCustomerOrgId, memberId);
-    res.json({ url: ssoUrl });
+    async function tryGetSsoUrl(): Promise<string | null> {
+      try {
+        const ssoResponse = await EnhanceService.getMemberSsoLink(enhanceCustomerOrgId, memberId) as string | { url?: string };
+        const url = typeof ssoResponse === "string" ? ssoResponse : ssoResponse?.url;
+        return url || null;
+      } catch (ssoError: any) {
+        // If member not found (404), clear stale member id and allow one retry
+        if (ssoError instanceof EnhanceApiError && ssoError.statusCode === 404 && !memberIdWasStale) {
+          console.log(`[SSO] Member ${memberId} not found in Enhance (404). Clearing stale member id and retrying...`);
+          await query(
+            `UPDATE organizations SET enhance_member_id = NULL WHERE id = $1`,
+            [organizationId]
+          );
+          memberId = null;
+          memberIdWasStale = true;
+          return null;
+        }
+
+        if (ssoError instanceof EnhanceApiError) {
+          const status = ssoError.statusCode || 502;
+          const message = ssoError.statusCode === 403
+            ? "Unable to generate SSO link for this member. The API key may not have permission."
+            : `Unable to generate SSO link: ${ssoError.message}`;
+          res.status(status).json({ error: message });
+          return null;
+        }
+        throw ssoError;
+      }
+    }
+
+    let url = await tryGetSsoUrl();
+
+    // Retry once if the first attempt discovered a stale member id
+    if (!url && memberIdWasStale) {
+      if (!await resolveMemberId()) {
+        return res.status(400).json({ error: "No Enhance member found for this organization" });
+      }
+      url = await tryGetSsoUrl();
+    }
+
+    if (!url) {
+      return res.status(502).json({ error: "Enhance did not return an SSO link" });
+    }
+
+    res.json({ url });
   } catch (error: any) {
     console.error("Failed to get Enhance SSO link:", error);
     res.status(500).json({ error: error?.message || "Failed to get SSO link" });
