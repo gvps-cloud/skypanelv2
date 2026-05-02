@@ -1149,8 +1149,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               cn(
                 "pointer-events-none fixed bottom-4 left-4 right-4 z-40 border-0 bg-transparent p-0 transition-[left] duration-200 ease-linear md:right-6",
                 isSidebarOpen
-                  ? "md:left-[calc(var(--sidebar-width)_+_theme(spacing.6))]"
-                  : "md:left-[calc(var(--sidebar-width-icon)_+_theme(spacing.6))]",
+                  ? "md:left-[calc(var(--sidebar-width)_+_1.5rem)]"
+                  : "md:left-[calc(var(--sidebar-width-icon)_+_1.5rem)]",
               ),
           )}
         >
