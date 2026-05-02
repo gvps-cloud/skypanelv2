@@ -5,6 +5,7 @@ import { requireHostingEnabledForUsers, requireOrgPermission } from "../../middl
 import { getEnhanceWebsiteOrgId, getHostingSubscriptionForOrganization } from "../../lib/hostingEnhanceOrg.js";
 import { EnhanceService } from "../../services/enhanceService.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
+import { query } from "../../lib/database.js";
 
 const router = express.Router();
 
@@ -161,8 +162,23 @@ router.put("/:id/domains/primary", requireOrgPermission("hosting_manage"), async
   if (!websiteId) return;
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    const result = await EnhanceService.updateWebsitePrimaryDomain(enhanceWebsiteOrgId, websiteId, req.body);
-    res.json(result);
+    const domainId = String(req.body?.domainId ?? "").trim();
+    if (!domainId) {
+      return res.status(400).json({ error: "Domain ID is required" });
+    }
+
+    const domainMapping = await EnhanceService.getWebsiteDomainMapping(enhanceWebsiteOrgId, websiteId, domainId);
+    await EnhanceService.updateWebsitePrimaryDomain(enhanceWebsiteOrgId, websiteId, req.body);
+
+    const primaryDomain = String(domainMapping?.domain ?? "").trim();
+    if (primaryDomain) {
+      await query(
+        `UPDATE hosting_subscriptions SET domain = $1, updated_at = NOW() WHERE id = $2 AND organization_id = $3`,
+        [primaryDomain, sub.id, sub.organization_id],
+      );
+    }
+
+    res.json({ success: true, domain: primaryDomain || null });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to set primary domain" });
   }

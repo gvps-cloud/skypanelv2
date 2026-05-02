@@ -174,13 +174,17 @@ class ApiClient {
       throw error;
     }
 
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      return response.json();
+    const responseText = await response.text();
+    if (!responseText.trim()) {
+      return undefined as T;
     }
 
-    // For non-JSON responses, return the text
-    return response.text() as unknown as T;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return JSON.parse(responseText) as T;
+    }
+
+    return responseText as unknown as T;
   }
 
   async get<T = any>(path: string): Promise<T> {
