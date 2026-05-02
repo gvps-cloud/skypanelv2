@@ -1132,7 +1132,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <div
           className={cn(
             "flex-1 overflow-auto",
-            isDashboardRoute && "pb-16",
+            isDashboardRoute && "pb-24",
           )}
         >
           <Card className="h-full">
@@ -1147,15 +1147,21 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             "border-t border-border/60 bg-background px-4 py-3 sm:px-6",
             isDashboardRoute &&
               cn(
-                "fixed bottom-0 left-0 right-0 z-40 bg-background/95 shadow-[0_-12px_30px_-24px_hsl(var(--foreground))] backdrop-blur transition-[left] duration-200 ease-linear supports-[backdrop-filter]:bg-background/80",
+                "pointer-events-none fixed bottom-4 left-4 right-4 z-40 border-0 bg-transparent p-0 transition-[left] duration-200 ease-linear md:right-6",
                 isSidebarOpen
-                  ? "md:left-[--sidebar-width]"
-                  : "md:left-[--sidebar-width-icon]",
+                  ? "md:left-[calc(var(--sidebar-width)_+_theme(spacing.6))]"
+                  : "md:left-[calc(var(--sidebar-width-icon)_+_theme(spacing.6))]",
               ),
           )}
         >
-          <div className="flex items-center justify-center sm:justify-end">
-            <FooterPartnerLinks />
+          <div
+            className={cn(
+              "flex items-center justify-center sm:justify-end",
+              isDashboardRoute &&
+                "pointer-events-auto mx-auto w-fit max-w-full rounded-2xl border border-border/70 bg-card/95 px-3 py-2 shadow-lg shadow-foreground/5 backdrop-blur supports-[backdrop-filter]:bg-card/85 sm:mx-0 sm:ml-auto",
+            )}
+          >
+            <FooterPartnerLinks className={cn(isDashboardRoute && "justify-center")} />
           </div>
         </footer>
 
