@@ -1147,7 +1147,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             "border-t border-border/60 bg-background px-4 py-3 sm:px-6",
             isDashboardRoute &&
               cn(
-                "fixed bottom-0 left-0 right-0 z-40 bg-background/95 shadow-[0_-12px_30px_-24px_hsl(var(--foreground))] backdrop-blur supports-[backdrop-filter]:bg-background/80",
+                "fixed bottom-0 left-0 right-0 z-40 bg-background/95 shadow-[0_-12px_30px_-24px_hsl(var(--foreground))] backdrop-blur transition-[left] duration-200 ease-linear supports-[backdrop-filter]:bg-background/80",
                 isSidebarOpen
                   ? "md:left-[--sidebar-width]"
                   : "md:left-[--sidebar-width-icon]",
