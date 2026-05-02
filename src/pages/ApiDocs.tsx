@@ -53,6 +53,7 @@ import {
 } from "@/lib/apiDocsShared";
 import { ApiKeyInput } from "@/components/api-docs/ApiKeyInput";
 import { RequestBuilder } from "@/components/api-docs/RequestBuilder";
+import { SwaggerExplorer } from "@/components/api-docs/SwaggerExplorer";
 import { executeRequest, validateApiKey } from "@/lib/apiDocsTryIt";
 
 /* ─── Animation Variants ─────────────────────────────────────────── */
@@ -281,6 +282,10 @@ export default function ApiDocs() {
     (payload: unknown, label: string) => handleCopy(formatJson(payload), label),
     [handleCopy],
   );
+  const showLegacyApiDocs =
+    import.meta.env.DEV &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("legacyApiDocs");
 
   return (
     <div className="relative bg-background min-h-screen">
@@ -340,6 +345,24 @@ export default function ApiDocs() {
       </section>
 
       {/* ═══════════════════ MAIN LAYOUT ════════════════════════ */}
+      <div className="relative mx-auto max-w-[1600px] px-4 py-10 sm:px-6 lg:px-8">
+        <SwaggerExplorer
+          sections={sections}
+          apiKey={apiKey}
+          organizationId={organizationId}
+          onApiKeyChange={setApiKey}
+          onOrganizationIdChange={setOrganizationId}
+          userOrganizations={userOrgs}
+          validateApiKey={handleValidateApiKey}
+          onExecute={handleExecuteRequest}
+          responses={responses}
+          executingEndpoint={executingEndpoint}
+          isAdmin={isAdmin}
+          onCopy={handleCopy}
+        />
+      </div>
+
+      {showLegacyApiDocs && (
       <div className="relative mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 py-10 flex flex-col lg:flex-row gap-10">
         
         {/* LEFT SIDEBAR (Navigation & Config) */}
@@ -681,6 +704,7 @@ export default function ApiDocs() {
           ))}
         </div>
       </div>
+      )}
     </div>
   );
 }

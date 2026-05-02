@@ -9,6 +9,7 @@ interface LogoProps {
   size?: "sm" | "md" | "lg" | "xl";
   /** Additional CSS classes */
   className?: string;
+  style?: React.CSSProperties;
 }
 
 const sizeMap = {
@@ -21,7 +22,7 @@ const sizeMap = {
 /**
  * Logo component that renders the favicon.svg used across the site.
  */
-export function Logo({ size = "md", className }: LogoProps) {
+export function Logo({ size = "md", className, style }: LogoProps) {
   const dimension = sizeMap[size];
 
   return (
@@ -31,6 +32,10 @@ export function Logo({ size = "md", className }: LogoProps) {
       width={dimension}
       height={dimension}
       className={cn("shrink-0", className)}
+      style={{
+        filter: "var(--logo-contrast-filter)",
+        ...style,
+      }}
     />
   );
 }

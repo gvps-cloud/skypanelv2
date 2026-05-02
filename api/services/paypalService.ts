@@ -52,6 +52,7 @@ export interface PaymentIntent {
   organizationId: string;
   userId: string;
   clientBaseUrl?: string;
+  walletType?: 'main' | 'hosting';
 }
 
 export interface PaymentResult {
@@ -71,6 +72,7 @@ export interface WalletTransaction {
   paymentId?: string;
   balanceBefore: number | null;
   balanceAfter: number | null;
+  walletType: 'main' | 'hosting';
   createdAt: string;
 }
 
@@ -123,6 +125,9 @@ const isOrderAlreadyCapturedError = (error: unknown): boolean => {
   return message.includes('ORDER_ALREADY_CAPTURED');
 };
 
+const normalizeWalletType = (walletType: unknown): 'main' | 'hosting' =>
+  walletType === 'hosting' ? 'hosting' : 'main';
+
 export class PayPalService {
   private static roundCurrencyAmount(amount: number): number {
     if (!Number.isFinite(amount)) {
@@ -151,6 +156,7 @@ export class PayPalService {
       const currency = paymentIntent.currency;
       const amountValue = paymentIntent.amount.toFixed(2);
       const itemName = paymentIntent.description?.substring(0, 127) || 'Wallet Credit';
+      const walletType = normalizeWalletType(paymentIntent.walletType);
 
       const clientBaseUrl = paymentIntent.clientBaseUrl || config.CLIENT_URL;
 
@@ -171,6 +177,7 @@ export class PayPalService {
               },
               description: paymentIntent.description,
               customId: paymentIntent.organizationId,
+              invoiceId: `${paymentIntent.organizationId}:${walletType}:${Date.now()}`,
               items: [
                 {
                   name: itemName,
@@ -211,8 +218,29 @@ export class PayPalService {
         const order = response.result;
         const approvalUrl = order.links?.find(link => link.rel === 'approve' || link.rel === 'payer-action')?.href;
 
-        // Don't create transaction record yet - will be created when payment is captured
-        // Transaction records are only created for completed payments
+        await query(
+          `INSERT INTO payment_transactions (
+             id, organization_id, amount, currency, payment_method, payment_provider,
+             provider_transaction_id, status, description, metadata
+           )
+           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            paymentIntent.organizationId,
+            paymentIntent.amount,
+            currency,
+            'paypal',
+            'paypal',
+            order.id,
+            'failed',
+            paymentIntent.description,
+            JSON.stringify({
+              wallet_type: walletType,
+              paypal_order_id: order.id,
+              user_id: paymentIntent.userId,
+              status: 'created',
+            }),
+          ]
+        );
 
         return {
           success: true,
@@ -275,6 +303,7 @@ export class PayPalService {
           const description = `PayPal payment ${orderId}`;
 
           const metadata: Record<string, unknown> = {
+            wallet_type: 'main',
             capture_id: capture.id,
             capture_status: capture.status,
             capture_amount: capture.amount?.value ?? null,
@@ -330,7 +359,7 @@ export class PayPalService {
                 amount,
                 currency,
                 description,
-                { reconciliation: 'ORDER_ALREADY_CAPTURED' }
+                { reconciliation: 'ORDER_ALREADY_CAPTURED', wallet_type: 'main' }
               );
 
               if (reconciliationResult.success) {
@@ -388,6 +417,7 @@ export class PayPalService {
         const metadataUpdate: Record<string, unknown> = {
           balance_before: currentBalance,
           balance_after: newBalance,
+          wallet_type: 'main',
           ...extraMetadata,
         };
 
@@ -480,6 +510,174 @@ export class PayPalService {
     }
   }
 
+  static async addFundsToHostingWallet(
+    organizationId: string,
+    amount: number,
+    description: string,
+    paymentId?: string,
+    paymentTransactionId?: string,
+    extraMetadata: Record<string, unknown> = {}
+  ): Promise<boolean> {
+    try {
+      return await transaction(async (client) => {
+        await client.query(
+          `INSERT INTO hosting_wallets (organization_id, balance, currency)
+           VALUES ($1, 0, 'USD')
+           ON CONFLICT (organization_id) DO NOTHING`,
+          [organizationId]
+        );
+
+        const walletResult = await client.query(
+          'SELECT id, balance FROM hosting_wallets WHERE organization_id = $1 FOR UPDATE',
+          [organizationId]
+        );
+
+        if (walletResult.rows.length === 0) {
+          console.error('Hosting wallet not found for organization:', organizationId);
+          return false;
+        }
+
+        const wallet = walletResult.rows[0];
+        const currentBalance = parseFloat(wallet.balance);
+        const newBalance = this.roundCurrencyAmount(currentBalance + amount);
+
+        await client.query(
+          'UPDATE hosting_wallets SET balance = $1, updated_at = NOW() WHERE id = $2',
+          [newBalance, wallet.id]
+        );
+
+        const metadataUpdate: Record<string, unknown> = {
+          balance_before: currentBalance,
+          balance_after: newBalance,
+          wallet_type: 'hosting',
+          ...extraMetadata,
+        };
+
+        if (paymentId) {
+          metadataUpdate.payment_id = paymentId;
+        }
+
+        if (paymentTransactionId) {
+          await client.query(
+            `UPDATE payment_transactions
+             SET metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb,
+                 status = 'completed',
+                 updated_at = NOW()
+             WHERE id = $2 AND organization_id = $1`,
+            [organizationId, paymentTransactionId, JSON.stringify(metadataUpdate)]
+          );
+        } else {
+          await client.query(
+            `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, status, description, metadata)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [organizationId, amount, 'USD', 'hosting_wallet_credit', 'internal', 'completed', description, JSON.stringify(metadataUpdate)]
+          );
+        }
+
+        return true;
+      });
+    } catch (error) {
+      console.error('Failed to add funds to hosting wallet:', error);
+      return false;
+    }
+  }
+
+  static async transferToHostingWallet(
+    organizationId: string,
+    amount: number,
+    userId: string
+  ): Promise<boolean> {
+    try {
+      return await transaction(async (client) => {
+        const mainWalletResult = await client.query(
+          'SELECT id, balance FROM wallets WHERE organization_id = $1 FOR UPDATE',
+          [organizationId]
+        );
+
+        if (mainWalletResult.rows.length === 0) {
+          console.error('Main wallet not found for organization:', organizationId);
+          return false;
+        }
+
+        await client.query(
+          `INSERT INTO hosting_wallets (organization_id, balance, currency)
+           VALUES ($1, 0, 'USD')
+           ON CONFLICT (organization_id) DO NOTHING`,
+          [organizationId]
+        );
+
+        const hostingWalletResult = await client.query(
+          'SELECT id, balance FROM hosting_wallets WHERE organization_id = $1 FOR UPDATE',
+          [organizationId]
+        );
+
+        if (hostingWalletResult.rows.length === 0) {
+          console.error('Hosting wallet not found for organization:', organizationId);
+          return false;
+        }
+
+        const mainWallet = mainWalletResult.rows[0];
+        const hostingWallet = hostingWalletResult.rows[0];
+        const mainBalance = parseFloat(mainWallet.balance);
+        const hostingBalance = parseFloat(hostingWallet.balance);
+
+        if (mainBalance < amount) {
+          return false;
+        }
+
+        const nextMainBalance = this.roundCurrencyAmount(mainBalance - amount);
+        const nextHostingBalance = this.roundCurrencyAmount(hostingBalance + amount);
+
+        await client.query(
+          'UPDATE wallets SET balance = $1, updated_at = NOW() WHERE id = $2',
+          [nextMainBalance, mainWallet.id]
+        );
+
+        await client.query(
+          'UPDATE hosting_wallets SET balance = $1, updated_at = NOW() WHERE id = $2',
+          [nextHostingBalance, hostingWallet.id]
+        );
+
+        const transferId = `hosting-transfer-${Date.now()}`;
+
+        await client.query(
+          `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, status, description, metadata)
+           VALUES
+             ($1, $2, 'USD', 'wallet_transfer', 'internal', 'completed', $3, $4),
+             ($1, $5, 'USD', 'hosting_wallet_credit', 'internal', 'completed', $6, $7)`,
+          [
+            organizationId,
+            -amount,
+            'Transfer to hosting wallet',
+            JSON.stringify({
+              transfer_id: transferId,
+              user_id: userId,
+              wallet_type: 'main',
+              destination_wallet_type: 'hosting',
+              balance_before: mainBalance,
+              balance_after: nextMainBalance,
+            }),
+            amount,
+            'Hosting wallet funded from main wallet',
+            JSON.stringify({
+              transfer_id: transferId,
+              user_id: userId,
+              wallet_type: 'hosting',
+              source_wallet_type: 'main',
+              balance_before: hostingBalance,
+              balance_after: nextHostingBalance,
+            }),
+          ]
+        );
+
+        return true;
+      });
+    } catch (error) {
+      console.error('Transfer to hosting wallet error:', error);
+      return false;
+    }
+  }
+
   /**
    * Get wallet balance for organization
    */
@@ -498,6 +696,32 @@ export class PayPalService {
       return parseFloat(result.rows[0].balance);
     } catch (error) {
       console.error('Get wallet balance error:', error);
+      return null;
+    }
+  }
+
+  static async getHostingWalletBalance(organizationId: string): Promise<number | null> {
+    try {
+      await query(
+        `INSERT INTO hosting_wallets (organization_id, balance, currency)
+         VALUES ($1, 0, 'USD')
+         ON CONFLICT (organization_id) DO NOTHING`,
+        [organizationId]
+      );
+
+      const result = await query(
+        'SELECT balance FROM hosting_wallets WHERE organization_id = $1',
+        [organizationId]
+      );
+
+      if (result.rows.length === 0) {
+        console.error('Hosting wallet not found for organization:', organizationId);
+        return null;
+      }
+
+      return parseFloat(result.rows[0].balance);
+    } catch (error) {
+      console.error('Get hosting wallet balance error:', error);
       return null;
     }
   }
@@ -550,6 +774,7 @@ export class PayPalService {
       return result.rows.map(row => {
         const amount = toNumber(row.amount) ?? 0;
         const metadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {});
+        const walletType = normalizeWalletType(metadata.wallet_type);
         const metadataBalance =
           metadata.balance_after ??
           metadata.balanceAfter ??
@@ -581,6 +806,7 @@ export class PayPalService {
           paymentId: row.provider_transaction_id || undefined,
           balanceBefore,
           balanceAfter,
+          walletType,
           createdAt: row.created_at,
         };
       });
@@ -674,9 +900,12 @@ export class PayPalService {
     metadata: Record<string, unknown> = {}
   ): Promise<PaymentResult> {
     try {
-      // Check if transaction already exists (for already captured orders)
       const existing = await query(
-        `SELECT id, status FROM payment_transactions WHERE provider_transaction_id = $1`,
+        `SELECT id, status, organization_id, metadata
+         FROM payment_transactions
+         WHERE provider_transaction_id = $1 OR id::text = $1
+         ORDER BY created_at DESC
+         LIMIT 1`,
         [orderId]
       );
 
@@ -687,34 +916,69 @@ export class PayPalService {
         };
       }
 
-      // Create new transaction record with completed status
+      const existingOrder = existing.rows[0];
+      const transactionOrganizationId = existingOrder?.organization_id ?? organizationId;
+      const storedMetadata = existingOrder?.metadata
+        ? typeof existingOrder.metadata === 'string'
+          ? JSON.parse(existingOrder.metadata)
+          : existingOrder.metadata
+        : {};
+      const mergedMetadata: Record<string, unknown> = {
+        ...storedMetadata,
+        ...metadata,
+        wallet_type: normalizeWalletType(metadata.wallet_type ?? storedMetadata.wallet_type),
+      };
       const captureId = metadata?.capture_id as string | undefined;
-      const result = await query(
-        `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, provider_transaction_id, provider_capture_id, status, description, metadata)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id`,
-        [organizationId, amount, currency, 'paypal', 'paypal', orderId, captureId || null, 'completed', description, JSON.stringify(metadata)]
-      );
+      let paymentTransactionId = existingOrder?.id as string | undefined;
 
-      if (result.rows.length === 0) {
-        console.error('Failed to create payment transaction for order:', orderId);
-        return {
-          success: false,
-          error: 'Payment capture failed: could not create transaction record',
-        };
+      if (paymentTransactionId) {
+        await query(
+          `UPDATE payment_transactions
+           SET provider_capture_id = COALESCE($2, provider_capture_id),
+               status = 'completed',
+               description = COALESCE(NULLIF($3, ''), description),
+               metadata = COALESCE(metadata, '{}'::jsonb) || $4::jsonb,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [paymentTransactionId, captureId || null, description, JSON.stringify(mergedMetadata)]
+        );
+      } else {
+        const result = await query(
+          `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, provider_transaction_id, provider_capture_id, status, description, metadata)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           RETURNING id`,
+          [transactionOrganizationId, amount, currency, 'paypal', 'paypal', orderId, captureId || null, 'completed', description, JSON.stringify(mergedMetadata)]
+        );
+
+        if (result.rows.length === 0) {
+          console.error('Failed to create payment transaction for order:', orderId);
+          return {
+            success: false,
+            error: 'Payment capture failed: could not create transaction record',
+          };
+        }
+
+        paymentTransactionId = result.rows[0].id;
       }
 
-      const paymentTransactionId = result.rows[0].id;
-
-      // Add funds to wallet
-      const credited = await this.addFundsToWallet(
-        organizationId,
-        amount,
-        description,
-        orderId,
-        paymentTransactionId,
-        metadata
-      );
+      const walletType = normalizeWalletType(mergedMetadata.wallet_type);
+      const credited = walletType === 'hosting'
+        ? await this.addFundsToHostingWallet(
+          transactionOrganizationId,
+          amount,
+          description,
+          orderId,
+          paymentTransactionId,
+          mergedMetadata
+        )
+        : await this.addFundsToWallet(
+          transactionOrganizationId,
+          amount,
+          description,
+          orderId,
+          paymentTransactionId,
+          mergedMetadata
+        );
 
       if (!credited) {
         console.error('PayPal capture succeeded but wallet update failed for order:', orderId);

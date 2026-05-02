@@ -35,7 +35,7 @@ const mockFetch = vi.fn();
 const mockApiResponse = (data: unknown) => ({
   ok: true,
   headers: { get: (key: string) => (key === 'content-type' ? 'application/json' : null) },
-  json: async () => data,
+  text: async () => JSON.stringify(data),
 });
 
 describe('Bug Condition Exploration: VPS Modal Dropdown Scrolling and Flag Display', () => {

@@ -706,6 +706,83 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
         ],
       },
       {
+        title: "Enhance Web Hosting",
+        base: `${apiBase}/hosting`,
+        description:
+          "Enhance web hosting plans, subscriptions, customer panel SSO, and service lifecycle.",
+        icon: <Server className="h-4 w-4" />,
+        endpoints: [
+          {
+            method: "GET",
+            path: "/status",
+            description: "Check whether Enhance hosting is configured and available.",
+            auth: false,
+            response: { enabled: true, configured: true },
+          },
+          {
+            method: "GET",
+            path: "/plans",
+            description: "List active hosting plans available for purchase.",
+            auth: true,
+            response: {
+              plans: [
+                { id: "plan_starter", name: "Starter Hosting", price_monthly: 9.99 },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/regions",
+            description: "List Enhance server groups exposed as hosting regions.",
+            auth: true,
+            response: { regions: [{ id: "group_us_east", name: "US East" }] },
+          },
+          {
+            method: "GET",
+            path: "/services",
+            description: "List hosting subscriptions for the active organization.",
+            auth: true,
+            response: {
+              subscriptions: [
+                { id: "host_001", domain: "example.com", status: "active", plan_name: "Starter Hosting" },
+              ],
+            },
+          },
+          {
+            method: "GET",
+            path: "/services/:id",
+            description: "Fetch hosting subscription details and Enhance metadata.",
+            auth: true,
+            response: {
+              subscription: { id: "host_001", domain: "example.com", status: "active" },
+            },
+          },
+          {
+            method: "POST",
+            path: "/purchase",
+            description: "Purchase a hosting subscription for a real domain using the hosting wallet.",
+            auth: true,
+            body: { planId: "plan_starter", domain: "example.com", regionId: "group_us_east" },
+            response: { success: true, subscriptionId: "host_001" },
+          },
+          {
+            method: "POST",
+            path: "/services/:id/cancel",
+            description: "Cancel a hosting subscription.",
+            auth: true,
+            body: { reason: "No longer needed" },
+            response: { success: true },
+          },
+          {
+            method: "POST",
+            path: "/sso",
+            description: "Create an Enhance panel SSO URL for the active organization.",
+            auth: true,
+            response: { url: "https://enhance.example.com/sso/token" },
+          },
+        ],
+      },
+      {
         title: "Billing & Payments",
         base: `${apiBase}/payments`,
         description:
@@ -722,11 +799,38 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
               amount: 100.0,
               currency: "USD",
               description: "Wallet top-up",
+              walletType: "main",
             },
             response: {
               success: true,
               paymentId: "PAYID-MOCK123",
               approvalUrl: "https://paypal.com/checkout?token=PAYID-MOCK123",
+            },
+          },
+          {
+            method: "GET",
+            path: "/wallet/hosting/balance",
+            description:
+              "Return the dedicated prepaid hosting wallet balance used for monthly Enhance hosting renewals.",
+            auth: true,
+            response: {
+              success: true,
+              balance: 85,
+              currency: "USD",
+            },
+          },
+          {
+            method: "POST",
+            path: "/wallet/hosting/fund",
+            description:
+              "Transfer funds from the main wallet into the dedicated hosting wallet.",
+            auth: true,
+            body: {
+              amount: 25,
+            },
+            response: {
+              success: true,
+              message: "Funds transferred to hosting wallet",
             },
           },
           {
@@ -1740,6 +1844,7 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
                     vps_count: 3,
                     ticket_count: 2,
                     ssh_key_count: 5,
+                    hosting_count: 2,
                     member_count: 4,
                   },
                 },
@@ -1941,12 +2046,24 @@ export const buildBaseSections = (apiBase: string): SectionDefinition[] => [
             
             params: {}, auth: true,
             response: {
-              resources: {
-                vpsCount: 10,
-                totalCpu: 20,
-                totalMemory: 40960,
-                totalStorage: 819200,
-              },
+              resources: [
+                {
+                  organization_id: "org_001",
+                  organization_name: "Acme Corp",
+                  vps_instances: [{ id: "vps_001", label: "web-01", status: "running" }],
+                  ssh_keys: [{ id: "key_001", name: "Deploy key", fingerprint: "SHA256:..." }],
+                  tickets: [{ id: "ticket_001", subject: "Need help", status: "open" }],
+                  hosting_subscriptions: [
+                    {
+                      id: "host_001",
+                      domain: "example.com",
+                      status: "active",
+                      plan_name: "Starter Hosting",
+                      next_billing_at: "2026-11-26T00:00:00Z",
+                    },
+                  ],
+                },
+              ],
             },
           },
           {

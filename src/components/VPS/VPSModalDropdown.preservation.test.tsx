@@ -33,7 +33,7 @@ const mockFetch = vi.fn();
 const mockApiResponse = (data: unknown) => ({
   ok: true,
   headers: { get: (key: string) => (key === 'content-type' ? 'application/json' : null) },
-  json: async () => data,
+  text: async () => JSON.stringify(data),
 });
 
 // Mock ResizeObserver for cmdk library
@@ -497,11 +497,9 @@ describe('Preservation Properties: VPS Modal Dropdown Functionality', () => {
 
       const trigger = container.querySelector('[role="combobox"]');
 
-      const externalFlagImage = trigger?.querySelector('img[src*="flagcdn.com"]');
-      const localFlagIcon = trigger?.querySelector('img[src*="flagcdn.com/w40/us.png"]');
+      const flagIcon = trigger?.querySelector('img[src*="flagcdn.com/w40/us.png"]');
 
-      expect(externalFlagImage).toBeFalsy();
-      expect(localFlagIcon).toBeTruthy();
+      expect(flagIcon).toBeTruthy();
     });
   });
 

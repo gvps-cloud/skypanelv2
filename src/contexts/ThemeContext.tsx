@@ -81,6 +81,10 @@ const applyTheme = (preset: ThemePreset) => {
 
   styleEl.textContent = `:root {\n${lightBlock}\n}\n:root.dark, .dark {\n${darkBlock}\n}`;
   document.documentElement.dataset.theme = preset.id;
+  document.documentElement.style.setProperty(
+    "--logo-contrast-filter",
+    preset.light["logo-contrast-filter"] ?? "drop-shadow(0 0 8px hsl(var(--primary) / 0.55))",
+  );
 };
 
 const getStoredTheme = (): ThemeId | null => {

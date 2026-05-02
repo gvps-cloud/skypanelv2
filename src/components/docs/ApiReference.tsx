@@ -33,6 +33,7 @@ import {
   syncSectionsWithActiveRoutes,
   buildBaseSections,
 } from "@/lib/apiDocsShared";
+import { SwaggerExplorer } from "@/components/api-docs/SwaggerExplorer";
 
 // ── Rendering Helpers ──────────────────────────────────────────────────────
 
@@ -127,8 +128,22 @@ export default function ApiReference({ onBack: _onBack }: ApiReferenceProps) {
     }
   }, []);
 
+  const handleSwaggerCopy = useCallback(
+    async (text: string, label: string) => {
+      await handleCopy(text, label, `${label}-${text.slice(0, 24)}`);
+    },
+    [handleCopy],
+  );
+  const showLegacyApiReference =
+    import.meta.env.DEV &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("legacyApiReference");
+
   return (
     <div className="relative space-y-6">
+      <SwaggerExplorer sections={filteredSections} readonly onCopy={handleSwaggerCopy} />
+      {showLegacyApiReference && (
+      <>
       {/* Header */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -155,6 +170,8 @@ export default function ApiReference({ onBack: _onBack }: ApiReferenceProps) {
           />
         </div>
       </div>
+      </>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-3">

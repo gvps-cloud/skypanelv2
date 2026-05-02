@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Key, Server, Ticket } from "lucide-react";
+import { ArrowUpRight, Globe2, Key, Server, Ticket } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { OrganizationResources } from "@/types/organizations";
 
-type ResourceTabKey = "vps" | "sshKeys" | "tickets";
+type ResourceTabKey = "vps" | "sshKeys" | "tickets" | "hosting";
 type BadgeVariant = React.ComponentProps<typeof Badge>["variant"];
 
 interface TablePaginationState {
@@ -39,9 +39,11 @@ interface OrganizationResourceTablesProps {
   getProviderSyncedLabel: (providerType: string) => string;
   getStatusBadgeVariant: (status: string) => BadgeVariant;
   onCreateVps: () => void;
+  onCreateHosting: () => void;
   onOpenSshKeys: (keyId?: string) => void;
   onCreateTicket: () => void;
   onOpenVps: (vpsId: string) => void;
+  onOpenHosting: (subscriptionId: string) => void;
   onOpenTicket: (ticketId: string) => void;
 }
 
@@ -50,6 +52,7 @@ const DEFAULT_PAGINATION: Record<ResourceTabKey, TablePaginationState> = {
   vps: { page: 1, limit: DEFAULT_LIMIT },
   sshKeys: { page: 1, limit: DEFAULT_LIMIT },
   tickets: { page: 1, limit: DEFAULT_LIMIT },
+  hosting: { page: 1, limit: DEFAULT_LIMIT },
 };
 
 const getPaginatedItems = <T,>(items: T[], page: number, limit: number) => {
@@ -107,9 +110,11 @@ export function OrganizationResourceTables({
   getProviderSyncedLabel,
   getStatusBadgeVariant,
   onCreateVps,
+  onCreateHosting,
   onOpenSshKeys,
   onCreateTicket,
   onOpenVps,
+  onOpenHosting,
   onOpenTicket,
 }: OrganizationResourceTablesProps) {
   const [activeTab, setActiveTab] = useState<ResourceTabKey>("vps");
@@ -131,6 +136,10 @@ export function OrganizationResourceTables({
   const ticketsPage = useMemo(
     () => getPaginatedItems(resources.tickets, pagination.tickets.page, pagination.tickets.limit),
     [resources.tickets, pagination.tickets.page, pagination.tickets.limit],
+  );
+  const hostingPage = useMemo(
+    () => getPaginatedItems(resources.hosting_subscriptions, pagination.hosting.page, pagination.hosting.limit),
+    [resources.hosting_subscriptions, pagination.hosting.page, pagination.hosting.limit],
   );
 
   const updatePage = (tab: ResourceTabKey, page: number) => {
@@ -162,10 +171,11 @@ export function OrganizationResourceTables({
 
   return (
     <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ResourceTabKey)}>
-      <TabsList className="grid h-auto w-full grid-cols-1 gap-1 sm:grid-cols-3">
+      <TabsList className="grid h-auto w-full grid-cols-1 gap-1 sm:grid-cols-4">
         <TabsTrigger value="vps">VPS Instances ({resources.vps_instances.length})</TabsTrigger>
         <TabsTrigger value="sshKeys">SSH Keys ({resources.ssh_keys.length})</TabsTrigger>
         <TabsTrigger value="tickets">Support Tickets ({resources.tickets.length})</TabsTrigger>
+        <TabsTrigger value="hosting">Web Hosting ({resources.hosting_subscriptions.length})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="vps">
@@ -234,6 +244,91 @@ export function OrganizationResourceTables({
                   itemsPerPage={vpsPage.itemsPerPage}
                   onPageChange={(page) => updatePage("vps", page)}
                   onItemsPerPageChange={(limit) => updateLimit("vps", limit)}
+                  itemsPerPageOptions={[5, 10, 20]}
+                />
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="hosting">
+        <Card>
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Globe2 className="h-5 w-5" />
+                Web Hosting
+              </CardTitle>
+              <CardDescription>
+                {resources.hosting_subscriptions.length} Enhance subscriptions in this organization
+              </CardDescription>
+            </div>
+            {resources.permissions.hosting_manage && (
+              <Button type="button" variant="outline" size="sm" onClick={onCreateHosting}>
+                {isActiveOrganization ? "Create" : "Switch & Create"}
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!resources.permissions.hosting_view ? (
+              <StateMessage message="You do not have permission to view web hosting" muted />
+            ) : resources.hosting_subscriptions.length === 0 ? (
+              <StateMessage message="No web hosting subscriptions found" />
+            ) : (
+              <>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Domain</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Plan</TableHead>
+                        <TableHead>Monthly</TableHead>
+                        <TableHead>Next Billing</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="w-[56px]" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {hostingPage.items.map((subscription) => (
+                        <TableRow
+                          key={subscription.id}
+                          {...getClickableRowProps(() => onOpenHosting(subscription.id))}
+                        >
+                          <TableCell className="font-medium">
+                            {subscription.domain || "Pending domain"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusBadgeVariant(subscription.status)}>
+                              {subscription.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{subscription.plan_name || "Hosting plan"}</TableCell>
+                          <TableCell>
+                            {subscription.price_monthly === null || subscription.price_monthly === undefined
+                              ? "—"
+                              : `$${Number(subscription.price_monthly).toFixed(2)}`}
+                          </TableCell>
+                          <TableCell>{formatTimestamp(subscription.next_billing_at || undefined)}</TableCell>
+                          <TableCell>{formatTimestamp(subscription.created_at)}</TableCell>
+                          <TableCell>
+                            <RowActionButton
+                              label={`Open hosting subscription ${subscription.domain || subscription.id}`}
+                              onClick={() => onOpenHosting(subscription.id)}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <Pagination
+                  currentPage={hostingPage.currentPage}
+                  totalItems={hostingPage.totalItems}
+                  itemsPerPage={hostingPage.itemsPerPage}
+                  onPageChange={(page) => updatePage("hosting", page)}
+                  onItemsPerPageChange={(limit) => updateLimit("hosting", limit)}
                   itemsPerPageOptions={[5, 10, 20]}
                 />
               </>

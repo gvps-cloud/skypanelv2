@@ -15,6 +15,8 @@ export interface PaymentIntent {
 
   description: string;
 
+  walletType?: 'main' | 'hosting';
+
 }
 
 
@@ -76,6 +78,8 @@ export interface WalletTransaction {
   balanceBefore?: number | null;
 
   balanceAfter: number | null;
+
+  walletType?: 'main' | 'hosting';
 
   createdAt: string;
 
@@ -297,6 +301,29 @@ class PaymentService {
     }
   }
 
+  async getHostingWalletBalance(): Promise<WalletBalance | null> {
+    try {
+      const data = await apiClient.get<any>('/payments/wallet/hosting/balance');
+      return { balance: data.balance };
+    } catch (error: any) {
+      console.error('Get hosting wallet balance error:', error);
+      return null;
+    }
+  }
+
+  async fundHostingWalletFromMain(amount: number): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      await apiClient.post<any>('/payments/wallet/hosting/fund', { amount });
+      return { success: true };
+    } catch (error: any) {
+      console.error('Fund hosting wallet error:', error);
+      return { success: false, error: error.message || 'Network error occurred' };
+    }
+  }
+
 
 
   /**
@@ -351,6 +378,8 @@ class PaymentService {
           const paymentIdValue = txRecord.paymentId ?? txRecord.payment_id;
           const paymentId = typeof paymentIdValue === 'string' ? paymentIdValue : undefined;
           const currencyValue = typeof txRecord.currency === 'string' ? txRecord.currency : 'USD';
+          const walletTypeValue = txRecord.walletType ?? txRecord.wallet_type;
+          const walletType = walletTypeValue === 'hosting' ? 'hosting' : 'main';
 
           return {
             id: String(txRecord.id ?? ''),
@@ -361,6 +390,7 @@ class PaymentService {
             currency: currencyValue,
             balanceBefore,
             balanceAfter,
+            walletType,
             createdAt,
           };
         }),

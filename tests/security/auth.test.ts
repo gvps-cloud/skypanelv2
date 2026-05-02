@@ -26,6 +26,11 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
 
+vi.mock('../../api/services/emailService.js', () => ({
+  sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+  sendWelcomeEmail: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Mock environment variables
 const mockJWTSecret = 'test-secret-key-for-security-testing-minimum-32-chars';
 process.env.JWT_SECRET = mockJWTSecret;

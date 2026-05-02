@@ -60,6 +60,7 @@ import {
   Sun,
   Users,
   BookOpen,
+  Globe,
   type LucideIcon,
 } from "lucide-react";
 import { generateBreadcrumbs } from "@/lib/breadcrumbs";
@@ -69,6 +70,7 @@ import FooterPartnerLinks from "@/components/FooterPartnerLinks";
 import NotificationDropdown from "@/components/NotificationDropdown";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHostingStatus } from "@/hooks/useHosting";
 import { apiClient } from "@/lib/api";
 import {
   BreadcrumbProvider,
@@ -240,6 +242,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isImpersonating } = useAuth();
+  const { data: hostingStatus } = useHostingStatus();
   const [commandOpen, setCommandOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -251,8 +254,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     () => location.pathname.startsWith("/admin"),
     [location.pathname],
   );
-  const isDashboardRoute = location.pathname === "/dashboard";
-
   // State for VPS and related search data
   const [vpsInstances, setVpsInstances] = useState<VPSInstance[]>([]);
   const [vpsLoading, setVpsLoading] = useState(false);
@@ -502,11 +503,41 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         icon: FileText,
         label: "Personal Notes",
         href: "/notes/personal",
+        shortcut: isMac ? "⌥N" : "Alt+N",
+        shortcutKey: "n",
+        requiresShift: false,
+        requiresAlt: true,
       },
       {
         icon: Users,
         label: "Organization Notes",
         href: "/notes/organizations",
+        shortcut: isMac ? "⌥⇧N" : "Alt+Shift+N",
+        shortcutKey: "n",
+        requiresShift: true,
+        requiresAlt: true,
+      },
+      ...(hostingStatus?.enabled
+        ? [
+            {
+              icon: Globe,
+              label: "Web Hosting",
+              href: "/hosting",
+              shortcut: isMac ? "⌥H" : "Alt+H",
+              shortcutKey: "h",
+              requiresShift: false,
+              requiresAlt: true,
+            },
+          ]
+        : []),
+      {
+        icon: Globe,
+        label: "Create Hosting",
+        href: "/hosting/store",
+        shortcut: isMac ? "⌥⇧H" : "Alt+Shift+H",
+        shortcutKey: "h",
+        requiresShift: true,
+        requiresAlt: true,
       },
       {
         icon: Key,
@@ -572,7 +603,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         requiresAlt: true,
       },
     ],
-    [isMac],
+    [hostingStatus?.enabled, isMac],
   );
 
   const adminNavigationItems = useMemo<CommandNavigationItem[]>(
@@ -870,6 +901,16 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         href: "/vps?create=1",
         icon: Server,
       },
+      ...(hostingStatus?.enabled
+        ? [
+            {
+              label: "Create Hosting",
+              description: "Order a new Enhance hosting subscription",
+              href: "/hosting/store",
+              icon: Globe,
+            },
+          ]
+        : []),
       {
         label: "Create support ticket",
         description: "Open a new support conversation",
@@ -885,7 +926,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     ];
 
     return items;
-  }, []);
+  }, [hostingStatus?.enabled]);
 
   const handleNavigate = useCallback(
     (href: string) => {
@@ -1132,7 +1173,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <div
           className={cn(
             "flex-1 overflow-auto",
-            isDashboardRoute && "md:pb-24",
+            "md:pb-24",
           )}
         >
           <Card className="h-full">
@@ -1144,24 +1185,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
         <footer
           className={cn(
-            "border-t border-border/60 bg-background px-4 py-3 sm:px-6",
-            isDashboardRoute &&
-              cn(
-                "md:pointer-events-none md:fixed md:bottom-4 md:left-4 md:right-6 md:z-40 md:border-0 md:bg-transparent md:p-0 md:transition-[left] md:duration-200 md:ease-linear",
-                isSidebarOpen
-                  ? "md:left-[calc(var(--sidebar-width)_+_1.5rem)]"
-                  : "md:left-[calc(var(--sidebar-width-icon)_+_1.5rem)]",
-              ),
+            "border-t border-border/60 bg-background px-4 py-3 sm:px-6 md:pointer-events-none md:fixed md:bottom-4 md:left-4 md:right-6 md:z-40 md:border-0 md:bg-transparent md:p-0 md:transition-[left] md:duration-200 md:ease-linear",
+            isSidebarOpen
+              ? "md:left-[calc(var(--sidebar-width)_+_1.5rem)]"
+              : "md:left-[calc(var(--sidebar-width-icon)_+_1.5rem)]",
           )}
         >
           <div
             className={cn(
-              "flex items-center justify-center sm:justify-end",
-              isDashboardRoute &&
-                "md:pointer-events-auto md:mx-0 md:ml-auto md:w-fit md:max-w-full md:rounded-2xl md:border md:border-border/70 md:bg-card/95 md:px-3 md:py-2 md:shadow-lg md:shadow-foreground/5 md:backdrop-blur md:supports-[backdrop-filter]:bg-card/85",
+              "flex items-center justify-center sm:justify-end md:pointer-events-auto md:mx-0 md:ml-auto md:w-fit md:max-w-full md:rounded-2xl md:border md:border-border/70 md:bg-card/95 md:px-3 md:py-2 md:shadow-lg md:shadow-foreground/5 md:backdrop-blur md:supports-[backdrop-filter]:bg-card/85",
             )}
           >
-            <FooterPartnerLinks className={cn(isDashboardRoute && "justify-center")} />
+            <FooterPartnerLinks className="justify-center" />
           </div>
         </footer>
 

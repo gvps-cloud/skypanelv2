@@ -634,6 +634,53 @@ export default function HomeRedesign() {
               </div>
             </motion.div>
 
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.15 }}
+              className="relative overflow-hidden rounded-3xl border border-primary/25 bg-card/80 p-4 shadow-2xl shadow-primary/10 backdrop-blur xl:col-span-2"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--primary)/0.08)_1px,transparent_1px),linear-gradient(hsl(var(--primary)/0.08)_1px,transparent_1px)] bg-[size:28px_28px] opacity-35" />
+              <svg viewBox="0 0 980 460" className="relative z-10 h-auto w-full" role="img" aria-label="SkyPanel dashboard preview">
+                <rect x="20" y="20" width="940" height="420" rx="26" fill="hsl(var(--background))" stroke="hsl(var(--primary) / 0.35)" />
+                <rect x="42" y="48" width="164" height="364" rx="18" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
+                <circle cx="74" cy="82" r="10" fill="hsl(var(--primary))" />
+                <rect x="94" y="74" width="82" height="14" rx="7" fill="hsl(var(--primary) / 0.9)" />
+                {["Dashboard", "Compute", "Hosting", "Billing", "API Docs"].map((item, index) => (
+                  <g key={item} transform={`translate(66 ${130 + index * 46})`}>
+                    <rect width="112" height="26" rx="13" fill={index === 2 ? "hsl(var(--primary) / 0.18)" : "hsl(var(--muted))"} />
+                    <circle cx="14" cy="13" r="4" fill="hsl(var(--primary))" />
+                    <text x="28" y="17" fontSize="12" fill="hsl(var(--foreground))">{item}</text>
+                  </g>
+                ))}
+                <rect x="236" y="58" width="680" height="70" rx="18" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
+                <text x="266" y="91" fontSize="26" fontWeight="700" fill="hsl(var(--foreground))">Cloud Control Matrix</text>
+                <text x="266" y="112" fontSize="13" fill="hsl(var(--muted-foreground))">VPS, hosting, billing, support, and org resources in one panel</text>
+                {[
+                  ["Active VPS", "12", 236],
+                  ["Hosting Sites", "8", 412],
+                  ["Wallet", "$248.50", 588],
+                  ["Uptime", "99.99%", 764],
+                ].map(([label, value, x]) => (
+                  <g key={label} transform={`translate(${x} 158)`}>
+                    <rect width="152" height="92" rx="18" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.24)" />
+                    <text x="18" y="34" fontSize="13" fill="hsl(var(--muted-foreground))">{label}</text>
+                    <text x="18" y="68" fontSize="28" fontWeight="700" fill="hsl(var(--primary))">{value}</text>
+                  </g>
+                ))}
+                <rect x="236" y="284" width="422" height="110" rx="20" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
+                <polyline points="262,360 316,334 372,348 430,312 494,328 548,298 626,316" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" />
+                <text x="262" y="318" fontSize="14" fill="hsl(var(--muted-foreground))">Realtime resource activity</text>
+                <rect x="684" y="284" width="232" height="110" rx="20" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
+                {["Enhance sync online", "Hosting wallet healthy", "API keys secured"].map((item, index) => (
+                  <g key={item} transform={`translate(706 ${314 + index * 27})`}>
+                    <circle cx="7" cy="7" r="5" fill="hsl(var(--primary))" />
+                    <text x="22" y="11" fontSize="13" fill="hsl(var(--foreground))">{item}</text>
+                  </g>
+                ))}
+              </svg>
+            </motion.div>
+
             {/* Globe */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}

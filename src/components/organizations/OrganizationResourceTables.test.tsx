@@ -37,6 +37,18 @@ const createResources = (): OrganizationResources => ({
       updated_at: "2026-03-02T11:00:00.000Z",
     },
   ],
+  hosting_subscriptions: [
+    {
+      id: "host-1",
+      domain: "example.com",
+      status: "active",
+      plan_name: "Starter Hosting",
+      price_monthly: "9.99",
+      next_billing_at: "2026-04-01T10:00:00.000Z",
+      last_billed_at: "2026-03-01T10:00:00.000Z",
+      created_at: "2026-03-01T10:00:00.000Z",
+    },
+  ],
   permissions: {
     vps_view: true,
     vps_create: true,
@@ -55,6 +67,8 @@ const createResources = (): OrganizationResources => ({
     settings_manage: false,
     egress_view: false,
     egress_manage: false,
+    hosting_view: true,
+    hosting_manage: true,
   },
 });
 
@@ -71,6 +85,8 @@ const renderComponent = () => {
     onOpenSshKeys: vi.fn(),
     onCreateTicket: vi.fn(),
     onOpenVps: vi.fn(),
+    onCreateHosting: vi.fn(),
+    onOpenHosting: vi.fn(),
     onOpenTicket: vi.fn(),
   };
 

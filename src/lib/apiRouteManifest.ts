@@ -1688,6 +1688,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/payments/wallet/hosting/balance",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/payments/wallet/hosting/fund",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/payments/wallet/transactions",
     "protected": true,
     "admin": false
