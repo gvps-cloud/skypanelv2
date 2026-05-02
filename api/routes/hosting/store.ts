@@ -1,9 +1,10 @@
+import crypto from "crypto";
 import express, { type Request, type Response } from "express";
 import { authenticateToken } from "../../middleware/auth.js";
 import { requireOrganization } from "../../middleware/auth.js";
 import { requireHostingEnabledForUsers, requireOrgPermission } from "../../middleware/hosting.js";
 import { query, transaction } from "../../lib/database.js";
-import { EnhanceService } from "../../services/enhanceService.js";
+import { EnhanceApiError, EnhanceService } from "../../services/enhanceService.js";
 import { logActivity } from "../../services/activityLogger.js";
 import { config } from "../../config/index.js";
 import { sendEnhanceCredentialsEmail } from "../../services/emailService.js";
@@ -13,6 +14,28 @@ import type { AuthenticatedRequest } from "../../middleware/auth.js";
 import { getEnhanceWebsiteOrgId, getHostingSubscriptionForOrganization } from "../../lib/hostingEnhanceOrg.js";
 
 const router = express.Router();
+
+const extractCollection = <T,>(value: any): T[] => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (Array.isArray(value?.items)) {
+    return value.items;
+  }
+
+  if (Array.isArray(value?.results)) {
+    return value.results;
+  }
+
+  return [];
+};
+
+const createHttpError = (message: string, statusCode: number, responseBody?: any) =>
+  Object.assign(new Error(message), { statusCode, responseBody });
+
+const generateSubdomainPrefix = (length = 6): string =>
+  crypto.randomBytes(length).toString("base64url").slice(0, length).toLowerCase();
 
 router.use(authenticateToken, requireOrganization, requireHostingEnabledForUsers);
 
@@ -154,25 +177,31 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
   }
 
   if (useStagingDomain) {
-    return res.status(400).json({
-      error: "Free staging domains are not available for initial hosting purchases. Please enter your own domain.",
-    });
-  }
-
-  const requestedDomain = typeof domain === 'string' ? domain.trim().toLowerCase() : '';
-  try {
-    const stagingSuffix = await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID);
-    const normalizedSuffix = stagingSuffix?.trim().toLowerCase();
-    if (normalizedSuffix && (requestedDomain === normalizedSuffix || requestedDomain.endsWith(`.${normalizedSuffix}`))) {
+    try {
+      const stagingSuffix = await EnhanceService.getStagingDomain(config.ENHANCE_MASTER_ORG_ID);
+      if (!stagingSuffix?.trim()) {
+        return res.status(400).json({
+          error: "Free subdomains are not available at this time. Please enter your own domain.",
+        });
+      }
+      req.body._generatedDomain = `${generateSubdomainPrefix()}.${stagingSuffix.trim().toLowerCase()}`;
+    } catch (error: any) {
+      console.error("Failed to resolve staging domain suffix:", error?.message || error);
       return res.status(400).json({
-        error: `Domains under ${normalizedSuffix} are reserved for Enhance staging sites. Please enter your own domain.`,
+        error: "Free subdomains are not available at this time. Please enter your own domain.",
       });
     }
-  } catch (error: any) {
-    console.error("Failed to validate staging domain suffix (non-fatal):", error?.message || error);
   }
 
+  const requestedDomain = useStagingDomain
+    ? req.body._generatedDomain
+    : (typeof domain === 'string' ? domain.trim().toLowerCase() : '');
+
   let subscriptionId: string | undefined;
+  let enhanceCustomerOrgId: string | undefined;
+  let remoteEnhanceSubscriptionId: string | undefined;
+  let remoteEnhanceWebsiteId: string | undefined;
+  let createdRemoteSubscription = false;
 
   try {
     const result = await transaction(async (client) => {
@@ -212,7 +241,7 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         `INSERT INTO payment_transactions (organization_id, amount, payment_method, payment_provider, status, description, metadata)
          VALUES ($1, $2, 'wallet_debit', 'internal', 'completed', $3, $4)
          RETURNING id`,
-        [organizationId, -amount, `Hosting purchase: ${plan.name}`, JSON.stringify({ plan_id: planId, domain })]
+        [organizationId, -amount, `Hosting purchase: ${plan.name}`, JSON.stringify({ plan_id: planId, domain: requestedDomain })]
       );
       const debitTransactionId = debitResult.rows[0].id;
 
@@ -221,7 +250,7 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, settings)
          VALUES ($1, $2, $3, $4, 'provisioning', now() + interval '1 month', $5)
          RETURNING *`,
-        [organizationId, userId, planId, domain, JSON.stringify({ debit_transaction_id: debitTransactionId })]
+        [organizationId, userId, planId, requestedDomain, JSON.stringify({ debit_transaction_id: debitTransactionId })]
       );
       const subscription = subResult.rows[0];
 
@@ -238,6 +267,7 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         organizationId,
         purchaserUserId: userId,
       });
+      enhanceCustomerOrgId = onboardingResult.enhanceCustomerId;
     } catch (onboardingError: any) {
       throw new Error(`Failed to prepare hosting account: ${onboardingError?.message || 'unknown error'}`);
     }
@@ -253,7 +283,6 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       : {};
     const allowServerGroupSelection = planFeatures.allowServerGroupSelection === true;
 
-    // Resolve the final domain (staging or custom)
     const resolvedDomain = requestedDomain;
 
     // Only include serverGroupId when the plan explicitly allows selection
@@ -270,13 +299,51 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         onboardingResult.enhanceCustomerId,
         { planId: enhancePlanId }
       );
+      createdRemoteSubscription = true;
     } catch (subError: any) {
-      throw new Error(`Failed to create hosting subscription: ${subError?.message || 'unknown error'}`);
+      const subscriptionAlreadyExists =
+        subError instanceof EnhanceApiError &&
+        subError.statusCode === 409 &&
+        subError.responseBody?.detail === 'subscription';
+
+      if (!subscriptionAlreadyExists) {
+        throw new Error(`Failed to create hosting subscription: ${subError?.message || 'unknown error'}`);
+      }
+
+      const existingSubscriptions = extractCollection<any>(
+        await EnhanceService.getCustomerSubscriptions(
+          config.ENHANCE_MASTER_ORG_ID,
+          onboardingResult.enhanceCustomerId,
+        )
+      );
+      const matchedSubscription = existingSubscriptions.find(
+        (item) => Number(item?.planId) === enhancePlanId,
+      );
+
+      if (!matchedSubscription?.id) {
+        throw new Error(
+          "Failed to create hosting subscription: Enhance reported an existing subscription, but no matching plan subscription could be found",
+        );
+      }
+
+      const existingWebsites = extractCollection<any>(
+        await EnhanceService.getWebsites(onboardingResult.enhanceCustomerId)
+      );
+      if (existingWebsites.length > 0) {
+        throw createHttpError(
+          "This hosting account already has an existing Enhance subscription with website data. Please cancel the existing service or contact support before purchasing again.",
+          409,
+          subError.responseBody,
+        );
+      }
+
+      enhanceSubscription = matchedSubscription;
     }
     const enhanceSubscriptionId = Number(enhanceSubscription.id);
     if (!Number.isInteger(enhanceSubscriptionId) || enhanceSubscriptionId <= 0) {
       throw new Error("Enhance subscription creation returned an invalid subscription id");
     }
+    remoteEnhanceSubscriptionId = String(enhanceSubscription.id);
 
     // Create website — conditionally include serverGroupId only when the plan allows selection
     const websitePayload: Record<string, any> = {
@@ -294,9 +361,23 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         websitePayload,
       );
     } catch (websiteError: any) {
+      const invalidDomainError =
+        websiteError instanceof EnhanceApiError &&
+        websiteError.statusCode === 403 &&
+        websiteError.responseBody?.detail === 'domain';
+
+      if (invalidDomainError) {
+        throw createHttpError(
+          websiteError.responseBody?.message || "Unable to create website for the requested domain",
+          400,
+          websiteError.responseBody,
+        );
+      }
+
       throw new Error(`Failed to create website: ${websiteError?.message || 'unknown error'}`);
     }
     const websiteId = websiteResult.id;
+    remoteEnhanceWebsiteId = websiteId;
 
     let enhanceWebsite;
     try {
@@ -365,12 +446,42 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
   } catch (error: any) {
     console.error("Hosting purchase failed:", error);
 
+    if (enhanceCustomerOrgId && remoteEnhanceWebsiteId) {
+      try {
+        await EnhanceService.deleteWebsite(enhanceCustomerOrgId, remoteEnhanceWebsiteId);
+      } catch (cleanupError) {
+        console.error("Failed to cleanup Enhance website after purchase error:", cleanupError);
+      }
+    }
+
+    if (remoteEnhanceSubscriptionId && createdRemoteSubscription) {
+      try {
+        await EnhanceService.deleteSubscription(config.ENHANCE_MASTER_ORG_ID, remoteEnhanceSubscriptionId);
+      } catch (cleanupError) {
+        console.error("Failed to cleanup Enhance subscription after purchase error:", cleanupError);
+      }
+    }
+
     // Mark subscription as error if it was created
     if (subscriptionId) {
       try {
         await query(
-          `UPDATE hosting_subscriptions SET status = 'error', updated_at = now() WHERE id = $1`,
-          [subscriptionId]
+          `UPDATE hosting_subscriptions
+           SET status = 'error',
+               updated_at = now(),
+               settings = settings || $2::jsonb
+           WHERE id = $1`,
+          [
+            subscriptionId,
+            JSON.stringify({
+              enhance_customer_id: enhanceCustomerOrgId || null,
+              enhance_subscription_id: remoteEnhanceSubscriptionId || null,
+              enhance_website_id: remoteEnhanceWebsiteId || null,
+              provisioning_error: error?.message || "Hosting purchase failed",
+              enhance_error_status: error?.statusCode || null,
+              enhance_error_body: error?.responseBody || null,
+            }),
+          ]
         );
       } catch (subUpdateError) {
         console.error("Failed to update subscription status to error:", subUpdateError);
@@ -396,7 +507,7 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       console.error("Failed to rollback hosting purchase:", rollbackError);
     }
 
-    res.status(500).json({ error: error?.message || "Hosting purchase failed" });
+    res.status(error?.statusCode || 500).json({ error: error?.message || "Hosting purchase failed" });
   }
 });
 

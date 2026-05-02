@@ -83,7 +83,7 @@ export default function HostingStore() {
   const [purchasing, setPurchasing] = useState(false);
 
   const stagingSuffix = stagingDomainData?.stagingDomain || null;
-  const canUseStaging = false;
+  const canUseStaging = !!stagingSuffix;
   const hasDomain = useStaging || domain.trim().length > 0;
 
   const plans: HostingPlan[] = plansData?.plans ?? [];

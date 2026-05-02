@@ -25,12 +25,25 @@ vi.mock('../services/enhanceToggle.js', () => ({
 
 // Mock EnhanceService methods; per-test behavior set via vi.mocked(...)
 vi.mock('../services/enhanceService.js', () => ({
+  EnhanceApiError: class EnhanceApiError extends Error {
+    statusCode?: number;
+    responseBody?: any;
+
+    constructor(message: string, statusCode?: number, responseBody?: any) {
+      super(message);
+      this.name = 'EnhanceApiError';
+      this.statusCode = statusCode;
+      this.responseBody = responseBody;
+    }
+  },
   EnhanceService: {
     createCustomerSubscription: vi.fn(),
     createWebsite: vi.fn(),
     getWebsite: vi.fn(),
     deleteWebsite: vi.fn().mockResolvedValue(undefined),
     deleteSubscription: vi.fn().mockResolvedValue(undefined),
+    getCustomerSubscriptions: vi.fn().mockResolvedValue({ items: [] }),
+    getWebsites: vi.fn().mockResolvedValue({ items: [] }),
     getServerGroups: vi.fn().mockResolvedValue([]),
     getStagingDomain: vi.fn().mockResolvedValue(null),
   },

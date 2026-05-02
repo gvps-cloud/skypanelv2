@@ -23,6 +23,7 @@ import { Logo } from "@/components/Logo";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
+import { useHostingStatus } from "@/hooks/useHosting";
 import { BRAND_NAME } from "@/lib/brand";
 import { ImpersonationSidebarPanel } from "@/components/ImpersonationSidebarPanel";
 import { NavMain } from "@/components/nav-main";
@@ -50,6 +51,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const { user, isImpersonating: authIsImpersonating } = useAuth();
   const { state, isMobile } = useSidebar();
   const { isImpersonating, impersonatedUser, exitImpersonation, isExiting } = useImpersonation();
+  const { data: hostingStatus } = useHostingStatus();
 
   // Main navigation items
   const pathname = location.pathname;
@@ -226,12 +228,16 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             },
           ],
         },
-        {
-          title: "Web Hosting",
-          url: "/hosting",
-          icon: Globe,
-          isActive: isHostingActive,
-        },
+        ...(hostingStatus?.enabled
+          ? [
+              {
+                title: "Web Hosting",
+                url: "/hosting",
+                icon: Globe,
+                isActive: isHostingActive,
+              },
+            ]
+          : []),
         {
           title: "Organizations",
           url: "/organizations",
@@ -287,12 +293,14 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
     [
       pathname,
       currentHash,
+      hostingStatus?.enabled,
       isActivityActive,
       isAdminRoute,
       isBillingActive,
       isApiDocsActive,
       isDashboardActive,
       isDocsActive,
+      isHostingActive,
       isOrganizationNotesActive,
       isPersonalNotesActive,
       isSshKeysActive,

@@ -7,18 +7,35 @@ import app from '../../app.js';
 const mockEnsureEnhanceCustomerForPurchase = vi.hoisted(() => vi.fn());
 const mockCreateCustomerSubscription = vi.hoisted(() => vi.fn());
 const mockCreateWebsite = vi.hoisted(() => vi.fn());
+const mockGetWebsite = vi.hoisted(() => vi.fn());
 const mockDeleteWebsite = vi.hoisted(() => vi.fn());
 const mockDeleteSubscription = vi.hoisted(() => vi.fn());
+const mockGetCustomerSubscriptions = vi.hoisted(() => vi.fn());
+const mockGetWebsites = vi.hoisted(() => vi.fn());
 const mockGetStagingDomain = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 const mockSendEnhanceCredentialsEmail = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockIsEffectivelyEnabled = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 
 vi.mock('../../services/enhanceService.js', () => ({
+  EnhanceApiError: class EnhanceApiError extends Error {
+    statusCode?: number;
+    responseBody?: any;
+
+    constructor(message: string, statusCode?: number, responseBody?: any) {
+      super(message);
+      this.name = 'EnhanceApiError';
+      this.statusCode = statusCode;
+      this.responseBody = responseBody;
+    }
+  },
   EnhanceService: {
     createCustomerSubscription: (...args: any[]) => mockCreateCustomerSubscription(...args),
     createWebsite: (...args: any[]) => mockCreateWebsite(...args),
+    getWebsite: (...args: any[]) => mockGetWebsite(...args),
     deleteWebsite: (...args: any[]) => mockDeleteWebsite(...args),
     deleteSubscription: (...args: any[]) => mockDeleteSubscription(...args),
+    getCustomerSubscriptions: (...args: any[]) => mockGetCustomerSubscriptions(...args),
+    getWebsites: (...args: any[]) => mockGetWebsites(...args),
     getStagingDomain: (...args: any[]) => mockGetStagingDomain(...args),
   },
 }));
@@ -52,6 +69,9 @@ describe('Hosting Store Routes', () => {
     vi.clearAllMocks();
     mockIsEffectivelyEnabled.mockResolvedValue(true);
     mockSendEnhanceCredentialsEmail.mockResolvedValue(undefined);
+    mockGetCustomerSubscriptions.mockResolvedValue({ items: [] });
+    mockGetWebsites.mockResolvedValue({ items: [] });
+    mockGetWebsite.mockResolvedValue({ id: 'web-123', primary_ip: '1.2.3.4' });
   });
 
   beforeAll(async () => {
@@ -303,10 +323,11 @@ describe('Hosting Store Routes', () => {
         `INSERT INTO hosting_plans (id, enhance_plan_id, name, description, features, service_type, price_monthly, is_active)
          VALUES ($1, $2, $3, $4, $5, $6, $7, true)
          RETURNING id`,
-        [randomUUID(), 'ep-999', 'SG Plan', 'Plan allowing server group selection',
-         '{"allowServerGroupSelection":true}', 'web', 10.00]
+        [randomUUID(), '999', 'SG Plan', 'Plan allowing server group selection',
+          '{"allowServerGroupSelection":true}', 'web', 10.00]
       );
       const sgPlanId = sgPlanResult.rows[0].id;
+      const selectedRegionId = randomUUID();
 
       await pool.query('UPDATE wallets SET balance = 100 WHERE organization_id = $1', [testOrgId]);
 
@@ -324,13 +345,13 @@ describe('Hosting Store Routes', () => {
       const response = await request(app)
         .post('/api/hosting/purchase')
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ planId: sgPlanId, domain: 'sg-test.com' });
+        .send({ planId: sgPlanId, domain: 'sg-test.com', regionId: selectedRegionId });
 
       expect(response.status).toBe(201);
       expect(mockCreateWebsite).toHaveBeenCalledWith('cust-123', {
         subscriptionId: 456,
         domain: 'sg-test.com',
-        serverGroupId: expect.any(String),
+        serverGroupId: selectedRegionId,
       });
 
       // Cleanup
@@ -338,10 +359,11 @@ describe('Hosting Store Routes', () => {
       await pool.query('DELETE FROM hosting_plans WHERE id = $1', [sgPlanId]);
     });
 
-    it('resolves staging domain when useStagingDomain is true', async () => {
-      await pool.query('UPDATE wallets SET balance = 100 WHERE organization_id = $1', [testOrgId]);
+    it('reuses an orphaned Enhance subscription after a 409 conflict when no websites exist', async () => {
+      const { EnhanceApiError } = await import('../../services/enhanceService.js');
 
-      mockGetStagingDomain.mockResolvedValue('staging.examplehost.com');
+      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+
       mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
         enhanceCustomerId: 'cust-123',
         purchaserLoginId: 'login-123',
@@ -350,26 +372,121 @@ describe('Hosting Store Routes', () => {
         credentialsEmail: null,
         ownerAssigned: false,
       });
-      mockCreateCustomerSubscription.mockResolvedValue({ id: 789 });
-      mockCreateWebsite.mockResolvedValue({ id: 'web-staging-1' });
+      mockCreateCustomerSubscription.mockRejectedValue(
+        new EnhanceApiError('Enhance API error: 409 Conflict', 409, {
+          code: 'already_exists',
+          detail: 'subscription',
+          message: 'This customer already has a reseller subscription',
+        }),
+      );
+      mockGetCustomerSubscriptions.mockResolvedValue({
+        items: [{ id: 444, planId: 101 }],
+      });
+      mockGetWebsites.mockResolvedValue({ items: [] });
+      mockCreateWebsite.mockResolvedValue({ id: 'web-444', primary_ip: '1.2.3.4' });
 
       const response = await request(app)
         .post('/api/hosting/purchase')
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ planId, useStagingDomain: true });
+        .send({ planId, domain: 'orphan-reuse-test.com' })
+        .expect(201);
 
-      expect(response.status).toBe(201);
-      expect(response.body.stagingDomain).toBe(true);
-      // The domain should end with the staging suffix
-      expect(response.body.subscription.domain).toMatch(/\.staging\.examplehost\.com$/);
-      // serverGroupId should NOT be in the payload (features='{}' → allowServerGroupSelection=false)
+      expect(response.body.subscription.status).toBe('active');
+      expect(mockGetCustomerSubscriptions).toHaveBeenCalledWith(expect.any(String), 'cust-123');
       expect(mockCreateWebsite).toHaveBeenCalledWith('cust-123', {
-        subscriptionId: 789,
-        domain: expect.stringMatching(/\.staging\.examplehost\.com$/),
+        subscriptionId: 444,
+        domain: 'orphan-reuse-test.com',
       });
+      expect(mockDeleteSubscription).not.toHaveBeenCalled();
+    });
 
-      // Cleanup
-      await pool.query('DELETE FROM hosting_subscriptions WHERE domain LIKE $1', ['%.staging.examplehost.com']);
+    it('returns a 400 with the Enhance domain message and cleans up a created subscription', async () => {
+      const { EnhanceApiError } = await import('../../services/enhanceService.js');
+
+      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+
+      mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
+        enhanceCustomerId: 'cust-123',
+        purchaserLoginId: 'login-123',
+        purchaserMemberId: 'member-123',
+        credentialsCreated: false,
+        credentialsEmail: null,
+        ownerAssigned: false,
+      });
+      mockCreateCustomerSubscription.mockResolvedValue({ id: '987' });
+      mockCreateWebsite.mockRejectedValue(
+        new EnhanceApiError('Enhance API error: 403 Forbidden', 403, {
+          code: 'unauthorized',
+          detail: 'domain',
+          message: 'Unable to create website outside of the org',
+        }),
+      );
+
+      const response = await request(app)
+        .post('/api/hosting/purchase')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ planId, domain: 'cp.gvps.cloud' })
+        .expect(400);
+
+      expect(response.body.error).toBe('Unable to create website outside of the org');
+      expect(mockDeleteSubscription).toHaveBeenCalledWith(expect.any(String), '987');
+
+      const walletResult = await pool.query(
+        'SELECT balance FROM wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(walletResult.rows[0].balance)).toBe(50.00);
+
+      const subResult = await pool.query(
+        `SELECT status, settings FROM hosting_subscriptions WHERE organization_id = $1 AND domain = $2 ORDER BY created_at DESC LIMIT 1`,
+        [testOrgId, 'cp.gvps.cloud']
+      );
+      expect(subResult.rows[0].status).toBe('error');
+      expect(subResult.rows[0].settings.provisioning_error).toContain('Unable to create website outside of the org');
+      expect(subResult.rows[0].settings.enhance_subscription_id).toBe('987');
+    });
+
+    it('auto-generates a staging subdomain when useStagingDomain is true', async () => {
+      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+
+      mockGetStagingDomain.mockResolvedValue('staging.cp.gvps.cloud');
+      mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
+        enhanceCustomerId: 'cust-123',
+        purchaserLoginId: 'login-123',
+        purchaserMemberId: 'member-123',
+        credentialsCreated: false,
+        credentialsEmail: null,
+        ownerAssigned: false,
+      });
+      mockCreateCustomerSubscription.mockResolvedValue({ id: '123' });
+      mockCreateWebsite.mockResolvedValue({ id: 'web-123', primary_ip: '1.2.3.4' });
+
+      const response = await request(app)
+        .post('/api/hosting/purchase')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ planId, useStagingDomain: true })
+        .expect(201);
+
+      expect(response.body.subscription.status).toBe('active');
+      expect(response.body.stagingDomain).toMatch(/^[a-z0-9]{6}\.staging\.cp\.gvps\.cloud$/);
+      expect(response.body.subscription.domain).toMatch(/^[a-z0-9]{6}\.staging\.cp\.gvps\.cloud$/);
+      expect(mockCreateWebsite).toHaveBeenCalledWith('cust-123', {
+        subscriptionId: 123,
+        domain: expect.stringMatching(/^[a-z0-9]{6}\.staging\.cp\.gvps\.cloud$/),
+      });
+    });
+
+    it('rejects useStagingDomain when no staging suffix is configured', async () => {
+      mockGetStagingDomain.mockResolvedValue(null);
+
+      const response = await request(app)
+        .post('/api/hosting/purchase')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ planId, useStagingDomain: true })
+        .expect(400);
+
+      expect(response.body.error).toContain('Free subdomains are not available');
+      expect(mockCreateCustomerSubscription).not.toHaveBeenCalled();
     });
   });
 
