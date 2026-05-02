@@ -296,6 +296,12 @@ export class EnhanceOnboardingService {
       console.log(`[EnhanceOnboarding] Matched existing member: ${purchaserMemberId}`);
     }
 
+    // Persist member ID for future SSO calls
+    await query(
+      `UPDATE organizations SET enhance_member_id = $1, updated_at = now() WHERE id = $2`,
+      [purchaserMemberId, organizationId]
+    );
+
     let ownerAssigned = false;
     if (!hasOwner(orgMembers)) {
       console.log(`[EnhanceOnboarding] No owner found, assigning ${purchaserMemberId} as owner...`);

@@ -7,6 +7,7 @@ export const hostingKeys = {
   plans: () => ["hosting", "plans"] as const,
   regions: () => ["hosting", "regions"] as const,
   stagingDomain: () => ["hosting", "staging-domain"] as const,
+  nameservers: () => ["hosting", "nameservers"] as const,
   services: () => ["hosting", "services"] as const,
   service: (id: string) => ["hosting", "services", id] as const,
 };
@@ -69,5 +70,16 @@ export function useHostingStagingDomain() {
       const res = await apiClient.get("/hosting/staging-domain");
       return res as { stagingDomain: string | null };
     },
+  });
+}
+
+export function useHostingNameservers() {
+  return useQuery({
+    queryKey: hostingKeys.nameservers(),
+    queryFn: async () => {
+      const res = await apiClient.get("/hosting/nameservers");
+      return res as { ips: string[]; servers: { hostname: string; ips: string[] }[] };
+    },
+    staleTime: 10 * 60 * 1000,
   });
 }

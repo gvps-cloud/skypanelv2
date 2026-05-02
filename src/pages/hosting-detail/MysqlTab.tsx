@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/select";
 
 interface MysqlDatabase {
+  id?: string | null;
   name: string;
   size: number;
   createdAt?: string | null;
@@ -50,6 +51,7 @@ interface MysqlDatabase {
 
 interface MysqlUser {
   username: string;
+  dbId?: string | null;
   accessHosts: string[];
   grants: Record<string, string[]>;
   authPlugin?: string | null;
@@ -59,6 +61,14 @@ interface MysqlUser {
 interface MysqlTabProps {
   subscriptionId: string;
 }
+
+type AccessPrivilegePreset = "all" | "readWrite" | "readOnly";
+
+const MYSQL_GRANTS_BY_PRESET: Record<AccessPrivilegePreset, string[]> = {
+  all: ["all"],
+  readWrite: ["select", "insert", "update", "delete"],
+  readOnly: ["select"],
+};
 
 function formatDatabaseSize(size: number | null | undefined): string {
   const value = Number(size ?? 0);
@@ -115,7 +125,7 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
   const [manageAccessOpen, setManageAccessOpen] = useState(false);
   const [accessUser, setAccessUser] = useState<MysqlUser | null>(null);
   const [accessDb, setAccessDb] = useState("");
-  const [accessPrivileges, setAccessPrivileges] = useState("ALL PRIVILEGES");
+  const [accessPrivileges, setAccessPrivileges] = useState<AccessPrivilegePreset>("all");
   const [managingAccess, setManagingAccess] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -263,7 +273,7 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
     try {
       await apiClient.post(
         `/hosting/mysql/${subscriptionId}/mysql-users/${encodeURIComponent(accessHostUsername)}/access-hosts`,
-        { hosts: [newHost.trim()] },
+        { accessHosts: [newHost.trim()] },
       );
       toast.success("Access host added");
       setNewHost("");
@@ -281,7 +291,7 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
     try {
       await apiClient.delete(
         `/hosting/mysql/${subscriptionId}/mysql-users/${encodeURIComponent(accessHostUsername)}/access-hosts`,
-        { data: { hosts: [host] } },
+        { accessHosts: [host] },
       );
       toast.success("Access host removed");
       await loadData();
@@ -297,7 +307,8 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
     setManagingAccess(true);
     try {
       await apiClient.put(`/hosting/mysql/${subscriptionId}/mysql-users/${encodeURIComponent(accessUser.username)}/privileges`, {
-        [accessDb]: [accessPrivileges]
+        dbName: accessDb,
+        grants: MYSQL_GRANTS_BY_PRESET[accessPrivileges],
       });
       toast.success("User access updated");
       setManageAccessOpen(false);
@@ -315,7 +326,8 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
     setUserActionLoading(username);
     try {
       await apiClient.put(`/hosting/mysql/${subscriptionId}/mysql-users/${encodeURIComponent(username)}/privileges`, {
-        [dbName]: []
+        dbName,
+        grants: [],
       });
       toast.success("User access revoked");
       await loadData();
@@ -600,6 +612,7 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
                       variant="ghost"
                       size="sm"
                       className="h-4 w-4 p-0 text-destructive hover:text-destructive"
+                      aria-label={`Remove access host ${host}`}
                       onClick={() => handleRemoveHost(host)}
                       disabled={removingHost === host}
                     >
@@ -656,14 +669,14 @@ export default function MysqlTab({ subscriptionId }: MysqlTabProps) {
             </div>
             <div className="space-y-2">
               <Label>Privileges</Label>
-              <Select value={accessPrivileges} onValueChange={setAccessPrivileges}>
+              <Select value={accessPrivileges} onValueChange={(value) => setAccessPrivileges(value as AccessPrivilegePreset)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL PRIVILEGES">All Privileges</SelectItem>
-                  <SelectItem value="SELECT, INSERT, UPDATE, DELETE">Read & Write</SelectItem>
-                  <SelectItem value="SELECT">Read Only</SelectItem>
+                  <SelectItem value="all">All Privileges</SelectItem>
+                  <SelectItem value="readWrite">Read & Write</SelectItem>
+                  <SelectItem value="readOnly">Read Only</SelectItem>
                 </SelectContent>
               </Select>
             </div>

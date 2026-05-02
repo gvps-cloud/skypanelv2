@@ -49,7 +49,6 @@ export default function WebTab({ subscriptionId }: WebTabProps) {
         <TabsTrigger value="general" className="rounded-md">General</TabsTrigger>
         <TabsTrigger value="php" className="rounded-md">PHP</TabsTrigger>
         <TabsTrigger value="webserver" className="rounded-md">Web Server</TabsTrigger>
-        <TabsTrigger value="security" className="rounded-md">Security</TabsTrigger>
       </TabsList>
 
       <TabsContent value="general" className="space-y-6 outline-none mt-0">
@@ -70,8 +69,6 @@ export default function WebTab({ subscriptionId }: WebTabProps) {
         <IoncubeRedisCard subscriptionId={subscriptionId} />
       </TabsContent>
 
-      <TabsContent value="security" className="space-y-6 outline-none mt-0">
-      </TabsContent>
     </Tabs>
   );
 }

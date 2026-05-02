@@ -1,4 +1,5 @@
 import { config } from '../config/index.js';
+import type { BackupDownloadKind, BackupStorageKind } from '../lib/hostingBackups.js';
 
 export class EnhanceApiError extends Error {
   constructor(
@@ -17,10 +18,34 @@ interface RequestOptions {
   headers?: Record<string, string>;
 }
 
+interface BinaryRequestOptions {
+  method?: 'GET' | 'POST';
+  body?: BodyInit | Buffer;
+  headers?: Record<string, string>;
+}
+
+export interface EnhanceBinaryResponse {
+  data: Buffer;
+  contentType: string;
+  contentDisposition?: string;
+}
+
 export class EnhanceService {
   private static baseUrl(): string {
     const url = config.ENHANCE_API_URL.replace(/\/$/, '');
     return url.endsWith('/api') ? url : `${url}/api`;
+  }
+
+  private static buildQuery(params: Record<string, string | boolean | undefined>): string {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (typeof value === 'undefined') {
+        continue;
+      }
+      query.set(key, typeof value === 'boolean' ? (value ? 'true' : 'false') : value);
+    }
+    const serialized = query.toString();
+    return serialized ? `?${serialized}` : '';
   }
 
   private static async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -77,6 +102,91 @@ export class EnhanceService {
     return parseBody() as T;
   }
 
+  private static async requestBinary(path: string, options: BinaryRequestOptions = {}): Promise<EnhanceBinaryResponse> {
+    const url = `${this.baseUrl()}${path}`;
+    const method = options.method || 'GET';
+
+    if (config.NODE_ENV !== 'production') {
+      console.log(`[EnhanceAPI] ${method} ${url}`);
+    }
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${config.ENHANCE_API_KEY.replace(/^Bearer\s+/i, '')}`,
+        'Accept': options.headers?.Accept ?? 'application/gzip',
+        ...options.headers,
+      },
+      body: options.body,
+    });
+
+    if (!response.ok) {
+      const responseText = await response.text();
+      let body: any = responseText;
+      try {
+        body = responseText.trim() ? JSON.parse(responseText) : undefined;
+      } catch {
+        // Preserve raw error text for binary endpoints.
+      }
+      throw new EnhanceApiError(
+        `Enhance API error: ${response.status} ${response.statusText}`,
+        response.status,
+        body,
+      );
+    }
+
+    const data = Buffer.from(await response.arrayBuffer());
+    return {
+      data,
+      contentType: response.headers.get('content-type') || 'application/gzip',
+      contentDisposition: response.headers.get('content-disposition') || undefined,
+    };
+  }
+
+  private static async requestRedirectUrl(path: string): Promise<string> {
+    const url = `${this.baseUrl()}${path}`;
+
+    if (config.NODE_ENV !== 'production') {
+      console.log(`[EnhanceAPI] GET ${url}`);
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      redirect: 'manual',
+      headers: {
+        'Authorization': `Bearer ${config.ENHANCE_API_KEY.replace(/^Bearer\s+/i, '')}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    const location = response.headers.get('location');
+    if (location) {
+      return location;
+    }
+
+    const responseText = await response.text();
+    let body: any = responseText;
+    try {
+      body = responseText.trim() ? JSON.parse(responseText) : undefined;
+    } catch {
+      // Some redirect-style endpoints return a raw URL string.
+    }
+
+    if (!response.ok) {
+      throw new EnhanceApiError(
+        `Enhance API error: ${response.status} ${response.statusText}`,
+        response.status,
+        body,
+      );
+    }
+
+    if (typeof body === 'string' && body.trim()) return body.trim();
+    if (body && typeof body.url === 'string') return body.url;
+    if (body && typeof body.redirectUrl === 'string') return body.redirectUrl;
+
+    throw new EnhanceApiError('Enhance API did not return a redirect URL', response.status, body);
+  }
+
   // ============================================================
   // Connectivity / Org
   // ============================================================
@@ -110,6 +220,49 @@ export class EnhanceService {
     // Enhance API: /servers/groups is a global endpoint (not org-scoped)
     const response = await this.request<any>(`/servers/groups`);
     return Array.isArray(response) ? response : (response?.items ?? []);
+  }
+
+  static async getServer(serverId: string) {
+    return this.request<any>(`/servers/${serverId}`);
+  }
+
+  static async getEmailServerHostnameOverride(serverId: string) {
+    return this.request<any>(`/servers/${serverId}/email/hostname_override`);
+  }
+
+  // ============================================================
+  // DNS Nameservers
+  // ============================================================
+
+  /**
+   * Get DNS nameserver info: returns the DNS pool IPs (from /v2/servers/dns_pool)
+   * and server hostnames/IPs for servers with the DNS role (from /servers).
+   */
+  static async getDnsNameservers(): Promise<{ ips: string[]; servers: { hostname: string; ips: string[] }[] }> {
+    // Fetch both in parallel
+    const [dnsPoolIps, serversResponse] = await Promise.all([
+      this.request<string[]>(`/v2/servers/dns_pool`).catch(() => []),
+      this.request<{ items?: any[]; total?: number } | any[]>(`/servers`),
+    ]);
+
+    const ips: string[] = Array.isArray(dnsPoolIps) ? dnsPoolIps : [];
+
+    // Normalize servers response
+    const serverList = Array.isArray(serversResponse)
+      ? serversResponse
+      : serversResponse?.items ?? [];
+
+    // Filter to servers that have the DNS role enabled
+    const dnsServers = serverList
+      .filter((s: any) => s.roles?.dns === 'enabled' || s.roles?.dns?.state === 'enabled')
+      .map((s: any) => ({
+        hostname: s.hostname || '',
+        ips: (Array.isArray(s.ips) ? s.ips : [])
+          .filter((ip: any) => ip.isPrimary || true) // include all IPs
+          .map((ip: any) => typeof ip === 'string' ? ip : ip.ip),
+      }));
+
+    return { ips, servers: dnsServers };
   }
 
   // ============================================================
@@ -244,6 +397,16 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}`);
   }
 
+  static async getSiteAccessToken(orgId: string, websiteId: string) {
+    return this.request<string>(`/orgs/${orgId}/websites/${websiteId}/access-tokens`, {
+      method: 'POST',
+    });
+  }
+
+  static async getWebsiteServerDomains(orgId: string, websiteId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/server_domains`);
+  }
+
   static async updateWebsite(orgId: string, websiteId: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}`, {
       method: 'PATCH',
@@ -280,7 +443,7 @@ export class EnhanceService {
 
   static async updateWebsiteDomainMapping(orgId: string, websiteId: string, domainId: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }
@@ -305,10 +468,27 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/dns-zone`);
   }
 
+  static async getWebsiteDomainDnsQuery(orgId: string, websiteId: string, domainId: string, options?: { resolveDepth?: string }) {
+    const params = this.buildQuery({ resolveDepth: options?.resolveDepth });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/dns-query${params}`);
+  }
+
   static async updateWebsiteDomainDnsZone(orgId: string, websiteId: string, domainId: string, data: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/dns-zone`, {
-      method: 'PUT',
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/dns-zone`, {
+      method: 'PATCH',
       body: data,
+    });
+  }
+
+  static async enableWebsiteDomainDnssec(orgId: string, websiteId: string, domainId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/dns-zone/dnssec`, {
+      method: 'POST',
+    });
+  }
+
+  static async disableWebsiteDomainDnssec(orgId: string, websiteId: string, domainId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/dns-zone/dnssec`, {
+      method: 'DELETE',
     });
   }
 
@@ -321,7 +501,7 @@ export class EnhanceService {
 
   static async updateWebsiteDomainDnsZoneRecord(orgId: string, websiteId: string, domainId: string, recordId: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/domains/${domainId}/dns-zone/records/${recordId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }
@@ -367,6 +547,14 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/emails/${encodeURIComponent(emailAddress)}/client-conf`);
   }
 
+  static async getWebsiteEmailSsoUrl(orgId: string, websiteId: string, emailAddress: string) {
+    return this.requestRedirectUrl(`/orgs/${orgId}/websites/${websiteId}/emails/${encodeURIComponent(emailAddress)}/sso`);
+  }
+
+  static async getWebsiteEmailAutoresponder(orgId: string, websiteId: string, emailAddress: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/emails/${encodeURIComponent(emailAddress)}/autoresponder`);
+  }
+
   static async createWebsiteEmailAutoresponder(orgId: string, websiteId: string, emailAddress: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/emails/${encodeURIComponent(emailAddress)}/autoresponder`, {
       method: 'POST',
@@ -377,6 +565,17 @@ export class EnhanceService {
   static async deleteWebsiteEmailAutoresponder(orgId: string, websiteId: string, emailAddress: string) {
     return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/emails/${encodeURIComponent(emailAddress)}/autoresponder`, {
       method: 'DELETE',
+    });
+  }
+
+  static async getEmailSpamThresholds(websiteId: string, emailAddress: string) {
+    return this.request<any>(`/websites/${websiteId}/emails/${encodeURIComponent(emailAddress)}/spam_thresholds`);
+  }
+
+  static async setEmailSpamThresholds(websiteId: string, emailAddress: string, data: any) {
+    return this.request<any>(`/websites/${websiteId}/emails/${encodeURIComponent(emailAddress)}/spam_thresholds`, {
+      method: 'PUT',
+      body: data,
     });
   }
 
@@ -565,8 +764,11 @@ export class EnhanceService {
     });
   }
 
-  static async deleteWebsiteApp(orgId: string, websiteId: string, appId: string) {
-    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}`, {
+  static async deleteWebsiteApp(orgId: string, websiteId: string, appId: string, options?: { backupBeforeOperation?: boolean }) {
+    const params = this.buildQuery({
+      backupBeforeOperation: typeof options?.backupBeforeOperation === 'boolean' ? options.backupBeforeOperation : undefined,
+    });
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}${params}`, {
       method: 'DELETE',
     });
   }
@@ -590,13 +792,33 @@ export class EnhanceService {
   }
 
   static async getWebsitePersistentAppLog(websiteId: string, appId: string) {
-    return this.request<any>(`/websites/${websiteId}/apps/persistent/${appId}/log`);
+    return this.request<any>(`/websites/${websiteId}/apps/persistent/${appId}`);
   }
 
   static async deleteWebsitePersistentApp(websiteId: string, appId: string) {
     return this.request<void>(`/websites/${websiteId}/apps/persistent/${appId}`, {
       method: 'DELETE',
     });
+  }
+
+  static async installWebsiteNvm(websiteId: string) {
+    return this.request<any>(`/websites/${websiteId}/apps/node`, { method: 'POST' });
+  }
+
+  static async getPossibleNodeVersions(websiteId: string) {
+    return this.request<string[]>(`/websites/${websiteId}/apps/node/possible_versions`);
+  }
+
+  static async getInstalledNodeVersions(websiteId: string) {
+    return this.request<string[]>(`/websites/${websiteId}/apps/node/versions`);
+  }
+
+  static async installNodeVersion(websiteId: string, version: string) {
+    return this.request<any>(`/websites/${websiteId}/apps/node/versions`, { method: 'POST', body: version });
+  }
+
+  static async setDefaultNodeVersion(websiteId: string, version: string) {
+    return this.request<any>(`/websites/${websiteId}/apps/node/versions/default`, { method: 'PUT', body: version });
   }
 
   // ============================================================
@@ -625,6 +847,17 @@ export class EnhanceService {
 
   static async getWordpressAppVersion(orgId: string, websiteId: string, appId: string) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/version`);
+  }
+
+  static async getWordpressMaintenanceMode(appId: string) {
+    return this.request<any>(`/v2/apps/${appId}/wordpress/maintenance-mode`);
+  }
+
+  static async setWordpressMaintenanceMode(appId: string, mode: 'activate' | 'deactivate') {
+    return this.request<any>(`/v2/apps/${appId}/wordpress/maintenance-mode`, {
+      method: 'PUT',
+      body: mode,
+    });
   }
 
   static async getWordpressUsers(orgId: string, websiteId: string, appId: string) {
@@ -666,8 +899,11 @@ export class EnhanceService {
     });
   }
 
-  static async getWordpressPlugins(orgId: string, websiteId: string, appId: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/plugins`);
+  static async getWordpressPlugins(orgId: string, websiteId: string, appId: string, options?: { refreshCache?: boolean }) {
+    const params = this.buildQuery({
+      refreshCache: options?.refreshCache,
+    });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/plugins${params}`);
   }
 
   static async installWordpressPlugin(orgId: string, websiteId: string, appId: string, data: any) {
@@ -678,13 +914,29 @@ export class EnhanceService {
   }
 
   static async deleteWordpressPlugin(orgId: string, websiteId: string, appId: string, pluginId: string) {
-    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/plugins/${pluginId}`, {
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/plugins/${encodeURIComponent(pluginId)}`, {
       method: 'DELETE',
     });
   }
 
-  static async getWordpressThemes(orgId: string, websiteId: string, appId: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/themes`);
+  static async updateWordpressPluginSettings(orgId: string, websiteId: string, appId: string, pluginId: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/plugins/${encodeURIComponent(pluginId)}`, {
+      method: 'PATCH',
+      body: data,
+    });
+  }
+
+  static async updateWordpressPluginToLatest(orgId: string, websiteId: string, appId: string, pluginId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/plugins/${encodeURIComponent(pluginId)}/version`, {
+      method: 'PATCH',
+    });
+  }
+
+  static async getWordpressThemes(orgId: string, websiteId: string, appId: string, options?: { refreshCache?: boolean }) {
+    const params = this.buildQuery({
+      refreshCache: options?.refreshCache,
+    });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/themes${params}`);
   }
 
   static async installWordpressTheme(orgId: string, websiteId: string, appId: string, data: any) {
@@ -695,7 +947,7 @@ export class EnhanceService {
   }
 
   static async deleteWordpressTheme(orgId: string, websiteId: string, appId: string, themeId: string) {
-    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/themes/${themeId}`, {
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/themes/${encodeURIComponent(themeId)}`, {
       method: 'DELETE',
     });
   }
@@ -707,8 +959,60 @@ export class EnhanceService {
   }
 
   static async activateWordpressTheme(orgId: string, websiteId: string, appId: string, themeId: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/themes/${themeId}/activate`, {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/themes/${encodeURIComponent(themeId)}/activate`, {
       method: 'POST',
+    });
+  }
+
+  static async setWordpressThemeAutoUpdateStatus(orgId: string, websiteId: string, appId: string, themeId: string, enabled: boolean) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/wordpress/themes/${encodeURIComponent(themeId)}/auto_update`, {
+      method: 'PATCH',
+      body: enabled,
+    });
+  }
+
+  // ============================================================
+  // Joomla
+  // ============================================================
+  static async getJoomlaInfo(orgId: string, websiteId: string, appId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/joomla/info`);
+  }
+
+  static async getJoomlaUsers(orgId: string, websiteId: string, appId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/joomla/users`);
+  }
+
+  static async createJoomlaUser(orgId: string, websiteId: string, appId: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/joomla/users`, {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  static async deleteJoomlaUser(orgId: string, websiteId: string, appId: string, username: string) {
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/joomla/users/${encodeURIComponent(username)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  static async resetJoomlaUserPassword(orgId: string, websiteId: string, appId: string, username: string, password: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/joomla/users/${encodeURIComponent(username)}/password`, {
+      method: 'PUT',
+      body: password,
+    });
+  }
+
+  static async updateJoomlaUsername(orgId: string, websiteId: string, appId: string, username: string, newUsername: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/joomla/users/${encodeURIComponent(username)}/username`, {
+      method: 'PUT',
+      body: newUsername,
+    });
+  }
+
+  static async updateJoomlaEmailAddress(orgId: string, websiteId: string, appId: string, username: string, email: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/apps/${appId}/joomla/users/${encodeURIComponent(username)}/email`, {
+      method: 'PUT',
+      body: email,
     });
   }
 
@@ -731,8 +1035,11 @@ export class EnhanceService {
     return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${encodeURIComponent(dbName)}`, { method: 'DELETE' });
   }
 
-  static async getWebsiteMysqlDbSso(orgId: string, websiteId: string, dbName: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${encodeURIComponent(dbName)}/sso`);
+  static async getWebsiteMysqlDbSso(orgId: string, websiteId: string, dbName: string, options?: { shouldRedirect?: boolean }) {
+    const params = this.buildQuery({
+      shouldRedirect: typeof options?.shouldRedirect === 'boolean' ? options.shouldRedirect : undefined,
+    });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/mysql-dbs/${encodeURIComponent(dbName)}/sso${params}`);
   }
 
   static async downloadWebsiteMysqlSql(orgId: string, websiteId: string, dbName: string) {
@@ -767,6 +1074,20 @@ export class EnhanceService {
     return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/mysql-users/${encodeURIComponent(username)}/access-hosts`, { method: 'DELETE', body: data });
   }
 
+  static async uploadWebsiteMysqlSql(websiteId: string, dbId: string, data: BodyInit | Buffer, options?: { force?: boolean; contentType?: string }) {
+    const params = this.buildQuery({
+      force: typeof options?.force === 'boolean' ? options.force : undefined,
+    });
+    return this.requestBinary(`/v2/websites/${websiteId}/mysql/${encodeURIComponent(dbId)}/sql${params}`, {
+      method: 'POST',
+      body: data,
+      headers: {
+        'Accept': 'application/json',
+        ...(options?.contentType ? { 'Content-Type': options.contentType } : {}),
+      },
+    });
+  }
+
   // ============================================================
   // FTP
   // ============================================================
@@ -774,8 +1095,11 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users`);
   }
 
-  static async createWebsiteFtpUser(orgId: string, websiteId: string, data: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users`, { method: 'POST', body: data });
+  static async createWebsiteFtpUser(orgId: string, websiteId: string, data: any, options?: { createHome?: boolean }) {
+    const params = this.buildQuery({
+      createHome: typeof options?.createHome === 'boolean' ? options.createHome : undefined,
+    });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users${params}`, { method: 'POST', body: data });
   }
 
   static async getWebsiteFtpUser(orgId: string, websiteId: string, username: string) {
@@ -786,8 +1110,11 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${encodeURIComponent(username)}`, { method: 'PATCH', body: data });
   }
 
-  static async deleteWebsiteFtpUser(orgId: string, websiteId: string, username: string) {
-    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${encodeURIComponent(username)}`, { method: 'DELETE' });
+  static async deleteWebsiteFtpUser(orgId: string, websiteId: string, username: string, options?: { deleteHome?: boolean }) {
+    const params = this.buildQuery({
+      deleteHome: typeof options?.deleteHome === 'boolean' ? options.deleteHome : undefined,
+    });
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/ftp/users/${encodeURIComponent(username)}${params}`, { method: 'DELETE' });
   }
 
   // ============================================================
@@ -813,15 +1140,19 @@ export class EnhanceService {
     return this.request<any>(`/v2/domains/${domainId}/mail_ssl`);
   }
 
+  static async uploadWebsiteDomainMailSsl(_orgId: string, _websiteId: string, domainId: string, data: any) {
+    return this.request<any>(`/v2/domains/${domainId}/mail_ssl`, { method: 'POST', body: data });
+  }
+
   static async setWebsiteDomainForceSsl(_orgId: string, _websiteId: string, domainId: string, enabled: boolean) {
-    return this.request<any>(`/v2/domains/${domainId}/ssl/force_ssl`, { method: 'PUT', body: { enabled } });
+    return this.request<any>(`/v2/domains/${domainId}/ssl/force_ssl`, { method: 'PUT', body: enabled });
   }
 
   // ============================================================
   // SSO
   // ============================================================
   static async getMemberSsoLink(orgId: string, memberId: string) {
-    return this.request<string>(`/orgs/${orgId}/members/${memberId}/sso`);
+    return this.request<string>(`/orgs/${orgId}/members/${memberId}/sso`, { method: 'GET' });
   }
 
   // ============================================================
@@ -831,32 +1162,65 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups`);
   }
 
-  static async backupWebsite(orgId: string, websiteId: string, data?: { includeEmails?: boolean }) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups`, {
+  static async backupWebsite(orgId: string, websiteId: string, data?: { includeEmails?: boolean; [key: string]: any }) {
+    const { includeEmails, ...body } = data ?? {};
+    const params = typeof includeEmails === 'boolean' ? `?includeEmails=${includeEmails ? 'true' : 'false'}` : '';
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups${params}`, {
       method: 'POST',
-      body: data ?? {},
+      body,
     });
   }
 
-  static async getWebsiteBackup(orgId: string, websiteId: string, backupId: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}`);
+  static async getWebsiteBackup(orgId: string, websiteId: string, backupId: string, options?: { storageKind?: BackupStorageKind }) {
+    const params = this.buildQuery({ storageKind: options?.storageKind });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}${params}`);
   }
 
   static async restoreWebsiteBackup(orgId: string, websiteId: string, backupId: string, data?: any) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}/restore`, {
-      method: 'POST',
-      body: data ?? {},
+    const { includeEmails, storageKind, ...body } = data ?? {};
+    const params = this.buildQuery({
+      includeEmails: typeof includeEmails === 'boolean' ? includeEmails : undefined,
+      storageKind,
+    });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}${params}`, {
+      method: 'PUT',
+      body,
     });
   }
 
-  static async deleteWebsiteBackup(orgId: string, websiteId: string, backupId: string) {
-    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}`, {
+  static async deleteWebsiteBackup(orgId: string, websiteId: string, backupId: string, options?: { storageKind?: BackupStorageKind }) {
+    const params = this.buildQuery({ storageKind: options?.storageKind });
+    return this.request<void>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}${params}`, {
       method: 'DELETE',
     });
   }
 
   static async getWebsiteBackupStatus(orgId: string, websiteId: string) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/status/backup`);
+  }
+
+  static async getWebsiteRestoreStatus(orgId: string, websiteId: string, backupId: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}/restore_status`);
+  }
+
+  static async getWebsiteBackupDirectoryTree(orgId: string, websiteId: string, backupId: string, offset?: string) {
+    const params = this.buildQuery({ offset });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/backups/${backupId}/directory_tree${params}`);
+  }
+
+  static async downloadWebsiteBackup(websiteId: string, backupDownloadKind: BackupDownloadKind = 'website') {
+    const params = this.buildQuery({ backupDownloadKind });
+    return this.requestBinary(`/websites/${websiteId}/backup/download${params}`);
+  }
+
+  static async uploadWebsiteBackup(websiteId: string, data: Buffer) {
+    return this.requestBinary(`/websites/${websiteId}/backup/upload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/gzip',
+      },
+      body: data,
+    });
   }
 
   static async getBackupsDisabled(websiteId: string) {
@@ -866,7 +1230,7 @@ export class EnhanceService {
   static async setBackupsDisabled(websiteId: string, disabled: boolean) {
     return this.request<any>(`/websites/${websiteId}/backups_disabled`, {
       method: 'PUT',
-      body: { disabled },
+      body: disabled,
     });
   }
 
@@ -879,7 +1243,7 @@ export class EnhanceService {
 
   static async updateCrontab(orgId: string, websiteId: string, data: any) {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/crontab`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: data,
     });
   }
@@ -893,8 +1257,11 @@ export class EnhanceService {
   // ============================================================
   // SSH Keys (per-website)
   // ============================================================
-  static async getWebsiteSshKeys(orgId: string, websiteId: string) {
-    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ssh/keys`);
+  static async getWebsiteSshKeys(orgId: string, websiteId: string, options?: { sanitize?: boolean }) {
+    const params = this.buildQuery({
+      sanitize: typeof options?.sanitize === 'boolean' ? options.sanitize : undefined,
+    });
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ssh/keys${params}`);
   }
 
   static async createWebsiteSshKey(orgId: string, websiteId: string, data: any) {
@@ -910,11 +1277,28 @@ export class EnhanceService {
     });
   }
 
+  static async updateWebsiteSshKey(orgId: string, websiteId: string, keyId: string, data: any) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ssh/keys/${keyId}`, {
+      method: 'PATCH',
+      body: data,
+    });
+  }
+
+  static async authorizeWebsiteSshPassword(orgId: string, websiteId: string, newPassword: string) {
+    return this.request<any>(`/orgs/${orgId}/websites/${websiteId}/ssh/password`, {
+      method: 'POST',
+      body: { newPassword },
+    });
+  }
+
   // ============================================================
   // Bandwidth
   // ============================================================
-  static async getSubscriptionBandwidth(orgId: string, subscriptionId: string | number) {
-    return this.request<any>(`/orgs/${orgId}/subscriptions/${subscriptionId}/bandwidth`);
+  static async getSubscriptionBandwidth(orgId: string, subscriptionId: string | number, options?: { refreshCache?: boolean }) {
+    const params = this.buildQuery({
+      refreshCache: typeof options?.refreshCache === 'boolean' ? options.refreshCache : undefined,
+    });
+    return this.request<any>(`/orgs/${orgId}/subscriptions/${subscriptionId}/bandwidth${params}`);
   }
 
   // ============================================================

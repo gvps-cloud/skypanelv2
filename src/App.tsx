@@ -69,6 +69,7 @@ import AcceptInvitation from "./pages/AcceptInvitation";
 import Hosting from "./pages/Hosting";
 import HostingStore from "./pages/HostingStore";
 import HostingDetail from "./pages/HostingDetail";
+import { useHostingStatus } from "./hooks/useHosting";
 
 // Component to handle impersonation banner display
 function ImpersonationWrapper({ children }: { children: React.ReactNode }) {
@@ -188,6 +189,24 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function HostingEnabledRoute({ children }: { children: React.ReactNode }) {
+  const { data: hostingStatus, isLoading } = useHostingStatus();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!hostingStatus?.enabled) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 // Component to setup auto-logout inside Router context
 function AutoLogoutSetup() {
   const { logout } = useAuth();
@@ -285,25 +304,31 @@ function AppRoutes() {
         <Route
           path="/hosting"
           element={
-            <ProtectedRoute>
-              <Hosting />
-            </ProtectedRoute>
+            <HostingEnabledRoute>
+              <ProtectedRoute>
+                <Hosting />
+              </ProtectedRoute>
+            </HostingEnabledRoute>
           }
         />
         <Route
           path="/hosting/store"
           element={
-            <ProtectedRoute>
-              <HostingStore />
-            </ProtectedRoute>
+            <HostingEnabledRoute>
+              <ProtectedRoute>
+                <HostingStore />
+              </ProtectedRoute>
+            </HostingEnabledRoute>
           }
         />
         <Route
           path="/hosting/:id"
           element={
-            <ProtectedRoute>
-              <HostingDetail />
-            </ProtectedRoute>
+            <HostingEnabledRoute>
+              <ProtectedRoute>
+                <HostingDetail />
+              </ProtectedRoute>
+            </HostingEnabledRoute>
           }
         />
         <Route

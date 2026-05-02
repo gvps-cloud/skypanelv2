@@ -4,7 +4,6 @@ import {
   useHostingPlans,
   useHostingRegions,
   useHostingStatus,
-  useHostingStagingDomain,
   hostingKeys,
 } from "@/hooks/useHosting";
 import { apiClient } from "@/lib/api";
@@ -28,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Globe, Check, ArrowLeft, Server } from "lucide-react";
+import { Loader2, Check, ArrowLeft, Server } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -74,17 +73,13 @@ export default function HostingStore() {
   const { data: statusData } = useHostingStatus();
   const { data: plansData, isLoading: plansLoading } = useHostingPlans();
   const { data: regionsData } = useHostingRegions();
-  const { data: stagingDomainData } = useHostingStagingDomain();
 
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [domain, setDomain] = useState("");
-  const [useStaging, setUseStaging] = useState(false);
   const [regionId, setRegionId] = useState("");
   const [purchasing, setPurchasing] = useState(false);
 
-  const stagingSuffix = stagingDomainData?.stagingDomain || null;
-  const canUseStaging = false;
-  const hasDomain = useStaging || domain.trim().length > 0;
+  const hasDomain = domain.trim().length > 0;
 
   const plans: HostingPlan[] = plansData?.plans ?? [];
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
@@ -95,33 +90,23 @@ export default function HostingStore() {
       toast.error("Please select a plan");
       return;
     }
-    if (!useStaging && !domain.trim()) {
-      toast.error("Please enter a domain or use a free staging domain");
+    if (!domain.trim()) {
+      toast.error("Please enter a domain");
       return;
     }
 
     setPurchasing(true);
     try {
-      const payload: Record<string, any> = {
-        planId: selectedPlanId,
-        regionId: regionId || undefined,
-      };
-
-      if (useStaging) {
-        payload.useStagingDomain = true;
-      } else {
-        payload.domain = domain.trim();
-      }
-
       const response = await apiClient.post<{
         credentialsCreated?: boolean;
         credentialsEmailed?: boolean;
-        stagingDomain?: string;
-      }>("/hosting/purchase", payload);
+      }>("/hosting/purchase", {
+        planId: selectedPlanId,
+        domain: domain.trim(),
+        regionId: regionId || undefined,
+      });
 
-      if (response?.stagingDomain) {
-        toast.success(`Hosting subscription purchased! Your staging domain: ${response.stagingDomain}`);
-      } else if (response?.credentialsCreated && response?.credentialsEmailed) {
+      if (response?.credentialsCreated && response?.credentialsEmailed) {
         toast.success("Hosting subscription purchased. Your hosting panel credentials were emailed.");
       } else if (response?.credentialsCreated) {
         toast.success("Hosting subscription purchased. Your hosting account was created; if the email does not arrive, use the panel password reset.");
@@ -291,39 +276,13 @@ export default function HostingStore() {
 
                 {/* Domain section */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="domain">
-                      {useStaging ? "Staging Domain" : "Domain"}
-                    </Label>
-                    {canUseStaging && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUseStaging(!useStaging);
-                          setDomain("");
-                        }}
-                        className="text-sm text-primary hover:underline"
-                      >
-                        {useStaging ? "I have my own domain" : "I don't have a domain"}
-                      </button>
-                    )}
-                  </div>
-
-                  {useStaging ? (
-                    <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-                      <Globe className="h-4 w-4" />
-                      <span>A random subdomain on </span>
-                      <code className="font-mono text-foreground">{stagingSuffix}</code>
-                      <span> will be assigned automatically</span>
-                    </div>
-                  ) : (
-                    <Input
-                      id="domain"
-                      placeholder="example.com"
-                      value={domain}
-                      onChange={(e) => setDomain(e.target.value)}
-                    />
-                  )}
+                  <Label htmlFor="domain">Domain</Label>
+                  <Input
+                    id="domain"
+                    placeholder="example.com"
+                    value={domain}
+                    onChange={(e) => setDomain(e.target.value)}
+                  />
                 </div>
 
                 {/* Region selector - only if plan allows server group selection */}

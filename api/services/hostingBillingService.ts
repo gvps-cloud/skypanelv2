@@ -114,7 +114,8 @@ export class HostingBillingService {
       // Suspend remote website
       if (sub.enhance_website_id) {
         await EnhanceService.updateWebsite(getEnhanceWebsiteOrgId(sub), sub.enhance_website_id, {
-          status: 'suspended',
+          status: 'disabled',
+          isSuspended: true,
         });
       }
 

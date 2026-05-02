@@ -174,13 +174,17 @@ class ApiClient {
       throw error;
     }
 
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      return response.json();
+    const responseText = await response.text();
+    if (!responseText.trim()) {
+      return undefined as T;
     }
 
-    // For non-JSON responses, return the text
-    return response.text() as unknown as T;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return JSON.parse(responseText) as T;
+    }
+
+    return responseText as unknown as T;
   }
 
   async get<T = any>(path: string): Promise<T> {
@@ -234,6 +238,48 @@ class ApiClient {
       credentials: "include",
       body: body ? JSON.stringify(body) : undefined,
     });
+    return this.handleResponse<T>(response);
+  }
+
+  async getBlob(path: string): Promise<{ blob: Blob; filename?: string }> {
+    const url = buildApiUrl(path);
+    const headers = this.getAuthHeaders() as Record<string, string>;
+    delete headers["Content-Type"];
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers,
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      await this.handleResponse(response);
+    }
+
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const filenameMatch = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+    const filename = filenameMatch?.[1]
+      ? decodeURIComponent(filenameMatch[1])
+      : filenameMatch?.[2];
+
+    return {
+      blob: await response.blob(),
+      filename,
+    };
+  }
+
+  async postBinary<T = any>(path: string, data: Blob | ArrayBuffer, contentType = "application/octet-stream"): Promise<T> {
+    const url = buildApiUrl(path);
+    const headers = this.getAuthHeaders() as Record<string, string>;
+    headers["Content-Type"] = contentType;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      credentials: "include",
+      body: data,
+    });
+
     return this.handleResponse<T>(response);
   }
 }

@@ -2,9 +2,9 @@ import express, { type Request, type Response } from "express";
 import { authenticateToken } from "../../middleware/auth.js";
 import { requireOrganization } from "../../middleware/auth.js";
 import { requireHostingEnabledForUsers, requireOrgPermission } from "../../middleware/hosting.js";
-import { query } from "../../lib/database.js";
-import { getEnhanceWebsiteOrgId } from "../../lib/hostingEnhanceOrg.js";
-import { EnhanceService } from "../../services/enhanceService.js";
+import { config } from "../../config/index.js";
+import { getEnhanceWebsiteOrgId, getHostingSubscriptionForOrganization } from "../../lib/hostingEnhanceOrg.js";
+import { EnhanceApiError, EnhanceService } from "../../services/enhanceService.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
 
 const router = express.Router();
@@ -14,15 +14,116 @@ router.use(authenticateToken, requireOrganization, requireHostingEnabledForUsers
 async function resolveSubscription(req: Request, res: Response) {
   const { organizationId } = (req as AuthenticatedRequest).user;
   const { id } = req.params;
-  const result = await query(
-    `SELECT * FROM hosting_subscriptions WHERE id = $1 AND organization_id = $2`,
-    [id, organizationId]
-  );
-  if (result.rows.length === 0) {
+  const sub = await getHostingSubscriptionForOrganization(id, organizationId);
+  if (!sub) {
     res.status(404).json({ error: "Service not found" });
     return null;
   }
-  return result.rows[0];
+  if (!sub.enhance_website_id) {
+    res.status(400).json({ error: "Website not yet provisioned" });
+    return null;
+  }
+  return sub;
+}
+
+function getEnhancePanelOrigin(): string {
+  const panelUrl = config.ENHANCE_API_URL.replace(/\/api\/?$/i, "");
+  return new URL(panelUrl).origin;
+}
+
+function readAccessToken(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (value && typeof value === "object") {
+    const token = (value as Record<string, unknown>).accessToken ?? (value as Record<string, unknown>).token;
+    if (typeof token === "string") return token.trim();
+  }
+  return "";
+}
+
+function buildFileManagerUrl(filerdAddress: string, rawAccessToken: unknown): string {
+  const accessToken = readAccessToken(rawAccessToken);
+  if (!accessToken) {
+    throw new EnhanceApiError("Enhance did not return a site access token", 502);
+  }
+
+  const address = filerdAddress.trim();
+  if (!address) {
+    throw new EnhanceApiError("File manager is not available for this website", 404);
+  }
+
+  const url = /^https?:\/\//i.test(address)
+    ? new URL(address)
+    : new URL(address.startsWith("/") ? address : `/${address}`, getEnhancePanelOrigin());
+  url.searchParams.set("accessToken", accessToken);
+  return url.toString();
+}
+
+function normalizeWebsiteStatus(website: any) {
+  if (!website || typeof website !== "object" || Array.isArray(website)) {
+    return website;
+  }
+
+  const status = typeof website.status === "string" ? website.status.toLowerCase() : "";
+  const suspendedBy = typeof website.suspendedBy === "string" ? website.suspendedBy.trim() : "";
+  const isSuspended = website.isSuspended === true || status === "disabled" || suspendedBy.length > 0;
+  const normalizedStatus = status === "deleted"
+    ? "deleted"
+    : isSuspended
+      ? "suspended"
+      : status === "active"
+        ? "active"
+        : "unknown";
+
+  return {
+    ...website,
+    isSuspended,
+    normalizedStatus,
+  };
+}
+
+function normalizeWebsiteUpdatePayload(body: any) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return body;
+  }
+
+  const payload = { ...body };
+  if (typeof payload.isSuspended === "boolean") {
+    payload.status = payload.isSuspended ? "disabled" : "active";
+  } else if (payload.status === "suspended") {
+    payload.status = "disabled";
+    payload.isSuspended = true;
+  } else if (payload.status === "disabled") {
+    payload.isSuspended = true;
+  } else if (payload.status === "active") {
+    payload.isSuspended = false;
+  }
+  return payload;
+}
+
+async function updateWebsiteAndReadFresh(sub: any, body: any) {
+  const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+  await EnhanceService.updateWebsite(
+    enhanceWebsiteOrgId,
+    sub.enhance_website_id,
+    normalizeWebsiteUpdatePayload(body),
+  );
+  const website = await EnhanceService.getWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
+  return normalizeWebsiteStatus(website);
+}
+
+async function ensureDomainBelongsToWebsite(sub: any, domainId: string, res: Response) {
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    await EnhanceService.getWebsiteDomainMapping(enhanceWebsiteOrgId, sub.enhance_website_id, domainId);
+    return true;
+  } catch (error) {
+    if (error instanceof EnhanceApiError && error.statusCode === 404) {
+      res.status(404).json({ error: "Domain not found" });
+      return false;
+    }
+
+    throw error;
+  }
 }
 
 // ============================================================
@@ -35,9 +136,33 @@ router.get("/:id/website", requireOrgPermission("hosting_view"), async (req: Req
   try {
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     const result = await EnhanceService.getWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
-    res.json(result);
+    res.json(normalizeWebsiteStatus(result));
   } catch (error: any) {
+    if (error instanceof EnhanceApiError && (error.statusCode === 400 || error.statusCode === 403 || error.statusCode === 404)) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
     res.status(500).json({ error: error?.message || "Failed to get website" });
+  }
+});
+
+router.post("/:id/file-manager", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+    const [website, accessToken] = await Promise.all([
+      EnhanceService.getWebsite(enhanceWebsiteOrgId, sub.enhance_website_id),
+      EnhanceService.getSiteAccessToken(enhanceWebsiteOrgId, sub.enhance_website_id),
+    ]);
+
+    const filerdAddress = String(website?.filerdAddress ?? website?.filerd_address ?? "").trim();
+    const fileManagerUrl = buildFileManagerUrl(filerdAddress, accessToken);
+    res.json({ url: fileManagerUrl, filerdAddress });
+  } catch (error: any) {
+    if (error instanceof EnhanceApiError && (error.statusCode === 400 || error.statusCode === 403 || error.statusCode === 404)) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    res.status(500).json({ error: error?.message || "Failed to open file manager" });
   }
 });
 
@@ -45,10 +170,12 @@ router.patch("/:id/website", requireOrgPermission("hosting_manage"), async (req:
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    await EnhanceService.updateWebsite(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
-    res.json({ success: true });
+    const website = await updateWebsiteAndReadFresh(sub, req.body);
+    res.json(website);
   } catch (error: any) {
+    if (error instanceof EnhanceApiError && (error.statusCode === 400 || error.statusCode === 403 || error.statusCode === 404)) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
     res.status(500).json({ error: error?.message || "Failed to update website" });
   }
 });
@@ -58,10 +185,12 @@ router.put("/:id/website", requireOrgPermission("hosting_manage"), async (req: R
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
-    await EnhanceService.updateWebsite(enhanceWebsiteOrgId, sub.enhance_website_id, req.body);
-    res.json({ success: true });
+    const website = await updateWebsiteAndReadFresh(sub, req.body);
+    res.json(website);
   } catch (error: any) {
+    if (error instanceof EnhanceApiError && (error.statusCode === 400 || error.statusCode === 403 || error.statusCode === 404)) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
     res.status(500).json({ error: error?.message || "Failed to update website" });
   }
 });
@@ -409,6 +538,7 @@ router.get("/:id/domains/:domainId/nginx-fastcgi", requireOrgPermission("hosting
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enabled = await EnhanceService.getDomainNginxFastCgi(req.params.domainId);
     res.json({ enabled });
   } catch (error: any) {
@@ -424,6 +554,7 @@ router.put("/:id/domains/:domainId/nginx-fastcgi", requireOrgPermission("hosting
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enabled = typeof req.body === "boolean" ? req.body : Boolean(req.body?.enabled);
     await EnhanceService.setDomainNginxFastCgi(req.params.domainId, enabled);
     res.json({ success: true, enabled });
@@ -436,6 +567,7 @@ router.delete("/:id/domains/:domainId/nginx-fastcgi", requireOrgPermission("host
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     await EnhanceService.clearDomainNginxFastCgi(req.params.domainId);
     res.json({ success: true, message: "FastCGI cache purged" });
   } catch (error: any) {
@@ -447,6 +579,7 @@ router.get("/:id/domains/:domainId/nginx-fastcgi/excluded-paths", requireOrgPerm
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const paths = await EnhanceService.getDomainNginxFastCgiExcludedPaths(req.params.domainId);
     res.json({ paths });
   } catch (error: any) {
@@ -462,6 +595,7 @@ router.post("/:id/domains/:domainId/nginx-fastcgi/excluded-paths", requireOrgPer
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const path = typeof req.body === "string" ? req.body : req.body?.path;
     if (!path) {
       res.status(400).json({ error: "Path is required" });
@@ -478,6 +612,7 @@ router.delete("/:id/domains/:domainId/nginx-fastcgi/excluded-paths", requireOrgP
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const path = req.query.path as string;
     if (!path) {
       res.status(400).json({ error: "Path query parameter is required" });
@@ -498,6 +633,7 @@ router.get("/:id/domains/:domainId/webserver-rewrites", requireOrgPermission("ho
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const rewrites = await EnhanceService.getDomainWebserverRewrites(req.params.domainId);
     res.json({ rewrites });
   } catch (error: any) {
@@ -513,6 +649,7 @@ router.put("/:id/domains/:domainId/webserver-rewrites", requireOrgPermission("ho
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     await EnhanceService.setDomainWebserverRewrite(req.params.domainId, req.body);
     res.json({ success: true });
   } catch (error: any) {
@@ -524,6 +661,7 @@ router.delete("/:id/domains/:domainId/webserver-rewrites", requireOrgPermission(
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const path = req.query.path as string;
     if (!path) {
       res.status(400).json({ error: "Path query parameter is required" });
@@ -544,6 +682,7 @@ router.post("/:id/domains/:domainId/mail-ssl", requireOrgPermission("hosting_man
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
     const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
     await EnhanceService.createWebsiteMailDomainLetsencryptCerts(enhanceWebsiteOrgId, sub.enhance_website_id, req.params.domainId);
     res.status(202).json({ success: true, message: "Mail SSL certificate generation started" });

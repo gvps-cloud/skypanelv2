@@ -109,7 +109,10 @@ describe('HostingBillingService', () => {
 
       await HostingBillingService.runMonthlyHostingBilling('scheduled');
 
-      expect(mockUpdateWebsite).toHaveBeenCalledWith('master-org-123', 'enh-web-1', { status: 'suspended' });
+      expect(mockUpdateWebsite).toHaveBeenCalledWith('master-org-123', 'enh-web-1', {
+        status: 'disabled',
+        isSuspended: true,
+      });
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining("UPDATE hosting_subscriptions SET status = 'suspended'"),
         ['sub-1']

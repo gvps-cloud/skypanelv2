@@ -422,6 +422,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/hosting/backups/:id/backup/download",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/hosting/backups/:id/backup/upload",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/hosting/backups/:id/backups",
     "protected": true,
     "admin": false
@@ -458,7 +470,19 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "PUT",
-    "path": "/api/hosting/backups/:id/backups/:backupId/restore",
+    "path": "/api/hosting/backups/:id/backups/:backupId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/backups/:id/backups/:backupId/directory-tree",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/backups/:id/backups/:backupId/restore-status",
     "protected": true,
     "admin": false
   },
@@ -505,6 +529,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
+    "method": "PATCH",
+    "path": "/api/hosting/dns/:id/domains/:domainId/dns",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/dns/:id/domains/:domainId/dns-query",
+    "protected": true,
+    "admin": false
+  },
+  {
     "method": "POST",
     "path": "/api/hosting/dns/:id/domains/:domainId/dns/records",
     "protected": true,
@@ -517,14 +553,32 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
-    "method": "PUT",
+    "method": "PATCH",
     "path": "/api/hosting/dns/:id/domains/:domainId/dns/records/:recordId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/hosting/dns/:id/domains/:domainId/dnssec",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/hosting/dns/:id/domains/:domainId/dnssec",
     "protected": true,
     "admin": false
   },
   {
     "method": "PUT",
     "path": "/api/hosting/dns/:id/domains/primary",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/email/:id/domains",
     "protected": true,
     "admin": false
   },
@@ -560,6 +614,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "DELETE",
+    "path": "/api/hosting/email/:id/emails/:emailAddress/autoresponder",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/hosting/email/:id/emails/:emailAddress/autoresponder",
     "protected": true,
     "admin": false
@@ -578,6 +638,24 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/hosting/email/:id/emails/:emailAddress/spam-thresholds",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/hosting/email/:id/emails/:emailAddress/spam-thresholds",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/email/:id/emails/:emailAddress/sso",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/hosting/ftp/:id/ftp-users",
     "protected": true,
     "admin": false
@@ -597,6 +675,42 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "PATCH",
     "path": "/api/hosting/ftp/:id/ftp-users/:username",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/joomla/:id/joomla",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/joomla/:id/joomla/:appId/info",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/joomla/:id/joomla/:appId/users",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/hosting/joomla/:id/joomla/:appId/users",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/hosting/joomla/:id/joomla/:appId/users/:username",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/hosting/joomla/:id/joomla/:appId/users/:username",
     "protected": true,
     "admin": false
   },
@@ -669,6 +783,42 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "PUT",
     "path": "/api/hosting/mysql/:id/mysql-users/:username/privileges",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/nameservers",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/node/:id/node/possible-versions",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/node/:id/node/versions",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/hosting/node/:id/node/versions",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/hosting/node/:id/node/versions/default",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/hosting/node/:id/nvm",
     "protected": true,
     "admin": false
   },
@@ -763,6 +913,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
+    "method": "PATCH",
+    "path": "/api/hosting/ssh/:id/ssh-keys/:keyId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/hosting/ssh/:id/ssh-password",
+    "protected": true,
+    "admin": false
+  },
+  {
     "method": "PUT",
     "path": "/api/hosting/ssl/:id/domains/:domainId/force_ssl",
     "protected": true,
@@ -777,6 +939,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "POST",
     "path": "/api/hosting/ssl/:id/domains/:domainId/mail_ssl",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/hosting/ssl/:id/domains/:domainId/mail_ssl/upload",
     "protected": true,
     "admin": false
   },
@@ -873,6 +1041,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "PUT",
     "path": "/api/hosting/web/:id/domains/:domainId/webserver-rewrites",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/hosting/web/:id/file-manager",
     "protected": true,
     "admin": false
   },
@@ -1028,6 +1202,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/hosting/wordpress/:id/wordpress/:appId/maintenance-mode",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/hosting/wordpress/:id/wordpress/:appId/maintenance-mode",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/hosting/wordpress/:id/wordpress/:appId/plugins",
     "protected": true,
     "admin": false
@@ -1041,6 +1227,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "DELETE",
     "path": "/api/hosting/wordpress/:id/wordpress/:appId/plugins/:pluginId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/hosting/wordpress/:id/wordpress/:appId/plugins/:pluginId",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/hosting/wordpress/:id/wordpress/:appId/plugins/:pluginId/version",
     "protected": true,
     "admin": false
   },
@@ -1077,6 +1275,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "POST",
     "path": "/api/hosting/wordpress/:id/wordpress/:appId/themes/:themeId/activate",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/hosting/wordpress/:id/wordpress/:appId/themes/:themeId/auto-update",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/hosting/wordpress/:id/wordpress/:appId/themes/:themeId/update",
     "protected": true,
     "admin": false
   },
@@ -1131,6 +1341,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "GET",
     "path": "/api/hosting/wordpress/:id/wordpress/:appId/wp-config/:wpOption",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/wordpress/catalog/plugins",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/wordpress/catalog/themes",
     "protected": true,
     "admin": false
   },
