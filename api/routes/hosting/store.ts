@@ -103,13 +103,43 @@ router.get("/services", requireOrgPermission("hosting_view"), async (req: Reques
   try {
     const result = await query(
       `SELECT hs.id, hs.domain, hs.status, hs.primary_ip, hs.next_billing_at, hs.created_at, hs.cancelled_at,
+              hs.enhance_website_id, org.enhance_customer_id AS enhance_customer_org_id,
               hp.id as plan_id, hp.name as plan_name, hp.service_type, hp.price_monthly, hp.enhance_plan_id
        FROM hosting_subscriptions hs
        LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
+       LEFT JOIN organizations org ON org.id = hs.organization_id
        WHERE hs.organization_id = $1
        ORDER BY hs.created_at DESC`,
       [organizationId]
     );
+
+    // Retroactively sync primary IP from Enhance for subscriptions missing it
+    const rowsNeedingSync = result.rows.filter(
+      (row: any) => !row.primary_ip && row.enhance_website_id
+    );
+    if (rowsNeedingSync.length > 0) {
+      const syncResults = await Promise.allSettled(
+        rowsNeedingSync.map(async (row: any) => {
+          const orgId = row.enhance_customer_org_id || config.ENHANCE_MASTER_ORG_ID;
+          const website = await EnhanceService.getWebsite(orgId, String(row.enhance_website_id));
+          const serverIps = Array.isArray(website?.serverIps) ? website.serverIps : [];
+          const ip = serverIps.find((ip: any) => ip.isPrimary)?.ip || serverIps[0]?.ip || null;
+          if (ip) {
+            await query(
+              `UPDATE hosting_subscriptions SET primary_ip = $1, updated_at = NOW() WHERE id = $2`,
+              [ip, row.id]
+            );
+            row.primary_ip = ip;
+          }
+        })
+      );
+      for (const r of syncResults) {
+        if (r.status === 'rejected') {
+          console.error('[Hosting] Failed to sync primary IP from Enhance (non-fatal):', r.reason?.message || r.reason);
+        }
+      }
+    }
+
     res.json({ services: result.rows });
   } catch (error) {
     console.error("Failed to get hosting services:", error);
@@ -135,7 +165,29 @@ router.get("/services/:id", requireOrgPermission("hosting_view"), async (req: Re
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Service not found" });
     }
-    res.json({ service: result.rows[0] });
+
+    const service = result.rows[0];
+
+    // Retroactively sync primary IP from Enhance if missing
+    if (!service.primary_ip && service.enhance_website_id) {
+      try {
+        const enhanceOrgId = getEnhanceWebsiteOrgId(service);
+        const website = await EnhanceService.getWebsite(enhanceOrgId, String(service.enhance_website_id));
+        const serverIps = Array.isArray(website?.serverIps) ? website.serverIps : [];
+        const syncedIp = serverIps.find((ip: any) => ip.isPrimary)?.ip || serverIps[0]?.ip || null;
+        if (syncedIp) {
+          await query(
+            `UPDATE hosting_subscriptions SET primary_ip = $1, updated_at = NOW() WHERE id = $2`,
+            [syncedIp, service.id]
+          );
+          service.primary_ip = syncedIp;
+        }
+      } catch (syncError: any) {
+        console.error(`[Hosting] Failed to retroactively sync primary IP for subscription ${id}:`, syncError.message);
+      }
+    }
+
+    res.json({ service });
   } catch (error) {
     console.error("Failed to get hosting service:", error);
     res.status(500).json({ error: "Failed to get hosting service" });
@@ -160,13 +212,39 @@ router.get(
       }
 
       if (!subscription.enhance_subscription_id) {
-        // No upstream subscription associated
         return res.json({ bandwidth: null });
       }
 
       const enhanceOrgId = getEnhanceWebsiteOrgId(subscription as any);
-      const result = await EnhanceService.getSubscriptionBandwidth(enhanceOrgId, subscription.enhance_subscription_id);
-      res.json({ bandwidth: result ?? null });
+      const subId = String(subscription.enhance_subscription_id);
+
+      // Fetch bandwidth used this month and subscription details (for plan limit) in parallel
+      const [rawBandwidth, subscriptionDetails] = await Promise.all([
+        EnhanceService.getSubscriptionBandwidth(enhanceOrgId, subId),
+        EnhanceService.getSubscription(enhanceOrgId, subId).catch(() => null),
+      ]);
+
+      const used = typeof rawBandwidth === "number" ? rawBandwidth : null;
+
+      // Extract the transfer resource limit from the subscription's plan resources
+      let limit: number | null = null;
+      if (subscriptionDetails?.resources && Array.isArray(subscriptionDetails.resources)) {
+        const transferResource = subscriptionDetails.resources.find(
+          (r: any) => r.name === "transfer"
+        );
+        if (transferResource) {
+          // total is null/undefined when the plan has unlimited transfer
+          limit = typeof transferResource.total === "number" ? transferResource.total : null;
+        }
+      }
+
+      const percentage = used !== null && limit !== null && limit > 0
+        ? Math.round((used / limit) * 10000) / 100
+        : null;
+
+      res.json({
+        bandwidth: used !== null ? { used, limit, percentage } : null,
+      });
     } catch (error: any) {
       console.error("Failed to get hosting bandwidth:", error);
       res.status(500).json({ error: error?.message || "Failed to get hosting bandwidth" });
@@ -392,8 +470,13 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       );
     } catch (websiteError: any) {
       console.error("Failed to fetch website details (non-fatal):", websiteError);
-      enhanceWebsite = { id: websiteId, primary_ip: null };
+      enhanceWebsite = { id: websiteId, serverIps: [] };
     }
+
+    const serverIps = Array.isArray(enhanceWebsite?.serverIps) ? enhanceWebsite.serverIps : [];
+    const primaryIp = serverIps.find((ip: any) => ip.isPrimary)?.ip
+      || serverIps[0]?.ip
+      || null;
 
     let credentialsEmailed = false;
     if (onboardingResult.credentialsEmail) {
@@ -425,8 +508,8 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       [
         enhanceSubscription.id,
         enhanceWebsite.id,
-        enhanceWebsite.primary_ip || null,
-        JSON.stringify({ primary_ip: enhanceWebsite.primary_ip }),
+        primaryIp,
+        JSON.stringify({ primary_ip: primaryIp }),
         subscription.id,
       ]
     );

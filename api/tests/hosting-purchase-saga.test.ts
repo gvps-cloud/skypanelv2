@@ -185,7 +185,7 @@ describe('Hosting Purchase Saga', () => {
       });
       vi.mocked(EnhanceService.getWebsite).mockResolvedValue({
         id: 'fake-website-id',
-        primary_ip: '203.0.113.1',
+        serverIps: [{ ip: '203.0.113.1', isPrimary: true }],
       });
 
       const response = await request(testApp)

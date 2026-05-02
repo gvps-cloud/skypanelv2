@@ -98,9 +98,9 @@ export default function OverviewTab({ service }: OverviewTabProps) {
           ? "secondary"
           : "outline";
 
-  const primaryIp = website?.serverIps?.find((ip: any) => ip.kind === 'primary')?.ip 
-    || website?.serverIps?.[0]?.ip 
-    || service.primary_ip 
+  const primaryIp = website?.serverIps?.find((ip: any) => ip.isPrimary)?.ip
+    || website?.serverIps?.[0]?.ip
+    || service.primary_ip
     || "—";
 
   const fields = [
@@ -189,26 +189,57 @@ export default function OverviewTab({ service }: OverviewTabProps) {
               <p className="text-sm text-muted-foreground">No bandwidth data available</p>
             )}
             {!bandwidthLoading && !bandwidthError && bandwidth && (
-              <dl className="space-y-3">
-                {bandwidth.used !== undefined && (
-                  <div className="flex justify-between items-center">
-                    <dt className="text-sm font-medium text-muted-foreground">Used</dt>
-                    <dd className="text-sm text-foreground">{formatBytes(bandwidth.used)}</dd>
+              <div className="space-y-4">
+                {/* Progress bar */}
+                {bandwidth.limit != null && bandwidth.limit > 0 && bandwidth.used != null && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {formatBytes(bandwidth.used)} of {formatBytes(bandwidth.limit)}
+                      </span>
+                      <span className="font-medium">
+                        {bandwidth.percentage != null ? `${bandwidth.percentage}%` : "—"}
+                      </span>
+                    </div>
+                    <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          bandwidth.percentage != null && bandwidth.percentage >= 90
+                            ? "bg-destructive"
+                            : bandwidth.percentage != null && bandwidth.percentage >= 75
+                              ? "bg-yellow-500"
+                              : "bg-primary"
+                        }`}
+                        style={{ width: `${Math.min(bandwidth.percentage ?? 0, 100)}%` }}
+                      />
+                    </div>
                   </div>
                 )}
-                {bandwidth.limit !== undefined && (
+
+                {/* Detail rows */}
+                <dl className="space-y-3">
+                  {bandwidth.used != null && (
+                    <div className="flex justify-between items-center">
+                      <dt className="text-sm font-medium text-muted-foreground">Used this month</dt>
+                      <dd className="text-sm text-foreground">{formatBytes(bandwidth.used)}</dd>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
-                    <dt className="text-sm font-medium text-muted-foreground">Limit</dt>
-                    <dd className="text-sm text-foreground">{bandwidth.limit === 0 ? "Unlimited" : formatBytes(bandwidth.limit)}</dd>
+                    <dt className="text-sm font-medium text-muted-foreground">Plan limit</dt>
+                    <dd className="text-sm text-foreground">
+                      {bandwidth.limit != null && bandwidth.limit > 0
+                        ? formatBytes(bandwidth.limit)
+                        : "Unlimited"}
+                    </dd>
                   </div>
-                )}
-                {bandwidth.percentage !== undefined && (
-                  <div className="flex justify-between items-center">
-                    <dt className="text-sm font-medium text-muted-foreground">Usage</dt>
-                    <dd className="text-sm text-foreground">{Math.round(bandwidth.percentage)}%</dd>
-                  </div>
-                )}
-              </dl>
+                  {bandwidth.limit != null && bandwidth.limit > 0 && bandwidth.percentage != null && (
+                    <div className="flex justify-between items-center">
+                      <dt className="text-sm font-medium text-muted-foreground">Usage</dt>
+                      <dd className="text-sm text-foreground">{bandwidth.percentage}%</dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
             )}
           </CardContent>
         </Card>

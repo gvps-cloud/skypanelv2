@@ -75,7 +75,7 @@ describe('Hosting Store Routes', () => {
     mockSendEnhanceCredentialsEmail.mockResolvedValue(undefined);
     mockGetCustomerSubscriptions.mockResolvedValue({ items: [] });
     mockGetWebsites.mockResolvedValue({ items: [] });
-    mockGetWebsite.mockResolvedValue({ id: 'web-123', primary_ip: '1.2.3.4' });
+    mockGetWebsite.mockResolvedValue({ id: 'web-123', serverIps: [{ ip: '1.2.3.4', isPrimary: true }] });
   });
 
   beforeAll(async () => {
@@ -210,7 +210,7 @@ describe('Hosting Store Routes', () => {
         ownerAssigned: true,
       });
       mockCreateCustomerSubscription.mockResolvedValue({ id: '123' });
-      mockCreateWebsite.mockResolvedValue({ id: 'web-123', primary_ip: '1.2.3.4' });
+      mockCreateWebsite.mockResolvedValue({ id: 'web-123', serverIps: [{ ip: '1.2.3.4', isPrimary: true }] });
 
       const response = await request(app)
         .post('/api/hosting/purchase')
@@ -289,7 +289,7 @@ describe('Hosting Store Routes', () => {
         ownerAssigned: false,
       });
       mockCreateCustomerSubscription.mockResolvedValue({ id: '123' });
-      mockCreateWebsite.mockResolvedValue({ id: 'web-123', primary_ip: '1.2.3.4' });
+      mockCreateWebsite.mockResolvedValue({ id: 'web-123', serverIps: [{ ip: '1.2.3.4', isPrimary: true }] });
 
       const response = await request(app)
         .post('/api/hosting/purchase')
@@ -344,7 +344,7 @@ describe('Hosting Store Routes', () => {
         ownerAssigned: false,
       });
       mockCreateCustomerSubscription.mockResolvedValue({ id: 456 });
-      mockCreateWebsite.mockResolvedValue({ id: 'web-sg-1' });
+      mockCreateWebsite.mockResolvedValue({ id: 'web-sg-1', serverIps: [{ ip: '1.2.3.4', isPrimary: true }] });
 
       const response = await request(app)
         .post('/api/hosting/purchase')
@@ -387,7 +387,7 @@ describe('Hosting Store Routes', () => {
         items: [{ id: 444, planId: 101 }],
       });
       mockGetWebsites.mockResolvedValue({ items: [] });
-      mockCreateWebsite.mockResolvedValue({ id: 'web-444', primary_ip: '1.2.3.4' });
+      mockCreateWebsite.mockResolvedValue({ id: 'web-444', serverIps: [{ ip: '1.2.3.4', isPrimary: true }] });
 
       const response = await request(app)
         .post('/api/hosting/purchase')
