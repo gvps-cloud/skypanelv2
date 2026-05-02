@@ -528,17 +528,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               requiresShift: false,
               requiresAlt: true,
             },
+            {
+              icon: Globe,
+              label: "Create Hosting",
+              href: "/hosting/store",
+              shortcut: isMac ? "⌥⇧H" : "Alt+Shift+H",
+              shortcutKey: "h",
+              requiresShift: true,
+              requiresAlt: true,
+            },
           ]
         : []),
-      {
-        icon: Globe,
-        label: "Create Hosting",
-        href: "/hosting/store",
-        shortcut: isMac ? "⌥⇧H" : "Alt+Shift+H",
-        shortcutKey: "h",
-        requiresShift: true,
-        requiresAlt: true,
-      },
       {
         icon: Key,
         label: "SSH Keys",
