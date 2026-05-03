@@ -534,9 +534,88 @@ function SocialProof() {
 /* ─── SkyPanel Dashboard Preview ─────────────────────────────────── */
 
 function SkyPanelPreview() {
+  const [activeView, setActiveView] = useState("Dashboard");
+  const [selectedVps, setSelectedVps] = useState("prod-api-01");
+  const [walletBalance, setWalletBalance] = useState(128.4);
+  const [activityFeed, setActivityFeed] = useState([
+    { message: "VPS prod-api-01 deployed", type: "VPS event", time: "2m ago" },
+    { message: "Wallet topped up $50.00", type: "Billing event", time: "1h ago" },
+    { message: "Hosting renewed: atlas-site.io", type: "System event", time: "3h ago" },
+  ]);
+
+  const vpsFleet = [
+    { id: "prod-api-01", status: "running", plan: "4C/8GB", region: "US-East", cpu: 34.2, cpuCount: 4, memory: 62 },
+    { id: "staging-web", status: "running", plan: "2C/4GB", region: "EU-West", cpu: 12.8, cpuCount: 2, memory: 41 },
+    { id: "db-primary", status: "running", plan: "8C/16GB", region: "US-East", cpu: 58.7, cpuCount: 8, memory: 76 },
+  ];
+
+  const hostingServices = [
+    { domain: "atlas-site.io", status: "active", plan: "Business Hosting", nextBilling: "May 28" },
+    { domain: "docs.gvps.cloud", status: "active", plan: "Starter Hosting", nextBilling: "Jun 02" },
+  ];
+
+  const selectedServer = vpsFleet.find((server) => server.id === selectedVps) ?? vpsFleet[0];
+
+  const addActivity = (message: string, type = "System event") => {
+    setActivityFeed((current) => [
+      { message, type, time: "just now" },
+      ...current.slice(0, 4),
+    ]);
+  };
+
+  const quickActions = [
+    {
+      icon: Plus,
+      title: "Launch a VPS",
+      description: "Deploy a fresh instance in under a minute.",
+      action: () => {
+        setActiveView("Compute");
+        addActivity("Deployment wizard opened for a new VPS", "VPS event");
+      },
+    },
+    {
+      icon: Globe2,
+      title: "Create Hosting",
+      description: "Launch an Enhance web hosting subscription.",
+      action: () => {
+        setActiveView("Web Hosting");
+        addActivity("Hosting checkout preview opened");
+      },
+    },
+    {
+      icon: Wallet,
+      title: "Top up wallet",
+      description: "Add credits with secure checkout.",
+      action: () => {
+        setWalletBalance((balance) => Math.round((balance + 25) * 100) / 100);
+        setActiveView("Billing");
+        addActivity("Wallet preview topped up $25.00", "Billing event");
+      },
+    },
+    {
+      icon: ShieldCheck,
+      title: "Create support ticket",
+      description: "Reach the platform team 24/7.",
+      action: () => {
+        setActiveView("Activity");
+        addActivity("Support ticket draft created", "Support update");
+      },
+    },
+  ];
+
+  const navItems = [
+    { icon: LayoutDashboard, label: "Dashboard" },
+    { icon: Server, label: "Compute" },
+    { icon: Globe2, label: "Web Hosting" },
+    { icon: Building2, label: "Organizations" },
+    { icon: FileText, label: "Notes" },
+    { icon: Activity, label: "Activity" },
+    { icon: CreditCard, label: "Billing" },
+  ];
+
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-border/60 bg-background shadow-2xl shadow-primary/10">
-      <div className="flex min-h-[460px]">
+      <div className="flex min-h-[620px]">
         <aside className="hidden w-56 shrink-0 border-r border-border/50 bg-card/90 sm:flex sm:flex-col">
           <div className="flex items-center gap-2.5 border-b border-border/50 px-4 py-3.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 ring-1 ring-primary/25">
@@ -549,26 +628,20 @@ function SkyPanelPreview() {
           </div>
 
           <nav className="flex-1 space-y-0.5 px-2 py-3">
-            {[
-              { icon: LayoutDashboard, label: "Dashboard", active: true },
-              { icon: Server, label: "Compute" },
-              { icon: Globe2, label: "Web Hosting" },
-              { icon: Building2, label: "Organizations" },
-              { icon: FileText, label: "Notes" },
-              { icon: Activity, label: "Activity" },
-              { icon: CreditCard, label: "Billing" },
-            ].map((item) => (
-              <div
+            {navItems.map((item) => (
+              <button
                 key={item.label}
-                className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] ${
-                  item.active
+                type="button"
+                onClick={() => setActiveView(item.label)}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors ${
+                  activeView === item.label
                     ? "bg-primary/10 font-medium text-primary"
                     : "text-muted-foreground hover:bg-muted/50"
                 }`}
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
-              </div>
+              </button>
             ))}
           </nav>
 
@@ -591,21 +664,43 @@ function SkyPanelPreview() {
             <div className="flex items-center gap-2">
               <div className="hidden items-center gap-1.5 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1 text-[11px] text-muted-foreground sm:flex">
                 <Search className="h-3 w-3" />
-                Search...
+                Search dashboard...
                 <kbd className="ml-2 rounded border border-border/60 bg-muted/50 px-1 py-px font-mono text-[9px]">Ctrl K</kbd>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/50 bg-muted/20">
+              <button
+                type="button"
+                onClick={() => quickActions[0].action()}
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/50 bg-muted/20 transition-colors hover:border-primary/40 hover:text-primary"
+                aria-label="Launch a VPS"
+              >
                 <Plus className="h-3.5 w-3.5 text-muted-foreground" />
-              </div>
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/50 bg-muted/20">
+              </button>
+              <button
+                type="button"
+                onClick={() => addActivity("Notification center opened")}
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/50 bg-muted/20 transition-colors hover:border-primary/40 hover:text-primary"
+                aria-label="Open notifications"
+              >
                 <Bell className="h-3.5 w-3.5 text-muted-foreground" />
-              </div>
+              </button>
             </div>
           </header>
 
-          <div className="flex-1 space-y-3.5 overflow-hidden p-3 sm:p-4">
+          <div className="flex-1 space-y-4 overflow-hidden p-3 sm:p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold leading-tight">{activeView}</h3>
+                <p className="text-[11px] text-muted-foreground">
+                  Dummy client console preview
+                </p>
+              </div>
+              <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
+                Interactive preview
+              </span>
+            </div>
+
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -622,21 +717,23 @@ function SkyPanelPreview() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[
-                { icon: Plus, label: "Launch a VPS" },
-                { icon: Globe2, label: "Create Hosting" },
-                { icon: Wallet, label: "Top up wallet" },
-                { icon: ShieldCheck, label: "Support ticket" },
-              ].map((action) => (
-                <div
-                  key={action.label}
-                  className="group flex items-center gap-2 rounded-lg border border-border/50 bg-card/60 p-2.5 transition-colors hover:border-primary/40"
+              {quickActions.map((action) => (
+                <button
+                  key={action.title}
+                  type="button"
+                  onClick={action.action}
+                  className="group flex min-h-[68px] items-center gap-2 rounded-lg border border-border/50 bg-card/60 p-2.5 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
                 >
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                     <action.icon className="h-3.5 w-3.5" />
                   </div>
-                  <span className="truncate text-[11px] font-medium">{action.label}</span>
-                </div>
+                  <div className="min-w-0">
+                    <span className="block truncate text-[11px] font-medium">{action.title}</span>
+                    <span className="hidden text-[10px] leading-snug text-muted-foreground md:line-clamp-2">
+                      {action.description}
+                    </span>
+                  </div>
+                </button>
               ))}
             </div>
 
@@ -653,15 +750,21 @@ function SkyPanelPreview() {
               </div>
 
               <div className="divide-y divide-border/30">
-                {[
-                  { name: "prod-api-01", status: "running", plan: "4C/8GB", region: "US-East", cpu: 34.2, cpuCount: 4 },
-                  { name: "staging-web", status: "running", plan: "2C/4GB", region: "EU-West", cpu: 12.8, cpuCount: 2 },
-                  { name: "db-primary", status: "running", plan: "8C/16GB", region: "US-East", cpu: 58.7, cpuCount: 8 },
-                ].map((vps) => (
-                  <div key={vps.name} className="flex items-center gap-3 px-3 py-2.5">
+                {vpsFleet.map((vps) => (
+                  <button
+                    key={vps.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedVps(vps.id);
+                      setActiveView("Compute");
+                    }}
+                    className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/35 ${
+                      selectedVps === vps.id ? "bg-primary/5" : ""
+                    }`}
+                  >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[12px] font-semibold">{vps.name}</span>
+                        <span className="text-[12px] font-semibold">{vps.id}</span>
                         <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
                           {vps.status}
                         </span>
@@ -682,7 +785,7 @@ function SkyPanelPreview() {
                         />
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -695,7 +798,7 @@ function SkyPanelPreview() {
                   </div>
                   <div>
                     <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Wallet Balance</p>
-                    <p className="text-lg font-bold">$128.40</p>
+                    <p className="text-lg font-bold">${walletBalance.toFixed(2)}</p>
                   </div>
                 </div>
                 <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
@@ -706,27 +809,68 @@ function SkyPanelPreview() {
 
               <div className="rounded-xl border border-border/50 bg-card/50 p-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-[12px] font-semibold">Recent Activity</h4>
-                  <span className="inline-flex items-center gap-1 text-[10px] text-primary">
+                  <h4 className="text-[12px] font-semibold">
+                    {activeView === "Web Hosting" ? "Hosting Services" : activeView === "Compute" ? "Selected VPS" : "Recent Activity"}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setActiveView(activeView === "Activity" ? "Dashboard" : "Activity")}
+                    className="inline-flex items-center gap-1 text-[10px] text-primary"
+                  >
                     View all
                     <ArrowUpRight className="h-3 w-3" />
-                  </span>
+                  </button>
                 </div>
-                <div className="mt-2 space-y-2">
-                  {[
-                    { msg: "VPS prod-api-01 deployed", time: "2m ago" },
-                    { msg: "Wallet topped up $50.00", time: "1h ago" },
-                    { msg: "Hosting renewed: mysite.com", time: "3h ago" },
-                  ].map((ev, i) => (
-                    <div key={i} className="flex items-start gap-2.5 text-[11px]">
-                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                      <div className="min-w-0 flex-1">
-                        <span className="text-foreground">{ev.msg}</span>
-                        <span className="ml-1.5 text-[10px] text-muted-foreground">{ev.time}</span>
+                {activeView === "Web Hosting" ? (
+                  <div className="mt-2 space-y-2">
+                    {hostingServices.map((service) => (
+                      <button
+                        key={service.domain}
+                        type="button"
+                        onClick={() => addActivity(`Opened hosting service ${service.domain}`)}
+                        className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/40 bg-background/40 p-2 text-left text-[11px] transition-colors hover:border-primary/40"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{service.domain}</span>
+                          <span className="text-[10px] text-muted-foreground">{service.plan} · bills {service.nextBilling}</span>
+                        </span>
+                        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary">{service.status}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : activeView === "Compute" ? (
+                  <div className="mt-2 space-y-2 text-[11px]">
+                    <div className="rounded-lg border border-border/40 bg-background/40 p-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{selectedServer.id}</span>
+                        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary">{selectedServer.status}</span>
+                      </div>
+                      <p className="mt-1 text-[10px] text-muted-foreground">{selectedServer.plan} · {selectedServer.region}</p>
+                      <div className="mt-2 space-y-1">
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground">Memory</span>
+                          <span>{selectedServer.memory}%</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full bg-primary" style={{ width: `${selectedServer.memory}%` }} />
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {activityFeed.slice(0, 3).map((event, i) => (
+                      <div key={`${event.message}-${i}`} className="flex items-start gap-2.5 text-[11px]">
+                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                        <div className="min-w-0 flex-1">
+                          <span className="text-foreground">{event.message}</span>
+                          <span className="ml-1.5 text-[10px] text-muted-foreground">{event.time}</span>
+                          <span className="block text-[10px] text-muted-foreground">{event.type}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -748,15 +892,20 @@ export default function HomeRedesign() {
     useState<CapabilityKey>("deploy");
   const [regionsData, setRegionsData] = useState<RegionData[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<RegionData | null>(null);
+  const [hostingEnabled, setHostingEnabled] = useState(false);
+  const [hostingPlanCount, setHostingPlanCount] = useState(0);
 
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
       try {
-        const [regData, priceData] = await Promise.all([
+        const [regData, priceData, hostingData] = await Promise.all([
           apiClient.get<{ success?: boolean; regions?: any[]; count?: number }>('/pricing/public-regions'),
           apiClient.get<{ plans?: any[] }>('/pricing/vps'),
+          apiClient
+            .get<{ enabled?: boolean; plans?: any[] }>('/pricing/hosting')
+            .catch(() => ({ enabled: false, plans: [] })),
         ]);
 
         if (!mounted) return;
@@ -784,6 +933,9 @@ export default function HomeRedesign() {
             if (values.length > 0) setLowestPrice(Math.min(...values));
           }
         }
+
+        setHostingEnabled(hostingData.enabled === true);
+        setHostingPlanCount(hostingData.plans?.length ?? 0);
       } catch {
         // Silently fail - pricing data is optional
       } finally {
@@ -833,7 +985,7 @@ export default function HomeRedesign() {
   /* ─── Render ─────────────────────────────────────────────────── */
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="home-cyber min-h-screen bg-background text-foreground">
       <MarketingNavbar />
 
       <main>
@@ -1360,14 +1512,18 @@ export default function HomeRedesign() {
                   },
                   {
                     num: "02",
-                    title: "Choose Infrastructure",
-                    desc: "Select your VPS plan, region, and operating system.",
-                    icon: Server,
+                    title: hostingEnabled ? "Choose VPS or Hosting" : "Choose Infrastructure",
+                    desc: hostingEnabled
+                      ? "Pick a VPS plan or launch an Enhance hosting subscription from the live catalog."
+                      : "Select your VPS plan, region, and operating system.",
+                    icon: hostingEnabled ? Globe2 : Server,
                   },
                   {
                     num: "03",
-                    title: "Deploy Instantly",
-                    desc: "Launch your infrastructure in under 45 seconds.",
+                    title: hostingEnabled ? "Deploy or Publish" : "Deploy Instantly",
+                    desc: hostingEnabled
+                      ? "Deploy servers in seconds or publish websites with SSL, email, databases, and panel access."
+                      : "Launch your infrastructure in under 45 seconds.",
                     icon: Rocket,
                   },
                   {
@@ -1599,41 +1755,65 @@ export default function HomeRedesign() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="mx-auto max-w-md"
+              className={`mx-auto grid max-w-4xl gap-5 ${hostingEnabled ? "md:grid-cols-2" : "md:max-w-md"}`}
             >
-              <Card className="home-pricing-glow border-primary/20 bg-gradient-to-b from-card to-background shadow-2xl">
-                <CardContent className="space-y-5 p-8 text-center">
-                  <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium">
-                    VPS Plans Starting At
-                  </p>
-                  <p className="text-5xl font-bold tracking-tight text-primary">
-                    {pricingLoading ? "…" : `$${lowestPrice ?? 5}`}
-                    <span className="text-lg text-muted-foreground font-normal">
-                      /mo
-                    </span>
-                  </p>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    {[
-                      "NVMe SSD storage",
-                      "Full root access",
-                      "DDoS protection options",
-                      "Billed hourly from your wallet",
-                    ].map((f) => (
-                      <div key={f} className="flex items-center justify-center gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-primary/70" />
-                        {f}
-                      </div>
-                    ))}
-                  </div>
-                  <Button
-                    asChild
-                    className="w-full home-btn-glow shadow-md"
-                    size="lg"
-                  >
-                    <Link to="/pricing">View All Plans</Link>
-                  </Button>
-                </CardContent>
-              </Card>
+              {[
+                {
+                  eyebrow: "VPS Plans Starting At",
+                  price: pricingLoading ? "..." : `$${lowestPrice ?? 5}`,
+                  suffix: "/mo",
+                  cta: "View VPS Plans",
+                  href: "/pricing",
+                  features: [
+                    "NVMe SSD storage",
+                    "Full root access",
+                    "DDoS protection options",
+                    "Billed hourly from your wallet",
+                  ],
+                },
+                ...(hostingEnabled
+                  ? [
+                      {
+                        eyebrow: "Hosting Catalog",
+                        price: `${hostingPlanCount}`,
+                        suffix: hostingPlanCount === 1 ? " plan" : " plans",
+                        cta: "View Hosting Plans",
+                        href: "/pricing",
+                        features: [
+                          "Enhance-backed websites",
+                          "Dedicated hosting wallet",
+                          "SSL, email, databases, and panel SSO",
+                          "Plans loaded from your catalog",
+                        ],
+                      },
+                    ]
+                  : []),
+              ].map((item) => (
+                <Card key={item.eyebrow} className="home-pricing-glow border-primary/20 bg-gradient-to-b from-card to-background shadow-2xl">
+                  <CardContent className="space-y-5 p-8 text-center">
+                    <p className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
+                      {item.eyebrow}
+                    </p>
+                    <p className="text-5xl font-bold tracking-tight text-primary">
+                      {item.price}
+                      <span className="text-lg font-normal text-muted-foreground">
+                        {item.suffix}
+                      </span>
+                    </p>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      {item.features.map((feature) => (
+                        <div key={feature} className="flex items-center justify-center gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-primary/70" />
+                          {feature}
+                        </div>
+                      ))}
+                    </div>
+                    <Button asChild className="w-full home-btn-glow shadow-md" size="lg">
+                      <Link to={item.href}>{item.cta}</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
             </motion.div>
           </div>
         </section>

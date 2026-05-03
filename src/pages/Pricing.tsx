@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Loader2,
   Check,
@@ -37,6 +38,7 @@ import { BRAND_NAME } from '@/lib/brand';
 import MarketingNavbar from '@/components/MarketingNavbar';
 import MarketingFooter from '@/components/MarketingFooter';
 import { apiClient } from '@/lib/api';
+import { getHostingFeatureRows } from '@/lib/hostingPlanFeatures';
 import '@/styles/home.css';
 import type { HostingPlan } from '@/hooks/useHosting';
 
@@ -101,29 +103,6 @@ const formatHostingMonthly = (amount: number | string | null | undefined): strin
   return hostingCurrencyFormatter.format(normalizedValue);
 };
 
-const formatHostingResourceValue = (value: number | null | undefined): string => {
-  if (value === null || value === undefined || value === -1) return 'Unlimited';
-  return String(value);
-};
-
-const getHostingFeatureRows = (plan: HostingPlan): string[] => {
-  const resources = plan.features?.resources ?? {};
-  const rows: string[] = [];
-
-  for (const [key, resource] of Object.entries(resources)) {
-    const label = key
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-    rows.push(`${formatHostingResourceValue(resource.total)} ${label}`);
-  }
-
-  if (plan.features?.allowances?.length) {
-    rows.push(...plan.features.allowances);
-  }
-
-  return rows.slice(0, 6);
-};
-
 const HostingPricingSection = ({ plans }: { plans: HostingPlan[] }) => {
   const content = plans.length === 0 ? <EmptyHostingPlans /> : <HostingPlanGrid plans={plans} />;
 
@@ -137,6 +116,7 @@ const HostingPricingSection = ({ plans }: { plans: HostingPlan[] }) => {
     >
       <HostingPricingHeader />
       {content}
+      <EnhanceHostingInfo />
     </motion.div>
   );
 };
@@ -154,6 +134,45 @@ const HostingPricingHeader = () => (
       Hosting prices and features are loaded from the configured hosting catalog, so this page reflects the plans available in the panel.
     </p>
   </div>
+);
+
+const EnhanceHostingInfo = () => (
+  <Card className="home-glass-panel border-primary/25">
+    <CardContent className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+      <div>
+        <Badge
+          variant="outline"
+          className="mb-4 rounded-full border-primary/30 px-3 py-1 text-primary"
+        >
+          Control panel layer
+        </Badge>
+        <h3 className="text-2xl font-semibold">GVPS.Cloud hosting with Enhance panel controls</h3>
+        <p className="mt-3 text-muted-foreground">
+          Hosting runs on GVPS.Cloud-operated servers. Enhance is the control panel
+          software we use, similar in purpose to Plesk or cPanel, for managing
+          websites, databases, mailboxes, FTP users, backups, and resource limits
+          after checkout.
+        </p>
+      </div>
+      <div className="rounded-2xl border border-border/60 bg-background/50 p-5">
+        <p className="text-sm font-medium text-foreground">How hosting works</p>
+        <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+          <li className="flex gap-2">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <span>You create an account and fund your GVPS.Cloud wallet</span>
+          </li>
+          <li className="flex gap-2">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <span>You buy a GVPS.Cloud hosting plan from the catalog</span>
+          </li>
+          <li className="flex gap-2">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <span>We provision it on GVPS.Cloud servers with panel access</span>
+          </li>
+        </ul>
+      </div>
+    </CardContent>
+  </Card>
 );
 
 const EmptyHostingPlans = () => (
@@ -239,6 +258,7 @@ const PricingPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [activeProduct, setActiveProduct] = useState<'vps' | 'hosting'>('vps');
   const { data: enabledCategoryMappings = [] } = useEnabledCategoryMappings();
 
   useEffect(() => {
@@ -486,7 +506,41 @@ const PricingPage: React.FC = () => {
               </Alert>
             )}
 
-            {hostingEnabled && <HostingPricingSection plans={hostingPlans} />}
+            <Tabs
+              value={activeProduct}
+              onValueChange={(value) => setActiveProduct(value as 'vps' | 'hosting')}
+              className="space-y-16"
+            >
+              <div className="mx-auto max-w-3xl rounded-3xl border border-primary/25 bg-card/70 p-3 shadow-2xl shadow-primary/10 backdrop-blur-xl">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="px-2 text-center sm:text-left">
+                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+                      Product catalog
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Switch between VPS compute plans and Enhance hosting packages.
+                    </p>
+                  </div>
+                  <TabsList className="h-12 rounded-2xl border border-border/60 bg-background/80 p-1.5">
+                    <TabsTrigger
+                      value="vps"
+                      className="rounded-xl px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                    >
+                      VPS
+                    </TabsTrigger>
+                    {hostingEnabled && (
+                      <TabsTrigger
+                        value="hosting"
+                        className="rounded-xl px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                      >
+                        Hosting
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
+                </div>
+              </div>
+
+              <TabsContent value="vps" className="mt-0">
 
             {/* VPS Instances header */}
             <motion.div
@@ -621,7 +675,7 @@ const PricingPage: React.FC = () => {
                             )}
                             <div className="flex items-center gap-3">
                               <ArrowDown className="h-4 w-4 text-primary" />
-                              <span className="text-sm">40 Gbps Network In</span>
+                              <span className="text-sm">40 Gbps Network In per VPS</span>
                             </div>
                             {networkOutMbits > 0 && (
                               <div className="flex items-center gap-3">
@@ -683,7 +737,7 @@ const PricingPage: React.FC = () => {
                       'DDoS protection',
                       'IPv4 and IPv6 support',
                       '99.9% uptime SLA',
-                      '40 Gbps inbound network',
+                      '40 Gbps inbound network per VPS',
                     ].map((feature) => (
                       <div key={feature} className="flex items-center gap-2">
                         <Check className="h-4 w-4 text-primary" />
@@ -736,6 +790,14 @@ const PricingPage: React.FC = () => {
                 </CardContent>
               </Card>
             </motion.div>
+              </TabsContent>
+
+              {hostingEnabled && (
+                <TabsContent value="hosting" className="mt-0">
+                  <HostingPricingSection plans={hostingPlans} />
+                </TabsContent>
+              )}
+            </Tabs>
           </div>
         </section>
 
@@ -743,7 +805,10 @@ const PricingPage: React.FC = () => {
         <div className="border-t border-border/60 bg-muted/20 mt-0">
           <div className="container mx-auto px-4 py-8">
             <div className="text-center text-sm text-muted-foreground">
-              <p>All prices are in USD. VPS instances are billed hourly.</p>
+              <p>
+                All prices are in USD. VPS instances are billed hourly.
+                {hostingEnabled && ' Hosting plans are monthly subscriptions on GVPS.Cloud-operated servers; Enhance is the control panel used to manage websites, databases, mailboxes, and FTP users.'}
+              </p>
               <p className="mt-2">
                 Questions about pricing? <Link to="/contact" className="text-primary hover:underline">Contact our team</Link>
               </p>

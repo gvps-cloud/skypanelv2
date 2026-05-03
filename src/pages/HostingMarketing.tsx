@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
 import { BRAND_NAME } from "@/lib/brand";
+import { getHostingFeatureRows } from "@/lib/hostingPlanFeatures";
 import type { HostingPlan } from "@/hooks/useHosting";
 
 const revealContainer: Variants = {
@@ -82,29 +83,6 @@ const normalizePrice = (amount: number | string | null | undefined): number => {
 
 const formatMonthly = (amount: number | string | null | undefined): string =>
   currencyFormatter.format(normalizePrice(amount));
-
-const formatResource = (value: number | null | undefined): string => {
-  if (value === null || value === undefined || value === -1) return "Unlimited";
-  return String(value);
-};
-
-const getFeatureRows = (plan: HostingPlan) => {
-  const rows: string[] = [];
-  const resources = plan.features?.resources ?? {};
-
-  for (const [key, resource] of Object.entries(resources)) {
-    const label = key
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase());
-    rows.push(`${formatResource(resource.total)} ${label}`);
-  }
-
-  if (plan.features?.allowances?.length) {
-    rows.push(...plan.features.allowances);
-  }
-
-  return rows.slice(0, 5);
-};
 
 interface HostingCatalogState {
   enabled: boolean;
@@ -258,7 +236,7 @@ const CapabilityGrid = () => (
 );
 
 const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
-  const featureRows = getFeatureRows(plan);
+  const featureRows = getHostingFeatureRows(plan, 5);
   const features = featureRows.length > 0 ? featureRows : ["Managed website hosting"];
 
   return (

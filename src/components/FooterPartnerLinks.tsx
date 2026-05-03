@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import BackToTopButton from "@/components/BackToTopButton";
 
 const partnerLinks = [
   { label: "OpenCode.ai", href: "https://opencode.ai" },
@@ -46,8 +45,6 @@ export default function FooterPartnerLinks({ className }: FooterPartnerLinksProp
         <span className="text-xs text-muted-foreground">Our</span>
         {resourceLinks.map(renderLinkPill)}
       </div>
-
-      <BackToTopButton embedded />
     </div>
   );
 }

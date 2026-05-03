@@ -558,7 +558,7 @@ const Organizations: React.FC = () => {
                 icon: <Users className="h-6 w-6" />,
               },
             ]}
-            columns={5}
+            columns={6}
           />
 
           <Card className="border-primary/25">

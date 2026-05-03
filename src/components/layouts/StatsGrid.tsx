@@ -15,7 +15,7 @@ interface StatCardProps {
 
 interface StatsGridProps {
   stats: StatCardProps[];
-  columns?: 2 | 3 | 4 | 5;
+  columns?: 2 | 3 | 4 | 5 | 6;
   className?: string;
 }
 
@@ -27,12 +27,17 @@ const StatCard: React.FC<StatCardProps> = ({
   trend
 }) => {
   return (
-    <Card className="border-border bg-card border-primary/25">
-      <CardContent className="flex items-center justify-between gap-6 p-6">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          <div className="flex items-center gap-2">
-            <p className="text-3xl font-semibold tracking-tight">{value}</p>
+    <Card className="overflow-hidden border-primary/20 bg-card/80">
+      <CardContent className="relative min-h-[118px] p-4">
+        <div className="absolute right-3 top-3 rounded-lg border border-primary/15 bg-primary/10 p-2 text-primary [&_svg]:h-5 [&_svg]:w-5">
+          {icon}
+        </div>
+
+        <div className="flex min-h-[86px] min-w-0 flex-col justify-between pr-10">
+          <div className="space-y-2">
+            <p className="truncate text-sm font-medium text-muted-foreground">{label}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-3xl font-semibold">{value}</p>
             {trend && (
               <div className={`flex items-center gap-1 text-xs ${
                 trend.direction === 'up' ? 'text-emerald-500' : 'text-red-500'
@@ -45,13 +50,12 @@ const StatCard: React.FC<StatCardProps> = ({
                 {Math.abs(trend.value)}%
               </div>
             )}
+            </div>
           </div>
+
           {description && (
-            <p className="text-xs text-muted-foreground">{description}</p>
+            <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">{description}</p>
           )}
-        </div>
-        <div className="rounded-2xl bg-primary/10 p-3 text-primary">
-          {icon}
         </div>
       </CardContent>
     </Card>
@@ -67,11 +71,14 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
     2: 'sm:grid-cols-2',
     3: 'sm:grid-cols-2 xl:grid-cols-3',
     4: 'sm:grid-cols-2 xl:grid-cols-4',
-    5: 'sm:grid-cols-2 xl:grid-cols-5'
+    5: 'sm:grid-cols-2 xl:grid-cols-5',
+    6: 'sm:grid-cols-2 xl:grid-cols-6'
   };
 
+  const gapClass = columns === 6 ? 'gap-3' : 'gap-4';
+
   return (
-    <div className={`grid gap-4 ${gridCols[columns]} ${className}`}>
+    <div className={`grid ${gapClass} ${gridCols[columns]} ${className}`}>
       {stats.map((stat, index) => (
         <StatCard key={index} {...stat} />
       ))}
