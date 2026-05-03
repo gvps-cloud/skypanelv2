@@ -649,7 +649,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
         query('SELECT organization_id, COUNT(*) as count FROM support_tickets WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds]),
         query('SELECT organization_id, COUNT(*) as count FROM user_ssh_keys WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds]),
         query('SELECT organization_id, COUNT(*) as count FROM organization_members WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds]),
-        query('SELECT organization_id, COUNT(*) as count FROM hosting_subscriptions WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds])
+        query('SELECT organization_id, COUNT(*) as count FROM hosting_subscriptions WHERE organization_id = ANY($1) AND status = \'active\' GROUP BY organization_id', [orgIds])
       ]);
 
       vpsCounts.rows.forEach(row => {

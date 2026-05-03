@@ -548,7 +548,7 @@ const Organizations: React.FC = () => {
               {
                 label: "Web Hosting",
                 value: totalStats.hosting,
-                description: "Enhance subscriptions",
+                description: "Active Enhance subscriptions",
                 icon: <Globe2 className="h-6 w-6" />,
               },
               {
