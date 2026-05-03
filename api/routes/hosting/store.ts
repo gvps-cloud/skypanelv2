@@ -435,8 +435,8 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
 
       // 5. Insert provisional hosting subscription
       const subResult = await client.query(
-        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, settings)
-         VALUES ($1, $2, $3, $4, 'provisioning', now() + interval '1 month', $5)
+        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, last_billed_at, next_billing_at, settings)
+         VALUES ($1, $2, $3, $4, 'provisioning', now(), now() + interval '1 month', $5)
          RETURNING *`,
         [organizationId, userId, planId, requestedDomain, JSON.stringify({ debit_transaction_id: debitTransactionId })]
       );

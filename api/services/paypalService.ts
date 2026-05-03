@@ -231,7 +231,7 @@ export class PayPalService {
             'paypal',
             'paypal',
             order.id,
-            'failed',
+            'pending',
             paymentIntent.description,
             JSON.stringify({
               wallet_type: walletType,

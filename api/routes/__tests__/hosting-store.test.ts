@@ -554,8 +554,8 @@ describe('Hosting Store Routes', () => {
 
       // Create a subscription for the org
       const subResult = await pool.query(
-        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, last_billed_at, enhance_website_id, enhance_subscription_id)
-         VALUES ($1, $2, $3, $4, 'active', NOW() + interval '1 month', NOW(), 'web-999', 'sub-999')
+        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, enhance_website_id, enhance_subscription_id)
+         VALUES ($1, $2, $3, $4, 'active', NOW() + interval '1 month', 'web-999', 'sub-999')
          RETURNING id`,
         [testOrgId, testUserId, planId, 'cancel-test.com']
       );
