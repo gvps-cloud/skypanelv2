@@ -13,11 +13,9 @@ import {
   Lock,
   Plus,
   Rocket,
-  Search,
   Server,
   ShieldCheck,
   Sparkles,
-  TerminalSquare,
   Wallet,
   Zap,
   Users,
@@ -32,6 +30,7 @@ import {
   FileText,
   Bell,
   Settings,
+  Search,
   type LucideIcon,
 } from "lucide-react";
 
@@ -59,6 +58,13 @@ interface MetricCard {
   value: string;
   detail: string;
   icon: LucideIcon;
+}
+
+interface ControlPlaneItem {
+  icon: LucideIcon;
+  label: string;
+  subtitle: string;
+  description: string;
 }
 
 interface PlatformCard {
@@ -226,6 +232,37 @@ const capabilityTabs: Array<{
   },
 ];
 
+const controlPlaneItems: ControlPlaneItem[] = [
+  {
+    icon: Server,
+    label: "Compute",
+    subtitle: "Virtual Machines",
+    description:
+      "Deploy high-performance Linux instances with full root access, NVMe storage, and instant provisioning in under 45 seconds.",
+  },
+  {
+    icon: Globe2,
+    label: "Hosting",
+    subtitle: "Managed Websites",
+    description:
+      "Launch website hosting through Enhance. WordPress, email, SSL, databases, and backups from one panel.",
+  },
+  {
+    icon: Wallet,
+    label: "Billing",
+    subtitle: "Prepaid Wallet",
+    description:
+      "Fund your wallet with PayPal and pay hourly. No surprise bills, no contracts. Hosting wallet keeps spend separate.",
+  },
+  {
+    icon: Users,
+    label: "Teams",
+    subtitle: "Organizations",
+    description:
+      "Create workspaces, invite members, assign roles. Centralized billing and resource tracking per team.",
+  },
+];
+
 const platformCards: PlatformCard[] = [
   {
     icon: Zap,
@@ -236,7 +273,7 @@ const platformCards: PlatformCard[] = [
     span: "sm:col-span-2 xl:col-span-1",
   },
   {
-    icon: TerminalSquare,
+    icon: Globe2,
     title: "Browser-Based SSH & Hosting Tools",
     description:
       "Access server terminals and hosting controls directly from the dashboard. Keep compute and website operations in one place.",
@@ -293,6 +330,15 @@ const platformCards: PlatformCard[] = [
       "Manage your infrastructure programmatically. Full REST API with SDK support for automation and integration.",
     metric: "Full API access",
   },
+];
+
+const trustItems = [
+  { icon: Server, label: "High Performance NVMe" },
+  { icon: ShieldCheck, label: "DDoS Protection" },
+  { icon: Users, label: "Built for Teams" },
+  { icon: Wallet, label: "Hourly Billing" },
+  { icon: Globe2, label: "Global Regions" },
+  { icon: Lock, label: "Encrypted at Rest" },
 ];
 
 const faqs = [
@@ -429,15 +475,6 @@ const solutionCards = [
   },
 ];
 
-const trustItems = [
-  { icon: Server, label: "High Performance NVMe" },
-  { icon: ShieldCheck, label: "DDoS Protection" },
-  { icon: Users, label: "Built for Teams" },
-  { icon: Wallet, label: "Hourly Billing" },
-  { icon: Globe2, label: "Global Regions" },
-  { icon: Lock, label: "Encrypted at Rest" },
-];
-
 /* ─── Social Proof Component ────────────────────────────────────── */
 
 function SocialProof() {
@@ -498,16 +535,14 @@ function SocialProof() {
 function SkyPanelPreview() {
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-border/60 bg-background shadow-2xl shadow-primary/10">
-      {/* Outer shell mimicking real app layout */}
       <div className="flex min-h-[460px]">
-        {/* ── Sidebar ── */}
         <aside className="hidden w-56 shrink-0 border-r border-border/50 bg-card/90 sm:flex sm:flex-col">
           <div className="flex items-center gap-2.5 border-b border-border/50 px-4 py-3.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 ring-1 ring-primary/25">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
             </div>
             <div className="grid flex-1 text-left leading-tight">
-              <span className="truncate text-sm font-semibold">SkyPanel</span>
+              <span className="truncate text-sm font-semibold">{BRAND_NAME}</span>
               <span className="truncate text-[10px] text-muted-foreground">Cloud Platform</span>
             </div>
           </div>
@@ -550,12 +585,9 @@ function SkyPanelPreview() {
           </div>
         </aside>
 
-        {/* ── Main area ── */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Top bar */}
           <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/50 px-3 sm:px-4">
             <div className="flex items-center gap-2">
-              <LayoutDashboard className="h-4 w-4 text-muted-foreground sm:hidden" />
               <div className="hidden items-center gap-1.5 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1 text-[11px] text-muted-foreground sm:flex">
                 <Search className="h-3 w-3" />
                 Search...
@@ -572,9 +604,7 @@ function SkyPanelPreview() {
             </div>
           </header>
 
-          {/* Dashboard content */}
           <div className="flex-1 space-y-3.5 overflow-hidden p-3 sm:p-4">
-            {/* Status badges */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -590,7 +620,6 @@ function SkyPanelPreview() {
               </span>
             </div>
 
-            {/* Quick actions */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {[
                 { icon: Plus, label: "Launch a VPS" },
@@ -610,7 +639,6 @@ function SkyPanelPreview() {
               ))}
             </div>
 
-            {/* VPS Fleet */}
             <div className="rounded-xl border border-border/50 bg-card/50">
               <div className="flex items-center justify-between border-b border-border/40 px-3 py-2.5">
                 <div>
@@ -658,9 +686,7 @@ function SkyPanelPreview() {
               </div>
             </div>
 
-            {/* Bottom row: wallet + activity */}
             <div className="grid gap-3 lg:grid-cols-2">
-              {/* Wallet summary */}
               <div className="rounded-xl border border-border/50 bg-card/50 p-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -677,7 +703,6 @@ function SkyPanelPreview() {
                 </div>
               </div>
 
-              {/* Recent activity */}
               <div className="rounded-xl border border-border/50 bg-card/50 p-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-[12px] font-semibold">Recent Activity</h4>
@@ -688,12 +713,12 @@ function SkyPanelPreview() {
                 </div>
                 <div className="mt-2 space-y-2">
                   {[
-                    { msg: "VPS prod-api-01 deployed", time: "2m ago", color: "bg-primary" },
-                    { msg: "Wallet topped up $50.00", time: "1h ago", color: "bg-primary" },
-                    { msg: "Hosting renewed: mysite.com", time: "3h ago", color: "bg-primary" },
+                    { msg: "VPS prod-api-01 deployed", time: "2m ago" },
+                    { msg: "Wallet topped up $50.00", time: "1h ago" },
+                    { msg: "Hosting renewed: mysite.com", time: "3h ago" },
                   ].map((ev, i) => (
                     <div key={i} className="flex items-start gap-2.5 text-[11px]">
-                      <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${ev.color}`} />
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                       <div className="min-w-0 flex-1">
                         <span className="text-foreground">{ev.msg}</span>
                         <span className="ml-1.5 text-[10px] text-muted-foreground">{ev.time}</span>
@@ -707,7 +732,6 @@ function SkyPanelPreview() {
         </div>
       </div>
 
-      {/* Subtle inner glow */}
       <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
     </div>
   );
@@ -813,19 +837,17 @@ export default function HomeRedesign() {
 
       <main>
         {/* ═══════════════════════════ HERO ═══════════════════════════ */}
-        <section className="relative overflow-hidden border-b border-border/40">
-          {/* Floating orbs */}
+        <section className="home-hero-section relative overflow-hidden border-b border-border/40">
           <div className="home-orb home-orb--1" aria-hidden />
           <div className="home-orb home-orb--2" aria-hidden />
-          <div className="home-orb home-orb--3" aria-hidden />
-          <div className="home-grid-mask absolute inset-0" aria-hidden />
+          <div className="home-hero-grid-lines" aria-hidden />
 
-          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-20 pt-24 sm:px-6 md:grid-cols-[minmax(0,1fr)_minmax(360px,0.95fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(460px,0.95fr)] lg:gap-12 lg:px-8 lg:pb-24 lg:pt-28">
+          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-6 pt-24 sm:px-6 md:grid-cols-[minmax(0,1fr)_minmax(360px,0.95fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(460px,0.95fr)] lg:gap-12 lg:px-8 lg:pt-28">
             <motion.div
               initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65 }}
-              className="space-y-8"
+              className="space-y-6"
             >
               <div className="space-y-5">
                 <Badge
@@ -879,47 +901,9 @@ export default function HomeRedesign() {
                   <Link to="/web-hosting">Explore Hosting</Link>
                 </Button>
               </div>
-
-              {/* Metric cards with connecting line */}
-              <div className="relative grid gap-4 sm:grid-cols-3">
-                <div className="hidden sm:block absolute top-1/2 left-[16.67%] right-[16.67%] h-px bg-gradient-to-r from-primary/10 via-primary/25 to-primary/10 -translate-y-1/2 z-0" />
-                {heroMetrics.map((metric) => (
-                  <motion.div
-                    key={metric.label}
-                    className="relative z-10 flex flex-col rounded-xl p-4 home-glass-panel home-animated-border border-primary/15 hover:border-primary/30 transition-colors"
-                  >
-                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                      <span>{metric.label}</span>
-                      <metric.icon className="h-4 w-4 text-primary/70" />
-                    </div>
-                    <div className="text-3xl font-bold tracking-tight text-foreground">
-                      {metric.value.includes("+") ||
-                      metric.value.includes("%") ? (
-                        metric.value
-                      ) : (
-                        <AnimatedCounter
-                          value={
-                            parseInt(metric.value.replace(/\D/g, "")) || 0
-                          }
-                          suffix={metric.value.replace(/[\d,]/g, "")}
-                        />
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {metric.detail}
-                    </p>
-                  </motion.div>
-                ))}
-              </div>
             </motion.div>
 
-            {/* Globe */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-              className="relative hero-globe-container md:-mr-8 lg:-mr-16"
-            >
+            <div className="relative hero-globe-container md:-mr-8 lg:-mr-16">
               <div className="home-globe-glow" aria-hidden />
               <ParticleGlobe
                 regions={regionsData}
@@ -932,10 +916,51 @@ export default function HomeRedesign() {
                 region={selectedRegion}
                 onClose={() => setSelectedRegion(null)}
               />
-            </motion.div>
+            </div>
+          </div>
+
+          {/* ── Metrics Bar ── */}
+          <div className="relative mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {heroMetrics.map((metric) => (
+                <motion.div
+                  key={metric.label}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="home-glass-panel home-animated-border flex items-center gap-4 rounded-xl border border-primary/15 p-4 transition-colors hover:border-primary/30"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20">
+                    <metric.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground">
+                      {metric.label}
+                    </p>
+                    <p className="text-2xl font-bold tracking-tight">
+                      {metric.value.includes("+") ||
+                      metric.value.includes("%") ? (
+                        metric.value
+                      ) : (
+                        <AnimatedCounter
+                          value={
+                            parseInt(metric.value.replace(/\D/g, "")) || 0
+                          }
+                          suffix={metric.value.replace(/[\d,]/g, "")}
+                        />
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {metric.detail}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </section>
 
+        {/* ═══════════════════ DASHBOARD PREVIEW ═══════════════════════ */}
         <section className="border-b border-border/40 bg-muted/10 py-14">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <motion.div
@@ -945,21 +970,20 @@ export default function HomeRedesign() {
               transition={{ duration: 0.55 }}
               className="relative"
             >
-              {/* Ambient glow behind the preview */}
               <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-gradient-to-b from-primary/10 via-primary/5 to-transparent blur-2xl" />
               <SkyPanelPreview />
             </motion.div>
           </div>
         </section>
 
-        {/* ═══════════════════════ TRUST MARQUEE ═══════════════════════ */}
-        <section className="border-b border-border/40 bg-muted/20 py-6">
+        {/* ═══════════════════ OPERATIONAL TICKER ═══════════════════ */}
+        <section className="border-b border-border/40 bg-muted/20 py-5">
           <div className="home-marquee">
             <div className="home-marquee__track">
               {[...trustItems, ...trustItems].map((item, i) => (
                 <div
                   key={i}
-                  className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground"
+                  className="flex shrink-0 items-center gap-2.5 text-sm text-muted-foreground"
                 >
                   <item.icon className="h-4 w-4 text-primary/60" />
                   <span className="whitespace-nowrap font-medium">
@@ -973,14 +997,14 @@ export default function HomeRedesign() {
         </section>
 
         {/* ═══════════════════ PLATFORM — BENTO GRID ════════════════════ */}
-        <section id="platform" className="py-24 sm:py-28">
+        <section id="platform" className="py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.55 }}
-              className="mb-14 max-w-3xl"
+              className="mb-12 max-w-3xl"
             >
               <Badge
                 variant="outline"
@@ -1038,11 +1062,73 @@ export default function HomeRedesign() {
           </div>
         </section>
 
+        {/* ═══════════════════ CONTROL PLANE ═══════════════════════ */}
+        <section className="border-y border-border/40 bg-muted/10 py-20 sm:py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.55 }}
+              className="mb-12 max-w-3xl"
+            >
+              <Badge
+                variant="outline"
+                className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary"
+              >
+                Control Plane
+              </Badge>
+              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                Everything you need to run production infrastructure.
+              </h2>
+              <p className="mt-4 text-lg text-muted-foreground">
+                VPS, hosting, billing, and team management unified under one
+                console. No juggling providers.
+              </p>
+            </motion.div>
+
+            <motion.div
+              variants={revealContainer}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="grid gap-4 sm:grid-cols-2"
+            >
+              {controlPlaneItems.map((item) => (
+                <motion.div
+                  key={item.label}
+                  variants={revealItem}
+                >
+                  <Card className="home-terminal-card h-full border-primary/25">
+                    <CardContent className="p-6 sm:p-7">
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
+                          <item.icon className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold tracking-tight">
+                              {item.label}
+                            </h3>
+                            <span className="rounded-full border border-border/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              {item.subtitle}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                            {item.description}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+
         {/* ═══════════════════ CAPABILITIES TABS ═══════════════════════ */}
-        <section
-          id="capabilities"
-          className="border-y border-border/40 bg-muted/20 py-24 sm:py-28"
-        >
+        <section className="py-20 sm:py-24">
           <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
@@ -1150,107 +1236,40 @@ export default function HomeRedesign() {
           </div>
         </section>
 
-        {/* ═══════════════════════ SOLUTIONS ═══════════════════════════ */}
-        <section id="solutions" className="py-24 sm:py-28">
+        {/* ═══════════════════ WORKFLOW RAIL ════════════════════════ */}
+        <section
+          id="capabilities"
+          className="border-y border-border/40 bg-muted/10 py-20 sm:py-24"
+        >
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.55 }}
-              className="mb-14 max-w-3xl"
+              className="mb-12 text-center"
             >
               <Badge
                 variant="outline"
                 className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary"
               >
-                Built For You
+                How It Works
               </Badge>
               <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                The foundation for your next big idea.
-              </h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                Whether you're a solo developer testing an app or a growing
-                business scaling production workloads.
-              </p>
-            </motion.div>
-
-            <div className="grid gap-5 md:grid-cols-3">
-              {solutionCards.map((item, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: idx * 0.1 }}
-                >
-                  <Card className="h-full home-feature-card group border-primary/25">
-                    <CardContent className="space-y-5 p-6">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
-                        <item.icon className="h-7 w-7 text-primary" />
-                      </div>
-                      <h3 className="text-xl font-semibold">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed min-h-[48px]">
-                        {item.detail}
-                      </p>
-                      <ul className="space-y-2 text-sm font-medium text-foreground">
-                        {item.bullets.map((b) => (
-                          <li key={b} className="flex items-center gap-2.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                            {b}
-                          </li>
-                        ))}
-                      </ul>
-                      <Link
-                        to="/register"
-                        className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline pt-1"
-                      >
-                        Get started
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Link>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ═══════════════════ HOW IT WORKS ════════════════════════════ */}
-        <section className="py-24 sm:py-28 border-y border-border/40 bg-muted/10 relative overflow-hidden">
-          <div className="absolute inset-0 bg-grid-pattern opacity-[0.03]" />
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.55 }}
-              className="text-center mb-16"
-            >
-              <Badge
-                variant="outline"
-                className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary"
-              >
-                Getting Started
-              </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                From Zero to{" "}
-                <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                  Live Infrastructure
-                </span>
+                From signup to production in minutes.
               </h2>
               <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                Get your infrastructure up and running in minutes, not hours.
+                No complex onboarding, no sales calls. Sign up, fund, deploy.
               </p>
             </motion.div>
 
             <div className="relative">
               <div className="hidden lg:block home-timeline-connector" />
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   {
                     num: "01",
-                    title: "Sign Up & Add Funds",
+                    title: "Sign Up & Fund",
                     desc: "Create your account and add funds to your wallet via PayPal.",
                     icon: Users,
                   },
@@ -1268,7 +1287,7 @@ export default function HomeRedesign() {
                   },
                   {
                     num: "04",
-                    title: "Monitor & Manage",
+                    title: "Monitor & Scale",
                     desc: "Track performance and scale through one dashboard.",
                     icon: Activity,
                   },
@@ -1278,23 +1297,23 @@ export default function HomeRedesign() {
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: i * 0.12 }}
+                    transition={{ duration: 0.5, delay: i * 0.1 }}
                     className="relative"
                   >
                     <Card className="h-full home-feature-card group border-primary/25">
-                      <CardContent className="p-6 text-center">
-                        <div className="relative mb-5 inline-flex">
-                          <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/50 rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-primary/10 group-hover:scale-105 transition-transform duration-300">
-                            <step.icon className="w-6 h-6 text-primary-foreground" />
+                      <CardContent className="p-5 text-center sm:p-6">
+                        <div className="relative mb-4 inline-flex">
+                          <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/50 rounded-xl flex items-center justify-center shadow-lg ring-4 ring-primary/10 group-hover:scale-105 transition-transform duration-300">
+                            <step.icon className="w-5 h-5 text-primary-foreground" />
                           </div>
-                          <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-background text-[10px] font-bold text-primary ring-2 ring-primary/30">
+                          <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-background text-[9px] font-bold text-primary ring-2 ring-primary/30">
                             {step.num}
                           </span>
                         </div>
-                        <h3 className="text-base font-semibold mb-2 text-foreground">
+                        <h3 className="text-sm font-semibold mb-1.5 text-foreground">
                           {step.title}
                         </h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
                           {step.desc}
                         </p>
                       </CardContent>
@@ -1306,15 +1325,81 @@ export default function HomeRedesign() {
           </div>
         </section>
 
-        {/* ═══════════════════ TESTIMONIALS ════════════════════════════ */}
-        <section className="py-24 sm:py-28">
+        {/* ═══════════════════════ SOLUTIONS ═══════════════════════════ */}
+        <section id="solutions" className="py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.55 }}
-              className="text-center mb-16"
+              className="mb-12 max-w-3xl"
+            >
+              <Badge
+                variant="outline"
+                className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary"
+              >
+                Built For You
+              </Badge>
+              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                The foundation for your next big idea.
+              </h2>
+              <p className="mt-4 text-lg text-muted-foreground">
+                Whether you're a solo developer testing an app or a growing
+                business scaling production workloads.
+              </p>
+            </motion.div>
+
+            <motion.div
+              variants={revealContainer}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="grid gap-5 md:grid-cols-2 xl:grid-cols-4"
+            >
+              {solutionCards.map((item) => (
+                <motion.div key={item.title} variants={revealItem}>
+                  <Card className="h-full home-feature-card group border-primary/25">
+                    <CardContent className="space-y-4 p-5">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
+                        <item.icon className="h-6 w-6 text-primary" />
+                      </div>
+                      <h3 className="text-base font-semibold">{item.title}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed min-h-[40px]">
+                        {item.detail}
+                      </p>
+                      <ul className="space-y-1.5 text-sm font-medium text-foreground">
+                        {item.bullets.map((b) => (
+                          <li key={b} className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            {b}
+                          </li>
+                        ))}
+                      </ul>
+                      <Link
+                        to="/register"
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline pt-1"
+                      >
+                        Get started
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+
+        {/* ═══════════════════ TESTIMONIALS ════════════════════════════ */}
+        <section className="border-y border-border/40 bg-muted/10 py-20 sm:py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.55 }}
+              className="text-center mb-12"
             >
               <Badge
                 variant="outline"
@@ -1323,15 +1408,11 @@ export default function HomeRedesign() {
                 Trusted by Teams
               </Badge>
               <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                What Our Customers Say
+                What our customers say.
               </h2>
-              <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                Join teams who trust {BRAND_NAME} for their infrastructure
-                needs.
-              </p>
             </motion.div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8 items-start">
               {testimonials.map((test, idx) => {
                 const isFeatured = idx === 1;
                 return (
@@ -1342,18 +1423,18 @@ export default function HomeRedesign() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, delay: idx * 0.1 }}
                     whileHover={{ y: -4 }}
-                    className={`touch-manipulation ${isFeatured ? "lg:-mt-4 lg:mb-4" : ""}`}
+                    className={`touch-manipulation ${isFeatured ? "lg:-mt-3 lg:mb-3" : ""}`}
                   >
                     <Card
                       className={`h-full home-feature-card group ${isFeatured ? "ring-1 ring-primary/20 shadow-lg" : ""} border-primary/25`}
                     >
-                      <CardContent className="p-7 home-testimonial-quote">
-                        <div className="flex items-center justify-between mb-5">
-                          <div className="flex items-center gap-1">
+                      <CardContent className="p-6 home-testimonial-quote">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-0.5">
                             {[...Array(test.rating)].map((_, i) => (
                               <Star
                                 key={i}
-                                className="w-4 h-4 text-yellow-500 fill-yellow-500"
+                                className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500"
                               />
                             ))}
                           </div>
@@ -1363,13 +1444,13 @@ export default function HomeRedesign() {
                           </div>
                         </div>
 
-                        <p className="relative z-10 text-sm text-muted-foreground leading-relaxed italic mb-6">
+                        <p className="relative z-10 text-sm text-muted-foreground leading-relaxed italic mb-5">
                           &ldquo;{test.quote}&rdquo;
                         </p>
 
-                        <div className="flex items-center gap-3 mb-5">
-                          <div className="w-10 h-10 bg-gradient-to-br from-primary/25 to-primary/50 rounded-full flex items-center justify-center ring-2 ring-primary/15">
-                            <span className="text-primary font-bold text-xs">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-9 h-9 bg-gradient-to-br from-primary/25 to-primary/50 rounded-full flex items-center justify-center ring-2 ring-primary/15">
+                            <span className="text-primary font-bold text-[10px]">
                               {test.avatar}
                             </span>
                           </div>
@@ -1383,13 +1464,13 @@ export default function HomeRedesign() {
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2 pt-4 border-t border-border/30">
+                        <div className="flex flex-wrap gap-1.5 pt-3 border-t border-border/30">
                           {test.results.map((r, i) => (
                             <div
                               key={i}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/[0.07] text-primary text-xs font-semibold rounded-full border border-primary/15"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/[0.07] text-primary text-[11px] font-semibold rounded-full border border-primary/15"
                             >
-                              <TrendingUp className="w-3 h-3" />
+                              <TrendingUp className="w-2.5 h-2.5" />
                               {r.metric}
                             </div>
                           ))}
@@ -1404,14 +1485,14 @@ export default function HomeRedesign() {
         </section>
 
         {/* ═══════════════════ PRICING PREVIEW ═════════════════════════ */}
-        <section className="border-y border-border/40 bg-muted/20 py-24 sm:py-28">
+        <section className="py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.55 }}
-              className="text-center mb-12"
+              className="text-center mb-10"
             >
               <Badge
                 variant="outline"
@@ -1435,7 +1516,7 @@ export default function HomeRedesign() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="mx-auto max-w-md"
             >
-              <Card className="home-animated-border border-primary/20 bg-gradient-to-b from-card to-background shadow-2xl border-primary/25">
+              <Card className="home-pricing-glow border-primary/20 bg-gradient-to-b from-card to-background shadow-2xl">
                 <CardContent className="space-y-5 p-8 text-center">
                   <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium">
                     VPS Plans Starting At
@@ -1473,7 +1554,7 @@ export default function HomeRedesign() {
         </section>
 
         {/* ═══════════════════════ FAQ ═════════════════════════════════ */}
-        <section className="py-24 sm:py-28">
+        <section className="border-y border-border/40 bg-muted/10 py-20 sm:py-24">
           <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_1fr] lg:gap-14 lg:px-8">
             <div className="space-y-5">
               <Badge
@@ -1521,10 +1602,9 @@ export default function HomeRedesign() {
         </section>
 
         {/* ═══════════════════════ CTA ═════════════════════════════════ */}
-        <section className="pb-24 sm:pb-28">
+        <section className="py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="home-cta-shell relative overflow-hidden rounded-3xl border border-border/50 px-6 py-16 text-center sm:px-12 shadow-2xl">
-              {/* Floating orbs in CTA */}
+            <div className="home-cta-shell relative overflow-hidden rounded-3xl border border-border/50 px-6 py-14 text-center sm:px-12 shadow-2xl">
               <div
                 className="home-orb absolute w-[300px] h-[300px] -top-[100px] -left-[80px] opacity-40"
                 style={{
@@ -1546,7 +1626,7 @@ export default function HomeRedesign() {
                 aria-hidden
               />
 
-              <div className="relative z-10 space-y-6">
+              <div className="relative z-10 space-y-5">
                 <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
                   Ready to launch your server?
                 </h2>

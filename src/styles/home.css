@@ -11,13 +11,23 @@
   background-size: 24px 24px;
 }
 
-.home-grid-mask {
+.home-hero-grid-lines {
+  position: absolute;
+  inset: 0;
   background-image:
-    linear-gradient(to right, hsl(var(--border) / 0.32) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--border) / 0.32) 1px, transparent 1px);
-  background-size: 34px 34px;
-  mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
-  opacity: 0.55;
+    linear-gradient(to right, hsl(var(--border) / 0.25) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border) / 0.25) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(160deg, black 30%, transparent 80%);
+  -webkit-mask-image: linear-gradient(160deg, black 30%, transparent 80%);
+  opacity: 0.6;
+}
+
+.dark .home-hero-grid-lines {
+  background-image:
+    linear-gradient(to right, hsl(var(--primary) / 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--primary) / 0.12) 1px, transparent 1px);
+  opacity: 0.5;
 }
 
 /* --- Aurora & Hero Backgrounds --- */
@@ -218,6 +228,66 @@
   border: 1px solid hsl(var(--border) / 0.55);
 }
 
+/* --- Hero Command-Deck Section --- */
+
+.home-hero-section {
+  background:
+    radial-gradient(60rem 30rem at 20% -10%, hsl(var(--primary) / 0.08), transparent 70%),
+    radial-gradient(50rem 30rem at 80% 10%, hsl(var(--primary) / 0.05), transparent 72%),
+    hsl(var(--background));
+}
+
+.dark .home-hero-section {
+  background:
+    radial-gradient(60rem 30rem at 20% -10%, hsl(var(--primary) / 0.12), transparent 70%),
+    radial-gradient(50rem 30rem at 80% 10%, hsl(var(--primary) / 0.08), transparent 72%),
+    hsl(var(--background));
+}
+
+/* --- Terminal Card (Control Plane) --- */
+
+.home-terminal-card {
+  background: linear-gradient(180deg, hsl(var(--card) / 0.6) 0%, hsl(var(--background) / 0.4) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid hsl(var(--border) / 0.5);
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.home-terminal-card:hover {
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow:
+    0 8px 32px -8px hsl(var(--primary) / 0.12),
+    inset 0 1px 0 hsl(var(--primary) / 0.08);
+  transform: translateY(-2px);
+}
+
+/* --- Pricing Glow --- */
+
+.home-pricing-glow {
+  position: relative;
+  border: 1px solid hsl(var(--primary) / 0.25);
+  transition: all 0.4s ease;
+}
+
+.home-pricing-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, transparent 30%, hsl(var(--primary) / 0.5), transparent 70%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.home-pricing-glow:hover {
+  border-color: hsl(var(--primary) / 0.45);
+  box-shadow: 0 0 40px -12px hsl(var(--primary) / 0.2);
+}
+
 /* --- Bento Card Gradient Top Border --- */
 
 .home-gradient-border-top {
@@ -326,9 +396,9 @@
     opacity: 0.3;
   }
 
-  .home-grid-mask {
-    background-size: 22px 22px;
-    opacity: 0.32;
+  .home-hero-grid-lines {
+    background-size: 32px 32px;
+    opacity: 0.35;
   }
 
   .home-panel-glow::before {
@@ -370,8 +440,15 @@
     animation: none !important;
   }
 
-  .home-feature-card {
+  .home-feature-card,
+  .home-terminal-card,
+  .home-pricing-glow {
     transition: none !important;
+  }
+
+  .home-terminal-card:hover,
+  .home-pricing-glow:hover {
+    transform: none !important;
   }
 }
 
