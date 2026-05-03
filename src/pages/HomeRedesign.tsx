@@ -4,12 +4,16 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import {
   ArrowRight,
+  ArrowUpRight,
   CheckCircle2,
   Clock3,
   Code2,
   Globe2,
+  LayoutDashboard,
   Lock,
+  Plus,
   Rocket,
+  Search,
   Server,
   ShieldCheck,
   Sparkles,
@@ -23,6 +27,11 @@ import {
   TrendingUp,
   Database,
   PanelsTopLeft,
+  CreditCard,
+  Building2,
+  FileText,
+  Bell,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 
@@ -484,6 +493,226 @@ function SocialProof() {
   );
 }
 
+/* ─── SkyPanel Dashboard Preview ─────────────────────────────────── */
+
+function SkyPanelPreview() {
+  return (
+    <div className="relative w-full overflow-hidden rounded-2xl border border-border/60 bg-background shadow-2xl shadow-primary/10">
+      {/* Outer shell mimicking real app layout */}
+      <div className="flex min-h-[460px]">
+        {/* ── Sidebar ── */}
+        <aside className="hidden w-56 shrink-0 border-r border-border/50 bg-card/90 sm:flex sm:flex-col">
+          <div className="flex items-center gap-2.5 border-b border-border/50 px-4 py-3.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 ring-1 ring-primary/25">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <div className="grid flex-1 text-left leading-tight">
+              <span className="truncate text-sm font-semibold">SkyPanel</span>
+              <span className="truncate text-[10px] text-muted-foreground">Cloud Platform</span>
+            </div>
+          </div>
+
+          <nav className="flex-1 space-y-0.5 px-2 py-3">
+            {[
+              { icon: LayoutDashboard, label: "Dashboard", active: true },
+              { icon: Server, label: "Compute" },
+              { icon: Globe2, label: "Web Hosting" },
+              { icon: Building2, label: "Organizations" },
+              { icon: FileText, label: "Notes" },
+              { icon: Activity, label: "Activity" },
+              { icon: CreditCard, label: "Billing" },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] ${
+                  item.active
+                    ? "bg-primary/10 font-medium text-primary"
+                    : "text-muted-foreground hover:bg-muted/50"
+                }`}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </div>
+            ))}
+          </nav>
+
+          <div className="border-t border-border/50 p-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
+                MC
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium">Storm Moran</p>
+                <p className="truncate text-[10px] text-muted-foreground">Admin</p>
+              </div>
+              <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+            </div>
+          </div>
+        </aside>
+
+        {/* ── Main area ── */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Top bar */}
+          <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/50 px-3 sm:px-4">
+            <div className="flex items-center gap-2">
+              <LayoutDashboard className="h-4 w-4 text-muted-foreground sm:hidden" />
+              <div className="hidden items-center gap-1.5 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1 text-[11px] text-muted-foreground sm:flex">
+                <Search className="h-3 w-3" />
+                Search...
+                <kbd className="ml-2 rounded border border-border/60 bg-muted/50 px-1 py-px font-mono text-[9px]">Ctrl K</kbd>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/50 bg-muted/20">
+                <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/50 bg-muted/20">
+                <Bell className="h-3.5 w-3.5 text-muted-foreground" />
+              </div>
+            </div>
+          </header>
+
+          {/* Dashboard content */}
+          <div className="flex-1 space-y-3.5 overflow-hidden p-3 sm:p-4">
+            {/* Status badges */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                3 vps active
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
+                <Globe2 className="h-3 w-3 text-muted-foreground" />
+                2 hosting active
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
+                <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                Avg CPU 24.3%
+              </span>
+            </div>
+
+            {/* Quick actions */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { icon: Plus, label: "Launch a VPS" },
+                { icon: Globe2, label: "Create Hosting" },
+                { icon: Wallet, label: "Top up wallet" },
+                { icon: ShieldCheck, label: "Support ticket" },
+              ].map((action) => (
+                <div
+                  key={action.label}
+                  className="group flex items-center gap-2 rounded-lg border border-border/50 bg-card/60 p-2.5 transition-colors hover:border-primary/40"
+                >
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                    <action.icon className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="truncate text-[11px] font-medium">{action.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* VPS Fleet */}
+            <div className="rounded-xl border border-border/50 bg-card/50">
+              <div className="flex items-center justify-between border-b border-border/40 px-3 py-2.5">
+                <div>
+                  <h3 className="text-[13px] font-semibold">VPS Fleet</h3>
+                  <p className="text-[10px] text-muted-foreground">Live signal across your deployments</p>
+                </div>
+                <span className="inline-flex items-center gap-1 text-[10px] text-primary">
+                  Manage all
+                  <ArrowUpRight className="h-3 w-3" />
+                </span>
+              </div>
+
+              <div className="divide-y divide-border/30">
+                {[
+                  { name: "prod-api-01", status: "running", plan: "4C/8GB", region: "US-East", cpu: 34.2, cpuCount: 4 },
+                  { name: "staging-web", status: "running", plan: "2C/4GB", region: "EU-West", cpu: 12.8, cpuCount: 2 },
+                  { name: "db-primary", status: "running", plan: "8C/16GB", region: "US-East", cpu: 58.7, cpuCount: 8 },
+                ].map((vps) => (
+                  <div key={vps.name} className="flex items-center gap-3 px-3 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[12px] font-semibold">{vps.name}</span>
+                        <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
+                          {vps.status}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        {vps.plan} · {vps.region}
+                      </p>
+                    </div>
+                    <div className="w-28 space-y-1">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-muted-foreground">CPU ({vps.cpuCount})</span>
+                        <span className="font-medium">{vps.cpu}%</span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${vps.cpu}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom row: wallet + activity */}
+            <div className="grid gap-3 lg:grid-cols-2">
+              {/* Wallet summary */}
+              <div className="rounded-xl border border-border/50 bg-card/50 p-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                    <Wallet className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Wallet Balance</p>
+                    <p className="text-lg font-bold">$128.40</p>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <CheckCircle2 className="h-3 w-3 text-primary" />
+                  Ready to deploy infrastructure
+                </div>
+              </div>
+
+              {/* Recent activity */}
+              <div className="rounded-xl border border-border/50 bg-card/50 p-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[12px] font-semibold">Recent Activity</h4>
+                  <span className="inline-flex items-center gap-1 text-[10px] text-primary">
+                    View all
+                    <ArrowUpRight className="h-3 w-3" />
+                  </span>
+                </div>
+                <div className="mt-2 space-y-2">
+                  {[
+                    { msg: "VPS prod-api-01 deployed", time: "2m ago", color: "bg-primary" },
+                    { msg: "Wallet topped up $50.00", time: "1h ago", color: "bg-primary" },
+                    { msg: "Hosting renewed: mysite.com", time: "3h ago", color: "bg-primary" },
+                  ].map((ev, i) => (
+                    <div key={i} className="flex items-start gap-2.5 text-[11px]">
+                      <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${ev.color}`} />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-foreground">{ev.msg}</span>
+                        <span className="ml-1.5 text-[10px] text-muted-foreground">{ev.time}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Subtle inner glow */}
+      <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+    </div>
+  );
+}
+
 /* ─── Component ──────────────────────────────────────────────────── */
 
 export default function HomeRedesign() {
@@ -714,47 +943,11 @@ export default function HomeRedesign() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.55 }}
-              className="relative overflow-hidden rounded-3xl border border-primary/25 bg-card/80 p-4 shadow-2xl shadow-primary/10 backdrop-blur"
+              className="relative"
             >
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--primary)/0.08)_1px,transparent_1px),linear-gradient(hsl(var(--primary)/0.08)_1px,transparent_1px)] bg-[size:28px_28px] opacity-35" />
-              <svg viewBox="0 0 980 460" className="relative z-10 h-auto w-full" role="img" aria-label="SkyPanel dashboard preview">
-                <rect x="20" y="20" width="940" height="420" rx="26" fill="hsl(var(--background))" stroke="hsl(var(--primary) / 0.35)" />
-                <rect x="42" y="48" width="164" height="364" rx="18" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
-                <circle cx="74" cy="82" r="10" fill="hsl(var(--primary))" />
-                <rect x="94" y="74" width="82" height="14" rx="7" fill="hsl(var(--primary) / 0.9)" />
-                {["Dashboard", "Compute", "Hosting", "Billing", "API Docs"].map((item, index) => (
-                  <g key={item} transform={`translate(66 ${130 + index * 46})`}>
-                    <rect width="112" height="26" rx="13" fill={index === 2 ? "hsl(var(--primary) / 0.18)" : "hsl(var(--muted))"} />
-                    <circle cx="14" cy="13" r="4" fill="hsl(var(--primary))" />
-                    <text x="28" y="17" fontSize="12" fill="hsl(var(--foreground))">{item}</text>
-                  </g>
-                ))}
-                <rect x="236" y="58" width="680" height="70" rx="18" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
-                <text x="266" y="91" fontSize="26" fontWeight="700" fill="hsl(var(--foreground))">Cloud Control Matrix</text>
-                <text x="266" y="112" fontSize="13" fill="hsl(var(--muted-foreground))">VPS, hosting, billing, support, and org resources in one panel</text>
-                {[
-                  ["Active VPS", "Live", 236],
-                  ["Hosting Sites", "Synced", 412],
-                  ["Wallet", "Funded", 588],
-                  ["Uptime", "Tracked", 764],
-                ].map(([label, value, x]) => (
-                  <g key={label} transform={`translate(${x} 158)`}>
-                    <rect width="152" height="92" rx="18" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.24)" />
-                    <text x="18" y="34" fontSize="13" fill="hsl(var(--muted-foreground))">{label}</text>
-                    <text x="18" y="68" fontSize="28" fontWeight="700" fill="hsl(var(--primary))">{value}</text>
-                  </g>
-                ))}
-                <rect x="236" y="284" width="422" height="110" rx="20" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
-                <polyline points="262,360 316,334 372,348 430,312 494,328 548,298 626,316" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" />
-                <text x="262" y="318" fontSize="14" fill="hsl(var(--muted-foreground))">Realtime resource activity</text>
-                <rect x="684" y="284" width="232" height="110" rx="20" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
-                {["Enhance sync online", "Hosting wallet healthy", "API keys secured"].map((item, index) => (
-                  <g key={item} transform={`translate(706 ${314 + index * 27})`}>
-                    <circle cx="7" cy="7" r="5" fill="hsl(var(--primary))" />
-                    <text x="22" y="11" fontSize="13" fill="hsl(var(--foreground))">{item}</text>
-                  </g>
-                ))}
-              </svg>
+              {/* Ambient glow behind the preview */}
+              <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-gradient-to-b from-primary/10 via-primary/5 to-transparent blur-2xl" />
+              <SkyPanelPreview />
             </motion.div>
           </div>
         </section>
