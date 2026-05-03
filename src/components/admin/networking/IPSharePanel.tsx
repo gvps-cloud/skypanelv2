@@ -89,7 +89,7 @@ export function IPSharePanel() {
         </p>
       </div>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="text-sm">IP Sharing Configuration</CardTitle>
           <CardDescription>

@@ -27,7 +27,7 @@ const StatCard: React.FC<StatCardProps> = ({
   trend
 }) => {
   return (
-    <Card className="border-border bg-card">
+    <Card className="border-border bg-card border-primary/25">
       <CardContent className="flex items-center justify-between gap-6 p-6">
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">{label}</p>

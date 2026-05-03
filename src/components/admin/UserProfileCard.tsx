@@ -24,7 +24,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ user }) => {
   };
 
   return (
-    <Card className="border-border bg-card">
+    <Card className="border-border bg-card border-primary/25">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="h-5 w-5" />

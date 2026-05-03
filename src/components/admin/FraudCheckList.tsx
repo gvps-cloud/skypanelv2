@@ -327,7 +327,7 @@ function FraudCheckDetailDialog({
 
           {/* Admin override info */}
           {check.raw_response?.admin_override && (
-            <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20">
+            <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20 border-primary/25">
               <CardContent className="py-3">
                 <p className="text-sm font-medium text-amber-800 dark:text-amber-400">
                   Admin Override Applied
@@ -572,7 +572,7 @@ export function FraudCheckList() {
       />
 
       {/* Filters */}
-      <Card>
+      <Card className="border-primary/25">
         <CardContent className="py-4">
           <div className="space-y-3">
             {/* Row 1: Status, Type, Search */}
@@ -679,7 +679,7 @@ export function FraudCheckList() {
       </Card>
 
       {/* Table */}
-      <Card>
+      <Card className="border-primary/25">
         <CardContent className="p-0">
           {checksLoading ? (
             <div className="flex items-center justify-center py-16">

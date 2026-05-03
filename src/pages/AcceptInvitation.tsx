@@ -270,7 +270,7 @@ export default function AcceptInvitation() {
               ← Back to invitation
             </Button>
           </div>
-          <Card className="shadow-lg">
+          <Card className="shadow-lg border-primary/25">
             <CardHeader className="space-y-4 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                 <LogIn className="h-6 w-6" />
@@ -358,7 +358,7 @@ export default function AcceptInvitation() {
               ← Back to invitation
             </Button>
           </div>
-          <Card className="shadow-lg">
+          <Card className="shadow-lg border-primary/25">
             <CardHeader className="space-y-4 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                 <UserPlus className="h-6 w-6" />
@@ -444,7 +444,7 @@ export default function AcceptInvitation() {
               ← Back to home
             </Link>
           </div>
-          <Card className="shadow-lg">
+          <Card className="shadow-lg border-primary/25">
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
                 <div className="mx-auto">{errorContent.icon}</div>
@@ -472,7 +472,7 @@ export default function AcceptInvitation() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/40 px-4 py-12">
         <div className="w-full max-w-md">
-          <Card className="shadow-lg">
+          <Card className="shadow-lg border-primary/25">
             <CardContent className="pt-6">
               <div className="text-center space-y-4">
                 <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
@@ -507,7 +507,7 @@ export default function AcceptInvitation() {
               ← Back to home
             </Link>
           </div>
-          <Card className="shadow-lg">
+          <Card className="shadow-lg border-primary/25">
             <CardHeader className="space-y-4 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
                 <Building2 className="h-8 w-8" />

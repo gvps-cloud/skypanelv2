@@ -568,7 +568,7 @@ export const UserManagement: React.FC = () => {
             </div>
 
             {selectedUserCount > 0 && (
-                <Card className="mb-4 border-primary/20 bg-primary/5">
+                <Card className="mb-4 border-primary/20 bg-primary/5 border-primary/25">
                     <CardContent className="p-4">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div className="flex items-center gap-3">
@@ -607,7 +607,7 @@ export const UserManagement: React.FC = () => {
                 </Card>
             )}
 
-            <Card>
+            <Card className="border-primary/25">
                 <CardHeader className="flex flex-col gap-4 border-b border-border pb-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <CardTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">

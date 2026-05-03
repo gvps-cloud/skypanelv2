@@ -93,7 +93,7 @@ export function SwaggerExplorer({
   return (
     <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
       <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-        <Card className="border-primary/20 bg-card/90">
+        <Card className="border-primary/20 bg-card/90 border-primary/25">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Search className="h-4 w-4 text-primary" />

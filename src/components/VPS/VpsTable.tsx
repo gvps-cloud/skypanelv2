@@ -412,7 +412,7 @@ export function VpsInstancesTable({
 
     return (
       <Fragment key={instance.id}>
-        <Card className="border border-border/70 bg-card/95 shadow-sm">
+        <Card className="border border-border/70 bg-card/95 shadow-sm border-primary/25">
           <CardHeader className="space-y-3">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
@@ -534,7 +534,7 @@ export function VpsInstancesTable({
         {mobileCards.length > 0 ? (
           mobileCards
         ) : (
-          <Card className="border border-dashed border-border/60 bg-card/60">
+          <Card className="border border-dashed border-border/60 bg-card/60 border-primary/25">
             <CardContent className="py-8 text-center text-sm text-muted-foreground">
               No VPS instances found.
             </CardContent>

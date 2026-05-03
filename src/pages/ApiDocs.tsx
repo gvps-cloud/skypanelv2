@@ -381,7 +381,7 @@ export default function ApiDocs() {
             </div>
 
             {/* Navigation Menu */}
-            <Card className="shadow-sm overflow-hidden">
+            <Card className="shadow-sm overflow-hidden border-primary/25">
               <CardHeader className="bg-muted/30 border-b py-4 px-5">
                 <CardTitle className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">
                   API Sections
@@ -445,7 +445,7 @@ export default function ApiDocs() {
             className="mb-10"
           >
             <motion.div variants={revealItem}>
-              <Card className="home-gradient-border-top home-animated-border shadow-md bg-card/60 backdrop-blur-sm">
+              <Card className="home-gradient-border-top home-animated-border shadow-md bg-card/60 backdrop-blur-sm border-primary/25">
                 <CardHeader className="pb-3 border-b border-border/40">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Terminal className="h-4 w-4 text-primary" />

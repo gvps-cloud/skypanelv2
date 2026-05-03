@@ -54,7 +54,7 @@ export const UserVPSList: React.FC<UserVPSListProps> = ({ vpsInstances }) => {
 
   if (vpsInstances.length === 0) {
     return (
-      <Card className="border-border bg-card">
+      <Card className="border-border bg-card border-primary/25">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <Server className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">No VPS Instances</h3>
@@ -67,7 +67,7 @@ export const UserVPSList: React.FC<UserVPSListProps> = ({ vpsInstances }) => {
   }
 
   return (
-    <Card className="border-border bg-card">
+    <Card className="border-border bg-card border-primary/25">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Server className="h-5 w-5" />

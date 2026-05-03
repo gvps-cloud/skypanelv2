@@ -231,19 +231,19 @@ export function FirewallManager() {
     <div className="space-y-6">
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="pb-2">
             <CardDescription>Total Firewalls</CardDescription>
             <CardTitle className="text-3xl">{firewalls.length}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="pb-2">
             <CardDescription>Enabled</CardDescription>
             <CardTitle className="text-3xl text-green-600">{enabledCount}</CardTitle>
           </CardHeader>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="pb-2">
             <CardDescription>Disabled</CardDescription>
             <CardTitle className="text-3xl text-muted-foreground">{disabledCount}</CardTitle>
@@ -272,7 +272,7 @@ export function FirewallManager() {
       </div>
 
       {/* Table */}
-      <Card>
+      <Card className="border-primary/25">
         <CardContent className="p-0">
           {firewallsQuery.isLoading ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">Loading firewalls...</div>
@@ -702,7 +702,7 @@ function FirewallDetailView({
           ) : rules ? (
             <>
               {/* Inbound */}
-              <Card>
+              <Card className="border-primary/25">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -755,7 +755,7 @@ function FirewallDetailView({
               </Card>
 
               {/* Outbound */}
-              <Card>
+              <Card className="border-primary/25">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -837,13 +837,13 @@ function FirewallDetailView({
           {devicesLoading ? (
             <div className="text-center py-8 text-muted-foreground">Loading devices...</div>
           ) : !devices || devices.length === 0 ? (
-            <Card>
+            <Card className="border-primary/25">
               <CardContent className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
                 <p>No devices attached</p>
               </CardContent>
             </Card>
           ) : (
-            <Card>
+            <Card className="border-primary/25">
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
@@ -899,7 +899,7 @@ function FirewallDetailView({
         {/* ── Settings & Templates Tab ── */}
         <TabsContent value="settings" className="space-y-6 pt-4">
           {/* Firewall Settings */}
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Settings className="h-4 w-4" />
@@ -932,7 +932,7 @@ function FirewallDetailView({
           </Card>
 
           {/* Firewall Templates */}
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <BookTemplate className="h-4 w-4" />

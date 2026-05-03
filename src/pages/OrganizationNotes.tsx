@@ -81,7 +81,7 @@ export default function OrganizationNotes() {
         <Building2 className="absolute right-8 top-8 h-24 w-24 text-muted/30" />
       </div>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <h2 className="text-lg font-semibold">Filter by Organization</h2>

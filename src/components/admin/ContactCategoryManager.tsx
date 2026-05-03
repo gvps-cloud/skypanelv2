@@ -305,7 +305,7 @@ export const ContactCategoryManager: React.FC<ContactCategoryManagerProps> = ({ 
 
   return (
     <>
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-4">
           <div>
             <CardTitle className="text-lg font-semibold">Contact Categories</CardTitle>

@@ -424,7 +424,7 @@ export default function Contact() {
               >
                 {emailMethod && (
 <motion.div variants={revealItem}>
-                  <Card className="home-feature-card">
+                  <Card className="home-feature-card border-primary/25">
                     <CardContent className="space-y-4 p-6">
                       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
                         <Mail className="h-7 w-7 text-primary" />
@@ -457,7 +457,7 @@ export default function Contact() {
 
                 {ticketMethod && (
 <motion.div variants={revealItem}>
-                  <Card className="home-feature-card">
+                  <Card className="home-feature-card border-primary/25">
                     <CardContent className="space-y-4 p-6">
                       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
                         <MessageSquare className="h-7 w-7 text-primary" />
@@ -518,7 +518,7 @@ export default function Contact() {
 
                 {phoneMethod && (
 <motion.div variants={revealItem}>
-                  <Card className="home-feature-card">
+                  <Card className="home-feature-card border-primary/25">
                     <CardContent className="space-y-4 p-6">
                       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
                         <Phone className="h-7 w-7 text-primary" />
@@ -551,7 +551,7 @@ export default function Contact() {
 
                 {officeMethod && (
 <motion.div variants={revealItem}>
-                  <Card className="home-feature-card">
+                  <Card className="home-feature-card border-primary/25">
                     <CardContent className="space-y-4 p-6">
                       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
                         <MapPin className="h-7 w-7 text-primary" />
@@ -610,7 +610,7 @@ export default function Contact() {
 
                 {/* Self-serve resources card */}
                 <motion.div variants={revealItem}>
-                  <Card className="home-gradient-border-top home-glass-panel">
+                  <Card className="home-gradient-border-top home-glass-panel border-primary/25">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg">
                         Self-serve resources
@@ -668,7 +668,7 @@ export default function Contact() {
               >
                 {/* Contact form */}
                 <motion.div variants={revealItem}>
-                  <Card className="home-gradient-border-top home-animated-border">
+                  <Card className="home-gradient-border-top home-animated-border border-primary/25">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-2xl">Send us a message</CardTitle>
                       <CardDescription>
@@ -782,7 +782,7 @@ export default function Contact() {
 
                 {/* Availability card */}
                 <motion.div variants={revealItem}>
-                  <Card className="home-glass-panel">
+                  <Card className="home-glass-panel border-primary/25">
                     <CardHeader>
                       <CardTitle>Availability</CardTitle>
                       <CardDescription>

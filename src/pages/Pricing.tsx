@@ -157,7 +157,7 @@ const HostingPricingHeader = () => (
 );
 
 const EmptyHostingPlans = () => (
-  <Card>
+  <Card className="border-primary/25">
     <CardContent className="py-12 text-center">
       <Globe className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
       <h3 className="mb-2 text-lg font-medium">No Hosting Plans Available</h3>
@@ -195,7 +195,7 @@ const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
 
   return (
     <motion.div variants={revealItem}>
-      <Card className="home-gradient-border-top home-animated-border home-feature-card flex h-full flex-col">
+      <Card className="home-gradient-border-top home-animated-border home-feature-card flex h-full flex-col border-primary/25">
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <CardTitle className="text-xl">{plan.name}</CardTitle>
@@ -529,7 +529,7 @@ const PricingPage: React.FC = () => {
             )}
 
             {filteredPlans.length === 0 ? (
-              <Card>
+              <Card className="border-primary/25">
                 <CardContent className="py-12">
                   <div className="text-center">
                     <Server className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -562,7 +562,7 @@ const PricingPage: React.FC = () => {
 
                   return (
                     <motion.div key={plan.id} variants={revealItem}>
-                      <Card className="home-gradient-border-top home-animated-border home-feature-card flex flex-col h-full">
+                      <Card className="home-gradient-border-top home-animated-border home-feature-card flex flex-col h-full border-primary/25">
                         <CardHeader>
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-xl">{plan.name}</CardTitle>
@@ -670,7 +670,7 @@ const PricingPage: React.FC = () => {
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
               className="mt-16"
             >
-              <Card className="home-gradient-border-top home-glass-panel">
+              <Card className="home-gradient-border-top home-glass-panel border-primary/25">
                 <CardContent className="pt-6">
                   <h3 className="font-semibold mb-6 text-lg">All Plans Include:</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -706,7 +706,7 @@ const PricingPage: React.FC = () => {
               <div className="home-orb home-orb--1 pointer-events-none" aria-hidden="true" />
               <div className="home-orb home-orb--2 pointer-events-none" aria-hidden="true" />
 
-              <Card className="home-cta-shell border-border/40">
+              <Card className="home-cta-shell border-border/40 border-primary/25">
                 <CardContent className="py-16">
                   <div className="text-center relative">
                     <Badge

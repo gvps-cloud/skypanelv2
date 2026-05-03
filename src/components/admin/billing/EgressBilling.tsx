@@ -188,7 +188,7 @@ export const EgressBilling: React.FC<EgressBillingProps> = ({
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">
               Configured Regions
@@ -203,7 +203,7 @@ export const EgressBilling: React.FC<EgressBillingProps> = ({
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">
               Billing Enabled
@@ -218,7 +218,7 @@ export const EgressBilling: React.FC<EgressBillingProps> = ({
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">
               Active Pools
@@ -233,7 +233,7 @@ export const EgressBilling: React.FC<EgressBillingProps> = ({
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">
               Billable Overage
@@ -260,7 +260,7 @@ export const EgressBilling: React.FC<EgressBillingProps> = ({
         </Card>
       </div>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="text-base">
             Region Pricing Controls
@@ -368,13 +368,13 @@ export const EgressBilling: React.FC<EgressBillingProps> = ({
 
       <div className="space-y-4">
         {liveEgressUsageLoading ? (
-          <Card>
+          <Card className="border-primary/25">
             <CardContent className="py-10 text-center text-muted-foreground">
               Loading live pooled egress usage…
             </CardContent>
           </Card>
         ) : filteredLiveEgressUsage.length === 0 ? (
-          <Card>
+          <Card className="border-primary/25">
             <CardContent className="py-10 text-center text-muted-foreground">
               No live pooled egress usage is available yet. Sync pricing and
               refresh once current transfer data is available.
@@ -502,7 +502,7 @@ export const EgressBilling: React.FC<EgressBillingProps> = ({
         )}
       </div>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div>

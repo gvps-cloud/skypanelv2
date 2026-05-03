@@ -127,7 +127,7 @@ const InvoiceDetail: React.FC = () => {
               <ChevronLeft className="h-4 w-4 mr-2" />
               Back to Billing
             </Button>
-            <Card>
+            <Card className="border-primary/25">
               <CardContent className="p-8 text-center">
                 <p className="text-muted-foreground">Invoice not found</p>
               </CardContent>
@@ -155,7 +155,7 @@ const InvoiceDetail: React.FC = () => {
           </div>
 
           {/* Invoice HTML Preview */}
-          <Card>
+          <Card className="border-primary/25">
             <CardContent className="p-4 sm:p-8">
               <div
                 className="prose prose-sm dark:prose-invert max-w-none dark:[&_p]:!text-foreground dark:[&_td]:!text-foreground dark:[&_th]:!text-foreground dark:[&_h1]:!text-foreground dark:[&_h2]:!text-foreground dark:[&_h3]:!text-foreground dark:[&_.invoice-meta-label]:!text-muted-foreground dark:[&_.invoice-meta-value]:!text-foreground"
@@ -168,7 +168,7 @@ const InvoiceDetail: React.FC = () => {
 
           {/* Invoice Metadata */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+            <Card className="border-primary/25">
               <CardHeader className="pb-3">
                 <CardDescription className="text-xs font-semibold uppercase">
                   Invoice Number
@@ -178,7 +178,7 @@ const InvoiceDetail: React.FC = () => {
                 <p className="text-lg font-semibold">{invoice.invoiceNumber}</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="border-primary/25">
               <CardHeader className="pb-3">
                 <CardDescription className="text-xs font-semibold uppercase">
                   Total Amount
@@ -190,7 +190,7 @@ const InvoiceDetail: React.FC = () => {
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="border-primary/25">
               <CardHeader className="pb-3">
                 <CardDescription className="text-xs font-semibold uppercase">
                   Date
@@ -207,7 +207,7 @@ const InvoiceDetail: React.FC = () => {
               </CardContent>
             </Card>
             {invoice.data.walletBalanceBefore != null && (
-              <Card>
+              <Card className="border-primary/25">
                 <CardHeader className="pb-3">
                   <CardDescription className="text-xs font-semibold uppercase">
                     Wallet Balance Before
@@ -221,7 +221,7 @@ const InvoiceDetail: React.FC = () => {
               </Card>
             )}
             {invoice.data.walletBalanceAfter != null && (
-              <Card>
+              <Card className="border-primary/25">
                 <CardHeader className="pb-3">
                   <CardDescription className="text-xs font-semibold uppercase">
                     Wallet Balance After

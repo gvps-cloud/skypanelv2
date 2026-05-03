@@ -709,7 +709,7 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                         </div>
 
                         {/* Settings */}
-                        <Card>
+                        <Card className="border-primary/25">
                           <CardHeader className="pb-2">
                             <CardTitle className="text-sm flex items-center gap-2">
                               <Settings className="h-4 w-4 text-muted-foreground" />Settings
@@ -766,7 +766,7 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                           </CardContent>
                         </Card>
 
-                        <Card>
+                        <Card className="border-primary/25">
                           <CardHeader className="pb-2">
                             <CardTitle className="text-sm flex items-center gap-2">
                               <Bug className="h-4 w-4 text-muted-foreground" />
@@ -832,7 +832,7 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                         </Card>
 
                         {/* Users */}
-                        <Card>
+                        <Card className="border-primary/25">
                           <CardHeader className="pb-2">
                             <div className="flex items-center justify-between">
                               <CardTitle className="text-sm flex items-center gap-2">
@@ -916,7 +916,7 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                         </Card>
 
                         {/* Plugins */}
-                        <Card>
+                        <Card className="border-primary/25">
                           <CardHeader className="pb-2">
                             <div className="flex items-center justify-between">
                               <CardTitle className="text-sm flex items-center gap-2">
@@ -1005,7 +1005,7 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                         </Card>
 
                         {/* Themes */}
-                        <Card>
+                        <Card className="border-primary/25">
                           <CardHeader className="pb-2">
                             <div className="flex items-center justify-between">
                               <CardTitle className="text-sm flex items-center gap-2">

@@ -2159,7 +2159,7 @@ const VPSDetail: React.FC = () => {
                       </div>
 
                       <div className="grid gap-6 lg:grid-cols-2">
-                        <Card className="border bg-background/60">
+                        <Card className="border bg-background/60 border-primary/25">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-semibold text-foreground">
                               CPU Usage Over Time
@@ -2233,7 +2233,7 @@ const VPSDetail: React.FC = () => {
                           </CardContent>
                         </Card>
 
-                        <Card className="border bg-background/60">
+                        <Card className="border bg-background/60 border-primary/25">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-semibold text-foreground">
                               Network Throughput
@@ -2336,7 +2336,7 @@ const VPSDetail: React.FC = () => {
                           </CardContent>
                         </Card>
 
-                        <Card className="border bg-background/60">
+                        <Card className="border bg-background/60 border-primary/25">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-semibold text-foreground">
                               Disk I/O Activity
@@ -2413,7 +2413,7 @@ const VPSDetail: React.FC = () => {
                           </CardContent>
                         </Card>
 
-                        <Card className="border bg-background/60">
+                        <Card className="border bg-background/60 border-primary/25">
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-semibold text-foreground">
                               Swap Activity

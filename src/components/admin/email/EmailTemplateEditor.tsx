@@ -135,7 +135,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle>Template Content</CardTitle>
             </CardHeader>
@@ -207,7 +207,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
         </div>
 
         <div className="space-y-6">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle>Available Variables</CardTitle>
               <CardDescription>
@@ -243,7 +243,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
             </CardFooter>
           </Card>
 
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle>Tips</CardTitle>
             </CardHeader>

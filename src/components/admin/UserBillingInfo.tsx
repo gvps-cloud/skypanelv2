@@ -107,7 +107,7 @@ export const UserBillingInfo: React.FC<UserBillingInfoProps> = ({ billing, userI
       <div className="space-y-6">
         {/* Billing Summary */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-border bg-card">
+          <Card className="border-border bg-card border-primary/25">
             <CardContent className="flex items-center justify-between gap-6 p-6">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Wallet Balance</p>
@@ -122,7 +122,7 @@ export const UserBillingInfo: React.FC<UserBillingInfoProps> = ({ billing, userI
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card">
+          <Card className="border-border bg-card border-primary/25">
             <CardContent className="flex items-center justify-between gap-6 p-6">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Monthly Spend</p>
@@ -137,7 +137,7 @@ export const UserBillingInfo: React.FC<UserBillingInfoProps> = ({ billing, userI
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card">
+          <Card className="border-border bg-card border-primary/25">
             <CardContent className="flex items-center justify-between gap-6 p-6">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Total Payments</p>
@@ -150,7 +150,7 @@ export const UserBillingInfo: React.FC<UserBillingInfoProps> = ({ billing, userI
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card">
+          <Card className="border-border bg-card border-primary/25">
             <CardContent className="flex items-center justify-between gap-6 p-6">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Last Payment</p>
@@ -175,7 +175,7 @@ export const UserBillingInfo: React.FC<UserBillingInfoProps> = ({ billing, userI
         </div>
 
         {/* Payment History */}
-        <Card className="border-border bg-card">
+        <Card className="border-border bg-card border-primary/25">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />

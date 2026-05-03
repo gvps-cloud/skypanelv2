@@ -11,7 +11,7 @@ interface UserTypesTabProps {
 export function UserTypesTab({ metrics, healthCheck, formatNumber }: UserTypesTabProps) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="text-lg">Anonymous Users</CardTitle>
           <CardDescription>Unauthenticated requests</CardDescription>
@@ -38,7 +38,7 @@ export function UserTypesTab({ metrics, healthCheck, formatNumber }: UserTypesTa
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="text-lg">Authenticated Users</CardTitle>
           <CardDescription>Requests with valid tokens</CardDescription>
@@ -65,7 +65,7 @@ export function UserTypesTab({ metrics, healthCheck, formatNumber }: UserTypesTa
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="text-lg">Admin Users</CardTitle>
           <CardDescription>Administrative requests</CardDescription>

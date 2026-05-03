@@ -258,7 +258,7 @@ export const AdminProvidersSection: React.FC<AdminProvidersSectionProps> = ({
         </div>
       </div>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle>Provider List</CardTitle>
         </CardHeader>

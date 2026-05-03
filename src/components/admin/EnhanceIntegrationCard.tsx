@@ -46,7 +46,7 @@ export function EnhanceIntegrationCard() {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="border-primary/25">
         <CardContent className="py-12 flex items-center justify-center">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </CardContent>
@@ -57,7 +57,7 @@ export function EnhanceIntegrationCard() {
   const canToggle = status?.hardEnabled && status?.envConfigured;
 
   return (
-    <Card>
+    <Card className="border-primary/25">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Globe className="w-5 h-5" />

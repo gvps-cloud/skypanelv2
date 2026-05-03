@@ -73,7 +73,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <BillingOverview />
         </TabsContent>
         <TabsContent value="clients" className="space-y-4">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle>Client Billing</CardTitle>
               <CardDescription>
@@ -86,7 +86,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
           </Card>
         </TabsContent>
         <TabsContent value="transactions" className="space-y-4">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle>Transactions</CardTitle>
               <CardDescription>
@@ -99,7 +99,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
           </Card>
         </TabsContent>
         <TabsContent value="invoices" className="space-y-4">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle>Invoices</CardTitle>
               <CardDescription>

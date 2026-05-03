@@ -311,7 +311,7 @@ const EgressCreditManager: React.FC = () => {
 
         <TabsContent value="organizations">
           {/* Search Section */}
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-primary" />
@@ -386,7 +386,7 @@ const EgressCreditManager: React.FC = () => {
 
           {/* Balance Display */}
           {selectedOrg && balanceData && (
-            <Card className="mt-6">
+            <Card className="mt-6 border-primary/25">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>

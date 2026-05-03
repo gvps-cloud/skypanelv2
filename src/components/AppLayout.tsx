@@ -1176,7 +1176,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             "md:pb-24",
           )}
         >
-          <Card className="h-full">
+          <Card className="h-full border-primary/25">
             <CardContent className="flex flex-1 flex-col gap-4 p-3 sm:p-4 md:p-6 pt-4 sm:pt-6 md:pt-6">
               <main className="flex-1 min-h-0">{children}</main>
             </CardContent>

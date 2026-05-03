@@ -284,7 +284,7 @@ const EgressPackSettings: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Pack Management Card */}
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -394,7 +394,7 @@ const EgressPackSettings: React.FC = () => {
       </Card>
 
       {/* Warning Threshold Card */}
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-yellow-500" />

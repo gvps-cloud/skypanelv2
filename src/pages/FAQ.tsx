@@ -187,7 +187,7 @@ export default function FAQ() {
               </div>
 
               {/* Search Card */}
-              <Card className="home-feature-card border-border/50 bg-card/60 max-w-2xl">
+              <Card className="home-feature-card border-border/50 bg-card/60 max-w-2xl border-primary/25">
                 <CardContent className="pt-5 pb-5">
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -274,7 +274,7 @@ export default function FAQ() {
 
                 {/* Empty State - No FAQ Content */}
                 {!isLoading && !error && categories.length === 0 && (
-                  <Card className="home-feature-card">
+                  <Card className="home-feature-card border-primary/25">
                     <CardContent className="py-12 text-center">
                       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-4">
                         <FileText className="h-7 w-7 text-muted-foreground" />
@@ -293,7 +293,7 @@ export default function FAQ() {
 
                 {/* No Search Results */}
                 {!isLoading && !error && categories.length > 0 && filteredFaqs.length === 0 && (
-                  <Card className="home-feature-card">
+                  <Card className="home-feature-card border-primary/25">
                     <CardContent className="py-12 text-center">
                       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-4">
                         <Search className="h-6 w-6 text-muted-foreground" />
@@ -326,7 +326,7 @@ export default function FAQ() {
                         key={category.category}
                         className="border-none"
                       >
-                        <Card className="home-feature-card shadow-sm overflow-hidden">
+                        <Card className="home-feature-card shadow-sm overflow-hidden border-primary/25">
                           <AccordionTrigger className="px-6 py-5 hover:no-underline">
                             <div className="flex w-full items-start justify-between gap-4 text-left">
                               <div className="space-y-1">
@@ -428,7 +428,7 @@ export default function FAQ() {
               {/* ── Sidebar ── */}
               <div className="hidden space-y-6 lg:block">
                 {/* Need something else? */}
-                <Card className="home-feature-card">
+                <Card className="home-feature-card border-primary/25">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold">Need something else?</CardTitle>
                     <CardDescription className="text-sm">
@@ -454,7 +454,7 @@ export default function FAQ() {
                 </Card>
 
                 {/* Latest updates */}
-                <Card className="home-feature-card">
+                <Card className="home-feature-card border-primary/25">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold">Latest updates</CardTitle>
                     <CardDescription className="text-sm">

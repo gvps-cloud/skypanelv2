@@ -172,7 +172,7 @@ export default function FtpTab({ subscriptionId }: FtpTabProps) {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />

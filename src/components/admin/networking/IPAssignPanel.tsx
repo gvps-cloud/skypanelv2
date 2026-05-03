@@ -138,7 +138,7 @@ export function IPAssignPanel() {
         </p>
       </div>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="text-sm">Assignment Configuration</CardTitle>
           <CardDescription>

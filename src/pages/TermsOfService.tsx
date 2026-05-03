@@ -197,7 +197,7 @@ export default function TermsOfService() {
             </p>
           </div>
 
-          <Card className="mt-10 shadow-sm">
+          <Card className="mt-10 shadow-sm border-primary/25">
             <CardHeader>
               <CardTitle>Agreement overview</CardTitle>
               <CardDescription>Review the sections below or download a copy for your records.</CardDescription>
@@ -218,7 +218,7 @@ export default function TermsOfService() {
             </CardContent>
           </Card>
 
-          <Card className="mt-8 border-primary/30 bg-primary/5">
+          <Card className="mt-8 border-primary/30 bg-primary/5 border-primary/25">
             <CardContent className="flex flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
                 <h2 className="text-lg font-semibold">Need a signed copy or have compliance questions?</h2>
@@ -232,7 +232,7 @@ export default function TermsOfService() {
         </div>
 
         <aside className="space-y-6">
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-primary/25">
             <CardHeader>
               <CardTitle>Quick reference</CardTitle>
             </CardHeader>
@@ -250,7 +250,7 @@ export default function TermsOfService() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-primary/25">
             <CardHeader>
               <CardTitle>Table of contents</CardTitle>
               <CardDescription>Jump to a specific section.</CardDescription>

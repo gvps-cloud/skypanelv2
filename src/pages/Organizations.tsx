@@ -561,7 +561,7 @@ const Organizations: React.FC = () => {
             columns={5}
           />
 
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -682,7 +682,7 @@ const Organizations: React.FC = () => {
             )}
           </Card>
 
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -1271,7 +1271,7 @@ const Organizations: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="egress" className="space-y-6">
-              <Card>
+              <Card className="border-primary/25">
                 <CardHeader>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -1311,7 +1311,7 @@ const Organizations: React.FC = () => {
                   ) : egressOverview ? (
                     <div className="space-y-6">
                       <div className="grid gap-4 md:grid-cols-4">
-                        <Card>
+                        <Card className="border-primary/25">
                           <CardContent className="p-4">
                             <div className="text-sm text-muted-foreground">Total Usage</div>
                             <div className="text-2xl font-bold">
@@ -1319,7 +1319,7 @@ const Organizations: React.FC = () => {
                             </div>
                           </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="border-primary/25">
                           <CardContent className="p-4">
                             <div className="text-sm text-muted-foreground">Billable</div>
                             <div className="text-2xl font-bold">
@@ -1327,7 +1327,7 @@ const Organizations: React.FC = () => {
                             </div>
                           </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="border-primary/25">
                           <CardContent className="p-4">
                             <div className="text-sm text-muted-foreground">Projected Cost</div>
                             <div className="text-2xl font-bold">
@@ -1335,7 +1335,7 @@ const Organizations: React.FC = () => {
                             </div>
                           </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="border-primary/25">
                           <CardContent className="p-4">
                             <div className="text-sm text-muted-foreground">Active Pools</div>
                             <div className="text-2xl font-bold">
@@ -1443,7 +1443,7 @@ const Organizations: React.FC = () => {
 
               {/* Egress Credits Management Card */}
               {selectedOrganizationResources?.permissions.egress_view && (
-                <Card>
+                <Card className="border-primary/25">
                   <CardHeader>
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>

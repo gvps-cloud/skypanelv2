@@ -356,7 +356,7 @@ export default function Regions() {
               </div>
             ) : error ? (
               <motion.div variants={revealItem} initial="hidden" animate="show">
-                <Card className="home-gradient-border-top border-orange-500/50 bg-orange-50 dark:bg-orange-950/20">
+                <Card className="home-gradient-border-top border-orange-500/50 bg-orange-50 dark:bg-orange-950/20 border-primary/25">
                   <CardContent className="p-6 text-center">
                     <p className="text-muted-foreground">{error}</p>
                   </CardContent>
@@ -364,7 +364,7 @@ export default function Regions() {
               </motion.div>
             ) : regions.length === 0 ? (
               <motion.div variants={revealItem} initial="hidden" animate="show">
-                <Card className="home-gradient-border-top">
+                <Card className="home-gradient-border-top border-primary/25">
                   <CardContent className="p-6 text-center text-muted-foreground">
                     No regions available
                   </CardContent>
@@ -424,7 +424,7 @@ export default function Regions() {
                   <div>
                     <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
                       {/* Interactive Map */}
-                      <Card className="home-feature-card shadow-sm">
+                      <Card className="home-feature-card shadow-sm border-primary/25">
                         <CardContent className="p-6">
                           <div className="mb-4 flex items-center justify-between">
                             <h2 className="text-xl font-semibold">
@@ -462,7 +462,7 @@ export default function Regions() {
                       </Card>
 
                       {/* Region Details Sidebar */}
-                      <Card className="home-gradient-border-top home-glass-panel shadow-sm">
+                      <Card className="home-gradient-border-top home-glass-panel shadow-sm border-primary/25">
                         <CardContent className="p-6">
                           <h3 className="text-lg font-semibold mb-4">
                             Region Details
@@ -694,7 +694,7 @@ export default function Regions() {
                 {/* List View */}
                 {!showMapView && (
                   <div>
-                    <Card className="home-gradient-border-top shadow-sm">
+                    <Card className="home-gradient-border-top shadow-sm border-primary/25">
                       <CardContent className="p-6">
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                           {regions.map((region) => {

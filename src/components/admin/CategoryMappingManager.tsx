@@ -84,7 +84,7 @@ const MobileMappingCard: React.FC<{
   onToggleEnabled: (mapping: CategoryMapping) => void;
 }> = ({ mapping, onEdit, onDelete, onToggleEnabled }) => {
   return (
-    <Card className="mb-4">
+    <Card className="mb-4 border-primary/25">
       <CardContent className="p-4 space-y-3">
         {/* Header Section */}
         <div className="flex items-start justify-between gap-2">
@@ -434,7 +434,7 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
       </>
     );
 
-    return noCard ? <>{content}</> : <Card>{content}</Card>;
+    return noCard ? <>{content}</> : <Card className="border-primary/25">{content}</Card>;
   }
 
   if (error) {
@@ -449,7 +449,7 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
       </>
     );
 
-    return noCard ? <>{content}</> : <Card>{content}</Card>;
+    return noCard ? <>{content}</> : <Card className="border-primary/25">{content}</Card>;
   }
 
   // Header content
@@ -726,7 +726,7 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
 
   return (
     <>
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader className="pb-3 sm:pb-4">
           {headerContent}
         </CardHeader>

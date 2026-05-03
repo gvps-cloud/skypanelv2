@@ -143,7 +143,7 @@ export default function RegionLabelManager() {
 
   if (error) {
     return (
-      <Card>
+      <Card className="border-primary/25">
         <CardContent className="p-6">
           <div className="text-center text-destructive">
             <p>{error}</p>
@@ -158,7 +158,7 @@ export default function RegionLabelManager() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-primary" />
@@ -287,7 +287,7 @@ export default function RegionLabelManager() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="text-base">How It Works</CardTitle>
         </CardHeader>

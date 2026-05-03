@@ -233,7 +233,7 @@ export function IPAddressTable() {
 
       <TabsContent value="ips" className="space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Total IPs</CardTitle>
             </CardHeader>
@@ -244,7 +244,7 @@ export function IPAddressTable() {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">IPv4</CardTitle>
             </CardHeader>
@@ -255,7 +255,7 @@ export function IPAddressTable() {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">IPv6</CardTitle>
             </CardHeader>
@@ -266,7 +266,7 @@ export function IPAddressTable() {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">
                 IPv6 Prefix Context
@@ -282,7 +282,7 @@ export function IPAddressTable() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(360px,1fr)]">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -521,7 +521,7 @@ export function IPAddressTable() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle className="text-base">Action Panel</CardTitle>
               <CardDescription>
@@ -705,7 +705,7 @@ export function IPAddressTable() {
           </Button>
         </div>
 
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="pt-6">
             <div className="rounded-md border">
               <Table>

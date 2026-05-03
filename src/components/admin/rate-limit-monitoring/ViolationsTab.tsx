@@ -11,7 +11,7 @@ interface ViolationsTabProps {
 export function ViolationsTab({ metrics }: ViolationsTabProps) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="text-lg">Top Violating Sources</CardTitle>
           <CardDescription>Users and IPs with the most rate limit violations</CardDescription>
@@ -61,7 +61,7 @@ export function ViolationsTab({ metrics }: ViolationsTabProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="text-lg">Top Violating Endpoints</CardTitle>
           <CardDescription>API endpoints with the most rate limit violations</CardDescription>

@@ -17,7 +17,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({
   className = ''
 }) => {
   return (
-    <Card className={`border-border bg-card ${className}`}>
+    <Card className={`border-border bg-card ${className} border-primary/25`}>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle className="text-lg">{title}</CardTitle>

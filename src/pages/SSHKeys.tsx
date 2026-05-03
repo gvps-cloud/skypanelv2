@@ -167,7 +167,7 @@ const SSHKeys: React.FC = () => {
             </Card>
           ))}
         </div>
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <Skeleton className="h-6 w-32" />
           </CardHeader>
@@ -238,7 +238,7 @@ const SSHKeys: React.FC = () => {
 
       {/* Key Metrics Grid */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -253,7 +253,7 @@ const SSHKeys: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -272,7 +272,7 @@ const SSHKeys: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -293,7 +293,7 @@ const SSHKeys: React.FC = () => {
       </div>
 
       {/* SSH Keys List */}
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>

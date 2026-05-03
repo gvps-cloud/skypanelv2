@@ -225,7 +225,7 @@ export function VolumePricing() {
       {/* Overview Stats */}
       {overview && (
         <div className="grid grid-cols-3 gap-4">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Volumes
@@ -235,7 +235,7 @@ export function VolumePricing() {
               <div className="text-2xl font-bold">{overview.stats.total_volumes}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Active Volumes
@@ -245,7 +245,7 @@ export function VolumePricing() {
               <div className="text-2xl font-bold">{overview.stats.active_volumes}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Capacity
@@ -286,7 +286,7 @@ export function VolumePricing() {
 
       {/* Volume Types Tab */}
       {activeTab === "types" && (
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
@@ -359,7 +359,7 @@ export function VolumePricing() {
 
       {/* Volumes Tab */}
       {activeTab === "volumes" && (
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <HardDrive className="h-5 w-5" />

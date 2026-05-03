@@ -418,7 +418,7 @@ const Settings: React.FC = () => {
         <div className="flex-1 space-y-6">
           {/* PROFILE TAB */}
           {activeTab === "profile" && (
-            <Card>
+            <Card className="border-primary/25">
               <CardHeader>
                 <CardTitle>Personal Information</CardTitle>
                 <CardDescription>
@@ -521,7 +521,7 @@ const Settings: React.FC = () => {
           {/* SECURITY TAB */}
           {activeTab === "security" && (
             <div className="space-y-6">
-              <Card>
+              <Card className="border-primary/25">
                 <CardHeader>
                   <CardTitle>Password</CardTitle>
                   <CardDescription>
@@ -579,7 +579,7 @@ const Settings: React.FC = () => {
                 </CardFooter>
               </Card>
 
-              <Card>
+              <Card className="border-primary/25">
                 <CardHeader>
                   <CardTitle>Two-Factor Authentication</CardTitle>
                   <CardDescription>
@@ -640,7 +640,7 @@ const Settings: React.FC = () => {
 
           {/* NOTIFICATIONS TAB */}
           {activeTab === "notifications" && (
-            <Card>
+            <Card className="border-primary/25">
               <CardHeader>
                 <CardTitle>Notifications</CardTitle>
                 <CardDescription>
@@ -726,7 +726,7 @@ const Settings: React.FC = () => {
           {/* API KEYS TAB */}
           {activeTab === "api" && (
             <div className="space-y-6">
-              <Card>
+              <Card className="border-primary/25">
                 <CardHeader>
                   <CardTitle>Create API Key</CardTitle>
                   <CardDescription>
@@ -752,7 +752,7 @@ const Settings: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-primary/25">
                 <CardHeader>
                   <CardTitle>Active API Keys</CardTitle>
                   <CardDescription>

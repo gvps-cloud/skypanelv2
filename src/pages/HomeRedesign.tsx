@@ -818,7 +818,7 @@ export default function HomeRedesign() {
                   variants={revealItem}
                   className={card.span}
                 >
-                  <Card className="h-full home-gradient-border-top border-border/50 bg-card/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/[0.04]">
+                  <Card className="h-full home-gradient-border-top border-border/50 bg-card/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/[0.04] border-primary/25">
                     <CardContent className="space-y-4 p-6">
                       <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/20">
                         <card.icon className="h-5 w-5 text-primary" />
@@ -915,7 +915,7 @@ export default function HomeRedesign() {
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.3 }}
               >
-                <Card className="border-border/50 bg-card/80 shadow-xl backdrop-blur h-full">
+                <Card className="border-border/50 bg-card/80 shadow-xl backdrop-blur h-full border-primary/25">
                   <CardContent className="space-y-6 p-6 sm:p-8 h-full flex flex-col justify-center">
                     <div>
                       <h3 className="text-2xl font-semibold tracking-tight">
@@ -991,7 +991,7 @@ export default function HomeRedesign() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: idx * 0.1 }}
                 >
-                  <Card className="h-full home-feature-card group">
+                  <Card className="h-full home-feature-card group border-primary/25">
                     <CardContent className="space-y-5 p-6">
                       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
                         <item.icon className="h-7 w-7 text-primary" />
@@ -1088,7 +1088,7 @@ export default function HomeRedesign() {
                     transition={{ duration: 0.5, delay: i * 0.12 }}
                     className="relative"
                   >
-                    <Card className="h-full home-feature-card group">
+                    <Card className="h-full home-feature-card group border-primary/25">
                       <CardContent className="p-6 text-center">
                         <div className="relative mb-5 inline-flex">
                           <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/50 rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-primary/10 group-hover:scale-105 transition-transform duration-300">
@@ -1152,7 +1152,7 @@ export default function HomeRedesign() {
                     className={`touch-manipulation ${isFeatured ? "lg:-mt-4 lg:mb-4" : ""}`}
                   >
                     <Card
-                      className={`h-full home-feature-card group ${isFeatured ? "ring-1 ring-primary/20 shadow-lg" : ""}`}
+                      className={`h-full home-feature-card group ${isFeatured ? "ring-1 ring-primary/20 shadow-lg" : ""} border-primary/25`}
                     >
                       <CardContent className="p-7 home-testimonial-quote">
                         <div className="flex items-center justify-between mb-5">
@@ -1242,7 +1242,7 @@ export default function HomeRedesign() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="mx-auto max-w-md"
             >
-              <Card className="home-animated-border border-primary/20 bg-gradient-to-b from-card to-background shadow-2xl">
+              <Card className="home-animated-border border-primary/20 bg-gradient-to-b from-card to-background shadow-2xl border-primary/25">
                 <CardContent className="space-y-5 p-8 text-center">
                   <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground font-medium">
                     VPS Plans Starting At

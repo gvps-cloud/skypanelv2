@@ -616,7 +616,7 @@ export default function Documentation() {
   const renderCategory = (cat: DocumentationCategoryWithArticles) => (
     <div className="max-w-3xl space-y-6">
       <motion.div variants={revealItem} initial="hidden" animate="show">
-        <Card className="home-gradient-border-top home-glass-panel overflow-hidden">
+        <Card className="home-gradient-border-top home-glass-panel overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <Breadcrumb category={{ name: cat.name, slug: cat.slug }} />
             <div className="flex items-start gap-4 mt-3">
@@ -823,7 +823,7 @@ export default function Documentation() {
     return (
       <article className="max-w-3xl space-y-6">
         <motion.div variants={revealItem} initial="hidden" animate="show">
-          <Card className="home-gradient-border-top home-glass-panel overflow-hidden">
+          <Card className="home-gradient-border-top home-glass-panel overflow-hidden border-primary/25">
             <CardContent className="p-6">
               <Breadcrumb
                 category={
@@ -937,7 +937,7 @@ export default function Documentation() {
     return (
       <article className="max-w-3xl space-y-6">
         <motion.div variants={revealItem} initial="hidden" animate="show">
-          <Card className="home-gradient-border-top home-glass-panel overflow-hidden">
+          <Card className="home-gradient-border-top home-glass-panel overflow-hidden border-primary/25">
             <CardContent className="p-6">
               <Breadcrumb
                 category={
@@ -1171,7 +1171,7 @@ export default function Documentation() {
   const renderArticle = (article: DocumentationArticleWithFiles) => (
     <article className="max-w-3xl space-y-6">
       <motion.div variants={revealItem} initial="hidden" animate="show">
-        <Card className="home-gradient-border-top home-glass-panel overflow-hidden">
+        <Card className="home-gradient-border-top home-glass-panel overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <Breadcrumb
               category={

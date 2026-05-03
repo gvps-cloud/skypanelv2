@@ -449,7 +449,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Quick Actions */}
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Quick Actions</CardTitle>
           </CardHeader>
@@ -480,7 +480,7 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {hostingEnabled && (
-          <Card className="h-full">
+          <Card className="h-full border-primary/25">
             <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
               <div className="space-y-1">
                 <CardTitle>Enhance Hosting</CardTitle>
@@ -595,7 +595,7 @@ const Dashboard: React.FC = () => {
         {/* Services & VPS Fleet */}
         <div className="grid gap-6 lg:grid-cols-1">
           {/* VPS Fleet */}
-          <Card className="h-full">
+          <Card className="h-full border-primary/25">
             <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
               <div className="space-y-1">
                 <CardTitle>VPS Fleet</CardTitle>
@@ -765,7 +765,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Recent Activity */}
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle>Recent Activity</CardTitle>

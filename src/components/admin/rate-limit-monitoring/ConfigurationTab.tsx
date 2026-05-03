@@ -12,7 +12,7 @@ export function ConfigurationTab({ healthCheck }: ConfigurationTabProps) {
   return (
     <>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg">Configuration Status</CardTitle>
             <CardDescription>Current rate limiting configuration health</CardDescription>
@@ -45,7 +45,7 @@ export function ConfigurationTab({ healthCheck }: ConfigurationTabProps) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg">Current Limits</CardTitle>
             <CardDescription>Active rate limiting configuration</CardDescription>
@@ -81,7 +81,7 @@ export function ConfigurationTab({ healthCheck }: ConfigurationTabProps) {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {(healthCheck.validation.errors.length > 0 ||
             healthCheck.validation.warnings.length > 0) && (
-            <Card>
+            <Card className="border-primary/25">
               <CardHeader>
                 <CardTitle className="text-lg text-destructive">Issues</CardTitle>
                 <CardDescription>Configuration problems that need attention</CardDescription>
@@ -102,7 +102,7 @@ export function ConfigurationTab({ healthCheck }: ConfigurationTabProps) {
           )}
 
           {healthCheck.validation.recommendations.length > 0 && (
-            <Card>
+            <Card className="border-primary/25">
               <CardHeader>
                 <CardTitle className="text-lg text-primary">Recommendations</CardTitle>
                 <CardDescription>Suggested improvements for better performance</CardDescription>

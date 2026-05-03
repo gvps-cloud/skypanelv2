@@ -58,7 +58,7 @@ export function StatusCards({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="flex items-center gap-4 p-6">
             <Activity className="h-5 w-5 text-primary" />
             <div>
@@ -80,7 +80,7 @@ export function StatusCards({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="flex items-center gap-4 p-6">
             <TrendingUp className="h-5 w-5 text-primary" />
             <div>
@@ -94,7 +94,7 @@ export function StatusCards({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="flex items-center gap-4 p-6">
             <Users className="h-5 w-5 text-primary" />
             <div>
@@ -105,7 +105,7 @@ export function StatusCards({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="flex items-center gap-4 p-6">
             <Clock className="h-5 w-5 text-primary" />
             <div>
@@ -116,7 +116,7 @@ export function StatusCards({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="flex items-center gap-4 p-6">
             <Activity className="h-5 w-5 text-primary" />
             <div>

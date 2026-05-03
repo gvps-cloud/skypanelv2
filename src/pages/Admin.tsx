@@ -307,7 +307,7 @@ interface SectionPanelProps {
 }
 
 const AdminSectionFallback: React.FC = () => (
-  <Card className="border-dashed">
+  <Card className="border-dashed border-primary/25">
     <CardContent className="flex min-h-[160px] items-center justify-center text-sm text-muted-foreground">
       Loading section...
     </CardContent>
@@ -2264,7 +2264,7 @@ const Admin: React.FC = () => {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border-primary/25">
               <CardContent className="p-6">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Support Tickets
@@ -2275,7 +2275,7 @@ const Admin: React.FC = () => {
                 </p>
               </CardContent>
             </Card>
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border-primary/25">
               <CardContent className="p-6">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Active Servers
@@ -2286,7 +2286,7 @@ const Admin: React.FC = () => {
                 </p>
               </CardContent>
             </Card>
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border-primary/25">
               <CardContent className="p-6">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Active Providers
@@ -2297,7 +2297,7 @@ const Admin: React.FC = () => {
                 </p>
               </CardContent>
             </Card>
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border-primary/25">
               <CardContent className="p-6">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Avg Plan Markup
@@ -2310,7 +2310,7 @@ const Admin: React.FC = () => {
             </Card>
           </div>
 
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle className="text-lg">Quick Actions</CardTitle>
               <CardDescription>Open frequently used admin sections.</CardDescription>
@@ -3768,7 +3768,7 @@ const Admin: React.FC = () => {
             </div>
           </div>
 
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle>Available StackScripts</CardTitle>
             </CardHeader>

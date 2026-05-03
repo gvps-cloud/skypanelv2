@@ -122,7 +122,7 @@ export default function PlatformAvailabilityManager() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
@@ -185,7 +185,7 @@ export default function PlatformAvailabilityManager() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle>Emergency Support</CardTitle>
           <CardDescription>

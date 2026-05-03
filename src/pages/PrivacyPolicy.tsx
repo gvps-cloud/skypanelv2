@@ -208,7 +208,7 @@ export default function PrivacyPolicy() {
             </p>
           </div>
 
-          <Card className="mt-10 shadow-sm">
+          <Card className="mt-10 shadow-sm border-primary/25">
             <CardHeader>
               <CardTitle>How we protect your data</CardTitle>
               <CardDescription>Navigate the sections below for specifics on collection, usage, and rights.</CardDescription>
@@ -229,7 +229,7 @@ export default function PrivacyPolicy() {
             </CardContent>
           </Card>
 
-          <Card className="mt-8 border-primary/30 bg-primary/5">
+          <Card className="mt-8 border-primary/30 bg-primary/5 border-primary/25">
             <CardContent className="flex flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
                 <h2 className="text-lg font-semibold">Need a data processing addendum (DPA)?</h2>
@@ -245,7 +245,7 @@ export default function PrivacyPolicy() {
         </div>
 
         <aside className="space-y-6">
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-primary/25">
             <CardHeader>
               <CardTitle>At a glance</CardTitle>
             </CardHeader>
@@ -264,7 +264,7 @@ export default function PrivacyPolicy() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-primary/25">
             <CardHeader>
               <CardTitle>Table of contents</CardTitle>
               <CardDescription>Quickly jump to any section.</CardDescription>

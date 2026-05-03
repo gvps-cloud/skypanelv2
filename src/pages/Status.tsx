@@ -476,7 +476,7 @@ export default function Status() {
               {/* Error Banner */}
               {error && (
                 <motion.div variants={revealItem}>
-                  <Card className="border-orange-500/50 bg-orange-50 dark:bg-orange-950/20 home-gradient-border-top">
+                  <Card className="border-orange-500/50 bg-orange-50 dark:bg-orange-950/20 home-gradient-border-top border-primary/25">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-3">
                         <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5" />
@@ -764,7 +764,7 @@ export default function Status() {
                       </Button>
                     </div>
                     {showHistory && (
-                      <Card className="home-feature-card shadow-sm">
+                      <Card className="home-feature-card shadow-sm border-primary/25">
                         <CardContent className="divide-y">
                           {bsIncidentsHistory
                             .filter((i) => i.resolvedAt)
@@ -845,7 +845,7 @@ export default function Status() {
                     </Badge>
                   </div>
 
-                  <Card className="home-feature-card shadow-sm">
+                  <Card className="home-feature-card shadow-sm border-primary/25">
                     <CardContent className="divide-y">
                       {/* VPS Infrastructure */}
                       <VPSInfrastructureCard />
@@ -956,7 +956,7 @@ export default function Status() {
                     <Badge variant="outline">Target uptime guarantees</Badge>
                   </div>
                   <div className="grid gap-6 md:grid-cols-3">
-                    <Card className="home-feature-card">
+                    <Card className="home-feature-card border-primary/25">
                       <CardHeader>
                         <CardTitle className="text-base">
                           VPS Infrastructure
@@ -971,7 +971,7 @@ export default function Status() {
                         </p>
                       </CardContent>
                     </Card>
-                    <Card className="home-feature-card">
+                    <Card className="home-feature-card border-primary/25">
                       <CardHeader>
                         <CardTitle className="text-base">
                           Network Availability
@@ -986,7 +986,7 @@ export default function Status() {
                         </p>
                       </CardContent>
                     </Card>
-                    <Card className="home-feature-card">
+                    <Card className="home-feature-card border-primary/25">
                       <CardHeader>
                         <CardTitle className="text-base">
                           Support Response
@@ -1007,7 +1007,7 @@ export default function Status() {
 
               {/* About this page */}
               <motion.div variants={revealItem}>
-                <Card className="home-gradient-border-top home-glass-panel">
+                <Card className="home-gradient-border-top home-glass-panel border-primary/25">
                   <CardContent className="space-y-4 px-6 py-8">
                     <h3 className="text-lg font-semibold text-foreground">
                       About this page

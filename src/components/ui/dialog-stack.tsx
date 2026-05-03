@@ -307,7 +307,7 @@ export function DialogStack({
                           isActive && "border-primary shadow-lg ring-2 ring-primary/20",
                           isCompleted && !isActive && "border-primary/40",
                           !isActive && !isCompleted && "border-border hover:border-primary/40"
-                        )}
+                        , "border-primary/25")}
                       >
                         <div
                           className={cn(
@@ -354,7 +354,7 @@ export function DialogStack({
                 />
               ))}
               {currentStep && (
-                <Card className="relative z-20 rounded-lg border border-border/80 bg-card/95 shadow-2xl sm:rounded-[26px] flex flex-col max-h-[calc(100vh-200px)]">
+                <Card className="relative z-20 rounded-lg border border-border/80 bg-card/95 shadow-2xl sm:rounded-[26px] flex flex-col max-h-[calc(100vh-200px)] border-primary/25">
                   <CardHeader className="gap-2 flex-col items-start sm:gap-3 sm:flex-row sm:items-center sm:justify-between flex-shrink-0">
                     <div className="space-y-1">
                       <CardTitle className="text-base sm:text-lg">{currentStep.title}</CardTitle>

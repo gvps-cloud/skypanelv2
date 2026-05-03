@@ -91,7 +91,7 @@ export const UpdatesManager: React.FC<UpdatesManagerProps> = ({ token }) => {
   };
 
   return (
-    <Card>
+    <Card className="border-primary/25">
       <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-4">
         <div>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">

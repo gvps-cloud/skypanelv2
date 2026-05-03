@@ -20,7 +20,7 @@ export function OverviewTab({
   return (
     <>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg">Request Distribution</CardTitle>
             <CardDescription>Breakdown by user authentication type</CardDescription>
@@ -56,7 +56,7 @@ export function OverviewTab({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg">Limit Utilization</CardTitle>
             <CardDescription>Average percentage of limits being used</CardDescription>
@@ -103,7 +103,7 @@ export function OverviewTab({
       </div>
 
       {metrics.configEffectiveness.recommendedAdjustments.length > 0 && (
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg">Recommendations</CardTitle>
             <CardDescription>System-generated suggestions for optimization</CardDescription>

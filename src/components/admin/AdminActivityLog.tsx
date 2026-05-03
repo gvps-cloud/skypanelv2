@@ -299,7 +299,7 @@ const AdminActivityLog: React.FC = () => {
 
         {/* Key Metrics Grid */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden border-primary/25">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
@@ -320,7 +320,7 @@ const AdminActivityLog: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden border-primary/25">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
@@ -341,7 +341,7 @@ const AdminActivityLog: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden border-primary/25">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
@@ -362,7 +362,7 @@ const AdminActivityLog: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <CardTitle>Filters</CardTitle>
             <CardDescription>Filter activity by organization, user, type, status, or date</CardDescription>
@@ -503,7 +503,7 @@ const AdminActivityLog: React.FC = () => {
         </Card>
 
         {/* Activity Table */}
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>

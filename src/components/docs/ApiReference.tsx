@@ -175,7 +175,7 @@ export default function ApiReference({ onBack: _onBack }: ApiReferenceProps) {
 
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Code2 className="h-4 w-4 text-primary" />
@@ -187,7 +187,7 @@ export default function ApiReference({ onBack: _onBack }: ApiReferenceProps) {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Lock className="h-4 w-4 text-amber-600" />
@@ -199,7 +199,7 @@ export default function ApiReference({ onBack: _onBack }: ApiReferenceProps) {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Globe className="h-4 w-4 text-emerald-600" />
@@ -218,7 +218,7 @@ export default function ApiReference({ onBack: _onBack }: ApiReferenceProps) {
         {/* Content Area */}
         <div className="flex-1 min-w-0 space-y-6">
           {filteredSections.length === 0 ? (
-            <Card>
+            <Card className="border-primary/25">
               <CardContent className="py-12 text-center">
                 <Search className="mx-auto h-12 w-12 text-muted-foreground/50" />
                 <p className="mt-4 text-sm text-muted-foreground">

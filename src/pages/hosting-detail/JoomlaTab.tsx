@@ -291,19 +291,19 @@ export default function JoomlaTab({ subscriptionId }: JoomlaTabProps) {
                       ) : (
                         <>
                           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                            <Card>
+                            <Card className="border-primary/25">
                               <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Version</CardTitle></CardHeader>
                               <CardContent className="text-sm font-medium">{info?.version ?? app.version ?? "Unknown"}</CardContent>
                             </Card>
-                            <Card>
+                            <Card className="border-primary/25">
                               <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Users</CardTitle></CardHeader>
                               <CardContent className="text-sm font-medium">{info?.userCount ?? users[app.id]?.length ?? 0}</CardContent>
                             </Card>
-                            <Card>
+                            <Card className="border-primary/25">
                               <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Plugins</CardTitle></CardHeader>
                               <CardContent className="text-sm font-medium">{info?.pluginCount ?? 0}</CardContent>
                             </Card>
-                            <Card>
+                            <Card className="border-primary/25">
                               <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">Site URL</CardTitle></CardHeader>
                               <CardContent className="text-sm font-medium">
                                 {info?.siteUrl ? (
@@ -315,7 +315,7 @@ export default function JoomlaTab({ subscriptionId }: JoomlaTabProps) {
                             </Card>
                           </div>
 
-                          <Card>
+                          <Card className="border-primary/25">
                             <CardHeader className="pb-2">
                               <div className="flex items-center justify-between">
                                 <CardTitle className="text-sm flex items-center gap-2">

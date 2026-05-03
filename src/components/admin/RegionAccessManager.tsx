@@ -276,7 +276,7 @@ export const RegionAccessManager: React.FC<RegionAccessManagerProps> = ({ token 
 
   if (!token) {
     return (
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle>Region Controls</CardTitle>
           <CardDescription>Sign in as an administrator to manage provider regions.</CardDescription>
@@ -307,7 +307,7 @@ export const RegionAccessManager: React.FC<RegionAccessManagerProps> = ({ token 
         </div>
       </div>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Configuration</CardTitle>
           <Button

@@ -20,7 +20,7 @@ export const ImpersonationLoadingOverlay: React.FC<ImpersonationLoadingOverlayPr
 }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <Card className="w-full max-w-md mx-4 animate-in zoom-in-95 duration-300">
+      <Card className="w-full max-w-md mx-4 animate-in zoom-in-95 duration-300 border-primary/25">
         <CardContent className="p-6">
           <div className="text-center space-y-4">
             {/* Icon and Title */}

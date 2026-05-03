@@ -691,7 +691,7 @@ const Billing: React.FC = () => {
 
       {/* Wallet Overview - Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -708,12 +708,12 @@ const Billing: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden border-primary/30 bg-primary/5">
+        <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Hosting Wallet</p>
-                <p className="text-3xl font-bold tracking-tight text-primary">
+                <p className="text-3xl font-bold tracking-tight">
                   {formatCurrencyValue(hostingWalletBalance)}
                 </p>
                 <p className="text-xs text-muted-foreground">Monthly Enhance hosting reserve</p>
@@ -725,7 +725,7 @@ const Billing: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -748,7 +748,7 @@ const Billing: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -784,7 +784,7 @@ const Billing: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -814,7 +814,7 @@ const Billing: React.FC = () => {
       {/* Add Funds and Egress Credits Section */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Add Funds to Wallet Card */}
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <CardTitle>Add Funds to Wallet</CardTitle>
             <CardDescription>Top up your wallet balance using PayPal</CardDescription>
@@ -946,7 +946,7 @@ const Billing: React.FC = () => {
         </Card>
 
         {/* Buy Egress Credits Card */}
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <CardTitle>Buy Egress Credits</CardTitle>
             <CardDescription>Purchase credits for VPS network transfer</CardDescription>
@@ -983,7 +983,7 @@ const Billing: React.FC = () => {
       />
 
       {/* VPS Uptime Summary Section */}
-      <Card className="mb-8">
+      <Card className="mb-8 border-primary/25">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center">
@@ -1167,7 +1167,7 @@ const Billing: React.FC = () => {
       </Card>
 
       {/* Tabs */}
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader className="border-b border">
           <nav className="-mb-px flex space-x-8">
             <button

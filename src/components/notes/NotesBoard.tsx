@@ -265,7 +265,7 @@ export function NotesBoard({
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <CardTitle>{title}</CardTitle>

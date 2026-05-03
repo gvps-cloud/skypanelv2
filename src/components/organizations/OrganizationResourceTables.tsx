@@ -179,7 +179,7 @@ export function OrganizationResourceTables({
       </TabsList>
 
       <TabsContent value="vps">
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -253,7 +253,7 @@ export function OrganizationResourceTables({
       </TabsContent>
 
       <TabsContent value="hosting">
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -346,7 +346,7 @@ export function OrganizationResourceTables({
       </TabsContent>
 
       <TabsContent value="sshKeys">
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -438,7 +438,7 @@ export function OrganizationResourceTables({
       </TabsContent>
 
       <TabsContent value="tickets">
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-2 text-lg">

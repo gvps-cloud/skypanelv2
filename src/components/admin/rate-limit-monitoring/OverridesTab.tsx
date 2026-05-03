@@ -67,7 +67,7 @@ export function OverridesTab({
 }: OverridesTabProps) {
   return (
     <>
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="text-lg">Override Management</CardTitle>
           <CardDescription>Grant elevated rate limits to trusted or high-volume users.</CardDescription>
@@ -101,7 +101,7 @@ export function OverridesTab({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="text-lg">Active Overrides</CardTitle>
           <CardDescription>Users currently operating under custom rate limits</CardDescription>

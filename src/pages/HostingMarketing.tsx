@@ -204,7 +204,7 @@ const HostingHero = ({ enabled, plans, isLoading }: HostingCatalogState) => (
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, delay: 0.15 }}
       >
-        <Card className="home-glass-panel home-animated-border">
+        <Card className="home-glass-panel home-animated-border border-primary/25">
           <CardContent className="space-y-5 p-6">
             {[
               ["Hosting catalog", enabled ? "Enabled" : "Available when configured"],
@@ -239,7 +239,7 @@ const CapabilityGrid = () => (
       >
         {capabilities.map((item) => (
           <motion.div key={item.title} variants={revealItem}>
-            <Card className="home-gradient-border-top home-feature-card h-full">
+            <Card className="home-gradient-border-top home-feature-card h-full border-primary/25">
               <CardContent className="space-y-4 p-6">
                 <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/20">
                   <item.icon className="h-5 w-5 text-primary" />
@@ -304,7 +304,7 @@ const HostingCatalogSection = ({ enabled, plans }: Pick<HostingCatalogState, "en
       </div>
 
       {!enabled ? (
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="py-12 text-center">
             <PanelsTopLeft className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <h3 className="mb-2 text-lg font-medium">Hosting catalog is not enabled</h3>
@@ -314,7 +314,7 @@ const HostingCatalogSection = ({ enabled, plans }: Pick<HostingCatalogState, "en
           </CardContent>
         </Card>
       ) : plans.length === 0 ? (
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="py-12 text-center">
             <Database className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <h3 className="mb-2 text-lg font-medium">No active hosting plans yet</h3>

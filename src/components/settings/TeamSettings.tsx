@@ -417,7 +417,7 @@ export default function TeamSettings({
         </TabsList>
 
         <TabsContent value="organization" className="space-y-4">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle>Organization Settings</CardTitle>
               <CardDescription>
@@ -455,7 +455,7 @@ export default function TeamSettings({
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <div className="space-y-1">
                 <CardTitle>Team Members</CardTitle>
@@ -622,7 +622,7 @@ export default function TeamSettings({
         </TabsContent>
 
         <TabsContent value="invitations" className="space-y-4">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader>
               <CardTitle>Pending Invitations</CardTitle>
               <CardDescription>
@@ -697,7 +697,7 @@ export default function TeamSettings({
         </TabsContent>
 
         <TabsContent value="roles" className="space-y-4">
-          <Card>
+          <Card className="border-primary/25">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <div className="space-y-1">
                 <CardTitle>Roles & Permissions</CardTitle>

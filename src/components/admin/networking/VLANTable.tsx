@@ -58,7 +58,7 @@ export function VLANTable() {
         </Button>
       </div>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardContent className="pt-6">
           <div className="rounded-md border">
             <Table>

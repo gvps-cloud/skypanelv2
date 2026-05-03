@@ -449,7 +449,7 @@ export const SSHKeyManagement: React.FC = () => {
       </div>
 
       {/* Main Card */}
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>

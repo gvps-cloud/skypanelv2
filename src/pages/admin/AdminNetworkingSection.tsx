@@ -49,7 +49,7 @@ export const AdminNetworkingSection: React.FC<AdminNetworkingSectionProps> = ({
         </div>
       </div>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle>Network Settings</CardTitle>
         </CardHeader>

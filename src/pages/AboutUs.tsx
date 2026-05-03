@@ -238,7 +238,7 @@ export default function AboutUs() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.15 }}
               >
-                <Card className="h-full home-gradient-border-top border-border/50 bg-card/60 home-feature-card">
+                <Card className="h-full home-gradient-border-top border-border/50 bg-card/60 home-feature-card border-primary/25">
                   <CardContent className="space-y-4 p-6 sm:p-8">
                     <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/20">
                       <Target className="h-5 w-5 text-primary" />
@@ -261,7 +261,7 @@ export default function AboutUs() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.25 }}
               >
-                <Card className="h-full home-animated-border border-primary/15 bg-gradient-to-b from-card to-background home-glass-panel">
+                <Card className="h-full home-animated-border border-primary/15 bg-gradient-to-b from-card to-background home-glass-panel border-primary/25">
                   <CardContent className="space-y-4 p-6 sm:p-8">
                     <h2 className="text-xl font-semibold tracking-tight">
                       Platform at a glance
@@ -371,7 +371,7 @@ export default function AboutUs() {
             >
               {values.map((item) => (
                 <motion.div key={item.title} variants={revealItem}>
-                  <Card className="h-full home-feature-card group">
+                  <Card className="h-full home-feature-card group border-primary/25">
                     <CardContent className="space-y-4 p-6">
                       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
                         <item.icon className="h-7 w-7 text-primary" />

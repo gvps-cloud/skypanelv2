@@ -349,7 +349,7 @@ export default function DocumentationCategoryManager() {
   };
 
   return (
-    <Card>
+    <Card className="border-primary/25">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <FolderOpen className="h-5 w-5" />

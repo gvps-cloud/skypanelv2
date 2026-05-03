@@ -175,7 +175,7 @@ export default function OverviewTab({ service }: OverviewTabProps) {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle>Subscription Overview</CardTitle>
         </CardHeader>
@@ -195,7 +195,7 @@ export default function OverviewTab({ service }: OverviewTabProps) {
 
       {/* Bandwidth Card */}
       {service?.enhance_subscription_id && (
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>

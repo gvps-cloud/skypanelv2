@@ -540,7 +540,7 @@ export default function DocumentationArticleManager() {
   };
 
   return (
-    <Card>
+    <Card className="border-primary/25">
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-4">
           <CardTitle className="flex items-center gap-2">

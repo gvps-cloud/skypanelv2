@@ -766,7 +766,7 @@ export const OrganizationManagement: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="flex items-center justify-between p-6">
             <div>
               <p className="text-sm text-muted-foreground">Organizations</p>
@@ -779,7 +779,7 @@ export const OrganizationManagement: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="flex items-center justify-between p-6">
             <div>
               <p className="text-sm text-muted-foreground">Memberships</p>
@@ -792,7 +792,7 @@ export const OrganizationManagement: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="p-6">
             <Label htmlFor="organization-search" className="text-sm">
               Search organizations or members
@@ -809,7 +809,7 @@ export const OrganizationManagement: React.FC = () => {
         </Card>
       </div>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle>Organizations</CardTitle>
           <CardDescription>

@@ -2276,7 +2276,7 @@ const VPS: React.FC = () => {
 
       {/* Bulk Actions Toolbar */}
       {selectedInstances.length > 0 && (
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-2">
@@ -2344,7 +2344,7 @@ const VPS: React.FC = () => {
       )}
 
       {/* VPS Instances Table */}
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-3">
@@ -2370,7 +2370,7 @@ const VPS: React.FC = () => {
               </Button>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
-              <Card className="min-w-[220px] overflow-hidden sm:w-auto border-0">
+              <Card className="min-w-[220px] overflow-hidden sm:w-auto border-0 border-primary/25">
                 <CardContent className="flex items-center gap-3 p-4">
                   <div className="rounded-lg bg-primary/10 p-3">
                     <DollarSign className="h-5 w-5 text-primary" />

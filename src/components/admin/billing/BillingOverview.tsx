@@ -54,7 +54,7 @@ export const BillingOverview: React.FC = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -64,7 +64,7 @@ export const BillingOverview: React.FC = () => {
             <p className="text-xs text-muted-foreground">Lifetime revenue</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Wallet Balances</CardTitle>
             <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -74,7 +74,7 @@ export const BillingOverview: React.FC = () => {
             <p className="text-xs text-muted-foreground">Total customer credit</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Transactions</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
@@ -84,7 +84,7 @@ export const BillingOverview: React.FC = () => {
             <p className="text-xs text-muted-foreground">Total processed payments</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/25">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Low Balance</CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
@@ -96,7 +96,7 @@ export const BillingOverview: React.FC = () => {
         </Card>
       </div>
 
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>

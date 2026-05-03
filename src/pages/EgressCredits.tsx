@@ -229,7 +229,7 @@ const EgressCredits: React.FC = () => {
             Egress Credits
           </h1>
         </div>
-        <Card>
+        <Card className="border-primary/25">
           <CardContent className="py-12 text-center">
             <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-amber-500" />
             <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
@@ -291,7 +291,7 @@ const EgressCredits: React.FC = () => {
 
       {/* Warning Banner */}
       {balance?.warning && (
-        <Card className="mb-6 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+        <Card className="mb-6 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 border-primary/25">
           <CardContent className="p-4 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <div>
@@ -308,7 +308,7 @@ const EgressCredits: React.FC = () => {
       )}
 
       {/* Balance Card */}
-      <Card className="mb-6">
+      <Card className="mb-6 border-primary/25">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
@@ -360,7 +360,7 @@ const EgressCredits: React.FC = () => {
         </h2>
         {!canManageEgress && (
           <div className="mb-4">
-            <Card>
+            <Card className="border-primary/25">
               <CardContent className="p-4 text-sm text-muted-foreground">
                 You need egress purchase permissions to buy credits for this organization.
               </CardContent>
@@ -368,7 +368,7 @@ const EgressCredits: React.FC = () => {
           </div>
         )}
         {packs.length === 0 ? (
-          <Card>
+          <Card className="border-primary/25">
             <CardContent className="py-8 text-center text-muted-foreground">
               <p>No credit packs available.</p>
             </CardContent>
@@ -428,7 +428,7 @@ const EgressCredits: React.FC = () => {
       </div>
 
       {/* Purchase History */}
-      <Card>
+      <Card className="border-primary/25">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />

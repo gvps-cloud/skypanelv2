@@ -215,7 +215,7 @@ const EmailMethodForm: React.FC<EmailMethodFormProps> = ({ method, onSave, isSub
   };
 
   return (
-    <Card>
+    <Card className="border-primary/25">
       <CardHeader className="border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -364,7 +364,7 @@ const TicketMethodForm: React.FC<TicketMethodFormProps> = ({ method, onSave, isS
   };
 
   return (
-    <Card>
+    <Card className="border-primary/25">
       <CardHeader className="border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -552,7 +552,7 @@ const PhoneMethodForm: React.FC<PhoneMethodFormProps> = ({ method, onSave, isSub
   };
 
   return (
-    <Card>
+    <Card className="border-primary/25">
       <CardHeader className="border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -690,7 +690,7 @@ const OfficeMethodForm: React.FC<OfficeMethodFormProps> = ({ method, onSave, isS
   };
 
   return (
-    <Card>
+    <Card className="border-primary/25">
       <CardHeader className="border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

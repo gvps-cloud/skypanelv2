@@ -47,7 +47,7 @@ const BillingPaymentSuccess: React.FC = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
-      <Card className="max-w-lg w-full">
+      <Card className="max-w-lg w-full border-primary/25">
         <CardContent className="p-8 text-center">
           <div className="flex justify-center mb-4">
             {status === 'processing' && <Loader2 className="h-12 w-12 text-foreground animate-spin" />}

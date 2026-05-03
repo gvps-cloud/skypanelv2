@@ -219,7 +219,7 @@ export default function HostingStore() {
 
           {/* Checkout Panel */}
           {selectedPlan && (
-            <Card>
+            <Card className="border-primary/25">
               <CardHeader>
                 <CardTitle>Configure Subscription</CardTitle>
               </CardHeader>
