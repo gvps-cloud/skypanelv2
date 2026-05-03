@@ -423,19 +423,23 @@ router.post(
         });
       }
 
-      await logActivity(
-        {
-          userId,
-          organizationId,
-          eventType: "billing.hosting_wallet.funded",
-          entityType: "hosting_wallet",
-          entityId: organizationId,
-          message: "Hosting wallet was funded from the main wallet.",
-          status: "success",
-          metadata: { amount },
-        },
-        req,
-      );
+      try {
+        await logActivity(
+          {
+            userId,
+            organizationId,
+            eventType: "billing.hosting_wallet.funded",
+            entityType: "hosting_wallet",
+            entityId: organizationId,
+            message: "Hosting wallet was funded from the main wallet.",
+            status: "success",
+            metadata: { amount },
+          },
+          req,
+        );
+      } catch (activityError) {
+        console.warn("Failed to log hosting wallet funding activity:", activityError);
+      }
 
       res.json({
         success: true,

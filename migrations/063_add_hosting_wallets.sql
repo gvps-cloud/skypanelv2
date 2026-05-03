@@ -13,26 +13,35 @@ CREATE TABLE IF NOT EXISTS hosting_wallets (
 
 CREATE INDEX IF NOT EXISTS idx_hosting_wallets_org_id ON hosting_wallets(organization_id);
 
-INSERT INTO hosting_wallets (organization_id, balance, currency)
-SELECT
-  w.organization_id,
-  GREATEST(
-    0,
-    LEAST(
-      w.balance,
-      COALESCE(active_hosting.monthly_total, 0)
-    )
-  ),
-  COALESCE(w.currency, 'USD')
-FROM wallets w
-LEFT JOIN (
-  SELECT hs.organization_id, SUM(hp.price_monthly) AS monthly_total
-  FROM hosting_subscriptions hs
-  JOIN hosting_plans hp ON hp.id = hs.plan_id
-  WHERE hs.status = 'active'
-  GROUP BY hs.organization_id
-) active_hosting ON active_hosting.organization_id = w.organization_id
-ON CONFLICT (organization_id) DO NOTHING;
+WITH seeded_hosting_wallets AS (
+  INSERT INTO hosting_wallets (organization_id, balance, currency)
+  SELECT
+    w.organization_id,
+    GREATEST(
+      0,
+      LEAST(
+        w.balance,
+        COALESCE(active_hosting.monthly_total, 0)
+      )
+    ),
+    COALESCE(w.currency, 'USD')
+  FROM wallets w
+  LEFT JOIN (
+    SELECT hs.organization_id, SUM(hp.price_monthly) AS monthly_total
+    FROM hosting_subscriptions hs
+    JOIN hosting_plans hp ON hp.id = hs.plan_id
+    WHERE hs.status = 'active'
+    GROUP BY hs.organization_id
+  ) active_hosting ON active_hosting.organization_id = w.organization_id
+  ON CONFLICT (organization_id) DO NOTHING
+  RETURNING organization_id, balance
+)
+UPDATE wallets w
+SET balance = w.balance - hw.balance,
+    updated_at = NOW()
+FROM seeded_hosting_wallets hw
+WHERE hw.organization_id = w.organization_id
+  AND hw.balance > 0;
 
 DROP TRIGGER IF EXISTS trigger_hosting_wallets_updated_at ON hosting_wallets;
 CREATE TRIGGER trigger_hosting_wallets_updated_at
