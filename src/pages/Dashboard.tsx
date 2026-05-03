@@ -66,6 +66,73 @@ interface VPSStats {
   metrics?: VpsMetrics;
 }
 
+
+interface VpsListResponse {
+  instances?: Array<{
+    id: string;
+    label?: string | null;
+    status?: VPSStats["status"] | null;
+    plan_name?: string | null;
+    configuration?: {
+      type?: string | null;
+      region?: string | null;
+    } | null;
+    ip_address?: string | null;
+  }>;
+}
+
+interface VpsDetailResponse {
+  instance?: {
+    metrics?: VpsMetrics | null;
+    plan?: {
+      specs?: {
+        vcpus?: number | null;
+      } | null;
+    } | null;
+  } | null;
+}
+
+interface WalletBalanceResponse {
+  balance?: number | null;
+}
+
+interface HostingStatusResponse {
+  enabled?: boolean;
+}
+
+interface PaymentsHistoryResponse {
+  payments?: Array<{
+    amount?: number | null;
+    created_at?: string | null;
+  }>;
+}
+
+interface HostingServicesResponse {
+  services?: Array<{
+    id: string;
+    domain?: string | null;
+    status?: string | null;
+    plan_name?: string | null;
+    plan?: {
+      name?: string | null;
+    } | null;
+    next_billing_at?: string | null;
+  }>;
+}
+
+interface ActivityResponse {
+  activities?: Array<{
+    id: string;
+    type?: ActivityItem["type"] | null;
+    entity_type?: ActivityItem["type"] | null;
+    message?: string | null;
+    event_type?: string | null;
+    timestamp?: string | null;
+    created_at?: string | null;
+    status?: ActivityItem["status"] | null;
+  }>;
+}
+
 interface BillingStats {
   walletBalance: number;
   hostingWalletBalance: number;
@@ -107,21 +174,21 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     try {
       const [vpsData, walletData, hostingWalletData, hostingStatusData, paymentsData] = await Promise.all([
-        apiClient.get("/vps"),
-        apiClient.get("/payments/wallet/balance"),
-        apiClient.get("/payments/wallet/hosting/balance").catch(() => ({ balance: 0 })),
-        apiClient.get("/hosting/status").catch(() => ({ enabled: false })),
-        apiClient.get("/payments/history?limit=1&status=completed"),
+        apiClient.get<VpsListResponse>("/vps"),
+        apiClient.get<WalletBalanceResponse>("/payments/wallet/balance"),
+        apiClient.get<WalletBalanceResponse>("/payments/wallet/hosting/balance").catch(() => ({ balance: 0 })),
+        apiClient.get<HostingStatusResponse>("/hosting/status").catch(() => ({ enabled: false })),
+        apiClient.get<PaymentsHistoryResponse>("/payments/history?limit=1&status=completed"),
       ]);
 
       const instances: VPSStats[] = await Promise.all(
-        (vpsData.instances || []).map(async (instance: any) => {
+        (vpsData.instances ?? []).map(async (instance) => {
           let metrics: VpsMetrics | undefined;
           let cpu = 0;
           let cpuCount = 0;
 
           try {
-            const detailData = await apiClient.get(`/vps/${instance.id}`);
+            const detailData = await apiClient.get<VpsDetailResponse>(`/vps/${instance.id}`);
             
             // Metrics are nested under instance
             const metricsData = detailData.instance?.metrics;
@@ -138,8 +205,8 @@ const Dashboard: React.FC = () => {
               },
             } : undefined;
             
-            cpu = metricsData?.cpu?.summary?.last || 0;
-            cpuCount = detailData.instance?.plan?.specs?.vcpus || 0;
+            cpu = metricsData?.cpu?.summary?.last ?? 0;
+            cpuCount = detailData.instance?.plan?.specs?.vcpus ?? 0;
           } catch (error) {
             console.warn(
               'Failed to fetch metrics for VPS',
@@ -150,15 +217,15 @@ const Dashboard: React.FC = () => {
 
           return {
             id: instance.id,
-            name: instance.label || "instance",
-            status: instance.status || "provisioning",
-            plan: instance.plan_name || instance.configuration?.type || "",
-            location: instance.configuration?.region || "",
+            name: instance.label ?? "instance",
+            status: instance.status ?? "provisioning",
+            plan: instance.plan_name ?? instance.configuration?.type ?? "",
+            location: instance.configuration?.region ?? "",
             cpu: Math.round(cpu * 100) / 100,
             cpuCount,
             memory: null,
             storage: 0,
-            ip: instance.ip_address || "",
+            ip: instance.ip_address ?? "",
             metrics,
           } satisfies VPSStats;
         }),
@@ -166,7 +233,7 @@ const Dashboard: React.FC = () => {
 
       setVpsInstances(instances);
 
-      const lastPaymentItem = (paymentsData.payments || [])[0];
+      const lastPaymentItem = (paymentsData.payments ?? [])[0];
       const monthlySpend = await getMonthlySpendWithFallback();
 
       setBilling({
@@ -184,12 +251,13 @@ const Dashboard: React.FC = () => {
 
       if (isHostingEnabled) {
         try {
-          const hostingData = await apiClient.get("/hosting/services");
+          const hostingData = await apiClient.get<HostingServicesResponse>("/hosting/services");
+          const services = hostingData.services ?? [];
           setHostingServices(
-            (hostingData.services || []).map((service: any) => ({
+            services.map((service) => ({
               id: service.id,
               domain: service.domain ?? null,
-              status: service.status || "unknown",
+              status: service.status ?? "unknown",
               planName: service.plan_name ?? service.plan?.name ?? null,
               nextBillingAt: service.next_billing_at ?? null,
             })),
@@ -203,14 +271,15 @@ const Dashboard: React.FC = () => {
       }
 
       try {
-        const actData = await apiClient.get("/activity/recent?limit=10");
-        const mapped: ActivityItem[] = (actData.activities || []).map(
-          (activity: any) => ({
+        const actData = await apiClient.get<ActivityResponse>("/activity/recent?limit=10");
+        const activities = actData.activities ?? [];
+        const mapped: ActivityItem[] = activities.map(
+          (activity) => ({
             id: activity.id,
-            type: activity.type || activity.entity_type || "activity",
-            message: activity.message || `${activity.event_type}`,
-            timestamp: activity.timestamp || activity.created_at,
-            status: activity.status || "info",
+            type: activity.type ?? activity.entity_type ?? "activity",
+            message: activity.message ?? `${activity.event_type}`,
+            timestamp: activity.timestamp ?? activity.created_at ?? "",
+            status: activity.status ?? "info",
           }),
         );
         setRecentActivity(mapped);
@@ -508,14 +577,14 @@ const Dashboard: React.FC = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold group-hover:text-primary">
-                              {service.domain || "Hosting service"}
+                              {service.domain ?? "Hosting service"}
                             </h4>
                             <Badge variant={service.status === "active" ? "default" : "secondary"}>
                               {service.status}
                             </Badge>
                           </div>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {service.planName || "Hosting plan"} · next billing {formatTimestamp(service.nextBillingAt || undefined)}
+                            {service.planName ?? "Hosting plan"} · next billing {formatTimestamp(service.nextBillingAt ?? undefined)}
                           </p>
                         </div>
                         <ArrowUpRight className="h-4 w-4 text-muted-foreground" />

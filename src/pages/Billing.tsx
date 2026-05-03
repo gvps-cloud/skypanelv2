@@ -432,7 +432,7 @@ const Billing: React.FC = () => {
     try {
       const result = await paymentService.fundHostingWalletFromMain(normalizedAmount);
       if (!result.success) {
-        toast.error(result.error || 'Unable to fund hosting wallet');
+        toast.error(result.error ?? 'Unable to fund hosting wallet');
         return;
       }
       toast.success('Hosting wallet funded from main wallet.');
@@ -885,7 +885,9 @@ const Billing: React.FC = () => {
                     <input
                       type="number"
                       value={hostingTransferAmount}
-                      onChange={(e) => setHostingTransferAmount(e.target.value)}
+                      onChange={(e) => {
+                        setHostingTransferAmount(e.target.value);
+                      }}
                       placeholder="0.00"
                       min="1"
                       step="0.01"
@@ -894,7 +896,9 @@ const Billing: React.FC = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={handleTransferToHostingWallet}
+                    onClick={() => {
+                      void handleTransferToHostingWallet();
+                    }}
                     disabled={hostingTransferLoading}
                     className="inline-flex items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
                   >
@@ -918,7 +922,9 @@ const Billing: React.FC = () => {
                     <input
                       type="number"
                       value={hostingFundsAmount}
-                      onChange={(e) => setHostingFundsAmount(e.target.value)}
+                      onChange={(e) => {
+                        setHostingFundsAmount(e.target.value);
+                      }}
                       placeholder="0.00"
                       min="1"
                       step="0.01"

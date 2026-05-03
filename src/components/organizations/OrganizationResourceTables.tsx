@@ -43,7 +43,7 @@ interface OrganizationResourceTablesProps {
   onOpenSshKeys: (keyId?: string) => void;
   onCreateTicket: () => void;
   onOpenVps: (vpsId: string) => void;
-  onOpenHosting: (_subscriptionId: string) => void;
+  onOpenHosting: (subscriptionId: string) => void;
   onOpenTicket: (ticketId: string) => void;
 }
 

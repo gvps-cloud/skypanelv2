@@ -293,9 +293,9 @@ class PaymentService {
 
   async getWalletBalance(): Promise<WalletBalance | null> {
     try {
-      const data = await apiClient.get<any>('/payments/wallet/balance');
+      const data = await apiClient.get<WalletBalance>('/payments/wallet/balance');
       return { balance: data.balance };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Get wallet balance error:', error);
       return null;
     }
@@ -303,9 +303,9 @@ class PaymentService {
 
   async getHostingWalletBalance(): Promise<WalletBalance | null> {
     try {
-      const data = await apiClient.get<any>('/payments/wallet/hosting/balance');
+      const data = await apiClient.get<WalletBalance>('/payments/wallet/hosting/balance');
       return { balance: data.balance };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Get hosting wallet balance error:', error);
       return null;
     }
@@ -316,11 +316,12 @@ class PaymentService {
     error?: string;
   }> {
     try {
-      await apiClient.post<any>('/payments/wallet/hosting/fund', { amount });
+      await apiClient.post<{ success?: boolean }>('/payments/wallet/hosting/fund', { amount });
       return { success: true };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Fund hosting wallet error:', error);
-      return { success: false, error: error.message || 'Network error occurred' };
+      const message = error instanceof Error ? error.message : 'Network error occurred';
+      return { success: false, error: message };
     }
   }
 

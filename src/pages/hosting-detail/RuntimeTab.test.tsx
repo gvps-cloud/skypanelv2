@@ -22,20 +22,37 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("@/components/ui/select", async () => {
-  const React = await import("react");
-  return {
-    Select: ({ value, onValueChange, children }: any) => (
-      <select value={value} onChange={(event) => onValueChange?.(event.target.value)}>
-        {children}
-      </select>
-    ),
-    SelectContent: ({ children }: any) => <>{children}</>,
-    SelectItem: ({ value, children }: any) => <option value={value}>{children}</option>,
-    SelectTrigger: ({ children }: any) => <>{children}</>,
-    SelectValue: ({ placeholder }: any) => <>{placeholder}</>,
-  };
-});
+type SelectProps = {
+  value?: string;
+  onValueChange?: (value: string) => void;
+  children?: React.ReactNode;
+};
+
+type SelectItemProps = {
+  value: string;
+  children?: React.ReactNode;
+};
+
+type SelectValueProps = {
+  placeholder?: React.ReactNode;
+};
+
+vi.mock("@/components/ui/select", () => ({
+  Select: ({ value, onValueChange, children }: SelectProps) => (
+    <select
+      value={value}
+      onChange={(event) => {
+        onValueChange?.(event.target.value);
+      }}
+    >
+      {children}
+    </select>
+  ),
+  SelectContent: ({ children }: Pick<SelectProps, "children">) => <>{children}</>,
+  SelectItem: ({ value, children }: SelectItemProps) => <option value={value}>{children}</option>,
+  SelectTrigger: ({ children }: Pick<SelectProps, "children">) => <>{children}</>,
+  SelectValue: ({ placeholder }: SelectValueProps) => <>{placeholder}</>,
+}));
 
 describe("RuntimeTab", () => {
   beforeEach(() => {

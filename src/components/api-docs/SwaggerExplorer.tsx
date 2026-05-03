@@ -31,19 +31,19 @@ interface SwaggerExplorerProps {
   sections: SectionDefinition[];
   apiKey?: string;
   organizationId?: string;
-  onApiKeyChange?: (_value: string) => void;
-  onOrganizationIdChange?: (_value: string) => void;
+  onApiKeyChange?: (value: string) => void;
+  onOrganizationIdChange?: (value: string) => void;
   userOrganizations?: Array<{ id: string; name: string }>;
-  validateApiKey?: (_key: string) => Promise<{ valid: boolean; error?: string; organizationId?: string }>;
+  validateApiKey?: (key: string) => Promise<{ valid: boolean; error?: string; organizationId?: string }>;
   onExecute?: (
-    _endpointKey: string,
-    _request: { method: string; url: string; body?: unknown; params?: Record<string, string> },
+    endpointKey: string,
+    request: { method: string; url: string; body?: unknown; params?: Record<string, string> },
   ) => Promise<void>;
   responses?: Map<string, ResponseState>;
   executingEndpoint?: string | null;
   isAdmin?: boolean;
   readonly?: boolean;
-  onCopy: (_value: string, _label: string) => void;
+  onCopy: (value: string, label: string) => void;
 }
 
 const endpointKeyFor = (section: SectionDefinition, endpoint: EndpointDefinition, index: number) =>
@@ -67,8 +67,8 @@ export function SwaggerExplorer({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState(sections[0]?.title ?? "");
 
-  const handleMissingApiKeyChange = (_value: string) => undefined;
-  const handleMissingValidateApiKey = (_key: string) => Promise.resolve({ valid: false });
+  const handleMissingApiKeyChange = () => undefined;
+  const handleMissingValidateApiKey = () => Promise.resolve({ valid: false });
 
   const filteredSections = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
@@ -102,7 +102,13 @@ export function SwaggerExplorer({
             <CardDescription>Search routes, then expand method cards to inspect schemas.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search endpoints..." />
+            <Input
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+              }}
+              placeholder="Search endpoints..."
+            />
             {!readonly && (
               <div className="space-y-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
                 <ApiKeyInput

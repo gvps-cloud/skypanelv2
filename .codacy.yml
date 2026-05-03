@@ -1,0 +1,3 @@
+---
+exclude_paths:
+  - "migrations/065_add_hosting_faq_docs.sql"
