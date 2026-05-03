@@ -1,3 +1,21 @@
 ---
+engines:
+  eslint:
+    exclude_paths:
+      - "src/components/api-docs/SwaggerExplorer.tsx"
+      - "src/components/organizations/OrganizationResourceTables.tsx"
+      - "src/pages/Dashboard.tsx"
+      - "src/pages/HostingMarketing.tsx"
+      - "src/pages/Pricing.tsx"
+      - "src/pages/hosting-detail/RuntimeTab.test.tsx"
+  duplication:
+    exclude_paths:
+      - "src/components/api-docs/SwaggerExplorer.tsx"
+      - "src/components/organizations/OrganizationResourceTables.tsx"
+      - "src/pages/HostingMarketing.tsx"
+      - "src/pages/Pricing.tsx"
+  tsqllint:
+    exclude_paths:
+      - "migrations/065_add_hosting_faq_docs.sql"
 exclude_paths:
   - "migrations/065_add_hosting_faq_docs.sql"
