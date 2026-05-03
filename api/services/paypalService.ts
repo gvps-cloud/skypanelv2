@@ -125,8 +125,9 @@ const isOrderAlreadyCapturedError = (error: unknown): boolean => {
   return message.includes('ORDER_ALREADY_CAPTURED');
 };
 
-const normalizeWalletType = (walletType: unknown): 'main' | 'hosting' =>
-  walletType === 'hosting' ? 'hosting' : 'main';
+function normalizeWalletType(walletType: unknown): 'main' | 'hosting' {
+  return walletType === 'hosting' ? 'hosting' : 'main';
+}
 
 export class PayPalService {
   private static roundCurrencyAmount(amount: number): number {
@@ -624,8 +625,8 @@ export class PayPalService {
           return false;
         }
 
-        const nextMainBalance = this.roundCurrencyAmount(mainBalance - amount);
-        const nextHostingBalance = this.roundCurrencyAmount(hostingBalance + amount);
+        const nextMainBalance = PayPalService.roundCurrencyAmount(mainBalance - amount);
+        const nextHostingBalance = PayPalService.roundCurrencyAmount(hostingBalance + amount);
 
         await client.query(
           'UPDATE wallets SET balance = $1, updated_at = NOW() WHERE id = $2',
@@ -940,14 +941,14 @@ export class PayPalService {
                metadata = COALESCE(metadata, '{}'::jsonb) || $4::jsonb,
                updated_at = NOW()
            WHERE id = $1`,
-          [paymentTransactionId, captureId || null, description, JSON.stringify(mergedMetadata)]
+          [paymentTransactionId, captureId ?? null, description, JSON.stringify(mergedMetadata)]
         );
       } else {
         const result = await query(
           `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, provider_transaction_id, provider_capture_id, status, description, metadata)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            RETURNING id`,
-          [transactionOrganizationId, amount, currency, 'paypal', 'paypal', orderId, captureId || null, 'completed', description, JSON.stringify(mergedMetadata)]
+          [transactionOrganizationId, amount, currency, 'paypal', 'paypal', orderId, captureId ?? null, 'completed', description, JSON.stringify(mergedMetadata)]
         );
 
         if (result.rows.length === 0) {
@@ -963,7 +964,7 @@ export class PayPalService {
 
       const walletType = normalizeWalletType(mergedMetadata.wallet_type);
       const credited = walletType === 'hosting'
-        ? await this.addFundsToHostingWallet(
+        ? await PayPalService.addFundsToHostingWallet(
           transactionOrganizationId,
           amount,
           description,
@@ -971,7 +972,7 @@ export class PayPalService {
           paymentTransactionId,
           mergedMetadata
         )
-        : await this.addFundsToWallet(
+        : await PayPalService.addFundsToWallet(
           transactionOrganizationId,
           amount,
           description,

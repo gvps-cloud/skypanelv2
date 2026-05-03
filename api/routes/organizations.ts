@@ -223,8 +223,16 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
       });
       hostingResult.rows.forEach(h => {
         const arr = allHostingSubscriptions.get(h.organization_id) || [];
-        const { rn, organization_id, ...hostingData } = h;
-        arr.push(hostingData);
+        arr.push({
+          id: h.id,
+          domain: h.domain,
+          status: h.status,
+          next_billing_at: h.next_billing_at,
+          last_billed_at: h.last_billed_at,
+          created_at: h.created_at,
+          plan_name: h.plan_name,
+          price_monthly: h.price_monthly,
+        });
         allHostingSubscriptions.set(h.organization_id, arr);
       });
     }
@@ -644,11 +652,21 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
         query('SELECT organization_id, COUNT(*) as count FROM hosting_subscriptions WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds])
       ]);
 
-      vpsCounts.rows.forEach(row => vpsCountsMap.set(row.organization_id, parseInt(row.count)));
-      ticketCounts.rows.forEach(row => ticketCountsMap.set(row.organization_id, parseInt(row.count)));
-      sshKeyCounts.rows.forEach(row => sshKeyCountsMap.set(row.organization_id, parseInt(row.count)));
-      memberCounts.rows.forEach(row => memberCountsMap.set(row.organization_id, parseInt(row.count)));
-      hostingCounts.rows.forEach(row => hostingCountsMap.set(row.organization_id, parseInt(row.count)));
+      vpsCounts.rows.forEach(row => {
+        vpsCountsMap.set(row.organization_id, Number.parseInt(row.count, 10));
+      });
+      ticketCounts.rows.forEach(row => {
+        ticketCountsMap.set(row.organization_id, Number.parseInt(row.count, 10));
+      });
+      sshKeyCounts.rows.forEach(row => {
+        sshKeyCountsMap.set(row.organization_id, Number.parseInt(row.count, 10));
+      });
+      memberCounts.rows.forEach(row => {
+        memberCountsMap.set(row.organization_id, Number.parseInt(row.count, 10));
+      });
+      hostingCounts.rows.forEach(row => {
+        hostingCountsMap.set(row.organization_id, Number.parseInt(row.count, 10));
+      });
     }
 
     const enrichedOrgs = orgs.map((org: any) => ({

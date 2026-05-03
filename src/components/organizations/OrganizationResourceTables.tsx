@@ -43,7 +43,7 @@ interface OrganizationResourceTablesProps {
   onOpenSshKeys: (keyId?: string) => void;
   onCreateTicket: () => void;
   onOpenVps: (vpsId: string) => void;
-  onOpenHosting: (subscriptionId: string) => void;
+  onOpenHosting: (_subscriptionId: string) => void;
   onOpenTicket: (ticketId: string) => void;
 }
 
@@ -294,7 +294,9 @@ export function OrganizationResourceTables({
                       {hostingPage.items.map((subscription) => (
                         <TableRow
                           key={subscription.id}
-                          {...getClickableRowProps(() => onOpenHosting(subscription.id))}
+                          {...getClickableRowProps(() => {
+                            onOpenHosting(subscription.id);
+                          })}
                         >
                           <TableCell className="font-medium">
                             {subscription.domain || "Pending domain"}
@@ -315,7 +317,9 @@ export function OrganizationResourceTables({
                           <TableCell>
                             <RowActionButton
                               label={`Open hosting subscription ${subscription.domain || subscription.id}`}
-                              onClick={() => onOpenHosting(subscription.id)}
+                              onClick={() => {
+                                onOpenHosting(subscription.id);
+                              }}
                             />
                           </TableCell>
                         </TableRow>
@@ -327,8 +331,12 @@ export function OrganizationResourceTables({
                   currentPage={hostingPage.currentPage}
                   totalItems={hostingPage.totalItems}
                   itemsPerPage={hostingPage.itemsPerPage}
-                  onPageChange={(page) => updatePage("hosting", page)}
-                  onItemsPerPageChange={(limit) => updateLimit("hosting", limit)}
+                  onPageChange={(page) => {
+                    updatePage("hosting", page);
+                  }}
+                  onItemsPerPageChange={(limit) => {
+                    updateLimit("hosting", limit);
+                  }}
                   itemsPerPageOptions={[5, 10, 20]}
                 />
               </>
@@ -415,8 +423,12 @@ export function OrganizationResourceTables({
                   currentPage={sshKeysPage.currentPage}
                   totalItems={sshKeysPage.totalItems}
                   itemsPerPage={sshKeysPage.itemsPerPage}
-                  onPageChange={(page) => updatePage("sshKeys", page)}
-                  onItemsPerPageChange={(limit) => updateLimit("sshKeys", limit)}
+                  onPageChange={(page) => {
+                    updatePage("sshKeys", page);
+                  }}
+                  onItemsPerPageChange={(limit) => {
+                    updateLimit("sshKeys", limit);
+                  }}
                   itemsPerPageOptions={[5, 10, 20]}
                 />
               </>
@@ -494,8 +506,12 @@ export function OrganizationResourceTables({
                   currentPage={ticketsPage.currentPage}
                   totalItems={ticketsPage.totalItems}
                   itemsPerPage={ticketsPage.itemsPerPage}
-                  onPageChange={(page) => updatePage("tickets", page)}
-                  onItemsPerPageChange={(limit) => updateLimit("tickets", limit)}
+                  onPageChange={(page) => {
+                    updatePage("tickets", page);
+                  }}
+                  onItemsPerPageChange={(limit) => {
+                    updateLimit("tickets", limit);
+                  }}
                   itemsPerPageOptions={[5, 10, 20]}
                 />
               </>

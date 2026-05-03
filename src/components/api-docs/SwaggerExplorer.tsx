@@ -31,19 +31,19 @@ interface SwaggerExplorerProps {
   sections: SectionDefinition[];
   apiKey?: string;
   organizationId?: string;
-  onApiKeyChange?: (value: string) => void;
-  onOrganizationIdChange?: (value: string) => void;
+  onApiKeyChange?: (_value: string) => void;
+  onOrganizationIdChange?: (_value: string) => void;
   userOrganizations?: Array<{ id: string; name: string }>;
-  validateApiKey?: (key: string) => Promise<{ valid: boolean; error?: string; organizationId?: string }>;
+  validateApiKey?: (_key: string) => Promise<{ valid: boolean; error?: string; organizationId?: string }>;
   onExecute?: (
-    endpointKey: string,
-    request: { method: string; url: string; body?: unknown; params?: Record<string, string> },
+    _endpointKey: string,
+    _request: { method: string; url: string; body?: unknown; params?: Record<string, string> },
   ) => Promise<void>;
   responses?: Map<string, ResponseState>;
   executingEndpoint?: string | null;
   isAdmin?: boolean;
   readonly?: boolean;
-  onCopy: (value: string, label: string) => void;
+  onCopy: (_value: string, _label: string) => void;
 }
 
 const endpointKeyFor = (section: SectionDefinition, endpoint: EndpointDefinition, index: number) =>
@@ -66,6 +66,9 @@ export function SwaggerExplorer({
 }: SwaggerExplorerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSection, setActiveSection] = useState(sections[0]?.title ?? "");
+
+  const handleMissingApiKeyChange = (_value: string) => undefined;
+  const handleMissingValidateApiKey = (_key: string) => Promise.resolve({ valid: false });
 
   const filteredSections = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
@@ -104,12 +107,14 @@ export function SwaggerExplorer({
               <div className="space-y-3 rounded-xl border border-primary/15 bg-primary/5 p-3">
                 <ApiKeyInput
                   apiKey={apiKey}
-                  onApiKeyChange={onApiKeyChange ?? (() => undefined)}
-                  onValidate={validateApiKey ?? (async () => ({ valid: false }))}
+                  onApiKeyChange={onApiKeyChange ?? handleMissingApiKeyChange}
+                  onValidate={validateApiKey ?? handleMissingValidateApiKey}
                 />
                 <Input
                   value={organizationId}
-                  onChange={(event) => onOrganizationIdChange?.(event.target.value)}
+                  onChange={(event) => {
+                    onOrganizationIdChange?.(event.target.value);
+                  }}
                   placeholder="Organization ID"
                   list="swagger-orgs"
                 />
@@ -128,7 +133,9 @@ export function SwaggerExplorer({
                   <button
                     key={section.title}
                     type="button"
-                    onClick={() => setActiveSection(section.title)}
+                    onClick={() => {
+                      setActiveSection(section.title);
+                    }}
                     className={cn(
                       "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition",
                       activeSection === section.title && !searchQuery
@@ -169,7 +176,13 @@ export function SwaggerExplorer({
                         </div>
                         <CardDescription>{endpoint.description}</CardDescription>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => onCopy(`${section.base}${endpoint.path}`, "Endpoint URL")}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          onCopy(`${section.base}${endpoint.path}`, "Endpoint URL");
+                        }}
+                      >
                         <Copy className="mr-2 h-3.5 w-3.5" />
                         Copy URL
                       </Button>
@@ -193,7 +206,12 @@ export function SwaggerExplorer({
                             requiresAuth={endpoint.auth}
                             isAdmin={isAdmin}
                             endpointAdmin={endpoint.admin}
-                            onExecute={(request) => onExecute?.(endpointKey, request)}
+                            onExecute={(request) => {
+                              if (onExecute) {
+                                return onExecute(endpointKey, request);
+                              }
+                              return Promise.resolve();
+                            }}
                             isLoading={executingEndpoint === endpointKey}
                             response={responses?.get(endpointKey)}
                           />
