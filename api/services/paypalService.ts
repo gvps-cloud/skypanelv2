@@ -746,8 +746,9 @@ export class PayPalService {
              provider_transaction_id,
              created_at,
              metadata,
+             CASE WHEN metadata->>'wallet_type' = 'hosting' THEN 'hosting' ELSE 'main' END AS wallet_type,
              SUM(amount) OVER (
-               PARTITION BY organization_id
+               PARTITION BY organization_id, CASE WHEN metadata->>'wallet_type' = 'hosting' THEN 'hosting' ELSE 'main' END
                ORDER BY created_at ASC, id ASC
              ) AS balance_after
            FROM payment_transactions

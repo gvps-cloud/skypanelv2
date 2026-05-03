@@ -1,4 +1,4 @@
--- Migration 063: Add dedicated hosting wallets
+-- Migration 064: Add dedicated hosting wallets
 -- Keeps the existing wallets table as the main VPS/general wallet and adds
 -- an organization-scoped wallet for monthly Enhance hosting charges.
 
