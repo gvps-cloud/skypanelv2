@@ -131,7 +131,10 @@ router.get(
         );
       }
 
-      if (type_class && typeof type_class === "string") {
+      let usedRegionFallback = false;
+      const requestedTypeClass = typeof type_class === "string" ? type_class.trim() : "";
+
+      if (requestedTypeClass) {
         try {
           const plansResult = await query(
             `SELECT DISTINCT vpr.region_id
@@ -140,19 +143,31 @@ router.get(
              WHERE p.provider_id = $1
                AND p.active = true
                AND p.type_class = $2`,
-            [providerId, type_class],
+            [providerId, requestedTypeClass],
           );
 
           const regionsWithPlans = new Set(
-            (plansResult.rows || []).map((row: any) => row.region_id),
+            (plansResult.rows || [])
+              .map((row: any) => String(row.region_id || "").toLowerCase())
+              .filter(Boolean),
           );
 
-          regions = regions.filter(
+          const filteredRegions = regions.filter(
             (region) =>
               region &&
               typeof region.id === "string" &&
-              regionsWithPlans.has(region.id),
+              regionsWithPlans.has(region.id.toLowerCase()),
           );
+
+          if (filteredRegions.length > 0) {
+            regions = filteredRegions;
+          } else {
+            usedRegionFallback = true;
+            console.warn(
+              "[VPS] No Linode regions matched plan-region availability; using allowed provider regions instead",
+              { providerId, typeClass: requestedTypeClass, mappedRegionCount: regionsWithPlans.size },
+            );
+          }
         } catch (plansErr: any) {
           const message = String(plansErr?.message || "").toLowerCase();
           if (
@@ -161,10 +176,14 @@ router.get(
           ) {
             throw plansErr;
           }
+          usedRegionFallback = true;
         }
       }
 
-      res.json({ regions });
+      res.json({
+        regions,
+        fallback_to_allowed_regions: usedRegionFallback,
+      });
     } catch (err) {
       sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to fetch regions" });
     }
@@ -188,6 +207,24 @@ router.get(
           .status(404)
           .json({ error: "Provider not found or inactive" });
       }
+
+      const mapRowsToPlans = (rows: any[]) => rows.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        provider_id: row.provider_id,
+        provider_plan_id: row.provider_plan_id,
+        base_price: row.base_price,
+        markup_price: row.markup_price,
+        backup_price_monthly: row.backup_price_monthly || 0,
+        backup_price_hourly: row.backup_price_hourly || 0,
+        backup_upcharge_monthly: row.backup_upcharge_monthly || 0,
+        backup_upcharge_hourly: row.backup_upcharge_hourly || 0,
+        daily_backups_enabled: row.daily_backups_enabled || false,
+        weekly_backups_enabled: row.weekly_backups_enabled !== false,
+        type_class: row.type_class || "standard",
+        specifications: row.specifications,
+      }));
 
       let queryText = `
         SELECT
@@ -215,34 +252,53 @@ router.get(
 
       const queryParams: any[] = [providerId, regionId];
 
-      if (type_class && typeof type_class === "string") {
+      const requestedTypeClass = typeof type_class === "string" ? type_class.trim() : "";
+      if (requestedTypeClass) {
         queryText += ` AND p.type_class = $3`;
-        queryParams.push(type_class);
+        queryParams.push(requestedTypeClass);
       }
 
       queryText += ` ORDER BY p.base_price ASC`;
 
-      const result = await query(queryText, queryParams);
+      let result = await query(queryText, queryParams);
+      let usedPlanFallback = false;
 
-      const plans = (result.rows || []).map((row: any) => ({
-        id: row.id,
-        name: row.name,
-        description: row.description,
-        provider_id: row.provider_id,
-        provider_plan_id: row.provider_plan_id,
-        base_price: row.base_price,
-        markup_price: row.markup_price,
-        backup_price_monthly: row.backup_price_monthly || 0,
-        backup_price_hourly: row.backup_price_hourly || 0,
-        backup_upcharge_monthly: row.backup_upcharge_monthly || 0,
-        backup_upcharge_hourly: row.backup_upcharge_hourly || 0,
-        daily_backups_enabled: row.daily_backups_enabled || false,
-        weekly_backups_enabled: row.weekly_backups_enabled !== false,
-        type_class: row.type_class || "standard",
-        specifications: row.specifications,
-      }));
+      if ((result.rows || []).length === 0 && requestedTypeClass) {
+        result = await query(
+          `SELECT
+             p.id,
+             p.name,
+             COALESCE(p.specifications->>'description', '') AS description,
+             p.provider_id,
+             p.provider_plan_id,
+             p.base_price,
+             p.markup_price,
+             p.backup_price_monthly,
+             p.backup_price_hourly,
+             p.backup_upcharge_monthly,
+             p.backup_upcharge_hourly,
+             p.daily_backups_enabled,
+             p.weekly_backups_enabled,
+             p.type_class,
+             p.specifications
+           FROM vps_plans p
+           WHERE p.active = true
+             AND p.provider_id = $1
+             AND p.type_class = $2
+           ORDER BY p.base_price ASC`,
+          [providerId, requestedTypeClass],
+        );
+        usedPlanFallback = true;
+        console.warn(
+          "[VPS] No region-specific Linode plans matched; using provider/type_class plans instead",
+          { providerId, regionId, typeClass: requestedTypeClass },
+        );
+      }
 
-      res.json({ plans });
+      res.json({
+        plans: mapRowsToPlans(result.rows || []),
+        fallback_to_type_class_plans: usedPlanFallback,
+      });
     } catch (err) {
       sendSafeErrorResponse(res, err, 500, { fallbackMessage: "Failed to fetch plans" });
     }

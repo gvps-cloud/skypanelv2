@@ -19,7 +19,7 @@ export async function getHostingSubscriptionForOrganization(
 ): Promise<HostingSubscriptionWithEnhanceOrg | null> {
   const result = await query(
     `${HOSTING_SUBSCRIPTION_WITH_ENHANCE_ORG_SELECT}
-     WHERE hs.id = $1 AND hs.organization_id = $2`,
+     WHERE hs.id = $1 AND hs.organization_id = $2 AND hs.status = 'active'`,
     [subscriptionId, organizationId],
   );
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Globe,
   Server,
@@ -55,6 +55,7 @@ const tabs = [
 
 export default function HostingDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
   const [service, setService] = useState<Record<string, any> | null>(null);
   const [serviceLoading, setServiceLoading] = useState(true);
@@ -69,11 +70,12 @@ export default function HostingDetail() {
       );
       setService(data.service ?? null);
     } catch {
-      setService(null);
+      toast.error("No active hosting plan found.");
+      navigate("/hosting", { replace: true });
     } finally {
       setServiceLoading(false);
     }
-  }, [id]);
+  }, [id, navigate]);
 
   useEffect(() => {
     loadService();

@@ -229,7 +229,7 @@ router.get("/services/:id", requireOrgPermission("hosting_view"), async (req: Re
       `SELECT hs.*, hp.name as plan_name, hp.service_type
        FROM hosting_subscriptions hs
        LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
-       WHERE hs.id = $1 AND hs.organization_id = $2`,
+       WHERE hs.id = $1 AND hs.organization_id = $2 AND hs.status = 'active'`,
       [id, organizationId]
     );
     if (result.rows.length === 0) {

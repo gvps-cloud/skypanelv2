@@ -28,6 +28,7 @@ import { Loader2, Globe, Plus, ArrowRight, Search, LayoutDashboard, CreditCard, 
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatBillingAmount } from "@/lib/formatters";
+import Pagination from "@/components/ui/Pagination";
 
 interface HostingService {
   id: string;
@@ -70,6 +71,8 @@ export default function Hosting() {
   const [ssoLoading, setSsoLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const services: HostingService[] = servicesData?.services ?? [];
 
@@ -83,6 +86,11 @@ export default function Hosting() {
       (service.primary_ip ?? "").toLowerCase().includes(q);
     return matchesStatus && matchesSearch;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * itemsPerPage;
+  const pageItems = filtered.slice(startIndex, startIndex + itemsPerPage);
 
   const activeCount = services.filter((s) => s.status === "active").length;
   const totalMonthly = services
@@ -200,7 +208,10 @@ export default function Hosting() {
             placeholder="Search domain, plan, or IP..."
             className="pl-8"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -209,7 +220,10 @@ export default function Hosting() {
               key={s}
               variant={statusFilter === s ? "default" : "outline"}
               size="sm"
-              onClick={() => setStatusFilter(s)}
+              onClick={() => {
+                setStatusFilter(s);
+                setCurrentPage(1);
+              }}
             >
               {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
             </Button>
@@ -252,14 +266,14 @@ export default function Hosting() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((service) => {
-                const isCancelled = service.status === "cancelled";
+              {pageItems.map((service) => {
+                const isActive = service.status === "active";
                 return (
                   <TableRow
                     key={service.id}
-                    className={isCancelled ? "opacity-60" : "cursor-pointer"}
+                    className={isActive ? "cursor-pointer" : "opacity-60"}
                     onClick={() => {
-                      if (!isCancelled) navigate(`/hosting/${service.id}`);
+                      if (isActive) navigate(`/hosting/${service.id}`);
                     }}
                   >
                     <TableCell className="font-medium">
@@ -290,19 +304,7 @@ export default function Hosting() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {isCancelled ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRequestReactivation(service);
-                            }}
-                          >
-                            <LifeBuoy className="w-4 h-4 mr-1" />
-                            Request Reactivation
-                          </Button>
-                        ) : (
+                        {isActive ? (
                           <>
                             <Button
                               size="sm"
@@ -353,6 +355,18 @@ export default function Hosting() {
                               </AlertDialogContent>
                             </AlertDialog>
                           </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRequestReactivation(service);
+                            }}
+                          >
+                            <LifeBuoy className="w-4 h-4 mr-1" />
+                            Request Reactivation
+                          </Button>
                         )}
                       </div>
                     </TableCell>
@@ -361,6 +375,13 @@ export default function Hosting() {
               })}
             </TableBody>
           </Table>
+          <Pagination
+            currentPage={safePage}
+            totalItems={filtered.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            showItemsPerPage={false}
+          />
         </div>
       )}
     </div>

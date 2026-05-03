@@ -521,4 +521,21 @@ describe("hosting detail route fixes", () => {
 
     expect(response.body.url).toBe("https://panel.example.com/file-manager?accessToken=access-token-123");
   });
+
+  it("blocks access to sub-routes when subscription is cancelled", async () => {
+    mockGetHostingSubscriptionForOrganization.mockResolvedValue(null);
+
+    const response = await request(app).get("/web/sub-123/website").expect(404);
+
+    expect(response.body.error).toBe("Service not found");
+    expect(mockGetWebsite).not.toHaveBeenCalled();
+  });
+
+  it("blocks access to sub-routes when subscription is suspended", async () => {
+    mockGetHostingSubscriptionForOrganization.mockResolvedValue(null);
+
+    const response = await request(app).get("/dns/sub-123/domains").expect(404);
+
+    expect(response.body.error).toBe("Service not found");
+  });
 });

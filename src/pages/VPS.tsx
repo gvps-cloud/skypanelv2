@@ -95,6 +95,7 @@ interface RegionOption {
 
 interface CreateRegionOption extends RegionOption {
   capabilities?: string[];
+  status?: string;
 }
 
 const DEFAULT_CATEGORY_LABELS: Record<OriginalCategory, string> = {
@@ -539,13 +540,22 @@ const VPS: React.FC = () => {
       setCreateRegionsError(null);
 
       try {
-        const url = createForm.type_class
-          ? `/vps/providers/${createForm.provider_id}/regions?type_class=${encodeURIComponent(createForm.type_class)}`
-          : `/vps/providers/${createForm.provider_id}/regions`;
+        const baseUrl = `/vps/providers/${createForm.provider_id}/regions`;
+        const typeClass = typeof createForm.type_class === "string"
+          ? createForm.type_class.trim()
+          : "";
+        const filteredUrl = typeClass
+          ? `${baseUrl}?type_class=${encodeURIComponent(typeClass)}`
+          : baseUrl;
 
-        const data = await apiClient.get<{ regions: any[]; error?: string }>(url);
+        let data = await apiClient.get<{ regions: any[]; error?: string }>(filteredUrl);
+        let regions = Array.isArray(data.regions) ? data.regions : [];
 
-        const regions = Array.isArray(data.regions) ? data.regions : [];
+        if (regions.length === 0 && typeClass) {
+          data = await apiClient.get<{ regions: any[]; error?: string }>(baseUrl);
+          regions = Array.isArray(data.regions) ? data.regions : [];
+        }
+
         const normalizedRegions: CreateRegionOption[] = regions
           .map((region: any) => ({
             id: String(region?.id ?? ""),
@@ -560,6 +570,10 @@ const VPS: React.FC = () => {
             capabilities: Array.isArray(region?.capabilities)
               ? region.capabilities.filter((capability: unknown) => typeof capability === "string")
               : undefined,
+            status:
+              typeof region?.status === "string" && region.status.trim().length > 0
+                ? region.status.trim()
+                : undefined,
           }))
           .filter((region) => region.id);
 
