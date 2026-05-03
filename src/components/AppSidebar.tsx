@@ -5,7 +5,6 @@ import {
   Building2,
   CreditCard,
   FileText,
-  Key,
   LayoutDashboard,
   LifeBuoy,
   Palette,
@@ -15,7 +14,6 @@ import {
   Tags,
   Users,
   Globe,
-  Shield,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";

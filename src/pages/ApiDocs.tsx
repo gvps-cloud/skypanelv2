@@ -8,7 +8,6 @@ import {
   Lock,
   Shield,
   Code2,
-  Key,
   Sparkles,
   KeyRound,
   Zap,

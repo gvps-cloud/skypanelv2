@@ -125,24 +125,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
-function StandaloneProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <ImpersonationWrapper>{children}</ImpersonationWrapper>;
-}
-
 // Admin Route Component (requires authenticated admin role)
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, isImpersonating } = useAuth();
