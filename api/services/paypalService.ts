@@ -415,10 +415,10 @@ export class PayPalService {
         );
 
         const metadataUpdate: Record<string, unknown> = {
+          ...extraMetadata,
           balance_before: currentBalance,
           balance_after: newBalance,
           wallet_type: 'main',
-          ...extraMetadata,
         };
 
         if (paymentId) {
@@ -547,10 +547,10 @@ export class PayPalService {
         );
 
         const metadataUpdate: Record<string, unknown> = {
+          ...extraMetadata,
           balance_before: currentBalance,
           balance_after: newBalance,
           wallet_type: 'hosting',
-          ...extraMetadata,
         };
 
         if (paymentId) {

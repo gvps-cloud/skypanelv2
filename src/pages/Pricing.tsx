@@ -250,14 +250,28 @@ const PricingPage: React.FC = () => {
     setError(null);
 
     try {
-      const [vpsResult, hostingResult] = await Promise.all([
+      const [vpsResult, hostingResult] = await Promise.allSettled([
         apiClient.get<{ plans?: VPSPlan[]; error?: string }>('/pricing/vps'),
         apiClient.get<{ enabled?: boolean; plans?: HostingPlan[]; error?: string }>('/pricing/hosting'),
       ]);
-      console.log('VPS plans loaded:', vpsResult.plans?.length || 0);
-      setVpsPlans(vpsResult.plans || []);
-      setHostingEnabled(hostingResult.enabled === true);
-      setHostingPlans(hostingResult.plans || []);
+
+      if (vpsResult.status === 'fulfilled') {
+        console.log('VPS plans loaded:', vpsResult.value.plans?.length || 0);
+        setVpsPlans(vpsResult.value.plans || []);
+      } else {
+        console.error('Failed to load VPS pricing data:', vpsResult.reason);
+        setError(vpsResult.reason instanceof Error ? vpsResult.reason.message : 'Failed to load pricing information');
+        setVpsPlans([]);
+      }
+
+      if (hostingResult.status === 'fulfilled') {
+        setHostingEnabled(hostingResult.value.enabled === true);
+        setHostingPlans(hostingResult.value.plans || []);
+      } else {
+        console.warn('Failed to load hosting pricing data:', hostingResult.reason);
+        setHostingEnabled(false);
+        setHostingPlans([]);
+      }
     } catch (err) {
       console.error('Failed to load pricing data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load pricing information');
