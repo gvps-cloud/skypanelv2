@@ -31,19 +31,19 @@ interface SwaggerExplorerProps {
   sections: SectionDefinition[];
   apiKey?: string;
   organizationId?: string;
-  onApiKeyChange?(value: string): void;
-  onOrganizationIdChange?(value: string): void;
+  onApiKeyChange?: (...args: [string]) => void;
+  onOrganizationIdChange?: (...args: [string]) => void;
   userOrganizations?: Array<{ id: string; name: string }>;
-  validateApiKey?(key: string): Promise<{ valid: boolean; error?: string; organizationId?: string }>;
-  onExecute?(
-    endpointKey: string,
-    request: { method: string; url: string; body?: unknown; params?: Record<string, string> },
-  ): Promise<void>;
+  validateApiKey?: (...args: [string]) => Promise<{ valid: boolean; error?: string; organizationId?: string }>;
+  onExecute?: (...args: [
+    string,
+    { method: string; url: string; body?: unknown; params?: Record<string, string> },
+  ]) => Promise<void>;
   responses?: Map<string, ResponseState>;
   executingEndpoint?: string | null;
   isAdmin?: boolean;
   readonly?: boolean;
-  onCopy(value: string, label: string): void;
+  onCopy: (...args: [string, string]) => void;
 }
 
 const endpointKeyFor = (section: SectionDefinition, endpoint: EndpointDefinition, index: number) =>
