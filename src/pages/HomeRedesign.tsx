@@ -31,6 +31,7 @@ import {
   Bell,
   Settings,
   Search,
+  Monitor,
   type LucideIcon,
 } from "lucide-react";
 
@@ -960,19 +961,103 @@ export default function HomeRedesign() {
           </div>
         </section>
 
-        {/* ═══════════════════ DASHBOARD PREVIEW ═══════════════════════ */}
-        <section className="border-b border-border/40 bg-muted/10 py-14">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.55 }}
-              className="relative"
-            >
-              <div className="absolute -inset-8 -z-10 rounded-[2rem] bg-gradient-to-b from-primary/10 via-primary/5 to-transparent blur-2xl" />
-              <SkyPanelPreview />
-            </motion.div>
+        {/* ═══════════════════ CONSOLE SHOWCASE ═════════════════════════ */}
+        <section className="home-console-showcase border-b border-border/40">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col items-center py-16 lg:py-20">
+              {/* Heading block */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.55 }}
+                className="mb-12 max-w-2xl text-center"
+              >
+                <Badge
+                  variant="outline"
+                  className="home-shimmer-badge mb-5 inline-flex rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
+                >
+                  <Monitor className="mr-2 h-3.5 w-3.5" />
+                  Live Console Preview
+                </Badge>
+
+                <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                  Operate everything from one{" "}
+                  <span className="text-primary">branded console</span>.
+                </h2>
+
+                <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
+                  {BRAND_NAME} brings VPS deployments, managed web hosting,
+                  prepaid wallet billing, team workspaces, and platform activity
+                  into a single dashboard.
+                </p>
+              </motion.div>
+
+              {/* Feature pills + CTA */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="mb-10 flex max-w-3xl flex-wrap items-center justify-center gap-3"
+              >
+                {[
+                  { icon: Rocket, text: "Deploy a VPS in under 45s" },
+                  { icon: Globe2, text: "Manage Enhance hosting" },
+                  { icon: Wallet, text: "Track wallet & spend" },
+                  { icon: Building2, text: "Multi-org workspaces" },
+                ].map((item) => (
+                  <span
+                    key={item.text}
+                    className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3.5 py-1.5 text-xs text-muted-foreground backdrop-blur-sm"
+                  >
+                    <item.icon className="h-3.5 w-3.5 text-primary" />
+                    {item.text}
+                  </span>
+                ))}
+              </motion.div>
+
+              {/* Browser-frame mock */}
+              <motion.div
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.15 }}
+                className="relative w-full max-w-5xl"
+              >
+                <div className="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-b from-primary/10 via-primary/5 to-transparent blur-2xl" />
+
+                <div className="home-console-frame">
+                  <div className="home-console-frame__bar">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
+                    </div>
+                    <span className="text-[10px] font-medium text-muted-foreground/60">
+                      {BRAND_NAME} Console
+                    </span>
+                    <div className="w-8" />
+                  </div>
+                  <SkyPanelPreview />
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="mt-8"
+              >
+                <Link to="/register">
+                  <Button size="lg" className="group gap-2">
+                    Open your console
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </Button>
+                </Link>
+              </motion.div>
+            </div>
           </div>
         </section>
 

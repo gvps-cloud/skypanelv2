@@ -466,6 +466,41 @@
   object-fit: cover;
 }
 
+/* --- Console Showcase --- */
+
+.home-console-showcase {
+  background:
+    radial-gradient(40rem 24rem at 75% 50%, hsl(var(--primary) / 0.06), transparent 70%),
+    hsl(var(--muted) / 0.08);
+}
+
+.dark .home-console-showcase {
+  background:
+    radial-gradient(40rem 24rem at 75% 50%, hsl(var(--primary) / 0.08), transparent 70%),
+    hsl(var(--muted) / 0.12);
+}
+
+.home-console-frame {
+  position: relative;
+  border-radius: 1rem;
+  border: 1px solid hsl(var(--border) / 0.5);
+  background: hsl(var(--card) / 0.6);
+  box-shadow:
+    0 0 0 1px hsl(var(--border) / 0.15),
+    0 8px 32px -8px hsl(var(--foreground) / 0.08),
+    0 24px 64px -16px hsl(var(--primary) / 0.08);
+  overflow: hidden;
+}
+
+.home-console-frame__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid hsl(var(--border) / 0.4);
+  background: hsl(var(--muted) / 0.25);
+}
+
 /* ================================================================================
    PARTICLE GLOBE STYLES
    ================================================================================ */
