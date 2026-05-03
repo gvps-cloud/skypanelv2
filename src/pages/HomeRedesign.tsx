@@ -22,6 +22,7 @@ import {
   MapPin,
   TrendingUp,
   Database,
+  PanelsTopLeft,
   type LucideIcon,
 } from "lucide-react";
 
@@ -59,7 +60,7 @@ interface PlatformCard {
   span?: string;
 }
 
-type CapabilityKey = "deploy" | "teams" | "protect";
+type CapabilityKey = "deploy" | "hosting" | "teams" | "protect";
 
 interface RegionData {
   id: string;
@@ -161,6 +162,24 @@ const capabilityTabs: Array<{
     ],
   },
   {
+    key: "hosting",
+    label: "Web Hosting",
+    icon: PanelsTopLeft,
+    title: "Enhance-backed website hosting",
+    description:
+      "Launch managed website hosting from the same console as your VPS, billing, support, and organization resources.",
+    bullets: [
+      "Order active hosting plans from the configured Enhance catalog",
+      "Use your own domain during checkout and manage the site after purchase",
+      "Fund a dedicated hosting wallet separately from VPS wallet spend",
+    ],
+    callouts: [
+      { label: "Catalog", value: "Live plans" },
+      { label: "Billing", value: "Hosting wallet" },
+      { label: "Control", value: "Panel SSO" },
+    ],
+  },
+  {
     key: "teams",
     label: "Teams & Orgs",
     icon: Users,
@@ -209,11 +228,18 @@ const platformCards: PlatformCard[] = [
   },
   {
     icon: TerminalSquare,
-    title: "Browser-Based SSH",
+    title: "Browser-Based SSH & Hosting Tools",
     description:
-      "Access your server's terminal directly from our dashboard. No need to manage local SSH keys or external clients.",
-    metric: "Instant root access",
+      "Access server terminals and hosting controls directly from the dashboard. Keep compute and website operations in one place.",
+    metric: "Unified console",
     span: "xl:col-span-2",
+  },
+  {
+    icon: PanelsTopLeft,
+    title: "Enhance Web Hosting",
+    description:
+      "Offer websites, WordPress, email, databases, SSL, backups, and runtime controls through the configured Enhance integration.",
+    metric: "Live hosting catalog",
   },
   {
     icon: Lock,
@@ -265,7 +291,12 @@ const faqs = [
     question: "What exactly is " + BRAND_NAME + "?",
     answer:
       BRAND_NAME +
-      " is a modern cloud hosting provider. We provide high-performance Virtual Private Servers (VPS) directly to developers, startups, and businesses to host their applications, websites, and services.",
+      " is a modern cloud hosting provider. We provide high-performance Virtual Private Servers (VPS) and, when enabled by the platform, Enhance-backed web hosting from the same dashboard.",
+  },
+  {
+    question: "Do you offer managed web hosting?",
+    answer:
+      "Yes, when the Enhance integration is enabled. Available hosting plans, features, and prices come from the platform hosting catalog rather than hardcoded marketing values.",
   },
   {
     question: "How does the billing work?",
@@ -358,11 +389,22 @@ const solutionCards = [
     icon: Users,
     title: "Startups & Agencies",
     detail:
-      "Create dedicated workspaces for different projects. Collaborate with your team securely.",
+      "Create dedicated workspaces for client projects, VPS resources, and website hosting subscriptions. Collaborate with your team securely.",
     bullets: [
       "Organization workspaces",
       "Role-based access",
       "Centralized billing",
+    ],
+  },
+  {
+    icon: PanelsTopLeft,
+    title: "Web Hosting Customers",
+    detail:
+      "Sell or manage websites with configured hosting plans, domain checkout, panel SSO, and support from one dashboard.",
+    bullets: [
+      "Configured plan catalog",
+      "Dedicated hosting wallet",
+      "Website control panel",
     ],
   },
   {
@@ -549,7 +591,7 @@ export default function HomeRedesign() {
           <div className="home-orb home-orb--3" aria-hidden />
           <div className="home-grid-mask absolute inset-0" aria-hidden />
 
-          <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-20 pt-24 sm:px-6 md:grid-cols-2 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-8 lg:pb-24 lg:pt-28">
+          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-20 pt-24 sm:px-6 md:grid-cols-[minmax(0,1fr)_minmax(360px,0.95fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(460px,0.95fr)] lg:gap-12 lg:px-8 lg:pb-24 lg:pt-28">
             <motion.div
               initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
@@ -575,8 +617,8 @@ export default function HomeRedesign() {
                 </h1>
 
                 <p className="max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-                  Deploy VPS instances in seconds with unified billing,
-                  real-time monitoring, and enterprise-grade security.
+                  Deploy VPS instances and managed web hosting with unified
+                  billing, real-time monitoring, and enterprise-grade security.
                 </p>
               </div>
 
@@ -598,6 +640,14 @@ export default function HomeRedesign() {
                   asChild
                 >
                   <Link to="/pricing">View Pricing</Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 px-7"
+                  asChild
+                >
+                  <Link to="/web-hosting">Explore Hosting</Link>
                 </Button>
               </div>
 
@@ -639,7 +689,7 @@ export default function HomeRedesign() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
-              className="relative hero-globe-container"
+              className="relative hero-globe-container md:-mr-8 lg:-mr-16"
             >
               <div className="home-globe-glow" aria-hidden />
               <ParticleGlobe
@@ -653,6 +703,58 @@ export default function HomeRedesign() {
                 region={selectedRegion}
                 onClose={() => setSelectedRegion(null)}
               />
+            </motion.div>
+          </div>
+        </section>
+
+        <section className="border-b border-border/40 bg-muted/10 py-14">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.55 }}
+              className="relative overflow-hidden rounded-3xl border border-primary/25 bg-card/80 p-4 shadow-2xl shadow-primary/10 backdrop-blur"
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--primary)/0.08)_1px,transparent_1px),linear-gradient(hsl(var(--primary)/0.08)_1px,transparent_1px)] bg-[size:28px_28px] opacity-35" />
+              <svg viewBox="0 0 980 460" className="relative z-10 h-auto w-full" role="img" aria-label="SkyPanel dashboard preview">
+                <rect x="20" y="20" width="940" height="420" rx="26" fill="hsl(var(--background))" stroke="hsl(var(--primary) / 0.35)" />
+                <rect x="42" y="48" width="164" height="364" rx="18" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
+                <circle cx="74" cy="82" r="10" fill="hsl(var(--primary))" />
+                <rect x="94" y="74" width="82" height="14" rx="7" fill="hsl(var(--primary) / 0.9)" />
+                {["Dashboard", "Compute", "Hosting", "Billing", "API Docs"].map((item, index) => (
+                  <g key={item} transform={`translate(66 ${130 + index * 46})`}>
+                    <rect width="112" height="26" rx="13" fill={index === 2 ? "hsl(var(--primary) / 0.18)" : "hsl(var(--muted))"} />
+                    <circle cx="14" cy="13" r="4" fill="hsl(var(--primary))" />
+                    <text x="28" y="17" fontSize="12" fill="hsl(var(--foreground))">{item}</text>
+                  </g>
+                ))}
+                <rect x="236" y="58" width="680" height="70" rx="18" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
+                <text x="266" y="91" fontSize="26" fontWeight="700" fill="hsl(var(--foreground))">Cloud Control Matrix</text>
+                <text x="266" y="112" fontSize="13" fill="hsl(var(--muted-foreground))">VPS, hosting, billing, support, and org resources in one panel</text>
+                {[
+                  ["Active VPS", "Live", 236],
+                  ["Hosting Sites", "Synced", 412],
+                  ["Wallet", "Funded", 588],
+                  ["Uptime", "Tracked", 764],
+                ].map(([label, value, x]) => (
+                  <g key={label} transform={`translate(${x} 158)`}>
+                    <rect width="152" height="92" rx="18" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.24)" />
+                    <text x="18" y="34" fontSize="13" fill="hsl(var(--muted-foreground))">{label}</text>
+                    <text x="18" y="68" fontSize="28" fontWeight="700" fill="hsl(var(--primary))">{value}</text>
+                  </g>
+                ))}
+                <rect x="236" y="284" width="422" height="110" rx="20" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
+                <polyline points="262,360 316,334 372,348 430,312 494,328 548,298 626,316" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" />
+                <text x="262" y="318" fontSize="14" fill="hsl(var(--muted-foreground))">Realtime resource activity</text>
+                <rect x="684" y="284" width="232" height="110" rx="20" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.22)" />
+                {["Enhance sync online", "Hosting wallet healthy", "API keys secured"].map((item, index) => (
+                  <g key={item} transform={`translate(706 ${314 + index * 27})`}>
+                    <circle cx="7" cy="7" r="5" fill="hsl(var(--primary))" />
+                    <text x="22" y="11" fontSize="13" fill="hsl(var(--foreground))">{item}</text>
+                  </g>
+                ))}
+              </svg>
             </motion.div>
           </div>
         </section>
@@ -767,8 +869,8 @@ export default function HomeRedesign() {
                   A complete toolkit for your infrastructure.
                 </h2>
                 <p className="mt-4 text-lg text-muted-foreground">
-                  Explore how our platform helps you deploy servers, manage your
-                  team, and keep your costs predictable.
+                  Explore how our platform helps you deploy servers, publish
+                  websites, manage your team, and keep your costs predictable.
                 </p>
               </div>
 

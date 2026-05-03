@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import RuntimeTab from "./RuntimeTab";
 
 const apiMocks = vi.hoisted(() => ({
@@ -22,22 +22,39 @@ vi.mock("sonner", () => ({
   },
 }));
 
-describe("RuntimeTab", () => {
-  beforeAll(() => {
-    if (!HTMLElement.prototype.hasPointerCapture) {
-      HTMLElement.prototype.hasPointerCapture = vi.fn();
-    }
-    if (!HTMLElement.prototype.setPointerCapture) {
-      HTMLElement.prototype.setPointerCapture = vi.fn();
-    }
-    if (!HTMLElement.prototype.releasePointerCapture) {
-      HTMLElement.prototype.releasePointerCapture = vi.fn();
-    }
-    if (!HTMLElement.prototype.scrollIntoView) {
-      HTMLElement.prototype.scrollIntoView = vi.fn();
-    }
-  });
+type SelectProps = {
+  value?: string;
+  onValueChange?: (...args: [string]) => void;
+  children?: React.ReactNode;
+};
 
+type SelectItemProps = {
+  value: string;
+  children?: React.ReactNode;
+};
+
+type SelectValueProps = {
+  placeholder?: React.ReactNode;
+};
+
+vi.mock("@/components/ui/select", () => ({
+  Select: ({ value, onValueChange, children }: SelectProps) => (
+    <select
+      value={value}
+      onChange={(event) => {
+        onValueChange?.(event.target.value);
+      }}
+    >
+      {children}
+    </select>
+  ),
+  SelectContent: ({ children }: Pick<SelectProps, "children">) => <>{children}</>,
+  SelectItem: ({ value, children }: SelectItemProps) => <option value={value}>{children}</option>,
+  SelectTrigger: ({ children }: Pick<SelectProps, "children">) => <>{children}</>,
+  SelectValue: ({ placeholder }: SelectValueProps) => <>{placeholder}</>,
+}));
+
+describe("RuntimeTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     apiMocks.get.mockImplementation(async (path: string) => {
@@ -60,8 +77,7 @@ describe("RuntimeTab", () => {
 
     const dialog = screen.getByRole("dialog");
     await user.type(within(dialog).getByLabelText("Command"), "node server.js");
-    await user.click(within(dialog).getAllByRole("combobox")[1]);
-    await user.click(await screen.findByRole("option", { name: "20.11.1" }));
+    await user.selectOptions(within(dialog).getAllByRole("combobox")[1], "20.11.1");
     await user.type(within(dialog).getByLabelText("Working Directory (optional)"), "/app");
     await user.type(within(dialog).getByLabelText("Proxy Path"), "/api");
     await user.type(within(dialog).getByLabelText("Proxy Port"), "3000");

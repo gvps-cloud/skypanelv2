@@ -4,9 +4,7 @@ import {
   Activity,
   Building2,
   CreditCard,
-  BookOpen,
   FileText,
-  Key,
   LayoutDashboard,
   LifeBuoy,
   Palette,
@@ -16,7 +14,6 @@ import {
   Tags,
   Users,
   Globe,
-  Shield,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -63,8 +60,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const isSshKeysActive = pathname.startsWith("/ssh-keys");
   const isPersonalNotesActive = pathname.startsWith("/notes/personal");
   const isOrganizationNotesActive = pathname.startsWith("/notes/organizations");
-  const isApiDocsActive = pathname.startsWith("/api-docs");
-  const isDocsActive = pathname.startsWith("/docs");
+  const isNotesActive = pathname.startsWith("/notes");
   const isHostingActive = pathname.startsWith("/hosting");
   const isAdminRoute = pathname.startsWith("/admin") && !authIsImpersonating;
 
@@ -226,6 +222,11 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               url: "/vps",
               isActive: isVpsActive,
             },
+            {
+              title: "SSH Keys",
+              url: "/ssh-keys",
+              isActive: isSshKeysActive,
+            },
           ],
         },
         ...(hostingStatus?.enabled
@@ -245,22 +246,22 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           isActive: pathname.startsWith("/organizations"),
         },
         {
-          title: "Personal Notes",
+          title: "Notes",
           url: "/notes/personal",
           icon: FileText,
-          isActive: isPersonalNotesActive,
-        },
-        {
-          title: "Organization Notes",
-          url: "/notes/organizations",
-          icon: Users,
-          isActive: isOrganizationNotesActive,
-        },
-        {
-          title: "SSH Keys",
-          url: "/ssh-keys",
-          icon: Key,
-          isActive: isSshKeysActive,
+          isActive: isNotesActive,
+          items: [
+            {
+              title: "Personal Notes",
+              url: "/notes/personal",
+              isActive: isPersonalNotesActive,
+            },
+            {
+              title: "Organization Notes",
+              url: "/notes/organizations",
+              isActive: isOrganizationNotesActive,
+            },
+          ],
         },
         {
           title: "Activity",
@@ -274,18 +275,6 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           icon: CreditCard,
           isActive: isBillingActive,
         },
-        {
-          title: "API Docs",
-          url: "/api-docs",
-          icon: BookOpen,
-          isActive: isApiDocsActive,
-        },
-        {
-          title: "Documentation",
-          url: "/docs",
-          icon: FileText,
-          isActive: isDocsActive,
-        },
       ];
 
       return userNavItems;
@@ -297,10 +286,9 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       isActivityActive,
       isAdminRoute,
       isBillingActive,
-      isApiDocsActive,
       isDashboardActive,
-      isDocsActive,
       isHostingActive,
+      isNotesActive,
       isOrganizationNotesActive,
       isPersonalNotesActive,
       isSshKeysActive,

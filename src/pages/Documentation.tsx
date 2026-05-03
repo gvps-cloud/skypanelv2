@@ -143,6 +143,7 @@ const categoryIconMap: Record<
   CreditCard,
   Server,
   Code,
+  Globe,
 };
 
 function getCategoryIcon(iconName: string | null) {

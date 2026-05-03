@@ -61,6 +61,7 @@ describe('HostingBillingService', () => {
       mockTransaction.mockImplementation(async (callback) => {
         const client = {
           query: vi.fn()
+            .mockResolvedValueOnce({ rows: [] }) // ensure wallet
             .mockResolvedValueOnce({ rows: [{ id: 'wallet-1', balance: 100 }] }) // wallet lock
             .mockResolvedValueOnce({ rows: [{ price_monthly: '10.00', name: 'Basic' }] }) // plan
             .mockResolvedValueOnce({ rows: [] }) // update wallet
@@ -101,6 +102,7 @@ describe('HostingBillingService', () => {
       mockTransaction.mockImplementation(async (callback) => {
         const client = {
           query: vi.fn()
+            .mockResolvedValueOnce({ rows: [] }) // ensure wallet
             .mockResolvedValueOnce({ rows: [{ id: 'wallet-1', balance: 5 }] }) // wallet lock
             .mockResolvedValueOnce({ rows: [{ price_monthly: '10.00', name: 'Basic' }] }), // plan
         };
@@ -175,6 +177,7 @@ describe('HostingBillingService', () => {
       mockTransaction.mockImplementationOnce(async (callback) => {
         const client = {
           query: vi.fn()
+            .mockResolvedValueOnce({ rows: [] }) // ensure wallet
             .mockResolvedValueOnce({ rows: [] }), // wallet not found
         };
         return callback(client);
@@ -184,6 +187,7 @@ describe('HostingBillingService', () => {
       mockTransaction.mockImplementationOnce(async (callback) => {
         const client = {
           query: vi.fn()
+            .mockResolvedValueOnce({ rows: [] })
             .mockResolvedValueOnce({ rows: [{ id: 'wallet-2', balance: 100 }] })
             .mockResolvedValueOnce({ rows: [{ price_monthly: '10.00', name: 'Basic' }] })
             .mockResolvedValueOnce({ rows: [] })

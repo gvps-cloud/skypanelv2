@@ -22,6 +22,7 @@ interface PayPalCheckoutDialogProps {
   open: boolean;
   amount: number | null;
   description: string;
+  walletType?: 'main' | 'hosting';
   onOpenChange: (open: boolean) => void;
   onPaymentSuccess: (data?: Record<string, unknown>) => Promise<void> | void;
   onPaymentCancel?: () => void;
@@ -32,6 +33,7 @@ export const PayPalCheckoutDialog: React.FC<PayPalCheckoutDialogProps> = ({
   open,
   amount,
   description,
+  walletType = 'main',
   onOpenChange,
   onPaymentSuccess,
   onPaymentCancel,
@@ -127,6 +129,8 @@ export const PayPalCheckoutDialog: React.FC<PayPalCheckoutDialogProps> = ({
     }
   }, [amount, config?.currency]);
 
+  const walletLabel = walletType === 'hosting' ? 'hosting wallet' : 'main wallet';
+
   const handleDialogOpenChange = React.useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
@@ -194,7 +198,7 @@ export const PayPalCheckoutDialog: React.FC<PayPalCheckoutDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Complete PayPal Checkout</DialogTitle>
           <DialogDescription>
-            Confirm your payment of {formattedAmount}. Funds are applied to your wallet as soon as PayPal confirms
+            Confirm your payment of {formattedAmount}. Funds are applied to your {walletLabel} as soon as PayPal confirms
             the transaction.
           </DialogDescription>
         </DialogHeader>
@@ -228,7 +232,7 @@ export const PayPalCheckoutDialog: React.FC<PayPalCheckoutDialogProps> = ({
                   fundingSource={FUNDING.PAYPAL}
                   style={{ layout: 'vertical', label: 'pay', tagline: false, shape: 'rect' }}
                   disabled={isButtonDisabled}
-                  forceReRender={[amount ?? 0, config.currency]}
+                  forceReRender={[amount ?? 0, config.currency, walletType]}
                   createOrder={async () => {
                     if (amount === null || amount <= 0) {
                       const message = 'Enter a valid amount before continuing.';
@@ -245,6 +249,7 @@ export const PayPalCheckoutDialog: React.FC<PayPalCheckoutDialogProps> = ({
                         amount,
                         currency: config.currency,
                         description,
+                        walletType,
                       });
 
                       if (result.success && result.paymentId) {

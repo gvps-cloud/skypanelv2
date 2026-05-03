@@ -96,6 +96,10 @@ router.post(
       .withMessage(
         "Description is required and must be less than 255 characters",
       ),
+    body("walletType")
+      .optional()
+      .isIn(["main", "hosting"])
+      .withMessage("Wallet type must be main or hosting"),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -109,6 +113,7 @@ router.post(
       }
 
       const { amount, currency, description } = req.body;
+      const walletType = req.body.walletType === "hosting" ? "hosting" : "main";
       const amountValue = safeParseNumber(amount);
       if (amountValue === null) {
         return res.status(400).json({
@@ -145,6 +150,7 @@ router.post(
         organizationId,
         userId,
         clientBaseUrl,
+        walletType,
       });
 
       if (result.success) {
@@ -192,9 +198,8 @@ router.post(
       const userId = authReq.user?.id;
       const organizationId = authReq.user?.organizationId ?? null;
 
-      // Security: Verify order ownership before capture
       const orderCheck = await dbQuery(
-        "SELECT organization_id, status FROM payment_transactions WHERE id = $1",
+        "SELECT organization_id, status, metadata FROM payment_transactions WHERE provider_transaction_id = $1 OR id::text = $1 ORDER BY created_at DESC LIMIT 1",
         [orderId]
       );
 
@@ -238,6 +243,7 @@ router.post(
                 metadata: {
                   order_id: orderId,
                   provider: "paypal",
+                  wallet_type: order.metadata?.wallet_type ?? "main",
                 },
               },
               req,
@@ -330,6 +336,117 @@ router.get(
       });
     } catch (error) {
       console.error("Get wallet balance error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      });
+    }
+  },
+);
+
+router.get(
+  "/wallet/hosting/balance",
+  async (req: Request, res: Response) => {
+    try {
+      const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
+      const hasBilling = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        'billing_view'
+      );
+
+      if (!hasBilling) {
+        return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+      }
+
+      const balance = await PayPalService.getHostingWalletBalance(organizationId);
+
+      res.json({
+        success: true,
+        balance: balance ?? 0,
+      });
+    } catch (error) {
+      console.error("Get hosting wallet balance error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      });
+    }
+  },
+);
+
+router.post(
+  "/wallet/hosting/fund",
+  billingMutationRateLimiter,
+  [
+    body("amount")
+      .isFloat({ min: 0.01 })
+      .withMessage("Amount must be a positive number"),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: "Validation failed",
+          details: errors.array(),
+        });
+      }
+
+      const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
+      const amount = safeParseNumber(req.body.amount);
+      if (amount === null || amount <= 0) {
+        return res.status(400).json({ success: false, error: "Invalid transfer amount" });
+      }
+
+      const hasBilling = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        'billing_manage'
+      );
+
+      if (!hasBilling) {
+        return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+      }
+
+      const success = await PayPalService.transferToHostingWallet(
+        organizationId,
+        amount,
+        userId
+      );
+
+      if (!success) {
+        return res.status(400).json({
+          success: false,
+          error: "Failed to fund hosting wallet. Check your main wallet balance.",
+        });
+      }
+
+      try {
+        await logActivity(
+          {
+            userId,
+            organizationId,
+            eventType: "billing.hosting_wallet.funded",
+            entityType: "hosting_wallet",
+            entityId: organizationId,
+            message: "Hosting wallet was funded from the main wallet.",
+            status: "success",
+            metadata: { amount },
+          },
+          req,
+        );
+      } catch (activityError) {
+        console.warn("Failed to log hosting wallet funding activity:", activityError);
+      }
+
+      res.json({
+        success: true,
+        message: "Hosting wallet funded successfully",
+      });
+    } catch (error) {
+      console.error("Fund hosting wallet error:", error);
       res.status(500).json({
         success: false,
         error: "Internal server error",

@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Plus,
   ArrowUpRight,
+  Globe,
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -65,13 +66,89 @@ interface VPSStats {
   metrics?: VpsMetrics;
 }
 
+
+interface VpsListResponse {
+  instances?: Array<{
+    id: string;
+    label?: string | null;
+    status?: VPSStats["status"] | null;
+    plan_name?: string | null;
+    configuration?: {
+      type?: string | null;
+      region?: string | null;
+    } | null;
+    ip_address?: string | null;
+  }>;
+}
+
+interface VpsDetailResponse {
+  instance?: {
+    metrics?: VpsMetrics | null;
+    plan?: {
+      specs?: {
+        vcpus?: number | null;
+      } | null;
+    } | null;
+  } | null;
+}
+
+interface WalletBalanceResponse {
+  balance?: number | null;
+}
+
+interface HostingStatusResponse {
+  enabled?: boolean;
+}
+
+interface PaymentsHistoryResponse {
+  payments?: Array<{
+    amount?: number | null;
+    created_at?: string | null;
+  }>;
+}
+
+interface HostingServicesResponse {
+  services?: Array<{
+    id: string;
+    domain?: string | null;
+    status?: string | null;
+    plan_name?: string | null;
+    plan?: {
+      name?: string | null;
+    } | null;
+    next_billing_at?: string | null;
+  }>;
+}
+
+interface ActivityResponse {
+  activities?: Array<{
+    id: string;
+    type?: ActivityItem["type"] | null;
+    entity_type?: ActivityItem["type"] | null;
+    message?: string | null;
+    event_type?: string | null;
+    timestamp?: string | null;
+    created_at?: string | null;
+    status?: ActivityItem["status"] | null;
+  }>;
+}
+
 interface BillingStats {
   walletBalance: number;
+  hostingWalletBalance: number;
   monthlySpend: number;
   lastPayment: {
     amount: number;
     date: string;
   };
+}
+
+interface HostingServiceSummary {
+  id: string;
+  domain: string | null;
+  status: string;
+  planName: string | null;
+  nextBillingAt: string | null;
 }
 
 interface ActivityItem {
@@ -82,9 +159,70 @@ interface ActivityItem {
   status: "success" | "warning" | "error" | "info";
 }
 
+
+const mapVpsInstance = async (instance: NonNullable<VpsListResponse["instances"]>[number]): Promise<VPSStats> => {
+  let metrics: VpsMetrics | undefined;
+  let cpu = 0;
+  let cpuCount = 0;
+
+  try {
+    const detailData = await apiClient.get<VpsDetailResponse>(`/vps/${instance.id}`);
+    const metricsData = detailData.instance?.metrics;
+
+    metrics = metricsData ? {
+      cpu: metricsData.cpu ?? null,
+      network: {
+        inbound: metricsData.network?.inbound ?? null,
+        outbound: metricsData.network?.outbound ?? null,
+      },
+      io: {
+        read: metricsData.io?.read ?? null,
+        swap: metricsData.io?.swap ?? null,
+      },
+    } : undefined;
+
+    cpu = metricsData?.cpu?.summary?.last ?? 0;
+    cpuCount = detailData.instance?.plan?.specs?.vcpus ?? 0;
+  } catch (error) {
+    console.warn('Failed to fetch metrics for VPS', { instanceId: instance.id }, error);
+  }
+
+  return {
+    id: instance.id,
+    name: instance.label ?? "instance",
+    status: instance.status ?? "provisioning",
+    plan: instance.plan_name ?? instance.configuration?.type ?? "",
+    location: instance.configuration?.region ?? "",
+    cpu: Math.round(cpu * 100) / 100,
+    cpuCount,
+    memory: null,
+    storage: 0,
+    ip: instance.ip_address ?? "",
+    metrics,
+  } satisfies VPSStats;
+};
+
+const mapHostingService = (service: NonNullable<HostingServicesResponse["services"]>[number]): HostingServiceSummary => ({
+  id: service.id,
+  domain: service.domain ?? null,
+  status: service.status ?? "unknown",
+  planName: service.plan_name ?? service.plan?.name ?? null,
+  nextBillingAt: service.next_billing_at ?? null,
+});
+
+const mapActivity = (activity: NonNullable<ActivityResponse["activities"]>[number]): ActivityItem => ({
+  id: activity.id,
+  type: activity.type ?? activity.entity_type ?? "activity",
+  message: activity.message ?? `${activity.event_type}`,
+  timestamp: activity.timestamp ?? activity.created_at ?? "",
+  status: activity.status ?? "info",
+});
+
 const Dashboard: React.FC = () => {
   const [vpsInstances, setVpsInstances] = useState<VPSStats[]>([]);
   const [billing, setBilling] = useState<BillingStats | null>(null);
+  const [hostingEnabled, setHostingEnabled] = useState(false);
+  const [hostingServices, setHostingServices] = useState<HostingServiceSummary[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { token } = useAuth();
@@ -94,69 +232,24 @@ const Dashboard: React.FC = () => {
     if (!token) return;
     setLoading(true);
     try {
-      const [vpsData, walletData, paymentsData] = await Promise.all([
-        apiClient.get("/vps"),
-        apiClient.get("/payments/wallet/balance"),
-        apiClient.get("/payments/history?limit=1&status=completed"),
+      const [vpsData, walletData, hostingWalletData, hostingStatusData, paymentsData] = await Promise.all([
+        apiClient.get<VpsListResponse>("/vps"),
+        apiClient.get<WalletBalanceResponse>("/payments/wallet/balance"),
+        apiClient.get<WalletBalanceResponse>("/payments/wallet/hosting/balance").catch(() => ({ balance: 0 })),
+        apiClient.get<HostingStatusResponse>("/hosting/status").catch(() => ({ enabled: false })),
+        apiClient.get<PaymentsHistoryResponse>("/payments/history?limit=1&status=completed"),
       ]);
 
-      const instances: VPSStats[] = await Promise.all(
-        (vpsData.instances || []).map(async (instance: any) => {
-          let metrics: VpsMetrics | undefined;
-          let cpu = 0;
-          let cpuCount = 0;
-
-          try {
-            const detailData = await apiClient.get(`/vps/${instance.id}`);
-            
-            // Metrics are nested under instance
-            const metricsData = detailData.instance?.metrics;
-            
-            metrics = metricsData ? {
-              cpu: metricsData.cpu ?? null,
-              network: {
-                inbound: metricsData.network?.inbound ?? null,
-                outbound: metricsData.network?.outbound ?? null,
-              },
-              io: {
-                read: metricsData.io?.read ?? null,
-                swap: metricsData.io?.swap ?? null,
-              },
-            } : undefined;
-            
-            cpu = metricsData?.cpu?.summary?.last || 0;
-            cpuCount = detailData.instance?.plan?.specs?.vcpus || 0;
-          } catch (error) {
-            console.warn(
-              'Failed to fetch metrics for VPS',
-              { instanceId: instance.id },
-              error,
-            );
-          }
-
-          return {
-            id: instance.id,
-            name: instance.label || "instance",
-            status: instance.status || "provisioning",
-            plan: instance.plan_name || instance.configuration?.type || "",
-            location: instance.configuration?.region || "",
-            cpu: Math.round(cpu * 100) / 100,
-            cpuCount,
-            memory: null,
-            storage: 0,
-            ip: instance.ip_address || "",
-            metrics,
-          } satisfies VPSStats;
-        }),
-      );
+      const instances: VPSStats[] = await Promise.all((vpsData.instances ?? []).map(mapVpsInstance));
 
       setVpsInstances(instances);
 
-      const lastPaymentItem = (paymentsData.payments || [])[0];
+      const lastPaymentItem = (paymentsData.payments ?? [])[0];
       const monthlySpend = await getMonthlySpendWithFallback();
 
       setBilling({
         walletBalance: walletData.balance ?? 0,
+        hostingWalletBalance: hostingWalletData.balance ?? 0,
         monthlySpend,
         lastPayment: {
           amount: lastPaymentItem?.amount ?? 0,
@@ -164,17 +257,26 @@ const Dashboard: React.FC = () => {
         },
       });
 
+      const isHostingEnabled = hostingStatusData.enabled === true;
+      setHostingEnabled(isHostingEnabled);
+
+      if (isHostingEnabled) {
+        try {
+          const hostingData = await apiClient.get<HostingServicesResponse>("/hosting/services");
+          const services = hostingData.services ?? [];
+          setHostingServices(services.map(mapHostingService));
+        } catch (error) {
+          console.warn("Failed to load hosting services", error);
+          setHostingServices([]);
+        }
+      } else {
+        setHostingServices([]);
+      }
+
       try {
-        const actData = await apiClient.get("/activity/recent?limit=10");
-        const mapped: ActivityItem[] = (actData.activities || []).map(
-          (activity: any) => ({
-            id: activity.id,
-            type: activity.type || activity.entity_type || "activity",
-            message: activity.message || `${activity.event_type}`,
-            timestamp: activity.timestamp || activity.created_at,
-            status: activity.status || "info",
-          }),
-        );
+        const actData = await apiClient.get<ActivityResponse>("/activity/recent?limit=10");
+        const activities = actData.activities ?? [];
+        const mapped: ActivityItem[] = activities.map(mapActivity);
         setRecentActivity(mapped);
       } catch (error) {
         console.warn("Failed to load recent activity", error);
@@ -193,6 +295,13 @@ const Dashboard: React.FC = () => {
 
   const quickActions = useMemo(() => {
     const actions = [
+      {
+        title: "Create Hosting",
+        description: "Launch an Enhance web hosting subscription.",
+        to: "/hosting/store",
+        icon: <Globe className="h-4 w-4" />,
+        hidden: !hostingEnabled,
+      },
       {
         title: "Launch a VPS",
         description: "Deploy a fresh instance in under a minute.",
@@ -213,8 +322,8 @@ const Dashboard: React.FC = () => {
       },
     ];
 
-    return actions;
-  }, []);
+    return actions.filter((action) => !action.hidden);
+  }, [hostingEnabled]);
 
   const heroStats = useMemo(() => {
     if (!vpsInstances.length) {
@@ -274,6 +383,8 @@ const Dashboard: React.FC = () => {
   const walletBalance = billing?.walletBalance ?? 0;
   const monthlySpend = billing?.monthlySpend ?? 0;
   const lastPayment = billing?.lastPayment;
+  const hostingWalletBalance = billing?.hostingWalletBalance ?? 0;
+  const activeHostingServices = hostingServices.filter((service) => service.status === "active").length;
 
   
   if (loading) {
@@ -310,6 +421,12 @@ const Dashboard: React.FC = () => {
               <div className="h-2 w-2 rounded-full bg-primary" />
               {heroStats.running} vps active
             </Badge>
+            {hostingEnabled && (
+              <Badge variant="outline" className="gap-2 px-3 py-1.5">
+                <Globe className="h-3 w-3" />
+                {activeHostingServices} hosting active
+              </Badge>
+            )}
             {heroStats.flagged > 0 && (
               <Badge variant="secondary" className="gap-2 px-3 py-1.5">
                 <AlertTriangle className="h-3 w-3" />
@@ -361,6 +478,119 @@ const Dashboard: React.FC = () => {
             ))}
           </CardContent>
         </Card>
+
+        {hostingEnabled && (
+          <Card className="h-full">
+            <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+              <div className="space-y-1">
+                <CardTitle>Enhance Hosting</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Website subscriptions, hosting wallet, and billing readiness
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/billing">Fund wallet</Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link to="/hosting/store">
+                    Create Hosting
+                    <ArrowUpRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-lg border bg-card p-4">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Globe className="h-4 w-4" />
+                    </div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Active Hosting
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold">{activeHostingServices}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {hostingServices.length} total subscription{hostingServices.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-card p-4">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Wallet className="h-4 w-4" />
+                    </div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Hosting Wallet
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold">
+                      {formatBillingAmount(hostingWalletBalance)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Reserved for monthly hosting charges
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-card p-4">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <ShieldCheck className="h-4 w-4" />
+                    </div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Enhance Status
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold">Enabled</p>
+                    <p className="text-xs text-muted-foreground">
+                      Hosting routes and checkout are available
+                    </p>
+                  </div>
+                </div>
+
+                {hostingServices.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
+                    <div className="rounded-full bg-muted p-4">
+                      <Globe className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="mt-6 text-base font-semibold">
+                      No hosting subscriptions yet
+                    </h3>
+                    <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                      Create your first Enhance hosting subscription to manage websites from the dashboard.
+                    </p>
+                    <Button className="mt-6" asChild>
+                      <Link to="/hosting/store">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Hosting
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {hostingServices.slice(0, 4).map((service) => (
+                      <Link
+                        key={service.id}
+                        to={`/hosting/${service.id}`}
+                        className="group flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold group-hover:text-primary">
+                              {service.domain ?? "Hosting service"}
+                            </h4>
+                            <Badge variant={service.status === "active" ? "default" : "secondary"}>
+                              {service.status}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {service.planName ?? "Hosting plan"} · next billing {formatTimestamp(service.nextBillingAt ?? undefined)}
+                          </p>
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Services & VPS Fleet */}
         <div className="grid gap-6 lg:grid-cols-1">

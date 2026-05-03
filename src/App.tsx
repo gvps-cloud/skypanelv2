@@ -4,7 +4,6 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import BackToTopButton from "./components/BackToTopButton";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -58,6 +57,7 @@ import Regions from "./pages/Regions";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Pricing from "./pages/Pricing";
+import HostingMarketing from "./pages/HostingMarketing";
 import SSHKeys from "./pages/SSHKeys";
 import Documentation from "./pages/Documentation";
 import PersonalNotes from "./pages/PersonalNotes";
@@ -123,24 +123,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       <AppLayout>{children}</AppLayout>
     </ImpersonationWrapper>
   );
-}
-
-function StandaloneProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <ImpersonationWrapper>{children}</ImpersonationWrapper>;
 }
 
 // Admin Route Component (requires authenticated admin role)
@@ -468,6 +450,8 @@ function AppRoutes() {
           }
         />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/web-hosting" element={<HostingMarketing />} />
+        <Route path="/hosting-web" element={<Navigate to="/web-hosting" replace />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/docs" element={<Documentation />} />
         <Route path="/docs/:categorySlug" element={<Documentation />} />
@@ -497,7 +481,6 @@ export default function App() {
             <Router>
               <AppRoutes />
               <Toaster position="bottom-right" richColors closeButton />
-              <BackToTopButton />
             </Router>
           </ImpersonationProvider>
         </AuthProvider>

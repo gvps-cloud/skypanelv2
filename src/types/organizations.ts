@@ -37,6 +37,7 @@ export interface OrganizationStats {
   vps_count: number;
   ticket_count: number;
   ssh_key_count: number;
+  hosting_count: number;
   member_count: number;
 }
 
@@ -84,6 +85,17 @@ export interface OrganizationSSHKey {
   } | null;
 }
 
+export interface OrganizationHostingSubscription {
+  id: string;
+  domain: string | null;
+  status: string;
+  plan_name: string | null;
+  price_monthly: string | number | null;
+  next_billing_at: string | null;
+  last_billed_at: string | null;
+  created_at: string;
+}
+
 export interface AdminSSHKey extends OrganizationSSHKey {
   organization_id: string;
   organization_name: string;
@@ -96,6 +108,7 @@ export interface OrganizationResources {
   vps_instances: OrganizationVPS[];
   ssh_keys: OrganizationSSHKey[];
   tickets: OrganizationTicket[];
+  hosting_subscriptions: OrganizationHostingSubscription[];
   permissions: {
     vps_view: boolean;
     vps_create: boolean;
@@ -112,6 +125,8 @@ export interface OrganizationResources {
     billing_manage: boolean;
     egress_view: boolean;
     egress_manage: boolean;
+    hosting_view: boolean;
+    hosting_manage: boolean;
     members_manage: boolean;
     settings_manage: boolean;
   };

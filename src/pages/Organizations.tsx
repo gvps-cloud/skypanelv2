@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   RefreshCw,
   Database,
+  Globe2,
   ShoppingCart,
   AlertTriangle,
 } from "lucide-react";
@@ -330,8 +331,20 @@ const Organizations: React.FC = () => {
     );
   };
 
+  const handleOpenOrganizationHosting = async (orgId: string, subscriptionId: string) => {
+    await handleOpenOrganizationResource(
+      orgId,
+      `/hosting/${subscriptionId}`,
+      "hosting subscription",
+    );
+  };
+
   const handleCreateOrganizationVPS = async (orgId: string) => {
     await handleOpenOrganizationResource(orgId, "/vps?create=1", "VPS creation");
+  };
+
+  const handleCreateOrganizationHosting = async (orgId: string) => {
+    await handleOpenOrganizationResource(orgId, "/hosting/store", "hosting creation");
   };
 
   const handleCreateOrganizationTicket = async (orgId: string) => {
@@ -450,6 +463,10 @@ const Organizations: React.FC = () => {
         (sum, org) => sum + org.stats.ssh_key_count,
         0,
       ),
+      hosting: organizations.reduce(
+        (sum, org) => sum + (org.stats.hosting_count || 0),
+        0,
+      ),
       members: organizations.reduce(
         (sum, org) => sum + org.stats.member_count,
         0,
@@ -527,6 +544,12 @@ const Organizations: React.FC = () => {
                 value: totalStats.sshKeys,
                 description: "Shared across organizations",
                 icon: <Key className="h-6 w-6" />,
+              },
+              {
+                label: "Web Hosting",
+                value: totalStats.hosting,
+                description: "Enhance subscriptions",
+                icon: <Globe2 className="h-6 w-6" />,
               },
               {
                 label: "Team Members",
@@ -769,6 +792,10 @@ const Organizations: React.FC = () => {
                                 <Key className="h-3 w-3" />
                                 {resourceGroup.ssh_keys.length} SSH keys
                               </div>
+                              <div className="flex items-center gap-1">
+                                <Globe2 className="h-3 w-3" />
+                                {resourceGroup.hosting_subscriptions.length} hosting
+                              </div>
                             </div>
                           </div>
                           <Link
@@ -1005,9 +1032,85 @@ const Organizations: React.FC = () => {
                             </div>
                           )}
 
+                        {resourceGroup.permissions.hosting_view &&
+                          resourceGroup.hosting_subscriptions.length > 0 && (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-semibold">
+                                  Web Hosting
+                                </h4>
+                                {resourceGroup.permissions.hosting_manage && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleCreateOrganizationHosting(
+                                        resourceGroup.organization_id,
+                                      )
+                                    }
+                                  >
+                                    {user?.organizationId ===
+                                    resourceGroup.organization_id
+                                      ? "Create Hosting"
+                                      : "Switch & Create"}
+                                  </Button>
+                                )}
+                              </div>
+                              <div
+                                className={`grid gap-3 ${
+                                  resourceViewMode === "grid"
+                                    ? "sm:grid-cols-2 lg:grid-cols-3"
+                                    : "grid-cols-1"
+                                }`}
+                              >
+                                {resourceGroup.hosting_subscriptions.map((subscription) => (
+                                  <Card
+                                    key={subscription.id}
+                                    className="group cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+                                    onClick={() =>
+                                      handleOpenOrganizationHosting(
+                                        resourceGroup.organization_id,
+                                        subscription.id,
+                                      )
+                                    }
+                                  >
+                                    <CardContent className="p-4">
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="flex-1 space-y-2">
+                                          <div className="flex items-center gap-2">
+                                            <div className="rounded-md bg-primary/10 p-2">
+                                              <Globe2 className="h-4 w-4 text-primary" />
+                                            </div>
+                                            <h5 className="font-semibold text-sm truncate">
+                                              {subscription.domain || "Pending domain"}
+                                            </h5>
+                                            <Badge
+                                              variant={getStatusBadgeVariant(subscription.status)}
+                                              className="text-xs"
+                                            >
+                                              {subscription.status}
+                                            </Badge>
+                                          </div>
+                                          <p className="text-xs text-muted-foreground">
+                                            {subscription.plan_name || "Hosting plan"} · Next billing{" "}
+                                            {formatTimestamp(subscription.next_billing_at || undefined)}
+                                          </p>
+                                        </div>
+                                        <div className="text-muted-foreground group-hover:text-primary transition-colors">
+                                          <ChevronRight className="h-4 w-4" />
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                         {resourceGroup.vps_instances.length === 0 &&
                           resourceGroup.tickets.length === 0 &&
-                          resourceGroup.ssh_keys.length === 0 && (
+                          resourceGroup.ssh_keys.length === 0 &&
+                          resourceGroup.hosting_subscriptions.length === 0 && (
                             <div className="text-center py-8 text-sm text-muted-foreground">
                               No resources available for this organization
                             </div>
@@ -1067,6 +1170,10 @@ const Organizations: React.FC = () => {
                   <Badge variant="outline">
                     <Key className="mr-1 h-3 w-3" />
                     {selectedOrganization.stats.ssh_key_count} SSH keys
+                  </Badge>
+                  <Badge variant="outline">
+                    <Globe2 className="mr-1 h-3 w-3" />
+                    {selectedOrganization.stats.hosting_count || 0} hosting
                   </Badge>
                   {egressOverview && (
                     <>
@@ -1132,6 +1239,7 @@ const Organizations: React.FC = () => {
                   getProviderSyncedLabel={getProviderSyncedLabel}
                   getStatusBadgeVariant={getStatusBadgeVariant}
                   onCreateVps={() => handleCreateOrganizationVPS(selectedOrganization.id)}
+                  onCreateHosting={() => handleCreateOrganizationHosting(selectedOrganization.id)}
                   onOpenSshKeys={(keyId) =>
                     handleOpenOrganizationSSHKeys(selectedOrganization.id, keyId)
                   }
@@ -1140,6 +1248,9 @@ const Organizations: React.FC = () => {
                   }
                   onOpenVps={(vpsId) =>
                     handleOpenOrganizationVPS(selectedOrganization.id, vpsId)
+                  }
+                  onOpenHosting={(subscriptionId) =>
+                    handleOpenOrganizationHosting(selectedOrganization.id, subscriptionId)
                   }
                   onOpenTicket={(ticketId) =>
                     handleOpenOrganizationTicket(selectedOrganization.id, ticketId)

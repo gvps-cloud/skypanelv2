@@ -138,9 +138,10 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
     const allVps = new Map();
     const allTickets = new Map();
     const allSshKeys = new Map();
+    const allHostingSubscriptions = new Map();
 
     if (orgIds.length > 0) {
-      const [membersResult, vpsResult, ticketResult, sshKeyResult] = await Promise.all([
+      const [membersResult, vpsResult, ticketResult, sshKeyResult, hostingResult] = await Promise.all([
         query(
           `SELECT om.organization_id, om.role_id, r.permissions, om.role as legacy_role
            FROM organization_members om
@@ -185,6 +186,19 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
            ) t WHERE rn <= 5
            ORDER BY organization_id, rn ASC`,
           [orgIds]
+        ),
+        query(
+          `SELECT * FROM (
+             SELECT hs.id, hs.organization_id, hs.domain, hs.status, hs.next_billing_at,
+                    hs.last_billed_at, hs.created_at, hp.name AS plan_name,
+                    hp.price_monthly,
+                    ROW_NUMBER() OVER(PARTITION BY hs.organization_id ORDER BY hs.created_at DESC) as rn
+             FROM hosting_subscriptions hs
+             LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
+             WHERE hs.organization_id = ANY($1)
+           ) t WHERE rn <= 5
+           ORDER BY organization_id, rn ASC`,
+          [orgIds]
         )
       ]);
 
@@ -206,6 +220,20 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
         const { rn, organization_id, ...sshData } = s;
         arr.push(sshData);
         allSshKeys.set(s.organization_id, arr);
+      });
+      hostingResult.rows.forEach(h => {
+        const arr = allHostingSubscriptions.get(h.organization_id) || [];
+        arr.push({
+          id: h.id,
+          domain: h.domain,
+          status: h.status,
+          next_billing_at: h.next_billing_at,
+          last_billed_at: h.last_billed_at,
+          created_at: h.created_at,
+          plan_name: h.plan_name,
+          price_monthly: h.price_monthly,
+        });
+        allHostingSubscriptions.set(h.organization_id, arr);
       });
     }
 
@@ -274,7 +302,8 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
         permissions,
         vps_instances: permissions.vps_view ? (allVps.get(org.id) || []) : [],
         ssh_keys: permissions.ssh_keys_view ? (allSshKeys.get(org.id) || []) : [],
-        tickets: permissions.tickets_view ? (allTickets.get(org.id) || []) : []
+        tickets: permissions.tickets_view ? (allTickets.get(org.id) || []) : [],
+        hosting_subscriptions: permissions.hosting_view ? (allHostingSubscriptions.get(org.id) || []) : []
       };
     });
 
@@ -612,19 +641,32 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     const ticketCountsMap = new Map();
     const sshKeyCountsMap = new Map();
     const memberCountsMap = new Map();
+    const hostingCountsMap = new Map();
 
     if (orgIds.length > 0) {
-      const [vpsCounts, ticketCounts, sshKeyCounts, memberCounts] = await Promise.all([
+      const [vpsCounts, ticketCounts, sshKeyCounts, memberCounts, hostingCounts] = await Promise.all([
         query('SELECT organization_id, COUNT(*) as count FROM vps_instances WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds]),
         query('SELECT organization_id, COUNT(*) as count FROM support_tickets WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds]),
         query('SELECT organization_id, COUNT(*) as count FROM user_ssh_keys WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds]),
-        query('SELECT organization_id, COUNT(*) as count FROM organization_members WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds])
+        query('SELECT organization_id, COUNT(*) as count FROM organization_members WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds]),
+        query('SELECT organization_id, COUNT(*) as count FROM hosting_subscriptions WHERE organization_id = ANY($1) GROUP BY organization_id', [orgIds])
       ]);
 
-      vpsCounts.rows.forEach(row => vpsCountsMap.set(row.organization_id, parseInt(row.count)));
-      ticketCounts.rows.forEach(row => ticketCountsMap.set(row.organization_id, parseInt(row.count)));
-      sshKeyCounts.rows.forEach(row => sshKeyCountsMap.set(row.organization_id, parseInt(row.count)));
-      memberCounts.rows.forEach(row => memberCountsMap.set(row.organization_id, parseInt(row.count)));
+      vpsCounts.rows.forEach(row => {
+        vpsCountsMap.set(row.organization_id, Number.parseInt(row.count, 10));
+      });
+      ticketCounts.rows.forEach(row => {
+        ticketCountsMap.set(row.organization_id, Number.parseInt(row.count, 10));
+      });
+      sshKeyCounts.rows.forEach(row => {
+        sshKeyCountsMap.set(row.organization_id, Number.parseInt(row.count, 10));
+      });
+      memberCounts.rows.forEach(row => {
+        memberCountsMap.set(row.organization_id, Number.parseInt(row.count, 10));
+      });
+      hostingCounts.rows.forEach(row => {
+        hostingCountsMap.set(row.organization_id, Number.parseInt(row.count, 10));
+      });
     }
 
     const enrichedOrgs = orgs.map((org: any) => ({
@@ -633,6 +675,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
         vps_count: vpsCountsMap.has(org.id) ? vpsCountsMap.get(org.id) : 0,
         ticket_count: ticketCountsMap.has(org.id) ? ticketCountsMap.get(org.id) : 0,
         ssh_key_count: sshKeyCountsMap.has(org.id) ? sshKeyCountsMap.get(org.id) : 0,
+        hosting_count: hostingCountsMap.has(org.id) ? hostingCountsMap.get(org.id) : 0,
         member_count: memberCountsMap.has(org.id) ? memberCountsMap.get(org.id) : 0
       }
     }));

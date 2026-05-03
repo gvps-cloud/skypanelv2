@@ -11,6 +11,7 @@ import {
   Download,
   ArrowUpRight,
   ArrowDownLeft,
+  ArrowRightLeft,
   DollarSign,
   Filter,
   X,
@@ -45,14 +46,19 @@ interface PaginationState {
 const Billing: React.FC = () => {
   const navigate = useNavigate();
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [hostingWalletBalance, setHostingWalletBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [addFundsAmount, setAddFundsAmount] = useState('');
+  const [hostingFundsAmount, setHostingFundsAmount] = useState('');
+  const [hostingTransferAmount, setHostingTransferAmount] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'history'>('overview');
   const [isPayPalDialogOpen, setIsPayPalDialogOpen] = useState(false);
   const [currentPaymentAmount, setCurrentPaymentAmount] = useState<number | null>(null);
   const [currentPaymentDescription, setCurrentPaymentDescription] = useState('');
+  const [currentWalletType, setCurrentWalletType] = useState<'main' | 'hosting'>('main');
+  const [hostingTransferLoading, setHostingTransferLoading] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     status: '',
@@ -304,6 +310,11 @@ const Billing: React.FC = () => {
         toast.error('Unable to retrieve wallet balance (permission denied)');
       }
 
+      const hostingBalance = await paymentService.getHostingWalletBalance();
+      if (hostingBalance) {
+        setHostingWalletBalance(hostingBalance.balance);
+      }
+
       await loadOverviewData();
       await Promise.all([
         loadVPSUptimeData(),
@@ -352,10 +363,11 @@ const Billing: React.FC = () => {
   }, []);
 
   const handlePayPalSuccess = React.useCallback(async () => {
-    toast.success('Payment completed. Wallet updated.');
+    toast.success(`Payment completed. ${currentWalletType === 'hosting' ? 'Hosting wallet' : 'Wallet'} updated.`);
     setAddFundsAmount('');
+    setHostingFundsAmount('');
     await loadBillingData();
-  }, [loadBillingData]);
+  }, [currentWalletType, loadBillingData]);
 
   const handlePayPalCancel = React.useCallback(() => {
     toast.info('PayPal checkout cancelled.');
@@ -378,10 +390,57 @@ const Billing: React.FC = () => {
     }
 
     const normalizedAmount = Math.round(parsed * 100) / 100;
-    // Store the current payment amount and description directly
+    setCurrentWalletType('main');
     setCurrentPaymentAmount(normalizedAmount);
     setCurrentPaymentDescription(`Add ${formatCurrencyValue(normalizedAmount)} to wallet`);
     setIsPayPalDialogOpen(true);
+  };
+
+  const handleHostingPayPalTopUp = () => {
+    if (!hostingFundsAmount) {
+      toast.error('Please enter a valid hosting wallet amount');
+      return;
+    }
+
+    const parsed = parseFloat(hostingFundsAmount);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      toast.error('Please enter a valid hosting wallet amount');
+      return;
+    }
+
+    const normalizedAmount = Math.round(parsed * 100) / 100;
+    setCurrentWalletType('hosting');
+    setCurrentPaymentAmount(normalizedAmount);
+    setCurrentPaymentDescription(`Add ${formatCurrencyValue(normalizedAmount)} to hosting wallet`);
+    setIsPayPalDialogOpen(true);
+  };
+
+  const handleTransferToHostingWallet = async () => {
+    if (!hostingTransferAmount) {
+      toast.error('Please enter a transfer amount');
+      return;
+    }
+
+    const parsed = parseFloat(hostingTransferAmount);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      toast.error('Please enter a valid transfer amount');
+      return;
+    }
+
+    const normalizedAmount = Math.round(parsed * 100) / 100;
+    setHostingTransferLoading(true);
+    try {
+      const result = await paymentService.fundHostingWalletFromMain(normalizedAmount);
+      if (!result.success) {
+        toast.error(result.error ?? 'Unable to fund hosting wallet');
+        return;
+      }
+      toast.success('Hosting wallet funded from main wallet.');
+      setHostingTransferAmount('');
+      await loadBillingData();
+    } finally {
+      setHostingTransferLoading(false);
+    }
   };
 
   const formatCurrencyValue = (amount: number | null | undefined): string =>
@@ -649,6 +708,23 @@ const Billing: React.FC = () => {
           </CardContent>
         </Card>
 
+        <Card className="overflow-hidden border-primary/30 bg-primary/5">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Hosting Wallet</p>
+                <p className="text-3xl font-bold tracking-tight text-primary">
+                  {formatCurrencyValue(hostingWalletBalance)}
+                </p>
+                <p className="text-xs text-muted-foreground">Monthly Enhance hosting reserve</p>
+              </div>
+              <div className="rounded-lg bg-primary/10 p-3">
+                <Database className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
@@ -736,7 +812,7 @@ const Billing: React.FC = () => {
       </div>
 
       {/* Add Funds and Egress Credits Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Add Funds to Wallet Card */}
         <Card>
           <CardHeader>
@@ -792,6 +868,83 @@ const Billing: React.FC = () => {
           </CardContent>
         </Card>
 
+        <Card className="border-primary/25">
+          <CardHeader>
+            <CardTitle>Fund Hosting Wallet</CardTitle>
+            <CardDescription>Reserve credits for monthly Enhance hosting renewals</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Transfer from main wallet</p>
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <DollarSign className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <input
+                      type="number"
+                      value={hostingTransferAmount}
+                      onChange={(e) => {
+                        setHostingTransferAmount(e.target.value);
+                      }}
+                      placeholder="0.00"
+                      min="1"
+                      step="0.01"
+                      className="block w-full rounded-md border bg-secondary py-2 pl-10 pr-3 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleTransferToHostingWallet();
+                    }}
+                    disabled={hostingTransferLoading}
+                    className="inline-flex items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
+                  >
+                    {hostingTransferLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowRightLeft className="mr-2 h-4 w-4" />
+                    )}
+                    Transfer
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <p className="mb-3 text-sm font-medium">Fund directly via PayPal</p>
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <DollarSign className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <input
+                      type="number"
+                      value={hostingFundsAmount}
+                      onChange={(e) => {
+                        setHostingFundsAmount(e.target.value);
+                      }}
+                      placeholder="0.00"
+                      min="1"
+                      step="0.01"
+                      className="block w-full rounded-md border bg-secondary py-2 pl-10 pr-3 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleHostingPayPalTopUp}
+                    className="inline-flex items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    PayPal
+                  </button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Buy Egress Credits Card */}
         <Card>
           <CardHeader>
@@ -822,6 +975,7 @@ const Billing: React.FC = () => {
         open={isPayPalDialogOpen}
         amount={currentPaymentAmount}
         description={currentPaymentDescription}
+        walletType={currentWalletType}
         onOpenChange={handlePayPalDialogOpenChange}
         onPaymentSuccess={handlePayPalSuccess}
         onPaymentCancel={handlePayPalCancel}

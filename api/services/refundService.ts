@@ -244,10 +244,18 @@ export class RefundService {
       initiatedByType: 'system_prorated',
     });
 
-    await query(
-      `UPDATE wallets SET balance = balance + $1 WHERE organization_id = $2`,
-      [amount, sub.organization_id]
-    );
+    await transaction(async (client) => {
+      await client.query(
+        `INSERT INTO hosting_wallets (organization_id, balance, currency)
+         VALUES ($1, 0, 'USD')
+         ON CONFLICT (organization_id) DO NOTHING`,
+        [sub.organization_id]
+      );
+      await client.query(
+        `UPDATE hosting_wallets SET balance = balance + $1 WHERE organization_id = $2`,
+        [amount, sub.organization_id]
+      );
+    });
     await query(
       `UPDATE refunds SET status = 'completed', updated_at = now() WHERE id = $1`,
       [refundId]

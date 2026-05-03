@@ -44,13 +44,19 @@ export class HostingBillingService {
 
   private static async billSubscription(sub: any): Promise<void> {
     await transaction(async (client) => {
-      // Lock wallet
+      await client.query(
+        `INSERT INTO hosting_wallets (organization_id, balance, currency)
+         VALUES ($1, 0, 'USD')
+         ON CONFLICT (organization_id) DO NOTHING`,
+        [sub.organization_id]
+      );
+
       const walletResult = await client.query(
-        `SELECT id, balance FROM wallets WHERE organization_id = $1 FOR UPDATE`,
+        `SELECT id, balance FROM hosting_wallets WHERE organization_id = $1 FOR UPDATE`,
         [sub.organization_id]
       );
       if (walletResult.rows.length === 0) {
-        throw new Error('Wallet not found');
+        throw new Error('Hosting wallet not found');
       }
       const wallet = walletResult.rows[0];
 
@@ -66,12 +72,11 @@ export class HostingBillingService {
       const amount = parseFloat(plan.price_monthly);
 
       if (wallet.balance < amount) {
-        throw new Error('Insufficient balance');
+        throw new Error('Insufficient hosting wallet balance');
       }
 
-      // Deduct wallet
       await client.query(
-        `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
+        `UPDATE hosting_wallets SET balance = balance - $1, updated_at = now() WHERE id = $2`,
         [amount, wallet.id]
       );
 
@@ -83,7 +88,13 @@ export class HostingBillingService {
           sub.organization_id,
           -amount,
           `Hosting billing: ${plan.name}`,
-          JSON.stringify({ hosting_subscription_id: sub.id, domain: sub.domain }),
+          JSON.stringify({
+            hosting_subscription_id: sub.id,
+            domain: sub.domain,
+            wallet_type: 'hosting',
+            balance_before: parseFloat(wallet.balance),
+            balance_after: parseFloat(wallet.balance) - amount,
+          }),
         ]
       );
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Enhance integration adds managed web hosting capabilities to SkyPanelV2. It connects to the [Enhance](https://enhance.com) control panel API to provision websites, handle domain mappings, SSL certificates, email accounts, MySQL databases, FTP users, WordPress installations, and Node.js apps. Hosting is sold as a monthly subscription product alongside VPS instances, using the same prepaid wallet and organization-scoped billing model.
+The Enhance integration adds managed web hosting capabilities to SkyPanelV2. It connects to the [Enhance](https://enhance.com) control panel API to provision websites, handle domain mappings, SSL certificates, email accounts, MySQL databases, FTP users, WordPress installations, and Node.js apps. Hosting is sold as a monthly subscription product alongside VPS instances, but renewals and hosting top-ups use a dedicated organization-scoped hosting wallet.
 
 Key capabilities:
 
@@ -62,15 +62,15 @@ Enhance plans are not automatically mirrored. An admin must trigger a sync:
 Purchasing a hosting subscription is a multi-step process with automatic rollback on failure:
 
 1. **Validation** — `planId` and `domain` are required. The plan must be active.
-2. **Wallet lock** — The organization's wallet is locked (`FOR UPDATE`) and balance verified.
-3. **Debit** — Plan price is deducted from the wallet and a `wallet_debit` transaction is recorded.
+2. **Hosting wallet lock** — The organization's `hosting_wallets` row is locked (`FOR UPDATE`) and balance verified. Customers can fund it from the main wallet or directly through PayPal.
+3. **Debit** — Plan price is deducted from the hosting wallet and a hosting wallet transaction is recorded.
 4. **Provisional subscription** — A `hosting_subscriptions` row is inserted with `status = 'provisioning'`.
 5. **Remote provisioning** (outside the DB transaction):
    - Ensure the org has an `enhance_customer_id`; create one if missing.
    - Create an Enhance customer subscription.
    - Create an Enhance website attached to the subscription.
 6. **Activation** — The local subscription is updated to `status = 'active'` with remote IDs and primary IP.
-7. **Failure rollback** — If any remote step fails, the wallet is credited back and a compensating `wallet_credit` transaction is recorded.
+7. **Failure rollback** — If any remote step fails, the hosting wallet is credited back and a compensating transaction is recorded.
 
 ---
 
@@ -78,11 +78,11 @@ Purchasing a hosting subscription is a multi-step process with automatic rollbac
 
 A monthly billing scheduler checks all `hosting_subscriptions` where `status = 'active'` and `next_billing_at <= now()`:
 
-1. Lock the organization's wallet (`FOR UPDATE`).
+1. Lock the organization's hosting wallet (`FOR UPDATE`).
 2. Load the plan's `price_monthly`.
 3. If balance is sufficient:
-   - Debit the wallet.
-   - Record a `wallet_debit` transaction.
+   - Debit the hosting wallet.
+   - Record a hosting wallet debit transaction.
    - Update `last_billed_at = now()` and `next_billing_at = now() + interval '1 month'`.
 4. If balance is insufficient:
    - Suspend the remote website via `EnhanceService.updateWebsite(..., { status: 'suspended' })`.
@@ -197,7 +197,7 @@ Custom roles can be created with any combination of the two permissions.
 
 ## Failure Handling
 
-- **Remote API failures** during purchase trigger automatic wallet rollback.
+- **Remote API failures** during purchase trigger automatic hosting wallet rollback.
 - **Insufficient balance** during recurring billing suspends the website locally and remotely.
 - **Health check failures** are persisted in `platform_integrations.last_health_status` and surfaced in the admin status endpoint.
 - **Missing env vars** are enumerated in the status response so admins know exactly what to configure.

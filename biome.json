@@ -1,0 +1,13 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "linter": {
+    "rules": {
+      "correctness": {
+        "useQwikValidLexicalScope": "off"
+      },
+      "suspicious": {
+        "noReactSpecificProps": "off"
+      }
+    }
+  }
+}

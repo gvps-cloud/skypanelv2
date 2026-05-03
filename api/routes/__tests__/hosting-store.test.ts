@@ -135,10 +135,16 @@ describe('Hosting Store Routes', () => {
       [testOrgId, testUserId, ownerRoleId]
     );
 
-    // Create wallet with balance
+    // Create wallet balances
     await pool.query(
       `INSERT INTO wallets (organization_id, balance, currency, created_at, updated_at)
        VALUES ($1, $2, 'USD', NOW(), NOW())`,
+      [testOrgId, 50.00]
+    );
+    await pool.query(
+      `INSERT INTO hosting_wallets (organization_id, balance, currency, created_at, updated_at)
+       VALUES ($1, $2, 'USD', NOW(), NOW())
+       ON CONFLICT (organization_id) DO UPDATE SET balance = EXCLUDED.balance`,
       [testOrgId, 50.00]
     );
 
@@ -178,6 +184,7 @@ describe('Hosting Store Routes', () => {
     await pool.query('DELETE FROM hosting_subscriptions WHERE organization_id = $1', [testOrgId]);
     await pool.query('DELETE FROM hosting_plans WHERE id = $1 OR id = $2', [planId, inactivePlanId]);
     await pool.query('DELETE FROM payment_transactions WHERE organization_id = $1', [testOrgId]);
+    await pool.query('DELETE FROM hosting_wallets WHERE organization_id = $1', [testOrgId]);
     await pool.query('DELETE FROM wallets WHERE organization_id = $1', [testOrgId]);
     await pool.query('DELETE FROM organization_members WHERE organization_id = $1', [testOrgId]);
     await pool.query('DELETE FROM organization_roles WHERE organization_id = $1', [testOrgId]);
@@ -262,7 +269,7 @@ describe('Hosting Store Routes', () => {
 
   describe('POST /api/hosting/purchase', () => {
     it('returns first-time onboarding flags when credentials are created and emailed', async () => {
-      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+      await pool.query('UPDATE hosting_wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
 
       mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
         enhanceCustomerId: 'cust-123',
@@ -326,8 +333,8 @@ describe('Hosting Store Routes', () => {
     });
 
     it('rejects insufficient balance', async () => {
-      // Set wallet balance below plan price
-      await pool.query('UPDATE wallets SET balance = 5 WHERE organization_id = $1', [testOrgId]);
+      // Set hosting wallet balance below plan price
+      await pool.query('UPDATE hosting_wallets SET balance = 5 WHERE organization_id = $1', [testOrgId]);
 
       const response = await request(app)
         .post('/api/hosting/purchase')
@@ -335,7 +342,7 @@ describe('Hosting Store Routes', () => {
         .send({ planId, domain: 'example.com' })
         .expect(500);
 
-      expect(response.body.error).toContain('Insufficient wallet balance');
+      expect(response.body.error).toContain('Insufficient hosting wallet balance');
 
       // Verify no subscription was created
       const subResult = await pool.query(
@@ -346,8 +353,8 @@ describe('Hosting Store Routes', () => {
     });
 
     it('successfully purchases hosting with sufficient balance', async () => {
-      // Restore balance
-      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+      // Restore hosting balance
+      await pool.query('UPDATE hosting_wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
 
       mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
         enhanceCustomerId: 'cust-123',
@@ -374,12 +381,17 @@ describe('Hosting Store Routes', () => {
         domain: 'purchase-test.com',
       });
 
-      // Verify wallet was debited
+      // Verify hosting wallet was debited and main wallet was untouched
       const walletResult = await pool.query(
-        'SELECT balance FROM wallets WHERE organization_id = $1',
+        'SELECT balance FROM hosting_wallets WHERE organization_id = $1',
         [testOrgId]
       );
       expect(Number(walletResult.rows[0].balance)).toBe(40.00);
+      const mainWalletResult = await pool.query(
+        'SELECT balance FROM wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(mainWalletResult.rows[0].balance)).toBe(50.00);
 
       // Verify subscription was created
       const subResult = await pool.query(
@@ -402,7 +414,7 @@ describe('Hosting Store Routes', () => {
       const sgPlanId = sgPlanResult.rows[0].id;
       const selectedRegionId = randomUUID();
 
-      await pool.query('UPDATE wallets SET balance = 100 WHERE organization_id = $1', [testOrgId]);
+      await pool.query('UPDATE hosting_wallets SET balance = 100 WHERE organization_id = $1', [testOrgId]);
 
       mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
         enhanceCustomerId: 'cust-123',
@@ -435,7 +447,7 @@ describe('Hosting Store Routes', () => {
     it('reuses an orphaned Enhance subscription after a 409 conflict when no websites exist', async () => {
       const { EnhanceApiError } = await import('../../services/enhanceService.js');
 
-      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+      await pool.query('UPDATE hosting_wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
 
       mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
         enhanceCustomerId: 'cust-123',
@@ -476,7 +488,7 @@ describe('Hosting Store Routes', () => {
     it('returns a 400 with the Enhance domain message and cleans up a created subscription', async () => {
       const { EnhanceApiError } = await import('../../services/enhanceService.js');
 
-      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+      await pool.query('UPDATE hosting_wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
 
       mockEnsureEnhanceCustomerForPurchase.mockResolvedValue({
         enhanceCustomerId: 'cust-123',
@@ -505,7 +517,7 @@ describe('Hosting Store Routes', () => {
       expect(mockDeleteSubscription).toHaveBeenCalledWith(expect.any(String), '987');
 
       const walletResult = await pool.query(
-        'SELECT balance FROM wallets WHERE organization_id = $1',
+        'SELECT balance FROM hosting_wallets WHERE organization_id = $1',
         [testOrgId]
       );
       expect(Number(walletResult.rows[0].balance)).toBe(50.00);
@@ -537,6 +549,8 @@ describe('Hosting Store Routes', () => {
         'UPDATE organizations SET enhance_customer_id = $1 WHERE id = $2',
         ['cust-org-999', testOrgId]
       );
+      await pool.query('UPDATE hosting_wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
 
       // Create a subscription for the org
       const subResult = await pool.query(
@@ -565,6 +579,17 @@ describe('Hosting Store Routes', () => {
         [subId]
       );
       expect(updatedSub.rows[0].status).toBe('cancelled');
+
+      const hostingWalletResult = await pool.query(
+        'SELECT balance FROM hosting_wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(hostingWalletResult.rows[0].balance)).toBeCloseTo(60.00, 2);
+      const mainWalletResult = await pool.query(
+        'SELECT balance FROM wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(mainWalletResult.rows[0].balance)).toBe(50.00);
     });
   });
 

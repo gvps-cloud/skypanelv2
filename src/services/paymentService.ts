@@ -15,6 +15,8 @@ export interface PaymentIntent {
 
   description: string;
 
+  walletType?: 'main' | 'hosting';
+
 }
 
 
@@ -76,6 +78,8 @@ export interface WalletTransaction {
   balanceBefore?: number | null;
 
   balanceAfter: number | null;
+
+  walletType?: 'main' | 'hosting';
 
   createdAt: string;
 
@@ -289,11 +293,35 @@ class PaymentService {
 
   async getWalletBalance(): Promise<WalletBalance | null> {
     try {
-      const data = await apiClient.get<any>('/payments/wallet/balance');
+      const data = await apiClient.get<WalletBalance>('/payments/wallet/balance');
       return { balance: data.balance };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Get wallet balance error:', error);
       return null;
+    }
+  }
+
+  async getHostingWalletBalance(): Promise<WalletBalance | null> {
+    try {
+      const data = await apiClient.get<WalletBalance>('/payments/wallet/hosting/balance');
+      return { balance: data.balance };
+    } catch (error) {
+      console.error('Get hosting wallet balance error:', error);
+      return null;
+    }
+  }
+
+  async fundHostingWalletFromMain(amount: number): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      await apiClient.post<{ success?: boolean }>('/payments/wallet/hosting/fund', { amount });
+      return { success: true };
+    } catch (error) {
+      console.error('Fund hosting wallet error:', error);
+      const message = error instanceof Error ? error.message : 'Network error occurred';
+      return { success: false, error: message };
     }
   }
 
@@ -351,6 +379,8 @@ class PaymentService {
           const paymentIdValue = txRecord.paymentId ?? txRecord.payment_id;
           const paymentId = typeof paymentIdValue === 'string' ? paymentIdValue : undefined;
           const currencyValue = typeof txRecord.currency === 'string' ? txRecord.currency : 'USD';
+          const walletTypeValue = txRecord.walletType ?? txRecord.wallet_type;
+          const walletType = walletTypeValue === 'hosting' ? 'hosting' : 'main';
 
           return {
             id: String(txRecord.id ?? ''),
@@ -361,6 +391,7 @@ class PaymentService {
             currency: currencyValue,
             balanceBefore,
             balanceAfter,
+            walletType,
             createdAt,
           };
         }),

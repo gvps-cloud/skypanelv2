@@ -386,13 +386,20 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
 
   try {
     const result = await transaction(async (client) => {
-      // 1. Lock org wallet and verify balance
+      await client.query(
+        `INSERT INTO hosting_wallets (organization_id, balance, currency)
+         VALUES ($1, 0, 'USD')
+         ON CONFLICT (organization_id) DO NOTHING`,
+        [organizationId]
+      );
+
+      // 1. Lock hosting wallet and verify balance
       const walletResult = await client.query(
-        `SELECT id, balance FROM wallets WHERE organization_id = $1 FOR UPDATE`,
+        `SELECT id, balance FROM hosting_wallets WHERE organization_id = $1 FOR UPDATE`,
         [organizationId]
       );
       if (walletResult.rows.length === 0) {
-        throw new Error("Wallet not found");
+        throw new Error("Hosting wallet not found");
       }
       const wallet = walletResult.rows[0];
 
@@ -408,12 +415,12 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       const amount = parseFloat(plan.price_monthly);
 
       if (wallet.balance < amount) {
-        throw new Error("Insufficient wallet balance");
+        throw new Error("Insufficient hosting wallet balance");
       }
 
-      // 3. Deduct wallet
+      // 3. Deduct hosting wallet
       await client.query(
-        `UPDATE wallets SET balance = balance - $1 WHERE id = $2`,
+        `UPDATE hosting_wallets SET balance = balance - $1 WHERE id = $2`,
         [amount, wallet.id]
       );
 
@@ -422,14 +429,14 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
         `INSERT INTO payment_transactions (organization_id, amount, payment_method, payment_provider, status, description, metadata)
          VALUES ($1, $2, 'wallet_debit', 'internal', 'completed', $3, $4)
          RETURNING id`,
-        [organizationId, -amount, `Hosting purchase: ${plan.name}`, JSON.stringify({ plan_id: planId, domain: requestedDomain })]
+        [organizationId, -amount, `Hosting purchase: ${plan.name}`, JSON.stringify({ plan_id: planId, domain: requestedDomain, wallet_type: 'hosting' })]
       );
       const debitTransactionId = debitResult.rows[0].id;
 
       // 5. Insert provisional hosting subscription
       const subResult = await client.query(
-        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, settings)
-         VALUES ($1, $2, $3, $4, 'provisioning', now() + interval '1 month', $5)
+        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, last_billed_at, next_billing_at, settings)
+         VALUES ($1, $2, $3, $4, 'provisioning', now(), now() + interval '1 month', $5)
          RETURNING *`,
         [organizationId, userId, planId, requestedDomain, JSON.stringify({ debit_transaction_id: debitTransactionId })]
       );
@@ -682,22 +689,32 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
     }
 
     // Compensating credit on failure
-    try {
-      const planResult = await query(`SELECT price_monthly FROM hosting_plans WHERE id = $1`, [planId]);
-      if (planResult.rows.length > 0) {
-        const amount = parseFloat(planResult.rows[0].price_monthly);
-        await query(
-          `UPDATE wallets SET balance = balance + $1 WHERE organization_id = $2`,
-          [amount, organizationId]
-        );
-        await query(
-          `INSERT INTO payment_transactions (organization_id, amount, payment_method, payment_provider, status, description, metadata)
-           VALUES ($1, $2, 'wallet_credit', 'internal', 'completed', $3, $4)`,
-          [organizationId, amount, "Hosting purchase rollback", JSON.stringify({ reason: error.message })]
-        );
+    if (subscriptionId) {
+      try {
+        const planResult = await query(`SELECT price_monthly FROM hosting_plans WHERE id = $1`, [planId]);
+        if (planResult.rows.length > 0) {
+          const amount = parseFloat(planResult.rows[0].price_monthly);
+          await transaction(async (rollbackClient) => {
+            await rollbackClient.query(
+              `INSERT INTO hosting_wallets (organization_id, balance, currency)
+               VALUES ($1, 0, 'USD')
+               ON CONFLICT (organization_id) DO NOTHING`,
+              [organizationId]
+            );
+            await rollbackClient.query(
+              `UPDATE hosting_wallets SET balance = balance + $1 WHERE organization_id = $2`,
+              [amount, organizationId]
+            );
+            await rollbackClient.query(
+              `INSERT INTO payment_transactions (organization_id, amount, payment_method, payment_provider, status, description, metadata)
+               VALUES ($1, $2, 'wallet_credit', 'internal', 'completed', $3, $4)`,
+              [organizationId, amount, "Hosting purchase rollback", JSON.stringify({ reason: error.message, wallet_type: 'hosting' })]
+            );
+          });
+        }
+      } catch (rollbackError) {
+        console.error("Failed to rollback hosting purchase:", rollbackError);
       }
-    } catch (rollbackError) {
-      console.error("Failed to rollback hosting purchase:", rollbackError);
     }
 
     res.status(error?.statusCode || 500).json({ error: error?.message || "Hosting purchase failed" });
