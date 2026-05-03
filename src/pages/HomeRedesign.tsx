@@ -647,7 +647,7 @@ export default function HomeRedesign() {
                   className="h-12 px-7"
                   asChild
                 >
-                  <Link to="/hosting-web">Explore Hosting</Link>
+                  <Link to="/web-hosting">Explore Hosting</Link>
                 </Button>
               </div>
 

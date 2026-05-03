@@ -10,7 +10,7 @@ const footerSections = [
     title: "Product",
     links: [
       { label: "Platform", href: "/#platform" },
-      { label: "Web Hosting", href: "/hosting-web" },
+      { label: "Web Hosting", href: "/web-hosting" },
       { label: "Pricing", href: "/pricing" },
       { label: "Regions", href: "/regions" },
       { label: "Status", href: "/status" },

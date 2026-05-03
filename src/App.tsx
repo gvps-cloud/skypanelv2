@@ -468,7 +468,8 @@ function AppRoutes() {
           }
         />
         <Route path="/pricing" element={<Pricing />} />
-        <Route path="/hosting-web" element={<HostingMarketing />} />
+        <Route path="/web-hosting" element={<HostingMarketing />} />
+        <Route path="/hosting-web" element={<Navigate to="/web-hosting" replace />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/docs" element={<Documentation />} />
         <Route path="/docs/:categorySlug" element={<Documentation />} />
