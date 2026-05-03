@@ -4,7 +4,7 @@ dist/
 dist-ssr/
 build/
 .vite/
-
+.codex/*
 # Logs
 logs/
 *.log

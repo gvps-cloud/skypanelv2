@@ -571,7 +571,7 @@ describe('Hosting Store Routes', () => {
 
       expect(response.body.success).toBe(true);
       expect(mockDeleteWebsite).toHaveBeenCalledWith('cust-org-999', 'web-999');
-      expect(mockDeleteSubscription).toHaveBeenCalledWith(expect.any(String), 'sub-999');
+      expect(mockDeleteSubscription).toHaveBeenCalledWith('cust-org-999', 'sub-999');
 
       // Verify subscription was cancelled
       const updatedSub = await pool.query(
@@ -590,6 +590,120 @@ describe('Hosting Store Routes', () => {
         [testOrgId]
       );
       expect(Number(mainWalletResult.rows[0].balance)).toBe(50.00);
+    });
+
+    it('fails cancel when Enhance subscription deletion fails and keeps local state active', async () => {
+      await pool.query(
+        'UPDATE organizations SET enhance_customer_id = $1 WHERE id = $2',
+        ['cust-org-999', testOrgId]
+      );
+      await pool.query('UPDATE hosting_wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+
+      const subResult = await pool.query(
+        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, enhance_website_id, enhance_subscription_id)
+         VALUES ($1, $2, $3, $4, 'active', NOW() + interval '1 month', 'web-901', 'sub-901')
+         RETURNING id`,
+        [testOrgId, testUserId, planId, 'cancel-subscription-fail.com']
+      );
+      const subId = subResult.rows[0].id;
+
+      mockDeleteWebsite.mockResolvedValue(undefined);
+      mockDeleteSubscription.mockRejectedValue(new Error('subscription delete failed'));
+
+      const response = await request(app)
+        .post(`/api/hosting/services/${subId}/cancel`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(502);
+
+      expect(response.body.failed_step).toBe('delete_subscription');
+
+      const updatedSub = await pool.query(
+        'SELECT status FROM hosting_subscriptions WHERE id = $1',
+        [subId]
+      );
+      expect(updatedSub.rows[0].status).toBe('active');
+
+      const hostingWalletResult = await pool.query(
+        'SELECT balance FROM hosting_wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(hostingWalletResult.rows[0].balance)).toBe(50.00);
+      const mainWalletResult = await pool.query(
+        'SELECT balance FROM wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(mainWalletResult.rows[0].balance)).toBe(50.00);
+    });
+
+    it('fails cancel when Enhance website deletion fails and keeps local state active', async () => {
+      await pool.query(
+        'UPDATE organizations SET enhance_customer_id = $1 WHERE id = $2',
+        ['cust-org-999', testOrgId]
+      );
+      await pool.query('UPDATE hosting_wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+
+      const subResult = await pool.query(
+        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, enhance_website_id, enhance_subscription_id)
+         VALUES ($1, $2, $3, $4, 'active', NOW() + interval '1 month', 'web-902', 'sub-902')
+         RETURNING id`,
+        [testOrgId, testUserId, planId, 'cancel-website-fail.com']
+      );
+      const subId = subResult.rows[0].id;
+
+      mockDeleteWebsite.mockRejectedValue(new Error('website delete failed'));
+      mockDeleteSubscription.mockResolvedValue(undefined);
+
+      const response = await request(app)
+        .post(`/api/hosting/services/${subId}/cancel`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(502);
+
+      expect(response.body.failed_step).toBe('delete_website');
+      expect(mockDeleteSubscription).not.toHaveBeenCalled();
+
+      const updatedSub = await pool.query(
+        'SELECT status FROM hosting_subscriptions WHERE id = $1',
+        [subId]
+      );
+      expect(updatedSub.rows[0].status).toBe('active');
+
+      const hostingWalletResult = await pool.query(
+        'SELECT balance FROM hosting_wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(hostingWalletResult.rows[0].balance)).toBe(50.00);
+      const mainWalletResult = await pool.query(
+        'SELECT balance FROM wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(mainWalletResult.rows[0].balance)).toBe(50.00);
+    });
+
+    it('returns 500 when enhance_customer_id is missing but remote IDs exist', async () => {
+      await pool.query(
+        'UPDATE organizations SET enhance_customer_id = NULL WHERE id = $1',
+        [testOrgId]
+      );
+      await pool.query('UPDATE hosting_wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+
+      const subResult = await pool.query(
+        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, enhance_website_id, enhance_subscription_id)
+         VALUES ($1, $2, $3, $4, 'active', NOW() + interval '1 month', 'web-no-cust', 'sub-no-cust')
+         RETURNING id`,
+        [testOrgId, testUserId, planId, 'no-customer-id.com']
+      );
+      const subId = subResult.rows[0].id;
+
+      const response = await request(app)
+        .post(`/api/hosting/services/${subId}/cancel`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(500);
+
+      expect(response.body.error).toContain('missing Enhance customer ID');
+      expect(mockDeleteWebsite).not.toHaveBeenCalled();
+      expect(mockDeleteSubscription).not.toHaveBeenCalled();
     });
   });
 

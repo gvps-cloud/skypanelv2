@@ -654,9 +654,9 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       }
     }
 
-    if (remoteEnhanceSubscriptionId && createdRemoteSubscription) {
+    if (enhanceCustomerOrgId && remoteEnhanceSubscriptionId && createdRemoteSubscription) {
       try {
-        await EnhanceService.deleteSubscription(config.ENHANCE_MASTER_ORG_ID, remoteEnhanceSubscriptionId);
+        await EnhanceService.deleteSubscription(enhanceCustomerOrgId, remoteEnhanceSubscriptionId, { force: true });
       } catch (cleanupError) {
         console.error("Failed to cleanup Enhance subscription after purchase error:", cleanupError);
       }
@@ -741,7 +741,13 @@ router.post("/services/:id/cancel", requireOrgPermission("hosting_manage"), asyn
       return res.status(404).json({ error: "Service not found" });
     }
     const sub = result.rows[0];
-    const enhanceWebsiteOrgId = sub.enhance_customer_org_id || config.ENHANCE_MASTER_ORG_ID;
+    const enhanceCustomerOrgId = sub.enhance_customer_org_id;
+
+    if (!enhanceCustomerOrgId && (sub.enhance_website_id || sub.enhance_subscription_id)) {
+      return res.status(500).json({
+        error: "Cannot cancel: organization is missing Enhance customer ID. Contact support.",
+      });
+    }
 
     if (sub.status === 'cancelled') {
       return res.status(400).json({ error: "Subscription is already cancelled" });
@@ -749,16 +755,67 @@ router.post("/services/:id/cancel", requireOrgPermission("hosting_manage"), asyn
 
     if (sub.enhance_website_id) {
       try {
-        await EnhanceService.deleteWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
+        await EnhanceService.deleteWebsite(enhanceCustomerOrgId, sub.enhance_website_id);
       } catch (enhanceErr) {
-        console.error("Failed to delete Enhance website (non-fatal):", enhanceErr);
+        const statusCode = enhanceErr instanceof EnhanceApiError
+          ? (enhanceErr.statusCode || 502)
+          : 502;
+        const errorMessage = enhanceErr instanceof Error ? enhanceErr.message : "unknown error";
+
+        await logActivity({
+          userId,
+          organizationId,
+          eventType: "hosting.cancel.failed",
+          entityType: "hosting_subscription",
+          entityId: id,
+          message: "Failed to delete Enhance website during cancellation",
+          status: "error",
+          metadata: {
+            failed_step: "delete_website",
+            enhance_org_id: enhanceCustomerOrgId,
+            enhance_website_id: sub.enhance_website_id,
+            enhance_subscription_id: sub.enhance_subscription_id ?? null,
+            error: errorMessage,
+          },
+        });
+
+        return res.status(statusCode).json({
+          error: `Failed to delete Enhance website: ${errorMessage}`,
+          failed_step: "delete_website",
+        });
       }
     }
+
     if (sub.enhance_subscription_id) {
       try {
-        await EnhanceService.deleteSubscription(config.ENHANCE_MASTER_ORG_ID, sub.enhance_subscription_id);
+        await EnhanceService.deleteSubscription(enhanceCustomerOrgId, sub.enhance_subscription_id);
       } catch (enhanceErr) {
-        console.error("Failed to delete Enhance subscription (non-fatal):", enhanceErr);
+        const statusCode = enhanceErr instanceof EnhanceApiError
+          ? (enhanceErr.statusCode || 502)
+          : 502;
+        const errorMessage = enhanceErr instanceof Error ? enhanceErr.message : "unknown error";
+
+        await logActivity({
+          userId,
+          organizationId,
+          eventType: "hosting.cancel.failed",
+          entityType: "hosting_subscription",
+          entityId: id,
+          message: "Failed to delete Enhance subscription during cancellation",
+          status: "error",
+          metadata: {
+            failed_step: "delete_subscription",
+            enhance_org_id: enhanceCustomerOrgId,
+            enhance_website_id: sub.enhance_website_id ?? null,
+            enhance_subscription_id: sub.enhance_subscription_id,
+            error: errorMessage,
+          },
+        });
+
+        return res.status(statusCode).json({
+          error: `Failed to delete Enhance subscription: ${errorMessage}`,
+          failed_step: "delete_subscription",
+        });
       }
     }
 

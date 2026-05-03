@@ -85,6 +85,17 @@ describe('EnhanceService', () => {
     expect(result).toBeUndefined();
   });
 
+  it('should pass force=true query param when deleting subscription with force option', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({ ok: true, status: 204 }));
+    global.fetch = fetchMock;
+
+    await EnhanceService.deleteSubscription('org-123', 'sub-456', { force: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/orgs/org-123/subscriptions/sub-456?force=true'),
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
   it('should create a login in the org realm', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       mockResponse({

@@ -376,8 +376,9 @@ export class EnhanceService {
     });
   }
 
-  static async deleteSubscription(orgId: string, subscriptionId: string) {
-    return this.request<void>(`/orgs/${orgId}/subscriptions/${subscriptionId}`, {
+  static async deleteSubscription(orgId: string, subscriptionId: string, options?: { force?: boolean }) {
+    const query = options?.force ? '?force=true' : '';
+    return this.request<void>(`/orgs/${orgId}/subscriptions/${subscriptionId}${query}`, {
       method: 'DELETE',
     });
   }
