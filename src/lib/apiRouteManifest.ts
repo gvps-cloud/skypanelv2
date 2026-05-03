@@ -1718,6 +1718,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/pricing/hosting",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/pricing/public-regions",
     "protected": false,
     "admin": false

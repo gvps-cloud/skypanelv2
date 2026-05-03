@@ -22,6 +22,7 @@ import {
   MapPin,
   TrendingUp,
   Database,
+  PanelsTopLeft,
   type LucideIcon,
 } from "lucide-react";
 
@@ -59,7 +60,7 @@ interface PlatformCard {
   span?: string;
 }
 
-type CapabilityKey = "deploy" | "teams" | "protect";
+type CapabilityKey = "deploy" | "hosting" | "teams" | "protect";
 
 interface RegionData {
   id: string;
@@ -161,6 +162,24 @@ const capabilityTabs: Array<{
     ],
   },
   {
+    key: "hosting",
+    label: "Web Hosting",
+    icon: PanelsTopLeft,
+    title: "Enhance-backed website hosting",
+    description:
+      "Launch managed website hosting from the same console as your VPS, billing, support, and organization resources.",
+    bullets: [
+      "Order active hosting plans from the configured Enhance catalog",
+      "Use your own domain during checkout and manage the site after purchase",
+      "Fund a dedicated hosting wallet separately from VPS wallet spend",
+    ],
+    callouts: [
+      { label: "Catalog", value: "Live plans" },
+      { label: "Billing", value: "Hosting wallet" },
+      { label: "Control", value: "Panel SSO" },
+    ],
+  },
+  {
     key: "teams",
     label: "Teams & Orgs",
     icon: Users,
@@ -209,11 +228,18 @@ const platformCards: PlatformCard[] = [
   },
   {
     icon: TerminalSquare,
-    title: "Browser-Based SSH",
+    title: "Browser-Based SSH & Hosting Tools",
     description:
-      "Access your server's terminal directly from our dashboard. No need to manage local SSH keys or external clients.",
-    metric: "Instant root access",
+      "Access server terminals and hosting controls directly from the dashboard. Keep compute and website operations in one place.",
+    metric: "Unified console",
     span: "xl:col-span-2",
+  },
+  {
+    icon: PanelsTopLeft,
+    title: "Enhance Web Hosting",
+    description:
+      "Offer websites, WordPress, email, databases, SSL, backups, and runtime controls through the configured Enhance integration.",
+    metric: "Live hosting catalog",
   },
   {
     icon: Lock,
@@ -265,7 +291,12 @@ const faqs = [
     question: "What exactly is " + BRAND_NAME + "?",
     answer:
       BRAND_NAME +
-      " is a modern cloud hosting provider. We provide high-performance Virtual Private Servers (VPS) directly to developers, startups, and businesses to host their applications, websites, and services.",
+      " is a modern cloud hosting provider. We provide high-performance Virtual Private Servers (VPS) and, when enabled by the platform, Enhance-backed web hosting from the same dashboard.",
+  },
+  {
+    question: "Do you offer managed web hosting?",
+    answer:
+      "Yes, when the Enhance integration is enabled. Available hosting plans, features, and prices come from the platform hosting catalog rather than hardcoded marketing values.",
   },
   {
     question: "How does the billing work?",
@@ -358,11 +389,22 @@ const solutionCards = [
     icon: Users,
     title: "Startups & Agencies",
     detail:
-      "Create dedicated workspaces for different projects. Collaborate with your team securely.",
+      "Create dedicated workspaces for client projects, VPS resources, and website hosting subscriptions. Collaborate with your team securely.",
     bullets: [
       "Organization workspaces",
       "Role-based access",
       "Centralized billing",
+    ],
+  },
+  {
+    icon: PanelsTopLeft,
+    title: "Web Hosting Customers",
+    detail:
+      "Sell or manage websites with configured hosting plans, domain checkout, panel SSO, and support from one dashboard.",
+    bullets: [
+      "Configured plan catalog",
+      "Dedicated hosting wallet",
+      "Website control panel",
     ],
   },
   {
@@ -575,8 +617,8 @@ export default function HomeRedesign() {
                 </h1>
 
                 <p className="max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-                  Deploy VPS instances in seconds with unified billing,
-                  real-time monitoring, and enterprise-grade security.
+                  Deploy VPS instances and managed web hosting with unified
+                  billing, real-time monitoring, and enterprise-grade security.
                 </p>
               </div>
 
@@ -598,6 +640,14 @@ export default function HomeRedesign() {
                   asChild
                 >
                   <Link to="/pricing">View Pricing</Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 px-7"
+                  asChild
+                >
+                  <Link to="/hosting-web">Explore Hosting</Link>
                 </Button>
               </div>
 
@@ -683,10 +733,10 @@ export default function HomeRedesign() {
                 <text x="266" y="91" fontSize="26" fontWeight="700" fill="hsl(var(--foreground))">Cloud Control Matrix</text>
                 <text x="266" y="112" fontSize="13" fill="hsl(var(--muted-foreground))">VPS, hosting, billing, support, and org resources in one panel</text>
                 {[
-                  ["Active VPS", "12", 236],
-                  ["Hosting Sites", "8", 412],
-                  ["Wallet", "$248.50", 588],
-                  ["Uptime", "99.99%", 764],
+                  ["Active VPS", "Live", 236],
+                  ["Hosting Sites", "Synced", 412],
+                  ["Wallet", "Funded", 588],
+                  ["Uptime", "Tracked", 764],
                 ].map(([label, value, x]) => (
                   <g key={label} transform={`translate(${x} 158)`}>
                     <rect width="152" height="92" rx="18" fill="hsl(var(--card))" stroke="hsl(var(--primary) / 0.24)" />
@@ -819,8 +869,8 @@ export default function HomeRedesign() {
                   A complete toolkit for your infrastructure.
                 </h2>
                 <p className="mt-4 text-lg text-muted-foreground">
-                  Explore how our platform helps you deploy servers, manage your
-                  team, and keep your costs predictable.
+                  Explore how our platform helps you deploy servers, publish
+                  websites, manage your team, and keep your costs predictable.
                 </p>
               </div>
 

@@ -5,6 +5,7 @@ import {
   useHostingRegions,
   useHostingStatus,
   hostingKeys,
+  type HostingPlan,
 } from "@/hooks/useHosting";
 import { apiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -32,30 +33,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatBillingAmount } from "@/lib/formatters";
-
-interface PlanFeatures {
-  planType?: string;
-  resources?: Record<string, { total?: number | null }>;
-  allowances?: string[];
-  selections?: Record<string, string>;
-  subscriptionsCount?: number;
-  allowedPhpVersions?: string[];
-  defaultPhpVersion?: string | null;
-  redisAllowed?: boolean;
-  persistentAppsAllowed?: boolean;
-  allowServerGroupSelection?: boolean;
-  serverGroupIds?: string[];
-}
-
-interface HostingPlan {
-  id: string;
-  name: string;
-  description?: string | null;
-  features?: PlanFeatures;
-  service_type: string;
-  price_monthly: number;
-  is_active: boolean;
-}
 
 const formatResource = (value: number | null | undefined) => {
   if (value === null || value === undefined || value === -1) return "∞";
@@ -230,7 +207,7 @@ export default function HostingStore() {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        {formatBillingAmount(plan.price_monthly)}
+                        {formatBillingAmount(Number(plan.price_monthly) || 0)}
                         <span className="text-muted-foreground font-normal text-xs">/mo</span>
                       </TableCell>
                     </TableRow>
@@ -252,7 +229,7 @@ export default function HostingStore() {
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{selectedPlan.name}</span>
                     <span className="font-semibold">
-                      {formatBillingAmount(selectedPlan.price_monthly)}/mo
+                      {formatBillingAmount(Number(selectedPlan.price_monthly) || 0)}/mo
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">

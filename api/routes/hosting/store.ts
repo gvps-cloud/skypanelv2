@@ -693,21 +693,23 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       const planResult = await query(`SELECT price_monthly FROM hosting_plans WHERE id = $1`, [planId]);
       if (planResult.rows.length > 0) {
         const amount = parseFloat(planResult.rows[0].price_monthly);
-        await query(
-          `INSERT INTO hosting_wallets (organization_id, balance, currency)
-           VALUES ($1, 0, 'USD')
-           ON CONFLICT (organization_id) DO NOTHING`,
-          [organizationId]
-        );
-        await query(
-          `UPDATE hosting_wallets SET balance = balance + $1 WHERE organization_id = $2`,
-          [amount, organizationId]
-        );
-        await query(
-          `INSERT INTO payment_transactions (organization_id, amount, payment_method, payment_provider, status, description, metadata)
-           VALUES ($1, $2, 'wallet_credit', 'internal', 'completed', $3, $4)`,
-          [organizationId, amount, "Hosting purchase rollback", JSON.stringify({ reason: error.message, wallet_type: 'hosting' })]
-        );
+        await transaction(async (rollbackClient) => {
+          await rollbackClient.query(
+            `INSERT INTO hosting_wallets (organization_id, balance, currency)
+             VALUES ($1, 0, 'USD')
+             ON CONFLICT (organization_id) DO NOTHING`,
+            [organizationId]
+          );
+          await rollbackClient.query(
+            `UPDATE hosting_wallets SET balance = balance + $1 WHERE organization_id = $2`,
+            [amount, organizationId]
+          );
+          await rollbackClient.query(
+            `INSERT INTO payment_transactions (organization_id, amount, payment_method, payment_provider, status, description, metadata)
+             VALUES ($1, $2, 'wallet_credit', 'internal', 'completed', $3, $4)`,
+            [organizationId, amount, "Hosting purchase rollback", JSON.stringify({ reason: error.message, wallet_type: 'hosting' })]
+          );
+        });
       }
     } catch (rollbackError) {
       console.error("Failed to rollback hosting purchase:", rollbackError);

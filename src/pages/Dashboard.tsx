@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Plus,
   ArrowUpRight,
+  Globe,
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -67,11 +68,20 @@ interface VPSStats {
 
 interface BillingStats {
   walletBalance: number;
+  hostingWalletBalance: number;
   monthlySpend: number;
   lastPayment: {
     amount: number;
     date: string;
   };
+}
+
+interface HostingServiceSummary {
+  id: string;
+  domain: string | null;
+  status: string;
+  planName: string | null;
+  nextBillingAt: string | null;
 }
 
 interface ActivityItem {
@@ -85,6 +95,8 @@ interface ActivityItem {
 const Dashboard: React.FC = () => {
   const [vpsInstances, setVpsInstances] = useState<VPSStats[]>([]);
   const [billing, setBilling] = useState<BillingStats | null>(null);
+  const [hostingEnabled, setHostingEnabled] = useState(false);
+  const [hostingServices, setHostingServices] = useState<HostingServiceSummary[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { token } = useAuth();
@@ -94,9 +106,11 @@ const Dashboard: React.FC = () => {
     if (!token) return;
     setLoading(true);
     try {
-      const [vpsData, walletData, paymentsData] = await Promise.all([
+      const [vpsData, walletData, hostingWalletData, hostingStatusData, paymentsData] = await Promise.all([
         apiClient.get("/vps"),
         apiClient.get("/payments/wallet/balance"),
+        apiClient.get("/payments/wallet/hosting/balance").catch(() => ({ balance: 0 })),
+        apiClient.get("/hosting/status").catch(() => ({ enabled: false })),
         apiClient.get("/payments/history?limit=1&status=completed"),
       ]);
 
@@ -157,12 +171,36 @@ const Dashboard: React.FC = () => {
 
       setBilling({
         walletBalance: walletData.balance ?? 0,
+        hostingWalletBalance: hostingWalletData.balance ?? 0,
         monthlySpend,
         lastPayment: {
           amount: lastPaymentItem?.amount ?? 0,
           date: lastPaymentItem?.created_at ?? "",
         },
       });
+
+      const isHostingEnabled = hostingStatusData.enabled === true;
+      setHostingEnabled(isHostingEnabled);
+
+      if (isHostingEnabled) {
+        try {
+          const hostingData = await apiClient.get("/hosting/services");
+          setHostingServices(
+            (hostingData.services || []).map((service: any) => ({
+              id: service.id,
+              domain: service.domain ?? null,
+              status: service.status || "unknown",
+              planName: service.plan_name ?? service.plan?.name ?? null,
+              nextBillingAt: service.next_billing_at ?? null,
+            })),
+          );
+        } catch (error) {
+          console.warn("Failed to load hosting services", error);
+          setHostingServices([]);
+        }
+      } else {
+        setHostingServices([]);
+      }
 
       try {
         const actData = await apiClient.get("/activity/recent?limit=10");
@@ -194,6 +232,13 @@ const Dashboard: React.FC = () => {
   const quickActions = useMemo(() => {
     const actions = [
       {
+        title: "Create Hosting",
+        description: "Launch an Enhance web hosting subscription.",
+        to: "/hosting/store",
+        icon: <Globe className="h-4 w-4" />,
+        hidden: !hostingEnabled,
+      },
+      {
         title: "Launch a VPS",
         description: "Deploy a fresh instance in under a minute.",
         to: "/vps",
@@ -213,8 +258,8 @@ const Dashboard: React.FC = () => {
       },
     ];
 
-    return actions;
-  }, []);
+    return actions.filter((action) => !action.hidden);
+  }, [hostingEnabled]);
 
   const heroStats = useMemo(() => {
     if (!vpsInstances.length) {
@@ -274,6 +319,8 @@ const Dashboard: React.FC = () => {
   const walletBalance = billing?.walletBalance ?? 0;
   const monthlySpend = billing?.monthlySpend ?? 0;
   const lastPayment = billing?.lastPayment;
+  const hostingWalletBalance = billing?.hostingWalletBalance ?? 0;
+  const activeHostingServices = hostingServices.filter((service) => service.status === "active").length;
 
   
   if (loading) {
@@ -310,6 +357,12 @@ const Dashboard: React.FC = () => {
               <div className="h-2 w-2 rounded-full bg-primary" />
               {heroStats.running} vps active
             </Badge>
+            {hostingEnabled && (
+              <Badge variant="outline" className="gap-2 px-3 py-1.5">
+                <Globe className="h-3 w-3" />
+                {activeHostingServices} hosting active
+              </Badge>
+            )}
             {heroStats.flagged > 0 && (
               <Badge variant="secondary" className="gap-2 px-3 py-1.5">
                 <AlertTriangle className="h-3 w-3" />
@@ -361,6 +414,119 @@ const Dashboard: React.FC = () => {
             ))}
           </CardContent>
         </Card>
+
+        {hostingEnabled && (
+          <Card className="h-full">
+            <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+              <div className="space-y-1">
+                <CardTitle>Enhance Hosting</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Website subscriptions, hosting wallet, and billing readiness
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/billing">Fund wallet</Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link to="/hosting/store">
+                    Create Hosting
+                    <ArrowUpRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-lg border bg-card p-4">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Globe className="h-4 w-4" />
+                    </div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Active Hosting
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold">{activeHostingServices}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {hostingServices.length} total subscription{hostingServices.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-card p-4">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Wallet className="h-4 w-4" />
+                    </div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Hosting Wallet
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold">
+                      {formatBillingAmount(hostingWalletBalance)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Reserved for monthly hosting charges
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-card p-4">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <ShieldCheck className="h-4 w-4" />
+                    </div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Enhance Status
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold">Enabled</p>
+                    <p className="text-xs text-muted-foreground">
+                      Hosting routes and checkout are available
+                    </p>
+                  </div>
+                </div>
+
+                {hostingServices.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
+                    <div className="rounded-full bg-muted p-4">
+                      <Globe className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="mt-6 text-base font-semibold">
+                      No hosting subscriptions yet
+                    </h3>
+                    <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                      Create your first Enhance hosting subscription to manage websites from the dashboard.
+                    </p>
+                    <Button className="mt-6" asChild>
+                      <Link to="/hosting/store">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Hosting
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {hostingServices.slice(0, 4).map((service) => (
+                      <Link
+                        key={service.id}
+                        to={`/hosting/${service.id}`}
+                        className="group flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold group-hover:text-primary">
+                              {service.domain || "Hosting service"}
+                            </h4>
+                            <Badge variant={service.status === "active" ? "default" : "secondary"}>
+                              {service.status}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {service.planName || "Hosting plan"} · next billing {formatTimestamp(service.nextBillingAt || undefined)}
+                          </p>
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Services & VPS Fleet */}
         <div className="grid gap-6 lg:grid-cols-1">

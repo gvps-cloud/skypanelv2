@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { query } from "../lib/database.js";
 import { linodeService } from "../services/linodeService.js";
 import { getSpeedTestUrl, parseStoredAllowedRegions, normalizeRegionList } from "../lib/providerRegions.js";
+import { EnhanceToggleService } from "../services/enhanceToggle.js";
 
 const router = express.Router();
 
@@ -240,6 +241,35 @@ router.get("/vps", async (_req: Request, res: Response) => {
     console.error("Public VPS plans fetch error:", error);
     const message =
       error instanceof Error ? error.message : "Failed to fetch VPS plans";
+    res.status(500).json({ error: message });
+  }
+});
+
+/**
+ * GET /api/pricing/hosting
+ *
+ * Public endpoint to retrieve active Enhance hosting plans for pricing display.
+ * No authentication required - this is for public pricing pages.
+ */
+router.get("/hosting", async (_req: Request, res: Response) => {
+  try {
+    const enabled = await EnhanceToggleService.isEffectivelyEnabled();
+    if (!enabled) {
+      return res.json({ enabled: false, plans: [] });
+    }
+
+    const result = await query(
+      `SELECT id, enhance_plan_id, name, description, features, service_type, price_monthly
+       FROM hosting_plans
+       WHERE is_active = true
+       ORDER BY price_monthly ASC, name ASC`
+    );
+
+    res.json({ enabled: true, plans: result.rows });
+  } catch (error) {
+    console.error("Public hosting plans fetch error:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch hosting plans";
     res.status(500).json({ error: message });
   }
 });

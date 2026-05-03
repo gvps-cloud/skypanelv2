@@ -38,6 +38,7 @@ import MarketingNavbar from '@/components/MarketingNavbar';
 import MarketingFooter from '@/components/MarketingFooter';
 import { apiClient } from '@/lib/api';
 import '@/styles/home.css';
+import type { HostingPlan } from '@/hooks/useHosting';
 
 /* â”€â”€â”€ Animation Variants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
@@ -88,6 +89,8 @@ const formatNetworkSpeed = (mbits: number): string => {
 
 const PricingPage: React.FC = () => {
   const [vpsPlans, setVpsPlans] = useState<VPSPlan[]>([]);
+  const [hostingEnabled, setHostingEnabled] = useState(false);
+  const [hostingPlans, setHostingPlans] = useState<HostingPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -102,13 +105,20 @@ const PricingPage: React.FC = () => {
     setError(null);
 
     try {
-      const vpsResult = await apiClient.get<{ plans?: VPSPlan[]; error?: string }>('/pricing/vps');
+      const [vpsResult, hostingResult] = await Promise.all([
+        apiClient.get<{ plans?: VPSPlan[]; error?: string }>('/pricing/vps'),
+        apiClient.get<{ enabled?: boolean; plans?: HostingPlan[]; error?: string }>('/pricing/hosting'),
+      ]);
       console.log('VPS plans loaded:', vpsResult.plans?.length || 0);
       setVpsPlans(vpsResult.plans || []);
+      setHostingEnabled(hostingResult.enabled === true);
+      setHostingPlans(hostingResult.plans || []);
     } catch (err) {
       console.error('Failed to load pricing data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load pricing information');
       setVpsPlans([]);
+      setHostingEnabled(false);
+      setHostingPlans([]);
     } finally {
       setLoading(false);
     }
@@ -205,6 +215,29 @@ const PricingPage: React.FC = () => {
       return `${unit}s`;
     };
     return `${value} ${pluralizeUnit(unit, value)}`;
+  };
+
+  const formatHostingResource = (value: number | null | undefined): string => {
+    if (value === null || value === undefined || value === -1) return 'Unlimited';
+    return String(value);
+  };
+
+  const getHostingFeatureRows = (plan: HostingPlan): string[] => {
+    const resources = plan.features?.resources ?? {};
+    const rows: string[] = [];
+
+    for (const [key, resource] of Object.entries(resources)) {
+      const label = key
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+      rows.push(`${formatHostingResource(resource.total)} ${label}`);
+    }
+
+    if (plan.features?.allowances?.length) {
+      rows.push(...plan.features.allowances);
+    }
+
+    return rows.slice(0, 6);
   };
 
   if (loading) {
@@ -313,6 +346,98 @@ const PricingPage: React.FC = () => {
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
+            )}
+
+            {hostingEnabled && (
+              <motion.div
+                initial={{ opacity: 0, y: 22 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="mt-20 space-y-10"
+              >
+                <div className="text-center">
+                  <Badge
+                    variant="outline"
+                    className="mb-4 rounded-full border-primary/30 px-4 py-1.5 text-primary"
+                  >
+                    Enhance Web Hosting
+                  </Badge>
+                  <h2 className="mb-4 text-3xl font-semibold">Managed Hosting Plans</h2>
+                  <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+                    Hosting prices and features are loaded from the configured hosting catalog, so this page reflects the plans available in the panel.
+                  </p>
+                </div>
+
+                {hostingPlans.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <Globe className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                      <h3 className="mb-2 text-lg font-medium">No Hosting Plans Available</h3>
+                      <p className="mb-4 text-muted-foreground">
+                        Enhance hosting is enabled, but no active hosting plans are configured yet.
+                      </p>
+                      <Button asChild variant="outline">
+                        <Link to="/contact">Contact Support</Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <motion.div
+                    variants={revealContainer}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true }}
+                    className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+                  >
+                    {hostingPlans.map((plan) => {
+                      const featureRows = getHostingFeatureRows(plan);
+
+                      return (
+                        <motion.div key={plan.id} variants={revealItem}>
+                          <Card className="home-gradient-border-top home-animated-border home-feature-card flex h-full flex-col">
+                            <CardHeader>
+                              <div className="flex items-center justify-between gap-3">
+                                <CardTitle className="text-xl">{plan.name}</CardTitle>
+                                <Badge variant="secondary" className="text-xs capitalize">
+                                  {plan.service_type}
+                                </Badge>
+                              </div>
+                              {plan.description && (
+                                <CardDescription>{plan.description}</CardDescription>
+                              )}
+                              <div className="pt-2">
+                                <span className="text-3xl font-bold">
+                                  {formatMonthly(plan.price_monthly)}
+                                </span>
+                                <span className="text-muted-foreground">/month</span>
+                              </div>
+                            </CardHeader>
+
+                            <CardContent className="flex-1 space-y-3">
+                              {(featureRows.length > 0 ? featureRows : ['Managed website hosting', 'Panel access after purchase']).map((feature) => (
+                                <div key={feature} className="flex items-center gap-3">
+                                  <Check className="h-4 w-4 text-primary" />
+                                  <span className="text-sm">{feature}</span>
+                                </div>
+                              ))}
+                            </CardContent>
+
+                            <CardFooter>
+                              <Button asChild className="w-full">
+                                <Link to="/register">
+                                  Start Hosting
+                                  <ArrowRight className="ml-2 h-4 w-4" />
+                                </Link>
+                              </Button>
+                            </CardFooter>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </motion.div>
             )}
 
             {/* VPS Instances header */}

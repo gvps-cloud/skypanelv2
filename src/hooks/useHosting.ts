@@ -1,6 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 
+export interface HostingPlanFeatures {
+  planType?: string;
+  resources?: Record<string, { total?: number | null }>;
+  allowances?: string[];
+  selections?: Record<string, string>;
+  subscriptionsCount?: number;
+  allowedPhpVersions?: string[];
+  defaultPhpVersion?: string | null;
+  redisAllowed?: boolean;
+  persistentAppsAllowed?: boolean;
+  allowServerGroupSelection?: boolean;
+  serverGroupIds?: string[];
+}
+
+export interface HostingPlan {
+  id: string;
+  enhance_plan_id?: string | null;
+  name: string;
+  description?: string | null;
+  features?: HostingPlanFeatures;
+  service_type: string;
+  price_monthly: number | string;
+  is_active?: boolean;
+}
+
 export const hostingKeys = {
   all: ["hosting"] as const,
   status: () => ["hosting", "status"] as const,
@@ -27,7 +52,7 @@ export function useHostingPlans() {
     queryKey: hostingKeys.plans(),
     queryFn: async () => {
       const res = await apiClient.get("/hosting/plans");
-      return res as { plans: any[] };
+      return res as { plans: HostingPlan[] };
     },
   });
 }

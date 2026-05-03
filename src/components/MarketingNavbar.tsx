@@ -31,6 +31,7 @@ const navDropdowns: NavDropdownConfig[] = [
 const navLinks: NavLinkConfig[] = [
   { label: "Platform", href: "#platform", isAnchor: true },
   { label: "Capabilities", href: "#capabilities", isAnchor: true },
+  { label: "Hosting", href: "/hosting-web" },
   { label: "Solutions", href: "#solutions", isAnchor: true },
   { label: "Pricing", href: "/pricing" },
   { label: "Regions", href: "/regions" },
