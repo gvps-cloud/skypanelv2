@@ -25,12 +25,22 @@ export function Logo({ size = "md", className }: LogoProps) {
   const dimension = sizeMap[size];
 
   return (
-    <img
-      src="/favicon.svg"
-      alt="Logo"
-      width={dimension}
-      height={dimension}
-      className={cn("shrink-0", className)}
+    <span
+      role="img"
+      aria-label="Logo"
+      className={cn("inline-block shrink-0 bg-current text-foreground", className)}
+      style={{
+        width: dimension,
+        height: dimension,
+        WebkitMaskImage: 'url("/favicon.svg")',
+        maskImage: 'url("/favicon.svg")',
+        WebkitMaskPosition: "center",
+        maskPosition: "center",
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskSize: "contain",
+        maskSize: "contain",
+      }}
     />
   );
 }
