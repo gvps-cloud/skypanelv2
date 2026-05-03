@@ -549,7 +549,7 @@ export default function HomeRedesign() {
           <div className="home-orb home-orb--3" aria-hidden />
           <div className="home-grid-mask absolute inset-0" aria-hidden />
 
-          <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-20 pt-24 sm:px-6 md:grid-cols-2 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-8 lg:pb-24 lg:pt-28">
+          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-20 pt-24 sm:px-6 md:grid-cols-[minmax(0,1fr)_minmax(360px,0.95fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(460px,0.95fr)] lg:gap-12 lg:px-8 lg:pb-24 lg:pt-28">
             <motion.div
               initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
@@ -634,11 +634,37 @@ export default function HomeRedesign() {
               </div>
             </motion.div>
 
+            {/* Globe */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.2 }}
+              className="relative hero-globe-container md:-mr-8 lg:-mr-16"
+            >
+              <div className="home-globe-glow" aria-hidden />
+              <ParticleGlobe
+                regions={regionsData}
+                onRegionSelect={setSelectedRegion}
+                selectedRegion={selectedRegion}
+                displayMode="pixel"
+                disableClick={true}
+              />
+              <GlobeRegionPanel
+                region={selectedRegion}
+                onClose={() => setSelectedRegion(null)}
+              />
+            </motion.div>
+          </div>
+        </section>
+
+        <section className="border-b border-border/40 bg-muted/10 py-14">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.15 }}
-              className="relative overflow-hidden rounded-3xl border border-primary/25 bg-card/80 p-4 shadow-2xl shadow-primary/10 backdrop-blur xl:col-span-2"
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.55 }}
+              className="relative overflow-hidden rounded-3xl border border-primary/25 bg-card/80 p-4 shadow-2xl shadow-primary/10 backdrop-blur"
             >
               <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--primary)/0.08)_1px,transparent_1px),linear-gradient(hsl(var(--primary)/0.08)_1px,transparent_1px)] bg-[size:28px_28px] opacity-35" />
               <svg viewBox="0 0 980 460" className="relative z-10 h-auto w-full" role="img" aria-label="SkyPanel dashboard preview">
@@ -679,27 +705,6 @@ export default function HomeRedesign() {
                   </g>
                 ))}
               </svg>
-            </motion.div>
-
-            {/* Globe */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-              className="relative hero-globe-container"
-            >
-              <div className="home-globe-glow" aria-hidden />
-              <ParticleGlobe
-                regions={regionsData}
-                onRegionSelect={setSelectedRegion}
-                selectedRegion={selectedRegion}
-                displayMode="pixel"
-                disableClick={true}
-              />
-              <GlobeRegionPanel
-                region={selectedRegion}
-                onClose={() => setSelectedRegion(null)}
-              />
             </motion.div>
           </div>
         </section>

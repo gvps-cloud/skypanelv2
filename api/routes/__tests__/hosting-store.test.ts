@@ -549,11 +549,13 @@ describe('Hosting Store Routes', () => {
         'UPDATE organizations SET enhance_customer_id = $1 WHERE id = $2',
         ['cust-org-999', testOrgId]
       );
+      await pool.query('UPDATE hosting_wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
+      await pool.query('UPDATE wallets SET balance = 50 WHERE organization_id = $1', [testOrgId]);
 
       // Create a subscription for the org
       const subResult = await pool.query(
-        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, enhance_website_id, enhance_subscription_id)
-         VALUES ($1, $2, $3, $4, 'active', NOW() + interval '1 month', 'web-999', 'sub-999')
+        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, next_billing_at, last_billed_at, enhance_website_id, enhance_subscription_id)
+         VALUES ($1, $2, $3, $4, 'active', NOW() + interval '1 month', NOW(), 'web-999', 'sub-999')
          RETURNING id`,
         [testOrgId, testUserId, planId, 'cancel-test.com']
       );
@@ -577,6 +579,17 @@ describe('Hosting Store Routes', () => {
         [subId]
       );
       expect(updatedSub.rows[0].status).toBe('cancelled');
+
+      const hostingWalletResult = await pool.query(
+        'SELECT balance FROM hosting_wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(hostingWalletResult.rows[0].balance)).toBeCloseTo(60.00, 2);
+      const mainWalletResult = await pool.query(
+        'SELECT balance FROM wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(mainWalletResult.rows[0].balance)).toBe(50.00);
     });
   });
 

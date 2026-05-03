@@ -117,6 +117,12 @@ describe('Hosting Purchase Saga', () => {
        VALUES ($1, 100.00, 'USD', NOW(), NOW())`,
       [testOrgId]
     );
+    await query(
+      `INSERT INTO hosting_wallets (organization_id, balance, currency, created_at, updated_at)
+       VALUES ($1, 100.00, 'USD', NOW(), NOW())
+       ON CONFLICT (organization_id) DO UPDATE SET balance = EXCLUDED.balance`,
+      [testOrgId]
+    );
 
     // Create hosting plan priced at $10/month (use unique enhance_plan_id to avoid collisions)
     hostingPlanId = uuidv4();
@@ -139,6 +145,7 @@ describe('Hosting Purchase Saga', () => {
     await query('DELETE FROM hosting_subscriptions WHERE organization_id = $1', [testOrgId]);
     await query('DELETE FROM payment_transactions WHERE organization_id = $1', [testOrgId]);
     await query('UPDATE wallets SET balance = 100.00 WHERE organization_id = $1', [testOrgId]);
+    await query('UPDATE hosting_wallets SET balance = 100.00 WHERE organization_id = $1', [testOrgId]);
     await query('DELETE FROM hosting_plans WHERE id = $1', [hostingPlanId]);
 
     hostingPlanId = uuidv4();
@@ -164,6 +171,7 @@ describe('Hosting Purchase Saga', () => {
   afterAll(async () => {
     await query('DELETE FROM hosting_subscriptions WHERE organization_id = $1', [testOrgId]);
     await query('DELETE FROM payment_transactions WHERE organization_id = $1', [testOrgId]);
+    await query('DELETE FROM hosting_wallets WHERE organization_id = $1', [testOrgId]);
     await query('DELETE FROM wallets WHERE organization_id = $1', [testOrgId]);
     await query('DELETE FROM organization_members WHERE organization_id = $1', [testOrgId]);
     await query('DELETE FROM organization_roles WHERE organization_id = $1', [testOrgId]);
@@ -206,12 +214,17 @@ describe('Hosting Purchase Saga', () => {
         domain: 'saga-test.example.com',
       });
 
-      // Assert wallet debited to $90
+      // Assert hosting wallet debited to $90 and main wallet remains untouched
       const walletResult = await query(
-        'SELECT balance FROM wallets WHERE organization_id = $1',
+        'SELECT balance FROM hosting_wallets WHERE organization_id = $1',
         [testOrgId]
       );
       expect(Number(walletResult.rows[0].balance)).toBe(90.00);
+      const mainWalletResult = await query(
+        'SELECT balance FROM wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(mainWalletResult.rows[0].balance)).toBe(100.00);
 
       // Assert wallet_debit transaction exists
       const debitResult = await query(
@@ -257,12 +270,17 @@ describe('Hosting Purchase Saga', () => {
       expect(response.status).toBe(500);
       expect(response.body.error).toContain('Remote website creation failed');
 
-      // Assert wallet balance restored to $100
+      // Assert hosting wallet balance restored to $100 and main wallet remains untouched
       const walletResult = await query(
-        'SELECT balance FROM wallets WHERE organization_id = $1',
+        'SELECT balance FROM hosting_wallets WHERE organization_id = $1',
         [testOrgId]
       );
       expect(Number(walletResult.rows[0].balance)).toBe(100.00);
+      const mainWalletResult = await query(
+        'SELECT balance FROM wallets WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(mainWalletResult.rows[0].balance)).toBe(100.00);
 
       // Assert compensating wallet_credit transaction exists
       const creditResult = await query(
