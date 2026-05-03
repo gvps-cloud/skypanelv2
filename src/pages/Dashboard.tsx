@@ -159,6 +159,65 @@ interface ActivityItem {
   status: "success" | "warning" | "error" | "info";
 }
 
+
+const mapVpsInstance = async (instance: NonNullable<VpsListResponse["instances"]>[number]): Promise<VPSStats> => {
+  let metrics: VpsMetrics | undefined;
+  let cpu = 0;
+  let cpuCount = 0;
+
+  try {
+    const detailData = await apiClient.get<VpsDetailResponse>(`/vps/${instance.id}`);
+    const metricsData = detailData.instance?.metrics;
+
+    metrics = metricsData ? {
+      cpu: metricsData.cpu ?? null,
+      network: {
+        inbound: metricsData.network?.inbound ?? null,
+        outbound: metricsData.network?.outbound ?? null,
+      },
+      io: {
+        read: metricsData.io?.read ?? null,
+        swap: metricsData.io?.swap ?? null,
+      },
+    } : undefined;
+
+    cpu = metricsData?.cpu?.summary?.last ?? 0;
+    cpuCount = detailData.instance?.plan?.specs?.vcpus ?? 0;
+  } catch (error) {
+    console.warn('Failed to fetch metrics for VPS', { instanceId: instance.id }, error);
+  }
+
+  return {
+    id: instance.id,
+    name: instance.label ?? "instance",
+    status: instance.status ?? "provisioning",
+    plan: instance.plan_name ?? instance.configuration?.type ?? "",
+    location: instance.configuration?.region ?? "",
+    cpu: Math.round(cpu * 100) / 100,
+    cpuCount,
+    memory: null,
+    storage: 0,
+    ip: instance.ip_address ?? "",
+    metrics,
+  } satisfies VPSStats;
+};
+
+const mapHostingService = (service: NonNullable<HostingServicesResponse["services"]>[number]): HostingServiceSummary => ({
+  id: service.id,
+  domain: service.domain ?? null,
+  status: service.status ?? "unknown",
+  planName: service.plan_name ?? service.plan?.name ?? null,
+  nextBillingAt: service.next_billing_at ?? null,
+});
+
+const mapActivity = (activity: NonNullable<ActivityResponse["activities"]>[number]): ActivityItem => ({
+  id: activity.id,
+  type: activity.type ?? activity.entity_type ?? "activity",
+  message: activity.message ?? `${activity.event_type}`,
+  timestamp: activity.timestamp ?? activity.created_at ?? "",
+  status: activity.status ?? "info",
+});
+
 const Dashboard: React.FC = () => {
   const [vpsInstances, setVpsInstances] = useState<VPSStats[]>([]);
   const [billing, setBilling] = useState<BillingStats | null>(null);
@@ -181,55 +240,7 @@ const Dashboard: React.FC = () => {
         apiClient.get<PaymentsHistoryResponse>("/payments/history?limit=1&status=completed"),
       ]);
 
-      const instances: VPSStats[] = await Promise.all(
-        (vpsData.instances ?? []).map(async (instance) => {
-          let metrics: VpsMetrics | undefined;
-          let cpu = 0;
-          let cpuCount = 0;
-
-          try {
-            const detailData = await apiClient.get<VpsDetailResponse>(`/vps/${instance.id}`);
-            
-            // Metrics are nested under instance
-            const metricsData = detailData.instance?.metrics;
-            
-            metrics = metricsData ? {
-              cpu: metricsData.cpu ?? null,
-              network: {
-                inbound: metricsData.network?.inbound ?? null,
-                outbound: metricsData.network?.outbound ?? null,
-              },
-              io: {
-                read: metricsData.io?.read ?? null,
-                swap: metricsData.io?.swap ?? null,
-              },
-            } : undefined;
-            
-            cpu = metricsData?.cpu?.summary?.last ?? 0;
-            cpuCount = detailData.instance?.plan?.specs?.vcpus ?? 0;
-          } catch (error) {
-            console.warn(
-              'Failed to fetch metrics for VPS',
-              { instanceId: instance.id },
-              error,
-            );
-          }
-
-          return {
-            id: instance.id,
-            name: instance.label ?? "instance",
-            status: instance.status ?? "provisioning",
-            plan: instance.plan_name ?? instance.configuration?.type ?? "",
-            location: instance.configuration?.region ?? "",
-            cpu: Math.round(cpu * 100) / 100,
-            cpuCount,
-            memory: null,
-            storage: 0,
-            ip: instance.ip_address ?? "",
-            metrics,
-          } satisfies VPSStats;
-        }),
-      );
+      const instances: VPSStats[] = await Promise.all((vpsData.instances ?? []).map(mapVpsInstance));
 
       setVpsInstances(instances);
 
@@ -253,15 +264,7 @@ const Dashboard: React.FC = () => {
         try {
           const hostingData = await apiClient.get<HostingServicesResponse>("/hosting/services");
           const services = hostingData.services ?? [];
-          setHostingServices(
-            services.map((service) => ({
-              id: service.id,
-              domain: service.domain ?? null,
-              status: service.status ?? "unknown",
-              planName: service.plan_name ?? service.plan?.name ?? null,
-              nextBillingAt: service.next_billing_at ?? null,
-            })),
-          );
+          setHostingServices(services.map(mapHostingService));
         } catch (error) {
           console.warn("Failed to load hosting services", error);
           setHostingServices([]);
@@ -273,15 +276,7 @@ const Dashboard: React.FC = () => {
       try {
         const actData = await apiClient.get<ActivityResponse>("/activity/recent?limit=10");
         const activities = actData.activities ?? [];
-        const mapped: ActivityItem[] = activities.map(
-          (activity) => ({
-            id: activity.id,
-            type: activity.type ?? activity.entity_type ?? "activity",
-            message: activity.message ?? `${activity.event_type}`,
-            timestamp: activity.timestamp ?? activity.created_at ?? "",
-            status: activity.status ?? "info",
-          }),
-        );
+        const mapped: ActivityItem[] = activities.map(mapActivity);
         setRecentActivity(mapped);
       } catch (error) {
         console.warn("Failed to load recent activity", error);

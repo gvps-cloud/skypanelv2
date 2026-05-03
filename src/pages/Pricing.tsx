@@ -124,18 +124,22 @@ const getHostingFeatureRows = (plan: HostingPlan): string[] => {
   return rows.slice(0, 6);
 };
 
-const HostingPricingSection = ({ plans }: { plans: HostingPlan[] }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 22 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-    className="mt-20 space-y-10"
-  >
-    <HostingPricingHeader />
-    {plans.length === 0 ? <EmptyHostingPlans /> : <HostingPlanGrid plans={plans} />}
-  </motion.div>
-);
+const HostingPricingSection = ({ plans }: { plans: HostingPlan[] }) => {
+  const content = plans.length === 0 ? <EmptyHostingPlans /> : <HostingPlanGrid plans={plans} />;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 22 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="mt-20 space-y-10"
+    >
+      <HostingPricingHeader />
+      {content}
+    </motion.div>
+  );
+};
 
 const HostingPricingHeader = () => (
   <div className="text-center">
@@ -181,11 +185,13 @@ const HostingPlanGrid = ({ plans }: { plans: HostingPlan[] }) => (
   </motion.div>
 );
 
-const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
+const getHostingDisplayFeatures = (plan: HostingPlan): string[] => {
   const featureRows = getHostingFeatureRows(plan);
-  const features = featureRows.length > 0
-    ? featureRows
-    : ['Managed website hosting', 'Panel access after purchase'];
+  return featureRows.length > 0 ? featureRows : ['Managed website hosting', 'Panel access after purchase'];
+};
+
+const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
+  const features = getHostingDisplayFeatures(plan);
 
   return (
     <motion.div variants={revealItem}>

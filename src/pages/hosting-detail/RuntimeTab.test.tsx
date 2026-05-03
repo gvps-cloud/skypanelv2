@@ -24,7 +24,7 @@ vi.mock("sonner", () => ({
 
 type SelectProps = {
   value?: string;
-  onValueChange?: (value: string) => void;
+  onValueChange?(value: string): void;
   children?: React.ReactNode;
 };
 
