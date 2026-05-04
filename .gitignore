@@ -13,6 +13,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+.playwright-mcp
+.opencode
+.codex
+.codacy.yml
 
 # Coverage and local analysis artifacts
 coverage/

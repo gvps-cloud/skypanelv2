@@ -6,12 +6,26 @@ const countLabels: Record<string, string> = {
   websites: "Websites",
   mailboxes: "Mailboxes",
   customers: "Customers",
+  domainAliases: "Domain aliases",
+  subdomains: "Subdomains",
 };
 
 const capacityLabels: Record<string, string> = {
   diskspace: "Disk space",
   transfer: "Transfer",
 };
+
+const canonicalResourceOrder: string[] = [
+  "websites",
+  "ftpUsers",
+  "mysqlDbs",
+  "mailboxes",
+  "customers",
+  "domainAliases",
+  "subdomains",
+  "diskspace",
+  "transfer",
+];
 
 const titleizeResourceKey = (key: string) =>
   key
@@ -28,8 +42,7 @@ const formatCapacity = (value: number | null | undefined) => {
   if (value === null || value === undefined || value === -1) return "Unlimited";
   if (!Number.isFinite(value) || value <= 0) return "0 MB";
 
-  const normalizedMb =
-    value >= 1_000_000 ? value / 1_000_000 : value;
+  const normalizedMb = value >= 1_000_000 ? value / 1_000_000 : value;
 
   if (normalizedMb >= 1_000_000) {
     return `${(normalizedMb / 1_000_000).toLocaleString("en-US", {
@@ -48,22 +61,27 @@ const formatCapacity = (value: number | null | undefined) => {
   })} MB`;
 };
 
-export const getHostingFeatureRows = (plan: HostingPlan, limit = 6): string[] => {
+export const getHostingFeatureRows = (plan: HostingPlan, limit = 9): string[] => {
   const rows: string[] = [];
   const resources = plan.features?.resources ?? {};
 
-  for (const [key, resource] of Object.entries(resources)) {
+  for (const key of canonicalResourceOrder) {
+    const resource = resources[key];
+
     if (key in capacityLabels) {
-      rows.push(`${formatCapacity(resource.total)} ${capacityLabels[key]}`);
+      rows.push(`${formatCapacity(resource?.total)} ${capacityLabels[key]}`);
       continue;
     }
 
     const label = countLabels[key] ?? titleizeResourceKey(key);
-    rows.push(`${formatCount(resource.total)} ${label}`);
-  }
+    const total = resource?.total;
+    // Keep cards compact and reseller-focused: hide 0-customer rows.
+    if (key === "customers" && (total === undefined || total === null || total === 0)) {
+      continue;
+    }
 
-  if (plan.features?.allowances?.length) {
-    rows.push(...plan.features.allowances);
+    const displayValue = total !== undefined && total !== null ? total : 0;
+    rows.push(`${formatCount(displayValue)} ${label}`);
   }
 
   return rows.slice(0, limit);

@@ -26,6 +26,115 @@ Compact guidance for OpenCode sessions in `skypanelv2`. `CLAUDE.md` delegates he
 - Playwright e2e config auto-starts `npm run dev-up` outside CI; base URL defaults to `http://localhost:5173`.
 - API docs: `npm run docs:api:sync` updates `src/lib/apiRouteManifest.ts`; `npm run docs:api:audit` checks coverage.
 
+## Tools & When to Use Them
+
+OpenCode provides built-in tools, MCP server integrations, and loadable skills. Use the right tool for the task.
+
+### File & Code Operations (Built-in)
+
+| Tool | Use When |
+|---|---|
+| `read` | Reading file contents. **Always read a file before editing it.** |
+| `write` | Creating new files or fully rewriting existing ones. |
+| `edit` | Surgical string replacements in existing files. Prefer over `write` for partial changes. |
+| `glob` | Finding files by name pattern (e.g., `**/*.tsx`, `api/routes/**/*.ts`). Use for discovery before reading. |
+| `grep` | Searching file contents by regex. Use to locate functions, imports, error messages, config values. |
+| `bash` | Running shell commands: git, npm scripts, migrations, typecheck, lint. Use `workdir` instead of `cd && cmd`. |
+
+### Task Delegation (Built-in)
+
+| Tool | Use When |
+|---|---|
+| `task` (sub-agents) | Parallel or complex independent work. Two agent types: |
+| — `explore` | Fast codebase search — "where is X", "what files contain Y", pattern matching. Thoroughness: quick/medium/very thorough. |
+| — `general` | Multi-step research or execution — reading multiple files, running commands, synthesizing findings. |
+| `todowrite` | Tracking multi-step tasks (3+ steps). Creates a visible task list for progress tracking. |
+
+### User Interaction (Built-in)
+
+| Tool | Use When |
+|---|---|
+| `question` | Asking the user clarifying questions mid-task — ambiguity, preferences, tradeoffs, scope decisions. |
+
+### Web Research & Documentation (MCP)
+
+| Tool | Use When |
+|---|---|
+| `Tavily_tavily_search` | Searching the web for current info — news, facts, recent changes beyond training data. |
+| `Tavily_tavily_extract` | Extracting content from specific known URLs. |
+| `Tavily_tavily_crawl` | Crawling a website from a root URL with configurable depth/breadth. |
+| `Tavily_tavily_map` | Mapping a website's full URL structure. |
+| `Tavily_tavily_research` | Deep multi-source research synthesizing web pages and documents. |
+| `webfetch` | Fetching a single URL to markdown. Prefer for simple page reads. |
+| `web-reader_webReader` | Converting a URL to LLM-friendly format with optional image/link summaries. |
+| `web-search-prime_web_search_prime` | Alternative web search returning titles, URLs, summaries, and favicons. |
+
+### Library & Framework Docs (MCP)
+
+| Tool | Use When |
+|---|---|
+| `context7_resolve-library-id` + `context7_query-docs` | Looking up up-to-date library docs, API refs, code examples. **Use before writing code that uses any external library.** |
+| `zread_search_doc` | Searching a GitHub repo's docs, issues, and commits by keyword. |
+| `zread_read_file` | Reading a specific file from a GitHub repo without cloning. |
+| `zread_get_repo_structure` | Getting the directory listing/structure of a GitHub repo. |
+| `find-docs` (skill) | Broader doc retrieval for any developer technology — SDKs, APIs, CLI tools, cloud services. |
+
+### Browser Automation & Testing (MCP)
+
+| Tool | Use When |
+|---|---|
+| `playwright_browser_*` (20+ tools) | Full browser automation: navigate, click, type, screenshot, snapshot, file upload, drag, hover, dialogs, JS eval, network inspection. |
+| — `playwright_browser_snapshot` | **Prefer over screenshots** for inspecting page elements and their references. |
+| — `playwright_browser_take_screenshot` | Capturing visual screenshots for verification or debugging. |
+| — `playwright_browser_navigate` | Loading a URL in the browser. |
+| — `playwright_browser_click` / `type` / `fill_form` | Interacting with page elements. |
+| — `playwright_browser_network_requests` | Inspecting network activity (API calls, failed requests). |
+| `chrome_devtools_*` (20+ tools) | Chrome DevTools Protocol: snapshots, form filling, JS evaluation, network inspection, Lighthouse audits, performance traces, memory snapshots. |
+| — `chrome_devtools_lighthouse_audit` | Running accessibility, SEO, and best-practices audits. |
+| — `chrome_devtools_performance_start_trace` | Profiling frontend performance (Core Web Vitals, LCP, INP, CLS). |
+| — `chrome_devtools_take_memory_snapshot` | Analyzing memory distribution and debugging leaks. |
+| — `chrome_devtools_list_network_requests` | Inspecting all network requests on a page. |
+| `webapp-testing` (skill) | Orchestrated Playwright workflows for testing local web apps — verify functionality, capture screenshots, view logs. |
+
+### Project Management (MCP)
+
+| Tool | Use When |
+|---|---|
+| `linear_list_issues` / `linear_get_issue` | Reading Linear issues — search, filter by assignee/team/state/cycle/project. |
+| `linear_save_issue` | Creating or updating Linear issues. |
+| `linear_list_projects` / `linear_get_project` | Listing or inspecting Linear projects. |
+| `linear_save_project` | Creating or updating Linear projects. |
+| `linear_list_cycles` | Viewing team sprint cycles (current/previous/next). |
+| `linear_list_milestones` / `linear_get_milestone` | Managing project milestones. |
+| `linear_list_initiatives` / `linear_get_initiative` | Tracking larger initiatives across projects. |
+| `linear_save_status_update` | Posting project/initiative status updates. |
+| `linear_list_customers` / `linear_save_customer` | Managing customer records and needs. |
+| `linear_save_document` | Creating/updating Linear documents. |
+| `linear_save_comment` | Commenting on issues for async communication. |
+| `zen-linear` (skill) | Alternative Linear CLI integration via zenskill. |
+| `linear` (skill) | Linear project management guidance and workflows. |
+
+### Document Generation (MCP)
+
+| Tool | Use When |
+|---|---|
+| `zen-office-docx` (skill) | Creating Word documents (.docx) — reports, proposals, letters, contracts. |
+| `zen-office-pdf` (skill) | Creating PDF documents — fixed-layout documents, invoices. |
+| `zen-office-pptx` (skill) | Creating PowerPoint presentations (.pptx) — slide decks, pitches. |
+| `zen-office-xlsx` (skill) | Creating Excel spreadsheets (.xlsx) — data tables, exports, reports. |
+
+### Specialized Skills (via `skill` tool)
+
+| Skill | Use When |
+|---|---|
+| `frontend-design` | Building production-grade UI components/pages with high design quality. |
+| `security-best-practices` | Security reviews, hardening guidance, secure-by-default coding (JS/TS, Python, Go). |
+| `shadcn` | Working with shadcn/ui — adding, searching, fixing, styling components. |
+| `brand-guidelines` | Applying Anthropic brand colors and typography to artifacts. |
+| `gh-address-comments` | Addressing review/issue comments on open GitHub PRs. |
+| `opentui` | Building terminal UIs with OpenTUI (React/Solid bindings). |
+| `zen-discovery` | Discovering available integrations and their connection status. |
+
 ## Environment
 
 - Copy `.env.example` to `.env`; backend loads `.env` in `api/app.ts` unless `IN_DOCKER` is set.
@@ -55,7 +164,7 @@ Compact guidance for OpenCode sessions in `skypanelv2`. `CLAUDE.md` delegates he
 ## Database & Migrations
 
 - This is not Prisma. `@prisma/client` may exist in dependencies, but app data access is raw `pg` through `api/lib/database.ts`.
-- Migrations are SQL files in `migrations/`, currently through `062`. Never modify an existing migration; add the next zero-padded `NNN_short_description.sql`.
+- Migrations are SQL files in `migrations/`, currently through `065`. Never modify an existing migration; add the next zero-padded `NNN_short_description.sql`.
 - Apply pending migrations with `node scripts/run-migration.js`. Do not run `db:reset`, `db:reset:confirm`, or `db:fresh` unless explicitly requested; they destroy data.
 - Migration runner validates SHA256 checksums, so editing applied migrations will break future runs.
 

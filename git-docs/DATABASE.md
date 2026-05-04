@@ -77,7 +77,7 @@ Relationship highlights
 
 ## Migration History
 
-The database schema is managed through **59 sequential SQL migrations** in the `migrations/` directory:
+The database schema is managed through **65 sequential SQL migrations** in the `migrations/` directory:
 
 | Migration | Description |
 | --------- | ----------- |
@@ -112,3 +112,9 @@ The database schema is managed through **59 sequential SQL migrations** in the `
 | `057` | Enhance hosting schema — platform_integrations, hosting_plans, hosting_subscriptions, RLS |
 | `058` | Fraud checks table for FraudLabsPro integration |
 | `059` | Refunds table with PayPal capture support |
+| `060` | Hosting subscriptions FK ON DELETE SET NULL — allow plan deletion without blocking old subscriptions |
+| `061` | Hosting cancel support + SSO — add hosting_subscription_id to support_tickets, enhance_member_id to organizations |
+| `062` | Add cancelled_at timestamp to hosting_subscriptions |
+| `063` | Add updated_at column to fraud_checks (fix admin override endpoint) |
+| `064` | Dedicated hosting wallets — hosting_wallets table, RLS, seed functions, balance alerts |
+| `065` | Enhance hosting FAQ and documentation content |

@@ -1,37 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { motion } from "framer-motion";
 import {
+  ArrowDownUp,
   ArrowRight,
-  ArrowUpRight,
+  ArrowUp,
   CheckCircle2,
   Clock3,
   Code2,
+  Cpu,
   Globe2,
-  LayoutDashboard,
+  HardDrive,
   Lock,
-  Plus,
+  Mail,
+  MemoryStick,
   Rocket,
   Server,
+  Shield,
   ShieldCheck,
-  Sparkles,
   Wallet,
   Zap,
   Users,
   Activity,
-  Star,
-  MapPin,
-  TrendingUp,
   Database,
   PanelsTopLeft,
-  CreditCard,
-  Building2,
-  FileText,
-  Bell,
-  Settings,
-  Search,
-  Monitor,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,9 +33,7 @@ import { BRAND_NAME } from "@/lib/brand";
 import { apiClient } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import ParticleGlobe from "@/components/home/ParticleGlobe";
-import GlobeRegionPanel from "@/components/home/GlobeRegionPanel";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Accordion,
   AccordionContent,
@@ -51,22 +42,11 @@ import {
 } from "@/components/ui/accordion";
 import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
+import SkyPanelPreview from "@/components/home/SkyPanelPreview";
+import { getHostingFeatureRows } from "@/lib/hostingPlanFeatures";
+import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
-
-interface MetricCard {
-  label: string;
-  value: string;
-  detail: string;
-  icon: LucideIcon;
-}
-
-interface ControlPlaneItem {
-  icon: LucideIcon;
-  label: string;
-  subtitle: string;
-  description: string;
-}
 
 interface PlatformCard {
   title: string;
@@ -76,34 +56,28 @@ interface PlatformCard {
   span?: string;
 }
 
-type CapabilityKey = "deploy" | "hosting" | "teams" | "protect";
-
-interface RegionData {
-  id: string;
-  label: string;
-  country: string;
-  status: string;
-  site_type: string;
-  displayLabel?: string;
-  displayCountry?: string;
-  speedTestUrl?: string;
-  capabilities?: string[];
-}
-
 /* ─── Animation Variants ─────────────────────────────────────────── */
 
-const revealContainer: Variants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-80px" as const },
 };
 
-const revealItem: Variants = {
-  hidden: { opacity: 0, y: 22 },
-  show: {
+const staggerContainer = {
+  initial: {},
+  whileInView: { transition: { staggerChildren: 0.08 } },
+  viewport: { once: true, margin: "-80px" as const },
+};
+
+const staggerItem = {
+  initial: { opacity: 0, y: 16 },
+  whileInView: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
   },
+  viewport: { once: true },
 };
 
 /* ─── Helpers ────────────────────────────────────────────────────── */
@@ -116,151 +90,186 @@ const parseNumber = (v: unknown): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
-const AnimatedCounter = ({
-  value,
-  suffix = "",
-  duration = 2,
-}: {
-  value: number;
-  suffix?: string;
-  duration?: number;
-}) => {
-  const [count, setCount] = useState(0);
+const hostingCurrencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
-  useEffect(() => {
-    let start: number;
-    let raf: number;
-    const animate = (ts: number) => {
-      if (!start) start = ts;
-      const p = Math.min((ts - start) / (duration * 1000), 1);
-      setCount(Math.floor(p * value));
-      if (p < 1) raf = requestAnimationFrame(animate);
-    };
-    raf = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(raf);
-  }, [value, duration]);
+const formatHostingMonthly = (
+  amount: number | string | null | undefined,
+): string => {
+  const value =
+    typeof amount === "string" ? Number.parseFloat(amount) : amount;
+  const normalizedValue =
+    Number.isFinite(value) && value !== undefined && value !== null ? value : 0;
+  return hostingCurrencyFormatter.format(normalizedValue);
+};
 
-  return (
-    <>
-      {count}
-      {suffix}
-    </>
-  );
+const formatMonthly = (amount: number | string | null | undefined): string => {
+  if (amount == null) return "$0.00";
+  const value = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (!Number.isFinite(value) || value < 0) return "$0.00";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+const formatCurrency6 = (amount: number | string | null | undefined): string => {
+  if (amount == null) return "$0.000000";
+  const value = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (!Number.isFinite(value) || value < 0) return "$0.000000";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 6,
+    maximumFractionDigits: 6,
+  }).format(value);
+};
+
+interface VpsSpecRow {
+  icon: LucideIcon;
+  label: string;
+}
+
+interface HostingSpecRow {
+  icon: LucideIcon;
+  label: string;
+}
+
+const formatNetworkSpeed = (mbits: number): string => {
+  if (mbits >= 1000) {
+    const gbps = mbits / 1000;
+    return `${Number.isInteger(gbps) ? gbps : gbps.toFixed(1)} Gbps`;
+  }
+  return `${mbits} Mbps`;
+};
+
+const getVpsSpecRows = (plan: any): VpsSpecRow[] => {
+  const specs = asRecord(plan?.specifications) ?? {};
+  const rows: VpsSpecRow[] = [];
+
+  const vcpus = parseNumber(specs.vcpus);
+  if (vcpus) rows.push({ icon: Cpu, label: `${vcpus} vCPU${vcpus > 1 ? "s" : ""}` });
+
+  const memoryGb =
+    parseNumber(specs.memory_gb) ??
+    (parseNumber(specs.memory) != null ? Math.round(parseNumber(specs.memory)! / 1024) : null);
+  if (memoryGb) rows.push({ icon: MemoryStick, label: `${memoryGb}GB Memory` });
+
+  const storageGb =
+    parseNumber(specs.storage_gb) ??
+    (parseNumber(specs.disk) != null ? Math.round(parseNumber(specs.disk)! / 1024) : null);
+  if (storageGb) rows.push({ icon: HardDrive, label: `${storageGb}GB SSD Storage` });
+
+  const transferGb =
+    parseNumber(specs.transfer_gb) ??
+    parseNumber(specs.bandwidth_gb) ??
+    parseNumber(specs.transfer);
+  if (transferGb) {
+    const label = transferGb >= 1000 ? `${transferGb / 1000} TB Transfer` : `${transferGb} GB Transfer`;
+    rows.push({ icon: ArrowDownUp, label });
+  }
+
+  rows.push({ icon: ArrowDownUp, label: "40 Gbps Network In per VPS" });
+
+  const networkOutMbits = parseNumber(plan?.network_out);
+  if (networkOutMbits && networkOutMbits > 0) {
+    rows.push({ icon: ArrowUp, label: `${formatNetworkSpeed(networkOutMbits)} Network Out` });
+  }
+
+  const backupsEnabled = plan?.daily_backups_enabled === true || plan?.weekly_backups_enabled === true;
+  rows.push({ icon: Shield, label: backupsEnabled ? "Backups Available" : "No Backups" });
+
+  return rows;
+};
+
+const getHostingFeatureIcon = (feature: string): LucideIcon => {
+  const normalized = feature.toLowerCase();
+
+  if (normalized.includes("mysql") || normalized.includes("database")) return Database;
+  if (normalized.includes("transfer") || normalized.includes("bandwidth")) return ArrowDownUp;
+  if (normalized.includes("disk") || normalized.includes("storage") || normalized.includes("space")) return HardDrive;
+  if (normalized.includes("mail")) return Mail;
+  if (normalized.includes("ftp") || normalized.includes("customer")) return Users;
+  if (normalized.includes("website") || normalized.includes("domain")) return Globe2;
+  if (normalized.includes("panel") || normalized.includes("access")) return PanelsTopLeft;
+
+  return Server;
+};
+
+const getHostingSpecRows = (plan: any): HostingSpecRow[] => {
+  const features = getHostingFeatureRows(plan);
+  const displayFeatures = features.length > 0
+    ? features
+    : ["Managed website hosting", "Panel access after purchase"];
+
+  return displayFeatures.map((feature) => ({
+    icon: getHostingFeatureIcon(feature),
+    label: feature,
+  }));
 };
 
 /* ─── Data ───────────────────────────────────────────────────────── */
 
-const capabilityTabs: Array<{
-  key: CapabilityKey;
-  label: string;
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  bullets: string[];
-  callouts: Array<{ label: string; value: string }>;
-}> = [
+const DEFAULT_CATEGORY_META: Record<string, { label: string; order: number }> = {
+  nanode:      { label: "Nanode",         order: 0 },
+  standard:    { label: "Standard",       order: 1 },
+  dedicated:   { label: "Dedicated CPU",  order: 2 },
+  premium:     { label: "Premium",        order: 3 },
+  highmem:     { label: "High Memory",    order: 4 },
+  gpu:         { label: "GPU",            order: 5 },
+  accelerated: { label: "Accelerated",    order: 6 },
+};
+
+const capabilityCards = [
   {
-    key: "deploy",
-    label: "Compute",
     icon: Server,
-    title: "High-performance virtual machines",
+    label: "VPS Compute",
     description:
-      "Spin up Linux distributions instantly. Get full root access and scale resources up as your application grows.",
-    bullets: [
-      "Provisioning times under 45 seconds",
-      "Full root access & seamless web-based SSH console",
-      "Multiple Linux distributions (Ubuntu, Debian, AlmaLinux, etc.)",
-    ],
-    callouts: [
+      "Spin up high-performance Linux instances with full root access and NVMe storage in under 45 seconds.",
+    specs: [
       { label: "Deployment", value: "Instant" },
       { label: "Storage", value: "NVMe SSD" },
       { label: "Network", value: "IPv4 & IPv6" },
     ],
   },
   {
-    key: "hosting",
-    label: "Web Hosting",
     icon: PanelsTopLeft,
-    title: "Enhance-backed website hosting",
+    label: "Web Hosting",
     description:
-      "Launch managed website hosting from the same console as your VPS, billing, support, and organization resources.",
-    bullets: [
-      "Order active hosting plans from the configured Enhance catalog",
-      "Use your own domain during checkout and manage the site after purchase",
-      "Fund a dedicated hosting wallet separately from VPS wallet spend",
-    ],
-    callouts: [
+      "Launch managed website hosting directly from the same console. WordPress, email, SSL, and databases.",
+    specs: [
       { label: "Catalog", value: "Live plans" },
-      { label: "Billing", value: "Hosting wallet" },
       { label: "Control", value: "Panel SSO" },
+      { label: "Billing", value: "Hosting wallet" },
     ],
   },
   {
-    key: "teams",
-    label: "Teams & Orgs",
     icon: Users,
-    title: "Collaborate securely with your team",
+    label: "Organizations",
     description:
-      "Organize your infrastructure into workspaces. Invite developers, assign roles, and manage permissions without sharing credentials.",
-    bullets: [
-      "Create multiple organization workspaces",
-      "Granular roles: Owner, Admin, Member",
-      "Centralized billing and resource tracking per team",
-    ],
-    callouts: [
+      "Organize infrastructure into workspaces. Invite developers, assign roles, manage permissions granularly.",
+    specs: [
       { label: "Workspaces", value: "Unlimited" },
       { label: "Access", value: "Role-based" },
-      { label: "Collaboration", value: "Seamless" },
+      { label: "Billing", value: "Per team" },
     ],
   },
   {
-    key: "protect",
-    label: "Security & Billing",
     icon: ShieldCheck,
-    title: "Built for resilience and predictability",
+    label: "Security & Billing",
     description:
-      "Keep your applications online with built-in DDoS protection, automated backups, and a transparent, prepaid wallet billing system.",
-    bullets: [
-      "Robust DDoS protection available for critical workloads",
-      "Automated daily and weekly backup scheduling",
-      "Pay-as-you-go hourly billing from a prepaid wallet",
-    ],
-    callouts: [
+      "Built-in DDoS protection, automated backups, and transparent prepaid wallet billing with hourly rates.",
+    specs: [
       { label: "Uptime SLA", value: "99.9%" },
       { label: "Protection", value: "DDoS Ready" },
-      { label: "Billing", value: "By the hour" },
+      { label: "Billing", value: "Hourly" },
     ],
-  },
-];
-
-const controlPlaneItems: ControlPlaneItem[] = [
-  {
-    icon: Server,
-    label: "Compute",
-    subtitle: "Virtual Machines",
-    description:
-      "Deploy high-performance Linux instances with full root access, NVMe storage, and instant provisioning in under 45 seconds.",
-  },
-  {
-    icon: Globe2,
-    label: "Hosting",
-    subtitle: "Managed Websites",
-    description:
-      "Launch website hosting through Enhance. WordPress, email, SSL, databases, and backups from one panel.",
-  },
-  {
-    icon: Wallet,
-    label: "Billing",
-    subtitle: "Prepaid Wallet",
-    description:
-      "Fund your wallet with PayPal and pay hourly. No surprise bills, no contracts. Hosting wallet keeps spend separate.",
-  },
-  {
-    icon: Users,
-    label: "Teams",
-    subtitle: "Organizations",
-    description:
-      "Create workspaces, invite members, assign roles. Centralized billing and resource tracking per team.",
   },
 ];
 
@@ -271,7 +280,6 @@ const platformCards: PlatformCard[] = [
     description:
       "From account creation to a running server in less than a minute. Skip the complexity and start building immediately.",
     metric: "45s average deployment",
-    span: "sm:col-span-2 xl:col-span-1",
   },
   {
     icon: Globe2,
@@ -279,7 +287,6 @@ const platformCards: PlatformCard[] = [
     description:
       "Access server terminals and hosting controls directly from the dashboard. Keep compute and website operations in one place.",
     metric: "Unified console",
-    span: "xl:col-span-2",
   },
   {
     icon: PanelsTopLeft,
@@ -315,7 +322,6 @@ const platformCards: PlatformCard[] = [
     description:
       "Fund your wallet and pay only for the hours you use. No hidden fees, no complicated contracts.",
     metric: "Hourly precision",
-    span: "sm:col-span-2 xl:col-span-1",
   },
   {
     icon: Database,
@@ -331,15 +337,6 @@ const platformCards: PlatformCard[] = [
       "Manage your infrastructure programmatically. Full REST API with SDK support for automation and integration.",
     metric: "Full API access",
   },
-];
-
-const trustItems = [
-  { icon: Server, label: "High Performance NVMe" },
-  { icon: ShieldCheck, label: "DDoS Protection" },
-  { icon: Users, label: "Built for Teams" },
-  { icon: Wallet, label: "Hourly Billing" },
-  { icon: Globe2, label: "Global Regions" },
-  { icon: Lock, label: "Encrypted at Rest" },
 ];
 
 const faqs = [
@@ -394,42 +391,36 @@ const faqs = [
 const testimonials = [
   {
     quote:
-      "The deployment speed is incredible. We went from signup to having our production servers running in under 5 minutes. The unified dashboard gives us complete visibility.",
+      "The deployment speed is incredible. We went from signup to having our production servers running in under 45 seconds. The unified dashboard gives us complete visibility.",
     name: "Marcus Chen",
     role: "DevOps Engineer",
-    rating: 5,
     results: [
       { metric: "99.9% uptime", period: "6 months" },
-      { metric: "5 min deploy", period: "vs 2 hours" },
+      { metric: "45s deploy", period: "vs 2 hours" },
     ],
     avatar: "MC",
-    location: "San Francisco, CA",
   },
   {
     quote:
       "Finally, a platform that combines VPS and application hosting with transparent billing. The cost savings have been significant for our startup.",
     name: "Sarah Williams",
     role: "CTO",
-    rating: 5,
     results: [
       { metric: "40% cost reduction", period: "monthly" },
       { metric: "2x performance", period: "vs previous" },
     ],
     avatar: "SW",
-    location: "Austin, TX",
   },
   {
     quote:
       "The web-based SSH console and real-time monitoring have transformed how we manage our infrastructure. It's like having a datacenter in our browser.",
     name: "David Rodriguez",
     role: "Infrastructure Lead",
-    rating: 5,
     results: [
       { metric: "3x faster deployments", period: "average" },
       { metric: "Zero downtime", period: "12 months" },
     ],
     avatar: "DR",
-    location: "Miami, FL",
   },
 ];
 
@@ -480,9 +471,9 @@ const solutionCards = [
 
 function SocialProof() {
   const { data: orgData } = useQuery({
-    queryKey: ['public-organizations'],
+    queryKey: ["public-organizations"],
     queryFn: async () => {
-      return apiClient.get<any>('/health/organizations');
+      return apiClient.get<any>("/health/organizations");
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -492,22 +483,20 @@ function SocialProof() {
       BRAND_NAME.trim().substring(0, 2).toUpperCase() || "??";
 
     if (orgData?.organizations?.length > 0) {
-      return orgData.organizations
-        .slice(0, 3)
-        .map((org: { name: string }) => {
-          const name = (org.name || '').trim();
+      return orgData.organizations.slice(0, 3).map((org: { name: string }) => {
+        const name = (org.name || "").trim();
 
-          if (!name) {
-            return fallbackInitials;
-          }
+        if (!name) {
+          return fallbackInitials;
+        }
 
-          const words = name.split(/\s+/).filter(Boolean);
-          if (words.length > 1 && words[0]?.[0] && words[1]?.[0]) {
-            return `${words[0][0]}${words[1][0]}`.toUpperCase();
-          }
+        const words = name.split(/\s+/).filter(Boolean);
+        if (words.length > 1 && words[0]?.[0] && words[1]?.[0]) {
+          return `${words[0][0]}${words[1][0]}`.toUpperCase();
+        }
 
-          return (name.substring(0, 2) || fallbackInitials).toUpperCase();
-        });
+        return (name.substring(0, 2) || fallbackInitials).toUpperCase();
+      });
     }
     return [fallbackInitials];
   }, [orgData]);
@@ -518,366 +507,13 @@ function SocialProof() {
         {orgInitials.map((initials, i) => (
           <div
             key={i}
-            className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/30 to-primary/60 flex items-center justify-center ring-2 ring-background text-[9px] font-bold text-primary"
+            className="w-7 h-7 rounded-full bg-muted flex items-center justify-center ring-2 ring-background text-[9px] font-bold text-foreground"
           >
             {initials}
           </div>
         ))}
       </div>
-      <span>
-        Join teams already using {BRAND_NAME}
-      </span>
-    </div>
-  );
-}
-
-/* ─── SkyPanel Dashboard Preview ─────────────────────────────────── */
-
-function SkyPanelPreview() {
-  const [activeView, setActiveView] = useState("Dashboard");
-  const [selectedVps, setSelectedVps] = useState("prod-api-01");
-  const [walletBalance, setWalletBalance] = useState(128.4);
-  const [activityFeed, setActivityFeed] = useState([
-    { message: "VPS prod-api-01 deployed", type: "VPS event", time: "2m ago" },
-    { message: "Wallet topped up $50.00", type: "Billing event", time: "1h ago" },
-    { message: "Hosting renewed: atlas-site.io", type: "System event", time: "3h ago" },
-  ]);
-
-  const vpsFleet = [
-    { id: "prod-api-01", status: "running", plan: "4C/8GB", region: "US-East", cpu: 34.2, cpuCount: 4, memory: 62 },
-    { id: "staging-web", status: "running", plan: "2C/4GB", region: "EU-West", cpu: 12.8, cpuCount: 2, memory: 41 },
-    { id: "db-primary", status: "running", plan: "8C/16GB", region: "US-East", cpu: 58.7, cpuCount: 8, memory: 76 },
-  ];
-
-  const hostingServices = [
-    { domain: "atlas-site.io", status: "active", plan: "Business Hosting", nextBilling: "May 28" },
-    { domain: "docs.gvps.cloud", status: "active", plan: "Starter Hosting", nextBilling: "Jun 02" },
-  ];
-
-  const selectedServer = vpsFleet.find((server) => server.id === selectedVps) ?? vpsFleet[0];
-
-  const addActivity = (message: string, type = "System event") => {
-    setActivityFeed((current) => [
-      { message, type, time: "just now" },
-      ...current.slice(0, 4),
-    ]);
-  };
-
-  const quickActions = [
-    {
-      icon: Plus,
-      title: "Launch a VPS",
-      description: "Deploy a fresh instance in under a minute.",
-      action: () => {
-        setActiveView("Compute");
-        addActivity("Deployment wizard opened for a new VPS", "VPS event");
-      },
-    },
-    {
-      icon: Globe2,
-      title: "Create Hosting",
-      description: "Launch an Enhance web hosting subscription.",
-      action: () => {
-        setActiveView("Web Hosting");
-        addActivity("Hosting checkout preview opened");
-      },
-    },
-    {
-      icon: Wallet,
-      title: "Top up wallet",
-      description: "Add credits with secure checkout.",
-      action: () => {
-        setWalletBalance((balance) => Math.round((balance + 25) * 100) / 100);
-        setActiveView("Billing");
-        addActivity("Wallet preview topped up $25.00", "Billing event");
-      },
-    },
-    {
-      icon: ShieldCheck,
-      title: "Create support ticket",
-      description: "Reach the platform team 24/7.",
-      action: () => {
-        setActiveView("Activity");
-        addActivity("Support ticket draft created", "Support update");
-      },
-    },
-  ];
-
-  const navItems = [
-    { icon: LayoutDashboard, label: "Dashboard" },
-    { icon: Server, label: "Compute" },
-    { icon: Globe2, label: "Web Hosting" },
-    { icon: Building2, label: "Organizations" },
-    { icon: FileText, label: "Notes" },
-    { icon: Activity, label: "Activity" },
-    { icon: CreditCard, label: "Billing" },
-  ];
-
-  return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-border/60 bg-background shadow-2xl shadow-primary/10">
-      <div className="flex min-h-[620px]">
-        <aside className="hidden w-56 shrink-0 border-r border-border/50 bg-card/90 sm:flex sm:flex-col">
-          <div className="flex items-center gap-2.5 border-b border-border/50 px-4 py-3.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 ring-1 ring-primary/25">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-            </div>
-            <div className="grid flex-1 text-left leading-tight">
-              <span className="truncate text-sm font-semibold">{BRAND_NAME}</span>
-              <span className="truncate text-[10px] text-muted-foreground">Cloud Platform</span>
-            </div>
-          </div>
-
-          <nav className="flex-1 space-y-0.5 px-2 py-3">
-            {navItems.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => setActiveView(item.label)}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors ${
-                  activeView === item.label
-                    ? "bg-primary/10 font-medium text-primary"
-                    : "text-muted-foreground hover:bg-muted/50"
-                }`}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
-          <div className="border-t border-border/50 p-3">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
-                MC
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium">Storm Moran</p>
-                <p className="truncate text-[10px] text-muted-foreground">Admin</p>
-              </div>
-              <Settings className="h-3.5 w-3.5 text-muted-foreground" />
-            </div>
-          </div>
-        </aside>
-
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border/50 px-3 sm:px-4">
-            <div className="flex items-center gap-2">
-              <div className="hidden items-center gap-1.5 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1 text-[11px] text-muted-foreground sm:flex">
-                <Search className="h-3 w-3" />
-                Search dashboard...
-                <kbd className="ml-2 rounded border border-border/60 bg-muted/50 px-1 py-px font-mono text-[9px]">Ctrl K</kbd>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => quickActions[0].action()}
-                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/50 bg-muted/20 transition-colors hover:border-primary/40 hover:text-primary"
-                aria-label="Launch a VPS"
-              >
-                <Plus className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-              <button
-                type="button"
-                onClick={() => addActivity("Notification center opened")}
-                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border/50 bg-muted/20 transition-colors hover:border-primary/40 hover:text-primary"
-                aria-label="Open notifications"
-              >
-                <Bell className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-            </div>
-          </header>
-
-          <div className="flex-1 space-y-4 overflow-hidden p-3 sm:p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-base font-semibold leading-tight">{activeView}</h3>
-                <p className="text-[11px] text-muted-foreground">
-                  Dummy client console preview
-                </p>
-              </div>
-              <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
-                Interactive preview
-              </span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                3 vps active
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
-                <Globe2 className="h-3 w-3 text-muted-foreground" />
-                2 hosting active
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
-                <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                Avg CPU 24.3%
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {quickActions.map((action) => (
-                <button
-                  key={action.title}
-                  type="button"
-                  onClick={action.action}
-                  className="group flex min-h-[68px] items-center gap-2 rounded-lg border border-border/50 bg-card/60 p-2.5 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
-                >
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <action.icon className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="block truncate text-[11px] font-medium">{action.title}</span>
-                    <span className="hidden text-[10px] leading-snug text-muted-foreground md:line-clamp-2">
-                      {action.description}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="rounded-xl border border-border/50 bg-card/50">
-              <div className="flex items-center justify-between border-b border-border/40 px-3 py-2.5">
-                <div>
-                  <h3 className="text-[13px] font-semibold">VPS Fleet</h3>
-                  <p className="text-[10px] text-muted-foreground">Live signal across your deployments</p>
-                </div>
-                <span className="inline-flex items-center gap-1 text-[10px] text-primary">
-                  Manage all
-                  <ArrowUpRight className="h-3 w-3" />
-                </span>
-              </div>
-
-              <div className="divide-y divide-border/30">
-                {vpsFleet.map((vps) => (
-                  <button
-                    key={vps.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedVps(vps.id);
-                      setActiveView("Compute");
-                    }}
-                    className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/35 ${
-                      selectedVps === vps.id ? "bg-primary/5" : ""
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[12px] font-semibold">{vps.id}</span>
-                        <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
-                          {vps.status}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        {vps.plan} · {vps.region}
-                      </p>
-                    </div>
-                    <div className="w-28 space-y-1">
-                      <div className="flex items-center justify-between text-[10px]">
-                        <span className="text-muted-foreground">CPU ({vps.cpuCount})</span>
-                        <span className="font-medium">{vps.cpu}%</span>
-                      </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${vps.cpu}%` }}
-                        />
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-3 lg:grid-cols-2">
-              <div className="rounded-xl border border-border/50 bg-card/50 p-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                    <Wallet className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Wallet Balance</p>
-                    <p className="text-lg font-bold">${walletBalance.toFixed(2)}</p>
-                  </div>
-                </div>
-                <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <CheckCircle2 className="h-3 w-3 text-primary" />
-                  Ready to deploy infrastructure
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/50 bg-card/50 p-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[12px] font-semibold">
-                    {activeView === "Web Hosting" ? "Hosting Services" : activeView === "Compute" ? "Selected VPS" : "Recent Activity"}
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => setActiveView(activeView === "Activity" ? "Dashboard" : "Activity")}
-                    className="inline-flex items-center gap-1 text-[10px] text-primary"
-                  >
-                    View all
-                    <ArrowUpRight className="h-3 w-3" />
-                  </button>
-                </div>
-                {activeView === "Web Hosting" ? (
-                  <div className="mt-2 space-y-2">
-                    {hostingServices.map((service) => (
-                      <button
-                        key={service.domain}
-                        type="button"
-                        onClick={() => addActivity(`Opened hosting service ${service.domain}`)}
-                        className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/40 bg-background/40 p-2 text-left text-[11px] transition-colors hover:border-primary/40"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium">{service.domain}</span>
-                          <span className="text-[10px] text-muted-foreground">{service.plan} · bills {service.nextBilling}</span>
-                        </span>
-                        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary">{service.status}</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : activeView === "Compute" ? (
-                  <div className="mt-2 space-y-2 text-[11px]">
-                    <div className="rounded-lg border border-border/40 bg-background/40 p-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{selectedServer.id}</span>
-                        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary">{selectedServer.status}</span>
-                      </div>
-                      <p className="mt-1 text-[10px] text-muted-foreground">{selectedServer.plan} · {selectedServer.region}</p>
-                      <div className="mt-2 space-y-1">
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-muted-foreground">Memory</span>
-                          <span>{selectedServer.memory}%</span>
-                        </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                          <div className="h-full rounded-full bg-primary" style={{ width: `${selectedServer.memory}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-2 space-y-2">
-                    {activityFeed.slice(0, 3).map((event, i) => (
-                      <div key={`${event.message}-${i}`} className="flex items-start gap-2.5 text-[11px]">
-                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                        <div className="min-w-0 flex-1">
-                          <span className="text-foreground">{event.message}</span>
-                          <span className="ml-1.5 text-[10px] text-muted-foreground">{event.time}</span>
-                          <span className="block text-[10px] text-muted-foreground">{event.type}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/5" />
+      <span>Join teams already using {BRAND_NAME}</span>
     </div>
   );
 }
@@ -888,12 +524,12 @@ export default function HomeRedesign() {
   const [regionCount, setRegionCount] = useState(10);
   const [lowestPrice, setLowestPrice] = useState<number | null>(null);
   const [pricingLoading, setPricingLoading] = useState(true);
-  const [activeCapability, setActiveCapability] =
-    useState<CapabilityKey>("deploy");
-  const [regionsData, setRegionsData] = useState<RegionData[]>([]);
-  const [selectedRegion, setSelectedRegion] = useState<RegionData | null>(null);
   const [hostingEnabled, setHostingEnabled] = useState(false);
   const [hostingPlanCount, setHostingPlanCount] = useState(0);
+  const [hostingPlans, setHostingPlans] = useState<any[]>([]);
+  const [hostingLowestPrice, setHostingLowestPrice] = useState<number | null>(null);
+  const [hostingCheapestPlan, setHostingCheapestPlan] = useState<any | null>(null);
+  const [vpsCheapestPlan, setVpsCheapestPlan] = useState<any | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -901,10 +537,12 @@ export default function HomeRedesign() {
     const load = async () => {
       try {
         const [regData, priceData, hostingData] = await Promise.all([
-          apiClient.get<{ success?: boolean; regions?: any[]; count?: number }>('/pricing/public-regions'),
-          apiClient.get<{ plans?: any[] }>('/pricing/vps'),
+          apiClient.get<{ success?: boolean; regions?: any[]; count?: number }>(
+            "/pricing/public-regions",
+          ),
+          apiClient.get<{ plans?: any[] }>("/pricing/vps"),
           apiClient
-            .get<{ enabled?: boolean; plans?: any[] }>('/pricing/hosting')
+            .get<{ enabled?: boolean; plans?: any[] }>("/pricing/hosting")
             .catch(() => ({ enabled: false, plans: [] })),
         ]);
 
@@ -914,7 +552,6 @@ export default function HomeRedesign() {
           const regions = regData.regions;
           if (Array.isArray(regions) && regions.length > 0) {
             setRegionCount(regions.length);
-            setRegionsData(regions as RegionData[]);
           } else {
             const c = parseNumber(regData.count);
             if (c !== null && c > 0) setRegionCount(c);
@@ -924,18 +561,40 @@ export default function HomeRedesign() {
         if (priceData) {
           const plans = priceData.plans;
           if (Array.isArray(plans)) {
-            const values = plans
+            const sorted = plans
               .map((p) => {
                 const rec = asRecord(p);
-                return (parseNumber(rec?.base_price) ?? 0) + (parseNumber(rec?.markup_price) ?? 0);
+                const price =
+                  (parseNumber(rec?.base_price) ?? 0) +
+                  (parseNumber(rec?.markup_price) ?? 0);
+                return { plan: p, price };
               })
-              .filter((v) => Number.isFinite(v) && v > 0);
-            if (values.length > 0) setLowestPrice(Math.min(...values));
+              .filter((v) => Number.isFinite(v.price) && v.price > 0)
+              .sort((a, b) => a.price - b.price);
+            if (sorted.length > 0) {
+              setLowestPrice(sorted[0].price);
+              setVpsCheapestPlan(sorted[0].plan);
+            }
           }
         }
 
         setHostingEnabled(hostingData.enabled === true);
         setHostingPlanCount(hostingData.plans?.length ?? 0);
+        setHostingPlans(hostingData.plans ?? []);
+        if (Array.isArray(hostingData.plans) && hostingData.plans.length > 0) {
+          const sorted = [...hostingData.plans]
+            .map((p) => {
+              const rec = asRecord(p);
+              const price = parseNumber(rec?.price_monthly);
+              return { plan: p, price };
+            })
+            .filter((v): v is { plan: any; price: number } => v.price !== null && v.price > 0)
+            .sort((a, b) => a.price - b.price);
+          if (sorted.length > 0) {
+            setHostingLowestPrice(sorted[0].price);
+            setHostingCheapestPlan(sorted[0].plan);
+          }
+        }
       } catch {
         // Silently fail - pricing data is optional
       } finally {
@@ -944,955 +603,557 @@ export default function HomeRedesign() {
     };
 
     void load();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const location = useLocation();
   useEffect(() => {
     if (location.hash) {
       const el = document.getElementById(location.hash.slice(1));
-      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+      if (el)
+        setTimeout(
+          () => el.scrollIntoView({ behavior: "smooth", block: "start" }),
+          100,
+        );
     }
   }, [location.hash]);
 
-  const heroMetrics: MetricCard[] = useMemo(
-    () => [
-      {
-        label: "Global locations",
-        value: `${regionCount}+`,
-        detail: "Deploy close to your users",
-        icon: Globe2,
-      },
-      {
-        label: "Deployment time",
-        value: "~45s",
-        detail: "From click to root access",
-        icon: Clock3,
-      },
-      {
-        label: "Uptime guarantee",
-        value: "99.9%",
-        detail: "Reliability you can trust",
-        icon: ShieldCheck,
-      },
-    ],
-    [regionCount],
-  );
+  const { data: enabledCategoryMappings = [] } = useEnabledCategoryMappings();
 
-  const activeTab =
-    capabilityTabs.find((t) => t.key === activeCapability) ?? capabilityTabs[0];
-
-  /* ─── Render ─────────────────────────────────────────────────── */
+  const getCategoryLabel = (category: string): string => {
+    const mapping = enabledCategoryMappings.find(
+      (item) => item.original_category === category,
+    );
+    if (mapping?.custom_name) return mapping.custom_name;
+    return (
+      DEFAULT_CATEGORY_META[category]?.label ??
+      category.charAt(0).toUpperCase() + category.slice(1)
+    );
+  };
 
   return (
-    <div className="home-cyber min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       <MarketingNavbar />
 
-      <main>
-        {/* ═══════════════════════════ HERO ═══════════════════════════ */}
-        <section className="home-hero-section relative overflow-hidden border-b border-border/40">
-          <div className="home-orb home-orb--1" aria-hidden />
-          <div className="home-orb home-orb--2" aria-hidden />
-          <div className="home-hero-grid-lines" aria-hidden />
+      <main className="flex flex-col">
+        {/* ── 1. HERO ─────────────────────────────────────────────── */}
+        <section className="relative overflow-hidden border-b border-border">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)_/_0.08)_0%,transparent_60%)] dark:bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)_/_0.12)_0%,transparent_60%)] pointer-events-none" />
 
-          <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-6 pt-24 sm:px-6 md:grid-cols-[minmax(0,1fr)_minmax(360px,0.95fr)] lg:grid-cols-[minmax(0,1.05fr)_minmax(460px,0.95fr)] lg:gap-12 lg:px-8 lg:pt-28">
+          <div className="relative mx-auto max-w-7xl px-6 md:px-12 pt-28 pb-16 md:pt-36 md:pb-24">
+            {/* Headline block */}
             <motion.div
-              initial={{ opacity: 0, y: 28 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.65 }}
-              className="space-y-6"
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
+              className="max-w-3xl"
             >
-              <div className="space-y-5">
-                <Badge
-                  variant="outline"
-                  className="home-shimmer-badge w-fit rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
-                >
-                  <Sparkles className="mr-2 h-3.5 w-3.5" />
-                  Next-Gen Cloud Infrastructure Platform
-                </Badge>
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]">
+                Cloud infrastructure,{" "}
+                <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                  simplified.
+                </span>
+              </h1>
+              <p className="mt-6 text-lg md:text-xl leading-relaxed text-muted-foreground max-w-2xl">
+                Deploy high-performance virtual machines and managed web hosting from one dashboard. Full root access, hourly billing, zero surprises.
+              </p>
 
-                <h1 className="text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl 2xl:text-7xl">
-                  Cloud Infrastructure{" "}
-                  <br className="hidden sm:block" />
-                  Management,
-                  <span className="block font-bold bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text text-transparent">
-                    Simplified
-                  </span>
-                </h1>
-
-                <p className="max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-                  Deploy VPS instances and managed web hosting with unified
-                  billing, real-time monitoring, and enterprise-grade security.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button
-                  size="lg"
-                  className="h-12 px-7 home-btn-glow group"
-                  asChild
-                >
-                  <Link to="/register">
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <Button size="lg" className="h-12 px-7 rounded-lg" asChild>
+                  <Link to="/register" className="flex items-center">
                     Deploy Your First Server
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 px-7"
-                  asChild
-                >
+                <Button size="lg" variant="outline" className="h-12 px-7 rounded-lg" asChild>
                   <Link to="/pricing">View Pricing</Link>
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 px-7"
-                  asChild
-                >
-                  <Link to="/web-hosting">Explore Hosting</Link>
-                </Button>
+              </div>
+
+              <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Globe2 className="h-3.5 w-3.5 text-primary" />
+                  {regionCount}+ Regions
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Clock3 className="h-3.5 w-3.5 text-primary" />
+                  ~45s Deploy
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                  99.9% Uptime SLA
+                </span>
               </div>
             </motion.div>
 
-            <div className="relative hero-globe-container md:-mr-8 lg:-mr-16">
-              <div className="home-globe-glow" aria-hidden />
-              <ParticleGlobe
-                regions={regionsData}
-                onRegionSelect={setSelectedRegion}
-                selectedRegion={selectedRegion}
-                displayMode="pixel"
-                disableClick={true}
-              />
-              <GlobeRegionPanel
-                region={selectedRegion}
-                onClose={() => setSelectedRegion(null)}
-              />
-            </div>
-          </div>
-
-          {/* ── Metrics Bar ── */}
-          <div className="relative mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {heroMetrics.map((metric) => (
-                <motion.div
-                  key={metric.label}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  className="home-glass-panel home-animated-border flex items-center gap-4 rounded-xl border border-primary/15 p-4 transition-colors hover:border-primary/30"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20">
-                    <metric.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground">
-                      {metric.label}
-                    </p>
-                    <p className="text-2xl font-bold tracking-tight">
-                      {metric.value.includes("+") ||
-                      metric.value.includes("%") ? (
-                        metric.value
-                      ) : (
-                        <AnimatedCounter
-                          value={
-                            parseInt(metric.value.replace(/\D/g, "")) || 0
-                          }
-                          suffix={metric.value.replace(/[\d,]/g, "")}
-                        />
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {metric.detail}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ═══════════════════ CONSOLE SHOWCASE ═════════════════════════ */}
-        <section className="home-console-showcase border-b border-border/40">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col items-center py-16 lg:py-20">
-              {/* Heading block */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.55 }}
-                className="mb-12 max-w-2xl text-center"
-              >
-                <Badge
-                  variant="outline"
-                  className="home-shimmer-badge mb-5 inline-flex rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
-                >
-                  <Monitor className="mr-2 h-3.5 w-3.5" />
-                  Live Console Preview
-                </Badge>
-
-                <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                  Operate everything from one{" "}
-                  <span className="text-primary">branded console</span>.
-                </h2>
-
-                <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-                  {BRAND_NAME} brings VPS deployments, managed web hosting,
-                  prepaid wallet billing, team workspaces, and platform activity
-                  into a single dashboard.
-                </p>
-              </motion.div>
-
-              {/* Feature pills + CTA */}
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="mb-10 flex max-w-3xl flex-wrap items-center justify-center gap-3"
-              >
-                {[
-                  { icon: Rocket, text: "Deploy a VPS in under 45s" },
-                  { icon: Globe2, text: "Manage Enhance hosting" },
-                  { icon: Wallet, text: "Track wallet & spend" },
-                  { icon: Building2, text: "Multi-org workspaces" },
-                ].map((item) => (
-                  <span
-                    key={item.text}
-                    className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3.5 py-1.5 text-xs text-muted-foreground backdrop-blur-sm"
-                  >
-                    <item.icon className="h-3.5 w-3.5 text-primary" />
-                    {item.text}
-                  </span>
-                ))}
-              </motion.div>
-
-              {/* Browser-frame mock */}
-              <motion.div
-                initial={{ opacity: 0, y: 28 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.15 }}
-                className="relative w-full max-w-5xl"
-              >
-                <div className="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-b from-primary/10 via-primary/5 to-transparent blur-2xl" />
-
-                <div className="home-console-frame">
-                  <div className="home-console-frame__bar">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
-                      <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
-                      <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
-                    </div>
-                    <span className="text-[10px] font-medium text-muted-foreground/60">
-                      {BRAND_NAME} Console
-                    </span>
-                    <div className="w-8" />
-                  </div>
-                  <SkyPanelPreview />
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="mt-8"
-              >
-                <Link to="/register">
-                  <Button size="lg" className="group gap-2">
-                    Open your console
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                  </Button>
-                </Link>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* ═══════════════════ OPERATIONAL TICKER ═══════════════════ */}
-        <section className="border-b border-border/40 bg-muted/20 py-5">
-          <div className="home-marquee">
-            <div className="home-marquee__track">
-              {[...trustItems, ...trustItems].map((item, i) => (
-                <div
-                  key={i}
-                  className="flex shrink-0 items-center gap-2.5 text-sm text-muted-foreground"
-                >
-                  <item.icon className="h-4 w-4 text-primary/60" />
-                  <span className="whitespace-nowrap font-medium">
-                    {item.label}
-                  </span>
-                  <span className="ml-4 h-1 w-1 rounded-full bg-border" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ═══════════════════ PLATFORM — BENTO GRID ════════════════════ */}
-        <section id="platform" className="py-20 sm:py-24">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            {/* Product preview */}
             <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.55 }}
-              className="mb-12 max-w-3xl"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
+              className="mt-16 md:mt-20"
             >
-              <Badge
-                variant="outline"
-                className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary"
-              >
-                Why {BRAND_NAME}
-              </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                Everything you need to host modern applications.
+              <div className="rounded-xl border border-border/50 overflow-hidden bg-card shadow-lg shadow-foreground/[0.03]">
+                <SkyPanelPreview />
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* ── 2. CAPABILITIES ──────────────────────────────────────── */}
+        <section id="platform" className="py-24 bg-background">
+          <div className="mx-auto max-w-7xl px-6 md:px-12">
+            <motion.div
+              {...fadeInUp}
+              transition={{ duration: 0.5 }}
+              className="mb-12"
+            >
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                Platform capabilities
               </h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                A cloud platform that strips away the complexity. Powerful
-                virtual machines, straightforward billing, and tools designed for
-                collaboration.
+              <p className="mt-2 text-muted-foreground max-w-xl">
+                Everything you need to deploy, manage, and scale cloud infrastructure — from VPS to web hosting.
               </p>
             </motion.div>
 
             <motion.div
-              variants={revealContainer}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+              {...staggerContainer}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
             >
-              {platformCards.map((card) => (
-                <motion.div
-                  key={card.title}
-                  variants={revealItem}
-                  className={card.span}
-                >
-                  <Card className="h-full home-gradient-border-top border-border/50 bg-card/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/[0.04] border-primary/25">
-                    <CardContent className="space-y-4 p-6">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/20">
-                        <card.icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold tracking-tight">
-                          {card.title}
-                        </h3>
-                        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                          {card.description}
-                        </p>
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="text-xs font-medium"
-                      >
-                        {card.metric}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* ═══════════════════ CONTROL PLANE ═══════════════════════ */}
-        <section className="border-y border-border/40 bg-muted/10 py-20 sm:py-24">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.55 }}
-              className="mb-12 max-w-3xl"
-            >
-              <Badge
-                variant="outline"
-                className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary"
-              >
-                Control Plane
-              </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                Everything you need to run production infrastructure.
-              </h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                VPS, hosting, billing, and team management unified under one
-                console. No juggling providers.
-              </p>
-            </motion.div>
-
-            <motion.div
-              variants={revealContainer}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              className="grid gap-4 sm:grid-cols-2"
-            >
-              {controlPlaneItems.map((item) => (
-                <motion.div
-                  key={item.label}
-                  variants={revealItem}
-                >
-                  <Card className="home-terminal-card h-full border-primary/25">
-                    <CardContent className="p-6 sm:p-7">
-                      <div className="flex items-start gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
-                          <item.icon className="h-6 w-6 text-primary" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-semibold tracking-tight">
-                              {item.label}
-                            </h3>
-                            <span className="rounded-full border border-border/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                              {item.subtitle}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                            {item.description}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* ═══════════════════ CAPABILITIES TABS ═══════════════════════ */}
-        <section className="py-20 sm:py-24">
-          <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.55 }}
-              className="space-y-6"
-            >
-              <div>
-                <Badge
-                  variant="outline"
-                  className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary"
-                >
-                  Features
-                </Badge>
-                <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                  A complete toolkit for your infrastructure.
-                </h2>
-                <p className="mt-4 text-lg text-muted-foreground">
-                  Explore how our platform helps you deploy servers, publish
-                  websites, manage your team, and keep your costs predictable.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                {capabilityTabs.map((tab) => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setActiveCapability(tab.key)}
-                    className={`relative flex w-full items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-all ${
-                      activeCapability === tab.key
-                        ? "border-primary/40 bg-primary/[0.07] text-foreground shadow-sm"
-                        : "border-border/50 bg-background/50 text-muted-foreground hover:border-primary/25 hover:text-foreground"
-                    }`}
-                  >
-                    {activeCapability === tab.key && (
-                      <motion.div
-                        layoutId="capability-indicator"
-                        className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-primary"
-                        transition={{
-                          type: "spring",
-                          stiffness: 350,
-                          damping: 30,
-                        }}
-                      />
-                    )}
-                    <span className="flex items-center gap-3 pl-2">
-                      <tab.icon className="h-4 w-4" />
-                      <span className="font-medium">{tab.label}</span>
-                    </span>
-                    <ArrowRight className="h-4 w-4 opacity-50" />
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab.key}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card className="border-border/50 bg-card/80 shadow-xl backdrop-blur h-full border-primary/25">
-                  <CardContent className="space-y-6 p-6 sm:p-8 h-full flex flex-col justify-center">
-                    <div>
-                      <h3 className="text-2xl font-semibold tracking-tight">
-                        {activeTab.title}
-                      </h3>
-                      <p className="mt-3 text-muted-foreground leading-relaxed">
-                        {activeTab.description}
-                      </p>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      {activeTab.callouts.map((item) => (
+              {capabilityCards.map((card) => (
+                <motion.div key={card.label} {...staggerItem}>
+                  <div className="h-full border border-border/50 bg-card/50 rounded-xl p-6 hover:border-primary/30 transition-colors">
+                    <card.icon className="w-6 h-6 text-primary mb-4" />
+                    <h3 className="text-base font-semibold mb-2">{card.label}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+                      {card.description}
+                    </p>
+                    <div className="space-y-2">
+                      {card.specs.map((spec) => (
                         <div
-                          key={item.label}
-                          className="rounded-lg border border-border/50 bg-gradient-to-b from-background/80 to-muted/30 p-3.5"
+                          key={spec.label}
+                          className="flex items-center justify-between text-xs"
                         >
-                          <p className="text-xs text-muted-foreground">
-                            {item.label}
-                          </p>
-                          <p className="mt-1 text-lg font-semibold tracking-tight">
-                            {item.value}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="space-y-3 pt-4 border-t border-border/40">
-                      {activeTab.bullets.map((point) => (
-                        <div key={point} className="flex items-start gap-3">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary flex-shrink-0" />
-                          <p className="text-sm text-foreground">{point}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </section>
-
-        {/* ═══════════════════ WORKFLOW RAIL ════════════════════════ */}
-        <section
-          id="capabilities"
-          className="border-y border-border/40 bg-muted/10 py-20 sm:py-24"
-        >
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.55 }}
-              className="mb-12 text-center"
-            >
-              <Badge
-                variant="outline"
-                className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary"
-              >
-                How It Works
-              </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                From signup to production in minutes.
-              </h2>
-              <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                No complex onboarding, no sales calls. Sign up, fund, deploy.
-              </p>
-            </motion.div>
-
-            <div className="relative">
-              <div className="hidden lg:block home-timeline-connector" />
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                {[
-                  {
-                    num: "01",
-                    title: "Sign Up & Fund",
-                    desc: "Create your account and add funds to your wallet via PayPal.",
-                    icon: Users,
-                  },
-                  {
-                    num: "02",
-                    title: hostingEnabled ? "Choose VPS or Hosting" : "Choose Infrastructure",
-                    desc: hostingEnabled
-                      ? "Pick a VPS plan or launch an Enhance hosting subscription from the live catalog."
-                      : "Select your VPS plan, region, and operating system.",
-                    icon: hostingEnabled ? Globe2 : Server,
-                  },
-                  {
-                    num: "03",
-                    title: hostingEnabled ? "Deploy or Publish" : "Deploy Instantly",
-                    desc: hostingEnabled
-                      ? "Deploy servers in seconds or publish websites with SSL, email, databases, and panel access."
-                      : "Launch your infrastructure in under 45 seconds.",
-                    icon: Rocket,
-                  },
-                  {
-                    num: "04",
-                    title: "Monitor & Scale",
-                    desc: "Track performance and scale through one dashboard.",
-                    icon: Activity,
-                  },
-                ].map((step, i) => (
-                  <motion.div
-                    key={step.num}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: i * 0.1 }}
-                    className="relative"
-                  >
-                    <Card className="h-full home-feature-card group border-primary/25">
-                      <CardContent className="p-5 text-center sm:p-6">
-                        <div className="relative mb-4 inline-flex">
-                          <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/50 rounded-xl flex items-center justify-center shadow-lg ring-4 ring-primary/10 group-hover:scale-105 transition-transform duration-300">
-                            <step.icon className="w-5 h-5 text-primary-foreground" />
-                          </div>
-                          <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-background text-[9px] font-bold text-primary ring-2 ring-primary/30">
-                            {step.num}
+                          <span className="font-mono text-muted-foreground uppercase tracking-wider">
+                            {spec.label}
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {spec.value}
                           </span>
                         </div>
-                        <h3 className="text-sm font-semibold mb-1.5 text-foreground">
-                          {step.title}
-                        </h3>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {step.desc}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ═══════════════════════ SOLUTIONS ═══════════════════════════ */}
-        <section id="solutions" className="py-20 sm:py-24">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.55 }}
-              className="mb-12 max-w-3xl"
-            >
-              <Badge
-                variant="outline"
-                className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary"
-              >
-                Built For You
-              </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                The foundation for your next big idea.
-              </h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                Whether you're a solo developer testing an app or a growing
-                business scaling production workloads.
-              </p>
-            </motion.div>
-
-            <motion.div
-              variants={revealContainer}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              className="grid gap-5 md:grid-cols-2 xl:grid-cols-4"
-            >
-              {solutionCards.map((item) => (
-                <motion.div key={item.title} variants={revealItem}>
-                  <Card className="h-full home-feature-card group border-primary/25">
-                    <CardContent className="space-y-4 p-5">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
-                        <item.icon className="h-6 w-6 text-primary" />
-                      </div>
-                      <h3 className="text-base font-semibold">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed min-h-[40px]">
-                        {item.detail}
-                      </p>
-                      <ul className="space-y-1.5 text-sm font-medium text-foreground">
-                        {item.bullets.map((b) => (
-                          <li key={b} className="flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                            {b}
-                          </li>
-                        ))}
-                      </ul>
-                      <Link
-                        to="/register"
-                        className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline pt-1"
-                      >
-                        Get started
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Link>
-                    </CardContent>
-                  </Card>
+                      ))}
+                    </div>
+                  </div>
                 </motion.div>
               ))}
             </motion.div>
           </div>
         </section>
 
-        {/* ═══════════════════ TESTIMONIALS ════════════════════════════ */}
-        <section className="border-y border-border/40 bg-muted/10 py-20 sm:py-24">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* ── 3. FEATURES GRID ─────────────────────────────────────── */}
+        <section className="border-t border-border bg-background">
+          <div className="mx-auto max-w-7xl px-6 md:px-12 py-24">
             <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.55 }}
-              className="text-center mb-12"
+              {...fadeInUp}
+              transition={{ duration: 0.5 }}
+              className="mb-12"
             >
-              <Badge
-                variant="outline"
-                className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary"
-              >
-                Trusted by Teams
-              </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                What our customers say.
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                Everything you need
               </h2>
-            </motion.div>
-
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8 items-start">
-              {testimonials.map((test, idx) => {
-                const isFeatured = idx === 1;
-                return (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: idx * 0.1 }}
-                    whileHover={{ y: -4 }}
-                    className={`touch-manipulation ${isFeatured ? "lg:-mt-3 lg:mb-3" : ""}`}
-                  >
-                    <Card
-                      className={`h-full home-feature-card group ${isFeatured ? "ring-1 ring-primary/20 shadow-lg" : ""} border-primary/25`}
-                    >
-                      <CardContent className="p-6 home-testimonial-quote">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-0.5">
-                            {[...Array(test.rating)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500"
-                              />
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <MapPin className="w-3 h-3" />
-                            {test.location}
-                          </div>
-                        </div>
-
-                        <p className="relative z-10 text-sm text-muted-foreground leading-relaxed italic mb-5">
-                          &ldquo;{test.quote}&rdquo;
-                        </p>
-
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-9 h-9 bg-gradient-to-br from-primary/25 to-primary/50 rounded-full flex items-center justify-center ring-2 ring-primary/15">
-                            <span className="text-primary font-bold text-[10px]">
-                              {test.avatar}
-                            </span>
-                          </div>
-                          <div>
-                            <div className="font-semibold text-sm text-foreground">
-                              {test.name}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {test.role}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-1.5 pt-3 border-t border-border/30">
-                          {test.results.map((r, i) => (
-                            <div
-                              key={i}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/[0.07] text-primary text-[11px] font-semibold rounded-full border border-primary/15"
-                            >
-                              <TrendingUp className="w-2.5 h-2.5" />
-                              {r.metric}
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* ═══════════════════ PRICING PREVIEW ═════════════════════════ */}
-        <section className="py-20 sm:py-24">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.55 }}
-              className="text-center mb-10"
-            >
-              <Badge
-                variant="outline"
-                className="mb-4 rounded-full px-4 py-1.5 border-primary/30 text-primary"
-              >
-                Transparent Pricing
-              </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                Pay only for the resources you use.
-              </h2>
-              <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                Add funds to your prepaid wallet and instances are billed by the
-                hour. No hidden fees, no long-term contracts.
+              <p className="mt-2 text-muted-foreground max-w-xl">
+                A complete toolkit for managing your cloud infrastructure, from provisioning to monitoring.
               </p>
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className={`mx-auto grid max-w-4xl gap-5 ${hostingEnabled ? "md:grid-cols-2" : "md:max-w-md"}`}
+              {...staggerContainer}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              {platformCards.map((card) => (
+                <motion.div key={card.title} {...staggerItem}>
+                  <div className="h-full border border-border/50 bg-card/50 rounded-xl p-6 hover:border-primary/20 transition-colors">
+                    <card.icon className="w-5 h-5 text-muted-foreground mb-6" />
+                    <h3 className="text-base font-semibold mb-2">{card.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-6 min-h-[48px]">
+                      {card.description}
+                    </p>
+                    <div className="inline-flex font-mono text-[10px] uppercase tracking-widest text-muted-foreground border border-border/50 px-2.5 py-1 rounded">
+                      {card.metric}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+
+        {/* ── 4. SOLUTIONS ─────────────────────────────────────────── */}
+        <section id="solutions" className="py-24 bg-background border-t border-border">
+          <div className="mx-auto max-w-7xl px-6 md:px-12">
+            <motion.div
+              {...fadeInUp}
+              transition={{ duration: 0.5 }}
+              className="mb-12 max-w-2xl"
+            >
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                Built for every team
+              </h2>
+              <p className="mt-2 text-muted-foreground">
+                Whether you're a solo developer testing an app or a growing business scaling production workloads.
+              </p>
+            </motion.div>
+
+            <motion.div
+              {...staggerContainer}
+              className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+            >
+              {solutionCards.map((item, idx) => (
+                <motion.div key={idx} {...staggerItem}>
+                  <div className="h-full border border-border/50 bg-card/50 rounded-xl p-6">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted mb-5">
+                      <item.icon className="h-5 w-5 text-foreground" />
+                    </div>
+                    <h3 className="text-base font-semibold mb-2">{item.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-5 min-h-[40px]">
+                      {item.detail}
+                    </p>
+                    <ul className="space-y-2 text-sm text-foreground">
+                      {item.bullets.map((b) => (
+                        <li key={b} className="flex items-center gap-2">
+                          <span className="h-1 w-1 rounded-full bg-primary" />
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                    <Link
+                      to="/register"
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-primary mt-4 hover:underline"
+                    >
+                      Get started
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+
+        {/* ── 5. HOW IT WORKS ──────────────────────────────────────── */}
+        <section className="py-24 border-t border-border bg-background">
+          <div className="mx-auto max-w-7xl px-6 md:px-12">
+            <motion.div
+              {...fadeInUp}
+              transition={{ duration: 0.5 }}
+              className="text-center mb-12"
+            >
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                Get started in under a minute
+              </h2>
+              <p className="mt-2 text-muted-foreground max-w-lg mx-auto">
+                From signup to running infrastructure in four simple steps.
+              </p>
+            </motion.div>
+
+            <motion.div
+              {...staggerContainer}
+              className="grid md:grid-cols-2 lg:grid-cols-4 gap-4"
             >
               {[
-                {
-                  eyebrow: "VPS Plans Starting At",
-                  price: pricingLoading ? "..." : `$${lowestPrice ?? 5}`,
-                  suffix: "/mo",
-                  cta: "View VPS Plans",
-                  href: "/pricing",
-                  features: [
-                    "NVMe SSD storage",
-                    "Full root access",
-                    "DDoS protection options",
-                    "Billed hourly from your wallet",
-                  ],
-                },
-                ...(hostingEnabled
-                  ? [
-                      {
-                        eyebrow: "Hosting Catalog",
-                        price: `${hostingPlanCount}`,
-                        suffix: hostingPlanCount === 1 ? " plan" : " plans",
-                        cta: "View Hosting Plans",
-                        href: "/pricing",
-                        features: [
-                          "Enhance-backed websites",
-                          "Dedicated hosting wallet",
-                          "SSL, email, databases, and panel SSO",
-                          "Plans loaded from your catalog",
-                        ],
-                      },
-                    ]
-                  : []),
-              ].map((item) => (
-                <Card key={item.eyebrow} className="home-pricing-glow border-primary/20 bg-gradient-to-b from-card to-background shadow-2xl">
-                  <CardContent className="space-y-5 p-8 text-center">
-                    <p className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
-                      {item.eyebrow}
+                { num: "01", title: "Sign Up & Add Funds", desc: "Create your account and add funds to your wallet via PayPal.", icon: Users },
+                { num: "02", title: "Choose Infrastructure", desc: "Select your VPS plan, region, and operating system.", icon: Server },
+                { num: "03", title: "Deploy Instantly", desc: "Launch your infrastructure in under 45 seconds.", icon: Rocket },
+                { num: "04", title: "Monitor & Manage", desc: "Track performance and scale through one dashboard.", icon: Activity },
+              ].map((step) => (
+                <motion.div key={step.num} {...staggerItem}>
+                  <div className="h-full border border-border/50 bg-card/50 rounded-xl p-6 text-center">
+                    <span className="font-mono text-xs text-muted-foreground mb-4 block">
+                      {step.num}
+                    </span>
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4">
+                      <step.icon className="w-5 h-5 text-foreground" />
+                    </div>
+                    <h3 className="text-sm font-semibold mb-1.5">{step.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {step.desc}
                     </p>
-                    <p className="text-5xl font-bold tracking-tight text-primary">
-                      {item.price}
-                      <span className="text-lg font-normal text-muted-foreground">
-                        {item.suffix}
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+
+        {/* ── 6. TESTIMONIALS ───────────────────────────────────────── */}
+        <section className="py-24 border-t border-border bg-background">
+          <div className="mx-auto max-w-7xl px-6 md:px-12">
+            <motion.div
+              {...fadeInUp}
+              transition={{ duration: 0.5 }}
+              className="mb-12"
+            >
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                What our users say
+              </h2>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {testimonials.map((test, i) => (
+                <motion.div
+                  key={i}
+                  {...fadeInUp}
+                  transition={{ duration: 0.45, delay: i * 0.08 }}
+                  className="border border-border/50 bg-card/50 rounded-xl p-6 flex flex-col"
+                >
+                  <p className="text-sm text-foreground/80 leading-relaxed mb-8 flex-1">
+                    &ldquo;{test.quote}&rdquo;
+                  </p>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-muted rounded flex items-center justify-center font-mono text-[10px] text-foreground font-medium">
+                        {test.avatar}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{test.name}</p>
+                        <p className="text-xs text-muted-foreground">{test.role}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-4 border-t border-border/50">
+                      {test.results.map((r, k) => (
+                        <span
+                          key={k}
+                          className="font-mono text-[10px] uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded"
+                        >
+                          {r.metric}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── 7. PRICING PREVIEW ────────────────────────────────────── */}
+        <section className="border-t border-border bg-background py-24">
+          <div className="mx-auto max-w-7xl px-6 md:px-12">
+            <motion.div
+              {...fadeInUp}
+              transition={{ duration: 0.5 }}
+              className="text-center mb-12"
+            >
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                Simple, transparent pricing
+              </h2>
+              <p className="mt-2 text-muted-foreground max-w-xl mx-auto">
+                Add funds to your prepaid wallet and instances are billed by the hour. No hidden fees, no contracts.
+              </p>
+            </motion.div>
+
+            <motion.div
+              {...fadeInUp}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="mx-auto max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6"
+            >
+              {vpsCheapestPlan ? (
+                <Card className="border border-border/50 bg-card rounded-xl flex flex-col">
+                  <CardHeader className="pb-2">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                      Starting at
+                    </p>
+                    <div className="flex items-center justify-between gap-3 mt-2">
+                      <CardTitle className="text-lg">
+                        {vpsCheapestPlan.name}
+                      </CardTitle>
+                      {vpsCheapestPlan.type_class && (
+                        <Badge variant="secondary" className="text-xs capitalize">
+                          {getCategoryLabel(vpsCheapestPlan.type_class)}
+                        </Badge>
+                      )}
+                    </div>
+                    {vpsCheapestPlan.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {vpsCheapestPlan.description}
+                      </p>
+                    )}
+                    <div className="pt-3">
+                      <span className="text-4xl font-bold tracking-tight text-foreground">
+                        {pricingLoading ? "..." : formatMonthly(lowestPrice ?? 5)}
+                      </span>
+                      <span className="text-base text-muted-foreground font-normal">
+                        /month
+                      </span>
+                      {lowestPrice != null && (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {formatCurrency6(lowestPrice / 730)} per hour
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-1 space-y-2.5">
+                    {getVpsSpecRows(vpsCheapestPlan).map((spec) => (
+                      <div key={spec.label} className="flex items-center gap-2.5">
+                        <spec.icon className="h-4 w-4 text-primary/70 shrink-0" />
+                        <span className="text-sm">{spec.label}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                  <CardFooter>
+                    <Button asChild className="w-full rounded-lg" size="lg">
+                      <Link to="/register">
+                        Get Started
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ) : (
+                <Card className="border border-border/50 bg-card rounded-xl">
+                  <CardContent className="space-y-5 p-6 text-center">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                      VPS Plans Starting At
+                    </p>
+                    <p className="text-4xl font-bold tracking-tight text-foreground">
+                      {pricingLoading ? "..." : `$${lowestPrice ?? 5}`}
+                      <span className="text-base text-muted-foreground font-normal">
+                        /mo
                       </span>
                     </p>
                     <div className="space-y-2 text-sm text-muted-foreground">
-                      {item.features.map((feature) => (
-                        <div key={feature} className="flex items-center justify-center gap-2">
+                      {[
+                        "NVMe SSD storage",
+                        "Full root access",
+                        "DDoS protection options",
+                        "Billed hourly from your wallet",
+                      ].map((f) => (
+                        <div key={f} className="flex items-center justify-center gap-2">
                           <CheckCircle2 className="h-3.5 w-3.5 text-primary/70" />
-                          {feature}
+                          {f}
                         </div>
                       ))}
                     </div>
-                    <Button asChild className="w-full home-btn-glow shadow-md" size="lg">
-                      <Link to={item.href}>{item.cta}</Link>
+                    <Button asChild className="w-full rounded-lg" size="lg">
+                      <Link to="/pricing">View All Plans</Link>
                     </Button>
                   </CardContent>
                 </Card>
-              ))}
+              )}
+
+              {hostingEnabled && hostingLowestPrice !== null && hostingCheapestPlan && (
+                <Card className="border border-border/50 bg-card rounded-xl flex flex-col">
+                  <CardHeader className="pb-2">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                      Starting at
+                    </p>
+                    <div className="flex items-center justify-between gap-3 mt-2">
+                      <CardTitle className="text-lg">
+                        {hostingCheapestPlan.name}
+                      </CardTitle>
+                      <Badge variant="secondary" className="text-xs capitalize">
+                        {hostingCheapestPlan.service_type}
+                      </Badge>
+                    </div>
+                    {hostingCheapestPlan.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {hostingCheapestPlan.description}
+                      </p>
+                    )}
+                    <div className="pt-3">
+                      <span className="text-4xl font-bold tracking-tight text-foreground">
+                        {formatHostingMonthly(hostingCheapestPlan.price_monthly)}
+                      </span>
+                      <span className="text-base text-muted-foreground font-normal">
+                        /month
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-1 space-y-2.5">
+                    {getHostingSpecRows(hostingCheapestPlan).map((feature) => (
+                      <div key={feature.label} className="flex items-center gap-2.5">
+                        <feature.icon className="h-4 w-4 text-primary/70 shrink-0" />
+                        <span className="text-sm">{feature.label}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                  <CardFooter>
+                    <Button asChild className="w-full rounded-lg" size="lg">
+                      <Link to="/register">
+                        Start Hosting
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              )}
             </motion.div>
-          </div>
-        </section>
 
-        {/* ═══════════════════════ FAQ ═════════════════════════════════ */}
-        <section className="border-y border-border/40 bg-muted/10 py-20 sm:py-24">
-          <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_1fr] lg:gap-14 lg:px-8">
-            <div className="space-y-5">
-              <Badge
-                variant="outline"
-                className="rounded-full px-4 py-1.5 border-primary/30 text-primary"
-              >
-                FAQ
-              </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                Frequently asked questions.
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Everything you need to know about hosting with {BRAND_NAME}.
-              </p>
-              <div className="mt-6 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.06] to-transparent p-6">
-                <p className="text-sm font-semibold text-foreground">
-                  Still have questions?
-                </p>
-                <p className="mt-1.5 text-sm text-muted-foreground mb-4">
-                  Our support team is ready to help you get started.
-                </p>
-                <Button variant="outline" asChild className="home-btn-glow">
-                  <Link to="/contact">Contact Support</Link>
-                </Button>
-              </div>
+            <div className="text-center mt-8">
+              <Button variant="ghost" asChild>
+                <Link to="/pricing" className="flex items-center gap-1.5 text-sm">
+                  View all plans
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
             </div>
-
-            <Accordion type="single" collapsible className="space-y-3">
-              {faqs.map((faq, index) => (
-                <AccordionItem
-                  key={faq.question}
-                  value={`faq-${index}`}
-                  className="home-faq-item rounded-xl border border-border/50 bg-card/40 px-5 shadow-sm transition-colors data-[state=open]:border-primary/30 data-[state=open]:bg-card/70"
-                >
-                  <AccordionTrigger className="text-left text-sm font-medium hover:text-primary hover:no-underline py-4 sm:text-base">
-                    {faq.question}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground pb-4 leading-relaxed">
-                    {faq.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
           </div>
         </section>
 
-        {/* ═══════════════════════ CTA ═════════════════════════════════ */}
-        <section className="py-20 sm:py-24">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="home-cta-shell relative overflow-hidden rounded-3xl border border-border/50 px-6 py-14 text-center sm:px-12 shadow-2xl">
-              <div
-                className="home-orb absolute w-[300px] h-[300px] -top-[100px] -left-[80px] opacity-40"
-                style={{
-                  background:
-                    "radial-gradient(circle, hsl(var(--primary) / 0.15), transparent 70%)",
-                  filter: "blur(60px)",
-                  animation: "float-orb-1 16s ease-in-out infinite",
-                }}
-                aria-hidden
-              />
-              <div
-                className="home-orb absolute w-[250px] h-[250px] -bottom-[80px] -right-[60px] opacity-40"
-                style={{
-                  background:
-                    "radial-gradient(circle, hsl(var(--primary) / 0.12), transparent 70%)",
-                  filter: "blur(60px)",
-                  animation: "float-orb-2 20s ease-in-out infinite",
-                }}
-                aria-hidden
-              />
+        {/* ── 8. FAQ ────────────────────────────────────────────────── */}
+        <section className="py-24 border-t border-border bg-background">
+          <div className="mx-auto max-w-7xl px-6 md:px-12">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-10 lg:gap-14">
+              <div className="space-y-5 lg:sticky lg:top-32 lg:self-start">
+                <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                  Frequently asked questions
+                </h2>
+                <p className="text-muted-foreground">
+                  Everything you need to know about hosting with {BRAND_NAME}.
+                </p>
+                <div className="mt-6 rounded-xl border border-border/50 bg-card p-6">
+                  <p className="text-sm font-medium">
+                    Still have questions?
+                  </p>
+                  <p className="mt-1.5 text-sm text-muted-foreground mb-4">
+                    Our support team is ready to help you get started.
+                  </p>
+                  <Button variant="outline" asChild className="rounded-lg">
+                    <Link to="/contact">Contact Support</Link>
+                  </Button>
+                </div>
+              </div>
 
-              <div className="relative z-10 space-y-5">
-                <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+              <Accordion type="single" collapsible className="space-y-3">
+                {faqs.map((faq, index) => (
+                  <AccordionItem
+                    key={faq.question}
+                    value={`faq-${index}`}
+                    className="rounded-xl border border-border/50 bg-card/50 px-5 transition-colors data-[state=open]:border-primary/30 data-[state=open]:bg-card"
+                  >
+                    <AccordionTrigger className="text-left text-sm font-medium hover:text-primary hover:no-underline py-4">
+                      {faq.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-sm text-muted-foreground pb-4 leading-relaxed">
+                      {faq.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 9. FINAL CTA ─────────────────────────────────────────── */}
+        <section className="py-24 border-t border-border bg-background">
+          <div className="mx-auto max-w-7xl px-6 md:px-12">
+            <div className="border border-border/50 bg-card rounded-xl px-6 py-16 text-center sm:px-12">
+              <div className="space-y-6">
+                <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
                   Ready to launch your server?
                 </h2>
                 <p className="mx-auto max-w-xl text-lg text-muted-foreground">
@@ -1902,18 +1163,14 @@ export default function HomeRedesign() {
 
                 <SocialProof />
 
-                <div className="flex flex-col justify-center gap-4 sm:flex-row">
-                  <Button
-                    size="lg"
-                    className="h-12 px-8 text-base home-btn-glow"
-                    asChild
-                  >
+                <div className="flex flex-col justify-center gap-3 sm:flex-row pt-2">
+                  <Button size="lg" className="h-11 px-8 text-base rounded-lg" asChild>
                     <Link to="/register">Create Account</Link>
                   </Button>
                   <Button
                     size="lg"
-                    variant="secondary"
-                    className="h-12 px-8 text-base border border-border/40"
+                    variant="outline"
+                    className="h-11 px-8 text-base rounded-lg"
                     asChild
                   >
                     <Link to="/pricing">View Pricing</Link>

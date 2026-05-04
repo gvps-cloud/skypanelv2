@@ -506,13 +506,15 @@ export default function ParticleGlobe({
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
+    const isDark = document.documentElement.classList.contains('dark');
+
     const material = new THREE.PointsMaterial({
       size: 0.025,
       vertexColors: true,
       transparent: true,
-      opacity: 0.7,
+      opacity: isDark ? 0.7 : 0.9,
       sizeAttenuation: true,
-      blending: THREE.AdditiveBlending,
+      blending: isDark ? THREE.AdditiveBlending : THREE.NormalBlending,
     });
 
     atmosphereRef.current = new THREE.Points(geometry, material);
@@ -569,13 +571,15 @@ export default function ParticleGlobe({
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
+    const isDark = document.documentElement.classList.contains('dark');
+
     const material = new THREE.PointsMaterial({
       size: 0.018,
       vertexColors: true,
       transparent: true,
-      opacity: 0.55,
+      opacity: isDark ? 0.55 : 0.8,
       sizeAttenuation: true,
-      blending: THREE.AdditiveBlending,
+      blending: isDark ? THREE.AdditiveBlending : THREE.NormalBlending,
     });
 
     continentPointsRef.current = new THREE.Points(geometry, material);
@@ -596,11 +600,20 @@ export default function ParticleGlobe({
       return fallbackTexture;
     }
 
-    const bgR = Math.round(continentRGB[0] * 0.063);
-    const bgG = Math.round(continentRGB[1] * 0.059);
-    const bgB = Math.round(continentRGB[2] * 0.11);
-    ctx.fillStyle = `rgb(${bgR}, ${bgG}, ${bgB})`;
-    ctx.fillRect(0, 0, 2048, 1024);
+    const isDark = document.documentElement.classList.contains('dark');
+    
+    if (isDark) {
+      const bgR = Math.round(continentRGB[0] * 0.063);
+      const bgG = Math.round(continentRGB[1] * 0.059);
+      const bgB = Math.round(continentRGB[2] * 0.11);
+      ctx.fillStyle = `rgb(${bgR}, ${bgG}, ${bgB})`;
+      ctx.fillRect(0, 0, 2048, 1024);
+    } else {
+      ctx.clearRect(0, 0, 2048, 1024);
+      // Optional: draw a very faint tint for the sphere core in light mode
+      ctx.fillStyle = `rgba(${continentRGB[0]}, ${continentRGB[1]}, ${continentRGB[2]}, 0.03)`;
+      ctx.fillRect(0, 0, 2048, 1024);
+    }
 
     const drawContinent = (
       points: number[][],
@@ -721,6 +734,8 @@ export default function ParticleGlobe({
         const selectedColor = themeColorsRef.current.selectedMarkerHex;
         const flagImg = mode === 'flag' ? (flagImageCache.get(countryCode) || null) : null;
 
+        const isDark = document.documentElement.classList.contains('dark');
+
         const material = new THREE.SpriteMaterial({
           map: createFlagIconTexture(
             countryCode,
@@ -735,7 +750,7 @@ export default function ParticleGlobe({
           ),
           transparent: true,
           depthTest: false,
-          blending: THREE.AdditiveBlending,
+          blending: isDark ? THREE.AdditiveBlending : THREE.NormalBlending,
         });
         const sprite = new THREE.Sprite(material);
 

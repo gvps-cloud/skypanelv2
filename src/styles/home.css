@@ -2,6 +2,10 @@
    HOME PAGE STYLES
    ================================================================================ */
 
+:root {
+  --home-radius: 0.75rem;
+}
+
 /* --- Grid & Pattern Backgrounds --- */
 
 .bg-grid-pattern {
@@ -15,12 +19,12 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(to right, hsl(var(--border) / 0.25) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--border) / 0.25) 1px, transparent 1px);
+    linear-gradient(to right, hsl(var(--border) / 0.5) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--border) / 0.5) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: linear-gradient(160deg, black 30%, transparent 80%);
   -webkit-mask-image: linear-gradient(160deg, black 30%, transparent 80%);
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 .dark .home-hero-grid-lines {
@@ -30,9 +34,16 @@
   opacity: 0.5;
 }
 
-/* --- Aurora & Hero Backgrounds --- */
+/* --- Aurora & Hero Backgrounds (used by other pages) --- */
 
 .home-aurora {
+  background:
+    radial-gradient(56rem 28rem at 10% -10%, hsl(var(--muted) / 0.5), transparent 70%),
+    radial-gradient(44rem 26rem at 88% 8%, hsl(var(--muted) / 0.35), transparent 72%),
+    linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)) 55%, hsl(var(--muted) / 0.3));
+}
+
+.dark .home-aurora {
   background:
     radial-gradient(56rem 28rem at 10% -10%, hsl(var(--primary) / 0.14), transparent 70%),
     radial-gradient(44rem 26rem at 88% 8%, hsl(var(--primary) / 0.1), transparent 72%),
@@ -40,10 +51,14 @@
 }
 
 .home-hero-radial {
+  background: radial-gradient(circle at 50% -20%, hsl(var(--muted) / 0.5) 0%, transparent 70%);
+}
+
+.dark .home-hero-radial {
   background: radial-gradient(circle at 50% -20%, hsl(var(--primary) / 0.15) 0%, transparent 70%);
 }
 
-/* --- Floating Gradient Orbs --- */
+/* --- Floating Gradient Orbs (used by other pages) --- */
 
 .home-orb {
   position: absolute;
@@ -56,7 +71,7 @@
 .home-orb--1 {
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, hsl(var(--primary) / 0.18), transparent 70%);
+  background: radial-gradient(circle, hsl(var(--muted) / 0.5), transparent 70%);
   top: -15%;
   left: -8%;
   animation: float-orb-1 18s ease-in-out infinite;
@@ -65,7 +80,7 @@
 .home-orb--2 {
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, hsl(var(--primary) / 0.12), transparent 70%);
+  background: radial-gradient(circle, hsl(var(--muted) / 0.4), transparent 70%);
   top: 10%;
   right: -5%;
   animation: float-orb-2 22s ease-in-out infinite;
@@ -74,10 +89,22 @@
 .home-orb--3 {
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, hsl(var(--primary) / 0.1), transparent 70%);
+  background: radial-gradient(circle, hsl(var(--muted) / 0.35), transparent 70%);
   bottom: -10%;
   left: 30%;
   animation: float-orb-3 20s ease-in-out infinite;
+}
+
+.dark .home-orb--1 {
+  background: radial-gradient(circle, hsl(var(--primary) / 0.18), transparent 70%);
+}
+
+.dark .home-orb--2 {
+  background: radial-gradient(circle, hsl(var(--primary) / 0.12), transparent 70%);
+}
+
+.dark .home-orb--3 {
+  background: radial-gradient(circle, hsl(var(--primary) / 0.1), transparent 70%);
 }
 
 @keyframes float-orb-1 {
@@ -98,23 +125,7 @@
   66% { transform: translate(-25px, 15px) scale(0.92); }
 }
 
-/* --- Globe Glow Pulse --- */
-
-.home-globe-glow {
-  position: absolute;
-  inset: -40px;
-  border-radius: 50%;
-  background: radial-gradient(circle, hsl(var(--primary) / 0.08), transparent 65%);
-  animation: globe-pulse 4s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes globe-pulse {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.04); }
-}
-
-/* --- Shimmer Badge Animation --- */
+/* --- Shimmer Badge Animation (used by other pages) --- */
 
 .home-shimmer-badge {
   position: relative;
@@ -131,10 +142,19 @@
   background: linear-gradient(
     90deg,
     transparent,
-    hsl(var(--primary) / 0.15),
+    hsl(var(--muted-foreground) / 0.12),
     transparent
   );
   animation: shimmer 3s ease-in-out infinite;
+}
+
+.dark .home-shimmer-badge::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--primary) / 0.15),
+    transparent
+  );
 }
 
 @keyframes shimmer {
@@ -167,56 +187,43 @@
   100% { transform: translateX(-50%); }
 }
 
-/* --- Glow Effects --- */
-
-.home-panel-glow::before {
-  content: "";
-  position: absolute;
-  inset: -24px;
-  border-radius: 1.25rem;
-  background: radial-gradient(circle at top, hsl(var(--primary) / 0.2), transparent 60%);
-  filter: blur(24px);
-  pointer-events: none;
-  z-index: -1;
-}
-
-.home-glow-text {
-  text-shadow: 0 0 32px hsl(var(--primary) / 0.4);
-}
-
-/* --- CTA Shell --- */
-
-.home-cta-shell {
-  background:
-    linear-gradient(130deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.88) 48%, hsl(var(--primary) / 0.12) 100%);
-}
-
-/* --- Card Styles --- */
+/* --- Card Styles (used by other pages) --- */
 
 .home-feature-card {
-  background: linear-gradient(180deg, hsl(var(--card) / 0.5) 0%, hsl(var(--background) / 0.5) 100%);
+  background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--muted) / 0.4) 100%);
   backdrop-filter: blur(12px);
-  border: 1px solid hsl(var(--border) / 0.4);
+  border: 1px solid hsl(var(--border));
   transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .home-feature-card:hover {
   border-color: hsl(var(--primary) / 0.5);
   box-shadow:
-    0 8px 32px -8px hsl(var(--primary) / 0.15),
+    0 8px 32px -8px hsl(var(--foreground) / 0.06),
     0 0 0 1px hsl(var(--primary) / 0.1);
   transform: translateY(-4px);
+}
+
+.dark .home-feature-card {
+  background: linear-gradient(180deg, hsl(var(--card) / 0.5) 0%, hsl(var(--background) / 0.5) 100%);
+  border: 1px solid hsl(var(--border) / 0.4);
+}
+
+.dark .home-feature-card:hover {
+  box-shadow:
+    0 8px 32px -8px hsl(var(--primary) / 0.15),
+    0 0 0 1px hsl(var(--primary) / 0.1);
 }
 
 .home-glass-panel {
   background: linear-gradient(
     180deg,
-    hsl(var(--card) / 0.9) 0%,
-    hsl(var(--background) / 0.82) 100%
+    hsl(var(--card)) 0%,
+    hsl(var(--muted) / 0.5) 100%
   );
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid hsl(var(--border) / 0.65);
+  border: 1px solid hsl(var(--border));
 }
 
 .dark .home-glass-panel {
@@ -228,67 +235,7 @@
   border: 1px solid hsl(var(--border) / 0.55);
 }
 
-/* --- Hero Command-Deck Section --- */
-
-.home-hero-section {
-  background:
-    radial-gradient(60rem 30rem at 20% -10%, hsl(var(--primary) / 0.08), transparent 70%),
-    radial-gradient(50rem 30rem at 80% 10%, hsl(var(--primary) / 0.05), transparent 72%),
-    hsl(var(--background));
-}
-
-.dark .home-hero-section {
-  background:
-    radial-gradient(60rem 30rem at 20% -10%, hsl(var(--primary) / 0.12), transparent 70%),
-    radial-gradient(50rem 30rem at 80% 10%, hsl(var(--primary) / 0.08), transparent 72%),
-    hsl(var(--background));
-}
-
-/* --- Terminal Card (Control Plane) --- */
-
-.home-terminal-card {
-  background: linear-gradient(180deg, hsl(var(--card) / 0.6) 0%, hsl(var(--background) / 0.4) 100%);
-  backdrop-filter: blur(10px);
-  border: 1px solid hsl(var(--border) / 0.5);
-  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.home-terminal-card:hover {
-  border-color: hsl(var(--primary) / 0.5);
-  box-shadow:
-    0 8px 32px -8px hsl(var(--primary) / 0.12),
-    inset 0 1px 0 hsl(var(--primary) / 0.08);
-  transform: translateY(-2px);
-}
-
-/* --- Pricing Glow --- */
-
-.home-pricing-glow {
-  position: relative;
-  border: 1px solid hsl(var(--primary) / 0.25);
-  transition: all 0.4s ease;
-}
-
-.home-pricing-glow::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, transparent 30%, hsl(var(--primary) / 0.5), transparent 70%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-.home-pricing-glow:hover {
-  border-color: hsl(var(--primary) / 0.45);
-  box-shadow: 0 0 40px -12px hsl(var(--primary) / 0.2);
-}
-
-/* --- Bento Card Gradient Top Border --- */
+/* --- Gradient Border Top (utility) --- */
 
 .home-gradient-border-top {
   position: relative;
@@ -302,11 +249,15 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.8) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, hsl(var(--muted-foreground) / 0.3) 50%, transparent 100%);
   opacity: 0.7;
 }
 
-/* --- Animated Border --- */
+.dark .home-gradient-border-top::before {
+  background: linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.8) 50%, transparent 100%);
+}
+
+/* --- Animated Border (used by other pages) --- */
 
 .home-animated-border {
   position: relative;
@@ -318,7 +269,7 @@
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(45deg, transparent 40%, hsl(var(--primary) / 0.8), transparent 60%);
+  background: linear-gradient(45deg, transparent 40%, hsl(var(--muted-foreground) / 0.25), transparent 60%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -328,64 +279,91 @@
   pointer-events: none;
 }
 
+.dark .home-animated-border::after {
+  background: linear-gradient(45deg, transparent 40%, hsl(var(--primary) / 0.8), transparent 60%);
+}
+
 @keyframes border-dance {
   0% { background-position: 0% 0%; }
   50% { background-position: 100% 100%; }
   100% { background-position: 0% 0%; }
 }
 
-/* --- FAQ Accordion Active Border --- */
+/* --- FAQ Accordion Active Border (used by FAQ page) --- */
 
 .home-faq-item[data-state="open"] {
   border-left: 2px solid hsl(var(--primary));
 }
 
-/* --- Timeline Connector --- */
-
-.home-timeline-connector {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: repeating-linear-gradient(
-    90deg,
-    hsl(var(--primary) / 0.3) 0px,
-    hsl(var(--primary) / 0.3) 8px,
-    transparent 8px,
-    transparent 16px
-  );
-  transform: translateY(-50%);
-}
-
-/* --- Button Glow --- */
+/* --- Button Glow (used by other pages) --- */
 
 .home-btn-glow {
-  box-shadow: 0 0 20px -4px hsl(var(--primary) / 0.35);
+  box-shadow: 0 0 20px -4px hsl(var(--foreground) / 0.08);
   transition: box-shadow 0.3s ease;
 }
 
 .home-btn-glow:hover {
+  box-shadow: 0 0 30px -4px hsl(var(--foreground) / 0.12);
+}
+
+.dark .home-btn-glow {
+  box-shadow: 0 0 20px -4px hsl(var(--primary) / 0.35);
+}
+
+.dark .home-btn-glow:hover {
   box-shadow: 0 0 30px -4px hsl(var(--primary) / 0.5);
 }
 
-/* --- Testimonial Decorative Quote --- */
+/* --- CTA Shell (used by other pages) --- */
 
-.home-testimonial-quote {
-  position: relative;
+.home-cta-shell {
+  background:
+    linear-gradient(130deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.95) 48%, hsl(var(--muted) / 0.3) 100%);
 }
 
-.home-testimonial-quote::before {
-  content: '\201C';
+.dark .home-cta-shell {
+  background:
+    linear-gradient(130deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.88) 48%, hsl(var(--primary) / 0.12) 100%);
+}
+
+/* --- Pricing Glow (used by other pages) --- */
+
+.home-pricing-glow {
+  position: relative;
+  border: 1px solid hsl(var(--border));
+  transition: all 0.4s ease;
+}
+
+.home-pricing-glow::before {
+  content: '';
   position: absolute;
-  top: -20px;
-  left: -5px;
-  font-size: 6rem;
-  line-height: 1;
-  font-family: Georgia, serif;
-  color: hsl(var(--primary) / 0.06);
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, transparent 30%, hsl(var(--foreground) / 0.1), transparent 70%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
   pointer-events: none;
-  z-index: 0;
+}
+
+.home-pricing-glow:hover {
+  border-color: hsl(var(--primary) / 0.4);
+  box-shadow: 0 0 40px -12px hsl(var(--foreground) / 0.06);
+}
+
+.dark .home-pricing-glow {
+  border: 1px solid hsl(var(--primary) / 0.25);
+}
+
+.dark .home-pricing-glow::before {
+  background: linear-gradient(135deg, transparent 30%, hsl(var(--primary) / 0.5), transparent 70%);
+}
+
+.dark .home-pricing-glow:hover {
+  border-color: hsl(var(--primary) / 0.45);
+  box-shadow: 0 0 40px -12px hsl(var(--primary) / 0.2);
 }
 
 /* --- Mobile Optimizations --- */
@@ -400,20 +378,6 @@
     background-size: 32px 32px;
     opacity: 0.35;
   }
-
-  .home-panel-glow::before {
-    inset: -12px;
-    filter: blur(16px);
-  }
-
-  .home-orb {
-    filter: blur(60px);
-    opacity: 0.6;
-  }
-
-  .home-orb--1 { width: 300px; height: 300px; }
-  .home-orb--2 { width: 250px; height: 250px; }
-  .home-orb--3 { width: 200px; height: 200px; }
 
   .home-marquee__track {
     animation-duration: 20s;
@@ -433,7 +397,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .home-orb,
-  .home-globe-glow,
   .home-shimmer-badge::after,
   .home-marquee__track,
   .home-animated-border::after {
@@ -441,12 +404,10 @@
   }
 
   .home-feature-card,
-  .home-terminal-card,
   .home-pricing-glow {
     transition: none !important;
   }
 
-  .home-terminal-card:hover,
   .home-pricing-glow:hover {
     transform: none !important;
   }
@@ -466,118 +427,8 @@
   object-fit: cover;
 }
 
-/* --- Console Showcase --- */
-
-.home-cyber {
-  position: relative;
-  overflow-x: hidden;
-  background:
-    radial-gradient(60rem 40rem at 15% 8%, hsl(var(--primary) / 0.14), transparent 64%),
-    hsl(var(--background));
-}
-
-.home-cyber::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    linear-gradient(to bottom, transparent 0 48%, hsl(var(--primary) / 0.06) 50%, transparent 52%),
-    linear-gradient(90deg, hsl(var(--primary) / 0.05), transparent 18%, transparent 82%, hsl(var(--primary) / 0.05));
-  background-size: 100% 5px, 100% 100%;
-  mix-blend-mode: screen;
-  opacity: 0.35;
-}
-
-.home-cyber > * {
-  position: relative;
-  z-index: 1;
-}
-
-.home-cyber .home-hero-section,
-.home-cyber .home-console-showcase,
-.home-cyber section.border-y,
-.home-cyber section.py-20,
-.home-cyber section.py-24 {
-  background:
-    radial-gradient(44rem 24rem at 78% 18%, hsl(var(--primary) / 0.13), transparent 70%),
-    linear-gradient(135deg, hsl(var(--primary) / 0.07), transparent 28%, hsl(var(--background)) 58%),
-    hsl(var(--background));
-}
-
-.home-cyber .home-hero-grid-lines {
-  background-image:
-    linear-gradient(to right, hsl(var(--primary) / 0.2) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--primary) / 0.16) 1px, transparent 1px);
-  background-size: 48px 48px;
-  opacity: 0.7;
-}
-
-.home-cyber .home-feature-card,
-.home-cyber .home-terminal-card,
-.home-cyber .home-glass-panel,
-.home-cyber .home-console-frame,
-.home-cyber .home-pricing-glow {
-  border-color: hsl(var(--primary) / 0.34);
-  background:
-    linear-gradient(145deg, hsl(var(--card) / 0.88), hsl(var(--background) / 0.76)),
-    radial-gradient(22rem 12rem at 100% 0%, hsl(var(--primary) / 0.14), transparent 72%);
-  box-shadow:
-    inset 0 1px 0 hsl(var(--primary) / 0.12),
-    0 0 0 1px hsl(var(--primary) / 0.06),
-    0 24px 72px -36px hsl(var(--primary) / 0.45);
-}
-
-.home-cyber .home-feature-card:hover,
-.home-cyber .home-terminal-card:hover {
-  border-color: hsl(var(--primary) / 0.65);
-  box-shadow:
-    inset 0 1px 0 hsl(var(--primary) / 0.18),
-    0 0 28px hsl(var(--primary) / 0.16),
-    0 28px 78px -42px hsl(var(--primary) / 0.6);
-}
-
-.home-cyber h1,
-.home-cyber h2 {
-  text-shadow: 0 0 34px hsl(var(--primary) / 0.18);
-}
-
-.home-console-showcase {
-  background:
-    radial-gradient(40rem 24rem at 75% 50%, hsl(var(--primary) / 0.06), transparent 70%),
-    hsl(var(--muted) / 0.08);
-}
-
-.dark .home-console-showcase {
-  background:
-    radial-gradient(40rem 24rem at 75% 50%, hsl(var(--primary) / 0.08), transparent 70%),
-    hsl(var(--muted) / 0.12);
-}
-
-.home-console-frame {
-  position: relative;
-  border-radius: 1rem;
-  border: 1px solid hsl(var(--border) / 0.5);
-  background: hsl(var(--card) / 0.6);
-  box-shadow:
-    0 0 0 1px hsl(var(--border) / 0.15),
-    0 8px 32px -8px hsl(var(--foreground) / 0.08),
-    0 24px 64px -16px hsl(var(--primary) / 0.08);
-  overflow: hidden;
-}
-
-.home-console-frame__bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 0.875rem;
-  border-bottom: 1px solid hsl(var(--border) / 0.4);
-  background: hsl(var(--muted) / 0.25);
-}
-
 /* ================================================================================
-   PARTICLE GLOBE STYLES
+   PARTICLE GLOBE STYLES (used by /regions page)
    ================================================================================ */
 
 .hero-globe-container {

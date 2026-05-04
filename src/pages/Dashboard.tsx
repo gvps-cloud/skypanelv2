@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMonthlySpendWithFallback } from "../lib/billingUtils";
 import { MonthlyResetIndicator } from "@/components/Dashboard/MonthlyResetIndicator";
 import { formatBillingAmount } from "@/lib/formatters";
@@ -225,6 +226,7 @@ const Dashboard: React.FC = () => {
   const [hostingServices, setHostingServices] = useState<HostingServiceSummary[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeDashboardTab, setActiveDashboardTab] = useState<"vps" | "hosting">("vps");
   const { token } = useAuth();
   const navigate = useNavigate();
 
@@ -460,6 +462,11 @@ const Dashboard: React.FC = () => {
               <Link
                 key={action.title}
                 to={action.to}
+                onClick={
+                  action.title === "Create Hosting"
+                    ? () => setActiveDashboardTab("hosting")
+                    : undefined
+                }
                 className="group flex items-center gap-3 rounded-lg border bg-card p-3 transition-all hover:border-primary/50 hover:bg-accent"
               >
                 <div className="rounded-md bg-primary/10 p-2 text-primary group-hover:bg-primary group-hover:text-primary-foreground">
@@ -479,122 +486,314 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {hostingEnabled && (
-          <Card className="h-full border-primary/25">
-            <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
-              <div className="space-y-1">
-                <CardTitle>Enhance Hosting</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Website subscriptions, hosting wallet, and billing readiness
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/billing">Fund wallet</Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link to="/hosting/store">
-                    Create Hosting
-                    <ArrowUpRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-lg border bg-card p-4">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Globe className="h-4 w-4" />
-                    </div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      Active Hosting
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold">{activeHostingServices}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {hostingServices.length} total subscription{hostingServices.length === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border bg-card p-4">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Wallet className="h-4 w-4" />
-                    </div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      Hosting Wallet
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold">
-                      {formatBillingAmount(hostingWalletBalance)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Reserved for monthly hosting charges
-                    </p>
-                  </div>
-                  <div className="rounded-lg border bg-card p-4">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <ShieldCheck className="h-4 w-4" />
-                    </div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      Enhance Status
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold">Enabled</p>
-                    <p className="text-xs text-muted-foreground">
-                      Hosting routes and checkout are available
-                    </p>
-                  </div>
-                </div>
+        {hostingEnabled ? (
+          <Tabs
+            value={activeDashboardTab}
+            onValueChange={(v) => setActiveDashboardTab(v as "vps" | "hosting")}
+            className="space-y-6"
+          >
+            <div className="flex items-center justify-between gap-4">
+              <TabsList className="h-11 rounded-2xl border border-border/60 bg-background/80 p-1.5">
+                <TabsTrigger
+                  value="vps"
+                  className="rounded-xl px-5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  <Server className="mr-2 h-4 w-4" />
+                  VPS
+                </TabsTrigger>
+                <TabsTrigger
+                  value="hosting"
+                  className="rounded-xl px-5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  <Globe className="mr-2 h-4 w-4" />
+                  Hosting
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-                {hostingServices.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
-                    <div className="rounded-full bg-muted p-4">
-                      <Globe className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="mt-6 text-base font-semibold">
-                      No hosting subscriptions yet
-                    </h3>
-                    <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                      Create your first Enhance hosting subscription to manage websites from the dashboard.
+            <TabsContent value="vps" className="mt-0">
+              <Card className="h-full border-primary/25">
+                <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+                  <div className="space-y-1">
+                    <CardTitle>VPS Fleet</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Live signal across your deployments
                     </p>
-                    <Button className="mt-6" asChild>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/vps">
+                      Manage all
+                      <ArrowUpRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-0">
+                      <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Wallet className="h-4 w-4" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            Wallet Balance
+                          </p>
+                          <p className="text-lg font-semibold leading-tight">
+                            {formatBillingAmount(walletBalance)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Ready to deploy infrastructure
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="hidden h-12 border-l border-border md:block" aria-hidden="true" />
+
+                      <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/30 text-primary">
+                          <TrendingUp className="h-4 w-4" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            Monthly Spend
+                          </p>
+                          <p className="text-lg font-semibold leading-tight">
+                            {formatBillingAmount(monthlySpend)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Current month to date
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="hidden h-12 border-l border-border md:block" aria-hidden="true" />
+
+                      <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/30 text-primary">
+                          <ActivityIcon className="h-4 w-4" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            Last Payment
+                          </p>
+                          <p className="text-lg font-semibold leading-tight">
+                            {lastPayment?.amount
+                              ? formatBillingAmount(lastPayment.amount)
+                              : "—"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {lastPayment?.date
+                              ? formatTimestamp(lastPayment.date)
+                              : "No payments yet"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                    {vpsInstances.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-16 text-center min-h-[250px]">
+                        <div className="rounded-full bg-muted p-4">
+                          <Server className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <h3 className="mt-6 text-base font-semibold">
+                          No instances yet
+                        </h3>
+                        <p className="mt-2 text-sm text-muted-foreground max-w-md">
+                          Deploy your first VPS to see live metrics
+                        </p>
+                        <div className="mt-6 flex flex-wrap gap-3">
+                          <Button size="lg" onClick={() => navigate('/vps')}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Deploy VPS
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      vpsInstances.slice(0, 5).map((vps) => {
+                        // Use the cpu value that was already extracted during data loading
+                        const hasMetrics = vps.cpu > 0;
+                        const cpuLoad = Math.min(100, Math.max(0, vps.cpu));
+
+                        return (
+                          <button
+                            key={vps.id}
+                            type="button"
+                            onClick={() => handleVpsClick(vps.id)}
+                            className="group w-full rounded-lg border bg-card p-4 text-left transition-all hover:border-primary/50 hover:shadow-md"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-semibold group-hover:text-primary">
+                                    {vps.name}
+                                  </h4>
+                                  <Badge
+                                    variant={
+                                      vps.status === "running"
+                                        ? "default"
+                                        : vps.status === "stopped"
+                                          ? "secondary"
+                                          : "outline"
+                                    }
+                                  >
+                                    {vps.status}
+                                  </Badge>
+                                </div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                  <span>{vps.plan || "Unassigned"}</span>
+                                  <span>•</span>
+                                  <span>{vps.location || "Unknown region"}</span>
+                                </div>
+                              </div>
+                              <div className="w-40 space-y-2 text-right">
+                                <div>
+                                  <div className="mb-1 flex items-center justify-between text-xs">
+                                    <span className="text-muted-foreground">
+                                      CPU {vps.cpuCount > 0 ? `(${vps.cpuCount})` : ''}
+                                    </span>
+                                    {hasMetrics ? (
+                                      <span className="font-semibold">
+                                        {cpuLoad.toFixed(1)}%
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground italic">
+                                        Pending
+                                      </span>
+                                    )}
+                                  </div>
+                                  {hasMetrics ? (
+                                    <Progress value={cpuLoad} className="h-1.5" />
+                                  ) : (
+                                    <div className="h-1.5 w-full rounded-full bg-muted" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="hosting" className="mt-0">
+              <Card className="h-full border-primary/25">
+                <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
+                  <div className="space-y-1">
+                    <CardTitle>Enhance Hosting</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Website subscriptions, hosting wallet, and billing readiness
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/billing">Fund wallet</Link>
+                    </Button>
+                    <Button size="sm" asChild>
                       <Link to="/hosting/store">
-                        <Plus className="mr-2 h-4 w-4" />
                         Create Hosting
+                        <ArrowUpRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {hostingServices.slice(0, 4).map((service) => (
-                      <Link
-                        key={service.id}
-                        to={`/hosting/${service.id}`}
-                        className="group flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold group-hover:text-primary">
-                              {service.domain ?? "Hosting service"}
-                            </h4>
-                            <Badge variant={service.status === "active" ? "default" : "secondary"}>
-                              {service.status}
-                            </Badge>
-                          </div>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {service.planName ?? "Hosting plan"} · next billing {formatTimestamp(service.nextBillingAt ?? undefined)}
-                          </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="rounded-lg border bg-card p-4">
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Globe className="h-4 w-4" />
                         </div>
-                        <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          Active Hosting
+                        </p>
+                        <p className="mt-1 text-2xl font-semibold">{activeHostingServices}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {hostingServices.length} total subscription{hostingServices.length === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-card p-4">
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Wallet className="h-4 w-4" />
+                        </div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          Hosting Wallet
+                        </p>
+                        <p className="mt-1 text-2xl font-semibold">
+                          {formatBillingAmount(hostingWalletBalance)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Reserved for monthly hosting charges
+                        </p>
+                      </div>
+                      <div className="rounded-lg border bg-card p-4">
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <ShieldCheck className="h-4 w-4" />
+                        </div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                          Enhance Status
+                        </p>
+                        <p className="mt-1 text-2xl font-semibold">Enabled</p>
+                        <p className="text-xs text-muted-foreground">
+                          Hosting routes and checkout are available
+                        </p>
+                      </div>
+                    </div>
 
-        {/* Services & VPS Fleet */}
-        <div className="grid gap-6 lg:grid-cols-1">
-          {/* VPS Fleet */}
+                    {hostingServices.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
+                        <div className="rounded-full bg-muted p-4">
+                          <Globe className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <h3 className="mt-6 text-base font-semibold">
+                          No hosting subscriptions yet
+                        </h3>
+                        <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                          Create your first Enhance hosting subscription to manage websites from the dashboard.
+                        </p>
+                        <Button className="mt-6" asChild>
+                          <Link to="/hosting/store">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Create Hosting
+                          </Link>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {hostingServices.slice(0, 4).map((service) => (
+                          <Link
+                            key={service.id}
+                            to={`/hosting/${service.id}`}
+                            className="group flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold group-hover:text-primary">
+                                  {service.domain ?? "Hosting service"}
+                                </h4>
+                                <Badge variant={service.status === "active" ? "default" : "secondary"}>
+                                  {service.status}
+                                </Badge>
+                              </div>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {service.planName ?? "Hosting plan"} · next billing {formatTimestamp(service.nextBillingAt ?? undefined)}
+                              </p>
+                            </div>
+                            <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        ) : (
           <Card className="h-full border-primary/25">
             <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
               <div className="space-y-1">
@@ -697,7 +896,7 @@ const Dashboard: React.FC = () => {
                     // Use the cpu value that was already extracted during data loading
                     const hasMetrics = vps.cpu > 0;
                     const cpuLoad = Math.min(100, Math.max(0, vps.cpu));
-                    
+
                     return (
                       <button
                         key={vps.id}
@@ -761,7 +960,7 @@ const Dashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
+        )}
       </div>
 
       {/* Recent Activity */}
