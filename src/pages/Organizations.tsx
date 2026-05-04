@@ -67,6 +67,8 @@ interface PaginationInfo {
   totalPages: number;
 }
 
+const HOSTING_SUBSCRIPTIONS_PAGE_SIZE = 6;
+
 const Organizations: React.FC = () => {
   const [organizations, setOrganizations] = useState<OrganizationWithStats[]>([]);
   const [organizationResources, setOrganizationResources] = useState<
@@ -79,6 +81,7 @@ const Organizations: React.FC = () => {
   const [resourceViewMode, setResourceViewMode] = useState<"grid" | "list">(
     "grid",
   );
+  const [hostingPageByOrg, setHostingPageByOrg] = useState<Record<string, number>>({});
   const [selectedOrgFilter, setSelectedOrgFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
@@ -137,6 +140,13 @@ const Organizations: React.FC = () => {
       setLoading(false);
     }
   }, [token, currentPage, itemsPerPage]);
+
+  const handleHostingPageChange = useCallback((organizationId: string, page: number) => {
+    setHostingPageByOrg((prev) => ({
+      ...prev,
+      [organizationId]: page,
+    }));
+  }, []);
 
   const loadOrganizationResources = useCallback(async () => {
     if (!token) return;
@@ -1063,47 +1073,92 @@ const Organizations: React.FC = () => {
                                     : "grid-cols-1"
                                 }`}
                               >
-                                {resourceGroup.hosting_subscriptions.map((subscription) => (
-                                  <Card
-                                    key={subscription.id}
-                                    className="group cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
-                                    onClick={() =>
-                                      handleOpenOrganizationHosting(
-                                        resourceGroup.organization_id,
-                                        subscription.id,
-                                      )
-                                    }
-                                  >
-                                    <CardContent className="p-4">
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div className="flex-1 space-y-2">
-                                          <div className="flex items-center gap-2">
-                                            <div className="rounded-md bg-primary/10 p-2">
-                                              <Globe2 className="h-4 w-4 text-primary" />
+                                {(() => {
+                                  const totalHostingPages = Math.max(
+                                    1,
+                                    Math.ceil(
+                                      resourceGroup.hosting_subscriptions.length /
+                                        HOSTING_SUBSCRIPTIONS_PAGE_SIZE,
+                                    ),
+                                  );
+                                  const currentHostingPage = Math.min(
+                                    Math.max(
+                                      hostingPageByOrg[resourceGroup.organization_id] || 1,
+                                      1,
+                                    ),
+                                    totalHostingPages,
+                                  );
+                                  const pageItems = resourceGroup.hosting_subscriptions.slice(
+                                    (currentHostingPage - 1) * HOSTING_SUBSCRIPTIONS_PAGE_SIZE,
+                                    currentHostingPage * HOSTING_SUBSCRIPTIONS_PAGE_SIZE,
+                                  );
+
+                                  return pageItems.map((subscription) => (
+                                    <Card
+                                      key={subscription.id}
+                                      className="group cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+                                      onClick={() =>
+                                        handleOpenOrganizationHosting(
+                                          resourceGroup.organization_id,
+                                          subscription.id,
+                                        )
+                                      }
+                                    >
+                                      <CardContent className="p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                          <div className="flex-1 space-y-2">
+                                            <div className="flex items-center gap-2">
+                                              <div className="rounded-md bg-primary/10 p-2">
+                                                <Globe2 className="h-4 w-4 text-primary" />
+                                              </div>
+                                              <h5 className="font-semibold text-sm truncate">
+                                                {subscription.domain || "Pending domain"}
+                                              </h5>
+                                              <Badge
+                                                variant={getStatusBadgeVariant(subscription.status)}
+                                                className="text-xs"
+                                              >
+                                                {subscription.status}
+                                              </Badge>
                                             </div>
-                                            <h5 className="font-semibold text-sm truncate">
-                                              {subscription.domain || "Pending domain"}
-                                            </h5>
-                                            <Badge
-                                              variant={getStatusBadgeVariant(subscription.status)}
-                                              className="text-xs"
-                                            >
-                                              {subscription.status}
-                                            </Badge>
+                                            <p className="text-xs text-muted-foreground">
+                                              {subscription.plan_name || "Hosting plan"} · Next billing{" "}
+                                              {formatTimestamp(subscription.next_billing_at || undefined)}
+                                            </p>
                                           </div>
-                                          <p className="text-xs text-muted-foreground">
-                                            {subscription.plan_name || "Hosting plan"} · Next billing{" "}
-                                            {formatTimestamp(subscription.next_billing_at || undefined)}
-                                          </p>
+                                          <div className="text-muted-foreground group-hover:text-primary transition-colors">
+                                            <ChevronRight className="h-4 w-4" />
+                                          </div>
                                         </div>
-                                        <div className="text-muted-foreground group-hover:text-primary transition-colors">
-                                          <ChevronRight className="h-4 w-4" />
-                                        </div>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                ))}
+                                      </CardContent>
+                                    </Card>
+                                  ));
+                                })()}
                               </div>
+                              {resourceGroup.hosting_subscriptions.length > HOSTING_SUBSCRIPTIONS_PAGE_SIZE && (
+                                <Pagination
+                                  currentPage={Math.min(
+                                    Math.max(
+                                      hostingPageByOrg[resourceGroup.organization_id] || 1,
+                                      1,
+                                    ),
+                                    Math.max(
+                                      1,
+                                      Math.ceil(
+                                        resourceGroup.hosting_subscriptions.length /
+                                          HOSTING_SUBSCRIPTIONS_PAGE_SIZE,
+                                      ),
+                                    ),
+                                  )}
+                                  totalItems={resourceGroup.hosting_subscriptions.length}
+                                  itemsPerPage={HOSTING_SUBSCRIPTIONS_PAGE_SIZE}
+                                  onPageChange={(page) =>
+                                    handleHostingPageChange(resourceGroup.organization_id, page)
+                                  }
+                                  showItemsPerPage={false}
+                                  className="mt-4"
+                                />
+                              )}
                             </div>
                           )}
 

@@ -188,16 +188,13 @@ router.get('/resources', async (req: AuthenticatedRequest, res: Response) => {
           [orgIds]
         ),
         query(
-          `SELECT * FROM (
-             SELECT hs.id, hs.organization_id, hs.domain, hs.status, hs.next_billing_at,
+          `SELECT hs.id, hs.organization_id, hs.domain, hs.status, hs.next_billing_at,
                     hs.last_billed_at, hs.created_at, hp.name AS plan_name,
-                    hp.price_monthly,
-                    ROW_NUMBER() OVER(PARTITION BY hs.organization_id ORDER BY hs.created_at DESC) as rn
+                    hp.price_monthly
              FROM hosting_subscriptions hs
              LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
              WHERE hs.organization_id = ANY($1)
-           ) t WHERE rn <= 5
-           ORDER BY organization_id, rn ASC`,
+             ORDER BY hs.organization_id, hs.created_at DESC`,
           [orgIds]
         )
       ]);
