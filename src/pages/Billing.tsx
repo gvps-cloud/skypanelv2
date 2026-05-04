@@ -59,6 +59,8 @@ const Billing: React.FC = () => {
   const [currentPaymentDescription, setCurrentPaymentDescription] = useState('');
   const [currentWalletType, setCurrentWalletType] = useState<'main' | 'hosting'>('main');
   const [hostingTransferLoading, setHostingTransferLoading] = useState(false);
+  const [hostingWithdrawAmount, setHostingWithdrawAmount] = useState('');
+  const [hostingWithdrawLoading, setHostingWithdrawLoading] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     status: '',
@@ -443,6 +445,34 @@ const Billing: React.FC = () => {
     }
   };
 
+  const handleWithdrawFromHostingToMain = async () => {
+    if (!hostingWithdrawAmount) {
+      toast.error('Please enter a transfer amount');
+      return;
+    }
+
+    const parsed = parseFloat(hostingWithdrawAmount);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      toast.error('Please enter a valid transfer amount');
+      return;
+    }
+
+    const normalizedAmount = Math.round(parsed * 100) / 100;
+    setHostingWithdrawLoading(true);
+    try {
+      const result = await paymentService.withdrawHostingWalletToMain(normalizedAmount);
+      if (!result.success) {
+        toast.error(result.error ?? 'Unable to move funds to main wallet');
+        return;
+      }
+      toast.success('Funds moved from hosting wallet to main wallet.');
+      setHostingWithdrawAmount('');
+      await loadBillingData();
+    } finally {
+      setHostingWithdrawLoading(false);
+    }
+  };
+
   const formatCurrencyValue = (amount: number | null | undefined): string =>
     formatBillingAmountDisplay(amount, { absolute: true });
 
@@ -644,14 +674,14 @@ const Billing: React.FC = () => {
             <div className="h-5 w-2/3 bg-muted animate-pulse rounded" />
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map((i) => (
             <Card key={i}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
+                  <div className="space-y-2 flex-1 min-w-0">
                     <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-                    <div className="h-9 w-32 bg-muted animate-pulse rounded" />
+                    <div className="h-7 w-28 bg-muted animate-pulse rounded" />
                     <div className="h-3 w-40 bg-muted animate-pulse rounded" />
                   </div>
                   <div className="h-12 w-12 bg-muted animate-pulse rounded-lg" />
@@ -674,7 +704,7 @@ const Billing: React.FC = () => {
               Billing
             </Badge>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+          <h1 className="text-xl font-semibold leading-tight md:text-4xl">
             Billing &amp; Payments
           </h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
@@ -690,18 +720,18 @@ const Billing: React.FC = () => {
       </div>
 
       {/* Wallet Overview - Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Wallet Balance</p>
-                <p className="text-3xl font-bold tracking-tight">
-                  {formatCurrencyValue(walletBalance)}
+              <div className="space-y-2 flex-1 min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Wallet Balance</p>
+                <p className="text-xl font-semibold leading-tight tabular-nums">
+                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(walletBalance)}
                 </p>
                 <p className="text-xs text-muted-foreground">Available funds</p>
               </div>
-              <div className="rounded-lg bg-primary/10 p-3">
+              <div className="rounded-lg bg-primary/10 p-2 flex-shrink-0 self-center">
                 <Wallet className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -711,14 +741,14 @@ const Billing: React.FC = () => {
         <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Hosting Wallet</p>
-                <p className="text-3xl font-bold tracking-tight">
-                  {formatCurrencyValue(hostingWalletBalance)}
+              <div className="space-y-2 flex-1 min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Hosting Wallet</p>
+                <p className="text-xl font-semibold leading-tight tabular-nums">
+                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(hostingWalletBalance)}
                 </p>
                 <p className="text-xs text-muted-foreground">Monthly Enhance hosting reserve</p>
               </div>
-              <div className="rounded-lg bg-primary/10 p-3">
+              <div className="rounded-lg bg-primary/10 p-2 flex-shrink-0 self-center">
                 <Database className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -728,20 +758,22 @@ const Billing: React.FC = () => {
         <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">This Month</p>
-                <p className="text-3xl font-bold tracking-tight">
+              <div className="space-y-2 flex-1 min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">This Month</p>
+                <p className="text-xl font-semibold leading-tight">
                   {summaryLoading ? (
                     <span className="text-base text-muted-foreground">Loading...</span>
                   ) : billingSummary ? (
                     formatCurrencyValue(billingSummary.monthlyEstimate)
                   ) : (
-                    formatCurrencyValue(0)
+                    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+                      billingSummary ? billingSummary.monthlyEstimate : 0
+                    )
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground">Estimated cost</p>
               </div>
-              <div className="rounded-lg bg-primary/10 p-3">
+              <div className="rounded-lg bg-primary/10 p-2 flex-shrink-0 self-center">
                 <ArrowUpRight className="h-6 w-6 text-primary" />
               </div>
             </div>
@@ -751,16 +783,16 @@ const Billing: React.FC = () => {
         <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Spent This Month</p>
+              <div className="space-y-2 flex-1 min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Spent This Month</p>
                 <div className="flex items-center space-x-2">
-                  <p className="text-3xl font-bold tracking-tight">
+                  <p className="text-xl font-semibold leading-tight tabular-nums">
                     {summaryLoading || computingMonthlySpent ? (
                       <span className="text-base text-muted-foreground">{computingMonthlySpent ? 'Calc...' : 'Loading...'}</span>
                     ) : (() => {
                       const serverValue = billingSummary?.totalSpentThisMonth;
                       const displayValue = (computedMonthlySpent ?? serverValue ?? 0);
-                      return formatCurrencyValue(displayValue);
+                      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(displayValue);
                     })()}
                   </p>
                   {monthlySpentDiscrepancy && (
@@ -777,8 +809,8 @@ const Billing: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Total spent</p>
                 )}
               </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <ArrowDownLeft className="h-6 w-6 text-foreground" />
+              <div className="rounded-lg bg-primary/10 p-3">
+                <ArrowDownLeft className="h-6 w-6 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -787,9 +819,9 @@ const Billing: React.FC = () => {
         <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">VPS Active Hours</p>
-                <p className="text-3xl font-bold tracking-tight">
+              <div className="space-y-2 flex-1 min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">VPS Active Hours</p>
+                <p className="text-xl font-semibold leading-tight">
                   {uptimeLoading ? (
                     <span className="text-base text-muted-foreground">Loading...</span>
                   ) : vpsUptimeData ? (
@@ -803,8 +835,8 @@ const Billing: React.FC = () => {
                 </p>
                 <p className="text-xs text-muted-foreground">Total runtime</p>
               </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <Clock className="h-6 w-6 text-foreground" />
+              <div className="rounded-lg bg-primary/10 p-2 flex-shrink-0 self-center">
+                <Clock className="h-6 w-6 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -812,11 +844,11 @@ const Billing: React.FC = () => {
       </div>
 
       {/* Add Funds and Egress Credits Section */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {/* Add Funds to Wallet Card */}
         <Card className="border-primary/25">
           <CardHeader>
-            <CardTitle>Add Funds to Wallet</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">Add Funds to Wallet</CardTitle>
             <CardDescription>Top up your wallet balance using PayPal</CardDescription>
           </CardHeader>
           <CardContent>
@@ -870,7 +902,7 @@ const Billing: React.FC = () => {
 
         <Card className="border-primary/25">
           <CardHeader>
-            <CardTitle>Fund Hosting Wallet</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">Fund Hosting Wallet</CardTitle>
             <CardDescription>Reserve credits for monthly Enhance hosting renewals</CardDescription>
           </CardHeader>
           <CardContent>
@@ -912,6 +944,43 @@ const Billing: React.FC = () => {
                 </div>
               </div>
 
+              <div className="space-y-3 border-t pt-4">
+                <p className="text-sm font-medium">Send back to main wallet</p>
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <DollarSign className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <input
+                      type="number"
+                      value={hostingWithdrawAmount}
+                      onChange={(e) => {
+                        setHostingWithdrawAmount(e.target.value);
+                      }}
+                      placeholder="0.00"
+                      min="0.01"
+                      step="0.01"
+                      className="block w-full rounded-md border bg-secondary py-2 pl-10 pr-3 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleWithdrawFromHostingToMain();
+                    }}
+                    disabled={hostingWithdrawLoading}
+                    className="inline-flex items-center rounded-md border border-transparent bg-secondary px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted disabled:opacity-60"
+                  >
+                    {hostingWithdrawLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowDownLeft className="mr-2 h-4 w-4" />
+                    )}
+                    To main
+                  </button>
+                </div>
+              </div>
+
               <div className="border-t pt-4">
                 <p className="mb-3 text-sm font-medium">Fund directly via PayPal</p>
                 <div className="flex items-center gap-3">
@@ -948,7 +1017,7 @@ const Billing: React.FC = () => {
         {/* Buy Egress Credits Card */}
         <Card className="border-primary/25">
           <CardHeader>
-            <CardTitle>Buy Egress Credits</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">Buy Egress Credits</CardTitle>
             <CardDescription>Purchase credits for VPS network transfer</CardDescription>
           </CardHeader>
           <CardContent>
@@ -986,7 +1055,7 @@ const Billing: React.FC = () => {
       <Card className="mb-8 border-primary/25">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center">
+            <CardTitle className="flex items-center text-lg font-semibold tracking-tight">
               <Clock className="h-5 w-5 mr-2 text-primary" />
               VPS Uptime Summary
             </CardTitle>

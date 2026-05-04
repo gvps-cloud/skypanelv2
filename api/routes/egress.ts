@@ -19,11 +19,14 @@ import {
   removeEgressCredits,
   getVPSHourlyUsage,
   getVPSMonthlyCreditsUsed,
+  refundEgressCreditsToMainWallet,
 } from "../services/egressCreditService.js";
 import { EgressHourlyBillingService } from "../services/egressHourlyBillingService.js";
 import { logActivity } from "../services/activityLogger.js";
 import { query as dbQuery, transaction } from "../lib/database.js";
 import { resolveClientBaseUrl } from "../lib/clientBaseUrl.js";
+import { RoleService } from "../services/roles.js";
+import { billingMutationRateLimiter } from "../middleware/rateLimiting.js";
 
 const router = express.Router();
 
@@ -360,6 +363,96 @@ router.post(
       });
     }
   }
+);
+
+/**
+ * POST /api/egress/credits/refund/wallet
+ * Refund a USD amount from egress credits back to the main wallet.
+ */
+router.post(
+  "/credits/refund/wallet",
+  requireOrganization,
+  billingMutationRateLimiter,
+  [
+    body("organizationId").isUUID().withMessage("Organization ID is required"),
+    body("amount")
+      .isFloat({ min: 0.01 })
+      .withMessage("Amount must be a positive number"),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: "Validation failed",
+          details: errors.array(),
+        });
+      }
+
+      const { organizationId, amount: amountBody } = req.body;
+      const { id: userId, organizationId: userOrgId } = (req as AuthenticatedRequest).user;
+      if (userOrgId !== organizationId) {
+        return res.status(403).json({
+          success: false,
+          error: "You do not have permission to refund credits for this organization",
+        });
+      }
+
+      const hasBilling = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        "billing_manage",
+      );
+      if (!hasBilling) {
+        return res.status(403).json({ success: false, error: "Insufficient permissions" });
+      }
+
+      const amount = safeParseNumber(amountBody);
+      if (amount === null || amount < 0.01) {
+        return res.status(400).json({ success: false, error: "Invalid refund amount" });
+      }
+
+      const result = await refundEgressCreditsToMainWallet(organizationId, userId, amount);
+
+      await logActivity({
+        userId,
+        organizationId,
+        eventType: "egress.credits.wallet_refunded",
+        entityType: "egress_credits",
+        message: `Refunded $${result.amountCreditedUsd.toFixed(2)} to main wallet from egress credits`,
+        status: "success",
+        metadata: {
+          amountCreditedUsd: result.amountCreditedUsd,
+          creditsDeductedGb: result.creditsDeductedGb,
+          refundRateUsdPerGb: result.refundRateUsdPerGb,
+          newCreditsGb: result.newCreditsGb,
+        },
+      });
+
+      res.json({
+        success: true,
+        message: "Egress credits refunded to main wallet",
+        data: {
+          newBalance: result.newCreditsGb,
+          newMainBalance: result.newMainBalance,
+          walletCredited: result.amountCreditedUsd,
+          creditsDeductedGb: result.creditsDeductedGb,
+          refundRateUsdPerGb: result.refundRateUsdPerGb,
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to refund credits";
+      const isOver = message.toLowerCase().includes("exceeds");
+      if (!isOver) {
+        console.error("Error refunding egress credits to wallet:", error);
+      }
+      res.status(isOver ? 400 : 500).json({
+        success: false,
+        error: message,
+      });
+    }
+  },
 );
 
 /**

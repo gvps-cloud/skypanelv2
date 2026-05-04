@@ -679,6 +679,106 @@ export class PayPalService {
   }
 
   /**
+   * Move funds from the hosting wallet back to the main organization wallet.
+   * Mirrors `transferToHostingWallet` with paired ledger rows and the same row lock order.
+   */
+  static async transferFromHostingToMainWallet(
+    organizationId: string,
+    amount: number,
+    userId: string
+  ): Promise<boolean> {
+    try {
+      return await transaction(async (client) => {
+        const mainWalletResult = await client.query(
+          'SELECT id, balance FROM wallets WHERE organization_id = $1 FOR UPDATE',
+          [organizationId]
+        );
+
+        if (mainWalletResult.rows.length === 0) {
+          console.error('Main wallet not found for organization:', organizationId);
+          return false;
+        }
+
+        await client.query(
+          `INSERT INTO hosting_wallets (organization_id, balance, currency)
+           VALUES ($1, 0, 'USD')
+           ON CONFLICT (organization_id) DO NOTHING`,
+          [organizationId]
+        );
+
+        const hostingWalletResult = await client.query(
+          'SELECT id, balance FROM hosting_wallets WHERE organization_id = $1 FOR UPDATE',
+          [organizationId]
+        );
+
+        if (hostingWalletResult.rows.length === 0) {
+          console.error('Hosting wallet not found for organization:', organizationId);
+          return false;
+        }
+
+        const mainWallet = mainWalletResult.rows[0];
+        const hostingWallet = hostingWalletResult.rows[0];
+        const mainBalance = parseFloat(mainWallet.balance);
+        const hostingBalance = parseFloat(hostingWallet.balance);
+
+        if (hostingBalance < amount) {
+          return false;
+        }
+
+        const nextMainBalance = PayPalService.roundCurrencyAmount(mainBalance + amount);
+        const nextHostingBalance = PayPalService.roundCurrencyAmount(hostingBalance - amount);
+
+        await client.query(
+          'UPDATE wallets SET balance = $1, updated_at = NOW() WHERE id = $2',
+          [nextMainBalance, mainWallet.id]
+        );
+
+        await client.query(
+          'UPDATE hosting_wallets SET balance = $1, updated_at = NOW() WHERE id = $2',
+          [nextHostingBalance, hostingWallet.id]
+        );
+
+        const transferId = `hosting-transfer-${Date.now()}`;
+
+        await client.query(
+          `INSERT INTO payment_transactions (organization_id, amount, currency, payment_method, payment_provider, status, description, metadata)
+           VALUES
+             ($1, $2, 'USD', 'wallet_transfer', 'internal', 'completed', $3, $4),
+             ($1, $5, 'USD', 'wallet_credit', 'internal', 'completed', $6, $7)`,
+          [
+            organizationId,
+            -amount,
+            'Transfer from hosting wallet to main wallet',
+            JSON.stringify({
+              transfer_id: transferId,
+              user_id: userId,
+              wallet_type: 'hosting',
+              destination_wallet_type: 'main',
+              balance_before: hostingBalance,
+              balance_after: nextHostingBalance,
+            }),
+            amount,
+            'Hosting wallet transfer to main wallet',
+            JSON.stringify({
+              transfer_id: transferId,
+              user_id: userId,
+              wallet_type: 'main',
+              source_wallet_type: 'hosting',
+              balance_before: mainBalance,
+              balance_after: nextMainBalance,
+            }),
+          ]
+        );
+
+        return true;
+      });
+    } catch (error) {
+      console.error('Transfer from hosting wallet error:', error);
+      return false;
+    }
+  }
+
+  /**
    * Get wallet balance for organization
    */
   static async getWalletBalance(organizationId: string): Promise<number | null> {

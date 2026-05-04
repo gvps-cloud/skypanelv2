@@ -488,6 +488,86 @@ router.post(
   },
 );
 
+router.post(
+  "/wallet/hosting/withdraw",
+  billingMutationRateLimiter,
+  [
+    body("amount")
+      .isFloat({ min: 0.01 })
+      .withMessage("Amount must be a positive number"),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: "Validation failed",
+          details: errors.array(),
+        });
+      }
+
+      const { organizationId, id: userId } = (req as AuthenticatedRequest).user;
+      const amount = safeParseNumber(req.body.amount);
+      if (amount === null || amount <= 0) {
+        return res.status(400).json({ success: false, error: "Invalid transfer amount" });
+      }
+
+      const hasBilling = await RoleService.checkPermission(
+        userId,
+        organizationId,
+        'billing_manage'
+      );
+
+      if (!hasBilling) {
+        return res.status(403).json({ success: false, error: 'Insufficient permissions' });
+      }
+
+      const success = await PayPalService.transferFromHostingToMainWallet(
+        organizationId,
+        amount,
+        userId
+      );
+
+      if (!success) {
+        return res.status(400).json({
+          success: false,
+          error: "Failed to withdraw from hosting wallet. Check your hosting wallet balance.",
+        });
+      }
+
+      try {
+        await logActivity(
+          {
+            userId,
+            organizationId,
+            eventType: "billing.hosting_wallet.withdrawn",
+            entityType: "hosting_wallet",
+            entityId: organizationId,
+            message: "Funds were moved from the hosting wallet to the main wallet.",
+            status: "success",
+            metadata: { amount },
+          },
+          req,
+        );
+      } catch (activityError) {
+        console.warn("Failed to log hosting wallet withdrawal activity:", activityError);
+      }
+
+      res.json({
+        success: true,
+        message: "Hosting wallet funds transferred to main wallet successfully",
+      });
+    } catch (error) {
+      console.error("Withdraw hosting wallet error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      });
+    }
+  },
+);
+
 /**
  * Deduct funds from wallet for VPS creation
  */

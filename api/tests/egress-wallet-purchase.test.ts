@@ -327,4 +327,86 @@ describe('Egress Wallet Purchase API', () => {
       await pool.query('DELETE FROM organizations WHERE id = $1', [otherOrg.rows[0].id]);
     });
   });
+
+  describe('POST /api/egress/credits/refund/wallet', () => {
+    beforeEach(async () => {
+      await pool.query(
+        `INSERT INTO platform_settings (key, value, updated_at)
+         VALUES ('egress_credit_packs', $1::jsonb, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [JSON.stringify([{ id: '100gb', gb: 100, price: 0.6 }])]
+      );
+      await pool.query(
+        `INSERT INTO organization_egress_credits (organization_id, credits_gb, created_at, updated_at)
+         VALUES ($1, 500, NOW(), NOW())
+         ON CONFLICT (organization_id)
+         DO UPDATE SET credits_gb = 500, updated_at = NOW()`,
+        [testOrgId]
+      );
+    });
+
+    it('should credit main wallet and deduct egress credits', async () => {
+      const walletBefore = await pool.query('SELECT balance FROM wallets WHERE organization_id = $1', [testOrgId]);
+      const creditsBefore = await pool.query(
+        'SELECT credits_gb FROM organization_egress_credits WHERE organization_id = $1',
+        [testOrgId]
+      );
+      const w0 = Number(walletBefore.rows[0].balance);
+      const c0 = Number(creditsBefore.rows[0].credits_gb);
+
+      const response = await request(app)
+        .post('/api/egress/credits/refund/wallet')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ organizationId: testOrgId, amount: 0.6 })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.creditsDeductedGb).toBeCloseTo(100, 1);
+
+      const walletAfter = await pool.query('SELECT balance FROM wallets WHERE organization_id = $1', [testOrgId]);
+      const creditsAfter = await pool.query(
+        'SELECT credits_gb FROM organization_egress_credits WHERE organization_id = $1',
+        [testOrgId]
+      );
+      expect(Number(walletAfter.rows[0].balance)).toBeCloseTo(w0 + 0.6, 2);
+      expect(Number(creditsAfter.rows[0].credits_gb)).toBeCloseTo(c0 - 100, 1);
+
+      const packRow = await pool.query(
+        `SELECT adjustment_type, pack_id FROM egress_credit_packs
+         WHERE organization_id = $1 AND adjustment_type = 'customer_refund'
+         ORDER BY created_at DESC LIMIT 1`,
+        [testOrgId]
+      );
+      expect(packRow.rows[0].pack_id).toBe('customer_refund');
+    });
+
+    it('should reject refund above available credit value', async () => {
+      const response = await request(app)
+        .post('/api/egress/credits/refund/wallet')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ organizationId: testOrgId, amount: 99999 })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should reject refund for a different organization', async () => {
+      const otherOrg = await pool.query(
+        `INSERT INTO organizations (id, name, slug, owner_id, settings, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+         RETURNING id`,
+        [randomUUID(), 'Egress Refund Other', 'egress-refund-other-' + Date.now(), testUserId, {}]
+      );
+
+      const response = await request(app)
+        .post('/api/egress/credits/refund/wallet')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ organizationId: otherOrg.rows[0].id, amount: 1 })
+        .expect(403);
+
+      expect(response.body.success).toBe(false);
+
+      await pool.query('DELETE FROM organizations WHERE id = $1', [otherOrg.rows[0].id]);
+    });
+  });
 });

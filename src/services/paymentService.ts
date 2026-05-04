@@ -325,6 +325,20 @@ class PaymentService {
     }
   }
 
+  async withdrawHostingWalletToMain(amount: number): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      await apiClient.post<{ success?: boolean }>('/payments/wallet/hosting/withdraw', { amount });
+      return { success: true };
+    } catch (error) {
+      console.error('Withdraw hosting wallet error:', error);
+      const message = error instanceof Error ? error.message : 'Network error occurred';
+      return { success: false, error: message };
+    }
+  }
+
 
 
   /**

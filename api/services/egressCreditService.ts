@@ -41,7 +41,7 @@ export interface CreditPurchase {
   paymentTransactionId: string | null;
   createdAt: Date;
   reason?: string;
-  adjustmentType: 'purchase' | 'admin_add' | 'admin_remove';
+  adjustmentType: 'purchase' | 'admin_add' | 'admin_remove' | 'customer_refund';
 }
 
 // Hourly reading interface
@@ -102,6 +102,26 @@ const normalizeCreditPacks = (rawValue: unknown): CreditPack[] => {
     })
     .filter((pack) => pack !== null) as CreditPack[];
 };
+
+/**
+ * Minimum USD per GB across configured packs — used as the deterministic refund rate
+ * when customers convert egress credits back into main-wallet USD.
+ */
+export function getMinEgressRefundRateUsdPerGb(packs: CreditPack[]): number | null {
+  if (!packs.length) {
+    return null;
+  }
+
+  const rates = packs
+    .map((p) => p.price / p.gb)
+    .filter((r) => Number.isFinite(r) && r > 0);
+
+  if (rates.length === 0) {
+    return null;
+  }
+
+  return Math.min(...rates);
+}
 
 const normalizeWarningThreshold = (rawValue: unknown): number => {
   const parsed = Number(rawValue);
@@ -179,6 +199,8 @@ export async function getEgressCreditBalance(organizationId: string): Promise<nu
 export async function getEgressCreditBalanceDetails(organizationId: string): Promise<{
   creditsGb: number;
   warning: boolean;
+  refundRateUsdPerGb: number | null;
+  maxRefundableUsd: number | null;
 }> {
   const creditsGb = await getEgressCreditBalance(organizationId);
   const config = await getEgressConfig();
@@ -186,10 +208,155 @@ export async function getEgressCreditBalanceDetails(organizationId: string): Pro
   // Warning threshold is configurable via platform_settings
   const warning = creditsGb > 0 && creditsGb < config.warningThresholdGb;
 
+  const refundRateUsdPerGb = getMinEgressRefundRateUsdPerGb(config.creditPacks);
+  const maxRefundableUsd =
+    refundRateUsdPerGb !== null && creditsGb > 0
+      ? round(creditsGb * refundRateUsdPerGb, 6)
+      : refundRateUsdPerGb !== null
+        ? 0
+        : null;
+
   return {
     creditsGb: round(creditsGb, 6),
     warning,
+    refundRateUsdPerGb,
+    maxRefundableUsd,
   };
+}
+
+export interface EgressRefundToWalletResult {
+  newCreditsGb: number;
+  newMainBalance: number;
+  creditsDeductedGb: number;
+  amountCreditedUsd: number;
+  refundRateUsdPerGb: number;
+}
+
+/**
+ * Convert egress credits back into main-wallet USD using {@link getMinEgressRefundRateUsdPerGb}.
+ */
+export async function refundEgressCreditsToMainWallet(
+  organizationId: string,
+  userId: string,
+  amountUsdRaw: number,
+): Promise<EgressRefundToWalletResult> {
+  const packs = await getAvailableCreditPacks();
+  const refundRateUsdPerGb = getMinEgressRefundRateUsdPerGb(packs);
+
+  if (refundRateUsdPerGb === null || refundRateUsdPerGb <= 0) {
+    throw new Error('Egress credit packs are not configured');
+  }
+
+  const amountUsd = round(amountUsdRaw, 6);
+  if (amountUsd < 0.01) {
+    throw new Error('Refund amount must be at least $0.01');
+  }
+
+  return await transaction(async (client) => {
+    const walletResult = await client.query(
+      'SELECT id, balance FROM wallets WHERE organization_id = $1 FOR UPDATE',
+      [organizationId],
+    );
+
+    if (walletResult.rows.length === 0) {
+      throw new Error('Wallet not found for organization');
+    }
+
+    const balanceResult = await client.query(
+      'SELECT credits_gb FROM organization_egress_credits WHERE organization_id = $1 FOR UPDATE',
+      [organizationId],
+    );
+
+    let creditsGb = 0;
+    if (balanceResult.rows.length === 0) {
+      await client.query(
+        'INSERT INTO organization_egress_credits (organization_id, credits_gb) VALUES ($1, 0)',
+        [organizationId],
+      );
+    } else {
+      creditsGb = Number(balanceResult.rows[0].credits_gb ?? 0);
+    }
+
+    const maxRefundableUsd =
+      creditsGb > 0 ? round(creditsGb * refundRateUsdPerGb, 6) : 0;
+
+    if (amountUsd > maxRefundableUsd + 1e-9) {
+      throw new Error(
+        `Refund exceeds maximum available ($${maxRefundableUsd.toFixed(2)} USD for current credits)`,
+      );
+    }
+
+    let creditsToDeduct = round(amountUsd / refundRateUsdPerGb, 6);
+    if (creditsToDeduct > creditsGb + 1e-9) {
+      creditsToDeduct = creditsGb;
+    }
+
+    if (creditsToDeduct <= 0) {
+      throw new Error('Computed credit deduction is invalid');
+    }
+
+    const walletRow = walletResult.rows[0];
+    const mainBefore = Number(walletRow.balance);
+    const mainAfter = round(mainBefore + amountUsd, 6);
+
+    await client.query(
+      'UPDATE wallets SET balance = $1, updated_at = NOW() WHERE id = $2',
+      [mainAfter, walletRow.id],
+    );
+
+    const newCreditsGb = round(creditsGb - creditsToDeduct, 6);
+
+    await client.query(
+      `UPDATE organization_egress_credits
+       SET credits_gb = $1, updated_at = NOW()
+       WHERE organization_id = $2`,
+      [newCreditsGb, organizationId],
+    );
+
+    await client.query(
+      `INSERT INTO egress_credit_packs
+       (organization_id, pack_id, credits_gb, amount_paid, adjustment_type, reason)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        organizationId,
+        'customer_refund',
+        creditsToDeduct,
+        amountUsd,
+        'customer_refund',
+        `Customer refund at $${refundRateUsdPerGb.toFixed(8)} USD/GB`,
+      ],
+    );
+
+    await client.query(
+      `INSERT INTO payment_transactions (
+         organization_id, amount, currency, payment_method, payment_provider,
+         status, description, metadata
+       )
+       VALUES ($1, $2, 'USD', 'wallet_credit', 'internal', 'completed', $3, $4)`,
+      [
+        organizationId,
+        amountUsd,
+        'Egress credits refunded to main wallet',
+        JSON.stringify({
+          wallet_type: 'main',
+          egress_refund: true,
+          credits_gb_deducted: creditsToDeduct,
+          refund_rate_usd_per_gb: refundRateUsdPerGb,
+          balance_before: mainBefore,
+          balance_after: mainAfter,
+          user_id: userId,
+        }),
+      ],
+    );
+
+    return {
+      newCreditsGb,
+      newMainBalance: mainAfter,
+      creditsDeductedGb: creditsToDeduct,
+      amountCreditedUsd: amountUsd,
+      refundRateUsdPerGb,
+    };
+  });
 }
 
 /**

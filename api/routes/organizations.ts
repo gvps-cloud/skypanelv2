@@ -398,6 +398,8 @@ router.get('/:id/egress/credits', checkEgressViewPermission, async (req: Authent
         organizationId: id,
         creditsGb: balanceDetails.creditsGb,
         warning: balanceDetails.warning,
+        refundRateUsdPerGb: balanceDetails.refundRateUsdPerGb,
+        maxRefundableUsd: balanceDetails.maxRefundableUsd,
         purchaseHistory: history.purchases,
         pagination: {
           total: history.total,

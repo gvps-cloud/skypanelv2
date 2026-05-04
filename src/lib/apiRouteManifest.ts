@@ -301,6 +301,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
+    "method": "POST",
+    "path": "/api/egress/credits/refund/wallet",
+    "protected": true,
+    "admin": false
+  },
+  {
     "method": "GET",
     "path": "/api/egress/credits/wallet-balance",
     "protected": true,
@@ -1743,6 +1749,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "POST",
     "path": "/api/payments/wallet/hosting/fund",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/payments/wallet/hosting/withdraw",
     "protected": true,
     "admin": false
   },

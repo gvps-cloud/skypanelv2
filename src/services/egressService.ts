@@ -16,6 +16,10 @@ export interface CreditPack {
 export interface EgressCreditBalance {
   creditsGb: number;
   warning: boolean;
+  /** Minimum USD/GB from configured packs — same rate used for refunds to main wallet */
+  refundRateUsdPerGb?: number | null;
+  /** Maximum USD that can be refunded to main wallet at the current rate */
+  maxRefundableUsd?: number | null;
 }
 
 export interface CreditPurchase {
@@ -26,6 +30,8 @@ export interface CreditPurchase {
   amountPaid: number;
   paymentTransactionId: string | null;
   createdAt: string;
+  adjustmentType?: 'purchase' | 'admin_add' | 'admin_remove' | 'customer_refund';
+  reason?: string | null;
 }
 
 export interface HourlyReading {
@@ -188,6 +194,33 @@ class EgressService {
   /**
    * Purchase egress credits using wallet balance
    */
+  /**
+   * Refund a USD amount from egress credits back to the main wallet (requires billing_manage).
+   */
+  async refundCreditsToMainWallet(
+    organizationId: string,
+    amount: number,
+  ): Promise<{
+    success: boolean;
+    message?: string;
+    data?: {
+      newBalance: number;
+      newMainBalance: number;
+      walletCredited: number;
+      creditsDeductedGb: number;
+      refundRateUsdPerGb: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const data = await apiClient.post<any>('/egress/credits/refund/wallet', { organizationId, amount });
+      return { success: true, message: data.message, data: data.data };
+    } catch (error: any) {
+      console.error('Refund egress credits error:', error);
+      return { success: false, error: error.message || 'Network error occurred' };
+    }
+  }
+
   async purchaseWithWallet(
     organizationId: string,
     packId: string,
@@ -218,6 +251,8 @@ class EgressService {
       organizationId: string;
       creditsGb: number;
       warning: boolean;
+      refundRateUsdPerGb?: number | null;
+      maxRefundableUsd?: number | null;
       purchaseHistory: CreditPurchase[];
     };
     error?: string;

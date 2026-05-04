@@ -41,6 +41,9 @@ vi.mock('../../api/services/paypalService.js', () => ({
       paymentId: 'test-payment-id',
     }),
     getWalletBalance: vi.fn().mockResolvedValue(100),
+    getHostingWalletBalance: vi.fn().mockResolvedValue(0),
+    transferToHostingWallet: vi.fn().mockResolvedValue(true),
+    transferFromHostingToMainWallet: vi.fn().mockResolvedValue(true),
     getWalletTransactions: vi.fn().mockResolvedValue([]),
     deductFundsFromWallet: vi.fn().mockResolvedValue(true),
     createPayout: vi.fn().mockResolvedValue({

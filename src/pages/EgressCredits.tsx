@@ -18,6 +18,7 @@ import {
   Star,
   ThumbsUp,
   Building2,
+  ArrowDownLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
@@ -59,6 +60,7 @@ const EgressCredits: React.FC = () => {
   const selectedOrg = accessibleOrgs.find(o => o.organization_id === selectedOrgId);
   const selectedOrgName = selectedOrg?.organization_name;
   const canManageEgress = selectedOrg?.permissions?.egress_manage === true;
+  const canRefundToMainWallet = selectedOrg?.permissions?.billing_manage === true;
 
   const [balance, setBalance] = useState<EgressCreditBalance | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -68,6 +70,8 @@ const EgressCredits: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPack, setSelectedPack] = useState<CreditPack | null>(null);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundLoading, setRefundLoading] = useState(false);
 
   // Load accessible organizations
   const loadAccessibleOrgs = useCallback(async () => {
@@ -192,12 +196,51 @@ const EgressCredits: React.FC = () => {
     setIsDialogOpen(true);
   };
 
+  const formatCurrency = (n: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+
   const handlePurchaseSuccess = async () => {
     await loadBalance();
     await loadPurchaseHistory();
     await loadWalletBalance();
     setIsDialogOpen(false);
     setSelectedPack(null);
+  };
+
+  const handleRefundToMainWallet = async () => {
+    if (!selectedOrgId || !canRefundToMainWallet) return;
+    if (!refundAmount.trim()) {
+      toast.error('Enter a refund amount');
+      return;
+    }
+    const parsed = parseFloat(refundAmount);
+    if (!Number.isFinite(parsed) || parsed < 0.01) {
+      toast.error('Enter a valid amount (at least $0.01)');
+      return;
+    }
+    const normalized = Math.round(parsed * 100) / 100;
+    const maxUsd = balance?.maxRefundableUsd ?? null;
+    if (maxUsd !== null && maxUsd > 0 && normalized > maxUsd + 1e-6) {
+      toast.error(`Amount cannot exceed ${formatCurrency(maxUsd)} available to refund.`);
+      return;
+    }
+    setRefundLoading(true);
+    try {
+      const result = await egressService.refundCreditsToMainWallet(selectedOrgId, normalized);
+      if (!result.success) {
+        toast.error(result.error ?? 'Refund failed');
+        return;
+      }
+      toast.success(
+        `Credited ${formatCurrency(result.data?.walletCredited ?? normalized)} to your main wallet.`
+      );
+      setRefundAmount('');
+      await loadBalance();
+      await loadPurchaseHistory();
+      await loadWalletBalance();
+    } finally {
+      setRefundLoading(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -352,6 +395,69 @@ const EgressCredits: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Refund egress credits to main wallet */}
+      {canRefundToMainWallet && balance && balance.creditsGb > 0 && (
+        <Card className="mb-6 border-primary/25">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ArrowDownLeft className="h-5 w-5" />
+              Refund credits to main wallet
+            </CardTitle>
+            <CardDescription>
+              Move funds back to your organization&apos;s main USD wallet. The refund rate is the best (lowest) USD/GB
+              price among configured credit packs.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-6 text-sm">
+              <div>
+                <span className="text-muted-foreground">Refund rate</span>
+                <p className="font-medium tabular-nums">
+                  {balance.refundRateUsdPerGb != null
+                    ? `${formatCurrency(balance.refundRateUsdPerGb)} / GB`
+                    : '—'}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Max refundable</span>
+                <p className="font-medium tabular-nums">
+                  {balance.maxRefundableUsd != null ? formatCurrency(balance.maxRefundableUsd) : '—'}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <span className="text-muted-foreground text-sm">$</span>
+                </div>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={refundAmount}
+                  onChange={(e) => setRefundAmount(e.target.value)}
+                  className="block w-full rounded-md border bg-secondary py-2 pl-8 pr-3 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={refundLoading || (balance.maxRefundableUsd ?? 0) <= 0}
+                onClick={() => void handleRefundToMainWallet()}
+              >
+                {refundLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowDownLeft className="mr-2 h-4 w-4" />
+                )}
+                Refund to wallet
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Credit Packs */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -459,26 +565,37 @@ const EgressCredits: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {purchaseHistory.map((purchase) => (
+                {purchaseHistory.map((purchase) => {
+                  const isRefund = purchase.adjustmentType === 'customer_refund';
+                  return (
                   <TableRow key={purchase.id}>
                     <TableCell>{formatDate(purchase.createdAt)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{purchase.packId}</Badge>
+                      <Badge variant="outline">
+                        {isRefund ? 'Refund to wallet' : purchase.packId}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      ${purchase.amountPaid.toFixed(6)}
+                      {isRefund ? '+' : ''}${purchase.amountPaid.toFixed(6)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatGb(purchase.creditsGb)}
+                      {isRefund ? `−${formatGb(purchase.creditsGb)}` : formatGb(purchase.creditsGb)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Badge variant="default" className="gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Complete
+                      <Badge variant={isRefund ? 'secondary' : 'default'} className="gap-1">
+                        {isRefund ? (
+                          'Refunded'
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-3 w-3" />
+                            Complete
+                          </>
+                        )}
                       </Badge>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}
