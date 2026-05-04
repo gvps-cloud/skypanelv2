@@ -1,4 +1,21 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  ArrowDownUp,
+  Globe2,
+  HardDrive,
+  Mail,
+  Database,
+  Users,
+  Key,
+  Server,
+} from "lucide-react";
 import type { HostingPlan } from "@/hooks/useHosting";
+
+export interface HostingFeatureSpecRow {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+}
 
 const countLabels: Record<string, string> = {
   ftpUsers: "FTP users",
@@ -26,6 +43,18 @@ const canonicalResourceOrder: string[] = [
   "diskspace",
   "transfer",
 ];
+
+const RESOURCE_ICONS: Record<string, LucideIcon> = {
+  websites: Globe2,
+  ftpUsers: Key,
+  mysqlDbs: Database,
+  mailboxes: Mail,
+  customers: Users,
+  domainAliases: Globe2,
+  subdomains: Server,
+  diskspace: HardDrive,
+  transfer: ArrowDownUp,
+};
 
 const titleizeResourceKey = (key: string) =>
   key
@@ -62,26 +91,41 @@ const formatCapacity = (value: number | null | undefined) => {
 };
 
 export const getHostingFeatureRows = (plan: HostingPlan, limit = 9): string[] => {
-  const rows: string[] = [];
+  return getHostingFeatureSpecRows(plan, limit).map((row) => row.label);
+};
+
+export const getHostingFeatureSpecRows = (
+  plan: HostingPlan,
+  limit = 9,
+): HostingFeatureSpecRow[] => {
+  const rows: HostingFeatureSpecRow[] = [];
   const resources = plan.features?.resources ?? {};
 
   for (const key of canonicalResourceOrder) {
     const resource = resources[key];
+    const icon = RESOURCE_ICONS[key] ?? Server;
 
     if (key in capacityLabels) {
-      rows.push(`${formatCapacity(resource?.total)} ${capacityLabels[key]}`);
+      rows.push({
+        key,
+        label: `${formatCapacity(resource?.total)} ${capacityLabels[key]}`,
+        icon,
+      });
       continue;
     }
 
     const label = countLabels[key] ?? titleizeResourceKey(key);
     const total = resource?.total;
-    // Keep cards compact and reseller-focused: hide 0-customer rows.
     if (key === "customers" && (total === undefined || total === null || total === 0)) {
       continue;
     }
 
     const displayValue = total !== undefined && total !== null ? total : 0;
-    rows.push(`${formatCount(displayValue)} ${label}`);
+    rows.push({
+      key,
+      label: `${formatCount(displayValue)} ${label}`,
+      icon,
+    });
   }
 
   return rows.slice(0, limit);

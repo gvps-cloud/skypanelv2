@@ -38,7 +38,7 @@ import { BRAND_NAME } from '@/lib/brand';
 import MarketingNavbar from '@/components/MarketingNavbar';
 import MarketingFooter from '@/components/MarketingFooter';
 import { apiClient } from '@/lib/api';
-import { getHostingFeatureRows } from '@/lib/hostingPlanFeatures';
+import { getHostingFeatureRows, getHostingFeatureSpecRows } from '@/lib/hostingPlanFeatures';
 import '@/styles/home.css';
 import type { HostingPlan } from '@/hooks/useHosting';
 
@@ -210,7 +210,8 @@ const getHostingDisplayFeatures = (plan: HostingPlan): string[] => {
 };
 
 const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
-  const features = getHostingDisplayFeatures(plan);
+  const specRows = getHostingFeatureSpecRows(plan);
+  const fallbackRows = getHostingDisplayFeatures(plan);
 
   return (
     <motion.div variants={revealItem}>
@@ -231,12 +232,19 @@ const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
           </div>
         </CardHeader>
         <CardContent className="flex-1 space-y-3">
-          {features.map((feature) => (
-            <div key={feature} className="flex items-center gap-3">
-              <Check className="h-4 w-4 text-primary" />
-              <span className="text-sm">{feature}</span>
-            </div>
-          ))}
+          {specRows.length > 0
+            ? specRows.map((row) => (
+                <div key={row.key} className="flex items-center gap-3">
+                  <row.icon className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm">{row.label}</span>
+                </div>
+              ))
+            : fallbackRows.map((feature) => (
+                <div key={feature} className="flex items-center gap-3">
+                  <Check className="h-4 w-4 text-primary" />
+                  <span className="text-sm">{feature}</span>
+                </div>
+              ))}
         </CardContent>
         <CardFooter>
           <Button asChild className="w-full">

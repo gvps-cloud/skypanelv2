@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
 import { BRAND_NAME } from "@/lib/brand";
-import { getHostingFeatureRows } from "@/lib/hostingPlanFeatures";
+import { getHostingFeatureSpecRows } from "@/lib/hostingPlanFeatures";
 import type { HostingPlan } from "@/hooks/useHosting";
 
 const revealContainer: Variants = {
@@ -236,8 +236,8 @@ const CapabilityGrid = () => (
 );
 
 const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
-  const featureRows = getHostingFeatureRows(plan, 5);
-  const features = featureRows.length > 0 ? featureRows : ["Managed website hosting"];
+  const specRows = getHostingFeatureSpecRows(plan, 5);
+  const fallbackRows = specRows.length > 0 ? [] : ["Managed website hosting"];
 
   return (
     <Card key={plan.id} className="home-feature-card flex h-full flex-col">
@@ -250,12 +250,19 @@ const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
         </p>
       </CardHeader>
       <CardContent className="flex-1 space-y-3">
-        {features.map((feature) => (
-          <div key={feature} className="flex items-center gap-3">
-            <CheckCircle2 className="h-4 w-4 text-primary" />
-            <span className="text-sm">{feature}</span>
-          </div>
-        ))}
+        {specRows.length > 0
+          ? specRows.map((row) => (
+              <div key={row.key} className="flex items-center gap-3">
+                <row.icon className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm">{row.label}</span>
+              </div>
+            ))
+          : fallbackRows.map((feature) => (
+              <div key={feature} className="flex items-center gap-3">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span className="text-sm">{feature}</span>
+              </div>
+            ))}
       </CardContent>
     </Card>
   );

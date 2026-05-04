@@ -32,6 +32,7 @@ interface PlatformStats {
   support: { totalTickets: number; openTickets: number };
   plans: { vpsPlans: number; containerPlans: number };
   regions: { total: number };
+  hosting: { active: number };
 }
 
 /* ─── Animation Variants ─────────────────────────────────────────── */
@@ -268,7 +269,7 @@ export default function AboutUs() {
                     </h2>
                     {isLoading ? (
                       <div className="grid gap-3">
-                        {Array.from({ length: 4 }).map((_, idx) => (
+                        {Array.from({ length: 5 }).map((_, idx) => (
                           <Skeleton key={idx} className="h-10 w-full" />
                         ))}
                       </div>
@@ -294,6 +295,10 @@ export default function AboutUs() {
                           {
                             label: "Regions",
                             value: formatStat(stats?.regions.total),
+                          },
+                          {
+                            label: "Active hosting accounts",
+                            value: formatStat(stats?.hosting.active),
                           },
                         ].map((row) => (
                           <div
@@ -368,97 +373,7 @@ export default function AboutUs() {
           </div>
         </section>
 
-        {/* ═══════════════════════ CTA ═════════════════════════════════ */}
-        <section className="border-y border-border/40 bg-muted/20 py-20 sm:py-24">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="home-cta-shell relative overflow-hidden rounded-3xl border border-border/50 px-6 py-16 text-center sm:px-12 shadow-2xl">
-              {/* Floating orbs */}
-              <div
-                className="home-orb absolute w-[300px] h-[300px] -top-[100px] -left-[80px] opacity-40"
-                style={{
-                  background:
-                    "radial-gradient(circle, hsl(var(--primary) / 0.15), transparent 70%)",
-                  filter: "blur(60px)",
-                  animation: "float-orb-1 16s ease-in-out infinite",
-                }}
-                aria-hidden="true"
-              />
-              <div
-                className="home-orb absolute w-[250px] h-[250px] -bottom-[80px] -right-[60px] opacity-40"
-                style={{
-                  background:
-                    "radial-gradient(circle, hsl(var(--primary) / 0.12), transparent 70%)",
-                  filter: "blur(60px)",
-                  animation: "float-orb-2 20s ease-in-out infinite",
-                }}
-                aria-hidden="true"
-              />
-
-              <div className="relative z-10 grid gap-8 lg:grid-cols-2 lg:text-left">
-                {/* Left CTA */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5 }}
-                  className="space-y-4"
-                >
-                  <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-                    Ready to launch your first deployment?
-                  </h2>
-                  <p className="mx-auto max-w-xl text-lg text-muted-foreground lg:mx-0">
-                    Start with a free account, onboard in minutes, and scale
-                    across regions without surprise bills.
-                  </p>
-                  <div className="flex flex-col gap-3 sm:flex-row lg:justify-start">
-                    <Button
-                      size="lg"
-                      className="h-12 px-8 text-base home-btn-glow"
-                      asChild
-                    >
-                      <Link to="/register">Get started</Link>
-                    </Button>
-                    <Button
-                      size="lg"
-                      variant="secondary"
-                      className="h-12 px-8 text-base border border-border/40"
-                      asChild
-                    >
-                      <Link to="/contact">Talk to sales</Link>
-                    </Button>
-                  </div>
-                </motion.div>
-
-                {/* Right feature pills */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                  className="flex flex-wrap items-start gap-3 lg:pt-4"
-                >
-                  {[
-                    "Secure by default",
-                    "API & CLI ready",
-                    "24/7 support",
-                    "Role-based access",
-                    "Hourly billing",
-                    "Global regions",
-                  ].map((tag) => (
-                    <div
-                      key={tag}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.06] px-3.5 py-1.5 text-sm font-medium text-primary"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      {tag}
-                    </div>
-                  ))}
-                </motion.div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
+        </main>
 
       <MarketingFooter />
     </div>

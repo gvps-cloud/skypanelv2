@@ -50,6 +50,9 @@ interface PlatformStats {
   regions: {
     total: number;
   };
+  hosting: {
+    active: number;
+  };
   cacheExpiry: string;
 }
 
@@ -267,6 +270,18 @@ export class PlatformStatsService {
 
       const plansRow = plansResult.rows[0] || { vps_plans: 0 };
 
+      // Get active hosting subscriptions count
+      let hostingActiveCount = 0;
+      try {
+        const hostingResult = await query(`
+          SELECT COUNT(*) FILTER (WHERE status = 'active') AS active
+          FROM hosting_subscriptions
+        `);
+        hostingActiveCount = parseInt(hostingResult.rows[0]?.active) || 0;
+      } catch {
+        // hosting_subscriptions table may not exist in older environments
+      }
+
       // Get regions count from admin-allowed regions across all providers
       let regionCount = 0;
       try {
@@ -342,6 +357,9 @@ export class PlatformStatsService {
         },
         regions: {
           total: regionCount,
+        },
+        hosting: {
+          active: hostingActiveCount,
         },
         cacheExpiry: new Date(Date.now() + this.CACHE_TTL_MS).toISOString(),
       };

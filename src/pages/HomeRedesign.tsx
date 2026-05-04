@@ -13,7 +13,6 @@ import {
   Globe2,
   HardDrive,
   Lock,
-  Mail,
   MemoryStick,
   Rocket,
   Server,
@@ -43,7 +42,7 @@ import {
 import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
 import SkyPanelPreview from "@/components/home/SkyPanelPreview";
-import { getHostingFeatureRows } from "@/lib/hostingPlanFeatures";
+import { getHostingFeatureSpecRows } from "@/lib/hostingPlanFeatures";
 import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
@@ -136,11 +135,6 @@ interface VpsSpecRow {
   label: string;
 }
 
-interface HostingSpecRow {
-  icon: LucideIcon;
-  label: string;
-}
-
 const formatNetworkSpeed = (mbits: number): string => {
   if (mbits >= 1000) {
     const gbps = mbits / 1000;
@@ -186,32 +180,6 @@ const getVpsSpecRows = (plan: any): VpsSpecRow[] => {
   rows.push({ icon: Shield, label: backupsEnabled ? "Backups Available" : "No Backups" });
 
   return rows;
-};
-
-const getHostingFeatureIcon = (feature: string): LucideIcon => {
-  const normalized = feature.toLowerCase();
-
-  if (normalized.includes("mysql") || normalized.includes("database")) return Database;
-  if (normalized.includes("transfer") || normalized.includes("bandwidth")) return ArrowDownUp;
-  if (normalized.includes("disk") || normalized.includes("storage") || normalized.includes("space")) return HardDrive;
-  if (normalized.includes("mail")) return Mail;
-  if (normalized.includes("ftp") || normalized.includes("customer")) return Users;
-  if (normalized.includes("website") || normalized.includes("domain")) return Globe2;
-  if (normalized.includes("panel") || normalized.includes("access")) return PanelsTopLeft;
-
-  return Server;
-};
-
-const getHostingSpecRows = (plan: any): HostingSpecRow[] => {
-  const features = getHostingFeatureRows(plan);
-  const displayFeatures = features.length > 0
-    ? features
-    : ["Managed website hosting", "Panel access after purchase"];
-
-  return displayFeatures.map((feature) => ({
-    icon: getHostingFeatureIcon(feature),
-    label: feature,
-  }));
 };
 
 /* ─── Data ───────────────────────────────────────────────────────── */
@@ -1074,8 +1042,8 @@ export default function HomeRedesign() {
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1 space-y-2.5">
-                    {getHostingSpecRows(hostingCheapestPlan).map((feature) => (
-                      <div key={feature.label} className="flex items-center gap-2.5">
+                    {getHostingFeatureSpecRows(hostingCheapestPlan).map((feature) => (
+                      <div key={feature.key} className="flex items-center gap-2.5">
                         <feature.icon className="h-4 w-4 text-primary/70 shrink-0" />
                         <span className="text-sm">{feature.label}</span>
                       </div>
