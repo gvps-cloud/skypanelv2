@@ -322,26 +322,6 @@ export default function Regions() {
           </div>
         </section>
 
-        {/* ═══════════════════════ TRUST MARQUEE ═══════════════════════ */}
-        <section className="border-b border-border/40 bg-muted/20 py-6">
-          <div className="home-marquee">
-            <div className="home-marquee__track">
-              {[...trustItems, ...trustItems].map((item, i) => (
-                <div
-                  key={i}
-                  className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground"
-                >
-                  <item.icon className="h-4 w-4 text-primary/60" />
-                  <span className="whitespace-nowrap font-medium">
-                    {item.label}
-                  </span>
-                  <span className="ml-4 h-1 w-1 rounded-full bg-border" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* ═══════════════════════ MAIN CONTENT ═════════════════════════ */}
         <section className="py-24 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

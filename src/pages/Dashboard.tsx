@@ -684,7 +684,7 @@ const Dashboard: React.FC = () => {
               <Card className="h-full border-primary/25">
                 <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
                   <div className="space-y-1">
-                    <CardTitle>Enhance Hosting</CardTitle>
+                    <CardTitle>Web Hosting</CardTitle>
                     <p className="text-sm text-muted-foreground">
                       Website subscriptions, hosting wallet, and billing readiness
                     </p>

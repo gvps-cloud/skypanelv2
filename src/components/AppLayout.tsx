@@ -1170,12 +1170,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </header>
 
         {/* Main Content Area */}
-        <div
-          className={cn(
-            "flex-1 overflow-auto",
-            "md:pb-24",
-          )}
-        >
+        <div className="flex-1 overflow-auto">
           <Card className="h-full border-primary/25">
             <CardContent className="flex flex-1 flex-col gap-4 p-3 sm:p-4 md:p-6 pt-4 sm:pt-6 md:pt-6">
               <main className="flex-1 min-h-0">{children}</main>
@@ -1183,19 +1178,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </Card>
         </div>
 
-        <footer
-          className={cn(
-            "border-t border-border/60 bg-background px-4 py-3 sm:px-6 md:pointer-events-none md:fixed md:bottom-4 md:left-4 md:right-6 md:z-40 md:border-0 md:bg-transparent md:p-0 md:transition-[left] md:duration-200 md:ease-linear",
-            isSidebarOpen
-              ? "md:left-[calc(var(--sidebar-width)_+_1.5rem)]"
-              : "md:left-[calc(var(--sidebar-width-icon)_+_1.5rem)]",
-          )}
-        >
-          <div
-            className={cn(
-              "flex items-center justify-center sm:justify-end md:pointer-events-auto md:mx-0 md:ml-auto md:w-fit md:max-w-full md:rounded-2xl md:border md:border-border/70 md:bg-card/95 md:px-3 md:py-2 md:shadow-lg md:shadow-foreground/5 md:backdrop-blur md:supports-[backdrop-filter]:bg-card/85",
-            )}
-          >
+        <footer className="shrink-0 border-t border-border/60 bg-background px-4 py-3 sm:px-6">
+          <div className="flex items-center justify-center sm:justify-end">
             <FooterPartnerLinks className="justify-center" />
           </div>
         </footer>
