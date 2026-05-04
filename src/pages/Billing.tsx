@@ -865,12 +865,12 @@ const Billing: React.FC = () => {
                   </button>
                 ))}
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="flex-1 max-w-xs">
+              <div className="flex flex-col gap-3">
+                <div className="w-full min-w-0">
                   <label htmlFor="amount" className="sr-only">Amount</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <DollarSign className="h-5 w-5 text-muted-foreground " />
+                      <DollarSign className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <input
                       type="number"
@@ -887,7 +887,7 @@ const Billing: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleAddFunds}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                  className="w-full shrink-0 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Funds via PayPal
@@ -909,8 +909,8 @@ const Billing: React.FC = () => {
             <div className="space-y-5">
               <div className="space-y-3">
                 <p className="text-sm font-medium">Transfer from main wallet</p>
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="relative flex-1 min-w-0">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <DollarSign className="h-5 w-5 text-muted-foreground" />
                     </div>
@@ -932,7 +932,7 @@ const Billing: React.FC = () => {
                       void handleTransferToHostingWallet();
                     }}
                     disabled={hostingTransferLoading}
-                    className="inline-flex items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
+                    className="w-full sm:w-auto shrink-0 inline-flex items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
                   >
                     {hostingTransferLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -946,8 +946,8 @@ const Billing: React.FC = () => {
 
               <div className="space-y-3 border-t pt-4">
                 <p className="text-sm font-medium">Send back to main wallet</p>
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="relative flex-1 min-w-0">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <DollarSign className="h-5 w-5 text-muted-foreground" />
                     </div>
@@ -969,7 +969,7 @@ const Billing: React.FC = () => {
                       void handleWithdrawFromHostingToMain();
                     }}
                     disabled={hostingWithdrawLoading}
-                    className="inline-flex items-center rounded-md border border-transparent bg-secondary px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted disabled:opacity-60"
+                    className="w-full sm:w-auto shrink-0 inline-flex items-center rounded-md border border-transparent bg-secondary px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted disabled:opacity-60"
                   >
                     {hostingWithdrawLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -983,8 +983,8 @@ const Billing: React.FC = () => {
 
               <div className="border-t pt-4">
                 <p className="mb-3 text-sm font-medium">Fund directly via PayPal</p>
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="relative flex-1 min-w-0">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <DollarSign className="h-5 w-5 text-muted-foreground" />
                     </div>
@@ -1003,7 +1003,7 @@ const Billing: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleHostingPayPalTopUp}
-                    className="inline-flex items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+                    className="w-full sm:w-auto shrink-0 inline-flex items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     PayPal
