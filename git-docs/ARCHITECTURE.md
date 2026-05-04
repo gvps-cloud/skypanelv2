@@ -57,6 +57,9 @@ Billing is **hourly** — charges are deducted from the organization's prepaid w
 │   • WebSocket server for SSH bridge                                        │
 │   • Linode/Akamai API for infrastructure                                   │
 │   • PayPal REST API for payments                                           │
+│   • Enhance Hosting API for shared hosting                                 │
+│   • FraudLabsPro API for fraud screening                                   │
+│   • Bunny CDN for static assets                                            │
 │   • Email providers (Resend · SMTP)                                        │
 │   • PG LISTEN/NOTIFY for real-time events                                  │
 │                                                                            │
@@ -64,7 +67,7 @@ Billing is **hourly** — charges are deducted from the organization's prepaid w
 │   SPA → Router → TanStack Query → Middleware → Routes → Services            │
 │   SPA (SSE) ← PG ← Services                                                │
 │   SPA (WebSocket) ↔ WS ↔ Linode (SSH2)                                     │
-│   Services ↔ PostgreSQL / Linode / PayPal / Email                          │
+│   Services ↔ PostgreSQL / Linode / PayPal / Enhance / Email                │
 │   Cron → Services for hourly billing                                       │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -234,3 +237,124 @@ PAYMENT & WALLET FLOW
 10. API → Frontend: success + new balance → UI confirms funds added
 11. Hourly billing cron later deducts usage fees from the wallet automatically
 ```
+
+### Enhance Hosting Provisioning Flow
+
+```text
+ENHANCE HOSTING PROVISIONING FLOW
+-----------------------------------------------------------------------------
+1. User → Frontend: browse hosting plans
+2. Frontend → API /api/hosting/plans: fetch available plans
+3. User selects plan, provides domain
+4. Frontend → API /api/hosting/purchase: { planId, domain, ... }
+5. API → enhanceOnboardingService:
+   a. Get/create Enhance customer org for user's organization
+   b. Create hosting_subscription record
+   c. Initialize dedicated hosting wallet
+   d. Enhance API: add domain → issue SSL → create website
+   e. Configure optional services (email, MySQL, apps)
+6. API → hostingBillingService: deduct first month from hosting wallet
+7. If any step fails: rollback + credit wallet (compensating transaction)
+8. API → Frontend: redirect to /hosting/:id detail page
+```
+
+### Hosting Management Flow
+
+```text
+HOSTING MANAGEMENT (per subscription)
+-----------------------------------------------------------------------------
+Website: /api/hosting/web — list, update, manage domains and settings
+DNS: /api/hosting/dns — zone management, record CRUD
+SSL: /api/hosting/ssl — certificate management, force HTTPS
+Email: /api/hosting/email — mailboxes, autoresponders, client config
+MySQL: /api/hosting/mysql — databases, users, privileges, SQL execution
+WordPress: /api/hosting/wordpress — install, configure, manage
+Joomla: /api/hosting/joomla — install, configure, manage
+Node.js: /api/hosting/node — persistent app management
+Apps: /api/hosting/apps — PHP/LSAPI application hosting
+FTP: /api/hosting/ftp — FTP account management
+SSH: /api/hosting/ssh — SSH key management for hosting
+Cron: /api/hosting/cron — scheduled job management
+Backups: /api/hosting/backups — backup creation, restore, download
+```
+
+### Monthly Hosting Billing Cycle
+
+```text
+MONTHLY HOSTING BILLING CYCLE (runs daily to check due subscriptions)
+-----------------------------------------------------------------------------
+1. hostingBillingService → DB: fetch subscriptions where next_billing_date <= NOW()
+2. For each subscription:
+   a. Check hosting_wallets balance for the org
+   b. If sufficient:
+        • Deduct monthly fee from hosting wallet
+        • Record payment transaction
+        • Update next_billing_date (+30 days)
+   c. If insufficient:
+        • Mark subscription as past_due
+        • Enhance API: suspend website
+        • Record failed billing cycle
+        • Notify user
+3. If user adds funds and balance recovers:
+   • Enhance API: unsuspend website
+   • Reset subscription status to active
+```
+
+### Fraud Screening Flow
+
+```text
+FRAUD SCREENING FLOW (FraudLabsPro)
+-----------------------------------------------------------------------------
+Registration:
+  1. User → API /api/auth/register: { email, password, name }
+  2. API → fraudLabsProService: screen IP, email, proxy/VPN/TOR
+  3. If score > threshold: flag for admin review
+  4. Admin → /api/admin/fraud-checks: approve or reject
+
+Payment:
+  1. User → API /api/payments/create-order: { amount }
+  2. API → fraudLabsProService: screen transaction
+  3. If score > threshold: block order creation, flag for review
+  4. Admin reviews and can manually allow/block
+```
+
+### Refund Flow
+
+```text
+REFUND FLOW
+-----------------------------------------------------------------------------
+Automatic (VPS deletion):
+  1. User → API /api/vps/:id (DELETE)
+  2. API → billingService: calculate unused hours
+  3. API → refundService: create refund record
+  4. API → DB: credit wallet with prorated amount
+
+Automatic (Hosting cancellation):
+  1. User → API /api/hosting/:id (DELETE)
+  2. API → hostingBillingService: calculate remaining days
+  3. API → refundService: create refund record
+  4. API → DB: credit hosting wallet
+
+Manual (Admin-initiated):
+  1. Admin → API /api/admin/refunds: { transactionId, amount, reason }
+  2. API → refundService: create PayPal capture refund
+  3. API → PayPal API: issue refund via capture ID
+  4. API → DB: record refund, update transaction status
+```
+
+### Notes System Flow
+
+```text
+NOTES SYSTEM
+-----------------------------------------------------------------------------
+Personal Notes:
+  • User → /api/notes (personal): CRUD notes scoped to user
+  • Frontend: PersonalNotes.tsx with NotesBoard (kanban-style)
+
+Organization Notes:
+  • User → /api/notes (org): CRUD notes scoped to organization
+  • Frontend: OrganizationNotes.tsx with NotesBoard
+  • Permission-gated: requires notes_view / notes_manage
+```
+
+> **Back to**: [README](../README.md)

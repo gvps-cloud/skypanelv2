@@ -205,12 +205,12 @@ const HostingPlanGrid = ({ plans }: { plans: HostingPlan[] }) => (
 );
 
 const getHostingDisplayFeatures = (plan: HostingPlan): string[] => {
-  const featureRows = getHostingFeatureRows(plan);
+  const featureRows = getHostingFeatureRows(plan, 9, { zeroMeansUnlimited: true });
   return featureRows.length > 0 ? featureRows : ['Managed website hosting', 'Panel access after purchase'];
 };
 
 const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
-  const specRows = getHostingFeatureSpecRows(plan);
+  const specRows = getHostingFeatureSpecRows(plan, 9, { zeroMeansUnlimited: true });
   const fallbackRows = getHostingDisplayFeatures(plan);
 
   return (

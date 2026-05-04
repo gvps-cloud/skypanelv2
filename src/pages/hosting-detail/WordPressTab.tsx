@@ -635,7 +635,7 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
 
   if (loading && installations.length === 0) {
     return (
-      <section className={cn("rounded-2xl border bg-card shadow-sm")}>
+      <section className={cn("rounded-2xl cyber-card cyber-card--hover")}>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading WordPress installations...</span>
@@ -646,7 +646,7 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
 
   if (error) {
     return (
-      <section className={cn("rounded-2xl border bg-card shadow-sm")}>
+      <section className={cn("rounded-2xl cyber-card cyber-card--hover")}>
         <div className="px-6 py-8 text-center">
           <p className="text-sm text-muted-foreground mb-3">{error}</p>
           <Button variant="outline" size="sm" onClick={loadInstallations}>
@@ -658,7 +658,7 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
   }
 
   return (
-    <section className={cn("rounded-2xl border bg-card shadow-sm")}>
+    <section className={cn("rounded-2xl cyber-card cyber-card--hover")}>
       <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6">
         <div className="flex items-center justify-between">
           <div>

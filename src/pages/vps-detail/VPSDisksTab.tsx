@@ -124,7 +124,7 @@ export default function VPSDisksTab({ instanceId, instanceLabel }: VPSDisksTabPr
 
   if (loading && disks.length === 0) {
     return (
-      <section className="rounded-2xl border bg-card shadow-sm">
+      <section className="rounded-2xl cyber-card cyber-card--hover">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading disks...</span>
@@ -135,7 +135,7 @@ export default function VPSDisksTab({ instanceId, instanceLabel }: VPSDisksTabPr
 
   if (error) {
     return (
-      <section className="rounded-2xl border bg-card shadow-sm">
+      <section className="rounded-2xl cyber-card cyber-card--hover">
         <div className="px-6 py-8 text-center">
           <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-3" />
           <p className="text-sm text-muted-foreground mb-3">{error}</p>
@@ -149,7 +149,7 @@ export default function VPSDisksTab({ instanceId, instanceLabel }: VPSDisksTabPr
   }
 
   return (
-    <section className="rounded-2xl border bg-card shadow-sm">
+    <section className="rounded-2xl cyber-card cyber-card--hover">
       <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6">
         <div className="flex items-center justify-between">
           <div>

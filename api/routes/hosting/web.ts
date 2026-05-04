@@ -81,6 +81,40 @@ function normalizeWebsiteStatus(website: any) {
   };
 }
 
+const WEBSERVER_KINDS = new Set(["liteSpeed", "openLiteSpeed", "dummyWebServer", "apache", "nginx"]);
+
+function normalizeWebserverKind(kind: unknown) {
+  return typeof kind === "string" && WEBSERVER_KINDS.has(kind) ? kind : "unknown";
+}
+
+function readVhostWebserverKind(kind: unknown): "apache" | "nginx" | null {
+  return kind === "apache" || kind === "nginx" ? kind : null;
+}
+
+const REDIS_OPERATIONS = [
+  {
+    method: "GET",
+    operationId: "getWebsiteRedisState",
+    enhancePath: "/v2/websites/{website_id}/redis",
+  },
+  {
+    method: "PUT",
+    operationId: "setWebsiteRedisState",
+    enhancePath: "/v2/websites/{website_id}/redis",
+  },
+] as const;
+
+function readRedisAllowed(website: any): boolean | null {
+  const redisAllowed = website?.canUse?.redis;
+  return typeof redisAllowed === "boolean" ? redisAllowed : null;
+}
+
+async function getRedisAllowedForWebsite(sub: any) {
+  const enhanceWebsiteOrgId = getEnhanceWebsiteOrgId(sub);
+  const website = await EnhanceService.getWebsite(enhanceWebsiteOrgId, sub.enhance_website_id);
+  return readRedisAllowed(website);
+}
+
 function normalizeWebsiteUpdatePayload(body: any) {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return body;
@@ -142,6 +176,20 @@ router.get("/:id/website", requireOrgPermission("hosting_view"), async (req: Req
       return res.status(error.statusCode).json({ error: error.message });
     }
     res.status(500).json({ error: error?.message || "Failed to get website" });
+  }
+});
+
+router.get("/:id/webserver-kind", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    const kind = await EnhanceService.getWebsiteWebserverKind(sub.enhance_website_id);
+    res.json({ kind: normalizeWebserverKind(kind) });
+  } catch (error: any) {
+    if (error instanceof EnhanceApiError && (error.statusCode === 400 || error.statusCode === 403 || error.statusCode === 404)) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    res.status(500).json({ error: error?.message || "Failed to get webserver kind" });
   }
 });
 
@@ -422,11 +470,27 @@ router.get("/:id/redis", requireOrgPermission("hosting_view"), async (req: Reque
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
-    const enabled = await EnhanceService.getWebsiteRedisState(sub.enhance_website_id);
-    res.json({ enabled });
+    const allowed = await getRedisAllowedForWebsite(sub);
+    let enabled = false;
+    let status: "available" | "not_in_plan" | "unavailable" = allowed === false ? "not_in_plan" : "available";
+
+    if (allowed !== false) {
+      try {
+        enabled = Boolean(await EnhanceService.getWebsiteRedisState(sub.enhance_website_id));
+      } catch (error: any) {
+        if (error?.statusCode === 404 || error?.statusCode === 400 || error?.statusCode === 403) {
+          enabled = false;
+          status = "unavailable";
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    res.json({ enabled, allowed, status, operations: REDIS_OPERATIONS });
   } catch (error: any) {
     if (error?.statusCode === 404 || error?.statusCode === 400) {
-      res.json({ enabled: false });
+      res.json({ enabled: false, allowed: null, status: "unavailable", operations: REDIS_OPERATIONS });
       return;
     }
     res.status(500).json({ error: error?.message || "Failed to get redis status" });
@@ -437,9 +501,15 @@ router.put("/:id/redis", requireOrgPermission("hosting_manage"), async (req: Req
   const sub = await resolveSubscription(req, res);
   if (!sub) return;
   try {
+    const allowed = await getRedisAllowedForWebsite(sub);
+    if (allowed === false) {
+      res.status(403).json({ error: "Redis is not available for this hosting plan" });
+      return;
+    }
+
     const enabled = typeof req.body === "boolean" ? req.body : Boolean(req.body?.enabled);
     await EnhanceService.setWebsiteRedisState(sub.enhance_website_id, enabled);
-    res.json({ success: true, enabled });
+    res.json({ success: true, enabled, allowed, status: "available", operations: REDIS_OPERATIONS });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to set redis status" });
   }
@@ -511,7 +581,7 @@ router.get("/:id/htaccess/ips", requireOrgPermission("hosting_view"), async (req
     res.json(result);
   } catch (error: any) {
     if (error?.statusCode === 404 || error?.statusCode === 400) {
-      res.json({ items: [] });
+      res.json({ kind: null, ips: [] });
       return;
     }
     res.status(500).json({ error: error?.message || "Failed to get IP rules" });
@@ -622,6 +692,99 @@ router.delete("/:id/domains/:domainId/nginx-fastcgi/excluded-paths", requireOrgP
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to delete excluded path" });
+  }
+});
+
+// ============================================================
+// ModSecurity (domain-scoped)
+// ============================================================
+
+router.get("/:id/domains/:domainId/modsec-status", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
+    const result = await EnhanceService.getWebsiteDomainModSecStatus(req.params.domainId);
+    res.json({ enabled: Boolean(result?.enabled) });
+  } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ enabled: false });
+      return;
+    }
+    res.status(500).json({ error: error?.message || "Failed to get ModSecurity status" });
+  }
+});
+
+router.put("/:id/domains/:domainId/modsec-status", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
+    const enabled = typeof req.body === "boolean" ? req.body : Boolean(req.body?.enabled);
+    await EnhanceService.setWebsiteDomainModSecStatus(req.params.domainId, enabled);
+    res.json({ success: true, enabled });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to set ModSecurity status" });
+  }
+});
+
+// ============================================================
+// Custom vhost (Apache/Nginx domain-scoped)
+// ============================================================
+
+router.get("/:id/domains/:domainId/vhost", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
+    const result = await EnhanceService.getWebsiteDomainVhost(req.params.domainId);
+    res.json({
+      contents: typeof result?.contents === "string" ? result.contents : "",
+      webserver: readVhostWebserverKind(result?.webserver),
+    });
+  } catch (error: any) {
+    if (error?.statusCode === 404 || error?.statusCode === 400) {
+      res.json({ contents: "", webserver: null });
+      return;
+    }
+    res.status(500).json({ error: error?.message || "Failed to get vhost" });
+  }
+});
+
+router.put("/:id/domains/:domainId/vhost", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
+    const webserver = readVhostWebserverKind(req.body?.webserver);
+    if (!webserver) {
+      res.status(400).json({ error: "Vhost webserver must be apache or nginx" });
+      return;
+    }
+    await EnhanceService.setWebsiteDomainVhost(req.params.domainId, {
+      contents: typeof req.body?.contents === "string" ? req.body.contents : "",
+      webserver,
+    });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to save vhost" });
+  }
+});
+
+router.delete("/:id/domains/:domainId/vhost", requireOrgPermission("hosting_manage"), async (req: Request, res: Response) => {
+  const sub = await resolveSubscription(req, res);
+  if (!sub) return;
+  try {
+    if (!(await ensureDomainBelongsToWebsite(sub, req.params.domainId, res))) return;
+    const webserver = readVhostWebserverKind(req.body?.webserver);
+    if (!webserver) {
+      res.status(400).json({ error: "Vhost webserver must be apache or nginx" });
+      return;
+    }
+    await EnhanceService.deleteWebsiteDomainVhost(req.params.domainId, webserver);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to delete vhost" });
   }
 });
 

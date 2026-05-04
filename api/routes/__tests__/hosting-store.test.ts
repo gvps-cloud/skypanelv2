@@ -400,15 +400,29 @@ describe('Hosting Store Routes', () => {
       );
       expect(subResult.rows.length).toBe(1);
       expect(subResult.rows[0].status).toBe('active');
+
+      const cycleResult = await pool.query(
+        `SELECT status, invoice_id, payment_transaction_id
+         FROM hosting_billing_cycles
+         WHERE hosting_subscription_id = $1
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [subResult.rows[0].id]
+      );
+      expect(cycleResult.rows.length).toBe(1);
+      expect(cycleResult.rows[0].status).toBe('paid');
+      expect(cycleResult.rows[0].payment_transaction_id).toBeTruthy();
+      expect(cycleResult.rows[0].invoice_id).toBeTruthy();
     });
 
     it('includes serverGroupId when plan allows server group selection', async () => {
       // Create a plan that allows server group selection
+      const enhancePlanId = String(900000 + Math.floor(Math.random() * 100000));
       const sgPlanResult = await pool.query(
         `INSERT INTO hosting_plans (id, enhance_plan_id, name, description, features, service_type, price_monthly, is_active)
          VALUES ($1, $2, $3, $4, $5, $6, $7, true)
          RETURNING id`,
-        [randomUUID(), '999', 'SG Plan', 'Plan allowing server group selection',
+        [randomUUID(), enhancePlanId, 'SG Plan', 'Plan allowing server group selection',
           '{"allowServerGroupSelection":true}', 'web', 10.00]
       );
       const sgPlanId = sgPlanResult.rows[0].id;
@@ -514,7 +528,7 @@ describe('Hosting Store Routes', () => {
         .expect(400);
 
       expect(response.body.error).toBe('Unable to create website outside of the org');
-      expect(mockDeleteSubscription).toHaveBeenCalledWith(expect.any(String), '987');
+      expect(mockDeleteSubscription).toHaveBeenCalledWith(expect.any(String), '987', { force: true });
 
       const walletResult = await pool.query(
         'SELECT balance FROM hosting_wallets WHERE organization_id = $1',
@@ -590,6 +604,20 @@ describe('Hosting Store Routes', () => {
         [testOrgId]
       );
       expect(Number(mainWalletResult.rows[0].balance)).toBe(50.00);
+
+      const refundTxnResult = await pool.query(
+        `SELECT amount, metadata
+         FROM payment_transactions
+         WHERE organization_id = $1
+           AND amount > 0
+           AND metadata->>'wallet_type' = 'hosting'
+           AND metadata->>'hosting_subscription_id' = $2
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [testOrgId, subId]
+      );
+      expect(refundTxnResult.rows.length).toBe(1);
+      expect(Number(refundTxnResult.rows[0].amount)).toBeGreaterThan(0);
     });
 
     it('fails cancel when Enhance subscription deletion fails and keeps local state active', async () => {

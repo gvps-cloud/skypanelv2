@@ -6,6 +6,8 @@ import { EnhanceToggleService } from "../../services/enhanceToggle.js";
 import { EnhanceService } from "../../services/enhanceService.js";
 import { logActivity } from "../../services/activityLogger.js";
 import { config } from "../../config/index.js";
+import { HostingBillingService } from "../../services/hostingBillingService.js";
+import { RefundService } from "../../services/refundService.js";
 
 const router = express.Router();
 
@@ -335,10 +337,27 @@ router.delete("/plans/:id", async (req: Request, res: Response) => {
 router.get("/subscriptions", async (req: Request, res: Response) => {
   try {
     const { status, organization_id } = req.query;
-    let sql = `SELECT hs.*, org.name as organization_name, hp.name as plan_name
+
+    const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 10));
+    const offset = (page - 1) * limit;
+
+    let sql = `SELECT hs.*, org.name as organization_name, hp.name as plan_name,
+                      hp.price_monthly, COALESCE(hw.balance, 0) as hosting_wallet_balance,
+                      latest_cycle.status as latest_billing_status,
+                      latest_cycle.failure_reason as latest_billing_failure_reason,
+                      latest_cycle.invoice_id as latest_invoice_id
                FROM hosting_subscriptions hs
                JOIN organizations org ON org.id = hs.organization_id
                LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
+               LEFT JOIN hosting_wallets hw ON hw.organization_id = hs.organization_id
+               LEFT JOIN LATERAL (
+                 SELECT status, failure_reason, invoice_id
+                 FROM hosting_billing_cycles hbc
+                 WHERE hbc.hosting_subscription_id = hs.id
+                 ORDER BY hbc.created_at DESC
+                 LIMIT 1
+               ) latest_cycle ON true
                WHERE 1=1`;
     const params: any[] = [];
     let paramIndex = 1;
@@ -352,13 +371,140 @@ router.get("/subscriptions", async (req: Request, res: Response) => {
       params.push(organization_id);
     }
 
-    sql += ` ORDER BY hs.created_at DESC`;
+    const countSql = sql.replace(
+      `SELECT hs.*, org.name as organization_name, hp.name as plan_name,
+                      hp.price_monthly, COALESCE(hw.balance, 0) as hosting_wallet_balance,
+                      latest_cycle.status as latest_billing_status,
+                      latest_cycle.failure_reason as latest_billing_failure_reason,
+                      latest_cycle.invoice_id as latest_invoice_id`,
+      "SELECT COUNT(*) as total"
+    );
+    const countResult = await query(countSql, params);
+    const total = Number(countResult.rows[0]?.total ?? 0);
+    const totalPages = Math.ceil(total / limit);
+
+    sql += ` ORDER BY hs.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    params.push(limit, offset);
 
     const result = await query(sql, params);
-    res.json({ subscriptions: result.rows });
+    res.json({
+      subscriptions: result.rows,
+      pagination: { total, page, limit, offset, totalPages },
+    });
   } catch (error) {
     console.error("Failed to get enhance subscriptions:", error);
     res.status(500).json({ error: "Failed to get subscriptions" });
+  }
+});
+
+/**
+ * POST /api/admin/enhance/subscriptions/:id/retry-billing
+ * Retry overdue hosting billing for one subscription.
+ */
+router.post("/subscriptions/:id/retry-billing", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = (req as any).user?.id;
+
+  try {
+    const result = await HostingBillingService.retrySubscriptionBilling(id, userId);
+    if (!result.recovered) {
+      return res.status(400).json({ success: false, error: result.error || "Billing retry failed" });
+    }
+
+    res.json({ success: true, invoiceId: result.invoiceId ?? null });
+  } catch (error: any) {
+    console.error("Failed to retry hosting billing:", error);
+    res.status(500).json({ error: error?.message || "Failed to retry hosting billing" });
+  }
+});
+
+/**
+ * POST /api/admin/enhance/subscriptions/:id/invoice
+ * Ensure an invoice exists for the latest paid hosting billing cycle.
+ */
+router.post("/subscriptions/:id/invoice", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = (req as any).user?.id;
+
+  try {
+    const cycleResult = await query(
+      `SELECT id, invoice_id
+       FROM hosting_billing_cycles
+       WHERE hosting_subscription_id = $1
+         AND status IN ('paid', 'refunded')
+       ORDER BY period_start DESC
+       LIMIT 1`,
+      [id]
+    );
+    if (cycleResult.rows.length === 0) {
+      return res.status(404).json({ error: "No paid hosting billing cycle found" });
+    }
+
+    const invoiceId = cycleResult.rows[0].invoice_id
+      || await HostingBillingService.ensureInvoiceForCycle(cycleResult.rows[0].id, userId);
+
+    res.json({ success: true, invoiceId });
+  } catch (error: any) {
+    console.error("Failed to generate hosting invoice:", error);
+    res.status(500).json({ error: error?.message || "Failed to generate hosting invoice" });
+  }
+});
+
+/**
+ * POST /api/admin/enhance/subscriptions/:id/refund
+ * Issue a hosting wallet credit refund for a subscription.
+ */
+router.post("/subscriptions/:id/refund", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = (req as any).user?.id;
+  const amount = Number(req.body?.amount);
+  const reason = typeof req.body?.reason === "string" && req.body.reason.trim()
+    ? req.body.reason.trim()
+    : "Admin hosting wallet credit refund";
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return res.status(400).json({ error: "amount must be a positive number" });
+  }
+
+  try {
+    const sub = await getHostingSubscriptionById(id);
+    if (!sub) {
+      return res.status(404).json({ error: "Subscription not found" });
+    }
+
+    const cycleResult = await query(
+      `SELECT id, payment_transaction_id
+       FROM hosting_billing_cycles
+       WHERE hosting_subscription_id = $1
+         AND status IN ('paid', 'refunded')
+       ORDER BY period_start DESC
+       LIMIT 1`,
+      [id]
+    );
+    const latestCycle = cycleResult.rows[0];
+
+    const { refundId } = await RefundService.createRefund({
+      organizationId: sub.organization_id,
+      userId: sub.created_by,
+      originalTransactionId: latestCycle?.payment_transaction_id || undefined,
+      originalHostingSubscriptionId: id,
+      originalHostingBillingCycleId: latestCycle?.id || undefined,
+      amount,
+      currency: "USD",
+      reason,
+      initiatedBy: userId,
+      initiatedByType: "admin",
+    });
+    const processResult = await RefundService.processHostingWalletRefund(refundId);
+
+    if (!processResult.success) {
+      return res.status(400).json({ success: false, refundId, error: processResult.message });
+    }
+
+    res.status(201).json({ success: true, refundId });
+  } catch (error: any) {
+    console.error("Failed to create hosting refund:", error);
+    res.status(500).json({ error: error?.message || "Failed to create hosting refund" });
   }
 });
 
@@ -422,6 +568,12 @@ router.post("/subscriptions/:id/suspend", async (req: Request, res: Response) =>
     const sub = await getHostingSubscriptionById(id);
     if (!sub) {
       return res.status(404).json({ error: "Subscription not found" });
+    }
+
+    if (await HostingBillingService.hasUnpaidOverdueCycles(id)) {
+      return res.status(409).json({
+        error: "Subscription has unpaid overdue hosting billing. Retry billing before unsuspending.",
+      });
     }
 
     if (sub.enhance_website_id) {

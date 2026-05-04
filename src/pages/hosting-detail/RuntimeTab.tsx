@@ -223,7 +223,7 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
 
   if (loading) {
     return (
-      <section className={cn("rounded-2xl border bg-card shadow-sm")}>
+      <section className={cn("rounded-2xl cyber-card cyber-card--hover")}>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading runtime apps...</span>
@@ -234,7 +234,7 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
 
   if (error) {
     return (
-      <section className={cn("rounded-2xl border bg-card shadow-sm")}>
+      <section className={cn("rounded-2xl cyber-card cyber-card--hover")}>
         <div className="px-6 py-8 text-center">
           <p className="text-sm text-muted-foreground mb-3">{error}</p>
           <Button variant="outline" size="sm" onClick={loadData}>
@@ -247,7 +247,7 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
 
   return (
     <div className="space-y-6">
-      <section className={cn("rounded-2xl border bg-card shadow-sm")}>
+      <section className={cn("rounded-2xl cyber-card cyber-card--hover")}>
         <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6">
           <h2 className="flex items-center gap-2 text-base sm:text-lg font-semibold text-foreground">
             <Zap className="h-5 w-5 text-primary" />
@@ -289,7 +289,7 @@ export default function RuntimeTab({ subscriptionId }: RuntimeTabProps) {
         </div>
       </section>
 
-      <section className={cn("rounded-2xl border bg-card shadow-sm")}>
+      <section className={cn("rounded-2xl cyber-card cyber-card--hover")}>
         <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6">
           <div className="flex items-center justify-between">
             <div>

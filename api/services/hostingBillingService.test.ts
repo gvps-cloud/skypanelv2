@@ -38,8 +38,10 @@ import { HostingBillingService } from './hostingBillingService.js';
 describe('HostingBillingService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockQuery.mockResolvedValue({ rows: [] });
     mockIsEffectivelyEnabled.mockResolvedValue(true);
     mockUpdateWebsite.mockResolvedValue(undefined);
+    (HostingBillingService as any).hostingBillingTablesEnsured = true;
   });
 
   describe('runMonthlyHostingBilling', () => {
@@ -64,8 +66,10 @@ describe('HostingBillingService', () => {
             .mockResolvedValueOnce({ rows: [] }) // ensure wallet
             .mockResolvedValueOnce({ rows: [{ id: 'wallet-1', balance: 100 }] }) // wallet lock
             .mockResolvedValueOnce({ rows: [{ price_monthly: '10.00', name: 'Basic' }] }) // plan
+            .mockResolvedValueOnce({ rows: [{ id: 'cycle-1' }] }) // insert billing cycle
             .mockResolvedValueOnce({ rows: [] }) // update wallet
             .mockResolvedValueOnce({ rows: [{ id: 'txn-1' }] }) // insert transaction
+            .mockResolvedValueOnce({ rows: [] }) // update cycle
             .mockResolvedValueOnce({ rows: [] }), // update subscription
         };
         return callback(client);
@@ -104,7 +108,9 @@ describe('HostingBillingService', () => {
           query: vi.fn()
             .mockResolvedValueOnce({ rows: [] }) // ensure wallet
             .mockResolvedValueOnce({ rows: [{ id: 'wallet-1', balance: 5 }] }) // wallet lock
-            .mockResolvedValueOnce({ rows: [{ price_monthly: '10.00', name: 'Basic' }] }), // plan
+            .mockResolvedValueOnce({ rows: [{ price_monthly: '10.00', name: 'Basic' }] }) // plan
+            .mockResolvedValueOnce({ rows: [{ id: 'cycle-1' }] }) // insert failed cycle
+            .mockResolvedValueOnce({ rows: [] }), // update failed cycle
         };
         return callback(client);
       });
@@ -190,8 +196,10 @@ describe('HostingBillingService', () => {
             .mockResolvedValueOnce({ rows: [] })
             .mockResolvedValueOnce({ rows: [{ id: 'wallet-2', balance: 100 }] })
             .mockResolvedValueOnce({ rows: [{ price_monthly: '10.00', name: 'Basic' }] })
+            .mockResolvedValueOnce({ rows: [{ id: 'cycle-2' }] })
             .mockResolvedValueOnce({ rows: [] })
             .mockResolvedValueOnce({ rows: [{ id: 'txn-2' }] })
+            .mockResolvedValueOnce({ rows: [] })
             .mockResolvedValueOnce({ rows: [] }),
         };
         return callback(client);
@@ -200,7 +208,12 @@ describe('HostingBillingService', () => {
       await HostingBillingService.runMonthlyHostingBilling('scheduled');
 
       expect(mockTransaction).toHaveBeenCalledTimes(2);
-      expect(mockLogActivity).toHaveBeenCalledTimes(2);
+      expect(mockLogActivity).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: 'hosting.billing.completed',
+          entityId: 'sub-2',
+        })
+      );
     });
   });
 });

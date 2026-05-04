@@ -2,6 +2,7 @@ import express from "express";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import appsRouter from "../hosting/apps.js";
+import dnsRouter from "../hosting/dns.js";
 import emailRouter from "../hosting/email.js";
 import webRouter from "../hosting/web.js";
 import wordpressRouter from "../hosting/wordpress.js";
@@ -37,6 +38,15 @@ const mockUpdateJoomlaEmailAddress = vi.hoisted(() => vi.fn());
 const mockGetWebsite = vi.hoisted(() => vi.fn());
 const mockUpdateWebsite = vi.hoisted(() => vi.fn());
 const mockGetSiteAccessToken = vi.hoisted(() => vi.fn());
+const mockGetWebsiteWebserverKind = vi.hoisted(() => vi.fn());
+const mockGetWebsiteDomainMapping = vi.hoisted(() => vi.fn());
+const mockGetWebsiteDomainModSecStatus = vi.hoisted(() => vi.fn());
+const mockSetWebsiteDomainModSecStatus = vi.hoisted(() => vi.fn());
+const mockGetWebsiteDomainVhost = vi.hoisted(() => vi.fn());
+const mockSetWebsiteDomainVhost = vi.hoisted(() => vi.fn());
+const mockDeleteWebsiteDomainVhost = vi.hoisted(() => vi.fn());
+const mockGetWebsiteRedisState = vi.hoisted(() => vi.fn());
+const mockSetWebsiteRedisState = vi.hoisted(() => vi.fn());
 
 vi.mock("../../config/index.js", () => ({
   config: {
@@ -103,6 +113,15 @@ vi.mock("../../services/enhanceService.js", () => ({
     getWebsite: (...args: any[]) => mockGetWebsite(...args),
     updateWebsite: (...args: any[]) => mockUpdateWebsite(...args),
     getSiteAccessToken: (...args: any[]) => mockGetSiteAccessToken(...args),
+    getWebsiteWebserverKind: (...args: any[]) => mockGetWebsiteWebserverKind(...args),
+    getWebsiteDomainMapping: (...args: any[]) => mockGetWebsiteDomainMapping(...args),
+    getWebsiteDomainModSecStatus: (...args: any[]) => mockGetWebsiteDomainModSecStatus(...args),
+    setWebsiteDomainModSecStatus: (...args: any[]) => mockSetWebsiteDomainModSecStatus(...args),
+    getWebsiteDomainVhost: (...args: any[]) => mockGetWebsiteDomainVhost(...args),
+    setWebsiteDomainVhost: (...args: any[]) => mockSetWebsiteDomainVhost(...args),
+    deleteWebsiteDomainVhost: (...args: any[]) => mockDeleteWebsiteDomainVhost(...args),
+    getWebsiteRedisState: (...args: any[]) => mockGetWebsiteRedisState(...args),
+    setWebsiteRedisState: (...args: any[]) => mockSetWebsiteRedisState(...args),
   },
 }));
 
@@ -110,6 +129,7 @@ function createApp() {
   const app = express();
   app.use(express.json());
   app.use("/apps", appsRouter);
+  app.use("/dns", dnsRouter);
   app.use("/email", emailRouter);
   app.use("/web", webRouter);
   app.use("/wordpress", wordpressRouter);
@@ -136,6 +156,15 @@ describe("hosting detail route fixes", () => {
     mockGetWordpressConfig.mockResolvedValue({});
     mockSetWordpressConfig.mockResolvedValue(undefined);
     mockUpdateWebsite.mockResolvedValue(undefined);
+    mockGetWebsiteWebserverKind.mockResolvedValue("nginx");
+    mockGetWebsiteDomainMapping.mockResolvedValue({ id: "domain-123" });
+    mockGetWebsiteDomainModSecStatus.mockResolvedValue({ enabled: false });
+    mockSetWebsiteDomainModSecStatus.mockResolvedValue(undefined);
+    mockGetWebsiteDomainVhost.mockResolvedValue({ contents: "", webserver: "nginx" });
+    mockSetWebsiteDomainVhost.mockResolvedValue(undefined);
+    mockDeleteWebsiteDomainVhost.mockResolvedValue(undefined);
+    mockGetWebsiteRedisState.mockResolvedValue(false);
+    mockSetWebsiteRedisState.mockResolvedValue(undefined);
   });
 
   it("normalizes Enhance disabled website status for the hosting status card", async () => {
@@ -520,6 +549,115 @@ describe("hosting detail route fixes", () => {
     const response = await request(app).post("/web/sub-123/file-manager").expect(200);
 
     expect(response.body.url).toBe("https://panel.example.com/file-manager?accessToken=access-token-123");
+  });
+
+  it("returns documented Enhance website webserver kind for tool selection", async () => {
+    mockGetWebsiteWebserverKind.mockResolvedValue("openLiteSpeed");
+
+    const response = await request(app).get("/web/sub-123/webserver-kind").expect(200);
+
+    expect(response.body).toEqual({ kind: "openLiteSpeed" });
+    expect(mockGetWebsiteWebserverKind).toHaveBeenCalledWith("web-123");
+  });
+
+  it("proxies documented domain ModSecurity status after domain ownership validation", async () => {
+    mockGetWebsiteDomainModSecStatus.mockResolvedValue({ enabled: true });
+
+    const getResponse = await request(app)
+      .get("/web/sub-123/domains/domain-123/modsec-status")
+      .expect(200);
+
+    await request(app)
+      .put("/web/sub-123/domains/domain-123/modsec-status")
+      .send({ enabled: false })
+      .expect(200);
+
+    expect(getResponse.body).toEqual({ enabled: true });
+    expect(mockGetWebsiteDomainMapping).toHaveBeenCalledWith("cust-org-123", "web-123", "domain-123");
+    expect(mockGetWebsiteDomainModSecStatus).toHaveBeenCalledWith("domain-123");
+    expect(mockSetWebsiteDomainModSecStatus).toHaveBeenCalledWith("domain-123", false);
+  });
+
+  it("proxies documented Apache and Nginx custom vhost payloads", async () => {
+    mockGetWebsiteDomainVhost.mockResolvedValue({ contents: "server { }", webserver: "nginx" });
+
+    const getResponse = await request(app)
+      .get("/web/sub-123/domains/domain-123/vhost")
+      .expect(200);
+
+    await request(app)
+      .put("/web/sub-123/domains/domain-123/vhost")
+      .send({ contents: "<VirtualHost *:80></VirtualHost>", webserver: "apache" })
+      .expect(200);
+
+    await request(app)
+      .delete("/web/sub-123/domains/domain-123/vhost")
+      .send({ webserver: "apache" })
+      .expect(200);
+
+    expect(getResponse.body).toEqual({ contents: "server { }", webserver: "nginx" });
+    expect(mockSetWebsiteDomainVhost).toHaveBeenCalledWith("domain-123", {
+      contents: "<VirtualHost *:80></VirtualHost>",
+      webserver: "apache",
+    });
+    expect(mockDeleteWebsiteDomainVhost).toHaveBeenCalledWith("domain-123", "apache");
+  });
+
+  it("returns plan-aware Redis state with documented Enhance operations", async () => {
+    mockGetWebsite.mockResolvedValue({ canUse: { redis: true } });
+    mockGetWebsiteRedisState.mockResolvedValue(true);
+
+    const response = await request(app).get("/web/sub-123/redis").expect(200);
+
+    expect(response.body).toMatchObject({
+      enabled: true,
+      allowed: true,
+      status: "available",
+      operations: [
+        { method: "GET", operationId: "getWebsiteRedisState", enhancePath: "/v2/websites/{website_id}/redis" },
+        { method: "PUT", operationId: "setWebsiteRedisState", enhancePath: "/v2/websites/{website_id}/redis" },
+      ],
+    });
+    expect(mockGetWebsite).toHaveBeenCalledWith("cust-org-123", "web-123");
+    expect(mockGetWebsiteRedisState).toHaveBeenCalledWith("web-123");
+  });
+
+  it("does not query Redis state when the hosting plan cannot use Redis", async () => {
+    mockGetWebsite.mockResolvedValue({ canUse: { redis: false } });
+
+    const response = await request(app).get("/web/sub-123/redis").expect(200);
+
+    expect(response.body).toMatchObject({
+      enabled: false,
+      allowed: false,
+      status: "not_in_plan",
+    });
+    expect(mockGetWebsiteRedisState).not.toHaveBeenCalled();
+  });
+
+  it("updates Redis only when the hosting plan can use Redis", async () => {
+    mockGetWebsite.mockResolvedValue({ canUse: { redis: true } });
+    mockSetWebsiteRedisState.mockResolvedValue(undefined);
+
+    const response = await request(app)
+      .put("/web/sub-123/redis")
+      .send({ enabled: true })
+      .expect(200);
+
+    expect(response.body).toMatchObject({ enabled: true, allowed: true, status: "available" });
+    expect(mockSetWebsiteRedisState).toHaveBeenCalledWith("web-123", true);
+  });
+
+  it("blocks Redis writes when Enhance reports the plan cannot use Redis", async () => {
+    mockGetWebsite.mockResolvedValue({ canUse: { redis: false } });
+
+    const response = await request(app)
+      .put("/web/sub-123/redis")
+      .send({ enabled: true })
+      .expect(403);
+
+    expect(response.body).toEqual({ error: "Redis is not available for this hosting plan" });
+    expect(mockSetWebsiteRedisState).not.toHaveBeenCalled();
   });
 
   it("blocks access to sub-routes when subscription is cancelled", async () => {

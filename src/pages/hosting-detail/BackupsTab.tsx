@@ -516,7 +516,7 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
 
   if (loading && backups.length === 0) {
     return (
-      <section className="rounded-2xl border bg-card shadow-sm">
+      <section className="rounded-2xl cyber-card cyber-card--hover">
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading backups...</span>
@@ -527,7 +527,7 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
 
   if (error) {
     return (
-      <section className="rounded-2xl border bg-card shadow-sm">
+      <section className="rounded-2xl cyber-card cyber-card--hover">
         <div className="px-6 py-8 text-center">
           <p className="mb-3 text-sm text-muted-foreground">{error}</p>
           <Button variant="outline" size="sm" onClick={() => loadData()}>
@@ -540,7 +540,7 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
   }
 
   return (
-    <section className="rounded-2xl border bg-card shadow-sm">
+    <section className="rounded-2xl cyber-card cyber-card--hover">
       <div className="border-b border-border px-6 py-4 sm:px-8 sm:py-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>

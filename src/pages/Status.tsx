@@ -179,33 +179,7 @@ export default function Status() {
       setIsLoading(true);
       setError(null);
 
-      let vpsCount = 0;
-      let vpsRunning = 0;
-      let vpsStopped = 0;
-
-      try {
-        const statusData = await apiClient.get<{ success?: boolean; services?: { vps?: { total?: number; running?: number; stopped?: number } } }>('/health/status');
-
-        if (statusData.success && statusData.services) {
-          vpsCount = statusData.services.vps?.total || 0;
-          vpsRunning = statusData.services.vps?.running || 0;
-          vpsStopped = statusData.services.vps?.stopped || 0;
-        }
-      } catch (err) {
-        console.warn("Failed to fetch status data:", err);
-      }
-
-      const liveServices: ServiceComponent[] = [
-        {
-          name: "VPS Infrastructure",
-          status: "operational",
-          icon: Server,
-          instances: vpsCount,
-          description: `Virtual Private Server provisioning and management${vpsCount > 0 ? ` (${vpsRunning} running, ${vpsStopped} stopped)` : ""}`,
-        },
-      ];
-
-      setServices(liveServices);
+      setServices([]);
       setActiveIncidents([]);
       setLastUpdated(new Date().toLocaleTimeString());
 
@@ -233,7 +207,7 @@ export default function Status() {
                 statusHistory: monitor.statusHistory,
               }),
             );
-            setServices([...liveServices, ...monitorServices]);
+            setServices(monitorServices);
           }
         } else {
           setBsConfigured(false);
@@ -248,16 +222,7 @@ export default function Status() {
         err instanceof Error ? err.message : "Failed to fetch live data",
       );
 
-      const fallbackServices: ServiceComponent[] = [
-        {
-          name: "VPS Infrastructure",
-          status: "degraded",
-          icon: Server,
-          instances: 0,
-          description: "Virtual Private Server provisioning and management",
-        },
-      ];
-      setServices(fallbackServices);
+      setServices([]);
     } finally {
       setIsLoading(false);
     }

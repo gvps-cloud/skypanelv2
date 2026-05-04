@@ -398,6 +398,10 @@ export class EnhanceService {
     return this.request<any>(`/orgs/${orgId}/websites/${websiteId}`);
   }
 
+  static async getWebsiteWebserverKind(websiteId: string) {
+    return this.request<string>(`/v2/websites/${websiteId}/webserver_kind`);
+  }
+
   static async getSiteAccessToken(orgId: string, websiteId: string) {
     return this.request<string>(`/orgs/${orgId}/websites/${websiteId}/access-tokens`, {
       method: 'POST',
@@ -709,6 +713,35 @@ export class EnhanceService {
   static async deleteDomainNginxFastCgiExcludedPath(domainId: string, path: string) {
     return this.request<any>(`/v2/domains/${domainId}/nginx_fastcgi_excluded_paths?path=${encodeURIComponent(path)}`, {
       method: 'DELETE',
+    });
+  }
+
+  static async getWebsiteDomainModSecStatus(domainId: string) {
+    return this.request<{ enabled: boolean }>(`/v2/domains/${domainId}/modsec_status`);
+  }
+
+  static async setWebsiteDomainModSecStatus(domainId: string, enabled: boolean) {
+    return this.request<any>(`/v2/domains/${domainId}/modsec_status`, {
+      method: 'PUT',
+      body: { enabled },
+    });
+  }
+
+  static async getWebsiteDomainVhost(domainId: string) {
+    return this.request<{ contents: string; webserver: 'apache' | 'nginx' }>(`/v2/domains/${domainId}/vhost`);
+  }
+
+  static async setWebsiteDomainVhost(domainId: string, data: { contents: string; webserver: 'apache' | 'nginx' }) {
+    return this.request<any>(`/v2/domains/${domainId}/vhost`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  static async deleteWebsiteDomainVhost(domainId: string, webserver: 'apache' | 'nginx') {
+    return this.request<any>(`/v2/domains/${domainId}/vhost`, {
+      method: 'DELETE',
+      body: { webserver },
     });
   }
 

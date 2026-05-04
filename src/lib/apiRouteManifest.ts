@@ -889,6 +889,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
+    "method": "GET",
+    "path": "/api/hosting/services/:id/billing",
+    "protected": true,
+    "admin": false
+  },
+  {
     "method": "POST",
     "path": "/api/hosting/services/:id/cancel",
     "protected": true,
@@ -991,6 +997,18 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
+    "method": "GET",
+    "path": "/api/hosting/web/:id/domains/:domainId/modsec-status",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/hosting/web/:id/domains/:domainId/modsec-status",
+    "protected": true,
+    "admin": false
+  },
+  {
     "method": "DELETE",
     "path": "/api/hosting/web/:id/domains/:domainId/nginx-fastcgi",
     "protected": true,
@@ -1023,6 +1041,24 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "POST",
     "path": "/api/hosting/web/:id/domains/:domainId/nginx-fastcgi/excluded-paths",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/hosting/web/:id/domains/:domainId/vhost",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/web/:id/domains/:domainId/vhost",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/hosting/web/:id/domains/:domainId/vhost",
     "protected": true,
     "admin": false
   },
@@ -1173,6 +1209,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "PUT",
     "path": "/api/hosting/web/:id/redis",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/hosting/web/:id/webserver-kind",
     "protected": true,
     "admin": false
   },
@@ -1377,6 +1419,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "POST",
     "path": "/api/invoices/from-billing-cycles",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/invoices/from-hosting-cycles",
     "protected": true,
     "admin": false
   },

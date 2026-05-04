@@ -19,8 +19,12 @@ Express.js API technology stack, route inventory, middleware, service layer, and
 | **ws**                  | WebSocket server for SSH bridge                    |
 | **Helmet**              | Security headers                                   |
 | **express-rate-limit**  | Tiered rate limiting                               |
+| **ioredis + rate-limit-redis** | Redis-backed rate limiting                 |
 | **Handlebars**          | Email template rendering                           |
 | **nodemailer + Resend** | Email delivery with provider fallback              |
+| **multer**              | File upload handling                               |
+| **dompurify**           | HTML sanitization                                  |
+| **cookie-parser**       | Cookie handling                                    |
 
 ---
 
@@ -31,21 +35,24 @@ API ROUTE MAP (grouped)
 -----------------------------------------------------------------------------
 Core
   /api/auth, /api/vps, /api/payments, /api/organizations,
-  /api/support, /api/ssh-keys, /api/invoices, /api/egress, /api/api-keys
+  /api/support, /api/ssh-keys, /api/invoices, /api/egress, /api/api-keys,
+  /api/notes
 
-Hosting
+Hosting (Enhance Integration)
   /api/hosting/status (public), /api/hosting/plans, /api/hosting/regions,
   /api/hosting/services, /api/hosting/purchase,
-  /api/hosting/web, /api/hosting/node, /api/hosting/email,
-  /api/hosting/dns, /api/hosting/wordpress, /api/hosting/mysql,
-  /api/hosting/ftp, /api/hosting/ssl
+  /api/hosting/web, /api/hosting/apps, /api/hosting/backups,
+  /api/hosting/cron, /api/hosting/dns, /api/hosting/email,
+  /api/hosting/ftp, /api/hosting/joomla, /api/hosting/mysql,
+  /api/hosting/node, /api/hosting/ssh, /api/hosting/ssl,
+  /api/hosting/wordpress
 
 Activity & Notifications
   /api/activity, /api/activities, /api/notifications
 
 Content & Configuration
   /api/faq, /api/contact, /api/theme, /api/pricing, /api/health,
-  /api/documentation, /api/announcements, /api/notes
+  /api/documentation, /api/announcements, /api/notes, /api/egress
 
 Admin Surface
   /api/admin/theme, /api/admin/rate-limits, /api/admin/tickets,
@@ -68,6 +75,9 @@ Admin Surface
 - `/api/support` — tickets, replies
 - `/api/ssh-keys` — CRUD, Linode sync
 - `/api/invoices` — list, detail, PDF
+- `/api/notes` — personal and organization notes
+- `/api/egress` — egress credit management
+- `/api/api-keys` — User API key CRUD
 
 **Activity & Notifications:**
 
@@ -110,6 +120,9 @@ Admin Surface
 - `/api/admin/documentation` — documentation article CRUD
 - `/api/admin/networking` — rDNS and IPv6 networking config
 - `/api/admin/announcements` — platform announcements
+- `/api/admin/enhance` — Enhance hosting integration status, plan sync, subscription oversight
+- `/api/admin/fraud-checks` — fraud screening review queue with manual allow/block override
+- `/api/admin/refunds` — refund creation and management
 
 ---
 
@@ -119,14 +132,23 @@ Admin Surface
 MIDDLEWARE PIPELINE
 -----------------------------------------------------------------------------
 Incoming Request
+  → requireHttps (enforce HTTPS in production)
   → Helmet
   → CORS
   → Body parsers (JSON + URL-encoded)
-  → Smart rate limiter (API routes only)
+  → Smart rate limiter (API routes only, Redis-backed)
   → Rate-limit headers
   → Express router
-      ↳ Per-route stack: authenticateToken → checkPermission → impersonation → express-validator → handler
+      ↳ Per-route stack: csrfProtection → authenticateToken → checkPermission
+                         → hosting feature gate (optional, for hosting routes)
+                         → impersonation → express-validator → handler
 ```
+
+Key middleware files in `api/middleware/`:
+- `auth.ts` — JWT verification, role/permission checks, impersonation
+- `hosting.ts` — feature gate for hosting routes (checks Enhance integration enabled)
+- `csrfProtection.ts` — CSRF token validation for mutating requests
+- `requireHttps.ts` — HTTPS enforcement in production
 
 ---
 
@@ -135,17 +157,38 @@ Incoming Request
 ```text
 SERVICE LAYER ARCHITECTURE
 -----------------------------------------------------------------------------
-HTTP Route Handlers (auth.ts, payments.ts, organizations.ts, support.ts, route index modules under admin/ and vps/)
+HTTP Route Handlers (auth.ts, payments.ts, organizations.ts, support.ts,
+                     route index modules under admin/ and vps/)
    ↓ delegate to
 Service Layer (authService, linodeService, billingService, paypalService,
               emailService, activityLogger, notificationService, invoiceService,
-              themeService, categoryMappingService, transferBillingService, etc.)
+              themeService, categoryMappingService, transferBillingService,
+              enhanceService, enhanceOnboardingService, enhanceToggle,
+              hostingBillingService, refundService, fraudLabsProService,
+              bunnyCdnService, ticketNotificationService,
+              notes service, tokenBlacklistService, etc.)
 
 Service Layer depends on:
   • Provider abstraction: ProviderFactory → IProviderService → LinodeProviderService/BaseProviderService
-  • Shared libraries: database.ts, crypto.ts, providerTokens.ts, whiteLabel.ts, validation.ts
-  • Background workers: hourly VPS billing, hourly egress billing, monthly egress finalization, NotificationService (LISTEN/NOTIFY)
+  • Shared libraries: database.ts, crypto.ts, providerTokens.ts, whiteLabel.ts, validation.ts, errorNormalizer.ts
+  • Background workers: hourly VPS billing, hourly egress billing, monthly egress finalization,
+                        monthly hosting billing, NotificationService (LISTEN/NOTIFY)
 ```
+
+**Key Services:**
+
+| Service | Purpose |
+| ------- | ------- |
+| `enhanceService.ts` | Enhance control panel API wrapper |
+| `enhanceOnboardingService.ts` | Customer org/website provisioning via Enhance |
+| `enhanceToggle.ts` | Feature flag checks for hosting |
+| `hostingBillingService.ts` | Monthly recurring billing for hosting subscriptions |
+| `refundService.ts` | PayPal refund processing |
+| `fraudLabsProService.ts` | FraudLabsPro transaction screening |
+| `bunnyCdnService.ts` | Bunny CDN edge server IP detection |
+| `ticketNotificationService.ts` | Support ticket email/real-time notifications |
+| `notes.ts` | Personal and organization notes |
+| `tokenBlacklistService.ts` | JWT token blacklist management |
 
 ---
 
@@ -170,4 +213,45 @@ Implementation
   • Makes REST calls to api.linode.com/v4
   • Maintains in-memory cache for plans/images/regions
   • Applies provider_region_overrides filtering on regions
+
+Error Handling
+  errorNormalizer.ts — normalizes provider-specific errors into consistent API responses
 ```
+
+---
+
+## Hosting Service Architecture (Enhance)
+
+```text
+HOSTING SERVICE ARCHITECTURE (ENHANCE)
+-----------------------------------------------------------------------------
+Database tables
+  • platform_integrations: Enhance connection config
+  • hosting_plans: synced plan catalog with local pricing overrides
+  • hosting_subscriptions: customer subscriptions with org FK, status, dates
+  • hosting_wallets: dedicated wallets for hosting billing (separate from VPS wallets)
+
+Onboarding Flow
+  Customer → /api/hosting/purchase → enhanceOnboardingService
+    1. Create/find Enhance customer org
+    2. Create subscription record
+    3. Add domain → install SSL → create website
+    4. Configure email/MySQL/apps as needed
+    5. Rollback + wallet credit on failure
+
+Billing Flow
+  hostingBillingService (monthly cron)
+    1. Fetch active subscriptions
+    2. Deduct monthly fee from hosting_wallets
+    3. Suspend on insufficient balance via Enhance API
+```
+
+**Hosting utility helpers (`api/lib/`):**
+
+| File | Purpose |
+| ---- | ------- |
+| `hostingBackups.ts` | Backup management helpers |
+| `hostingEnhanceOrg.ts` | Enhance org resolution |
+| `hostingRouteHelpers.ts` | Shared route handler utilities |
+
+> **Back to**: [README](../README.md)

@@ -30,7 +30,7 @@
 
 ## Open-Source VPS Management Platform
 
-**SkyPanelV2** is an open-source full-stack VPS management and billing platform built for Linode-based hosting businesses and self-hosted deployments. It provides a complete customer portal, admin dashboard, automated hourly billing, real-time SSH console access, multi-tenant organization management, and integrated support ticketing — all in a single deployable application.
+**SkyPanelV2** is an open-source full-stack VPS management and billing platform built for Linode-based hosting businesses and self-hosted deployments. It provides a complete customer portal, admin dashboard, automated hourly billing, real-time SSH console access, multi-tenant organization management, integrated support ticketing, Enhance web hosting integration, fraud protection, refund management, and API key authentication — all in a single deployable application.
 
 > **Open source**: Anyone can clone, self-host, adapt, and extend this project under the terms of the included [MIT License](./LICENSE).
 
@@ -47,7 +47,7 @@ Detailed documentation is organized in the [`git-docs/`](./git-docs/) directory:
 | [Architecture](./git-docs/ARCHITECTURE.md) | System overview, high-level architecture, application flow diagrams (auth, provisioning, billing, SSH, notifications, payments) |
 | [Frontend](./git-docs/FRONTEND.md) | React tech stack, route map, context providers, key components |
 | [Backend](./git-docs/BACKEND.md) | Express tech stack, API route inventory, middleware pipeline, service layer, provider architecture |
-| [Database](./git-docs/DATABASE.md) | Entity relationships, table definitions, migration history (001–059) |
+| [Database](./git-docs/DATABASE.md) | Entity relationships, table definitions, migration history (001–065) |
 | [Features](./git-docs/FEATURES.md) | Core features — VPS, hosting, billing, fraud, refunds, orgs, auth, real-time, admin, UI/UX |
 | [Security](./git-docs/SECURITY.md) | Encryption, access control, rate limiting tiers |
 | [Development](./git-docs/DEVELOPMENT.md) | Prerequisites, quick start, environment variables, icons/logo, dev commands |
@@ -116,6 +116,9 @@ npm run dev            # Frontend (5173) + Backend (3001)
 | **Quality** | `npm run check` | TypeScript type checking |
 | | `npm run lint` | ESLint validation |
 | | `npm run build` | Type check + Vite production build |
+| | `npm test` | Run all Vitest tests |
+| | `npm run test:security` | Security test suite |
+| | `npm run verify:security` | Full security verification (audit + scan + tests) |
 | **API Docs** | `npm run docs:api:sync` | Sync API docs manifest |
 | | `npm run docs:api:audit` | Audit API doc coverage |
 | **Production** | `npm run pm2:start` | Build and start with PM2 |

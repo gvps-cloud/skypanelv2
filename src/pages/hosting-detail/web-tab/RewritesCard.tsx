@@ -39,22 +39,29 @@ interface WebserverRewrite {
 interface Props {
   subscriptionId: string;
   domains: Domain[];
+  mode?: "htaccess" | "webserver" | "both";
 }
 
-export default function RewritesCard({ subscriptionId, domains }: Props) {
+export default function RewritesCard({ subscriptionId, domains, mode = "both" }: Props) {
   const [htaccessChains, setHtaccessChains] = useState<HtaccessChain[]>([]);
   const [webserverRewrites, setWebserverRewrites] = useState<WebserverRewrite[]>([]);
   const [loadingHt, setLoadingHt] = useState(true);
   const [loadingWs, setLoadingWs] = useState(false);
   const [selectedDomainId, setSelectedDomainId] = useState<string>("");
+  const [newHtaccessPattern, setNewHtaccessPattern] = useState("");
+  const [newHtaccessSubstitution, setNewHtaccessSubstitution] = useState("");
+  const [newHtaccessFlags, setNewHtaccessFlags] = useState("L");
   const [newRewritePath, setNewRewritePath] = useState("");
   const [newRewriteDest, setNewRewriteDest] = useState("");
   const [saving, setSaving] = useState(false);
 
   const htBase = `/hosting/web/${subscriptionId}/htaccess`;
   const wsBase = `/hosting/web/${subscriptionId}/domains/${selectedDomainId}/webserver-rewrites`;
+  const showHtaccess = mode === "htaccess" || mode === "both";
+  const showWebserver = mode === "webserver" || mode === "both";
 
   const loadHtaccess = useCallback(async () => {
+    if (!showHtaccess) return;
     setLoadingHt(true);
     try {
       const data = await apiClient.get<{ items: HtaccessChain[] }>(htBase);
@@ -64,10 +71,10 @@ export default function RewritesCard({ subscriptionId, domains }: Props) {
     } finally {
       setLoadingHt(false);
     }
-  }, [htBase]);
+  }, [htBase, showHtaccess]);
 
   const loadWebserver = useCallback(async () => {
-    if (!selectedDomainId) return;
+    if (!showWebserver || !selectedDomainId) return;
     setLoadingWs(true);
     try {
       const data = await apiClient.get<{ rewrites: WebserverRewrite[] }>(wsBase);
@@ -77,13 +84,13 @@ export default function RewritesCard({ subscriptionId, domains }: Props) {
     } finally {
       setLoadingWs(false);
     }
-  }, [wsBase, selectedDomainId]);
+  }, [wsBase, selectedDomainId, showWebserver]);
 
-  useEffect(() => { loadHtaccess(); }, [loadHtaccess]);
-  useEffect(() => { if (selectedDomainId) loadWebserver(); }, [selectedDomainId, loadWebserver]);
+  useEffect(() => { if (showHtaccess) loadHtaccess(); }, [loadHtaccess, showHtaccess]);
+  useEffect(() => { if (showWebserver && selectedDomainId) loadWebserver(); }, [selectedDomainId, loadWebserver, showWebserver]);
   useEffect(() => {
-    if (domains.length > 0 && !selectedDomainId) setSelectedDomainId(domains[0].id);
-  }, [domains, selectedDomainId]);
+    if (showWebserver && domains.length > 0 && !selectedDomainId) setSelectedDomainId(domains[0].id);
+  }, [domains, selectedDomainId, showWebserver]);
 
   const handleDeleteChain = async (lineNumber: number) => {
     if (!confirm("Delete this rewrite chain?")) return;
@@ -94,6 +101,39 @@ export default function RewritesCard({ subscriptionId, domains }: Props) {
       await loadHtaccess();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete chain");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddHtaccessRewrite = async () => {
+    if (!newHtaccessPattern.trim() || !newHtaccessSubstitution.trim()) return;
+    const nextLineNumber = htaccessChains.reduce((max, chain) => Math.max(max, chain.lineNumber), 0) + 1;
+    const flags = newHtaccessFlags
+      .split(/[\s,]+/)
+      .map((flag) => flag.trim())
+      .filter(Boolean);
+
+    setSaving(true);
+    try {
+      await apiClient.patch(htBase, {
+        items: [{
+          lineNumber: nextLineNumber,
+          conds: [],
+          rule: {
+            pattern: newHtaccessPattern.trim(),
+            substitution: newHtaccessSubstitution.trim(),
+            flags,
+          },
+        }],
+      });
+      toast.success(".htaccess rewrite added");
+      setNewHtaccessPattern("");
+      setNewHtaccessSubstitution("");
+      setNewHtaccessFlags("L");
+      await loadHtaccess();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add .htaccess rewrite");
     } finally {
       setSaving(false);
     }
@@ -129,7 +169,7 @@ export default function RewritesCard({ subscriptionId, domains }: Props) {
   };
 
   return (
-    <section className="rounded-2xl border bg-card shadow-sm">
+    <section className="rounded-2xl cyber-card cyber-card--hover">
       <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6">
         <div className="flex items-center justify-between">
           <div>
@@ -137,16 +177,17 @@ export default function RewritesCard({ subscriptionId, domains }: Props) {
               <FileEdit className="h-5 w-5 text-primary" />
               <span>URL Rewrites</span>
             </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage .htaccess rewrite rules and webserver rewrites.</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              {mode === "webserver" ? "Manage Enhance webserver rewrites for Nginx domains." : "Manage documented .htaccess rewrite rules for this website."}
+            </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => { loadHtaccess(); if (selectedDomainId) loadWebserver(); }}>
+          <Button variant="outline" size="sm" onClick={() => { if (showHtaccess) loadHtaccess(); if (showWebserver && selectedDomainId) loadWebserver(); }}>
             <RefreshCw className="h-3 w-3 mr-1.5" />Refresh
           </Button>
         </div>
       </div>
       <div className="px-6 sm:px-8 py-5 sm:py-6 space-y-6">
-        {/* .htaccess section */}
-        <div>
+        {showHtaccess && <div>
           <h3 className="text-sm font-medium mb-3">.htaccess Rewrite Rules</h3>
           {loadingHt ? (
             <div className="flex items-center justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
@@ -187,10 +228,26 @@ export default function RewritesCard({ subscriptionId, domains }: Props) {
           ) : (
             <p className="text-xs text-muted-foreground">No .htaccess rewrite rules found.</p>
           )}
-        </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_160px_auto] lg:items-end">
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">Pattern</Label>
+              <Input placeholder="^old-path/?$" value={newHtaccessPattern} onChange={(event) => setNewHtaccessPattern(event.target.value)} className="h-9" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">Substitution</Label>
+              <Input placeholder="/new-path/" value={newHtaccessSubstitution} onChange={(event) => setNewHtaccessSubstitution(event.target.value)} className="h-9" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">Flags</Label>
+              <Input placeholder="L,R=301" value={newHtaccessFlags} onChange={(event) => setNewHtaccessFlags(event.target.value)} className="h-9" />
+            </div>
+            <Button size="sm" onClick={handleAddHtaccessRewrite} disabled={saving || !newHtaccessPattern.trim() || !newHtaccessSubstitution.trim()}>
+              <Plus className="h-3 w-3 mr-1.5" />Add
+            </Button>
+          </div>
+        </div>}
 
-        {/* Webserver rewrites */}
-        <div>
+        {showWebserver && <div>
           <h3 className="text-sm font-medium mb-3">Webserver Rewrites</h3>
           <div className="mb-3">
             <Label className="text-xs">Domain</Label>
@@ -246,7 +303,7 @@ export default function RewritesCard({ subscriptionId, domains }: Props) {
               </div>
             </>
           )}
-        </div>
+        </div>}
       </div>
     </section>
   );

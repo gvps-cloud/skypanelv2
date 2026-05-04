@@ -38,7 +38,8 @@ npm install
 
 # 2. Configure environment
 cp .env.example .env
-node scripts/generate-ssh-secret.js  # Generates SSH_CRED_SECRET
+node scripts/generate-ssh-secret.js      # Generates SSH_CRED_SECRET
+node scripts/generate-encryption-key.js  # Generates ENCRYPTION_KEY
 
 # 3. Edit .env with your values (see below)
 
@@ -175,6 +176,11 @@ npm run seed:admin       # Create default admin user
 npm run check            # TypeScript type checking
 npm run lint             # ESLint validation
 npm run build            # TypeScript check + Vite production build
+npm test                 # Run all Vitest tests
+npx vitest run path/to/file  # Run specific test file
+npm run test:security    # Run security test suite
+npm run verify:security  # Full security verification (audit + scan + tests)
+npm run verify:env       # Verify all required environment variables
 
 # --- API Docs ---------------------------------------------------
 npm run docs:api:sync    # Sync API docs manifest (auto-runs on dev/build)

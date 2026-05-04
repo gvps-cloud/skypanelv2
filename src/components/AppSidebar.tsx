@@ -323,19 +323,20 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader className="gap-4 border-b border-white/10 bg-sidebar-background/80 p-4 pointer-events-none">
+      <SidebarHeader className="gap-4 border-b border-white/10 cyber-glass p-4 pointer-events-none group-data-[state=collapsed]:px-2">
         <SidebarMenu className="pointer-events-auto">
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              className="group-data-[collapsible=icon]:-ml-1.5"
+              tooltip={BRAND_NAME}
+              className="group-data-[state=collapsed]:justify-center"
               asChild
             >
               <Link to="/dashboard">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20">
                   <Logo size="sm" />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
                   <span className="truncate font-semibold">{BRAND_NAME}</span>
                   <span className="truncate text-xs">Cloud Platform</span>
                 </div>

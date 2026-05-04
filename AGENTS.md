@@ -95,6 +95,10 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 - Route registration and middleware order: `api/app.ts`.
 - Auth, org context, impersonation: `api/middleware/auth.ts` and organization routes.
 - Hosting purchase/onboarding: `api/routes/hosting/store.ts`, `api/services/enhanceOnboardingService.ts`, `api/services/enhanceService.ts`.
+- Hosting billing: `api/services/hostingBillingService.ts` — monthly recurring billing for hosting subscriptions.
 - Egress prepaid billing: `api/services/egressCreditService.ts`, `api/services/egressHourlyBillingService.ts`, migrations `025`-`033`.
+- Fraud screening: `api/services/fraudLabsProService.ts` — FraudLabsPro transaction screening.
+- Refund processing: `api/services/refundService.ts` — PayPal capture refunds + wallet credits.
+- Notes system: `api/services/notes.ts`, `api/routes/notes.ts` — personal and organization notes.
 - Theme behavior: `src/contexts/ThemeContext.tsx` and `api/routes/theme.ts`.
 - Frontend route guards/provider order: `src/App.tsx`.

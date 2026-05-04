@@ -20,6 +20,7 @@ import { config } from "../config/index.js";
 import { logActivity } from "../services/activityLogger.js";
 import { RoleService } from "../services/roles.js";
 import { FraudLabsProService } from "../services/fraudLabsProService.js";
+import { HostingBillingService } from "../services/hostingBillingService.js";
 import { getClientIP } from "../lib/ipDetection.js";
 
 const router = express.Router();
@@ -41,6 +42,21 @@ const safeParseNumber = (value: unknown): number | null => {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+};
+
+const parseMetadata = (value: unknown): Record<string, unknown> => {
+  if (value && typeof value === "object") {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
 };
 
 // Apply authentication middleware to all routes
@@ -229,6 +245,16 @@ router.post(
       const result = await PayPalService.capturePayment(orderId, organizationId ?? undefined);
 
       if (result.success) {
+        const metadata = parseMetadata(order.metadata);
+        let hostingRecovery: Awaited<ReturnType<typeof HostingBillingService.retryOverdueForOrganization>> | null = null;
+        if (metadata.wallet_type === "hosting" && organizationId) {
+          try {
+            hostingRecovery = await HostingBillingService.retryOverdueForOrganization(organizationId, userId);
+          } catch (recoveryError) {
+            console.error("Failed to retry overdue hosting billing after PayPal capture:", recoveryError);
+          }
+        }
+
         if (userId) {
           try {
             await logActivity(
@@ -243,7 +269,8 @@ router.post(
                 metadata: {
                   order_id: orderId,
                   provider: "paypal",
-                  wallet_type: order.metadata?.wallet_type ?? "main",
+                  wallet_type: metadata.wallet_type ?? "main",
+                  hosting_recovery: hostingRecovery,
                 },
               },
               req,
@@ -253,6 +280,7 @@ router.post(
         res.json({
           success: true,
           paymentId: result.paymentId,
+          hostingRecovery,
         });
       } else {
         if (userId) {
@@ -424,6 +452,11 @@ router.post(
       }
 
       try {
+        const hostingRecovery = await HostingBillingService.retryOverdueForOrganization(
+          organizationId,
+          userId
+        );
+
         await logActivity(
           {
             userId,
@@ -433,7 +466,7 @@ router.post(
             entityId: organizationId,
             message: "Hosting wallet was funded from the main wallet.",
             status: "success",
-            metadata: { amount },
+            metadata: { amount, hosting_recovery: hostingRecovery },
           },
           req,
         );

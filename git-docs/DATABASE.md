@@ -66,11 +66,59 @@ platform_settings & email_templates
 invoices (PK uuid)
   organization_id, amount, status
 
+hosting_plans (PK uuid)
+  provider_plan_id, name, description, price_monthly, service_type,
+  specifications JSONB, is_active, billing_cycle, disk_space, max_domains,
+  max_websites, max_emails, max_databases, max_ftp_accounts
+
+hosting_subscriptions (PK uuid)
+  organization_id, plan_id (FK, ON DELETE SET NULL), enhance_customer_org_id,
+  enhance_website_id, primary_domain, status, billing_amount,
+  next_billing_date, cancelled_at, created_by
+
+platform_integrations (PK uuid)
+  type, configuration JSONB, is_active, display_name
+
+hosting_wallets (PK uuid)
+  organization_id, balance, currency, low_balance_alert_threshold, last_alert_at
+
+fraud_checks (PK uuid)
+  transaction_id, user_id, organization_id, screening_type, provider,
+  risk_score, risk_country, is_proxy, is_vpn, is_tor, is_disposable_email,
+  status (pending/approved/rejected), admin_reviewed_by, admin_notes, updated_at
+
+refunds (PK uuid)
+  organization_id, payment_transaction_id, vps_billing_cycle_id,
+  hosting_subscription_id, amount, currency, reason, status,
+  paypal_capture_id, paypal_refund_id, processed_by
+
+announcements (PK uuid)
+  title, message, type, is_active, starts_at, expires_at, created_by
+
+documentation_categories / documentation_articles
+  Categories: slug, name, description, display_order, is_active
+  Articles: category_id (FK), slug, title, content TEXT, is_published, author_id, display_order
+
+notes (PK uuid)
+  organization_id (nullable for personal), user_id, title, content,
+  color, position, column, is_pinned, is_archived
+
+user_api_keys (PK uuid)
+  user_id, name, key_hash, key_prefix, permissions JSONB, last_used_at, expires_at
+
+announcements_read (PK uuid)
+  user_id, announcement_id, read_at
+
 Relationship highlights
   • users own organizations and belong via organization_members
   • organizations link to wallets, vps_instances, tickets, payments, billing cycles, SSH keys, invoices
   • vps_plans define vps_instances; service_providers supply plans and host instances
   • tickets have many replies; users create activity_logs and user_api_keys
+  • hosting_plans define hosting_subscriptions; organizations link to hosting_subscriptions and hosting_wallets
+  • fraud_checks link to transactions, users, and organizations
+  • refunds link to payment_transactions, vps_billing_cycles, and hosting_subscriptions
+  • documentation_categories contain documentation_articles
+  • notes are scoped to organizations (org notes) or users (personal notes)
 ```
 
 ---

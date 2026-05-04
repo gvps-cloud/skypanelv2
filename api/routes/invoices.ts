@@ -4,7 +4,7 @@
  */
 
 import express, { Request, Response } from 'express';
-import { param, query as queryValidator, validationResult } from 'express-validator';
+import { body, param, query as queryValidator, validationResult } from 'express-validator';
 import { authenticateToken, requireOrganization } from '../middleware/auth.js';
 import { EgressBillingService } from '../services/egressBillingService.js';
 import { InvoiceService } from '../services/invoiceService.js';
@@ -589,6 +589,165 @@ router.post(
       });
     } catch (error) {
       console.error('Create invoice from billing cycles error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+      });
+    }
+  }
+);
+
+/**
+ * Create invoice from Enhance hosting billing cycles.
+ */
+router.post(
+  '/from-hosting-cycles',
+  [
+    body('subscriptionId')
+      .optional()
+      .isUUID()
+      .withMessage('Subscription ID must be a valid UUID'),
+    body('startDate')
+      .optional()
+      .isISO8601()
+      .withMessage('Start date must be a valid ISO 8601 date'),
+    body('endDate')
+      .optional()
+      .isISO8601()
+      .withMessage('End date must be a valid ISO 8601 date'),
+  ],
+  requireOrganization,
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: errors.array(),
+        });
+      }
+
+      const organizationId = (req as AuthenticatedRequest).user.organizationId;
+      const userId = (req as AuthenticatedRequest).user.id;
+      const invoiceNumber = `INV-HOST-${Date.now()}`;
+      const subscriptionId = req.body.subscriptionId as string | undefined;
+      const endDate = req.body.endDate ? new Date(req.body.endDate) : new Date();
+      const startDate = req.body.startDate
+        ? new Date(req.body.startDate)
+        : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const params: unknown[] = [organizationId, startDate, endDate];
+      let subscriptionFilter = '';
+      if (subscriptionId) {
+        params.push(subscriptionId);
+        subscriptionFilter = ` AND hbc.hosting_subscription_id = $${params.length}`;
+      }
+
+      const result = await query(
+        `SELECT hbc.*, hs.created_by, org.name as organization_name
+         FROM hosting_billing_cycles hbc
+         JOIN hosting_subscriptions hs ON hs.id = hbc.hosting_subscription_id
+         JOIN organizations org ON org.id = hbc.organization_id
+         WHERE hbc.organization_id = $1
+           AND hbc.status IN ('paid', 'refunded')
+           AND hbc.period_start >= $2
+           AND hbc.period_start <= $3
+           ${subscriptionFilter}
+         ORDER BY hbc.period_start ASC`,
+        params
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'No paid hosting billing cycles found for the specified period',
+        });
+      }
+
+      let userName: string | undefined;
+      let userEmail: string | undefined;
+      try {
+        const userResult = await query(
+          'SELECT name, email FROM users WHERE id = $1',
+          [userId]
+        );
+        if (userResult.rows.length > 0) {
+          userName = userResult.rows[0].name || undefined;
+          userEmail = userResult.rows[0].email || undefined;
+        }
+      } catch (error) {
+        console.error('Failed to fetch user data for hosting invoice:', error);
+      }
+
+      const organizationName = result.rows[0]?.organization_name || undefined;
+      const invoiceData = InvoiceService.generateInvoiceFromHostingCycles(
+        organizationId,
+        result.rows.map((row) => ({
+          domain: row.domain,
+          planName: row.plan_name,
+          cycleType: row.cycle_type,
+          periodStart: new Date(row.period_start),
+          periodEnd: new Date(row.period_end),
+          amount: parseFloat(row.amount),
+        })),
+        invoiceNumber,
+        'USD',
+        userId,
+        userName,
+        userEmail,
+        organizationName
+      );
+
+      const walletBalances = await InvoiceService.resolveWalletBalances(organizationId, {
+        transactionIds: result.rows
+          .map((row) => row.payment_transaction_id)
+          .filter(Boolean),
+      });
+      invoiceData.walletBalanceBefore = walletBalances.walletBalanceBefore;
+      invoiceData.walletBalanceAfter = walletBalances.walletBalanceAfter;
+
+      const themeConfig = await themeService.getThemeConfig();
+      const themePalette = resolveThemePalette(themeConfig);
+      const htmlContent = InvoiceService.generateInvoiceHTML(
+        invoiceData,
+        resolveCompanyName(),
+        resolveCompanyLogo(),
+        themePalette
+      );
+
+      const invoiceId = await InvoiceService.createInvoice(
+        organizationId,
+        invoiceNumber,
+        htmlContent,
+        {
+          ...invoiceData,
+          sourceType: 'hosting_billing_cycles',
+          hostingBillingCycleIds: result.rows.map((row) => row.id),
+          hostingSubscriptionId: subscriptionId ?? null,
+        } as Record<string, unknown>,
+        invoiceData.total,
+        invoiceData.currency || 'USD'
+      );
+
+      await query(
+        `UPDATE hosting_billing_cycles
+         SET invoice_id = COALESCE(invoice_id, $1),
+             updated_at = now()
+         WHERE id = ANY($2::uuid[])
+           AND organization_id = $3`,
+        [invoiceId, result.rows.map((row) => row.id), organizationId]
+      );
+
+      res.json({
+        success: true,
+        invoiceId,
+        invoiceNumber,
+        itemCount: invoiceData.items.length,
+        total: invoiceData.total,
+      });
+    } catch (error) {
+      console.error('Create invoice from hosting cycles error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',

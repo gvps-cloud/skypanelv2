@@ -9,6 +9,7 @@ import { config } from "../../config/index.js";
 import { sendEnhanceCredentialsEmail } from "../../services/emailService.js";
 import { EnhanceOnboardingService } from "../../services/enhanceOnboardingService.js";
 import { RefundService } from "../../services/refundService.js";
+import { HostingBillingService } from "../../services/hostingBillingService.js";
 import type { AuthenticatedRequest } from "../../middleware/auth.js";
 import { getEnhanceWebsiteOrgId, getHostingSubscriptionForOrganization } from "../../lib/hostingEnhanceOrg.js";
 
@@ -229,7 +230,7 @@ router.get("/services/:id", requireOrgPermission("hosting_view"), async (req: Re
       `SELECT hs.*, hp.name as plan_name, hp.service_type
        FROM hosting_subscriptions hs
        LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
-       WHERE hs.id = $1 AND hs.organization_id = $2 AND hs.status = 'active'`,
+       WHERE hs.id = $1 AND hs.organization_id = $2 AND hs.status <> 'cancelled'`,
       [id, organizationId]
     );
     if (result.rows.length === 0) {
@@ -261,6 +262,96 @@ router.get("/services/:id", requireOrgPermission("hosting_view"), async (req: Re
   } catch (error) {
     console.error("Failed to get hosting service:", error);
     res.status(500).json({ error: "Failed to get hosting service" });
+  }
+});
+
+/**
+ * GET /api/hosting/services/:id/billing
+ * Return subscription-scoped hosting billing status, cycles, invoices, and refunds.
+ */
+router.get("/services/:id/billing", requireOrgPermission("hosting_view"), async (req: Request, res: Response) => {
+  const { organizationId } = (req as AuthenticatedRequest).user;
+  const { id } = req.params;
+
+  try {
+    const serviceResult = await query(
+      `SELECT hs.id, hs.organization_id, hs.status, hs.domain, hs.next_billing_at, hs.last_billed_at,
+              hp.name as plan_name, hp.price_monthly,
+              COALESCE(hw.balance, 0) as hosting_wallet_balance
+       FROM hosting_subscriptions hs
+       LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
+       LEFT JOIN hosting_wallets hw ON hw.organization_id = hs.organization_id
+       WHERE hs.id = $1 AND hs.organization_id = $2`,
+      [id, organizationId]
+    );
+
+    if (serviceResult.rows.length === 0) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    const service = serviceResult.rows[0];
+    const [cyclesResult, refundsResult] = await Promise.all([
+      query(
+        `SELECT hbc.id, hbc.cycle_type, hbc.period_start, hbc.period_end, hbc.amount,
+                hbc.currency, hbc.status, hbc.failure_reason, hbc.payment_transaction_id,
+                hbc.invoice_id, hbc.refunded_amount, hbc.created_at,
+                bi.invoice_number
+         FROM hosting_billing_cycles hbc
+         LEFT JOIN billing_invoices bi ON bi.id = hbc.invoice_id
+         WHERE hbc.organization_id = $1
+           AND hbc.hosting_subscription_id = $2
+         ORDER BY hbc.period_start DESC
+         LIMIT 24`,
+        [organizationId, id]
+      ),
+      query(
+        `SELECT id, amount, currency, reason, status, original_transaction_id,
+                original_hosting_billing_cycle_id, created_at, updated_at
+         FROM refunds
+         WHERE organization_id = $1
+           AND original_hosting_subscription_id = $2
+         ORDER BY created_at DESC
+         LIMIT 24`,
+        [organizationId, id]
+      ),
+    ]);
+
+    const latestFailedCycle = cyclesResult.rows.find((cycle: any) => cycle.status === 'failed');
+    const nextBillingAt = service.next_billing_at ? new Date(service.next_billing_at) : null;
+    const paymentStatus =
+      service.status === 'suspended' && latestFailedCycle
+        ? 'past_due'
+        : nextBillingAt && nextBillingAt.getTime() <= Date.now()
+          ? 'due'
+          : 'current';
+
+    res.json({
+      billing: {
+        subscriptionId: service.id,
+        domain: service.domain,
+        planName: service.plan_name,
+        renewalAmount: service.price_monthly ? parseFloat(service.price_monthly) : 0,
+        currency: 'USD',
+        status: service.status,
+        paymentStatus,
+        nextBillingAt: service.next_billing_at,
+        lastBilledAt: service.last_billed_at,
+        hostingWalletBalance: parseFloat(service.hosting_wallet_balance ?? 0),
+        latestFailureReason: latestFailedCycle?.failure_reason ?? null,
+        cycles: cyclesResult.rows.map((cycle: any) => ({
+          ...cycle,
+          amount: parseFloat(cycle.amount),
+          refunded_amount: parseFloat(cycle.refunded_amount ?? 0),
+        })),
+        refunds: refundsResult.rows.map((refund: any) => ({
+          ...refund,
+          amount: parseFloat(refund.amount),
+        })),
+      },
+    });
+  } catch (error: any) {
+    console.error("Failed to get hosting billing:", error);
+    res.status(500).json({ error: error?.message || "Failed to get hosting billing" });
   }
 });
 
@@ -383,71 +474,22 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
   let remoteEnhanceSubscriptionId: string | undefined;
   let remoteEnhanceWebsiteId: string | undefined;
   let createdRemoteSubscription = false;
+  let billingCycleId: string | undefined;
 
   try {
     const result = await transaction(async (client) => {
-      await client.query(
-        `INSERT INTO hosting_wallets (organization_id, balance, currency)
-         VALUES ($1, 0, 'USD')
-         ON CONFLICT (organization_id) DO NOTHING`,
-        [organizationId]
-      );
-
-      // 1. Lock hosting wallet and verify balance
-      const walletResult = await client.query(
-        `SELECT id, balance FROM hosting_wallets WHERE organization_id = $1 FOR UPDATE`,
-        [organizationId]
-      );
-      if (walletResult.rows.length === 0) {
-        throw new Error("Hosting wallet not found");
-      }
-      const wallet = walletResult.rows[0];
-
-      // 2. Get plan pricing and features
-      const planResult = await client.query(
-        `SELECT price_monthly, enhance_plan_id, name, features FROM hosting_plans WHERE id = $1 AND is_active = true`,
-        [planId]
-      );
-      if (planResult.rows.length === 0) {
-        throw new Error("Plan not found or inactive");
-      }
-      const plan = planResult.rows[0];
-      const amount = parseFloat(plan.price_monthly);
-
-      if (wallet.balance < amount) {
-        throw new Error("Insufficient hosting wallet balance");
-      }
-
-      // 3. Deduct hosting wallet
-      await client.query(
-        `UPDATE hosting_wallets SET balance = balance - $1 WHERE id = $2`,
-        [amount, wallet.id]
-      );
-
-      // 4. Insert wallet debit transaction
-      const debitResult = await client.query(
-        `INSERT INTO payment_transactions (organization_id, amount, payment_method, payment_provider, status, description, metadata)
-         VALUES ($1, $2, 'wallet_debit', 'internal', 'completed', $3, $4)
-         RETURNING id`,
-        [organizationId, -amount, `Hosting purchase: ${plan.name}`, JSON.stringify({ plan_id: planId, domain: requestedDomain, wallet_type: 'hosting' })]
-      );
-      const debitTransactionId = debitResult.rows[0].id;
-
-      // 5. Insert provisional hosting subscription
-      const subResult = await client.query(
-        `INSERT INTO hosting_subscriptions (organization_id, created_by, plan_id, domain, status, last_billed_at, next_billing_at, settings)
-         VALUES ($1, $2, $3, $4, 'provisioning', now(), now() + interval '1 month', $5)
-         RETURNING *`,
-        [organizationId, userId, planId, requestedDomain, JSON.stringify({ debit_transaction_id: debitTransactionId })]
-      );
-      const subscription = subResult.rows[0];
-
-      return { subscription, plan, debitTransactionId, wallet };
+      return HostingBillingService.createInitialPurchaseCharge(client, {
+        organizationId,
+        userId,
+        planId,
+        domain: requestedDomain,
+      });
     });
 
     // Remote Enhance calls (outside the initial DB transaction)
     const { subscription, plan } = result;
     subscriptionId = subscription.id;
+    billingCycleId = result.billingCycleId;
 
     let onboardingResult;
     try {
@@ -614,9 +656,8 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
            enhance_website_id = $2,
            primary_ip = $3,
            status = 'active',
-           last_billed_at = now(),
-           next_billing_at = now() + interval '1 month',
-           settings = settings || $4
+           settings = COALESCE(settings, '{}'::jsonb) || $4::jsonb,
+           updated_at = now()
        WHERE id = $5`,
       [
         enhanceSubscription.id,
@@ -627,6 +668,13 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       ]
     );
 
+    let invoiceId: string | null = null;
+    try {
+      invoiceId = await HostingBillingService.ensureInvoiceForCycle(result.billingCycleId, userId);
+    } catch (invoiceError) {
+      console.error("Failed to create hosting purchase invoice (non-fatal):", invoiceError);
+    }
+
     await logActivity({
       userId,
       organizationId,
@@ -635,11 +683,18 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       entityId: subscription.id,
       message: `Purchased hosting plan ${plan.name} for ${resolvedDomain}`,
       status: "success",
-      metadata: { plan_id: planId, domain: resolvedDomain, enhance_subscription_id: enhanceSubscription.id },
+      metadata: {
+        plan_id: planId,
+        domain: resolvedDomain,
+        enhance_subscription_id: enhanceSubscription.id,
+        hosting_billing_cycle_id: result.billingCycleId,
+        invoice_id: invoiceId,
+      },
     });
 
     res.status(201).json({
       subscription: { ...subscription, status: "active", domain: resolvedDomain },
+      invoiceId,
       credentialsCreated: onboardingResult.credentialsCreated,
       credentialsEmailed,
     });
@@ -688,6 +743,21 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       }
     }
 
+    if (billingCycleId) {
+      try {
+        await query(
+          `UPDATE hosting_billing_cycles
+           SET status = 'cancelled',
+               failure_reason = $2,
+               updated_at = now()
+           WHERE id = $1`,
+          [billingCycleId, error?.message || "Hosting purchase failed"]
+        );
+      } catch (cycleUpdateError) {
+        console.error("Failed to cancel hosting billing cycle after purchase error:", cycleUpdateError);
+      }
+    }
+
     // Compensating credit on failure
     if (subscriptionId) {
       try {
@@ -708,7 +778,17 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
             await rollbackClient.query(
               `INSERT INTO payment_transactions (organization_id, amount, payment_method, payment_provider, status, description, metadata)
                VALUES ($1, $2, 'wallet_credit', 'internal', 'completed', $3, $4)`,
-              [organizationId, amount, "Hosting purchase rollback", JSON.stringify({ reason: error.message, wallet_type: 'hosting' })]
+              [
+                organizationId,
+                amount,
+                "Hosting purchase rollback",
+                JSON.stringify({
+                  reason: error.message,
+                  wallet_type: 'hosting',
+                  hosting_subscription_id: subscriptionId,
+                  hosting_billing_cycle_id: billingCycleId || null,
+                }),
+              ]
             );
           });
         }

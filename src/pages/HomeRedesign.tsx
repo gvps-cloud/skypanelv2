@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
+import DataStreamCanvas from "@/components/home/DataStreamCanvas";
 import {
   ArrowDownUp,
   ArrowRight,
@@ -498,6 +499,15 @@ export default function HomeRedesign() {
   const [hostingLowestPrice, setHostingLowestPrice] = useState<number | null>(null);
   const [hostingCheapestPlan, setHostingCheapestPlan] = useState<any | null>(null);
   const [vpsCheapestPlan, setVpsCheapestPlan] = useState<any | null>(null);
+  const [heroReducedMotion, setHeroReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setHeroReducedMotion(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -611,50 +621,64 @@ export default function HomeRedesign() {
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)_/_0.08)_0%,transparent_60%)] dark:bg-[radial-gradient(ellipse_at_top_right,hsl(var(--primary)_/_0.12)_0%,transparent_60%)] pointer-events-none" />
 
           <div className="relative mx-auto max-w-7xl px-6 md:px-12 pt-28 pb-16 md:pt-36 md:pb-24">
-            {/* Headline block */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
-              className="max-w-3xl"
-            >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]">
-                Cloud infrastructure,{" "}
-                <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                  simplified.
-                </span>
-              </h1>
-              <p className="mt-6 text-lg md:text-xl leading-relaxed text-muted-foreground max-w-2xl">
-                Deploy high-performance virtual machines and managed web hosting from one dashboard. Full root access, hourly billing, zero surprises.
-              </p>
+            {/* Two-column: headline + data stream canvas */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+              {/* Headline block */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
+                className="max-w-3xl lg:max-w-none"
+              >
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]">
+                  Cloud infrastructure,{" "}
+                  <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                    simplified.
+                  </span>
+                </h1>
+                <p className="mt-6 text-lg md:text-xl leading-relaxed text-muted-foreground max-w-2xl">
+                  Deploy high-performance virtual machines and managed web hosting from one dashboard. Full root access, hourly billing, zero surprises.
+                </p>
 
-              <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <Button size="lg" className="h-12 px-7 rounded-lg" asChild>
-                  <Link to="/register" className="flex items-center">
-                    Deploy Your First Server
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" className="h-12 px-7 rounded-lg" asChild>
-                  <Link to="/pricing">View Pricing</Link>
-                </Button>
-              </div>
+                <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                  <Button size="lg" className="h-12 px-7 rounded-lg" asChild>
+                    <Link to="/register" className="flex items-center">
+                      Deploy Your First Server
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="h-12 px-7 rounded-lg" asChild>
+                    <Link to="/pricing">View Pricing</Link>
+                  </Button>
+                </div>
 
-              <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Globe2 className="h-3.5 w-3.5 text-primary" />
-                  {regionCount}+ Regions
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Clock3 className="h-3.5 w-3.5 text-primary" />
-                  ~45s Deploy
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                  99.9% Uptime SLA
-                </span>
-              </div>
-            </motion.div>
+                <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <Globe2 className="h-3.5 w-3.5 text-primary" />
+                    {regionCount}+ Regions
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Clock3 className="h-3.5 w-3.5 text-primary" />
+                    ~45s Deploy
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                    99.9% Uptime SLA
+                  </span>
+                </div>
+              </motion.div>
+
+              {/* Data stream canvas */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
+                className="relative h-[320px] sm:h-[380px] lg:h-[420px] rounded-xl border border-border/40 overflow-hidden bg-card/50 backdrop-blur-sm hidden lg:block"
+              >
+                <DataStreamCanvas className="absolute inset-0" reducedMotion={heroReducedMotion} />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent pointer-events-none" />
+              </motion.div>
+            </div>
 
             {/* Product preview */}
             <motion.div
@@ -721,7 +745,7 @@ export default function HomeRedesign() {
         </section>
 
         {/* ── 3. FEATURES GRID ─────────────────────────────────────── */}
-        <section className="border-t border-border bg-background">
+        <section id="features" className="border-t border-border bg-background">
           <div className="mx-auto max-w-7xl px-6 md:px-12 py-24">
             <motion.div
               {...fadeInUp}
@@ -811,7 +835,7 @@ export default function HomeRedesign() {
         </section>
 
         {/* ── 5. HOW IT WORKS ──────────────────────────────────────── */}
-        <section className="py-24 border-t border-border bg-background">
+        <section id="how-it-works" className="py-24 border-t border-border bg-background">
           <div className="mx-auto max-w-7xl px-6 md:px-12">
             <motion.div
               {...fadeInUp}
@@ -856,7 +880,7 @@ export default function HomeRedesign() {
         </section>
 
         {/* ── 6. TESTIMONIALS ───────────────────────────────────────── */}
-        <section className="py-24 border-t border-border bg-background">
+        <section id="testimonials" className="py-24 border-t border-border bg-background">
           <div className="mx-auto max-w-7xl px-6 md:px-12">
             <motion.div
               {...fadeInUp}

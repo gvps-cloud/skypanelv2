@@ -236,7 +236,7 @@ const CapabilityGrid = () => (
 );
 
 const HostingPlanCard = ({ plan }: { plan: HostingPlan }) => {
-  const specRows = getHostingFeatureSpecRows(plan, 5);
+  const specRows = getHostingFeatureSpecRows(plan, 5, { zeroMeansUnlimited: true });
   const fallbackRows = specRows.length > 0 ? [] : ["Managed website hosting"];
 
   return (

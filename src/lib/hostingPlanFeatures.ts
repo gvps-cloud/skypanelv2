@@ -17,6 +17,10 @@ export interface HostingFeatureSpecRow {
   icon: LucideIcon;
 }
 
+export interface HostingFeatureDisplayOptions {
+  zeroMeansUnlimited?: boolean;
+}
+
 const countLabels: Record<string, string> = {
   ftpUsers: "FTP users",
   mysqlDbs: "MySQL databases",
@@ -56,19 +60,42 @@ const RESOURCE_ICONS: Record<string, LucideIcon> = {
   transfer: ArrowDownUp,
 };
 
+const hasResourceKey = (resources: Record<string, { total?: number | null }>, key: string) =>
+  Object.prototype.hasOwnProperty.call(resources, key);
+
 const titleizeResourceKey = (key: string) =>
   key
     .replace(/_/g, " ")
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
-const formatCount = (value: number | null | undefined) => {
-  if (value === null || value === undefined || value === -1) return "Unlimited";
+const formatCount = (
+  value: number | null | undefined,
+  options?: HostingFeatureDisplayOptions,
+) => {
+  if (
+    value === null ||
+    value === undefined ||
+    value === -1 ||
+    (options?.zeroMeansUnlimited === true && value === 0)
+  ) {
+    return "Unlimited";
+  }
   return new Intl.NumberFormat("en-US").format(value);
 };
 
-const formatCapacity = (value: number | null | undefined) => {
-  if (value === null || value === undefined || value === -1) return "Unlimited";
+const formatCapacity = (
+  value: number | null | undefined,
+  options?: HostingFeatureDisplayOptions,
+) => {
+  if (
+    value === null ||
+    value === undefined ||
+    value === -1 ||
+    (options?.zeroMeansUnlimited === true && value === 0)
+  ) {
+    return "Unlimited";
+  }
   if (!Number.isFinite(value) || value <= 0) return "0 MB";
 
   const normalizedMb = value >= 1_000_000 ? value / 1_000_000 : value;
@@ -90,13 +117,18 @@ const formatCapacity = (value: number | null | undefined) => {
   })} MB`;
 };
 
-export const getHostingFeatureRows = (plan: HostingPlan, limit = 9): string[] => {
-  return getHostingFeatureSpecRows(plan, limit).map((row) => row.label);
+export const getHostingFeatureRows = (
+  plan: HostingPlan,
+  limit = 9,
+  options?: HostingFeatureDisplayOptions,
+): string[] => {
+  return getHostingFeatureSpecRows(plan, limit, options).map((row) => row.label);
 };
 
 export const getHostingFeatureSpecRows = (
   plan: HostingPlan,
   limit = 9,
+  options?: HostingFeatureDisplayOptions,
 ): HostingFeatureSpecRow[] => {
   const rows: HostingFeatureSpecRow[] = [];
   const resources = plan.features?.resources ?? {};
@@ -104,26 +136,27 @@ export const getHostingFeatureSpecRows = (
   for (const key of canonicalResourceOrder) {
     const resource = resources[key];
     const icon = RESOURCE_ICONS[key] ?? Server;
+    const hasResource = hasResourceKey(resources, key);
+    const total = resource?.total;
+    const displayValue = hasResource ? total : 0;
 
     if (key in capacityLabels) {
       rows.push({
         key,
-        label: `${formatCapacity(resource?.total)} ${capacityLabels[key]}`,
+        label: `${formatCapacity(displayValue, options)} ${capacityLabels[key]}`,
         icon,
       });
       continue;
     }
 
     const label = countLabels[key] ?? titleizeResourceKey(key);
-    const total = resource?.total;
     if (key === "customers" && (total === undefined || total === null || total === 0)) {
       continue;
     }
 
-    const displayValue = total !== undefined && total !== null ? total : 0;
     rows.push({
       key,
-      label: `${formatCount(displayValue)} ${label}`,
+      label: `${formatCount(displayValue, options)} ${label}`,
       icon,
     });
   }

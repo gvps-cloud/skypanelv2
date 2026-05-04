@@ -43,7 +43,7 @@ export default function PhpErrorLogCard({ subscriptionId }: Props) {
   };
 
   return (
-    <section className="rounded-2xl border bg-card shadow-sm">
+    <section className="rounded-2xl cyber-card cyber-card--hover">
       <div className="border-b border-border px-6 sm:px-8 py-4 sm:py-6">
         <div className="flex items-center justify-between">
           <div>

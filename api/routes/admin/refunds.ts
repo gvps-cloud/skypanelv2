@@ -117,7 +117,17 @@ router.post("/:id/process", async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   try {
     const { id } = req.params;
-    const result = await RefundService.processPayPalRefund(id);
+    const refundResult = await query(
+      `SELECT original_hosting_subscription_id FROM refunds WHERE id = $1`,
+      [id]
+    );
+    if (refundResult.rows.length === 0) {
+      return res.status(404).json({ error: "Refund not found" });
+    }
+
+    const result = refundResult.rows[0].original_hosting_subscription_id
+      ? await RefundService.processHostingWalletRefund(id)
+      : await RefundService.processPayPalRefund(id);
 
     if (result.success) {
       await logActivity({

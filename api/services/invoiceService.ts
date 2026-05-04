@@ -855,6 +855,67 @@ export class InvoiceService {
   }
 
   /**
+   * Generate invoice from Enhance hosting billing cycles.
+   */
+  static generateInvoiceFromHostingCycles(
+    organizationId: string,
+    billingCycles: Array<{
+      domain: string;
+      planName: string;
+      cycleType: string;
+      periodStart: Date;
+      periodEnd: Date;
+      amount: number;
+    }>,
+    invoiceNumber: string,
+    currency: string = 'USD',
+    userId?: string,
+    userName?: string,
+    userEmail?: string,
+    organizationName?: string
+  ): InvoiceData {
+    const items: InvoiceItem[] = billingCycles.map(cycle => ({
+      description: `${cycle.domain} - ${cycle.planName} (${cycle.cycleType} hosting, ${cycle.periodStart.toLocaleDateString()} to ${cycle.periodEnd.toLocaleDateString()})`,
+      quantity: 1,
+      unitPrice: cycle.amount,
+      amount: cycle.amount,
+    }));
+
+    const subtotal = Number(items.reduce((sum, item) => sum + item.amount, 0).toFixed(6));
+    const tax = 0;
+    const total = subtotal + tax;
+    const periodStart = billingCycles.length > 0
+      ? billingCycles.reduce((earliest, cycle) => (
+          cycle.periodStart < earliest ? cycle.periodStart : earliest
+        ), billingCycles[0].periodStart)
+      : new Date();
+    const periodEnd = billingCycles.length > 0
+      ? billingCycles.reduce((latest, cycle) => (
+          cycle.periodEnd > latest ? cycle.periodEnd : latest
+        ), billingCycles[0].periodEnd)
+      : new Date();
+
+    return {
+      id: `inv-${Date.now()}`,
+      invoiceNumber,
+      organizationId,
+      userId,
+      userName,
+      userEmail,
+      organizationName,
+      title: 'Enhance Hosting Billing Statement',
+      description: `Enhance hosting billing from ${periodStart.toLocaleDateString()} to ${periodEnd.toLocaleDateString()}`,
+      items,
+      subtotal,
+      tax,
+      total,
+      currency,
+      createdAt: new Date(),
+      status: 'paid',
+    };
+  }
+
+  /**
    * Generate invoice from payment transactions
    */
   static generateInvoiceFromTransactions(

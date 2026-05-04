@@ -75,7 +75,7 @@ export function VPSInfrastructureCard() {
   const statusVariant = getStatusVariant();
 
   return (
-    <>
+    <div className="py-0">
       {/* Clickable row header — matches other service component rows */}
       <button
         type="button"
@@ -83,7 +83,9 @@ export function VPSInfrastructureCard() {
         className="flex w-full flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between text-left cursor-pointer"
       >
         <div className="flex flex-1 items-start gap-4">
-          <Server className="mt-1 h-8 w-8 text-muted-foreground" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/20">
+            <Server className="h-6 w-6 text-primary" />
+          </div>
           <div className="space-y-1">
             <h3 className="font-semibold">VPS Infrastructure</h3>
             <p className="text-sm text-muted-foreground">
@@ -130,7 +132,7 @@ export function VPSInfrastructureCard() {
 
       {/* Expanded detailed metrics */}
       {expanded && (
-        <div className="pb-5 pl-12 md:pl-16 space-y-4 animate-in fade-in-0 slide-in-from-top-2 duration-200">
+        <div className="space-y-4 border-t bg-muted/20 px-4 py-4 sm:px-6 animate-in fade-in-0 slide-in-from-top-2 duration-200">
           {isLoading ? (
             <div className="space-y-4">
               <Skeleton className="h-20 w-full" />
@@ -208,6 +210,6 @@ export function VPSInfrastructureCard() {
           ) : null}
         </div>
       )}
-    </>
+    </div>
   );
 }

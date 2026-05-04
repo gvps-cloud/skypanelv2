@@ -1055,7 +1055,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <AppSidebar onOpenCommand={() => setCommandOpen(true)} />
       <SidebarInset>
         {/* Two-Tier Navigation Header */}
-        <header className="sticky z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b transition-[width,height] ease-linear" style={{ top: 'var(--announcement-banner-height, 0px)' }}>
+        <header className="sticky z-50 cyber-header transition-[width,height] ease-linear" style={{ top: 'var(--announcement-banner-height, 0px)' }}>
           <div className="flex h-14 sm:h-16 shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-0">
             <div className="flex items-center gap-2">
               <SidebarTrigger
@@ -1170,7 +1170,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </header>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto cyber-grid-bg">
           <Card className="h-full border-primary/25">
             <CardContent className="flex flex-1 flex-col gap-4 p-3 sm:p-4 md:p-6 pt-4 sm:pt-6 md:pt-6">
               <main className="flex-1 min-h-0">{children}</main>

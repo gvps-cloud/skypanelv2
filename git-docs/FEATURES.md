@@ -62,6 +62,67 @@ Complete feature inventory for SkyPanelV2 — VPS management, web hosting, billi
 
 ---
 
+## Notes System
+
+- **Personal Notes** — User-scoped notes with kanban-style board (NotesBoard component)
+- **Organization Notes** — Org-scoped notes visible to all members with appropriate permissions
+- **Permission-Gated** — `notes_view` and `notes_manage` permissions control access
+- **Rich Editing** — Support for note creation, editing, deletion, and board organization
+
+---
+
+## API Key Management
+
+- **User API Keys** — Generate, list, and delete API keys scoped to individual users
+- **Hashed Storage** — Keys are stored as SHA-256 hashes; the plain text is shown only once at creation
+- **Permission JSONB** — Each key carries a granular permission set controlling which endpoints it can access
+- **Row-Level Security** — PostgreSQL RLS on `user_api_keys` table enforces access isolation
+- **Bearer Auth** — API keys are sent as `Bearer` tokens; middleware validates against hashed values
+- **Rate Limiting** — API key requests count against the user's rate limit quota
+
+---
+
+## Documentation & Knowledge Base
+
+- **Admin-Managed Articles** — Full CRUD for documentation articles organized by categories
+- **Public Knowledge Base** — Customers browse articles at `/docs/:categorySlug/:articleSlug`
+- **White-Label Content** — Documentation is seeded with branding and scrubbed of provider references
+- **Rich Content** — Articles support formatted text, code blocks, and structured content
+
+---
+
+## Announcements
+
+- **Platform Announcements** — Admin-created announcements displayed to all users
+- **Banner Integration** — Active announcements shown via AnnouncementBanner at the top of the page
+- **Dismissible** — Users can dismiss announcements; state persisted per user
+
+---
+
+## Status Monitoring
+
+- **Better Stack Integration** — Uptime monitoring via Better Stack service
+- **Public Status Page** — `/status` page showing service health and uptime
+- **Real-Time Status** — Cached status data refreshed periodically
+
+---
+
+## Volume Pricing
+
+- **Admin Volume Configuration** — Configure volume types, pricing tiers, and billing rules
+- **Volume Billing Management** — Track volume usage and billing per organization
+
+---
+
+## Content Management
+
+- **FAQ System** — Admin-managed FAQ categories and items displayed publicly
+- **Contact Methods** — Configurable contact methods (email, phone, chat) with availability hours
+- **Category Mappings** — White-label plan category names for custom branding
+- **GitHub Integration** — Optional GitHub token for update checking
+
+---
+
 ## Organizations & Multi-Tenancy
 
 - **Organization-Based Isolation** — All resources (VPS, wallets, tickets, SSH keys, invoices) are scoped to organizations
@@ -129,6 +190,14 @@ Seven predefined roles control access across 19 granular permissions. Orgs can a
 
 ---
 
+## IP Detection & CDN
+
+- **Client IP Resolution** — Multi-header IP detection (X-Forwarded-For, True-Client-IP, etc.)
+- **Bunny CDN Integration** — Automatic fetching and trusting of Bunny CDN edge server IPs for accurate rate limiting
+- **Proxy/VPN Detection** — Via FraudLabsPro integration during screening
+
+---
+
 ## Admin Dashboard
 
 - **User Management** — Search, view, edit, impersonate, promote users
@@ -141,9 +210,11 @@ Seven predefined roles control access across 19 granular permissions. Orgs can a
 - **Rate Limit Monitoring** — View and configure rate limit metrics and per-user overrides
 - **GitHub Integration** — Optional GitHub token for update checking
 - **Billing Administration** — View all billing cycles, failed charges, wallet balances
-- **Fraud Protection** — Review flagged transactions, manual allow/block override
+- **Fraud Protection** — Review flagged transactions with manual allow/block override
 - **Refund Management** — Create and process refunds via PayPal
 - **Web Hosting** — Enhance integration status, plan sync, subscription oversight
+- **Announcements** — Platform-wide announcement management
+- **Documentation** — Knowledge base article CRUD
 
 ---
 
