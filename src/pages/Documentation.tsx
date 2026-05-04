@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import DOMPurify from "dompurify";
 import type { ReactNode } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   BookOpen,
   Search,
@@ -22,13 +21,12 @@ import {
   Cpu,
   Wifi,
   Loader2,
-  Sparkles,
+  ChevronDown,
 } from "lucide-react";
 
 import "@/styles/home.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -46,29 +44,6 @@ import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
 
 /* ─── Trust Items ────────────────────────────────────────────────── */
-
-const trustItems = [
-  { icon: BookOpen, label: "Step-by-Step Guides" },
-  { icon: Code, label: "API Reference" },
-  { icon: FileText, label: "Code Samples" },
-  { icon: Rocket, label: "Video Tutorials" },
-  { icon: User, label: "Community Forum" },
-  { icon: Sparkles, label: "Quick Start" },
-  { icon: Globe, label: "Best Practices" },
-  { icon: Wifi, label: "24/7 Support" },
-];
-
-const revealItem = {
-  hidden: { opacity: 0, y: 16 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.4,
-      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
-    },
-  },
-};
 
 /* ── Plans & Regions constants ─────────────────────────────────────────────────*/
 
@@ -170,6 +145,9 @@ function SanitizedHtml({ html, className }: { html: string; className: string })
   return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+/** Monospace, wide-tracked text style used throughout the docs UI */
+const DOCS_FONT = "font-mono tracking-wider";
+
 /* ── Sidebar ────────────────────────────────────────────────────────────────*/
 
 function Sidebar({
@@ -187,6 +165,19 @@ function Sidebar({
   onSearchChange: (q: string) => void;
   onNavigate: (path: string) => void;
 }) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  // Auto-expand the active category; collapse all others on first load
+  useEffect(() => {
+    if (categorySlug) {
+      setExpanded((prev) => {
+        const next = Object.fromEntries(Object.keys(prev).map((k) => [k, false]));
+        next[categorySlug] = true;
+        return next;
+      });
+    }
+  }, [categorySlug]);
+
   const filteredCategories = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return categories;
@@ -202,9 +193,12 @@ function Sidebar({
     );
   }, [categories, searchQuery]);
 
+  const toggle = (slug: string) =>
+    setExpanded((prev) => ({ ...prev, [slug]: !prev[slug] }));
+
   return (
     <div className="flex flex-col h-full">
-      {/* Logo / title with gradient icon box */}
+      {/* Logo / title */}
       <div className="px-5 pt-5 pb-4">
         <Link
           to="/docs"
@@ -214,7 +208,7 @@ function Sidebar({
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20 shrink-0">
             <BookOpen className="h-4 w-4 text-primary" />
           </div>
-          <span className="font-semibold text-sm tracking-tight">Docs</span>
+          <span className="font-semibold text-sm tracking-tight font-mono tracking-wider">Docs</span>
         </Link>
       </div>
 
@@ -226,7 +220,7 @@ function Sidebar({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search docs..."
-            className="h-8 pl-8 text-sm bg-muted/60 border-0 focus-visible:ring-1"
+            className="h-8 pl-8 text-sm bg-muted/60 border-0 focus-visible:ring-1 font-mono tracking-wider"
           />
           {searchQuery && (
             <button
@@ -239,38 +233,56 @@ function Sidebar({
         </div>
       </div>
 
-      {/* Nav list */}
+      {/* Nav tree — always show nested articles */}
       <ScrollArea className="flex-1 px-3">
         <nav className="space-y-0.5 pb-6">
           {filteredCategories.map((cat) => {
             const Icon = getCategoryIcon(cat.icon);
             const isActive = categorySlug === cat.slug;
-            const hasArticles = searchQuery.trim() || isActive;
+            const isExpanded = !!expanded[cat.slug];
+            const hasArticles = cat.articles && cat.articles.length > 0;
 
             return (
               <div key={cat.id}>
-                <button
-                  onClick={() => onNavigate(`/docs/${cat.slug}`)}
-                  className={`w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-[13px] font-medium transition-colors ${
-                    isActive && !articleSlug
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate flex-1">{cat.name}</span>
-                  <Badge
-                    variant="secondary"
-                    className="h-4 px-1.5 text-[10px] font-normal tabular-nums"
+                <div className="flex items-center">
+                  {hasArticles && (
+                    <button
+                      onClick={() => toggle(cat.slug)}
+                      className="mr-1 p-0.5 rounded hover:bg-accent/50 shrink-0"
+                      aria-label={isExpanded ? "Collapse" : "Expand"}
+                    >
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-0" : "-rotate-90"}`}
+                      />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => onNavigate(`/docs/${cat.slug}`)}
+                    className={`flex-1 flex items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] font-medium transition-colors ${
+                      isActive && !articleSlug
+                        ? "bg-accent text-accent-foreground"
+                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                    }`}
                   >
-                    {cat.article_count || cat.articles?.length || 0}
-                  </Badge>
-                </button>
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate flex-1">{cat.name}</span>
+                    <Badge
+                      variant="secondary"
+                      className="h-4 px-1.5 text-[10px] font-normal tabular-nums shrink-0"
+                    >
+                      {cat.article_count || cat.articles?.length || 0}
+                    </Badge>
+                  </button>
+                </div>
 
-                {/* Show articles when category is active or searching */}
-                {hasArticles && cat.articles && cat.articles.length > 0 && (
-                  <div className="ml-5 mt-0.5 space-y-0.5 border-l border-border/50 pl-3">
-                    {cat.articles.map((article) => {
+                {/* Always render article list; show only when expanded or active */}
+                {hasArticles && (
+                  <div
+                    className={`ml-5 mt-0.5 space-y-0.5 border-l border-border/50 pl-3 overflow-hidden transition-all duration-200 ${
+                      isExpanded || isActive ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+                    }`}
+                  >
+                    {cat.articles!.map((article) => {
                       const isArticleActive =
                         categorySlug === cat.slug &&
                         articleSlug === article.slug;
@@ -346,70 +358,27 @@ function Breadcrumb({
   );
 }
 
-/* ── Main Page ────────────────────────────────────────────────────────────────*/
+/* ── Page header (docs-first, no marketing chrome) ───────────────────────*/
 
-function DocsHero({
-  compact,
-  category,
-  article,
+function DocsPageHeader({
   title,
   description,
+  breadcrumb,
 }: {
-  compact?: boolean;
-  category?: { name: string; slug: string };
-  article?: string;
   title: ReactNode;
-  description: string;
+  description?: string;
+  breadcrumb?: ReactNode;
 }) {
-  const wrapperSpacing = compact
-    ? "relative mx-auto max-w-7xl px-4 pb-10 pt-16 sm:px-6 lg:px-8 lg:pb-12 lg:pt-20"
-    : "relative mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 lg:px-8 lg:pb-16 lg:pt-24";
-  const titleClass = compact
-    ? "text-3xl font-medium leading-[1.08] tracking-tight sm:text-4xl lg:text-5xl"
-    : "text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl 2xl:text-7xl";
-  const descriptionClass = compact
-    ? "max-w-3xl text-base leading-relaxed text-muted-foreground sm:text-lg"
-    : "max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl";
-
   return (
-    <section className="relative overflow-hidden border-b border-border/40">
-      <div className="home-orb home-orb--1" aria-hidden="true" />
-      <div className="home-orb home-orb--2" aria-hidden="true" />
-      <div className="home-orb home-orb--3" aria-hidden="true" />
-      <div className="home-grid-mask absolute inset-0" aria-hidden="true" />
-
-      <div className={wrapperSpacing}>
-        <motion.div
-          initial={{ opacity: 0, y: compact ? 18 : 28 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65 }}
-          className={compact ? "space-y-4" : "space-y-6"}
-        >
-          <div className={compact ? "space-y-4" : "space-y-5"}>
-            <Badge
-              variant="outline"
-              className="home-shimmer-badge w-fit rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
-            >
-              <Sparkles className="mr-2 h-3.5 w-3.5" />
-              Documentation
-            </Badge>
-
-            {(category || article) && (
-              <Breadcrumb
-                category={category}
-                article={article}
-                className={compact ? "mb-4" : "mb-6"}
-              />
-            )}
-
-            <div className="space-y-4">
-              <h1 className={titleClass}>{title}</h1>
-              <p className={descriptionClass}>{description}</p>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    </section>
+    <div className="border-b border-border/50 pb-6 mb-8">
+      {breadcrumb}
+      <h1 className="text-3xl font-semibold tracking-tight mt-3">
+        {title}
+      </h1>
+      {description && (
+        <p className="text-muted-foreground mt-1.5">{description}</p>
+      )}
+    </div>
   );
 }
 
@@ -566,15 +535,10 @@ export default function Documentation() {
 
   const renderIndex = () => (
     <div className="max-w-3xl">
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold tracking-tight mb-3">
-          Documentation
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          Guides, tutorials, and API reference to help you get the most out of{" "}
-          {BRAND_NAME}.
-        </p>
-      </div>
+      <DocsPageHeader
+        title="Documentation"
+        description={`Guides, tutorials, and API reference to help you get the most out of ${BRAND_NAME}.`}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         {categories.map((cat) => {
@@ -615,31 +579,11 @@ export default function Documentation() {
 
   const renderCategory = (cat: DocumentationCategoryWithArticles) => (
     <div className="max-w-3xl space-y-6">
-      <motion.div variants={revealItem} initial="hidden" animate="show">
-        <Card className="home-gradient-border-top home-glass-panel overflow-hidden border-primary/25">
-          <CardContent className="p-6">
-            <Breadcrumb category={{ name: cat.name, slug: cat.slug }} />
-            <div className="flex items-start gap-4 mt-3">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
-                {(() => {
-                  const Icon = getCategoryIcon(cat.icon);
-                  return <Icon className="h-6 w-6 text-primary" />;
-                })()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                  {cat.name}
-                </h1>
-                {cat.description && (
-                  <p className="text-muted-foreground mt-1">
-                    {cat.description}
-                  </p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <DocsPageHeader
+        title={cat.name}
+        description={cat.description}
+        breadcrumb={<Breadcrumb category={{ name: cat.name, slug: cat.slug }} />}
+      />
 
       {!cat.articles || cat.articles.length === 0 ? (
         <div className="rounded-xl border bg-muted/30 py-12 text-center">
@@ -822,31 +766,23 @@ export default function Documentation() {
 
     return (
       <article className="max-w-3xl space-y-6">
-        <motion.div variants={revealItem} initial="hidden" animate="show">
-          <Card className="home-gradient-border-top home-glass-panel overflow-hidden border-primary/25">
-            <CardContent className="p-6">
-              <Breadcrumb
-                category={
-                  article.category
-                    ? {
-                        name: article.category.name,
-                        slug: article.category.slug,
-                      }
-                    : undefined
-                }
-                article={article.title}
-              />
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-3 mb-3">
-                {article.title}
-              </h1>
-              {article.summary && (
-                <p className="text-lg text-muted-foreground mb-6">
-                  {article.summary}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+        <DocsPageHeader
+          title={article.title}
+          description={article.summary}
+          breadcrumb={
+            <Breadcrumb
+              category={
+                article.category
+                  ? {
+                      name: article.category.name,
+                      slug: article.category.slug,
+                    }
+                  : undefined
+              }
+              article={article.title}
+            />
+          }
+        />
 
         {/* Content before the plans table marker */}
         {parts[0] && (
@@ -936,31 +872,23 @@ export default function Documentation() {
   ) => {
     return (
       <article className="max-w-3xl space-y-6">
-        <motion.div variants={revealItem} initial="hidden" animate="show">
-          <Card className="home-gradient-border-top home-glass-panel overflow-hidden border-primary/25">
-            <CardContent className="p-6">
-              <Breadcrumb
-                category={
-                  article.category
-                    ? {
-                        name: article.category.name,
-                        slug: article.category.slug,
-                      }
-                    : undefined
-                }
-                article={article.title}
-              />
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-3 mb-3">
-                {article.title}
-              </h1>
-              {article.summary && (
-                <p className="text-lg text-muted-foreground">
-                  {article.summary}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+        <DocsPageHeader
+          title={article.title}
+          description={article.summary}
+          breadcrumb={
+            <Breadcrumb
+              category={
+                article.category
+                  ? {
+                      name: article.category.name,
+                      slug: article.category.slug,
+                    }
+                  : undefined
+              }
+              article={article.title}
+            />
+          }
+        />
 
         {article.content && (
           <SanitizedHtml
@@ -1170,26 +1098,20 @@ export default function Documentation() {
 
   const renderArticle = (article: DocumentationArticleWithFiles) => (
     <article className="max-w-3xl space-y-6">
-      <motion.div variants={revealItem} initial="hidden" animate="show">
-        <Card className="home-gradient-border-top home-glass-panel overflow-hidden border-primary/25">
-          <CardContent className="p-6">
-            <Breadcrumb
-              category={
-                article.category
-                  ? { name: article.category.name, slug: article.category.slug }
-                  : undefined
-              }
-              article={article.title}
-            />
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mt-3 mb-3">
-              {article.title}
-            </h1>
-            {article.summary && (
-              <p className="text-lg text-muted-foreground">{article.summary}</p>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+      <DocsPageHeader
+        title={article.title}
+        description={article.summary}
+        breadcrumb={
+          <Breadcrumb
+            category={
+              article.category
+                ? { name: article.category.name, slug: article.category.slug }
+                : undefined
+            }
+            article={article.title}
+          />
+        }
+      />
 
       {/* HTML content */}
       <SanitizedHtml
@@ -1290,70 +1212,39 @@ export default function Documentation() {
     renderArticle(selectedArticle)
   ) : isApiReferenceCategory ? (
     // Render ApiReference component for api-reference category
-    <ApiReference onBack={() => handleNavigate("/docs")} />
+    <div>
+      <DocsPageHeader
+        title="API Reference"
+        description={`Complete REST API documentation for ${BRAND_NAME}`}
+        breadcrumb={<Breadcrumb category={{ name: "API Reference", slug: "api-reference" }} />}
+      />
+      <ApiReference onBack={() => handleNavigate("/docs")} />
+    </div>
   ) : currentCategory ? (
     renderCategory(currentCategory)
   ) : (
     renderIndex()
   );
 
-  const showHero = !categorySlug && !articleSlug;
-  const compactHeroCategory = selectedArticle?.category
-    ? {
-        name: selectedArticle.category.name,
-        slug: selectedArticle.category.slug,
-      }
-    : currentCategory
-      ? { name: currentCategory.name, slug: currentCategory.slug }
-      : undefined;
-  const compactHeroTitle =
-    selectedArticle?.title || currentCategory?.name || "Documentation";
-  const compactHeroDescription =
-    selectedArticle?.summary ||
-    currentCategory?.description ||
-    `Guides, tutorials, and API reference to help you get the most out of ${BRAND_NAME}.`;
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <MarketingNavbar />
 
-      <main>
-        {/* ═══════════════════════ HERO ══════════════════════════ */}
-        {showHero ? (
-          <DocsHero
-            title={
-              <>
-                Everything you need to
-                <span className="block font-bold bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text text-transparent">
-                  get started
-                </span>
-              </>
-            }
-            description={`Guides, tutorials, and API reference to help you get the most out of ${BRAND_NAME}.`}
-          />
-        ) : (
-          <DocsHero
-            compact
-            category={compactHeroCategory}
-            article={articleSlug ? compactHeroTitle : undefined}
-            title={compactHeroTitle}
-            description={compactHeroDescription}
-          />
-        )}
-
-        {/* ═══════════════════════ CONTENT AREA ════════════════════════════════ */}
+      {/* Single landmark; no nested <main> */}
+      <div className="pt-20 lg:pt-24">
+        {/* Content area */}
         <div className="flex min-h-[calc(100vh-4rem)]">
           {/* Desktop sidebar */}
           <aside className="hidden lg:flex w-64 xl:w-72 shrink-0 border-r bg-muted/20">
-            <div className="sticky top-16 w-full max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+            <div className="sticky top-[calc(var(--announcement-banner-height,0px)+5rem)] w-full max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
               <Sidebar {...sidebarProps} />
             </div>
           </aside>
 
-          {/* Main content */}
-          <main className="flex-1 min-w-0">
+          {/* Content column */}
+          <div className="flex-1 min-w-0">
             {/* Mobile top bar */}
-            <div className="lg:hidden sticky top-16 z-20 flex items-center gap-2 border-b bg-background/95 backdrop-blur px-4 h-12">
+            <div className="lg:hidden sticky top-[calc(var(--announcement-banner-height,0px)+5rem)] z-20 flex items-center gap-2 border-b bg-background/95 backdrop-blur px-4 h-12">
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -1386,9 +1277,9 @@ export default function Documentation() {
 
             {/* Content */}
             <div className="px-6 py-8 lg:px-10 lg:py-10">{content}</div>
-          </main>
+          </div>
         </div>
-      </main>
+      </div>
 
       <MarketingFooter />
     </div>

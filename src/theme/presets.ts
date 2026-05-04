@@ -28,7 +28,7 @@ export type ThemeVariables = Record<string, string>;
 
 const sharedTokens: ThemeVariables = {
   radius: "0.75rem",
-  "font-sans": '"Inter", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", sans-serif',
+  "font-sans": "ui-monospace, SFMono-Regular, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", \"Courier New\", monospace",
 };
 
 const withShared = (vars: ThemeVariables): ThemeVariables => ({
