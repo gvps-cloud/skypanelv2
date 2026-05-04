@@ -11,7 +11,7 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 
 - `src/` — React 18 + Vite + TypeScript frontend. Pages in `src/pages/`, components in `src/components/`, shared UI via shadcn/ui in `src/components/ui/`.
 - `api/` — Express 4 + TypeScript backend. Routes in `api/routes/`, services in `api/services/`, middleware in `api/middleware/`.
-- `lib/` — Shared packages: `api-client-react` (TanStack Query hooks), `api-zod` (Zod request/response schemas), `db` (database helpers).
+- `lib/` — Shared workspace packages: `api-client-react` (TanStack Query hooks), `api-zod` (Zod request/response schemas), `api-spec` (OpenAPI spec + orval codegen at `openapi.yaml`), `db` (Drizzle ORM schema — see Database section).
 - `migrations/` — Numbered SQL migrations (currently through `065`). Never modify applied migrations.
 - `git-docs/` — Prose documentation; prefer root configs/scripts when docs disagree.
 - Three product surfaces: public marketing pages, customer portal (dashboard/VPS/billing), admin dashboard.
@@ -49,6 +49,7 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 - Apply auth/organization middleware at router level (`router.use(...)`) where possible. `/api` gets CSRF, API-key auth, smart rate limits, and rate-limit headers in `api/app.ts`.
 - Business errors usually return `{ error: "message" }`; provider/Linode errors should use `handleProviderError()` from `api/lib/errorHandling.ts`.
 - Log meaningful successful mutations with `logActivity()` from `api/services/activityLogger.ts`.
+- Common activity action types: `vps.created`, `vps.deleted`, `vps.rebuilt`, `vps.power_on`, `vps.power_off`, `ssh.session_started`, `billing.credited`. Use existing types; do not invent ad-hoc strings.
 - Scope resource queries by `organization_id`. Many tables are multi-tenant; do not fetch by resource id alone.
 
 ## Frontend Rules
@@ -59,13 +60,15 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 - Use `cn()` from `@/lib/utils` for conditional/composed Tailwind classes.
 - Public marketing pages share `@/styles/home.css`; `MarketingNavbar` is fixed and content needs top padding (`pt-[72px]`).
 - Logo source of truth is `public/favicon.svg`; `Logo` renders it as an image.
+- Route guards in `src/App.tsx`: `<ProtectedRoute>` for authenticated pages (renders `AppLayout` with sidebar), `<AdminRoute>` for admin pages (requires `user.role === 'admin'`), `<StandaloneProtectedRoute>` for SSH console (auth without sidebar).
 
 ## Database & Migrations
 
-- This is not Prisma. `@prisma/client` may exist in dependencies, but app data access is raw `pg` through `api/lib/database.ts`.
+- Two DB access patterns coexist: `api/` uses raw `pg` through `api/lib/database.ts` (the primary path); `lib/db` (`@workspace/db`) uses Drizzle ORM with `drizzle-kit` for schema definitions. New backend routes should use the raw `pg` `query()` helper from `api/lib/database.ts`.
 - Migrations are SQL files in `migrations/`, currently through `065`. Never modify an existing migration; add the next zero-padded `NNN_short_description.sql`.
 - Apply pending migrations with `node scripts/run-migration.js`. Do not run `db:reset`, `db:reset:confirm`, or `db:fresh` unless explicitly requested; they destroy data.
 - Migration runner validates SHA256 checksums, so editing applied migrations will break future runs.
+- Schema conventions: UUID PKs (`gen_random_uuid()`), `TIMESTAMPTZ` timestamps, `deleted_at` for soft deletes, `JSONB DEFAULT '{}'` for config/metadata, explicit `ON DELETE CASCADE` or `ON DELETE SET NULL` on all foreign keys.
 
 ## Testing Notes
 
