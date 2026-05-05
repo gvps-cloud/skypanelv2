@@ -65,6 +65,7 @@ const RESET_WINDOW = 24 * 60 * 60 * 1000;
  */
 let redisClient: Redis | null = null;
 let redisAvailable = false;
+let bruteForceRedisEverReady = false;
 
 /**
  * Initialize Redis connection (lazy loading)
@@ -106,17 +107,30 @@ async function initializeRedis(): Promise<void> {
     });
 
     redisClient.on('ready', () => {
-      console.log('[Brute force] Redis connected and ready');
+      if (process.env.NODE_ENV !== 'production' && bruteForceRedisEverReady) {
+        console.debug('[Brute force] Redis connected and ready');
+      } else {
+        console.log('[Brute force] Redis connected and ready');
+      }
+      bruteForceRedisEverReady = true;
       redisAvailable = true;
     });
 
     redisClient.on('close', () => {
-      console.log('[Brute force] Redis connection closed');
+      if (process.env.NODE_ENV !== 'production' && bruteForceRedisEverReady) {
+        console.debug('[Brute force] Redis connection closed');
+      } else {
+        console.log('[Brute force] Redis connection closed');
+      }
       redisAvailable = false;
     });
 
     redisClient.on('reconnecting', (ms: number) => {
-      console.log(`[Brute force] Redis reconnecting in ${ms}ms`);
+      if (process.env.NODE_ENV !== 'production' && bruteForceRedisEverReady) {
+        console.debug(`[Brute force] Redis reconnecting in ${ms}ms`);
+      } else {
+        console.log(`[Brute force] Redis reconnecting in ${ms}ms`);
+      }
     });
 
     const maskedUrl = redisUrl.replace(/:\/\/([^@]+)@/, '://***@');

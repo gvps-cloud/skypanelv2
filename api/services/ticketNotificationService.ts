@@ -1,6 +1,7 @@
 import { Client } from 'pg';
 import { EventEmitter } from 'events';
 import { config } from '../config/index.js';
+import { getLongLivedPgClientConfig } from '../lib/database.js';
 
 export interface TicketNotificationPayload {
   ticket_id: string;
@@ -24,6 +25,7 @@ class TicketNotificationService extends EventEmitter {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 10;
+  private hasHadSuccessfulListen = false;
 
   async start(): Promise<void> {
     if (this.isListening) {
@@ -36,7 +38,7 @@ class TicketNotificationService extends EventEmitter {
         throw new Error('DATABASE_URL is not defined');
       }
 
-      this.client = new Client({ connectionString });
+      this.client = new Client(getLongLivedPgClientConfig(connectionString));
 
       this.client.on('error', (err) => {
         console.error('TicketNotificationService client error:', err);
@@ -67,6 +69,7 @@ class TicketNotificationService extends EventEmitter {
 
       this.isListening = true;
       this.reconnectAttempts = 0;
+      this.hasHadSuccessfulListen = true;
     } catch (err) {
       console.error('Failed to start TicketNotificationService:', err);
       this.handleDisconnect();
@@ -85,10 +88,14 @@ class TicketNotificationService extends EventEmitter {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = Math.min(BASE_RECONNECT_DELAY_MS * Math.pow(2, this.reconnectAttempts - 1), MAX_RECONNECT_DELAY_MS);
-      console.log(
+      const msg =
         `TicketNotificationService reconnecting in ${delay}ms ` +
-        `(attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
-      );
+        `(attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`;
+      if (process.env.NODE_ENV !== 'production' && this.hasHadSuccessfulListen) {
+        console.debug(msg);
+      } else {
+        console.log(msg);
+      }
       this.reconnectTimer = setTimeout(() => {
         this.start().catch((err) => {
           console.error('TicketNotificationService reconnection attempt failed:', err);

@@ -41,6 +41,8 @@ const CLEANUP_INTERVAL = 5 * 60 * 1000;
  */
 let redisClient: Redis | null = null;
 let redisAvailable = false;
+/** After first `ready`, downgrade Redis churn logs in development. */
+let tokenBlacklistRedisEverReady = false;
 
 /**
  * Initialize Redis connection (lazy loading)
@@ -85,17 +87,30 @@ async function initializeRedis(): Promise<void> {
     });
 
     redisClient.on('ready', () => {
-      console.log('[Token blacklist] Redis connected and ready');
+      if (process.env.NODE_ENV !== 'production' && tokenBlacklistRedisEverReady) {
+        console.debug('[Token blacklist] Redis connected and ready');
+      } else {
+        console.log('[Token blacklist] Redis connected and ready');
+      }
+      tokenBlacklistRedisEverReady = true;
       redisAvailable = true;
     });
 
     redisClient.on('close', () => {
-      console.log('[Token blacklist] Redis connection closed');
+      if (process.env.NODE_ENV !== 'production' && tokenBlacklistRedisEverReady) {
+        console.debug('[Token blacklist] Redis connection closed');
+      } else {
+        console.log('[Token blacklist] Redis connection closed');
+      }
       redisAvailable = false;
     });
 
     redisClient.on('reconnecting', (ms: number) => {
-      console.log(`[Token blacklist] Redis reconnecting in ${ms}ms`);
+      if (process.env.NODE_ENV !== 'production' && tokenBlacklistRedisEverReady) {
+        console.debug(`[Token blacklist] Redis reconnecting in ${ms}ms`);
+      } else {
+        console.log(`[Token blacklist] Redis reconnecting in ${ms}ms`);
+      }
     });
 
     const maskedUrl = redisUrl.replace(/:\/\/([^@]+)@/, '://***@');

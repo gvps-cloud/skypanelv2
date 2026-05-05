@@ -1,6 +1,7 @@
 import { Client } from 'pg';
 import { EventEmitter } from 'events';
 import { config } from '../config/index.js';
+import { getLongLivedPgClientConfig } from '../lib/database.js';
 
 export interface Notification {
   id: string;
@@ -21,6 +22,8 @@ class NotificationService extends EventEmitter {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
+  /** After at least one successful LISTEN, downgrade reconnect chatter in development. */
+  private hasHadSuccessfulListen = false;
 
   async start(): Promise<void> {
     if (this.isListening) {
@@ -34,7 +37,7 @@ class NotificationService extends EventEmitter {
         throw new Error('DATABASE_URL is not defined');
       }
 
-      this.client = new Client({ connectionString });
+      this.client = new Client(getLongLivedPgClientConfig(connectionString));
 
       this.client.on('error', (err) => {
         console.error('Notification service client error:', err);
@@ -67,6 +70,7 @@ class NotificationService extends EventEmitter {
 
       this.isListening = true;
       this.reconnectAttempts = 0;
+      this.hasHadSuccessfulListen = true;
     } catch (err) {
       console.error('Failed to start notification service:', err);
       this.handleDisconnect();
@@ -86,7 +90,13 @@ class NotificationService extends EventEmitter {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
-      console.log(`Attempting to reconnect notification service in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      const msg =
+        `Attempting to reconnect notification service in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`;
+      if (process.env.NODE_ENV !== 'production' && this.hasHadSuccessfulListen) {
+        console.debug(msg);
+      } else {
+        console.log(msg);
+      }
       
       this.reconnectTimer = setTimeout(() => {
         this.start().catch(err => {

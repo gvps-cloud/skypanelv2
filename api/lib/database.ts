@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from 'pg';
+import { Pool, PoolClient, type ClientConfig } from 'pg';
 import dotenv from 'dotenv';
 
 // Load environment variables ONLY if not in Docker (Docker passes env vars directly)
@@ -40,6 +40,23 @@ function getDatabaseSslConfig(connectionString: string): false | { rejectUnautho
 
   return {
     rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== "false",
+  };
+}
+
+/**
+ * Connection options for long-lived `pg.Client` usage (e.g. LISTEN/NOTIFY).
+ * Matches the shared pool’s SSL behavior and enables TCP keepalive to reduce
+ * idle disconnects through NATs and firewalls.
+ *
+ * **Operations:** Correlated PostgreSQL LISTEN + Redis reconnect storms usually
+ * mean Postgres or Redis restarted (Docker Compose, OOM), a network blip, VPN,
+ * or host sleep/wake — not necessarily application logic.
+ */
+export function getLongLivedPgClientConfig(connectionString: string): ClientConfig {
+  return {
+    connectionString,
+    ssl: getDatabaseSslConfig(connectionString),
+    keepAlive: true,
   };
 }
 
