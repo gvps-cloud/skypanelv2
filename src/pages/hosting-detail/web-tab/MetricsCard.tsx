@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, BarChart3 } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import Pagination from "@/components/ui/Pagination";
 import {
   Select,
   SelectContent,
@@ -44,6 +45,8 @@ export default function MetricsCard({ subscriptionId }: Props) {
   const [entries, setEntries] = useState<MetricsEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("24h");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const load = useCallback(async () => {
     if (!subscriptionId) return;
@@ -63,6 +66,7 @@ export default function MetricsCard({ subscriptionId }: Props) {
         `/hosting/web/${subscriptionId}/metrics?${params}`
       );
       setEntries(data?.items ?? []);
+      setPage(1);
     } catch {
       setEntries([]);
     } finally {
@@ -134,38 +138,56 @@ export default function MetricsCard({ subscriptionId }: Props) {
             <div>
               <h3 className="text-sm font-medium mb-3">Bandwidth Over Time</h3>
               <div className="space-y-1">
-                {entries.slice(-24).map((entry) => {
-                  const total = entry.bytesReceived + entry.bytesSent;
-                  const pct = (total / maxBandwidth) * 100;
-                  const sentPct = (entry.bytesSent / Math.max(total, 1)) * 100;
-                  return (
-                    <div key={entry.datetime} className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground w-16 shrink-0">
-                        {new Date(entry.datetime).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                        {" "}
-                        {new Date(entry.datetime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                      <div className="flex-1 h-4 bg-muted/30 rounded overflow-hidden">
-                        <div
-                          className="h-full rounded-l bg-blue-500/70"
-                          style={{ width: `${pct * (sentPct / 100)}%` }}
-                        />
-                        <div
-                          className="h-full bg-green-500/70 -mt-4"
-                          style={{ width: `${pct * (1 - sentPct / 100)}%`, marginLeft: `${pct * (sentPct / 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-muted-foreground w-20 text-right">
-                        {formatBytes(total)}
-                      </span>
-                    </div>
+                {(() => {
+                  const sorted = [...entries].sort(
+                    (a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime()
                   );
-                })}
+                  const pageStart = (page - 1) * pageSize;
+                  const pageEntries = sorted.slice(pageStart, pageStart + pageSize);
+                  return pageEntries.map((entry) => {
+                    const total = entry.bytesReceived + entry.bytesSent;
+                    const pct = (total / maxBandwidth) * 100;
+                    const sentPct = (entry.bytesSent / Math.max(total, 1)) * 100;
+                    return (
+                      <div key={entry.datetime} className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground w-16 shrink-0">
+                          {new Date(entry.datetime).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                          {" "}
+                          {new Date(entry.datetime).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <div className="flex-1 h-4 bg-muted/30 rounded overflow-hidden">
+                          <div
+                            className="h-full rounded-l bg-blue-500/70"
+                            style={{ width: `${pct * (sentPct / 100)}%` }}
+                          />
+                          <div
+                            className="h-full bg-green-500/70 -mt-4"
+                            style={{ width: `${pct * (1 - sentPct / 100)}%`, marginLeft: `${pct * (sentPct / 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground w-20 text-right">
+                          {formatBytes(total)}
+                        </span>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
               <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-500/70 inline-block" /> Sent</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-500/70 inline-block" /> Received</span>
               </div>
+              {entries.length > pageSize && (
+                <Pagination
+                  currentPage={page}
+                  totalItems={entries.length}
+                  itemsPerPage={pageSize}
+                  onPageChange={setPage}
+                  onItemsPerPageChange={(n) => { setPageSize(n); setPage(1); }}
+                  itemsPerPageOptions={[10, 25, 50]}
+                  className="mt-4 rounded-lg"
+                />
+              )}
             </div>
           </div>
         )}
