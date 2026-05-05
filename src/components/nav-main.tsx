@@ -104,36 +104,32 @@ export function NavMain({
     window.localStorage.setItem(storageKey, JSON.stringify(openGroups))
   }, [openGroups, storageKey])
 
-  const handleGroupToggle = React.useCallback(
-    (key: string, nextOpen: boolean) => {
-      setOpenGroups((prev) => {
-        if (prev[key] === nextOpen) {
-          return prev
-        }
-
-        return { ...prev, [key]: nextOpen }
-      })
-    },
-    [setOpenGroups]
-  )
-
-  React.useEffect(() => {
+const handleGroupToggle = React.useCallback(
+  (key: string, nextOpen: boolean) => {
     setOpenGroups((prev) => {
-      let changed = false
-      const next: NavGroupState = { ...prev }
+      if (prev[key] === nextOpen) {
+        return prev
+      }
 
-      items.forEach((item) => {
-        const itemKey = item.url || item.title
-        const isItemActive = item.isActive || item.items?.some((sub) => sub.isActive)
-        if (isItemActive && !next[itemKey]) {
-          next[itemKey] = true
-          changed = true
-        }
-      })
-
-      return changed ? next : prev
+      if (nextOpen) {
+        // Opening a group: close all others (accordion behavior)
+        return { [key]: true }
+      }
+      // Closing a group: keep other groups unchanged, set this one to false
+      return { ...prev, [key]: false }
     })
-  }, [items])
+  },
+  [setOpenGroups]
+)
+
+React.useEffect(() => {
+  // Open only the first active group and close others (accordion behavior)
+  const activeItem = items.find((item) => item.isActive || item.items?.some((sub) => sub.isActive))
+  if (activeItem) {
+    const activeKey = activeItem.url || activeItem.title
+    setOpenGroups({ [activeKey]: true })
+  }
+}, [items])
 
   return (
     <SidebarGroup>
@@ -144,8 +140,8 @@ export function NavMain({
           const isExactActive = Boolean(item.isActive)
           const isItemActive = isExactActive || hasActiveChild
           const itemKey = item.url || item.title
-          const persistedState = openGroups[itemKey]
-          const openValue = isItemActive ? true : persistedState ?? false
+const persistedState = openGroups[itemKey]
+const openValue = persistedState ?? (isItemActive ? true : false)
 
           return (
             <SidebarMenuItem key={item.title}>

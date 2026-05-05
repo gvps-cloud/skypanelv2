@@ -82,3 +82,4 @@ docker-compose.override.yml
 # Ignore insiders AI rules
 .github/instructions/codacy.instructions.md
 .claude/settings.local.json
+.opencode/plugins/emdash-notifications.js
