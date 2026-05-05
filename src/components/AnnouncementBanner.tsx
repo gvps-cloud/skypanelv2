@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { X, Info, AlertTriangle, CheckCircle, Wrench, AlertOctagon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/api";
@@ -49,12 +49,10 @@ function addDismissedId(id: string) {
 
 interface AnnouncementBannerProps {
   topOffset?: number;
-  onHeightChange?: (height: number) => void;
 }
 
 export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
   topOffset = 0,
-  onHeightChange,
 }) => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -79,29 +77,42 @@ export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
     fetchAnnouncements();
   }, [fetchAnnouncements]);
 
-  // Report height changes
-  useEffect(() => {
-    if (!containerRef.current) return;
+  useLayoutEffect(() => {
+    if (announcements.length === 0) {
+      document.documentElement.style.setProperty(
+        "--announcement-banner-height",
+        "0px",
+      );
+      return;
+    }
+
+    const el = containerRef.current;
+    if (!el) return;
+
+    const applyHeight = (height: number) => {
+      document.documentElement.style.setProperty(
+        "--announcement-banner-height",
+        `${height}px`,
+      );
+    };
+
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const height = entry.contentRect.height;
-        document.documentElement.style.setProperty(
-          "--announcement-banner-height",
-          `${height}px`
-        );
-        onHeightChange?.(height);
+        applyHeight(entry.contentRect.height);
       }
     });
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, [onHeightChange, announcements.length]);
+    observer.observe(el);
+    applyHeight(el.getBoundingClientRect().height);
 
-  // Clean up CSS var when unmounted
+    return () => observer.disconnect();
+  }, [announcements.length]);
+
+  // Reset CSS var when this component is removed from the tree (e.g. route change)
   useEffect(() => {
     return () => {
       document.documentElement.style.setProperty(
         "--announcement-banner-height",
-        "0px"
+        "0px",
       );
     };
   }, []);
@@ -117,7 +128,7 @@ export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
   return (
     <div
       ref={containerRef}
-      className="fixed left-0 right-0 z-[45] animate-in slide-in-from-top-2 duration-300"
+      className="fixed left-0 right-0 z-[45] w-full animate-in fade-in-0 duration-300"
       style={{ top: topOffset }}
     >
       {announcements.map((announcement) => {
@@ -128,7 +139,7 @@ export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
             role="banner"
             aria-live="polite"
             className={cn(
-              "flex items-center justify-between gap-3 border-b px-4 py-2 text-sm",
+              "flex w-full items-center justify-between gap-3 border-b px-4 py-2 text-sm animate-in slide-in-from-top-2 fade-in-0 duration-300",
               TYPE_STYLES[announcement.type] || TYPE_STYLES.info
             )}
           >

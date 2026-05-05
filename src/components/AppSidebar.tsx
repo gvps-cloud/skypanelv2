@@ -323,7 +323,7 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader className="gap-4 border-b border-white/10 cyber-glass p-4 pointer-events-none group-data-[state=collapsed]:px-2">
+      <SidebarHeader className="cyber-glass pointer-events-none gap-2 border-b border-sidebar-border p-3 font-mono group-data-[state=collapsed]:px-2">
         <SidebarMenu className="pointer-events-auto">
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -333,12 +333,14 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               asChild
             >
               <Link to="/dashboard">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/20">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-primary/25 bg-primary/10">
                   <Logo size="sm" />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight group-data-[state=collapsed]:hidden">
-                  <span className="truncate font-semibold">{BRAND_NAME}</span>
-                  <span className="truncate text-xs">Cloud Platform</span>
+                <div className="grid flex-1 text-left text-xs leading-tight group-data-[state=collapsed]:hidden">
+                  <span className="truncate font-semibold tracking-tight">{BRAND_NAME}</span>
+                  <span className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
+                    panel
+                  </span>
                 </div>
               </Link>
             </SidebarMenuButton>

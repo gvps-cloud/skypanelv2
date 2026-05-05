@@ -80,10 +80,10 @@ export function useMobileAnimations() {
     return defaultDuration;
   };
 
-  // Get backdrop filter classes with fallback
+  // Panel surfaces: opaque terminal style on desktop; light blur only on mobile where supported
   const getBackdropClasses = () => {
-    if (!isMobile) return 'backdrop-blur-md';
-    if (!config.supportsBackdropFilter) return 'bg-black/80';
+    if (!isMobile) return '';
+    if (!config.supportsBackdropFilter) return '';
     return 'mobile-backdrop-optimized';
   };
 

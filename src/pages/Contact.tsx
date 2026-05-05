@@ -406,7 +406,7 @@ export default function Contact() {
 <motion.div variants={revealItem}>
                   <Card className="home-feature-card border-primary/25">
                     <CardContent className="space-y-4 p-6">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-primary/20 bg-muted">
                         <Mail className="h-7 w-7 text-primary" />
                       </div>
                       <h3 className="text-xl font-semibold">
@@ -439,7 +439,7 @@ export default function Contact() {
 <motion.div variants={revealItem}>
                   <Card className="home-feature-card border-primary/25">
                     <CardContent className="space-y-4 p-6">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-primary/20 bg-muted">
                         <MessageSquare className="h-7 w-7 text-primary" />
                       </div>
                       <h3 className="text-xl font-semibold">
@@ -500,7 +500,7 @@ export default function Contact() {
 <motion.div variants={revealItem}>
                   <Card className="home-feature-card border-primary/25">
                     <CardContent className="space-y-4 p-6">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-primary/20 bg-muted">
                         <Phone className="h-7 w-7 text-primary" />
                       </div>
                       <h3 className="text-xl font-semibold">
@@ -533,7 +533,7 @@ export default function Contact() {
 <motion.div variants={revealItem}>
                   <Card className="home-feature-card border-primary/25">
                     <CardContent className="space-y-4 p-6">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-primary/20 bg-muted">
                         <MapPin className="h-7 w-7 text-primary" />
                       </div>
                       <h3 className="text-xl font-semibold">
@@ -773,7 +773,7 @@ export default function Contact() {
                       {availability.map((schedule) => (
                         <div
                           key={schedule.id}
-                          className="flex items-center justify-between rounded-lg border border-border/30 bg-gradient-to-b from-background/50 to-muted/10 px-4 py-2.5"
+                          className="flex items-center justify-between rounded-sm border border-border/30 bg-card px-4 py-2.5"
                         >
                           <span className="text-sm text-muted-foreground">
                             {schedule.day_of_week}
@@ -786,7 +786,7 @@ export default function Contact() {
                       {emergencyText && (
                         <>
                           <Separator className="my-4" />
-                          <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                          <div className="rounded-sm border border-primary/20 bg-primary/5 px-4 py-3">
                             <p className="text-xs text-muted-foreground">
                               <span className="font-semibold text-primary">
                                 Emergency support:{" "}

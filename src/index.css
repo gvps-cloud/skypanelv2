@@ -5,6 +5,7 @@
 @tailwind utilities;
 
 :root {
+  --announcement-banner-height: 0px;
   --background: 0 0% 100%;
   --foreground: 240 10% 3.9%;
   --muted: 240 4.8% 95.9%;
@@ -745,4 +746,14 @@ bile Toast Styles */
 .leaflet-map-container ::-webkit-scrollbar-thumb {
   background-color: hsl(var(--muted-foreground) / 0.2);
   border-radius: 3px;
+}
+
+/* Authenticated shell (AppLayout): SidebarProvider uses min-h-svh; AnnouncementBannerWrapper adds
+   padding-top: var(--announcement-banner-height). Without subtracting here, total height > 100svh and
+   the document scrolls while .terminal-main-scroll also scrolls. These rules load after Tailwind. */
+/* !important: defeat Tailwind `min-h-svh` on the same node (SidebarProvider) regardless of bundle order */
+.dashboard-app-shell {
+  min-height: calc(100svh - var(--announcement-banner-height, 0px)) !important;
+  height: calc(100svh - var(--announcement-banner-height, 0px)) !important;
+  max-height: calc(100svh - var(--announcement-banner-height, 0px)) !important;
 }

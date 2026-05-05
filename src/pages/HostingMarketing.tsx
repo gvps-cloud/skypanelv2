@@ -192,7 +192,7 @@ const HostingHero = ({ enabled, plans, isLoading }: HostingCatalogState) => (
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="flex items-center justify-between rounded-xl border border-border/50 bg-background/60 p-4"
+                className="flex items-center justify-between rounded-sm border border-border/50 bg-card p-4"
               >
                 <span className="text-sm text-muted-foreground">{label}</span>
                 <span className="font-semibold">{value}</span>
@@ -219,7 +219,7 @@ const CapabilityGrid = () => (
           <motion.div key={item.title} variants={revealItem}>
             <Card className="home-gradient-border-top home-feature-card h-full border-primary/25">
               <CardContent className="space-y-4 p-6">
-                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/20">
+                <div className="flex h-11 w-11 items-center justify-center rounded-sm border border-primary/20 bg-muted">
                   <item.icon className="h-5 w-5 text-primary" />
                 </div>
                 <h2 className="text-lg font-semibold">{item.title}</h2>

@@ -181,22 +181,27 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
   const applyRemoteConfig = useCallback((config: ThemeConfigPayload | null | undefined) => {
     const remoteCustom = sanitizeThemePreset(config?.customPreset);
-    setCustomPreset(remoteCustom);
-
     const remotePresetId = typeof config?.presetId === "string" ? config?.presetId : undefined;
 
+    setCustomPreset((prev) => {
+      const prevSerialized = JSON.stringify(prev);
+      const nextSerialized = JSON.stringify(remoteCustom);
+      if (prevSerialized === nextSerialized) return prev;
+      return remoteCustom;
+    });
+
     if (remotePresetId === "custom" && remoteCustom) {
-      setThemeId("custom");
+      setThemeId((current) => current === "custom" ? current : "custom");
       return;
     }
 
     if (remotePresetId && BASE_THEME_IDS.has(remotePresetId as ThemeId)) {
-      setThemeId(remotePresetId as ThemeId);
+      setThemeId((current) => current === (remotePresetId as ThemeId) ? current : (remotePresetId as ThemeId));
       return;
     }
 
     if (remoteCustom) {
-      setThemeId("custom");
+      setThemeId((current) => current === "custom" ? current : "custom");
       return;
     }
 

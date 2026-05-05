@@ -25,8 +25,26 @@ import {
 import { toast } from 'sonner';
 import { paymentService, type WalletTransaction, type PaymentHistory, type VPSUptimeSummary, type BillingSummary } from '../services/paymentService';
 import Pagination from '../components/ui/Pagination';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from '@/components/ui/input-group';
+import { TerminalPanel } from '@/components/terminal';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import PayPalCheckoutDialog from '@/components/billing/PayPalCheckoutDialog';
 import { formatBillingAmount as formatBillingAmountDisplay } from '@/lib/formatters';
 import { useHostingStatus } from '@/hooks/useHosting';
@@ -698,29 +716,20 @@ const Billing: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
-        <div className="relative z-10">
-          <div className="mb-2">
-            <Badge variant="secondary" className="mb-3">
-              Billing
-            </Badge>
-          </div>
-          <h1 className="text-xl font-semibold leading-tight md:text-4xl">
+    <div className="space-y-6 font-mono">
+      <TerminalPanel title="BILLING" bodyClassName="p-0">
+        <div className="space-y-2 p-4 md:p-6">
+          <Badge variant="secondary" className="rounded-sm text-[10px] uppercase tracking-wider">
+            module
+          </Badge>
+          <h1 className="text-xl font-semibold leading-tight md:text-3xl">
             Billing &amp; Payments
           </h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
+          <p className="max-w-2xl text-sm text-muted-foreground">
             Manage your wallet, add funds via PayPal, and track your spending across all services.
           </p>
         </div>
-
-        {/* Background decoration */}
-        <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-          <Wallet className="absolute right-10 top-10 h-32 w-32 rotate-12" />
-          <DollarSign className="absolute bottom-10 right-20 h-24 w-24 -rotate-6" />
-        </div>
-      </div>
+      </TerminalPanel>
 
       {/* Wallet Overview - Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -790,7 +799,7 @@ const Billing: React.FC = () => {
             <div className="flex items-start justify-between">
               <div className="space-y-2 flex-1 min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Spent This Month</p>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <p className="text-xl font-semibold leading-tight tabular-nums">
                     {summaryLoading || computingMonthlySpent ? (
                       <span className="text-base text-muted-foreground">{computingMonthlySpent ? 'Calc...' : 'Loading...'}</span>
@@ -851,170 +860,167 @@ const Billing: React.FC = () => {
       {/* Add Funds and Egress Credits Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {/* Add Funds to Wallet Card */}
-        <Card className="border-primary/25">
+        <Card className="flex h-full flex-col border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg font-semibold tracking-tight">Add Funds to Wallet</CardTitle>
             <CardDescription>Top up your wallet balance using PayPal</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {[10, 25, 50, 100, 250].map((amount) => (
-                  <button
-                    key={amount}
-                    type="button"
-                    onClick={() => setAddFundsAmount(amount.toString())}
-                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md border bg-muted hover:bg-accent hover:text-accent-foreground transition-colors"
-                  >
-                    ${amount}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-col gap-3">
-                <div className="w-full min-w-0">
-                  <label htmlFor="amount" className="sr-only">Amount</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <DollarSign className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <input
-                      type="number"
-                      id="amount"
-                      value={addFundsAmount}
-                      onChange={(e) => setAddFundsAmount(e.target.value)}
-                      placeholder="0.00"
-                      min="1"
-                      step="0.01"
-                      className="block w-full pl-10 pr-3 py-2 border border rounded-md bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                    />
-                  </div>
-                </div>
-                <button
+          <CardContent className="flex flex-1 flex-col gap-4">
+            <div className="flex flex-wrap gap-2">
+              {[10, 25, 50, 100, 250].map((amount) => (
+                <Button
+                  key={amount}
                   type="button"
-                  onClick={handleAddFunds}
-                  className="w-full shrink-0 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAddFundsAmount(amount.toString())}
+                  className={cn(
+                    addFundsAmount === String(amount) &&
+                      "border-primary bg-primary/10",
+                  )}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Funds via PayPal
-                </button>
-              </div>
+                  ${amount}
+                </Button>
+              ))}
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Funds will be added to your wallet after successful PayPal payment
-            </p>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="billing-add-amount">Amount</Label>
+              <InputGroup>
+                <InputGroupAddon align="inline-start">
+                  <DollarSign className="text-muted-foreground" />
+                </InputGroupAddon>
+                <InputGroupInput
+                  id="billing-add-amount"
+                  type="number"
+                  value={addFundsAmount}
+                  onChange={(e) => setAddFundsAmount(e.target.value)}
+                  placeholder="0.00"
+                  min={1}
+                  step="0.01"
+                />
+              </InputGroup>
+            </div>
+            <div className="mt-auto flex flex-col gap-3">
+              <Button type="button" className="w-full shrink-0" onClick={handleAddFunds}>
+                <Plus className="mr-2 size-4" />
+                Add Funds via PayPal
+              </Button>
+            </div>
           </CardContent>
+          <CardFooter className="flex flex-col items-stretch border-t border-border pt-4">
+            <p className="text-xs text-muted-foreground">
+              Funds will be added to your wallet after successful PayPal payment.
+            </p>
+          </CardFooter>
         </Card>
 
         {hostingEnabled && (
-        <Card className="border-primary/25">
+        <Card className="flex h-full flex-col border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg font-semibold tracking-tight">Fund Hosting Wallet</CardTitle>
             <CardDescription>Reserve credits for monthly Enhance hosting renewals</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-5">
-              <div className="space-y-3">
-                <p className="text-sm font-medium">Transfer from main wallet</p>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
-                  <div className="relative flex-1 min-w-0">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <DollarSign className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <input
-                      type="number"
-                      value={hostingTransferAmount}
-                      onChange={(e) => {
-                        setHostingTransferAmount(e.target.value);
-                      }}
-                      placeholder="0.00"
-                      min="1"
-                      step="0.01"
-                      className="block w-full rounded-md border bg-secondary py-2 pl-10 pr-3 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void handleTransferToHostingWallet();
-                    }}
-                    disabled={hostingTransferLoading}
-                    className="w-full sm:w-auto shrink-0 inline-flex items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
-                  >
-                    {hostingTransferLoading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <ArrowRightLeft className="mr-2 h-4 w-4" />
-                    )}
-                    Transfer
-                  </button>
-                </div>
+          <CardContent className="flex flex-1 flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="billing-hosting-transfer">Transfer from main wallet</Label>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <InputGroup className="min-w-0 flex-1">
+                  <InputGroupAddon align="inline-start">
+                    <DollarSign className="text-muted-foreground" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="billing-hosting-transfer"
+                    type="number"
+                    value={hostingTransferAmount}
+                    onChange={(e) => setHostingTransferAmount(e.target.value)}
+                    placeholder="0.00"
+                    min={1}
+                    step="0.01"
+                  />
+                </InputGroup>
+                <Button
+                  type="button"
+                  className="w-full shrink-0 sm:w-auto"
+                  onClick={() => {
+                    void handleTransferToHostingWallet();
+                  }}
+                  disabled={hostingTransferLoading}
+                >
+                  {hostingTransferLoading ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <ArrowRightLeft className="mr-2 size-4" />
+                  )}
+                  Transfer
+                </Button>
               </div>
+            </div>
 
-              <div className="space-y-3 border-t pt-4">
-                <p className="text-sm font-medium">Send back to main wallet</p>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
-                  <div className="relative flex-1 min-w-0">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <DollarSign className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <input
-                      type="number"
-                      value={hostingWithdrawAmount}
-                      onChange={(e) => {
-                        setHostingWithdrawAmount(e.target.value);
-                      }}
-                      placeholder="0.00"
-                      min="0.01"
-                      step="0.01"
-                      className="block w-full rounded-md border bg-secondary py-2 pl-10 pr-3 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void handleWithdrawFromHostingToMain();
-                    }}
-                    disabled={hostingWithdrawLoading}
-                    className="w-full sm:w-auto shrink-0 inline-flex items-center rounded-md border border-transparent bg-secondary px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted disabled:opacity-60"
-                  >
-                    {hostingWithdrawLoading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <ArrowDownLeft className="mr-2 h-4 w-4" />
-                    )}
-                    To main
-                  </button>
-                </div>
+            <Separator />
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="billing-hosting-withdraw">Send back to main wallet</Label>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <InputGroup className="min-w-0 flex-1">
+                  <InputGroupAddon align="inline-start">
+                    <DollarSign className="text-muted-foreground" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="billing-hosting-withdraw"
+                    type="number"
+                    value={hostingWithdrawAmount}
+                    onChange={(e) => setHostingWithdrawAmount(e.target.value)}
+                    placeholder="0.00"
+                    min={0.01}
+                    step="0.01"
+                  />
+                </InputGroup>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full shrink-0 sm:w-auto"
+                  onClick={() => {
+                    void handleWithdrawFromHostingToMain();
+                  }}
+                  disabled={hostingWithdrawLoading}
+                >
+                  {hostingWithdrawLoading ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <ArrowDownLeft className="mr-2 size-4" />
+                  )}
+                  To main
+                </Button>
               </div>
+            </div>
 
-              <div className="border-t pt-4">
-                <p className="mb-3 text-sm font-medium">Fund directly via PayPal</p>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
-                  <div className="relative flex-1 min-w-0">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <DollarSign className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <input
-                      type="number"
-                      value={hostingFundsAmount}
-                      onChange={(e) => {
-                        setHostingFundsAmount(e.target.value);
-                      }}
-                      placeholder="0.00"
-                      min="1"
-                      step="0.01"
-                      className="block w-full rounded-md border bg-secondary py-2 pl-10 pr-3 text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleHostingPayPalTopUp}
-                    className="w-full sm:w-auto shrink-0 inline-flex items-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    PayPal
-                  </button>
-                </div>
+            <Separator />
+
+            <div className="mt-auto flex flex-col gap-2">
+              <Label htmlFor="billing-hosting-paypal">Fund directly via PayPal</Label>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <InputGroup className="min-w-0 flex-1">
+                  <InputGroupAddon align="inline-start">
+                    <DollarSign className="text-muted-foreground" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="billing-hosting-paypal"
+                    type="number"
+                    value={hostingFundsAmount}
+                    onChange={(e) => setHostingFundsAmount(e.target.value)}
+                    placeholder="0.00"
+                    min={1}
+                    step="0.01"
+                  />
+                </InputGroup>
+                <Button
+                  type="button"
+                  className="w-full shrink-0 sm:w-auto"
+                  onClick={handleHostingPayPalTopUp}
+                >
+                  <Plus className="mr-2 size-4" />
+                  PayPal
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -1022,26 +1028,28 @@ const Billing: React.FC = () => {
         )}
 
         {/* Buy Egress Credits Card */}
-        <Card className="border-primary/25">
+        <Card className="flex h-full flex-col border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg font-semibold tracking-tight">Buy Egress Credits</CardTitle>
             <CardDescription>Purchase credits for VPS network transfer</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="rounded-lg bg-muted/60 p-4 border border-border">
-                <p className="text-sm text-muted-foreground">
-                  Pre-paid credits for handling excess network transfer beyond your VPS monthly quota. Credits are deducted hourly based on usage.
-                </p>
-              </div>
-              <button
+          <CardContent className="flex flex-1 flex-col gap-4">
+            <Alert>
+              <AlertTitle>How credits work</AlertTitle>
+              <AlertDescription>
+                Pre-paid credits for handling excess network transfer beyond your VPS monthly quota.
+                Credits are deducted hourly based on usage.
+              </AlertDescription>
+            </Alert>
+            <div className="mt-auto">
+              <Button
                 type="button"
+                className="w-full"
                 onClick={() => navigate('/egress-credits')}
-                className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               >
-                <Database className="h-4 w-4 mr-2" />
+                <Database className="mr-2 size-4" />
                 Browse Credit Packs
-              </button>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1416,7 +1424,7 @@ const Billing: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-foreground">Payment History</h3>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setShowFilter(!showFilter)}
                     className={`inline-flex items-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${hasActiveFilters

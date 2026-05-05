@@ -16,7 +16,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { TerminalPanel } from "@/components/terminal";
 import {
   CommandDialog,
   CommandEmpty,
@@ -213,7 +213,13 @@ const BreadcrumbNavigation: React.FC = () => {
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   return (
-    <div className="hidden md:block">
+    <div className="terminal-breadcrumb hidden md:flex md:items-center md:gap-1.5">
+      <span
+        className="font-mono text-xs text-muted-foreground select-none"
+        aria-hidden="true"
+      >
+        ~
+      </span>
       <Breadcrumb>
         <BreadcrumbList>
           {breadcrumbs.map((crumb, index) => (
@@ -292,10 +298,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
     getSidebarPreference(),
   );
-
-  useEffect(() => {
-    setIsSidebarOpen(getSidebarPreference());
-  }, [getSidebarPreference]);
 
   // This will be moved to a separate component that uses the breadcrumb context
 
@@ -1051,12 +1053,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       defaultOpen={isSidebarOpen}
       open={isSidebarOpen}
       onOpenChange={setIsSidebarOpen}
+      className="dashboard-app-shell"
     >
       <AppSidebar onOpenCommand={() => setCommandOpen(true)} />
-      <SidebarInset>
+      <SidebarInset
+        className="md:peer-data-[variant=inset]:m-0 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-none md:peer-data-[variant=inset]:shadow-none"
+      >
         {/* Two-Tier Navigation Header */}
-        <header className="sticky z-50 cyber-header transition-[width,height] ease-linear" style={{ top: 'var(--announcement-banner-height, 0px)' }}>
-          <div className="flex h-14 sm:h-16 shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-0">
+        <header className="sticky top-0 z-50 shrink-0 cyber-header">
+          <div className="flex h-12 sm:h-14 shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-0 font-mono">
             <div className="flex items-center gap-2">
               <SidebarTrigger
                 className={cn(isSidebarOpen ? "-ml-1" : "ml-2", "text-muted-foreground")}
@@ -1074,12 +1079,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <div className="hidden md:block max-w-md">
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-muted-foreground min-w-[200px]"
+                  className="w-full justify-start rounded-sm text-muted-foreground min-w-[200px] font-mono text-xs shadow-none"
                   onClick={() => setCommandOpen(true)}
                 >
-                  <Search className="mr-2 h-4 w-4" />
-                  Search...
-                  <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                  <span className="mr-1.5 text-primary select-none" aria-hidden="true">
+                    $
+                  </span>
+                  <Search className="mr-2 h-4 w-4 opacity-70" />
+                  exec search…
+                  <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-0.5 rounded-sm border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
                     <span className="text-xs">⌘</span>K
                   </kbd>
                 </Button>
@@ -1170,15 +1178,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </header>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-auto cyber-grid-bg">
-          <Card className="h-full border-primary/25">
-            <CardContent className="flex flex-1 flex-col gap-4 p-3 sm:p-4 md:p-6 pt-4 sm:pt-6 md:pt-6">
-              <main className="flex-1 min-h-0">{children}</main>
-            </CardContent>
-          </Card>
+        <div className="min-h-0 flex-1 overflow-auto terminal-main-scroll">
+          <TerminalPanel
+            title="WORKSPACE"
+            className="min-h-0 rounded-none shadow-none"
+            bodyClassName="flex-initial"
+          >
+            <div className="flex flex-col gap-4 p-3 sm:p-4 md:p-6 pt-3 sm:pt-4 md:pt-5">
+              <main className="min-h-0 flex-1">{children}</main>
+            </div>
+          </TerminalPanel>
         </div>
 
-        <footer className="shrink-0 border-t border-border/60 bg-background px-4 py-3 sm:px-6">
+        <footer className="shrink-0 border-t border-border bg-background px-4 py-2 sm:px-6 font-mono text-[10px] text-muted-foreground">
           <div className="flex items-center justify-center sm:justify-end">
             <FooterPartnerLinks className="justify-center" />
           </div>
@@ -1186,10 +1198,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
         {/* Command Dialog */}
         <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
-          <CommandInput placeholder="Type a command or search for a server..." />
+          <CommandInput placeholder="type command | filter…" />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup heading="Navigation">
+            <CommandEmpty className="font-mono text-xs">no matches — exit 1</CommandEmpty>
+            <CommandGroup heading="# navigation">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -1209,7 +1221,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             {(vpsInstances.length > 0 || vpsLoading) && (
               <>
                 <CommandSeparator />
-                <CommandGroup heading="VPS Instances">
+                <CommandGroup heading="# vps">
                   {vpsLoading ? (
                     <CommandItem disabled>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1252,7 +1264,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             {(invoiceItems.length > 0 || invoicesLoading) && (
               <>
                 <CommandSeparator />
-                <CommandGroup heading="Recent Invoices">
+                <CommandGroup heading="# invoices">
                   {invoicesLoading ? (
                     <CommandItem disabled>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1298,7 +1310,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               (supportTickets.length > 0 || supportTicketsLoading) && (
                 <>
                   <CommandSeparator />
-                  <CommandGroup heading="Support Tickets">
+                  <CommandGroup heading="# tickets">
                     {supportTicketsLoading ? (
                       <CommandItem disabled>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1353,7 +1365,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             {isAdmin && (adminCommandUsers.length > 0 || adminUsersLoading) && (
               <>
                 <CommandSeparator />
-                <CommandGroup heading="Admins">
+                <CommandGroup heading="# admins">
                   {adminUsersLoading ? (
                     <CommandItem disabled>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1397,7 +1409,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             {isAdmin && regularCommandUsers.length > 0 && !adminUsersLoading && (
               <>
                 <CommandSeparator />
-                <CommandGroup heading="Users">
+                <CommandGroup heading="# users">
                   {regularCommandUsers.map((regularUser) => (
                     <CommandItem
                       key={regularUser.id}
@@ -1431,7 +1443,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             )}
 
             <CommandSeparator />
-            <CommandGroup heading="Actions">
+            <CommandGroup heading="# actions">
               {actionItems.map((item) => {
                 const Icon = item.icon;
                 return (

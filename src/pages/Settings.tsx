@@ -36,14 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { TerminalPanel } from "@/components/terminal";
 import { Label } from "@/components/ui/label";
 import { TIMEZONE_OPTIONS } from "@/lib/timezones";
 import { BRAND_NAME } from "@/lib/brand";
@@ -375,18 +368,18 @@ const Settings: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+      <div className="mb-8 font-mono">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
           Settings
         </h1>
-        <p className="mt-2 text-muted-foreground">
+        <p className="mt-2 text-sm text-muted-foreground">
           Manage your account settings and preferences.
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
+      <div className="flex flex-col gap-8 lg:flex-row">
         {/* Navigation Sidebar */}
-        <nav className="lg:w-64 flex-shrink-0 space-y-1">
+        <nav className="flex-shrink-0 space-y-0.5 lg:w-64">
           {[
             { id: "profile", name: "Profile", icon: User },
             { id: "security", name: "Security", icon: Shield },
@@ -399,10 +392,10 @@ const Settings: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                className={`flex w-full items-center rounded-sm border border-transparent px-3 py-2.5 font-mono text-xs font-medium transition-colors duration-200 ${
                   isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:border-border hover:bg-muted/40 hover:text-foreground"
                 }`}
               >
                 <Icon
@@ -415,17 +408,16 @@ const Settings: React.FC = () => {
         </nav>
 
         {/* Content Area */}
-        <div className="flex-1 space-y-6">
+        <div className="flex-1 space-y-6 font-mono">
           {/* PROFILE TAB */}
           {activeTab === "profile" && (
-            <Card className="border-primary/25">
-              <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>
+            <TerminalPanel title="PERSONAL INFORMATION" bodyClassName="p-0">
+              <div className="space-y-2 border-b border-border p-4 md:p-6">
+                <p className="text-xs text-muted-foreground">
                   Update your personal details and contact information.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+                </p>
+              </div>
+              <div className="space-y-6 p-4 md:p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
@@ -500,12 +492,12 @@ const Settings: React.FC = () => {
                     </Select>
                   </div>
                 </div>
-              </CardContent>
-              <CardFooter className="flex justify-end border-t pt-6">
+              </div>
+              <div className="flex justify-end border-t border-border p-4 md:px-6">
                 <Button
                   onClick={handleSaveProfile}
                   disabled={loading}
-                  className="min-w-[120px]"
+                  className="min-w-[120px] rounded-sm shadow-none"
                 >
                   {loading ? (
                     <span className="animate-spin mr-2">⏳</span>
@@ -514,22 +506,20 @@ const Settings: React.FC = () => {
                   )}
                   Save Changes
                 </Button>
-              </CardFooter>
-            </Card>
+              </div>
+            </TerminalPanel>
           )}
 
           {/* SECURITY TAB */}
           {activeTab === "security" && (
             <div className="space-y-6">
-              <Card className="border-primary/25">
-                <CardHeader>
-                  <CardTitle>Password</CardTitle>
-                  <CardDescription>
-                    Ensure your account is using a long, random password to stay
-                    secure.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <TerminalPanel title="PASSWORD" bodyClassName="p-0">
+                <div className="border-b border-border p-4 md:p-6">
+                  <p className="text-xs text-muted-foreground">
+                    Ensure your account is using a long, random password to stay secure.
+                  </p>
+                </div>
+                <div className="space-y-4 p-4 md:p-6">
                   <div className="space-y-2">
                     <Label>Current Password</Label>
                     <Input
@@ -571,23 +561,25 @@ const Settings: React.FC = () => {
                       />
                     </div>
                   </div>
-                </CardContent>
-                <CardFooter className="border-t pt-6 flex justify-end">
-                  <Button onClick={handleChangePassword} disabled={loading}>
+                </div>
+                <div className="flex justify-end border-t border-border p-4 md:px-6">
+                  <Button
+                    className="rounded-sm shadow-none"
+                    onClick={handleChangePassword}
+                    disabled={loading}
+                  >
                     Change Password
                   </Button>
-                </CardFooter>
-              </Card>
+                </div>
+              </TerminalPanel>
 
-              <Card className="border-primary/25">
-                <CardHeader>
-                  <CardTitle>Two-Factor Authentication</CardTitle>
-                  <CardDescription>
-                    Add an extra layer of security to your account by requiring
-                    a code from your authenticator app.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center justify-between">
+              <TerminalPanel title="TWO-FACTOR AUTH" bodyClassName="p-0">
+                <div className="border-b border-border p-4 md:p-6">
+                  <p className="text-xs text-muted-foreground">
+                    Require a code from your authenticator app when signing in.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between p-4 md:p-6">
                   <div className="space-y-1">
                     <div className="text-sm font-medium">Authenticator App</div>
                     <div className="text-sm text-muted-foreground">
@@ -598,8 +590,8 @@ const Settings: React.FC = () => {
                     checked={user?.twoFactorEnabled}
                     onCheckedChange={handleToggle2FA}
                   />
-                </CardContent>
-              </Card>
+                </div>
+              </TerminalPanel>
 
               <Dialog open={disable2faModalOpen} onOpenChange={setDisable2faModalOpen}>
                 <DialogContent className="sm:max-w-md">
@@ -640,14 +632,13 @@ const Settings: React.FC = () => {
 
           {/* NOTIFICATIONS TAB */}
           {activeTab === "notifications" && (
-            <Card className="border-primary/25">
-              <CardHeader>
-                <CardTitle>Notifications</CardTitle>
-                <CardDescription>
+            <TerminalPanel title="NOTIFICATIONS" bodyClassName="p-0">
+              <div className="border-b border-border p-4 md:p-6">
+                <p className="text-xs text-muted-foreground">
                   Choose how you receive updates and alerts.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+                </p>
+              </div>
+              <div className="space-y-6 p-4 md:p-6">
                 <div className="flex items-start space-x-4">
                   <Mail className="h-5 w-5 mt-0.5 text-muted-foreground" />
                   <div className="flex-1 space-y-1">
@@ -719,22 +710,20 @@ const Settings: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </TerminalPanel>
           )}
 
           {/* API KEYS TAB */}
           {activeTab === "api" && (
             <div className="space-y-6">
-              <Card className="border-primary/25">
-                <CardHeader>
-                  <CardTitle>Create API Key</CardTitle>
-                  <CardDescription>
-                    Generate a new API key for accessing the {BRAND_NAME} API
-                    programmatically.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+              <TerminalPanel title="CREATE API KEY" bodyClassName="p-0">
+                <div className="border-b border-border p-4 md:p-6">
+                  <p className="text-xs text-muted-foreground">
+                    Generate a new API key for accessing the {BRAND_NAME} API programmatically.
+                  </p>
+                </div>
+                <div className="p-4 md:p-6">
                   <div className="flex gap-4">
                     <Input
                       placeholder="Key Name (e.g. My App)"
@@ -745,21 +734,21 @@ const Settings: React.FC = () => {
                     <Button
                       onClick={handleCreateApiKey}
                       disabled={loading || !newApiKeyName.trim()}
+                      className="rounded-sm shadow-none"
                     >
                       Create Key
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </TerminalPanel>
 
-              <Card className="border-primary/25">
-                <CardHeader>
-                  <CardTitle>Active API Keys</CardTitle>
-                  <CardDescription>
+              <TerminalPanel title="ACTIVE API KEYS" bodyClassName="p-0">
+                <div className="border-b border-border p-4 md:p-6">
+                  <p className="text-xs text-muted-foreground">
                     Manage your existing API keys.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+                  </p>
+                </div>
+                <div className="p-4 md:p-6">
                   {apiKeys.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Key className="h-12 w-12 mx-auto mb-3 opacity-20" />
@@ -770,12 +759,12 @@ const Settings: React.FC = () => {
                       {apiKeys.map((key) => (
                         <div
                           key={key.id}
-                          className="flex items-center justify-between p-4 border rounded-lg bg-card/50"
+                          className="flex items-center justify-between rounded-sm border border-border bg-card/50 p-4"
                         >
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{key.name}</span>
-                              <span className="text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full">
+                              <span className="rounded-sm bg-green-500/10 px-2 py-0.5 text-xs text-green-500">
                                 Active
                               </span>
                             </div>
@@ -825,8 +814,8 @@ const Settings: React.FC = () => {
                       ))}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </TerminalPanel>
             </div>
           )}
         </div>

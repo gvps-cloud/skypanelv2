@@ -14,7 +14,7 @@ import {
 } from "./contexts/ImpersonationContext";
 import { ImpersonationLoadingOverlay } from "./components/admin/ImpersonationLoadingOverlay";
 import { setupAutoLogout } from "@/lib/api";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect } from "react";
 import { AnnouncementBanner } from "./components/AnnouncementBanner";
 
 // Create a client for React Query
@@ -219,18 +219,10 @@ function AutoLogoutSetup() {
 }
 
 function AnnouncementBannerWrapper({ children }: { children: React.ReactNode }) {
-  const [bannerHeight, setBannerHeight] = useState(0);
-
-  const handleHeightChange = useCallback((height: number) => {
-    setBannerHeight(height);
-  }, []);
-
   return (
     <>
-      <AnnouncementBanner
-        onHeightChange={handleHeightChange}
-      />
-      <div style={{ paddingTop: bannerHeight > 0 ? `${bannerHeight}px` : "0" }}>
+      <AnnouncementBanner />
+      <div style={{ paddingTop: 'var(--announcement-banner-height, 0px)' }}>
         {children}
       </div>
     </>

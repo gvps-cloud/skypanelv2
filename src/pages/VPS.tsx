@@ -37,6 +37,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TerminalPanel } from "@/components/terminal";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -2259,7 +2260,7 @@ const VPS: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <>
       {/* Mobile loading overlay */}
       <MobileLoading
         isLoading={mobileLoading.isLoading}
@@ -2268,6 +2269,8 @@ const VPS: React.FC = () => {
         progress={mobileLoading.progress}
       />
 
+      <TerminalPanel title="INSTANCES" bodyClassName="p-4 md:p-6">
+    <div className="space-y-6 font-mono">
       {/* Page Header */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="space-y-3">
@@ -2682,6 +2685,8 @@ const VPS: React.FC = () => {
         requiresTwoFactor={Boolean(user?.twoFactorEnabled)}
       />
     </div>
+      </TerminalPanel>
+    </>
   );
 };
 

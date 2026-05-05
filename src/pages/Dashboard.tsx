@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +29,8 @@ import { MonthlyResetIndicator } from "@/components/Dashboard/MonthlyResetIndica
 import { formatBillingAmount } from "@/lib/formatters";
 import { apiClient } from "@/lib/api";
 import { useHostingStatus } from "@/hooks/useHosting";
+import { TerminalPanel } from "@/components/terminal";
+import { cn } from "@/lib/utils";
 
 interface MetricSummary {
   average: number;
@@ -398,7 +400,31 @@ const Dashboard: React.FC = () => {
   
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 font-mono">
+        {/* Status overview badges skeleton */}
+        <div className="flex flex-wrap items-center gap-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-6 w-28 rounded-sm" />
+          ))}
+          <Skeleton className="h-6 w-36 rounded-sm ml-auto" />
+        </div>
+
+        {/* Quick actions skeleton */}
+        <TerminalPanel title="QUICK ACTIONS" bodyClassName="p-4">
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-sm border border-border bg-card p-3">
+                <Skeleton className="h-4 w-5 shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </TerminalPanel>
+
+        {/* Billing summary skeleton */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
@@ -415,35 +441,71 @@ const Dashboard: React.FC = () => {
             </Card>
           ))}
         </div>
+
+        {/* VPS / content skeleton */}
+        <TerminalPanel title="VPS FLEET" bodyClassName="p-4">
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between rounded-sm border border-border bg-card p-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-2 w-16" />
+                  <Skeleton className="h-6 w-16 rounded-sm" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </TerminalPanel>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-mono">
       {/* Main Content Area */}
       <div className="space-y-6">
-        {/* Status Overview */}
+        {/* Status Overview — log line */}
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="gap-2 px-3 py-1.5">
-              <div className="h-2 w-2 rounded-full bg-primary" />
+            <span
+              className="hidden select-none text-xs text-primary sm:inline"
+              aria-hidden="true"
+            >
+              &gt;
+            </span>
+            <Badge
+              variant="outline"
+              className="gap-2 rounded-sm border-border px-2.5 py-1 text-xs shadow-none"
+            >
+              <div className="h-1.5 w-1.5 shrink-0 bg-primary" aria-hidden="true" />
               {heroStats.running} vps active
             </Badge>
             {hostingEnabled && (
-              <Badge variant="outline" className="gap-2 px-3 py-1.5">
+              <Badge
+                variant="outline"
+                className="gap-2 rounded-sm border-border px-2.5 py-1 text-xs shadow-none"
+              >
                 <Globe className="h-3 w-3" />
                 {activeHostingServices} hosting active
               </Badge>
             )}
             {heroStats.flagged > 0 && (
-              <Badge variant="secondary" className="gap-2 px-3 py-1.5">
+              <Badge
+                variant="secondary"
+                className="gap-2 rounded-sm px-2.5 py-1 text-xs shadow-none"
+              >
                 <AlertTriangle className="h-3 w-3" />
                 {heroStats.flagged} attention
               </Badge>
             )}
             {heroStats.averageCpu !== null && (
-              <Badge variant="outline" className="gap-2 px-3 py-1.5">
+              <Badge
+                variant="outline"
+                className="gap-2 rounded-sm border-border px-2.5 py-1 text-xs shadow-none"
+              >
                 <TrendingUp className="h-3 w-3" />
                 Avg CPU {heroStats.averageCpu.toFixed(1)}%
               </Badge>
@@ -457,15 +519,15 @@ const Dashboard: React.FC = () => {
           />
         </div>
 
-        {/* Quick Actions */}
-        <Card className="border-primary/25">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent
-            className={`grid gap-4 md:grid-cols-2 ${quickActions.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}
+        {/* Quick Actions — command list */}
+        <TerminalPanel title="QUICK ACTIONS" bodyClassName="p-4">
+          <div
+            className={cn(
+              "grid gap-2 md:grid-cols-2",
+              quickActions.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4",
+            )}
           >
-            {quickActions.map((action) => (
+            {quickActions.map((action, idx) => (
               <Link
                 key={action.title}
                 to={action.to}
@@ -474,24 +536,28 @@ const Dashboard: React.FC = () => {
                     ? () => setActiveDashboardTab("hosting")
                     : undefined
                 }
-                className="group flex items-center gap-3 rounded-lg border bg-card p-3 transition-all hover:border-primary/50 hover:bg-accent"
+                className="group flex items-center gap-3 rounded-sm border border-border bg-card p-3 text-left ring-2 ring-inset ring-transparent transition-[background-color,box-shadow] hover:bg-muted/40 hover:ring-primary/40"
               >
-                <div className="rounded-md bg-primary/10 p-2 text-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                <span
+                  className="w-5 shrink-0 text-[10px] text-muted-foreground tabular-nums"
+                  aria-hidden="true"
+                >
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+                <div className="rounded-sm border border-border/60 bg-primary/10 p-2 text-primary transition-[background-color,color] group-hover:bg-primary group-hover:text-primary-foreground">
                   {action.icon}
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium group-hover:text-primary">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium group-hover:text-primary">
                     {action.title}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {action.description}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{action.description}</p>
                 </div>
-                <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
               </Link>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </TerminalPanel>
 
         {hostingEnabled ? (
           <Tabs
@@ -500,17 +566,17 @@ const Dashboard: React.FC = () => {
             className="space-y-6"
           >
             <div className="flex items-center justify-between gap-4">
-              <TabsList className="h-11 rounded-2xl border border-border/60 bg-background/80 p-1.5">
+              <TabsList className="inline-flex h-10 gap-0 rounded-sm border border-border bg-muted/30 p-0 shadow-none">
                 <TabsTrigger
                   value="vps"
-                  className="rounded-xl px-5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  className="rounded-none border-r border-border px-5 py-2 text-xs font-semibold uppercase tracking-wide last:border-r-0 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent"
                 >
                   <Server className="mr-2 h-4 w-4" />
                   VPS
                 </TabsTrigger>
                 <TabsTrigger
                   value="hosting"
-                  className="rounded-xl px-5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  className="rounded-none px-5 py-2 text-xs font-semibold uppercase tracking-wide data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent"
                 >
                   <Globe className="mr-2 h-4 w-4" />
                   Hosting
@@ -519,33 +585,30 @@ const Dashboard: React.FC = () => {
             </div>
 
             <TabsContent value="vps" className="mt-0">
-              <Card className="h-full border-primary/25">
-                <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
-                  <div className="space-y-1">
-                    <CardTitle>VPS Fleet</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Live signal across your deployments
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
+              <TerminalPanel title="VPS FLEET" bodyClassName="p-4 md:p-6">
+                <div className="mb-6 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Live signal across your deployments —{" "}
+                    <span className="text-foreground/80">tty metrics</span>
+                  </p>
+                  <Button variant="outline" size="sm" className="rounded-sm shadow-none" asChild>
                     <Link to="/vps">
                       Manage all
                       <ArrowUpRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
-                </CardHeader>
-                <CardContent>
+                </div>
                   <div className="space-y-6">
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-0">
                       <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-border bg-primary/10 text-primary">
                           <Wallet className="h-4 w-4" />
                         </div>
                         <div className="space-y-0.5">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             Wallet Balance
                           </p>
-                          <p className="text-lg font-semibold leading-tight">
+                          <p className="text-lg font-semibold tabular-nums leading-tight">
                             {formatBillingAmount(walletBalance)}
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -557,14 +620,14 @@ const Dashboard: React.FC = () => {
                       <div className="hidden h-12 border-l border-border md:block" aria-hidden="true" />
 
                       <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/30 text-primary">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-border bg-accent/30 text-primary">
                           <TrendingUp className="h-4 w-4" />
                         </div>
                         <div className="space-y-0.5">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             Monthly Spend
                           </p>
-                          <p className="text-lg font-semibold leading-tight">
+                          <p className="text-lg font-semibold tabular-nums leading-tight">
                             {formatBillingAmount(monthlySpend)}
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -576,14 +639,14 @@ const Dashboard: React.FC = () => {
                       <div className="hidden h-12 border-l border-border md:block" aria-hidden="true" />
 
                       <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/30 text-primary">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-border bg-accent/30 text-primary">
                           <ActivityIcon className="h-4 w-4" />
                         </div>
                         <div className="space-y-0.5">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             Last Payment
                           </p>
-                          <p className="text-lg font-semibold leading-tight">
+                          <p className="text-lg font-semibold tabular-nums leading-tight">
                             {lastPayment?.amount
                               ? formatBillingAmount(lastPayment.amount)
                               : "—"}
@@ -599,15 +662,15 @@ const Dashboard: React.FC = () => {
 
                     <div className="space-y-3">
                     {vpsInstances.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-16 text-center min-h-[250px]">
-                        <div className="rounded-full bg-muted p-4">
+                      <div className="flex min-h-[250px] flex-col items-center justify-center rounded-sm border border-dashed border-border p-16 text-center">
+                        <div className="rounded-sm border border-border bg-muted p-4">
                           <Server className="h-8 w-8 text-muted-foreground" />
                         </div>
                         <h3 className="mt-6 text-base font-semibold">
-                          No instances yet
+                          No instances yet — exit 0
                         </h3>
-                        <p className="mt-2 text-sm text-muted-foreground max-w-md">
-                          Deploy your first VPS to see live metrics
+                        <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                          Deploy your first VPS to attach live metrics to this pane.
                         </p>
                         <div className="mt-6 flex flex-wrap gap-3">
                           <Button size="lg" onClick={() => navigate('/vps')}>
@@ -627,7 +690,7 @@ const Dashboard: React.FC = () => {
                             key={vps.id}
                             type="button"
                             onClick={() => handleVpsClick(vps.id)}
-                            className="group w-full rounded-lg border bg-card p-4 text-left transition-all hover:border-primary/50 hover:shadow-md"
+                            className="group w-full rounded-sm border border-border bg-card p-4 text-left ring-2 ring-inset ring-transparent transition-[background-color,box-shadow] hover:bg-muted/30 hover:ring-primary/40"
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1 space-y-2">
@@ -683,68 +746,63 @@ const Dashboard: React.FC = () => {
                     )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+              </TerminalPanel>
             </TabsContent>
 
             <TabsContent value="hosting" className="mt-0">
-              <Card className="h-full border-primary/25">
-                <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
-                  <div className="space-y-1">
-                    <CardTitle>Web Hosting</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Website subscriptions, hosting wallet, and billing readiness
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" asChild>
+              <TerminalPanel title="WEB HOSTING" bodyClassName="p-4 md:p-6">
+                <div className="mb-6 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
+                  <p className="max-w-xl text-xs text-muted-foreground">
+                    Website subscriptions, hosting wallet, and billing readiness.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" className="rounded-sm shadow-none" asChild>
                       <Link to="/billing">Fund wallet</Link>
                     </Button>
-                    <Button size="sm" asChild>
+                    <Button size="sm" className="rounded-sm shadow-none" asChild>
                       <Link to="/hosting/store">
                         Create Hosting
                         <ArrowUpRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
                   </div>
-                </CardHeader>
-                <CardContent>
+                </div>
                   <div className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-3">
-                      <div className="rounded-lg border bg-card p-4">
-                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <div className="rounded-sm border border-border bg-card p-4">
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-sm border border-border/60 bg-primary/10 text-primary">
                           <Globe className="h-4 w-4" />
                         </div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                           Active Hosting
                         </p>
-                        <p className="mt-1 text-2xl font-semibold">{activeHostingServices}</p>
+                        <p className="mt-1 text-2xl font-semibold tabular-nums">{activeHostingServices}</p>
                         <p className="text-xs text-muted-foreground">
                           {hostingServices.length} total subscription{hostingServices.length === 1 ? "" : "s"}
                         </p>
                       </div>
-                      <div className="rounded-lg border bg-card p-4">
-                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <div className="rounded-sm border border-border bg-card p-4">
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-sm border border-border/60 bg-primary/10 text-primary">
                           <Wallet className="h-4 w-4" />
                         </div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                           Hosting Wallet
                         </p>
-                        <p className="mt-1 text-2xl font-semibold">
+                        <p className="mt-1 text-2xl font-semibold tabular-nums">
                           {formatBillingAmount(hostingWalletBalance)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Reserved for monthly hosting charges
                         </p>
                       </div>
-                      <div className="rounded-lg border bg-card p-4">
-                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <div className="rounded-sm border border-border bg-card p-4">
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-sm border border-border/60 bg-primary/10 text-primary">
                           <ShieldCheck className="h-4 w-4" />
                         </div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                           Enhance Status
                         </p>
-                        <p className="mt-1 text-2xl font-semibold">Enabled</p>
+                        <p className="mt-1 text-2xl font-semibold tabular-nums">Enabled</p>
                         <p className="text-xs text-muted-foreground">
                           Hosting routes and checkout are available
                         </p>
@@ -752,8 +810,8 @@ const Dashboard: React.FC = () => {
                     </div>
 
                     {hostingServices.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
-                        <div className="rounded-full bg-muted p-4">
+                      <div className="flex flex-col items-center justify-center rounded-sm border border-dashed border-border p-12 text-center">
+                        <div className="rounded-sm border border-border bg-muted p-4">
                           <Globe className="h-8 w-8 text-muted-foreground" />
                         </div>
                         <h3 className="mt-6 text-base font-semibold">
@@ -762,7 +820,7 @@ const Dashboard: React.FC = () => {
                         <p className="mt-2 max-w-md text-sm text-muted-foreground">
                           Create your first Enhance hosting subscription to manage websites from the dashboard.
                         </p>
-                        <Button className="mt-6" asChild>
+                        <Button className="mt-6 rounded-sm shadow-none" asChild>
                           <Link to="/hosting/store">
                             <Plus className="mr-2 h-4 w-4" />
                             Create Hosting
@@ -775,7 +833,7 @@ const Dashboard: React.FC = () => {
                           <Link
                             key={service.id}
                             to={`/hosting/${service.id}`}
-                            className="group flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md"
+                            className="group flex items-center justify-between gap-4 rounded-sm border border-border bg-card p-4 ring-2 ring-inset ring-transparent transition-[background-color,box-shadow] hover:bg-muted/30 hover:ring-primary/40"
                           >
                             <div>
                               <div className="flex items-center gap-2">
@@ -796,38 +854,33 @@ const Dashboard: React.FC = () => {
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+              </TerminalPanel>
             </TabsContent>
           </Tabs>
         ) : (
-          <Card className="h-full border-primary/25">
-            <CardHeader className="flex flex-col gap-1 pb-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
-              <div className="space-y-1">
-                <CardTitle>VPS Fleet</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Live signal across your deployments
-                </p>
-              </div>
-              <Button variant="outline" size="sm" asChild>
+          <TerminalPanel title="VPS FLEET" bodyClassName="p-4 md:p-6">
+            <div className="mb-6 flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                Live signal across your deployments.
+              </p>
+              <Button variant="outline" size="sm" className="rounded-sm shadow-none" asChild>
                 <Link to="/vps">
                   Manage all
                   <ArrowUpRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-            </CardHeader>
-            <CardContent>
+            </div>
               <div className="space-y-6">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-0">
                   <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-border bg-primary/10 text-primary">
                       <Wallet className="h-4 w-4" />
                     </div>
                     <div className="space-y-0.5">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         Wallet Balance
                       </p>
-                      <p className="text-lg font-semibold leading-tight">
+                      <p className="text-lg font-semibold tabular-nums leading-tight">
                         {formatBillingAmount(walletBalance)}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -839,14 +892,14 @@ const Dashboard: React.FC = () => {
                   <div className="hidden h-12 border-l border-border md:block" aria-hidden="true" />
 
                   <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/30 text-primary">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-border bg-accent/30 text-primary">
                       <TrendingUp className="h-4 w-4" />
                     </div>
                     <div className="space-y-0.5">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         Monthly Spend
                       </p>
-                      <p className="text-lg font-semibold leading-tight">
+                      <p className="text-lg font-semibold tabular-nums leading-tight">
                         {formatBillingAmount(monthlySpend)}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -858,14 +911,14 @@ const Dashboard: React.FC = () => {
                   <div className="hidden h-12 border-l border-border md:block" aria-hidden="true" />
 
                   <div className="flex flex-1 items-center gap-3 px-1 py-1 md:px-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/30 text-primary">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-border bg-accent/30 text-primary">
                       <ActivityIcon className="h-4 w-4" />
                     </div>
                     <div className="space-y-0.5">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         Last Payment
                       </p>
-                      <p className="text-lg font-semibold leading-tight">
+                      <p className="text-lg font-semibold tabular-nums leading-tight">
                         {lastPayment?.amount
                           ? formatBillingAmount(lastPayment.amount)
                           : "—"}
@@ -881,18 +934,18 @@ const Dashboard: React.FC = () => {
 
                 <div className="space-y-3">
                 {vpsInstances.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-16 text-center min-h-[250px]">
-                    <div className="rounded-full bg-muted p-4">
+                  <div className="flex min-h-[250px] flex-col items-center justify-center rounded-sm border border-dashed border-border p-16 text-center">
+                    <div className="rounded-sm border border-border bg-muted p-4">
                       <Server className="h-8 w-8 text-muted-foreground" />
                     </div>
                     <h3 className="mt-6 text-base font-semibold">
-                      No instances yet
+                      No instances yet — exit 0
                     </h3>
-                    <p className="mt-2 text-sm text-muted-foreground max-w-md">
-                      Deploy your first VPS to see live metrics
+                    <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                      Deploy your first VPS to attach live metrics to this pane.
                     </p>
                     <div className="mt-6 flex flex-wrap gap-3">
-                      <Button size="lg" onClick={() => navigate('/vps')}>
+                      <Button size="lg" className="rounded-sm shadow-none" onClick={() => navigate('/vps')}>
                         <Plus className="mr-2 h-4 w-4" />
                         Deploy VPS
                       </Button>
@@ -909,7 +962,7 @@ const Dashboard: React.FC = () => {
                         key={vps.id}
                         type="button"
                         onClick={() => handleVpsClick(vps.id)}
-                        className="group w-full rounded-lg border bg-card p-4 text-left transition-all hover:border-primary/50 hover:shadow-md"
+                        className="group w-full rounded-sm border border-border bg-card p-4 text-left ring-2 ring-inset ring-transparent transition-[background-color,box-shadow] hover:bg-muted/30 hover:ring-primary/40"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 space-y-2">
@@ -965,31 +1018,24 @@ const Dashboard: React.FC = () => {
                 )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </TerminalPanel>
         )}
       </div>
 
       {/* Recent Activity */}
-      <Card className="border-primary/25">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle>Recent Activity</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Track your platform events
-            </p>
-          </div>
-          <Button variant="outline" size="sm" asChild>
+      <TerminalPanel title="RECENT ACTIVITY" bodyClassName="p-4 md:p-6">
+        <div className="mb-4 flex flex-row items-center justify-between gap-3 border-b border-border pb-4">
+          <p className="text-xs text-muted-foreground">Track your platform events</p>
+          <Button variant="outline" size="sm" className="rounded-sm shadow-none" asChild>
             <Link to="/activity">
               View all
               <ArrowUpRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
-        </CardHeader>
-        <CardContent>
+        </div>
           {recentActivity.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
-              <div className="rounded-full bg-muted p-4">
+            <div className="flex flex-col items-center justify-center rounded-sm border border-dashed border-border p-12 text-center">
+              <div className="rounded-sm border border-border bg-muted p-4">
                 <ActivityIcon className="h-8 w-8 text-muted-foreground" />
               </div>
               <p className="mt-4 text-sm text-muted-foreground">
@@ -1005,7 +1051,7 @@ const Dashboard: React.FC = () => {
                     <span className="absolute left-2 top-6 h-full w-px bg-border" />
                   )}
                   <div
-                    className={`absolute left-0 top-2 flex h-4 w-4 items-center justify-center rounded-full border-2 ${
+                    className={`absolute left-0 top-2 flex h-4 w-4 items-center justify-center rounded-sm border-2 ${
                       activity.status === "success"
                         ? "border-primary bg-primary/10"
                         : activity.status === "warning"
@@ -1035,8 +1081,7 @@ const Dashboard: React.FC = () => {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </TerminalPanel>
     </div>
   );
 };

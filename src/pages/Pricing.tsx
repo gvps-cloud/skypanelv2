@@ -154,7 +154,7 @@ const EnhanceHostingInfo = () => (
           after checkout.
         </p>
       </div>
-      <div className="rounded-2xl border border-border/60 bg-background/50 p-5">
+      <div className="rounded-sm border border-border/60 bg-card p-5">
         <p className="text-sm font-medium text-foreground">How hosting works</p>
         <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
           <li className="flex gap-2">
@@ -507,7 +507,7 @@ const PricingPage: React.FC = () => {
               onValueChange={(value) => setActiveProduct(value as 'vps' | 'hosting')}
               className="space-y-16"
             >
-              <div className="mx-auto max-w-3xl rounded-3xl border border-primary/25 bg-card/70 p-3 shadow-2xl shadow-primary/10 backdrop-blur-xl">
+              <div className="mx-auto max-w-3xl rounded-sm border border-primary/25 bg-card p-3 shadow-none">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="px-2 text-center sm:text-left">
                     <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
@@ -520,17 +520,17 @@ const PricingPage: React.FC = () => {
                       }
                     </p>
                   </div>
-                  <TabsList className="h-12 rounded-2xl border border-border/60 bg-background/80 p-1.5">
+                  <TabsList className="h-12 rounded-sm border border-border/60 bg-muted/50 p-1.5">
                     <TabsTrigger
                       value="vps"
-                      className="rounded-xl px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                      className="rounded-sm px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                     >
                       VPS
                     </TabsTrigger>
                     {hostingEnabled && (
                       <TabsTrigger
                         value="hosting"
-                        className="rounded-xl px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                        className="rounded-sm px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                       >
                         Hosting
                       </TabsTrigger>
@@ -570,7 +570,7 @@ const PricingPage: React.FC = () => {
                       onClick={() => setActiveCategory(cat)}
                       className={`px-5 py-2.5 rounded-full text-sm font-medium transition-colors ${
                         activeCategory === cat
-                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          ? 'bg-primary text-primary-foreground shadow-none'
                           : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
                       }`}
                     >
@@ -754,7 +754,7 @@ const PricingPage: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="relative mt-20 overflow-hidden rounded-3xl"
+              className="relative mt-20 overflow-hidden rounded-sm"
             >
               <div className="home-orb home-orb--1 pointer-events-none" aria-hidden="true" />
               <div className="home-orb home-orb--2 pointer-events-none" aria-hidden="true" />

@@ -205,7 +205,7 @@ function Sidebar({
           className="flex items-center gap-2.5 group"
           onClick={() => onNavigate("/docs")}
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20 shrink-0">
+          <div className="flex h-9 w-9 items-center justify-center rounded-sm border border-primary/20 bg-muted shrink-0">
             <BookOpen className="h-4 w-4 text-primary" />
           </div>
           <span className="font-semibold text-sm tracking-tight font-mono tracking-wider">Docs</span>
@@ -550,7 +550,7 @@ export default function Documentation() {
               className="group home-feature-card"
             >
               <div className="flex items-start gap-3.5 p-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20 group-hover:from-primary/25 group-hover:to-primary/10 transition-all">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-sm border border-primary/20 bg-muted transition-colors group-hover:border-primary/35">
                   <Icon className="h-5 w-5 text-primary" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -586,7 +586,7 @@ export default function Documentation() {
       />
 
       {!cat.articles || cat.articles.length === 0 ? (
-        <div className="rounded-xl border bg-muted/30 py-12 text-center">
+        <div className="rounded-sm border bg-muted/30 py-12 text-center">
           <FileText className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
           <p className="text-muted-foreground text-sm">
             No articles in this category yet.
@@ -899,7 +899,7 @@ export default function Documentation() {
 
         {/* ── Plan Tiers grouped by type_class ──────────────────────── */}
         <div className="space-y-4">
-          <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 p-4 mb-4">
+          <div className="rounded-sm border border-primary/20 bg-primary/5 p-4 mb-4">
             <div className="flex items-center gap-2 mb-1">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
                 <Cpu className="h-4 w-4 text-primary" />
@@ -945,7 +945,7 @@ export default function Documentation() {
 
         {/* ── Regions with inline speed test ────────────────────────── */}
         <div className="space-y-4">
-          <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 p-4 mb-4">
+          <div className="rounded-sm border border-primary/20 bg-primary/5 p-4 mb-4">
             <div className="flex items-center gap-2 mb-1">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
                 <Globe className="h-4 w-4 text-primary" />
@@ -1244,7 +1244,7 @@ export default function Documentation() {
           {/* Content column */}
           <div className="flex-1 min-w-0">
             {/* Mobile top bar */}
-            <div className="lg:hidden sticky top-[calc(var(--announcement-banner-height,0px)+5rem)] z-20 flex items-center gap-2 border-b bg-background/95 backdrop-blur px-4 h-12">
+            <div className="lg:hidden sticky top-[calc(var(--announcement-banner-height,0px)+5rem)] z-20 flex items-center gap-2 border-b bg-background px-4 h-12">
               <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8">

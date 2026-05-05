@@ -262,7 +262,7 @@ export default function AboutUs() {
               >
                 <Card className="h-full home-gradient-border-top border-border/50 bg-card/60 home-feature-card border-primary/25">
                   <CardContent className="space-y-4 p-6 sm:p-8">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/20">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-sm border border-primary/20 bg-muted">
                       <Target className="h-5 w-5 text-primary" />
                     </div>
                     <h2 className="text-2xl font-semibold tracking-tight">
@@ -303,7 +303,7 @@ export default function AboutUs() {
                         {visibleStatRows.map((row) => (
                           <div
                             key={row.label}
-                            className="flex items-center justify-between rounded-lg border border-border/40 bg-gradient-to-b from-background/80 to-muted/20 px-4 py-2.5"
+                            className="flex items-center justify-between rounded-sm border border-border/40 bg-card px-4 py-2.5"
                           >
                             <span className="text-sm text-muted-foreground">
                               {row.label}
@@ -358,7 +358,7 @@ export default function AboutUs() {
                 <motion.div key={item.title} variants={revealItem}>
                   <Card className="h-full home-feature-card group border-primary/25">
                     <CardContent className="space-y-4 p-6">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-sm border border-primary/20 bg-muted">
                         <item.icon className="h-7 w-7 text-primary" />
                       </div>
                       <h3 className="text-xl font-semibold">{item.title}</h3>

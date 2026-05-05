@@ -427,7 +427,7 @@ export default function ApiDocs() {
             className="mb-10"
           >
             <motion.div variants={revealItem}>
-              <Card className="home-gradient-border-top home-animated-border shadow-md bg-card/60 backdrop-blur-sm border-primary/25">
+              <Card className="home-gradient-border-top home-animated-border shadow-none bg-card border-primary/25">
                 <CardHeader className="pb-3 border-b border-border/40">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Terminal className="h-4 w-4 text-primary" />

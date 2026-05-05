@@ -3,8 +3,6 @@
 import * as React from "react"
 import { type DialogProps } from "@radix-ui/react-dialog"
 import { Command as CommandPrimitive } from "cmdk"
-import { Search } from "lucide-react"
-
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
@@ -26,14 +24,14 @@ Command.displayName = CommandPrimitive.displayName
 const CommandDialog = ({ children, ...props }: DialogProps) => {
   return (
     <Dialog {...props}>
-      <DialogContent className="overflow-hidden p-0 shadow-lg w-[calc(100vw-2rem)] max-w-[480px] sm:max-w-[640px] h-[85vh] sm:h-auto rounded-3xl sm:rounded-2xl">
+      <DialogContent className="terminal-command-dialog overflow-hidden p-0 w-[calc(100vw-2rem)] max-w-[480px] sm:max-w-[640px] h-[85vh] sm:h-auto rounded-sm border-2 border-border bg-popover shadow-none sm:h-auto">
         <DialogHeader>
-          <DialogTitle className="sr-only">Command Menu</DialogTitle>
+          <DialogTitle className="sr-only">Command shell</DialogTitle>
           <DialogDescription className="sr-only">
-            Search and navigate using the command menu
+            Search and navigate using the command shell
           </DialogDescription>
         </DialogHeader>
-        <Command className="h-full [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
+        <Command className="h-full font-mono text-sm [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-mono [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-primary [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]]:border-border [&_[cmdk-input-wrapper]_svg]:hidden [&_[cmdk-input]]:h-11 [&_[cmdk-input]]:pl-3 [&_[cmdk-input]]:font-mono [&_[cmdk-input]]:text-sm [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2 [&_[cmdk-item]]:rounded-sm [&_[cmdk-item]_svg]:h-4 [&_[cmdk-item]_svg]:w-4">
           {children}
         </Command>
       </DialogContent>
@@ -45,12 +43,20 @@ const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
-    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+  <div
+    className="flex items-center border-b border-border bg-muted/20 px-0"
+    cmdk-input-wrapper=""
+  >
+    <span
+      className="shrink-0 pl-3 pr-1 font-mono text-sm text-primary select-none"
+      aria-hidden="true"
+    >
+      $
+    </span>
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
-        "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-11 w-full rounded-none bg-transparent py-3 pr-3 text-sm outline-none placeholder:text-muted-foreground/80 disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}

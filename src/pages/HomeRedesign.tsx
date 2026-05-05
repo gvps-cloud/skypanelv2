@@ -43,6 +43,7 @@ import {
 import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
 import SkyPanelPreview from "@/components/home/SkyPanelPreview";
+import { TerminalPanel } from "@/components/terminal/TerminalPanel";
 import { getHostingFeatureSpecRows } from "@/lib/hostingPlanFeatures";
 import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
 
@@ -684,13 +685,13 @@ export default function HomeRedesign() {
                 </p>
 
                 <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                  <Button size="lg" className="h-12 px-7 rounded-lg" asChild>
+                  <Button size="lg" className="h-12 px-7 rounded-sm" asChild>
                     <Link to="/register" className="flex items-center">
                       Deploy Your First Server
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
-                  <Button size="lg" variant="outline" className="h-12 px-7 rounded-lg" asChild>
+                  <Button size="lg" variant="outline" className="h-12 px-7 rounded-sm" asChild>
                     <Link to="/pricing">View Pricing</Link>
                   </Button>
                 </div>
@@ -716,7 +717,7 @@ export default function HomeRedesign() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
-                className="relative h-[320px] sm:h-[380px] lg:h-[420px] rounded-xl border border-border/40 overflow-hidden bg-card/50 backdrop-blur-sm hidden lg:block"
+                className="relative h-[320px] sm:h-[380px] lg:h-[420px] rounded-sm border border-border/40 overflow-hidden bg-card hidden lg:block"
               >
                 <DataStreamCanvas className="absolute inset-0" reducedMotion={heroReducedMotion} />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent pointer-events-none" />
@@ -730,9 +731,9 @@ export default function HomeRedesign() {
               transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
               className="mt-16 md:mt-20"
             >
-              <div className="rounded-xl border border-border/50 overflow-hidden bg-card shadow-lg shadow-foreground/[0.03]">
+              <TerminalPanel title="Control plane preview" bodyClassName="overflow-hidden">
                 <SkyPanelPreview />
-              </div>
+              </TerminalPanel>
             </motion.div>
           </div>
         </section>
@@ -745,7 +746,7 @@ export default function HomeRedesign() {
               transition={{ duration: 0.5 }}
               className="mb-12"
             >
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight font-mono">
                 Platform capabilities
               </h2>
               <p className="mt-2 text-muted-foreground max-w-xl">
@@ -759,7 +760,7 @@ export default function HomeRedesign() {
             >
               {visibleCapabilityCards.map((card) => (
                 <motion.div key={card.label} {...staggerItem}>
-                  <div className="h-full border border-border/50 bg-card/50 rounded-xl p-6 hover:border-primary/30 transition-colors">
+                  <div className="h-full border border-border/50 bg-card/50 rounded-sm p-6 hover:border-primary/30 transition-colors">
                     <card.icon className="w-6 h-6 text-primary mb-4" />
                     <h3 className="text-base font-semibold mb-2">{card.label}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed mb-5">
@@ -795,7 +796,7 @@ export default function HomeRedesign() {
               transition={{ duration: 0.5 }}
               className="mb-12"
             >
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight font-mono">
                 Everything you need
               </h2>
               <p className="mt-2 text-muted-foreground max-w-xl">
@@ -809,13 +810,13 @@ export default function HomeRedesign() {
             >
               {visiblePlatformCards.map((card) => (
                 <motion.div key={card.title} {...staggerItem}>
-                  <div className="h-full border border-border/50 bg-card/50 rounded-xl p-6 hover:border-primary/20 transition-colors">
+                  <div className="h-full border border-border/50 bg-card/50 rounded-sm p-6 hover:border-primary/20 transition-colors">
                     <card.icon className="w-5 h-5 text-muted-foreground mb-6" />
                     <h3 className="text-base font-semibold mb-2">{card.title}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed mb-6 min-h-[48px]">
                       {card.description}
                     </p>
-                    <div className="inline-flex font-mono text-[10px] uppercase tracking-widest text-muted-foreground border border-border/50 px-2.5 py-1 rounded">
+                    <div className="inline-flex font-mono text-[10px] uppercase tracking-widest text-muted-foreground border border-border/50 px-2.5 py-1 rounded-sm">
                       {card.metric}
                     </div>
                   </div>
@@ -847,8 +848,8 @@ export default function HomeRedesign() {
             >
               {visibleSolutionCards.map((item, idx) => (
                 <motion.div key={idx} {...staggerItem}>
-                  <div className="h-full border border-border/50 bg-card/50 rounded-xl p-6">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted mb-5">
+                  <div className="h-full border border-border/50 bg-card/50 rounded-sm p-6">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-muted mb-5">
                       <item.icon className="h-5 w-5 text-foreground" />
                     </div>
                     <h3 className="text-base font-semibold mb-2">{item.title}</h3>
@@ -904,11 +905,11 @@ export default function HomeRedesign() {
                 { num: "04", title: "Monitor & Manage", desc: "Track performance and scale through one dashboard.", icon: Activity },
               ].map((step) => (
                 <motion.div key={step.num} {...staggerItem}>
-                  <div className="h-full border border-border/50 bg-card/50 rounded-xl p-6 text-center">
+                  <div className="h-full border border-border/50 bg-card/50 rounded-sm p-6 text-center">
                     <span className="font-mono text-xs text-muted-foreground mb-4 block">
                       {step.num}
                     </span>
-                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <div className="w-10 h-10 bg-muted rounded-sm flex items-center justify-center mx-auto mb-4">
                       <step.icon className="w-5 h-5 text-foreground" />
                     </div>
                     <h3 className="text-sm font-semibold mb-1.5">{step.title}</h3>
@@ -941,7 +942,7 @@ export default function HomeRedesign() {
                   key={i}
                   {...fadeInUp}
                   transition={{ duration: 0.45, delay: i * 0.08 }}
-                  className="border border-border/50 bg-card/50 rounded-xl p-6 flex flex-col"
+                  className="border border-border/50 bg-card/50 rounded-sm p-6 flex flex-col"
                 >
                   <p className="text-sm text-foreground/80 leading-relaxed mb-8 flex-1">
                     &ldquo;{test.quote}&rdquo;
@@ -997,7 +998,7 @@ export default function HomeRedesign() {
               className="mx-auto max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6"
             >
               {vpsCheapestPlan ? (
-                <Card className="border border-border/50 bg-card rounded-xl flex flex-col">
+                <Card className="border border-border/50 bg-card rounded-sm flex flex-col">
                   <CardHeader className="pb-2">
                     <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
                       Starting at
@@ -1040,7 +1041,7 @@ export default function HomeRedesign() {
                     ))}
                   </CardContent>
                   <CardFooter>
-                    <Button asChild className="w-full rounded-lg" size="lg">
+                    <Button asChild className="w-full rounded-sm" size="lg">
                       <Link to="/register">
                         Get Started
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -1049,7 +1050,7 @@ export default function HomeRedesign() {
                   </CardFooter>
                 </Card>
               ) : (
-                <Card className="border border-border/50 bg-card rounded-xl">
+                <Card className="border border-border/50 bg-card rounded-sm">
                   <CardContent className="space-y-5 p-6 text-center">
                     <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
                       VPS Plans Starting At
@@ -1073,7 +1074,7 @@ export default function HomeRedesign() {
                         </div>
                       ))}
                     </div>
-                    <Button asChild className="w-full rounded-lg" size="lg">
+                    <Button asChild className="w-full rounded-sm" size="lg">
                       <Link to="/pricing">View All Plans</Link>
                     </Button>
                   </CardContent>
@@ -1081,7 +1082,7 @@ export default function HomeRedesign() {
               )}
 
               {hostingEnabled && hostingLowestPrice !== null && hostingCheapestPlan && (
-                <Card className="border border-border/50 bg-card rounded-xl flex flex-col">
+                <Card className="border border-border/50 bg-card rounded-sm flex flex-col">
                   <CardHeader className="pb-2">
                     <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
                       Starting at
@@ -1117,7 +1118,7 @@ export default function HomeRedesign() {
                     ))}
                   </CardContent>
                   <CardFooter>
-                    <Button asChild className="w-full rounded-lg" size="lg">
+                    <Button asChild className="w-full rounded-sm" size="lg">
                       <Link to="/register">
                         Start Hosting
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -1150,14 +1151,14 @@ export default function HomeRedesign() {
                 <p className="text-muted-foreground">
                   Everything you need to know about hosting with {BRAND_NAME}.
                 </p>
-                <div className="mt-6 rounded-xl border border-border/50 bg-card p-6">
+                <div className="mt-6 rounded-sm border border-border/50 bg-card p-6">
                   <p className="text-sm font-medium">
                     Still have questions?
                   </p>
                   <p className="mt-1.5 text-sm text-muted-foreground mb-4">
                     Our support team is ready to help you get started.
                   </p>
-                  <Button variant="outline" asChild className="rounded-lg">
+                  <Button variant="outline" asChild className="rounded-sm">
                     <Link to="/contact">Contact Support</Link>
                   </Button>
                 </div>
@@ -1168,7 +1169,7 @@ export default function HomeRedesign() {
                   <AccordionItem
                     key={faq.question}
                     value={`faq-${index}`}
-                    className="rounded-xl border border-border/50 bg-card/50 px-5 transition-colors data-[state=open]:border-primary/30 data-[state=open]:bg-card"
+                    className="rounded-sm border border-border/50 bg-card/50 px-5 transition-colors data-[state=open]:border-primary/30 data-[state=open]:bg-card"
                   >
                     <AccordionTrigger className="text-left text-sm font-medium hover:text-primary hover:no-underline py-4">
                       {faq.question}
@@ -1186,7 +1187,7 @@ export default function HomeRedesign() {
         {/* ── 9. FINAL CTA ─────────────────────────────────────────── */}
         <section className="py-24 border-t border-border bg-background">
           <div className="mx-auto max-w-7xl px-6 md:px-12">
-            <div className="border border-border/50 bg-card rounded-xl px-6 py-16 text-center sm:px-12">
+            <div className="border border-border/50 bg-card rounded-sm px-6 py-16 text-center sm:px-12">
               <div className="space-y-6">
                 <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
                   Ready to launch your server?
@@ -1199,13 +1200,13 @@ export default function HomeRedesign() {
                 <SocialProof />
 
                 <div className="flex flex-col justify-center gap-3 sm:flex-row pt-2">
-                  <Button size="lg" className="h-11 px-8 text-base rounded-lg" asChild>
+                  <Button size="lg" className="h-11 px-8 text-base rounded-sm" asChild>
                     <Link to="/register">Create Account</Link>
                   </Button>
                   <Button
                     size="lg"
                     variant="outline"
-                    className="h-11 px-8 text-base rounded-lg"
+                    className="h-11 px-8 text-base rounded-sm"
                     asChild
                   >
                     <Link to="/pricing">View Pricing</Link>

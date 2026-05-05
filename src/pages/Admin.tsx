@@ -57,6 +57,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { TerminalPanel } from "@/components/terminal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -2241,27 +2242,23 @@ const Admin: React.FC = () => {
     <div className={isDashboardView ? "space-y-8" : "min-h-full"}>
       {isDashboardView ? (
         <>
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-5 sm:p-7 md:p-9">
-            <div className="relative z-10">
+          <TerminalPanel title="ADMIN CONSOLE" bodyClassName="p-0" className="font-mono">
+            <div className="space-y-3 p-5 sm:p-7 md:p-9">
               <Badge
                 variant="outline"
-                className="mb-3 text-xs sm:text-sm border-primary/30 bg-primary/10 text-primary"
+                className="mb-1 rounded-sm border-primary/30 bg-primary/10 text-[10px] text-primary uppercase tracking-wider sm:text-xs"
               >
                 Admin Panel
               </Badge>
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
                 {BRAND_NAME} Administration
               </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
                 Manage support operations, infrastructure, billing, and platform
                 configuration from a single workspace with clearer priorities.
               </p>
             </div>
-            <div className="absolute right-0 top-0 h-full w-1/3 opacity-5">
-              <Settings className="absolute right-4 sm:right-10 top-4 sm:top-10 h-24 w-24 sm:h-32 sm:w-32 rotate-12" />
-              <Shield className="absolute bottom-4 sm:bottom-10 right-8 sm:right-20 h-16 w-16 sm:h-24 sm:w-24 -rotate-6" />
-            </div>
-          </div>
+          </TerminalPanel>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Card className="overflow-hidden border-primary/25">

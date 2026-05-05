@@ -3,7 +3,7 @@
    ================================================================================ */
 
 :root {
-  --home-radius: 0.75rem;
+  --home-radius: 0.125rem;
 }
 
 /* --- Grid & Pattern Backgrounds --- */
@@ -190,49 +190,39 @@
 /* --- Card Styles (used by other pages) --- */
 
 .home-feature-card {
-  background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--muted) / 0.4) 100%);
-  backdrop-filter: blur(12px);
+  background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
-  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  border-left: 2px solid hsl(var(--primary) / 0.45);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .home-feature-card:hover {
-  border-color: hsl(var(--primary) / 0.5);
-  box-shadow:
-    0 8px 32px -8px hsl(var(--foreground) / 0.06),
-    0 0 0 1px hsl(var(--primary) / 0.1);
-  transform: translateY(-4px);
+  border-color: hsl(var(--primary) / 0.45);
+  box-shadow: none;
+  transform: none;
 }
 
 .dark .home-feature-card {
-  background: linear-gradient(180deg, hsl(var(--card) / 0.5) 0%, hsl(var(--background) / 0.5) 100%);
-  border: 1px solid hsl(var(--border) / 0.4);
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-left: 2px solid hsl(var(--primary) / 0.5);
 }
 
 .dark .home-feature-card:hover {
-  box-shadow:
-    0 8px 32px -8px hsl(var(--primary) / 0.15),
-    0 0 0 1px hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary) / 0.55);
+  box-shadow: none;
 }
 
 .home-glass-panel {
-  background: linear-gradient(
-    180deg,
-    hsl(var(--card)) 0%,
-    hsl(var(--muted) / 0.5) 100%
-  );
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
+  border-left: 2px solid hsl(var(--primary) / 0.45);
 }
 
 .dark .home-glass-panel {
-  background: linear-gradient(
-    180deg,
-    hsl(var(--card) / 0.74) 0%,
-    hsl(var(--background) / 0.65) 100%
-  );
-  border: 1px solid hsl(var(--border) / 0.55);
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-left: 2px solid hsl(var(--primary) / 0.5);
 }
 
 /* --- Gradient Border Top (utility) --- */
@@ -317,13 +307,13 @@
 /* --- CTA Shell (used by other pages) --- */
 
 .home-cta-shell {
-  background:
-    linear-gradient(130deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.95) 48%, hsl(var(--muted) / 0.3) 100%);
+  background: hsl(var(--card));
+  border-left: 2px solid hsl(var(--primary) / 0.45);
 }
 
 .dark .home-cta-shell {
-  background:
-    linear-gradient(130deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.88) 48%, hsl(var(--primary) / 0.12) 100%);
+  background: hsl(var(--card));
+  border-left: 2px solid hsl(var(--primary) / 0.5);
 }
 
 /* --- Pricing Glow (used by other pages) --- */
@@ -350,7 +340,7 @@
 
 .home-pricing-glow:hover {
   border-color: hsl(var(--primary) / 0.4);
-  box-shadow: 0 0 40px -12px hsl(var(--foreground) / 0.06);
+  box-shadow: none;
 }
 
 .dark .home-pricing-glow {
@@ -363,7 +353,7 @@
 
 .dark .home-pricing-glow:hover {
   border-color: hsl(var(--primary) / 0.45);
-  box-shadow: 0 0 40px -12px hsl(var(--primary) / 0.2);
+  box-shadow: none;
 }
 
 /* --- Mobile Optimizations --- */
