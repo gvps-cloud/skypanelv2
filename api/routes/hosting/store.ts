@@ -724,7 +724,7 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
           `UPDATE hosting_subscriptions
            SET status = 'error',
                updated_at = now(),
-               settings = settings || $2::jsonb
+               settings = COALESCE(settings, '{}'::jsonb) || $2::jsonb
            WHERE id = $1`,
           [
             subscriptionId,
@@ -953,8 +953,8 @@ router.post("/sso", requireOrgPermission("hosting_view"), async (req: Request, r
     let memberId = orgResult.rows[0].enhance_member_id;
     let memberIdWasStale = false;
 
-    async function resolveMemberId(): Promise<boolean> {
-      if (memberId) return true;
+    async function resolveMemberId(): Promise<{ ok: boolean; errorSent?: false } | { ok: false; errorSent: true; status: number; message: string }> {
+      if (memberId) return { ok: true };
       try {
         const members = await EnhanceService.getOrgMembers(enhanceCustomerOrgId);
         const items = Array.isArray(members) ? members : (members?.items || []);
@@ -966,31 +966,34 @@ router.post("/sso", requireOrgPermission("hosting_view"), async (req: Request, r
             `UPDATE organizations SET enhance_member_id = $1 WHERE id = $2`,
             [memberId, organizationId]
           );
-          return true;
+          return { ok: true };
         }
-        return false;
+        return { ok: false, errorSent: false };
       } catch (memberError: any) {
         if (memberError instanceof EnhanceApiError) {
           const status = memberError.statusCode || 502;
           const message = memberError.statusCode === 403
             ? "Unable to access Enhance organization members. The API key may not have permission for this customer org."
             : `Unable to list Enhance organization members: ${memberError.message}`;
-          res.status(status).json({ error: message });
-          return false;
+          return { ok: false, errorSent: true, status, message };
         }
         throw memberError;
       }
     }
 
-    if (!await resolveMemberId()) {
+    const memberResult = await resolveMemberId();
+    if (!memberResult.ok) {
+      if (memberResult.errorSent) {
+        return res.status(memberResult.status).json({ error: memberResult.message });
+      }
       return res.status(400).json({ error: "No Enhance member found for this organization" });
     }
 
-    async function tryGetSsoUrl(): Promise<string | null> {
+    async function tryGetSsoUrl(): Promise<{ url: string } | { url: null; errorSent?: false } | { url: null; errorSent: true; status: number; message: string }> {
       try {
         const ssoResponse = await EnhanceService.getMemberSsoLink(enhanceCustomerOrgId, memberId) as string | { url?: string };
         const url = typeof ssoResponse === "string" ? ssoResponse : ssoResponse?.url;
-        return url || null;
+        return url ? { url } : { url: null };
       } catch (ssoError: any) {
         // If member not found (404), clear stale member id and allow one retry
         if (ssoError instanceof EnhanceApiError && ssoError.statusCode === 404 && !memberIdWasStale) {
@@ -1001,7 +1004,7 @@ router.post("/sso", requireOrgPermission("hosting_view"), async (req: Request, r
           );
           memberId = null;
           memberIdWasStale = true;
-          return null;
+          return { url: null };
         }
 
         if (ssoError instanceof EnhanceApiError) {
@@ -1009,28 +1012,34 @@ router.post("/sso", requireOrgPermission("hosting_view"), async (req: Request, r
           const message = ssoError.statusCode === 403
             ? "Unable to generate SSO link for this member. The API key may not have permission."
             : `Unable to generate SSO link: ${ssoError.message}`;
-          res.status(status).json({ error: message });
-          return null;
+          return { url: null, errorSent: true, status, message };
         }
         throw ssoError;
       }
     }
 
-    let url = await tryGetSsoUrl();
+    let ssoResult = await tryGetSsoUrl();
 
     // Retry once if the first attempt discovered a stale member id
-    if (!url && memberIdWasStale) {
-      if (!await resolveMemberId()) {
+    if (ssoResult.url === null && memberIdWasStale) {
+      const retryMember = await resolveMemberId();
+      if (!retryMember.ok) {
+        if (retryMember.errorSent) {
+          return res.status(retryMember.status).json({ error: retryMember.message });
+        }
         return res.status(400).json({ error: "No Enhance member found for this organization" });
       }
-      url = await tryGetSsoUrl();
+      ssoResult = await tryGetSsoUrl();
     }
 
-    if (!url) {
+    if (!ssoResult.url) {
+      if ('errorSent' in ssoResult && ssoResult.errorSent) {
+        return res.status(ssoResult.status).json({ error: ssoResult.message });
+      }
       return res.status(502).json({ error: "Enhance did not return an SSO link" });
     }
 
-    res.json({ url });
+    res.json({ url: ssoResult.url });
   } catch (error: any) {
     console.error("Failed to get Enhance SSO link:", error);
     res.status(500).json({ error: error?.message || "Failed to get SSO link" });

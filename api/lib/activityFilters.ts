@@ -34,7 +34,7 @@ export function appendActivityEntityTypeFilter(opts: {
   }
 
   const norm = normalizeActivityTypeInput(trimmed);
-  let p = opts.placeholderStart;
+  const p = opts.placeholderStart;
 
   if (HOSTING_ALIASES.has(norm)) {
     opts.clauses.push(
