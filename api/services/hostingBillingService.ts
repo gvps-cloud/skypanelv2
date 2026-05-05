@@ -5,6 +5,7 @@ import { EnhanceService } from './enhanceService.js';
 import { EnhanceToggleService } from './enhanceToggle.js';
 import { InvoiceService } from './invoiceService.js';
 import { logActivity } from './activityLogger.js';
+import { themeService, resolveThemePalette } from './themeService.js';
 
 class HostingBillingPaymentError extends Error {
   constructor(message: string) {
@@ -396,7 +397,10 @@ export class HostingBillingService {
     invoiceData.walletBalanceBefore = metadata?.balance_before ?? metadata?.balanceBefore ?? null;
     invoiceData.walletBalanceAfter = metadata?.balance_after ?? metadata?.balanceAfter ?? null;
 
-    const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData);
+    const themeConfig = await themeService.getThemeConfig();
+    const themePalette = resolveThemePalette(themeConfig);
+
+    const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData, undefined, undefined, themePalette);
     const invoiceId = await InvoiceService.createInvoice(
       cycle.organization_id,
       invoiceNumber,

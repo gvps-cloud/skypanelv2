@@ -4,7 +4,8 @@ import { body, param, query as queryValidator, validationResult } from 'express-
 import { authenticateToken, requireAdmin } from '../../middleware/auth.js';
 import { query } from '../../lib/database.js';
 import { logActivity } from '../../services/activityLogger.js';
-import { InvoiceService } from '../../services/invoiceService.js';
+import { InvoiceService, injectInvoiceThemeIntoHTML } from '../../services/invoiceService.js';
+import { resolveThemePalette, themeService } from '../../services/themeService.js';
 import { sendAccountNotificationEmail } from '../../services/emailService.js';
 
 const router = express.Router();
@@ -329,7 +330,9 @@ router.post(
         tx.user_id || undefined
       );
 
-      const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData);
+      const themeConfig = await themeService.getThemeConfig();
+      const themePalette = resolveThemePalette(themeConfig);
+      const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData, undefined, undefined, themePalette);
 
       const invoiceId = await InvoiceService.createInvoice(
         tx.organization_id,
@@ -548,7 +551,10 @@ router.get('/invoices/:id/download',
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoiceNumber}.html"`);
-      res.send(invoice.htmlContent);
+
+      const themeConfig = await themeService.getThemeConfig();
+      const themePalette = resolveThemePalette(themeConfig);
+      res.send(injectInvoiceThemeIntoHTML(invoice.htmlContent, themePalette));
     } catch (error) {
       console.error('Download invoice error:', error);
       res.status(500).json({ success: false, error: 'Internal server error' });

@@ -7,7 +7,7 @@ import express, { Request, Response } from 'express';
 import { body, param, query as queryValidator, validationResult } from 'express-validator';
 import { authenticateToken, requireOrganization } from '../middleware/auth.js';
 import { EgressBillingService } from '../services/egressBillingService.js';
-import { InvoiceService } from '../services/invoiceService.js';
+import { InvoiceService, injectInvoiceThemeIntoHTML } from '../services/invoiceService.js';
 import { PayPalService, type WalletTransaction } from '../services/paypalService.js';
 import { query } from '../lib/database.js';
 import { themeService, resolveThemePalette } from '../services/themeService.js';
@@ -172,8 +172,9 @@ router.get(
         `attachment; filename="invoice-${invoice.invoiceNumber}.html"`
       );
 
-      // Send HTML content
-      res.send(invoice.htmlContent);
+      const themeConfig = await themeService.getThemeConfig();
+      const themePalette = resolveThemePalette(themeConfig);
+      res.send(injectInvoiceThemeIntoHTML(invoice.htmlContent, themePalette));
     } catch (error) {
       console.error('Download invoice error:', error);
       res.status(500).json({

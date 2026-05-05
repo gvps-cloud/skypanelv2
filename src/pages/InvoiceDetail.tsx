@@ -19,6 +19,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
+import { injectInvoiceTheme } from "@/lib/invoiceTheme";
 
 interface Invoice {
   id: string;
@@ -160,7 +161,7 @@ const InvoiceDetail: React.FC = () => {
               <div
                 className="prose prose-sm dark:prose-invert max-w-none dark:[&_p]:!text-foreground dark:[&_td]:!text-foreground dark:[&_th]:!text-foreground dark:[&_h1]:!text-foreground dark:[&_h2]:!text-foreground dark:[&_h3]:!text-foreground dark:[&_.invoice-meta-label]:!text-muted-foreground dark:[&_.invoice-meta-value]:!text-foreground"
                 dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(invoice.htmlContent),
+                  __html: DOMPurify.sanitize(injectInvoiceTheme(invoice.htmlContent)),
                 }}
               />
             </CardContent>

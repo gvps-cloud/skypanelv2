@@ -9,6 +9,7 @@ import { logActivity } from './activityLogger.js';
 import { linodeService } from './linodeService.js';
 import { round } from './egress/egressUtils.js';
 import { InvoiceService } from './invoiceService.js';
+import { themeService, resolveThemePalette } from './themeService.js';
 
 // Custom error for insufficient credits
 export class InsufficientCreditsError extends Error {
@@ -579,7 +580,10 @@ export async function addEgressCredits(
         status: 'paid' as const,
       };
 
-      const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData);
+      const themeConfig = await themeService.getThemeConfig();
+      const themePalette = resolveThemePalette(themeConfig);
+
+      const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData, undefined, undefined, themePalette);
       await InvoiceService.createInvoice(
         organizationId,
         invoiceNumber,
@@ -711,7 +715,10 @@ export async function removeEgressCredits(
         status: 'paid' as const,
       };
 
-      const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData);
+      const themeConfig = await themeService.getThemeConfig();
+      const themePalette = resolveThemePalette(themeConfig);
+
+      const htmlContent = InvoiceService.generateInvoiceHTML(invoiceData, undefined, undefined, themePalette);
       await InvoiceService.createInvoice(
         organizationId,
         invoiceNumber,

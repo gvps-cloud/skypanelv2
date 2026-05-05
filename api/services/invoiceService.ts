@@ -56,6 +56,52 @@ const defaultInvoicePalette: ThemePalette = {
   ring: '#007bff',
 };
 
+export function injectInvoiceThemeIntoHTML(htmlContent: string, palette: ThemePalette): string {
+  const colors = {
+    bg: palette.background,
+    fg: palette.foreground,
+    card: palette.card,
+    cardFg: palette.cardForeground,
+    muted: palette.muted,
+    mutedFg: palette.mutedForeground,
+    border: palette.border,
+    primary: palette.primary,
+    primaryFg: palette.primaryForeground,
+    secondary: palette.secondary,
+    secondaryFg: palette.secondaryForeground,
+    accent: palette.accent,
+    accentFg: palette.accentForeground,
+    destructive: palette.destructive,
+    destructiveFg: palette.destructiveForeground,
+  };
+
+  const themeCSS = `<style data-invoice-theme>
+body { background: ${colors.bg} !important; color: ${colors.fg} !important; }
+.container { background: ${colors.card} !important; color: ${colors.cardFg} !important; }
+.header { border-bottom-color: ${colors.primary} !important; }
+.company-info h1 { color: ${colors.primary} !important; }
+.invoice-info h2 { color: ${colors.primary} !important; }
+.company-info p { color: ${colors.mutedFg} !important; }
+.invoice-meta { background: ${colors.secondary} !important; }
+.invoice-meta-label { color: ${colors.mutedFg} !important; }
+.invoice-meta-value { color: ${colors.cardFg} !important; }
+table thead { background: ${colors.secondary} !important; }
+table th { color: ${colors.secondaryFg} !important; border-bottom-color: ${colors.border} !important; }
+table td { border-bottom-color: ${colors.border} !important; color: ${colors.cardFg} !important; }
+.totals-row { border-bottom-color: ${colors.border} !important; }
+.totals-row.total { border-bottom-color: ${colors.primary} !important; color: ${colors.primary} !important; }
+.status-badge { background: ${colors.secondary} !important; color: ${colors.secondaryFg} !important; }
+.status-badge.issued { background: ${colors.primary} !important; color: ${colors.primaryFg} !important; }
+.status-badge.paid { background: ${colors.accent} !important; color: ${colors.accentFg} !important; }
+.status-badge.draft { background: ${colors.muted} !important; color: ${colors.mutedFg} !important; }
+.status-badge.cancelled { background: ${colors.destructive} !important; color: ${colors.destructiveFg} !important; }
+.footer { border-top-color: ${colors.border} !important; color: ${colors.mutedFg} !important; }
+h3 { color: ${colors.primary} !important; }
+</style>`;
+
+  return htmlContent.replace('</head>', `${themeCSS}\n</head>`);
+}
+
 const formatInvoiceAmount = (amount: number): string => {
   if (!Number.isFinite(amount)) {
     return '0.000000';
