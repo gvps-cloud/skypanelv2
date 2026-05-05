@@ -45,6 +45,7 @@ interface OrganizationResourceTablesProps {
   onOpenVps: (vpsId: string) => void;
   onOpenHosting: (...args: [string]) => void;
   onOpenTicket: (ticketId: string) => void;
+  hostingEnabled?: boolean;
 }
 
 const DEFAULT_LIMIT = 5;
@@ -116,6 +117,7 @@ export function OrganizationResourceTables({
   onOpenVps,
   onOpenHosting,
   onOpenTicket,
+  hostingEnabled = true,
 }: OrganizationResourceTablesProps) {
   const [activeTab, setActiveTab] = useState<ResourceTabKey>("vps");
   const [pagination, setPagination] = useState(DEFAULT_PAGINATION);
@@ -175,7 +177,9 @@ export function OrganizationResourceTables({
         <TabsTrigger value="vps">VPS Instances ({resources.vps_instances.length})</TabsTrigger>
         <TabsTrigger value="sshKeys">SSH Keys ({resources.ssh_keys.length})</TabsTrigger>
         <TabsTrigger value="tickets">Support Tickets ({resources.tickets.length})</TabsTrigger>
-        <TabsTrigger value="hosting">Web Hosting ({resources.hosting_subscriptions.length})</TabsTrigger>
+        {hostingEnabled && (
+          <TabsTrigger value="hosting">Web Hosting ({resources.hosting_subscriptions.length})</TabsTrigger>
+        )}
       </TabsList>
 
       <TabsContent value="vps">
@@ -252,6 +256,7 @@ export function OrganizationResourceTables({
         </Card>
       </TabsContent>
 
+      {hostingEnabled && (
       <TabsContent value="hosting">
         <Card className="border-primary/25">
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -344,6 +349,7 @@ export function OrganizationResourceTables({
           </CardContent>
         </Card>
       </TabsContent>
+      )}
 
       <TabsContent value="sshKeys">
         <Card className="border-primary/25">

@@ -20,24 +20,39 @@ import {
 } from "lucide-react";
 
 import { BRAND_NAME } from "@/lib/brand";
+import { useHostingStatus } from "@/hooks/useHosting";
 
 function SkyPanelPreview() {
+  const { data: hostingStatus } = useHostingStatus();
+  const hostingEnabled = hostingStatus?.enabled === true;
+
   const [activeView, setActiveView] = useState("Dashboard");
   const [selectedVps, setSelectedVps] = useState("prod-api-01");
   const [walletBalance, setWalletBalance] = useState(128.4);
-  const [activityFeed, setActivityFeed] = useState([
-    { message: "VPS prod-api-01 deployed", type: "VPS event", time: "2m ago" },
-    {
-      message: "Wallet topped up $50.00",
-      type: "Billing event",
-      time: "1h ago",
-    },
-    {
-      message: "Hosting renewed: atlas-site.io",
-      type: "System event",
-      time: "3h ago",
-    },
-  ]);
+  const [activityFeed, setActivityFeed] = useState(
+    hostingEnabled
+      ? [
+          { message: "VPS prod-api-01 deployed", type: "VPS event", time: "2m ago" },
+          {
+            message: "Wallet topped up $50.00",
+            type: "Billing event",
+            time: "1h ago",
+          },
+          {
+            message: "Hosting renewed: atlas-site.io",
+            type: "System event",
+            time: "3h ago",
+          },
+        ]
+      : [
+          { message: "VPS prod-api-01 deployed", type: "VPS event", time: "2m ago" },
+          {
+            message: "Wallet topped up $50.00",
+            type: "Billing event",
+            time: "1h ago",
+          },
+        ]
+  );
 
   const vpsFleet = [
     {
@@ -94,7 +109,7 @@ function SkyPanelPreview() {
     ]);
   };
 
-  const quickActions = [
+  const allQuickActions = [
     {
       icon: Plus,
       title: "Launch a VPS",
@@ -112,6 +127,7 @@ function SkyPanelPreview() {
         setActiveView("Web Hosting");
         addActivity("Hosting checkout preview opened");
       },
+      hidden: !hostingEnabled,
     },
     {
       icon: Wallet,
@@ -134,15 +150,26 @@ function SkyPanelPreview() {
     },
   ];
 
-  const navItems = [
-    { icon: LayoutDashboard, label: "Dashboard" },
-    { icon: Server, label: "Compute" },
-    { icon: Globe2, label: "Web Hosting" },
-    { icon: Building2, label: "Organizations" },
-    { icon: FileText, label: "Notes" },
-    { icon: Activity, label: "Activity" },
-    { icon: CreditCard, label: "Billing" },
-  ];
+  const quickActions = allQuickActions.filter((a) => !a.hidden);
+
+  const navItems = hostingEnabled
+    ? [
+        { icon: LayoutDashboard, label: "Dashboard" },
+        { icon: Server, label: "Compute" },
+        { icon: Globe2, label: "Web Hosting" },
+        { icon: Building2, label: "Organizations" },
+        { icon: FileText, label: "Notes" },
+        { icon: Activity, label: "Activity" },
+        { icon: CreditCard, label: "Billing" },
+      ]
+    : [
+        { icon: LayoutDashboard, label: "Dashboard" },
+        { icon: Server, label: "Compute" },
+        { icon: Building2, label: "Organizations" },
+        { icon: FileText, label: "Notes" },
+        { icon: Activity, label: "Activity" },
+        { icon: CreditCard, label: "Billing" },
+      ];
 
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-border/60 bg-background shadow-2xl shadow-primary/10">
@@ -183,7 +210,7 @@ function SkyPanelPreview() {
           <div className="border-t border-border/50 p-3">
             <div className="flex items-center gap-2.5">
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
-                MC
+                SM
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-medium">Storm Moran</p>
@@ -244,13 +271,15 @@ function SkyPanelPreview() {
 
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />3 vps
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />{vpsFleet.length} vps
                 active
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
-                <Globe2 className="h-3 w-3 text-muted-foreground" />2 hosting
-                active
-              </span>
+              {hostingEnabled && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
+                  <Globe2 className="h-3 w-3 text-muted-foreground" />2 hosting
+                  active
+                </span>
+              )}
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[11px]">
                 <TrendingUp className="h-3 w-3 text-muted-foreground" />
                 Avg CPU 24.3%
@@ -382,7 +411,7 @@ function SkyPanelPreview() {
                     <ArrowUpRight className="h-3 w-3" />
                   </button>
                 </div>
-                {activeView === "Web Hosting" ? (
+                {hostingEnabled && activeView === "Web Hosting" ? (
                   <div className="mt-2 space-y-2">
                     {hostingServices.map((service) => (
                       <button

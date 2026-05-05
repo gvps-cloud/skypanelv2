@@ -26,6 +26,8 @@ import {
   Globe,
   Wifi,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useHostingStatus } from "@/hooks/useHosting";
 
 interface OrganizationRole {
   id: string;
@@ -149,6 +151,17 @@ const PERMISSIONS: Permission[] = [
 ];
 
 export default function CreateRoleWizard({ isOpen, onClose, onSave, editingRole, loading }: CreateRoleWizardProps) {
+  const { data: hostingStatus } = useHostingStatus();
+  const hostingEnabled = hostingStatus?.enabled === true;
+
+  const visibleCategories = hostingEnabled
+    ? PERMISSION_CATEGORIES
+    : PERMISSION_CATEGORIES.filter((cat) => cat.id !== "hosting");
+
+  const visiblePermissions = hostingEnabled
+    ? PERMISSIONS
+    : PERMISSIONS.filter((perm) => perm.category !== "hosting");
+
   const [roleName, setRoleName] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -256,7 +269,7 @@ export default function CreateRoleWizard({ isOpen, onClose, onSave, editingRole,
                 className="tabular-nums font-mono text-xs h-6 gap-1"
               >
                 <Check className="h-3 w-3" />
-                {selectedPermissions.length} / {PERMISSIONS.length}
+                {selectedPermissions.length} / {visiblePermissions.length}
               </Badge>
             )}
           </div>
@@ -301,24 +314,36 @@ export default function CreateRoleWizard({ isOpen, onClose, onSave, editingRole,
               <button
                 type="button"
                 onClick={() => {
-                  if (selectedPermissions.length === PERMISSIONS.length) {
-                    setSelectedPermissions([]);
+                  const visibleSelected = selectedPermissions.filter((id) =>
+                    visiblePermissions.some((p) => p.id === id)
+                  );
+                  if (visibleSelected.length === visiblePermissions.length) {
+                    setSelectedPermissions((prev) =>
+                      prev.filter((id) => !visiblePermissions.some((p) => p.id === id))
+                    );
                   } else {
-                    setSelectedPermissions(PERMISSIONS.map((p) => p.id));
+                    setSelectedPermissions((prev) => [
+                      ...prev,
+                      ...visiblePermissions
+                        .map((p) => p.id)
+                        .filter((id) => !prev.includes(id)),
+                    ]);
                   }
                 }}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                {selectedPermissions.length === PERMISSIONS.length
+                {selectedPermissions.filter((id) =>
+                  visiblePermissions.some((p) => p.id === id)
+                ).length === visiblePermissions.length
                   ? "Deselect all"
                   : "Select all"}
               </button>
             </div>
 
             <div className="space-y-3">
-              {PERMISSION_CATEGORIES.map((category) => {
+              {visibleCategories.map((category) => {
                 const Icon = category.icon;
-                const categoryPerms = PERMISSIONS.filter(
+                const categoryPerms = visiblePermissions.filter(
                   (p) => p.category === category.id
                 );
                 const selectedCount = getCategorySelectedCount(category.id);

@@ -189,6 +189,24 @@ function HostingEnabledRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function HostingMarketingGate({ children }: { children: React.ReactNode }) {
+  const { data: hostingStatus, isLoading } = useHostingStatus();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (hostingStatus?.enabled !== true) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 // Component to setup auto-logout inside Router context
 function AutoLogoutSetup() {
   const { logout } = useAuth();
@@ -450,8 +468,8 @@ function AppRoutes() {
           }
         />
         <Route path="/pricing" element={<Pricing />} />
-        <Route path="/web-hosting" element={<HostingMarketing />} />
-        <Route path="/hosting-web" element={<Navigate to="/web-hosting" replace />} />
+        <Route path="/web-hosting" element={<HostingMarketingGate><HostingMarketing /></HostingMarketingGate>} />
+        <Route path="/hosting-web" element={<HostingMarketingGate><Navigate to="/web-hosting" replace /></HostingMarketingGate>} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/docs" element={<Documentation />} />
         <Route path="/docs/:categorySlug" element={<Documentation />} />

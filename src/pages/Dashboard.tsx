@@ -28,6 +28,7 @@ import { getMonthlySpendWithFallback } from "../lib/billingUtils";
 import { MonthlyResetIndicator } from "@/components/Dashboard/MonthlyResetIndicator";
 import { formatBillingAmount } from "@/lib/formatters";
 import { apiClient } from "@/lib/api";
+import { useHostingStatus } from "@/hooks/useHosting";
 
 interface MetricSummary {
   average: number;
@@ -95,10 +96,6 @@ interface VpsDetailResponse {
 
 interface WalletBalanceResponse {
   balance?: number | null;
-}
-
-interface HostingStatusResponse {
-  enabled?: boolean;
 }
 
 interface PaymentsHistoryResponse {
@@ -222,7 +219,8 @@ const mapActivity = (activity: NonNullable<ActivityResponse["activities"]>[numbe
 const Dashboard: React.FC = () => {
   const [vpsInstances, setVpsInstances] = useState<VPSStats[]>([]);
   const [billing, setBilling] = useState<BillingStats | null>(null);
-  const [hostingEnabled, setHostingEnabled] = useState(false);
+  const { data: hostingStatus } = useHostingStatus();
+  const hostingEnabled = hostingStatus?.enabled === true;
   const [hostingServices, setHostingServices] = useState<HostingServiceSummary[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -234,13 +232,25 @@ const Dashboard: React.FC = () => {
     if (!token) return;
     setLoading(true);
     try {
-      const [vpsData, walletData, hostingWalletData, hostingStatusData, paymentsData] = await Promise.all([
+      const basePromises: Promise<any>[] = [
         apiClient.get<VpsListResponse>("/vps"),
         apiClient.get<WalletBalanceResponse>("/payments/wallet/balance"),
-        apiClient.get<WalletBalanceResponse>("/payments/wallet/hosting/balance").catch(() => ({ balance: 0 })),
-        apiClient.get<HostingStatusResponse>("/hosting/status").catch(() => ({ enabled: false })),
         apiClient.get<PaymentsHistoryResponse>("/payments/history?limit=1&status=completed"),
-      ]);
+      ];
+
+      if (hostingEnabled) {
+        basePromises.push(
+          apiClient.get<WalletBalanceResponse>("/payments/wallet/hosting/balance").catch(() => ({ balance: 0 }))
+        );
+      }
+
+      const results = await Promise.all(basePromises);
+      const vpsData = results[0] as VpsListResponse;
+      const walletData = results[1] as WalletBalanceResponse;
+      const paymentsData = results[2] as PaymentsHistoryResponse;
+      const hostingWalletData = hostingEnabled
+        ? (results[3] as WalletBalanceResponse)
+        : { balance: 0 };
 
       const instances: VPSStats[] = await Promise.all((vpsData.instances ?? []).map(mapVpsInstance));
 
@@ -259,10 +269,7 @@ const Dashboard: React.FC = () => {
         },
       });
 
-      const isHostingEnabled = hostingStatusData.enabled === true;
-      setHostingEnabled(isHostingEnabled);
-
-      if (isHostingEnabled) {
+      if (hostingEnabled) {
         try {
           const hostingData = await apiClient.get<HostingServicesResponse>("/hosting/services");
           const services = hostingData.services ?? [];
@@ -289,7 +296,7 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, hostingEnabled]);
 
   useEffect(() => {
     loadDashboardData();

@@ -411,6 +411,13 @@ const solutionCards = [
       "Role-based access",
       "Centralized billing",
     ],
+    detailNoHosting:
+      "Create dedicated workspaces for client projects and VPS resources. Collaborate with your team securely.",
+    bulletsNoHosting: [
+      "Organization workspaces",
+      "Role-based access",
+      "Centralized billing",
+    ],
   },
   {
     icon: PanelsTopLeft,
@@ -500,6 +507,42 @@ export default function HomeRedesign() {
   const [hostingCheapestPlan, setHostingCheapestPlan] = useState<any | null>(null);
   const [vpsCheapestPlan, setVpsCheapestPlan] = useState<any | null>(null);
   const [heroReducedMotion, setHeroReducedMotion] = useState(false);
+
+  // Filter hosting-related content based on enabled state
+  const visibleCapabilityCards = hostingEnabled
+    ? capabilityCards
+    : capabilityCards.filter((card) => card.label !== "Web Hosting");
+
+  const visiblePlatformCards = hostingEnabled
+    ? platformCards
+    : platformCards.filter((card) =>
+        card.title !== "Browser-Based SSH & Hosting Tools" &&
+        card.title !== "Enhance Web Hosting"
+      );
+
+  const visibleSolutionCards = hostingEnabled
+    ? solutionCards
+    : solutionCards
+        .filter((card) => card.title !== "Web Hosting Customers")
+        .map((card) => ({
+          ...card,
+          detail: (card as any).detailNoHosting ?? card.detail,
+          bullets: (card as any).bulletsNoHosting ?? card.bullets,
+        }));
+
+  const visibleFaqs = hostingEnabled
+    ? faqs
+    : faqs.filter((faq) =>
+        !faq.question.toLowerCase().includes("web hosting") &&
+        !faq.answer.toLowerCase().includes("enhance") &&
+        !faq.question.toLowerCase().includes("managed")
+      );
+
+  const visibleTestimonials = hostingEnabled
+    ? testimonials
+    : testimonials.filter((test) =>
+        !test.quote.toLowerCase().includes("application hosting")
+      );
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -637,7 +680,7 @@ export default function HomeRedesign() {
                   </span>
                 </h1>
                 <p className="mt-6 text-lg md:text-xl leading-relaxed text-muted-foreground max-w-2xl">
-                  Deploy high-performance virtual machines and managed web hosting from one dashboard. Full root access, hourly billing, zero surprises.
+                  Deploy high-performance virtual machines{hostingEnabled ? " and managed web hosting" : ""} from one dashboard. Full root access, hourly billing, zero surprises.
                 </p>
 
                 <div className="mt-8 flex flex-col sm:flex-row gap-3">
@@ -706,7 +749,7 @@ export default function HomeRedesign() {
                 Platform capabilities
               </h2>
               <p className="mt-2 text-muted-foreground max-w-xl">
-                Everything you need to deploy, manage, and scale cloud infrastructure — from VPS to web hosting.
+                Everything you need to deploy, manage, and scale cloud infrastructure{hostingEnabled ? " — from VPS to web hosting" : ""}.
               </p>
             </motion.div>
 
@@ -714,7 +757,7 @@ export default function HomeRedesign() {
               {...staggerContainer}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
             >
-              {capabilityCards.map((card) => (
+              {visibleCapabilityCards.map((card) => (
                 <motion.div key={card.label} {...staggerItem}>
                   <div className="h-full border border-border/50 bg-card/50 rounded-xl p-6 hover:border-primary/30 transition-colors">
                     <card.icon className="w-6 h-6 text-primary mb-4" />
@@ -764,7 +807,7 @@ export default function HomeRedesign() {
               {...staggerContainer}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
             >
-              {platformCards.map((card) => (
+              {visiblePlatformCards.map((card) => (
                 <motion.div key={card.title} {...staggerItem}>
                   <div className="h-full border border-border/50 bg-card/50 rounded-xl p-6 hover:border-primary/20 transition-colors">
                     <card.icon className="w-5 h-5 text-muted-foreground mb-6" />
@@ -802,7 +845,7 @@ export default function HomeRedesign() {
               {...staggerContainer}
               className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
             >
-              {solutionCards.map((item, idx) => (
+              {visibleSolutionCards.map((item, idx) => (
                 <motion.div key={idx} {...staggerItem}>
                   <div className="h-full border border-border/50 bg-card/50 rounded-xl p-6">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted mb-5">
@@ -893,7 +936,7 @@ export default function HomeRedesign() {
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {testimonials.map((test, i) => (
+              {visibleTestimonials.map((test, i) => (
                 <motion.div
                   key={i}
                   {...fadeInUp}
@@ -1121,7 +1164,7 @@ export default function HomeRedesign() {
               </div>
 
               <Accordion type="single" collapsible className="space-y-3">
-                {faqs.map((faq, index) => (
+                {visibleFaqs.map((faq, index) => (
                   <AccordionItem
                     key={faq.question}
                     value={`faq-${index}`}

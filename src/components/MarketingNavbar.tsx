@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/Logo";
 import { BRAND_NAME } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
+import { useHostingStatus } from "@/hooks/useHosting";
 
 interface NavLinkConfig {
   label: string;
@@ -37,6 +38,10 @@ const navLinks: NavLinkConfig[] = [
 ];
 
 export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
+  const { data: hostingStatus } = useHostingStatus();
+  const hostingEnabled = hostingStatus?.enabled === true;
+
+  const visibleNavLinks = hostingEnabled ? navLinks : navLinks.filter((link) => link.label !== "Hosting");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -172,7 +177,7 @@ export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
 
         <nav className="hidden items-center gap-1 lg:flex">
           {navDropdowns.map(renderDropdown)}
-          {navLinks.map((link) => (
+          {visibleNavLinks.map((link) => (
             <div key={link.label} className="px-3 py-1.5">
               {renderNavLink(link)}
             </div>
@@ -231,7 +236,7 @@ export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
                     </Link>
                   ))
                 )}
-                {navLinks.map(renderNavLink)}
+                {visibleNavLinks.map(renderNavLink)}
               </div>
               <div className="mt-5 flex flex-col gap-2 border-t border-border/40 pt-4">
                 <Button variant="ghost" asChild className="justify-start">

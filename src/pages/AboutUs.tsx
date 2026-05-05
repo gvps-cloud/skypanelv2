@@ -23,6 +23,7 @@ import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
 import { BRAND_NAME } from "@/lib/brand";
 import api from "@/lib/api";
+import { useHostingStatus } from "@/hooks/useHosting";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 
@@ -158,11 +159,31 @@ export default function AboutUs() {
     refetchOnWindowFocus: false,
   });
 
+  const { data: hostingStatus } = useHostingStatus();
+  const hostingEnabled = hostingStatus?.enabled === true;
+
   const formatStat =
     (value?: number) =>
     typeof value === "number" && Number.isFinite(value)
       ? value.toLocaleString()
       : "N/A";
+
+  const visibleStatRows = hostingEnabled
+    ? [
+        { label: "Total users", value: formatStat(stats?.users.total) },
+        { label: "VPS instances", value: formatStat(stats?.vps.total) },
+        { label: "Active VPS", value: formatStat(stats?.vps.active) },
+        { label: "Open tickets", value: formatStat(stats?.support.openTickets) },
+        { label: "Regions", value: formatStat(stats?.regions.total) },
+        { label: "Active hosting accounts", value: formatStat(stats?.hosting.active) },
+      ]
+    : [
+        { label: "Total users", value: formatStat(stats?.users.total) },
+        { label: "VPS instances", value: formatStat(stats?.vps.total) },
+        { label: "Active VPS", value: formatStat(stats?.vps.active) },
+        { label: "Open tickets", value: formatStat(stats?.support.openTickets) },
+        { label: "Regions", value: formatStat(stats?.regions.total) },
+      ];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -279,28 +300,7 @@ export default function AboutUs() {
                       </p>
                     ) : (
                       <div className="grid gap-3">
-                        {[
-                          {
-                            label: "Total users",
-                            value: formatStat(stats?.users.regular),
-                          },
-                          {
-                            label: "VPS deployed",
-                            value: formatStat(stats?.vps.total),
-                          },
-                          {
-                            label: "Open tickets",
-                            value: formatStat(stats?.support.openTickets),
-                          },
-                          {
-                            label: "Regions",
-                            value: formatStat(stats?.regions.total),
-                          },
-                          {
-                            label: "Active hosting accounts",
-                            value: formatStat(stats?.hosting.active),
-                          },
-                        ].map((row) => (
+                        {visibleStatRows.map((row) => (
                           <div
                             key={row.label}
                             className="flex items-center justify-between rounded-lg border border-border/40 bg-gradient-to-b from-background/80 to-muted/20 px-4 py-2.5"

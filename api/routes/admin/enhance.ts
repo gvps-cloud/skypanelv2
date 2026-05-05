@@ -40,6 +40,33 @@ router.patch("/status", async (req: Request, res: Response) => {
   }
 
   try {
+    // Block disable if any active subscriptions exist
+    if (!enabled) {
+      const activeSubResult = await query(
+        `SELECT COUNT(*)::int AS n
+         FROM hosting_subscriptions
+         WHERE status IN ('provisioning','active','suspended')`
+      );
+      const activeSubscriptionCount = activeSubResult.rows[0]?.n ?? 0;
+
+      if (activeSubscriptionCount > 0) {
+        await logActivity({
+          userId,
+          eventType: "enhance.toggle.disable_attempt_blocked",
+          entityType: "platform_integration",
+          entityId: "enhance",
+          message: `Attempted to disable Enhance hosting while ${activeSubscriptionCount} subscription(s) still active`,
+          status: "error",
+          metadata: { activeSubscriptionCount },
+        });
+
+        return res.status(409).json({
+          error: `Cannot disable Enhance hosting while ${activeSubscriptionCount} subscription(s) are still active. Cancel or migrate them first.`,
+          activeSubscriptionCount,
+        });
+      }
+    }
+
     await EnhanceToggleService.setRuntimeEnabled(enabled, userId);
     const status = await EnhanceToggleService.getStatus();
     res.json(status);

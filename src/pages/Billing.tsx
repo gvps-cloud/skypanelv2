@@ -29,6 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import PayPalCheckoutDialog from '@/components/billing/PayPalCheckoutDialog';
 import { formatBillingAmount as formatBillingAmountDisplay } from '@/lib/formatters';
+import { useHostingStatus } from '@/hooks/useHosting';
 // Navigation provided by AppLayout
 
 interface FilterState {
@@ -44,6 +45,9 @@ interface PaginationState {
 }
 
 const Billing: React.FC = () => {
+  const { data: hostingStatus } = useHostingStatus();
+  const hostingEnabled = hostingStatus?.enabled === true;
+
   const navigate = useNavigate();
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [hostingWalletBalance, setHostingWalletBalance] = useState<number>(0);
@@ -737,6 +741,7 @@ const Billing: React.FC = () => {
           </CardContent>
         </Card>
 
+        {hostingEnabled && (
         <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
@@ -753,6 +758,7 @@ const Billing: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+        )}
 
         <Card className="overflow-hidden border-primary/25">
           <CardContent className="p-6">
@@ -899,6 +905,7 @@ const Billing: React.FC = () => {
           </CardContent>
         </Card>
 
+        {hostingEnabled && (
         <Card className="border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg font-semibold tracking-tight">Fund Hosting Wallet</CardTitle>
@@ -1012,6 +1019,7 @@ const Billing: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Buy Egress Credits Card */}
         <Card className="border-primary/25">

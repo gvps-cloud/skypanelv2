@@ -539,7 +539,13 @@ export function NotesBoard({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={submitting}>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleDelete();
+              }}
+              disabled={submitting}
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -4,6 +4,7 @@ import { Logo } from "@/components/Logo";
 import FooterPartnerLinks from "@/components/FooterPartnerLinks";
 import { BRAND_NAME } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
+import { useHostingStatus } from "@/hooks/useHosting";
 
 const footerSections = [
   {
@@ -35,6 +36,14 @@ const footerSections = [
 ];
 
 export default function MarketingFooter() {
+  const { data: hostingStatus } = useHostingStatus();
+  const hostingEnabled = hostingStatus?.enabled === true;
+
+  const visibleFooterSections = hostingEnabled ? footerSections : footerSections.map((section) => ({
+    ...section,
+    links: section.links.filter((link) => link.label !== "Web Hosting"),
+  }));
+
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (
@@ -57,7 +66,7 @@ export default function MarketingFooter() {
           </div>
 
           {/* Link sections */}
-          {footerSections.map((section) => (
+          {visibleFooterSections.map((section) => (
             <div key={section.title}>
               <h3 className="mb-4 text-sm font-semibold tracking-wide text-foreground">
                 {section.title}

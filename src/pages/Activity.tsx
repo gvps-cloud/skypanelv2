@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 import Pagination from '@/components/ui/Pagination';
 import { apiClient, buildApiUrl } from '@/lib/api';
+import { useHostingStatus } from '@/hooks/useHosting';
 
 interface ActivityRecord {
   id: string;
@@ -41,6 +42,8 @@ interface PaginationInfo {
 
 const ActivityPage: React.FC = () => {
   const { user: _user } = useAuth();
+  const { data: hostingStatus } = useHostingStatus();
+  const hostingEnabled = hostingStatus?.enabled === true;
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [loading, setLoading] = useState(false);
   /** Maps to `/activity?type=` when scope dropdown used; overridden by `entityTypeText` when set. */
@@ -276,8 +279,8 @@ const ActivityPage: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="all">All activity</SelectItem>
                     <SelectItem value="vps">VPS</SelectItem>
-                    <SelectItem value="hosting">Web hosting</SelectItem>
-                    <SelectItem value="enhance">Enhance platform</SelectItem>
+                    {hostingEnabled && <SelectItem value="hosting">Web hosting</SelectItem>}
+                    {hostingEnabled && <SelectItem value="enhance">Enhance platform</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>

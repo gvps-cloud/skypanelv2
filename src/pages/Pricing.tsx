@@ -270,6 +270,12 @@ const PricingPage: React.FC = () => {
   const { data: enabledCategoryMappings = [] } = useEnabledCategoryMappings();
 
   useEffect(() => {
+    if (!hostingEnabled && activeProduct === 'hosting') {
+      setActiveProduct('vps');
+    }
+  }, [hostingEnabled, activeProduct]);
+
+  useEffect(() => {
     loadPricingData();
   }, []);
 
@@ -508,7 +514,10 @@ const PricingPage: React.FC = () => {
                       Product catalog
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Switch between VPS compute plans and Enhance hosting packages.
+                      {hostingEnabled
+                        ? "Switch between VPS compute plans and Enhance hosting packages."
+                        : "Choose from our VPS instances with transparent hourly and monthly billing."
+                      }
                     </p>
                   </div>
                   <TabsList className="h-12 rounded-2xl border border-border/60 bg-background/80 p-1.5">

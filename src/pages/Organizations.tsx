@@ -54,6 +54,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TeamSettings from "@/components/settings/TeamSettings";
 import { OrganizationResourceTables } from "@/components/organizations/OrganizationResourceTables";
 import { OrganizationNotesSection } from "@/components/notes/OrganizationNotesSection";
+import { useHostingStatus } from "@/hooks/useHosting";
 
 interface ViewMode {
   type: "all" | "organization";
@@ -70,6 +71,8 @@ interface PaginationInfo {
 const HOSTING_SUBSCRIPTIONS_PAGE_SIZE = 6;
 
 const Organizations: React.FC = () => {
+  const { data: hostingStatus } = useHostingStatus();
+  const hostingEnabled = hostingStatus?.enabled === true;
   const [organizations, setOrganizations] = useState<OrganizationWithStats[]>([]);
   const [organizationResources, setOrganizationResources] = useState<
     OrganizationResources[]
@@ -473,16 +476,16 @@ const Organizations: React.FC = () => {
         (sum, org) => sum + org.stats.ssh_key_count,
         0,
       ),
-      hosting: organizations.reduce(
+      hosting: hostingEnabled ? organizations.reduce(
         (sum, org) => sum + (org.stats.hosting_count || 0),
         0,
-      ),
+      ) : 0,
       members: organizations.reduce(
         (sum, org) => sum + org.stats.member_count,
         0,
       ),
     };
-  }, [organizations, pagination.total]);
+  }, [organizations, pagination.total, hostingEnabled]);
 
   if (loading && currentPage === 1) {
     return (
@@ -555,12 +558,14 @@ const Organizations: React.FC = () => {
                 description: "Shared across organizations",
                 icon: <Key className="h-6 w-6" />,
               },
-              {
-                label: "Web Hosting",
-                value: totalStats.hosting,
-                description: "Active Enhance subscriptions",
-                icon: <Globe2 className="h-6 w-6" />,
-              },
+              ...(hostingEnabled
+                ? [{
+                    label: "Web Hosting",
+                    value: totalStats.hosting,
+                    description: "Active Enhance subscriptions",
+                    icon: <Globe2 className="h-6 w-6" />,
+                  }]
+                : []),
               {
                 label: "Team Members",
                 value: totalStats.members,
@@ -802,10 +807,12 @@ const Organizations: React.FC = () => {
                                 <Key className="h-3 w-3" />
                                 {resourceGroup.ssh_keys.length} SSH keys
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Globe2 className="h-3 w-3" />
-                                {resourceGroup.hosting_subscriptions.length} hosting
-                              </div>
+                              {hostingEnabled && (
+                                <div className="flex items-center gap-1">
+                                  <Globe2 className="h-3 w-3" />
+                                  {resourceGroup.hosting_subscriptions.length} hosting
+                                </div>
+                              )}
                             </div>
                           </div>
                           <Link
@@ -1042,7 +1049,7 @@ const Organizations: React.FC = () => {
                             </div>
                           )}
 
-                        {resourceGroup.permissions.hosting_view &&
+                        {hostingEnabled && resourceGroup.permissions.hosting_view &&
                           resourceGroup.hosting_subscriptions.length > 0 && (
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
@@ -1226,10 +1233,12 @@ const Organizations: React.FC = () => {
                     <Key className="mr-1 h-3 w-3" />
                     {selectedOrganization.stats.ssh_key_count} SSH keys
                   </Badge>
-                  <Badge variant="outline">
-                    <Globe2 className="mr-1 h-3 w-3" />
-                    {selectedOrganization.stats.hosting_count || 0} hosting
-                  </Badge>
+                  {hostingEnabled && (
+                    <Badge variant="outline">
+                      <Globe2 className="mr-1 h-3 w-3" />
+                      {selectedOrganization.stats.hosting_count || 0} hosting
+                    </Badge>
+                  )}
                   {egressOverview && (
                     <>
                       <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
@@ -1310,6 +1319,7 @@ const Organizations: React.FC = () => {
                   onOpenTicket={(ticketId) =>
                     handleOpenOrganizationTicket(selectedOrganization.id, ticketId)
                   }
+                  hostingEnabled={hostingEnabled}
                 />
               ) : (
                 <div className="text-center py-8 text-sm text-muted-foreground">
