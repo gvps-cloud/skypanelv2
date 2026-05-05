@@ -43,7 +43,14 @@ const ActivityPage: React.FC = () => {
   const { user: _user } = useAuth();
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [loading, setLoading] = useState(false);
-  const [type, setType] = useState<string>('');
+  /** Maps to `/activity?type=` when scope dropdown used; overridden by `entityTypeText` when set. */
+  const [activityScope, setActivityScope] = useState<
+    'all' | 'vps' | 'hosting' | 'enhance'
+  >('all');
+  /** Filters the table "Type" column (entity_type). When set, overrides activity scope. */
+  const [entityTypeText, setEntityTypeText] = useState('');
+  /** Filters the "Event" column (event_type). */
+  const [eventTypeFilter, setEventTypeFilter] = useState('');
   const [status, setStatus] = useState<string>('all');
   const [from, setFrom] = useState<Date | undefined>(undefined);
   const [to, setTo] = useState<Date | undefined>(undefined);
@@ -61,7 +68,12 @@ const ActivityPage: React.FC = () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (type) params.set('type', type);
+      if (entityTypeText.trim()) {
+        params.set('type', entityTypeText.trim());
+      } else if (activityScope !== 'all') {
+        params.set('type', activityScope);
+      }
+      if (eventTypeFilter.trim()) params.set('event_type', eventTypeFilter.trim());
       if (status && status !== 'all') params.set('status', status);
       if (from instanceof Date) params.set('from', from.toISOString());
       if (to instanceof Date) params.set('to', to.toISOString());
@@ -98,7 +110,7 @@ const ActivityPage: React.FC = () => {
       fetchActivities(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, status, from, to, limit]);
+  }, [activityScope, entityTypeText, eventTypeFilter, status, from, to, limit]);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= pagination.totalPages) {
@@ -113,6 +125,13 @@ const ActivityPage: React.FC = () => {
 
   const exportCsv = () => {
     const params = new URLSearchParams();
+    if (entityTypeText.trim()) {
+      params.set('type', entityTypeText.trim());
+    } else if (activityScope !== 'all') {
+      params.set('type', activityScope);
+    }
+    if (eventTypeFilter.trim()) params.set('event_type', eventTypeFilter.trim());
+    if (status && status !== 'all') params.set('status', status);
     if (from instanceof Date) params.set('from', from.toISOString());
     if (to instanceof Date) params.set('to', to.toISOString());
     const url = buildApiUrl(`/api/activity/export?${params.toString()}`);
@@ -241,18 +260,48 @@ const ActivityPage: React.FC = () => {
         <Card className="border-primary/25">
           <CardHeader>
             <CardTitle>Filters</CardTitle>
-            <CardDescription>Narrow down your activity search</CardDescription>
+            <CardDescription>
+              Use <strong className="font-medium text-foreground">Type (entity)</strong> for the Type column, and{' '}
+              <strong className="font-medium text-foreground">Event (exact)</strong> for the Event column. Preset scope is ignored when Type (entity) is filled.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-end">
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
               <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="activity-scope">Activity scope</Label>
+                <Select value={activityScope} onValueChange={(v) => setActivityScope(v as typeof activityScope)}>
+                  <SelectTrigger id="activity-scope">
+                    <SelectValue placeholder="All activity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All activity</SelectItem>
+                    <SelectItem value="vps">VPS</SelectItem>
+                    <SelectItem value="hosting">Web hosting</SelectItem>
+                    <SelectItem value="enhance">Enhance platform</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="entity-type-filter">Type (entity)</Label>
                 <Input
-                  id="type"
-                  value={type}
-                  onChange={e => setType(e.target.value)}
-                  placeholder="vps, container, billing"
+                  id="entity-type-filter"
+                  value={entityTypeText}
+                  onChange={e => setEntityTypeText(e.target.value)}
+                  placeholder="e.g. user, vps, hosting"
+                  autoComplete="off"
                 />
+                <p className="text-xs text-muted-foreground">Same values as the Type column (entity_type).</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="event-type-filter">Event (exact)</Label>
+                <Input
+                  id="event-type-filter"
+                  value={eventTypeFilter}
+                  onChange={e => setEventTypeFilter(e.target.value)}
+                  placeholder="e.g. auth.login, hosting.purchase.completed"
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">Same values as the Event column (event_type).</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
@@ -269,6 +318,8 @@ const ActivityPage: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
               <div className="space-y-2">
                 <Label>From Date</Label>
                 <DatePicker

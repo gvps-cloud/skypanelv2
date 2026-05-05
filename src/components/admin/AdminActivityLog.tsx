@@ -435,17 +435,31 @@ const AdminActivityLog: React.FC = () => {
                   id="eventType"
                   value={eventType}
                   onChange={(e) => setEventType(e.target.value)}
-                  placeholder="e.g. vps.create"
+                  placeholder="e.g. hosting.purchase.completed"
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 xl:col-span-2">
                 <Label htmlFor="entityType">Entity Type</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setEntityType("")}>
+                    Clear
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setEntityType("hosting")}>
+                    Web hosting
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setEntityType("enhance")}>
+                    Enhance
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setEntityType("vps")}>
+                    VPS
+                  </Button>
+                </div>
                 <Input
                   id="entityType"
                   value={entityType}
                   onChange={(e) => setEntityType(e.target.value)}
-                  placeholder="e.g. vps, billing"
+                  placeholder="hosting, enhance, or exact: hosting_subscription"
                 />
               </div>
 

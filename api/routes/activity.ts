@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import { authenticateToken, requireOrganization } from "../middleware/auth.js";
+import { appendActivityEntityTypeFilter } from "../lib/activityFilters.js";
 import { query } from "../lib/database.js";
 import { ensureActivityLogsTable } from "../services/activityLogger.js";
 import { sendSafeErrorResponse } from "../lib/errorHandling.js";
@@ -54,6 +55,7 @@ router.get("/", requireOrganization, async (req: Request, res: Response) => {
     const isAdmin = user.role === "admin";
     const {
       type,
+      event_type,
       status,
       from,
       to,
@@ -67,8 +69,16 @@ router.get("/", requireOrganization, async (req: Request, res: Response) => {
     let paramIdx = 2;
 
     if (type && typeof type === "string") {
-      clauses.push("entity_type = $" + paramIdx);
-      params.push(type);
+      paramIdx = appendActivityEntityTypeFilter({
+        rawValue: type,
+        clauses,
+        params,
+        placeholderStart: paramIdx,
+      });
+    }
+    if (event_type && typeof event_type === "string") {
+      clauses.push("event_type = $" + paramIdx);
+      params.push(event_type);
       paramIdx++;
     }
     if (status && typeof status === "string") {
@@ -178,12 +188,36 @@ router.get(
       const user = (req as any).user;
       const orgId = user.organizationId;
       const isAdmin = user.role === "admin";
-      const { from, to } = req.query as any;
+      const {
+        type,
+        event_type,
+        status,
+        from,
+        to,
+      } = req.query as any;
       const clauses: string[] = [
         isAdmin ? "user_id = $1" : "organization_id = $1",
       ];
       const params: any[] = [isAdmin ? user.id : orgId];
       let paramIdx = 2;
+      if (type && typeof type === "string") {
+        paramIdx = appendActivityEntityTypeFilter({
+          rawValue: type,
+          clauses,
+          params,
+          placeholderStart: paramIdx,
+        });
+      }
+      if (event_type && typeof event_type === "string") {
+        clauses.push("event_type = $" + paramIdx);
+        params.push(event_type);
+        paramIdx++;
+      }
+      if (status && typeof status === "string") {
+        clauses.push("status = $" + paramIdx);
+        params.push(status);
+        paramIdx++;
+      }
       if (from && typeof from === "string") {
         clauses.push("created_at >= $" + paramIdx);
         params.push(new Date(from));

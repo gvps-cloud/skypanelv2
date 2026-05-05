@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import { authenticateToken, requireAdmin } from "../../middleware/auth.js";
+import { appendActivityEntityTypeFilter } from "../../lib/activityFilters.js";
 import { query } from "../../lib/database.js";
 import { ensureActivityLogsTable } from "../../services/activityLogger.js";
 
@@ -59,9 +60,12 @@ router.get("/", async (req: Request, res: Response) => {
       paramIdx++;
     }
     if (entity_type && typeof entity_type === "string") {
-      clauses.push(`entity_type = $${paramIdx}`);
-      params.push(entity_type);
-      paramIdx++;
+      paramIdx = appendActivityEntityTypeFilter({
+        rawValue: entity_type,
+        clauses,
+        params,
+        placeholderStart: paramIdx,
+      });
     }
     if (status && typeof status === "string") {
       clauses.push(`status = $${paramIdx}`);
@@ -159,9 +163,12 @@ router.get("/export", async (req: Request, res: Response) => {
       paramIdx++;
     }
     if (entity_type && typeof entity_type === "string") {
-      clauses.push(`entity_type = $${paramIdx}`);
-      params.push(entity_type);
-      paramIdx++;
+      paramIdx = appendActivityEntityTypeFilter({
+        rawValue: entity_type,
+        clauses,
+        params,
+        placeholderStart: paramIdx,
+      });
     }
     if (status && typeof status === "string") {
       clauses.push(`status = $${paramIdx}`);

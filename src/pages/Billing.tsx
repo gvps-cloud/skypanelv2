@@ -72,7 +72,6 @@ const Billing: React.FC = () => {
   // VPS Uptime state
   const [vpsUptimeData, setVpsUptimeData] = useState<VPSUptimeSummary | null>(null);
   const [uptimeLoading, setUptimeLoading] = useState(false);
-  const [uptimeError, setUptimeError] = useState<string | null>(null);
 
   // Billing summary state
   const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
@@ -186,17 +185,17 @@ const Billing: React.FC = () => {
 
   const loadVPSUptimeData = React.useCallback(async () => {
     setUptimeLoading(true);
-    setUptimeError(null);
     try {
       const result = await paymentService.getVPSUptimeSummary();
       if (result.success && result.data) {
         setVpsUptimeData(result.data);
       } else {
-        setUptimeError(result.error || 'Failed to load VPS uptime data');
+        const message = result.error || 'Failed to load VPS uptime data';
+        toast.error(message);
       }
     } catch (error) {
       console.error('Failed to load VPS uptime data:', error);
-      setUptimeError('Failed to load VPS uptime data');
+      toast.error('Failed to load VPS uptime data');
     } finally {
       setUptimeLoading(false);
     }
@@ -1051,43 +1050,27 @@ const Billing: React.FC = () => {
         onError={handlePayPalError}
       />
 
-      {/* VPS Uptime Summary Section */}
-      <Card className="mb-8 border-primary/25">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center text-lg font-semibold tracking-tight">
-              <Clock className="h-5 w-5 mr-2 text-primary" />
-              VPS Uptime Summary
-            </CardTitle>
-            {!uptimeLoading && (
-              <button
-                onClick={loadVPSUptimeData}
-                className="inline-flex items-center px-3 py-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                title="Refresh uptime data"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {uptimeLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <p className="ml-3 text-muted-foreground">Loading VPS uptime data...</p>
+      {/* VPS Uptime Summary Section — only when org has VPS instances */}
+      {vpsUptimeData && vpsUptimeData.vpsInstances.length > 0 && (
+        <Card className="mb-8 border-primary/25">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center text-lg font-semibold tracking-tight">
+                <Clock className="h-5 w-5 mr-2 text-primary" />
+                VPS Uptime Summary
+              </CardTitle>
+              {!uptimeLoading && (
+                <button
+                  onClick={loadVPSUptimeData}
+                  className="inline-flex items-center px-3 py-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  title="Refresh uptime data"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              )}
             </div>
-          ) : uptimeError ? (
-            <div className="text-center py-8">
-              <p className="text-destructive mb-4">{uptimeError}</p>
-              <button
-                onClick={loadVPSUptimeData}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
-              </button>
-            </div>
-          ) : vpsUptimeData && vpsUptimeData.vpsInstances.length > 0 ? (
+          </CardHeader>
+          <CardContent>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 bg-muted rounded-lg">
@@ -1223,17 +1206,9 @@ const Billing: React.FC = () => {
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground">No VPS instances found</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Create a VPS instance to see uptime tracking
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Card className="border-primary/25">
