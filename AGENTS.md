@@ -11,10 +11,13 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 
 - `src/` — React 18 + Vite + TypeScript frontend. Pages in `src/pages/`, components in `src/components/`, shared UI via shadcn/ui in `src/components/ui/`.
 - `api/` — Express 4 + TypeScript backend. Routes in `api/routes/`, services in `api/services/`, middleware in `api/middleware/`.
-- `lib/` — Shared workspace packages: `api-client-react` (TanStack Query hooks), `api-zod` (Zod request/response schemas), `api-spec` (OpenAPI spec + orval codegen at `openapi.yaml`), `db` (Drizzle ORM schema — see Database section).
-- `migrations/` — Numbered SQL migrations; see Database & Migrations.
+- `lib/` — Shared workspace packages (pnpm): `api-client-react` (TanStack Query hooks), `api-zod` (Zod schemas), `api-spec` (OpenAPI spec + Orval codegen), `db` (Drizzle ORM schema).
+  - `lib/api-spec`: run `pnpm codegen` to regenerate clients from `openapi.yaml`.
+  - `lib/db`: `pnpm push` / `pnpm push-force` to sync Drizzle schema to DB (development only).
+  - Generated output under `lib/api-client-react/src/generated` and `lib/api-zod/src/generated` is Orval-generated; do not hand-edit.
+- `migrations/` — Numbered SQL migrations (zero-padded `NNN_*.sql`); see Database section.
 - `git-docs/` — Prose documentation; prefer root configs/scripts when docs disagree.
-- Package manager split is intentional: root app scripts and `package-lock.json` use npm; `pnpm-workspace.yaml`/`pnpm-lock.yaml` are for `lib/*` workspace packages and catalog deps. Do not infer root React/Vite versions from the pnpm catalog.
+- Package manager split is intentional: root app scripts and `package-lock.json` use npm; `pnpm-workspace.yaml`/`pnpm-lock.yaml` are for `lib/*` workspace packages and catalog deps. Do not infer root React/Vite/Zod versions from the pnpm catalog — root is React 18 / Zod 4, catalog targets React 19 / Zod 3 for lib packages.
 - Three product surfaces: public marketing pages, customer portal (dashboard/VPS/billing), admin dashboard.
 
 ## Commands
@@ -28,7 +31,14 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 - Security suite: `npm run test:security`. Full verification: `npm run verify:security`.
 - Playwright e2e config auto-starts `npm run dev-up` outside CI; base URL defaults to `http://localhost:5173`.
 - API docs: `npm run docs:api:sync` updates `src/lib/apiRouteManifest.ts`; `npm run docs:api:audit` checks coverage.
-- OpenAPI client/Zod output under `lib/api-client-react/src/generated` and `lib/api-zod/src/generated` is Orval-generated from `lib/api-spec/openapi.yaml`; do not hand-edit generated files.
+- Admin seed: `npm run seed:admin` (uses `DEFAULT_ADMIN_EMAIL`/`DEFAULT_ADMIN_PASSWORD` env vars).
+
+## TypeScript & Lint Conventions
+
+- `tsconfig.json` has `"strict": false`, `"noUnusedLocals": false`, `"noUnusedParameters": false`. Do not add strict assertions that the codebase doesn't enforce.
+- ESLint: `@typescript-eslint/no-explicit-any` is `off`; unused vars/params prefixed with `_` are allowed. Do not "fix" these to stricter settings.
+- Backend is ESM (`"type": "module"`): all local backend imports need `.js` extensions even when importing `.ts` sources.
+- Root uses Zod 4 (`"zod": "4.1.12"`); pnpm catalog uses Zod 3 (`"zod": "3.25.76"`). The Zod API differs between major versions — use the correct import for the package context.
 
 ## Commit Conventions
 
@@ -47,7 +57,6 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 
 ## Backend Rules
 
-- Backend is ESM (`"type": "module"`): all local backend imports need `.js` extensions even when importing `.ts` sources.
 - `api/server.ts` is the listening entrypoint; `api/app.ts` builds middleware/routes and also serves `dist/` if it exists, regardless of `NODE_ENV`.
 - Route/service files should import `config` from `api/config/index.ts`; do not read `process.env` directly except in config/bootstrap code.
 - Apply auth/organization middleware at router level (`router.use(...)`) where possible. `/api` gets CSRF, API-key auth, smart rate limits, and rate-limit headers in `api/app.ts`.
@@ -67,11 +76,13 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 - Public marketing pages share `@/styles/home.css`; `MarketingNavbar` is fixed and offset by `--announcement-banner-height` from `AnnouncementBanner`.
 - Logo source of truth is `public/favicon.svg`; `Logo` renders it as an image.
 - Route guards in `src/App.tsx`: `<ProtectedRoute>` renders `AppLayout`; `<AdminRoute>` requires `user.role === 'admin'` and blocks impersonation; `<HostingEnabledRoute>` gates hosting pages.
+- Vite build includes a `removeMockData` plugin that strips example emails, passwords, and API tokens from production bundles. Do not add sensitive-looking defaults to `src/` files expecting them to ship.
 
 ## Database & Migrations
 
 - Two DB access patterns coexist: `api/` uses raw `pg` through `api/lib/database.ts` (the primary path); `lib/db` (`@workspace/db`) uses Drizzle ORM with `drizzle-kit` for schema definitions. New backend routes should use the raw `pg` `query()` helper from `api/lib/database.ts`.
-- Migrations are SQL files in `migrations/`, currently through `065`. Never modify an existing migration; add the next zero-padded `NNN_short_description.sql`.
+- `@workspace/db` exports `./src/index.ts` (query helpers) and `./schema` (Drizzle schema definitions).
+- Migrations are zero-padded SQL files in `migrations/`. Never modify an existing migration; add the next numbered `NNN_short_description.sql`.
 - Apply pending migrations with `node scripts/run-migration.js`. Do not run `db:reset`, `db:reset:confirm`, or `db:fresh` unless explicitly requested; they destroy data.
 - Migration runner validates SHA256 checksums, so editing applied migrations will break future runs.
 - Schema conventions: UUID PKs (`gen_random_uuid()`), `TIMESTAMPTZ` timestamps, `deleted_at` for soft deletes, `JSONB DEFAULT '{}'` for config/metadata, explicit `ON DELETE CASCADE` or `ON DELETE SET NULL` on all foreign keys.
@@ -92,13 +103,12 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 
 ## Architecture Hotspots
 
-- Route registration and middleware order: `api/app.ts`.
+- Route registration and middleware order: `api/app.ts`. Hosting sub-routes (web, node, email, dns, wordpress, joomla, mysql, ftp, ssl, apps, backups, cron, ssh) are individually imported and mounted.
 - Auth, org context, impersonation: `api/middleware/auth.ts` and organization routes.
 - Hosting purchase/onboarding: `api/routes/hosting/store.ts`, `api/services/enhanceOnboardingService.ts`, `api/services/enhanceService.ts`.
-- Hosting billing: `api/services/hostingBillingService.ts` — monthly recurring billing for hosting subscriptions.
-- Egress prepaid billing: `api/services/egressCreditService.ts`, `api/services/egressHourlyBillingService.ts`, migrations `025`-`033`.
-- Fraud screening: `api/services/fraudLabsProService.ts` — FraudLabsPro transaction screening.
-- Refund processing: `api/services/refundService.ts` — PayPal capture refunds + wallet credits.
-- Notes system: `api/services/notes.ts`, `api/routes/notes.ts` — personal and organization notes.
-- Theme behavior: `src/contexts/ThemeContext.tsx` and `api/routes/theme.ts`.
-- Frontend route guards/provider order: `src/App.tsx`.
+- Hosting billing: `api/services/hostingBillingService.ts` — monthly recurring billing.
+- Egress prepaid billing: `api/services/egressCreditService.ts`, `api/services/egressHourlyBillingService.ts`, `api/services/egress/` sub-directory.
+- Fraud screening: `api/services/fraudLabsProService.ts`.
+- Refund processing: `api/services/refundService.ts`.
+- Theme behavior is dual-path: frontend `src/contexts/ThemeContext.tsx` and API route `api/routes/theme.ts`.
+- Vite proxy config in `vite.config.ts` includes SSE/WebSocket handling for `/notifications/stream`.
