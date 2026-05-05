@@ -34,7 +34,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -524,7 +523,7 @@ export function NotesBoard({
       <AlertDialog
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => {
-          if (!open) {
+          if (!open && !submitting) {
             setDeleteTarget(null);
           }
         }}
@@ -539,15 +538,13 @@ export function NotesBoard({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                void handleDelete();
-              }}
+            <Button
+              variant="destructive"
+              onClick={() => void handleDelete()}
               disabled={submitting}
             >
-              Delete
-            </AlertDialogAction>
+              {submitting ? "Deleting..." : "Delete"}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
