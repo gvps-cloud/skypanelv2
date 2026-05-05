@@ -29,7 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { BRAND_NAME } from "../lib/brand";
 import { apiClient } from "@/lib/api";
@@ -714,7 +714,7 @@ export default function Documentation() {
   /* ── Shared plan table renderer ────────────────────────────────────────────*/
 
   const renderPlanTable = (plans: typeof vpsPlans) => (
-    <div className="overflow-x-auto rounded-lg border">
+    <ScrollArea className="w-full whitespace-nowrap rounded-lg border">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/50">
@@ -755,7 +755,8 @@ export default function Documentation() {
           })}
         </tbody>
       </table>
-    </div>
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
   );
 
   /* ── Render: Creating Your First VPS article (dynamic plans) ──────────────*/

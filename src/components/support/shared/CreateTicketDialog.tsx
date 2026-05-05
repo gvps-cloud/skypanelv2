@@ -35,6 +35,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
+  Globe,
   Loader2,
   Server,
   Shield,
@@ -46,11 +47,13 @@ interface CreateTicketDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: CreateTicketData) => Promise<void>;
   vpsInstances?: Array<{ id: string; label: string }>;
+  hostingServices?: Array<{ id: string; label: string }>;
   isLoading?: boolean;
   prefilled?: {
     subject?: string;
     description?: string;
     category?: string;
+    hostingSubscriptionId?: string;
   };
 }
 
@@ -60,11 +63,12 @@ export interface CreateTicketData {
   priority: TicketPriority;
   category: TicketCategory;
   vpsId?: string;
+  hostingSubscriptionId?: string;
 }
 
 const STEPS = [
   { id: "details", label: "Issue Details", description: "Define the request" },
-  { id: "service", label: "Service Context", description: "Attach a server" },
+  { id: "service", label: "Service Context", description: "Attach VPS or hosting" },
   { id: "review", label: "Review & Send", description: "Add final detail" },
 ] as const;
 
@@ -89,6 +93,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
   onOpenChange,
   onSubmit,
   vpsInstances = [],
+  hostingServices = [],
   isLoading = false,
   prefilled,
 }) => {
@@ -98,12 +103,16 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
     priority: "medium",
     category: "general",
     vpsId: undefined,
+    hostingSubscriptionId: undefined,
   });
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
   const [serviceSearch, setServiceSearch] = useState("");
   const [servicePage, setServicePage] = useState(1);
+  const [hostingPickerOpen, setHostingPickerOpen] = useState(false);
+  const [hostingSearch, setHostingSearch] = useState("");
+  const [hostingPage, setHostingPage] = useState(1);
 
   const busy = isLoading || submitting;
   const subjectReady = data.subject.trim().length > 0;
@@ -120,6 +129,22 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
     [data.vpsId, vpsInstances]
   );
 
+  const filteredHostingServices = useMemo(() => {
+    const query = hostingSearch.trim().toLowerCase();
+    if (!query) return hostingServices;
+    return hostingServices.filter((svc) => svc.label.toLowerCase().includes(query));
+  }, [hostingSearch, hostingServices]);
+
+  const selectedHostingService = useMemo(
+    () => hostingServices.find((svc) => svc.id === data.hostingSubscriptionId),
+    [data.hostingSubscriptionId, hostingServices]
+  );
+
+  const paginatedHostingServices = useMemo(() => {
+    const start = (hostingPage - 1) * SERVICES_PER_PAGE;
+    return filteredHostingServices.slice(start, start + SERVICES_PER_PAGE);
+  }, [filteredHostingServices, hostingPage]);
+
   const paginatedServices = useMemo(() => {
     const start = (servicePage - 1) * SERVICES_PER_PAGE;
     return filteredServices.slice(start, start + SERVICES_PER_PAGE);
@@ -133,17 +158,32 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
         priority: "medium",
         category: (prefilled?.category as TicketCategory) || "general",
         vpsId: undefined,
+        hostingSubscriptionId: prefilled?.hostingSubscriptionId,
       });
       setCurrentStep(0);
       setServicePickerOpen(false);
       setServiceSearch("");
       setServicePage(1);
+      setHostingPickerOpen(false);
+      setHostingSearch("");
+      setHostingPage(1);
     }
   }, [open, prefilled]);
 
   useEffect(() => {
     setServicePage(1);
   }, [serviceSearch]);
+
+  useEffect(() => {
+    setHostingPage(1);
+  }, [hostingSearch]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredHostingServices.length / SERVICES_PER_PAGE));
+    if (hostingPage > totalPages) {
+      setHostingPage(totalPages);
+    }
+  }, [filteredHostingServices.length, hostingPage]);
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(filteredServices.length / SERVICES_PER_PAGE));
@@ -185,7 +225,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
     <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent className="overflow-hidden border-border/60 bg-background p-0 shadow-2xl sm:max-w-3xl">
         <div className="relative">
-          <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-r from-primary/15 via-primary/5 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-primary/10 to-transparent" />
 
           <DialogHeader className="relative gap-5 border-b border-border/60 px-6 py-6 sm:px-8">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
@@ -353,15 +393,15 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
               )}
 
               {currentStep === 1 && (
-                <div className="space-y-5 rounded-2xl border border-border/70 bg-card/80 p-5 shadow-sm">
+                <div className="space-y-8 rounded-2xl border border-border/70 bg-card/80 p-5 shadow-sm">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                       <Server className="h-4 w-4 text-primary" />
-                      Related service
+                      VPS (optional)
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Link a VPS if the request is tied to a specific server. This is optional,
-                      and you can search through large server lists with pagination.
+                      Link a VPS if the request is tied to a specific server. You can search
+                      large lists with pagination.
                     </p>
                   </div>
 
@@ -464,8 +504,132 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                     </div>
                   ) : (
                     <div className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
-                      No VPS instances are currently available to attach. You can continue without
-                      linking a service.
+                      No VPS instances are currently available to attach.
+                    </div>
+                  )}
+
+                  <div className="space-y-2 border-t border-border/60 pt-6">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <Globe className="h-4 w-4 text-primary" />
+                      Enhance hosting (optional)
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Link a hosting subscription if the ticket applies to a specific site or plan.
+                    </p>
+                  </div>
+
+                  {hostingServices.length > 0 ? (
+                    <div className="space-y-4">
+                      <Popover open={hostingPickerOpen} onOpenChange={setHostingPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={hostingPickerOpen}
+                            disabled={busy}
+                            className="h-12 w-full justify-between rounded-xl border-dashed px-4 text-left font-normal"
+                          >
+                            <span className="truncate text-sm">
+                              {selectedHostingService?.label ||
+                                "Search and choose a hosting subscription (optional)"}
+                            </span>
+                            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-60" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-[min(36rem,calc(100vw-2rem))] p-0">
+                          <Command shouldFilter={false} className="rounded-xl">
+                            <CommandInput
+                              placeholder="Search by domain or plan..."
+                              value={hostingSearch}
+                              onValueChange={setHostingSearch}
+                            />
+                            <CommandList className="max-h-[340px]">
+                              <CommandGroup heading="Selection">
+                                <CommandItem
+                                  value="none-hosting"
+                                  onSelect={() => {
+                                    setData((current) => ({
+                                      ...current,
+                                      hostingSubscriptionId: undefined,
+                                    }));
+                                    setHostingPickerOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "h-4 w-4",
+                                      !data.hostingSubscriptionId ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  None / Not applicable
+                                </CommandItem>
+                              </CommandGroup>
+
+                              <CommandSeparator />
+
+                              {filteredHostingServices.length > 0 ? (
+                                <CommandGroup
+                                  heading={`Hosting (${filteredHostingServices.length})`}
+                                >
+                                  {paginatedHostingServices.map((svc) => (
+                                    <CommandItem
+                                      key={svc.id}
+                                      value={svc.id}
+                                      onSelect={() => {
+                                        setData((current) => ({
+                                          ...current,
+                                          hostingSubscriptionId: svc.id,
+                                        }));
+                                        setHostingPickerOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "h-4 w-4",
+                                          data.hostingSubscriptionId === svc.id
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        )}
+                                      />
+                                      <span className="truncate">{svc.label}</span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              ) : (
+                                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                                  No hosting subscriptions match your search.
+                                </div>
+                              )}
+                            </CommandList>
+                          </Command>
+
+                          {filteredHostingServices.length > 0 && (
+                            <Pagination
+                              currentPage={hostingPage}
+                              totalItems={filteredHostingServices.length}
+                              itemsPerPage={SERVICES_PER_PAGE}
+                              onPageChange={setHostingPage}
+                              showItemsPerPage={false}
+                              className="rounded-b-xl border-t bg-muted/10 px-4 py-3"
+                            />
+                          )}
+                        </PopoverContent>
+                      </Popover>
+
+                      <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm">
+                        <p className="font-medium text-foreground">Hosting selection</p>
+                        <p className="mt-1 text-muted-foreground">
+                          {selectedHostingService
+                            ? `This ticket will be linked to ${selectedHostingService.label}.`
+                            : "No hosting subscription is linked yet."}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">
+                      No hosting subscriptions are available to attach (you may need hosting access,
+                      or none exist yet).
                     </div>
                   )}
                 </div>
@@ -529,10 +693,19 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
 
                       <div>
                         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Related service
+                          Related VPS
                         </p>
                         <p className="mt-1 text-foreground">
-                          {selectedService?.label || "No linked service"}
+                          {selectedService?.label || "None"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Related hosting
+                        </p>
+                        <p className="mt-1 text-foreground">
+                          {selectedHostingService?.label || "None"}
                         </p>
                       </div>
 

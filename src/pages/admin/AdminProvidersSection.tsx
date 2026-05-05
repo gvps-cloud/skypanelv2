@@ -1,4 +1,5 @@
 import React from "react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   AlertCircle,
   CheckCircle,
@@ -263,7 +264,7 @@ export const AdminProvidersSection: React.FC<AdminProvidersSectionProps> = ({
           <CardTitle>Provider List</CardTitle>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="overflow-x-auto">
+          <ScrollArea className="w-full whitespace-nowrap">
             <DndContext
               sensors={providerSensors}
               collisionDetection={closestCenter}
@@ -311,7 +312,8 @@ export const AdminProvidersSection: React.FC<AdminProvidersSectionProps> = ({
                 </TableBody>
               </Table>
             </DndContext>
-          </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </CardContent>
       </Card>
 

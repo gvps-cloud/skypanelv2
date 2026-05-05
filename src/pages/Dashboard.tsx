@@ -667,7 +667,7 @@ const Dashboard: React.FC = () => {
                           <Server className="h-8 w-8 text-muted-foreground" />
                         </div>
                         <h3 className="mt-6 text-base font-semibold">
-                          No instances yet — exit 0
+                          No instances yet
                         </h3>
                         <p className="mt-2 max-w-md text-sm text-muted-foreground">
                           Deploy your first VPS to attach live metrics to this pane.
@@ -939,7 +939,7 @@ const Dashboard: React.FC = () => {
                       <Server className="h-8 w-8 text-muted-foreground" />
                     </div>
                     <h3 className="mt-6 text-base font-semibold">
-                      No instances yet — exit 0
+                      No instances yet
                     </h3>
                     <p className="mt-2 max-w-md text-sm text-muted-foreground">
                       Deploy your first VPS to attach live metrics to this pane.

@@ -124,11 +124,15 @@ router.get("/tickets", authenticateToken, requireOrganization, async (req: Reque
            u.email AS creator_email,
            org.name AS organization_name,
            org.slug AS organization_slug,
-           COALESCE(vi.label, st.vps_label_snapshot) as vps_label
+           COALESCE(vi.label, st.vps_label_snapshot) as vps_label,
+           COALESCE(st.hosting_domain_snapshot, hs.domain) AS hosting_domain,
+           COALESCE(st.hosting_plan_name_snapshot, hp.name) AS hosting_plan_name
          FROM support_tickets st
          LEFT JOIN users u ON u.id = st.created_by
          LEFT JOIN organizations org ON org.id = st.organization_id
          LEFT JOIN vps_instances vi ON st.vps_id = vi.id
+         LEFT JOIN hosting_subscriptions hs ON st.hosting_subscription_id = hs.id
+         LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
          WHERE st.organization_id = $1 
          ORDER BY st.created_at DESC`,
         [organizationId],
@@ -143,11 +147,15 @@ router.get("/tickets", authenticateToken, requireOrganization, async (req: Reque
            u.email AS creator_email,
            org.name AS organization_name,
            org.slug AS organization_slug,
-           COALESCE(vi.label, st.vps_label_snapshot) as vps_label
+           COALESCE(vi.label, st.vps_label_snapshot) as vps_label,
+           COALESCE(st.hosting_domain_snapshot, hs.domain) AS hosting_domain,
+           COALESCE(st.hosting_plan_name_snapshot, hp.name) AS hosting_plan_name
          FROM support_tickets st
          LEFT JOIN users u ON u.id = st.created_by
          LEFT JOIN organizations org ON org.id = st.organization_id
          LEFT JOIN vps_instances vi ON st.vps_id = vi.id
+         LEFT JOIN hosting_subscriptions hs ON st.hosting_subscription_id = hs.id
+         LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
          WHERE st.organization_id = $1 AND st.created_by = $2
          ORDER BY st.created_at DESC`,
         [organizationId, userId],
@@ -232,9 +240,33 @@ router.post(
       }
     }
 
+    let resolvedHostingSubscriptionId: string | null = null;
+    let hostingDomainSnapshot: string | null = null;
+    let hostingPlanNameSnapshot: string | null = null;
+
+    if (hostingSubscriptionId) {
+      const hostingRes = await query(
+        `SELECT hs.domain, hp.name AS plan_name
+         FROM hosting_subscriptions hs
+         LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
+         WHERE hs.id = $1 AND hs.organization_id = $2`,
+        [hostingSubscriptionId, organizationId],
+      );
+      if (hostingRes.rows.length === 0) {
+        res.status(400).json({
+          error:
+            "Hosting subscription not found or does not belong to this organization.",
+        });
+        return;
+      }
+      resolvedHostingSubscriptionId = hostingSubscriptionId;
+      hostingDomainSnapshot = hostingRes.rows[0].domain ?? null;
+      hostingPlanNameSnapshot = hostingRes.rows[0].plan_name ?? null;
+    }
+
     const result = await query(
-      `INSERT INTO support_tickets (organization_id, created_by, subject, message, priority, category, status, vps_id, vps_label_snapshot, vps_ip_snapshot, hosting_subscription_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `INSERT INTO support_tickets (organization_id, created_by, subject, message, priority, category, status, vps_id, vps_label_snapshot, vps_ip_snapshot, hosting_subscription_id, hosting_domain_snapshot, hosting_plan_name_snapshot)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [
         organizationId,
@@ -247,7 +279,9 @@ router.post(
         vpsId || null,
         vpsLabelSnapshot,
         vpsIpSnapshot,
-        hostingSubscriptionId || null,
+        resolvedHostingSubscriptionId,
+        hostingDomainSnapshot,
+        hostingPlanNameSnapshot,
       ],
     );
 
@@ -270,6 +304,9 @@ router.post(
           message_preview: String(message || "").substring(0, 100),
           vps_id: vpsId,
           vps_label: vpsLabel,
+          hosting_subscription_id: resolvedHostingSubscriptionId,
+          hosting_domain_snapshot: hostingDomainSnapshot,
+          hosting_plan_name_snapshot: hostingPlanNameSnapshot,
         },
         req,
       });

@@ -18,6 +18,7 @@ import {
 } from "@/services/ipamService";
 import { ChevronLeft, ChevronRight, Loader2, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export interface IPv6PrefixOption {
   range: string;
@@ -316,7 +317,8 @@ export function IPv6RangeRdnsEditor({
               {pageRecords.length === 0 ? (
                 <p className="py-2 text-xs text-muted-foreground">No records match your filter.</p>
               ) : (
-                <ul className="max-h-[220px] space-y-1.5 overflow-y-auto">
+                <ScrollArea className="max-h-[220px]">
+                  <ul className="space-y-1.5">
                   {pageRecords.map((record) => {
                     const isDeleting = deletingAddress === record.address;
                     return (
@@ -351,6 +353,7 @@ export function IPv6RangeRdnsEditor({
                     );
                   })}
                 </ul>
+                </ScrollArea>
               )}
 
               {totalPages > 1 ? (

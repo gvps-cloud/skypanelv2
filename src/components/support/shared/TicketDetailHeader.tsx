@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { SupportTicket } from "@/types/support";
 import { TICKET_STATUS_META, TICKET_PRIORITY_META } from "./constants";
-import { ArrowLeft, Clock, MapPin, Shield, User } from "lucide-react";
+import { ArrowLeft, Clock, Globe, MapPin, Shield, User } from "lucide-react";
 
 interface TicketDetailHeaderProps {
   ticket: SupportTicket;
@@ -95,6 +95,20 @@ export const TicketDetailHeader: React.FC<TicketDetailHeaderProps> = ({
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 opacity-70" />
                 <span className="font-medium text-foreground">{ticket.vps_label}</span>
+              </div>
+            </>
+          )}
+
+          {ticket.hosting_subscription_id && (
+            <>
+              <div className="h-1 w-1 rounded-full bg-border" />
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Globe className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                <span className="font-medium text-foreground truncate">
+                  {[ticket.hosting_domain, ticket.hosting_plan_name]
+                    .filter((part) => Boolean(part && String(part).trim()))
+                    .join(" · ") || "Hosting subscription"}
+                </span>
               </div>
             </>
           )}

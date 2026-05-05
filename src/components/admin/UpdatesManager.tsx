@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { apiClient } from '@/lib/api';
 import type { GitHubCommit } from '@/types/faq';
@@ -128,7 +129,7 @@ export const UpdatesManager: React.FC<UpdatesManagerProps> = ({ token }) => {
             No commits found.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollArea className="w-full whitespace-nowrap">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -219,7 +220,8 @@ export const UpdatesManager: React.FC<UpdatesManagerProps> = ({ token }) => {
                 ))}
               </TableBody>
             </Table>
-          </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         )}
       </CardContent>
     </Card>

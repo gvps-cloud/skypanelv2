@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Plus, Edit, Trash2, GripVertical, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -504,7 +505,7 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
 
           {/* Desktop Table View */}
           <div className="hidden md:block rounded-md border overflow-hidden">
-            <div className="overflow-x-auto">
+            <ScrollArea className="w-full whitespace-nowrap">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -540,7 +541,8 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
                   </TableBody>
                 </Table>
               </DndContext>
-            </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </div>
         </>
       )}
@@ -569,22 +571,23 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
         </div>
         {mainContent}
 
-      {/* Add/Edit Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[85vh] overflow-y-auto">
-            <DialogHeader className="pb-2">
-              <DialogTitle className="text-base sm:text-lg">
-                {editingMapping ? 'Edit Category Mapping' : 'Add Category Mapping'}
-              </DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm">
-                {editingMapping
-                  ? 'Update the custom name and description for this category.'
-                  : 'Create a new custom name and description for a VPS category.'}
-              </DialogDescription>
-            </DialogHeader>
+{/* Add/Edit Dialog */}
+         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+           <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[85vh] flex flex-col overflow-hidden">
+             <DialogHeader className="pb-2">
+               <DialogTitle className="text-base sm:text-lg">
+                 {editingMapping ? 'Edit Category Mapping' : 'Add Category Mapping'}
+               </DialogTitle>
+               <DialogDescription className="text-xs sm:text-sm">
+                 {editingMapping
+                   ? 'Update the custom name and description for this category.'
+                   : 'Create a new custom name and description for a VPS category.'}
+               </DialogDescription>
+             </DialogHeader>
 
-            <form onSubmit={form.handleSubmit(handleSubmit)}>
-              <div className="grid gap-4 py-4">
+             <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
+               <ScrollArea className="flex-1">
+               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="original_category" className="text-sm">Original Category</Label>
                   {editingMapping ? (
@@ -670,11 +673,12 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
                       form.setValue('enabled', checked)
                     }
                   />
-                  <Label htmlFor="enabled" className="text-sm">Enabled</Label>
-                </div>
-              </div>
+<Label htmlFor="enabled" className="text-sm">Enabled</Label>
+                 </div>
+               </div>
+               </ScrollArea>
 
-              <DialogFooter className="flex-col sm:flex-row gap-2">
+               <DialogFooter className="flex-col sm:flex-row gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -737,7 +741,7 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-base sm:text-lg">
               {editingMapping ? 'Edit Category Mapping' : 'Add Category Mapping'}
@@ -749,7 +753,8 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={form.handleSubmit(handleSubmit)}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 min-h-0">
+            <ScrollArea className="flex-1">
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="original_category" className="text-sm">Original Category</Label>
@@ -839,6 +844,7 @@ export const CategoryMappingManager: React.FC<CategoryMappingManagerProps> = ({ 
                 <Label htmlFor="enabled" className="text-sm">Enabled</Label>
               </div>
             </div>
+            </ScrollArea>
 
             <DialogFooter className="flex-col sm:flex-row gap-2">
               <Button

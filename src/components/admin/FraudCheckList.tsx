@@ -29,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { DatePicker } from "@/components/ui/date-picker";
 import Pagination from "@/components/ui/Pagination";
 import {
@@ -223,7 +224,7 @@ function FraudCheckDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[85vh] flex flex-col overflow-hidden sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
@@ -232,6 +233,7 @@ function FraudCheckDetailDialog({
           <DialogDescription>ID: {check.id}</DialogDescription>
         </DialogHeader>
 
+        <ScrollArea className="flex-1">
         <div className="space-y-6">
           {/* Summary row */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -357,6 +359,7 @@ function FraudCheckDetailDialog({
             </Button>
           </div>
         </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertTriangle } from 'lucide-react';
 import { VPSInstance } from '@/types/vps';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface BulkDeleteModalProps {
   isOpen: boolean;
@@ -86,7 +87,8 @@ export const BulkDeleteModal: React.FC<BulkDeleteModalProps> = ({
 
         <div className="space-y-4">
           {/* Server List */}
-          <div className="max-h-32 overflow-y-auto rounded-md border p-3">
+          <ScrollArea className="max-h-32 rounded-md border">
+            <div className="p-3">
             <ul className="space-y-1">
               {selectedInstances.map((instance) => (
                 <li key={instance.id} className="text-sm">
@@ -94,7 +96,8 @@ export const BulkDeleteModal: React.FC<BulkDeleteModalProps> = ({
                 </li>
               ))}
             </ul>
-          </div>
+            </div>
+          </ScrollArea>
 
           {/* Password Input */}
           <form onSubmit={handleSubmit} className="space-y-4">

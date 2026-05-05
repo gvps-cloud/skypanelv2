@@ -14,6 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { CountryFlag } from '@/components/regions/countryFlags';
 
 export interface RegionOption {
@@ -143,7 +144,7 @@ export function RegionMultiSelect({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-          <div className="max-h-80 overflow-y-auto">
+          <ScrollArea className="max-h-80">
             {/* Search Input */}
             <div className="p-3 border-b sticky top-0 bg-background z-10">
               <div className="relative">
@@ -231,7 +232,7 @@ export function RegionMultiSelect({
                 );
               })
             )}
-          </div>
+          </ScrollArea>
         </PopoverContent>
       </Popover>
     </div>

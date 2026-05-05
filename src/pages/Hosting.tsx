@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
 import { useHostingServices, useHostingStatus, hostingKeys } from "@/hooks/useHosting";
 import { apiClient } from "@/lib/api";
@@ -252,7 +253,7 @@ export default function Hosting() {
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
+        <ScrollArea className="w-full whitespace-nowrap rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -375,6 +376,7 @@ export default function Hosting() {
               })}
             </TableBody>
           </Table>
+          <ScrollBar orientation="horizontal" />
           <Pagination
             currentPage={safePage}
             totalItems={filtered.length}
@@ -382,7 +384,7 @@ export default function Hosting() {
             onPageChange={setCurrentPage}
             showItemsPerPage={false}
           />
-        </div>
+        </ScrollArea>
       )}
     </div>
   );

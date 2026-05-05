@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
 import {
   useHostingPlans,
@@ -134,7 +135,7 @@ export default function HostingStore() {
       ) : (
         <>
           {/* Plan Table */}
-          <div className="overflow-x-auto rounded-md border">
+          <ScrollArea className="w-full whitespace-nowrap rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -215,7 +216,8 @@ export default function HostingStore() {
                 })}
               </TableBody>
             </Table>
-          </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
 
           {/* Checkout Panel */}
           {selectedPlan && (

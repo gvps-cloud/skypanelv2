@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -1091,7 +1092,7 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                                         >
                                           <Trash2 className="h-2.5 w-2.5" />
                                         </Button>
-                                      )}
+)}
                                     </div>
                                   );
                                 })}
@@ -1232,8 +1233,9 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                 Loading plugin store...
               </div>
             ) : (
-              <div className="grid max-h-[420px] gap-3 overflow-y-auto pr-1 md:grid-cols-2">
-                {pluginCatalog.map((plugin) => (
+              <ScrollArea className="max-h-[420px]">
+                <div className="grid gap-3 pr-1 md:grid-cols-2">
+                  {pluginCatalog.map((plugin) => (
                   <div key={plugin.slug} className="flex gap-3 rounded-lg border p-3">
                     {plugin.imageUrl ? (
                       <img src={plugin.imageUrl} alt="" className="h-12 w-12 rounded-md border bg-muted object-cover" />
@@ -1265,7 +1267,8 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                     No plugins found. Try another search or install by slug below.
                   </div>
                 )}
-              </div>
+                </div>
+              </ScrollArea>
             )}
             {pluginCatalogPages > 1 && (
               <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -1318,8 +1321,9 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                 Loading theme store...
               </div>
             ) : (
-              <div className="grid max-h-[420px] gap-3 overflow-y-auto pr-1 md:grid-cols-2">
-                {themeCatalog.map((theme) => (
+              <ScrollArea className="max-h-[420px]">
+                <div className="grid gap-3 pr-1 md:grid-cols-2">
+                  {themeCatalog.map((theme) => (
                   <div key={theme.slug} className="overflow-hidden rounded-lg border">
                     {theme.imageUrl ? (
                       <img src={theme.imageUrl} alt="" className="h-28 w-full bg-muted object-cover" />
@@ -1353,7 +1357,8 @@ export default function WordPressTab({ subscriptionId }: WordPressTabProps) {
                     No themes found. Try another search or install by slug below.
                   </div>
                 )}
-              </div>
+                </div>
+              </ScrollArea>
             )}
             {themeCatalogPages > 1 && (
               <div className="flex items-center justify-between text-xs text-muted-foreground">

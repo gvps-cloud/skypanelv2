@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildApiUrl, apiClient } from "@/lib/api";
 
@@ -337,7 +338,7 @@ const NotificationDropdown: React.FC = () => {
             You are all caught up.
           </div>
         ) : (
-          <div className="max-h-[360px] overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40">
+          <ScrollArea className="max-h-[360px]">
             <div className="divide-y">
               {notifications.map((notification) => (
                 <div
@@ -407,7 +408,8 @@ const NotificationDropdown: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
+            <ScrollBar />
+          </ScrollArea>
         )}
 
         {hasNotifications && (

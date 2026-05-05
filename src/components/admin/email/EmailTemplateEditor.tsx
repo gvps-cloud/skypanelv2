@@ -34,6 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EmailTemplateEditorProps {
   template: EmailTemplate;
@@ -266,10 +267,11 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
       </div>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Email Preview</DialogTitle>
           </DialogHeader>
+          <ScrollArea className="flex-1">
           {previewContent && (
             <div className="space-y-4">
               <div className="border-b pb-4">
@@ -304,6 +306,7 @@ export const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
               </Tabs>
             </div>
           )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

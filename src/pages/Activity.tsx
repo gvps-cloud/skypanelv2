@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import Pagination from '@/components/ui/Pagination';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { apiClient, buildApiUrl } from '@/lib/api';
 import { useHostingStatus } from '@/hooks/useHosting';
 
@@ -396,7 +397,7 @@ const ActivityPage: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <ScrollArea className="w-full whitespace-nowrap">
                   <table className="min-w-full divide-y divide-border">
                     <thead className="bg-muted/30">
                       <tr>
@@ -475,7 +476,8 @@ const ActivityPage: React.FC = () => {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
 
                 {/* Pagination Controls */}
                 {pagination.total > 0 && (

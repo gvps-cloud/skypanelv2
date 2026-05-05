@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Plus, Edit, Trash2, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -324,7 +325,7 @@ export const ContactCategoryManager: React.FC<ContactCategoryManagerProps> = ({ 
               No categories yet. Create your first category to get started.
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <ScrollArea className="w-full whitespace-nowrap">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -359,7 +360,8 @@ export const ContactCategoryManager: React.FC<ContactCategoryManagerProps> = ({ 
                   </TableBody>
                 </Table>
               </DndContext>
-            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
           )}
         </CardContent>
       </Card>

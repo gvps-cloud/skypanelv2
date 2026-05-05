@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -453,7 +454,7 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
           if (!open) createForm.reset(EMPTY_FORM);
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Create Announcement</DialogTitle>
             <DialogDescription>
@@ -461,7 +462,8 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
               optional scheduling.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={createForm.handleSubmit(handleCreate)}>
+          <form onSubmit={createForm.handleSubmit(handleCreate)} className="flex flex-col flex-1 min-h-0">
+            <ScrollArea className="flex-1">
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="create-title">Title *</Label>
@@ -594,10 +596,11 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
                       <Switch checked={field.value} onCheckedChange={field.onChange} disabled={submitting} />
                     )}
                   />
-                  <Label>Dismissible</Label>
-                </div>
-              </div>
-            </div>
+<Label>Dismissible</Label>
+                 </div>
+               </div>
+             </div>
+            </ScrollArea>
             <DialogFooter>
               <Button
                 variant="outline"
@@ -623,14 +626,15 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
           if (!open) setSelectedAnnouncement(null);
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Edit Announcement</DialogTitle>
             <DialogDescription>
               Update the announcement details.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={editForm.handleSubmit(handleUpdate)}>
+          <form onSubmit={editForm.handleSubmit(handleUpdate)} className="flex flex-col flex-1 min-h-0">
+            <ScrollArea className="flex-1">
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="edit-title">Title *</Label>
@@ -767,6 +771,7 @@ export const AnnouncementsManager: React.FC<AnnouncementsManagerProps> = ({ toke
                 </div>
               </div>
             </div>
+            </ScrollArea>
             <DialogFooter>
               <Button
                 variant="outline"

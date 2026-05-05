@@ -103,6 +103,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { buildApiUrl } from "@/lib/api";
 import { BRAND_NAME } from "@/lib/brand";
@@ -2841,7 +2842,7 @@ const Admin: React.FC = () => {
               </div>
 
               {/* Table View for large/desktop only (use 2xl breakpoint) */}
-              <div className="hidden 2xl:block overflow-x-auto">
+              <ScrollArea className="hidden 2xl:block whitespace-nowrap">
                 {filteredPlans.length === 0 ? (
                   <div className="py-10 text-center text-muted-foreground">
                     {planProviderFilter === "all" && planTypeFilter === "all"
@@ -3340,9 +3341,10 @@ const Admin: React.FC = () => {
                     </TableBody>
                   </Table>
                 )}
-              </div>
-            </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </div>
+        </div>
 
           <VPSPlanWizard
             open={showAddVPSPlan}

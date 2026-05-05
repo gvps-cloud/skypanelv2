@@ -44,6 +44,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import EgressPackSettings from './EgressPackSettings';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Organization {
   id: string;
@@ -351,7 +352,8 @@ const EgressCreditManager: React.FC = () => {
 
               {/* Search Results */}
               {searchQuery && organizations.length > 0 && (
-                <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+                <ScrollArea className="max-h-64 rounded-lg border">
+                  <div className="divide-y">
                   {organizations.map((org) => (
                     <button
                       key={org.id}
@@ -373,7 +375,8 @@ const EgressCreditManager: React.FC = () => {
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </button>
                   ))}
-                </div>
+                  </div>
+                </ScrollArea>
               )}
 
               {searchQuery && organizations.length === 0 && !searchLoading && (

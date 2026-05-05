@@ -71,6 +71,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Area, AreaChart, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ActiveHoursDisplay } from "@/components/VPS/ActiveHoursDisplay";
 import RebuildOSSelect from "@/components/VPS/RebuildOSSelect";
@@ -3061,7 +3062,7 @@ const VPSDetail: React.FC = () => {
           }
         }}
       >
-        <DialogContent className="w-full max-w-md sm:max-w-lg overflow-y-auto max-h-[90dvh]">
+        <DialogContent className="w-full max-w-md sm:max-w-lg max-h-[90dvh] flex flex-col overflow-hidden">
           <DialogHeader className="pb-2">
             <DialogTitle>Edit Reverse DNS</DialogTitle>
             <DialogDescription className="text-xs">
@@ -3072,6 +3073,7 @@ const VPSDetail: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
+          <ScrollArea className="flex-1">
           {/* Compact 2-column grid for inputs on sm+, stacked on mobile */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
@@ -3170,7 +3172,8 @@ const VPSDetail: React.FC = () => {
                           No records match your filter.
                         </p>
                       ) : (
-                        <ul className="space-y-1 max-h-40 overflow-y-auto">
+                        <ScrollArea className="max-h-40">
+                          <ul className="space-y-1">
                           {pageRecords.map((record) => {
                             const isDeleting = ipv6RdnsDialog.deletingAddress === record.address;
                             return (
@@ -3217,8 +3220,9 @@ const VPSDetail: React.FC = () => {
                               </li>
                             );
                           })}
-                        </ul>
-                      )}
+</ul>
+                        </ScrollArea>
+                       )}
 
                       {totalPages > 1 && (
                         <div className="flex items-center justify-between pt-0.5">
@@ -3260,6 +3264,8 @@ const VPSDetail: React.FC = () => {
                 </div>
               );
             })()}
+
+          </ScrollArea>
 
           <DialogFooter className="pt-1">
             <Button

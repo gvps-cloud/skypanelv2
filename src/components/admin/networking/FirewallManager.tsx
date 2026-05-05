@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Shield, MoreHorizontal, Pencil, Trash2, RefreshCw, Plus, Settings, BookTemplate } from "lucide-react";
 import { toast } from "sonner";
@@ -462,7 +463,7 @@ function CreateFirewallDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Create Firewall</DialogTitle>
           <DialogDescription>
@@ -470,6 +471,7 @@ function CreateFirewallDialog({
           </DialogDescription>
         </DialogHeader>
 
+        <ScrollArea className="flex-1">
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="fw-label">Label</Label>
@@ -586,6 +588,7 @@ function CreateFirewallDialog({
             ))}
           </div>
         </div>
+        </ScrollArea>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -1068,7 +1071,7 @@ function RulesEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" ref={initRef}>
+      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col overflow-hidden" ref={initRef}>
         <DialogHeader>
           <DialogTitle>Edit Firewall Rules</DialogTitle>
           <DialogDescription>
@@ -1076,6 +1079,7 @@ function RulesEditorDialog({
           </DialogDescription>
         </DialogHeader>
 
+        <ScrollArea className="flex-1">
         <div className="space-y-6">
           {/* Policies */}
           <div className="grid gap-4 sm:grid-cols-2">
@@ -1153,6 +1157,7 @@ function RulesEditorDialog({
             ))}
           </div>
         </div>
+        </ScrollArea>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>

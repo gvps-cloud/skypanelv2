@@ -80,6 +80,9 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
   const [vpsInstances, setVpsInstances] = useState<
     Array<{ id: string; label: string }>
   >([]);
+  const [hostingServices, setHostingServices] = useState<
+    Array<{ id: string; label: string }>
+  >([]);
 
   const fetchWalletBalance = useCallback(async () => {
     try {
@@ -111,11 +114,34 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
     }
   }, []);
 
+  const fetchHostingServices = useCallback(async () => {
+    try {
+      const data = await apiClient.get<{ services: any[] }>("/hosting/services");
+      if (data.services) {
+        setHostingServices(
+          data.services.map((s: any) => {
+            const domainPart =
+              (s.domain && String(s.domain).trim()) || "No domain";
+            const planPart =
+              (s.plan_name && String(s.plan_name).trim()) || "Hosting";
+            return {
+              id: s.id,
+              label: `${domainPart} · ${planPart}`,
+            };
+          })
+        );
+      }
+    } catch {
+      setHostingServices([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (isCreateModalOpen) {
       fetchVpsInstances();
+      fetchHostingServices();
     }
-  }, [isCreateModalOpen, fetchVpsInstances]);
+  }, [isCreateModalOpen, fetchVpsInstances, fetchHostingServices]);
 
   useEffect(() => {
     if (!pendingCreateTicket) {
@@ -488,10 +514,12 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         category: data.category,
         vpsId: data.vpsId,
       };
-      if (prefilledTicket?.hostingSubscriptionId) {
-        payload.hostingSubscriptionId = prefilledTicket.hostingSubscriptionId;
+      const hostingSubscriptionId =
+        data.hostingSubscriptionId ?? prefilledTicket?.hostingSubscriptionId;
+      if (hostingSubscriptionId) {
+        payload.hostingSubscriptionId = hostingSubscriptionId;
       }
-      const resData = await apiClient.post<{ error?: string }>("/support/tickets", payload);
+      await apiClient.post<{ error?: string }>("/support/tickets", payload);
 
       toast.success("Support ticket created successfully");
       setIsCreateModalOpen(false);
@@ -736,10 +764,12 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         onOpenChange={setIsCreateModalOpen}
         onSubmit={handleCreateTicket}
         vpsInstances={vpsInstances}
+        hostingServices={hostingServices}
         prefilled={prefilledTicket ? {
           subject: prefilledTicket.subject,
           description: prefilledTicket.description,
           category: prefilledTicket.category,
+          hostingSubscriptionId: prefilledTicket.hostingSubscriptionId,
         } : undefined}
       />
     </>

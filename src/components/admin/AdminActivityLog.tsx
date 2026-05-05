@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Activity as ActivityIcon,
@@ -550,7 +551,7 @@ const AdminActivityLog: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <ScrollArea className="w-full whitespace-nowrap">
                   <table className="min-w-full divide-y divide-border">
                     <thead className="bg-muted/30">
                       <tr>
@@ -646,7 +647,8 @@ const AdminActivityLog: React.FC = () => {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
 
                 {/* Pagination Controls */}
                 {pagination.total > 0 && (

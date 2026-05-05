@@ -32,6 +32,13 @@ export interface SupportTicket {
   has_staff_reply?: boolean;
   vps_id?: string;
   vps_label?: string;
+  hosting_subscription_id?: string;
+  hosting_domain_snapshot?: string | null;
+  hosting_plan_name_snapshot?: string | null;
+  /** Display domain: snapshot first, then live subscription */
+  hosting_domain?: string | null;
+  /** Display plan name: snapshot first, then live catalog */
+  hosting_plan_name?: string | null;
   messages: TicketMessage[];
   
   // Admin specific fields

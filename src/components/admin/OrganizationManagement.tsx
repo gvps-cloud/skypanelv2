@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import {
   Building2,
@@ -907,7 +908,7 @@ export const OrganizationManagement: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="overflow-x-auto rounded-lg border">
+                      <ScrollArea className="w-full whitespace-nowrap rounded-lg border">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -993,7 +994,8 @@ export const OrganizationManagement: React.FC = () => {
                             })}
                           </TableBody>
                         </Table>
-                      </div>
+                        <ScrollBar orientation="horizontal" />
+                      </ScrollArea>
                     </div>
                   </AccordionContent>
                 </AccordionItem>

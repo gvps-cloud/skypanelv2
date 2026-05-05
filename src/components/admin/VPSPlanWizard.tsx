@@ -35,6 +35,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Provider {
   id: string;
@@ -460,7 +461,7 @@ export function VPSPlanWizard({
       </div>
 
       {/* Region List */}
-      <div className="max-h-[240px] overflow-y-auto rounded-lg border bg-background">
+      <ScrollArea className="max-h-[240px] rounded-lg border bg-background">
         {filteredRegions.length === 0 ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             No regions available for this plan type.
@@ -519,7 +520,7 @@ export function VPSPlanWizard({
             ))}
           </div>
         )}
-      </div>
+      </ScrollArea>
 
       {/* Selection Summary */}
       {newVPSPlan.selectedRegions && newVPSPlan.selectedRegions.length > 0 && (
@@ -835,12 +836,12 @@ export function VPSPlanWizard({
           {renderStepIndicator()}
         </div>
 
-        <div className="px-6 pb-2 min-h-[340px] max-h-[50vh] overflow-y-auto">
+        <ScrollArea className="px-6 pb-2 min-h-[340px] max-h-[50vh]">
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
           {currentStep === 4 && renderStep4()}
-        </div>
+        </ScrollArea>
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t bg-muted/30">

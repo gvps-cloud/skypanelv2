@@ -72,6 +72,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { UserEditModal } from './UserEditModal';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AdminUser {
     id: string;
@@ -1007,7 +1008,8 @@ export const UserManagement: React.FC = () => {
                     </DialogHeader>
 
                     <div className="space-y-4">
-                        <div className="max-h-40 overflow-y-auto rounded-md border p-3">
+                        <ScrollArea className="max-h-40 rounded-md border">
+                            <div className="p-3">
                             <ul className="space-y-1">
                                 {[...selectedAdminIds, ...selectedRegularUserIds].filter(id => id !== currentUser?.id).map(userId => {
                                     const user = users.find(u => u.id === userId);
@@ -1020,7 +1022,8 @@ export const UserManagement: React.FC = () => {
                                     );
                                 })}
                             </ul>
-                        </div>
+                            </div>
+                        </ScrollArea>
 
                         {(selectedAdminIds.has(currentUser?.id || '') || selectedRegularUserIds.has(currentUser?.id || '')) && (
                             <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 dark:bg-amber-950/20 dark:border-amber-800">
@@ -1098,7 +1101,8 @@ export const UserManagement: React.FC = () => {
                                     <h4 className="text-sm font-medium text-green-600 dark:text-green-400 mb-2">
                                         Deleted ({bulkDeleteResults.deleted.length})
                                     </h4>
-                                    <div className="max-h-32 overflow-y-auto rounded-md border border-green-200 dark:border-green-800 p-2">
+                                    <ScrollArea className="max-h-32 rounded-md border border-green-200 dark:border-green-800">
+                                        <div className="p-2">
                                         <ul className="space-y-1">
                                             {bulkDeleteResults.deleted.map((u) => (
                                                 <li key={u.id} className="text-sm flex items-center gap-2">
@@ -1108,7 +1112,8 @@ export const UserManagement: React.FC = () => {
                                                 </li>
                                             ))}
                                         </ul>
-                                    </div>
+                                        </div>
+                                    </ScrollArea>
                                 </div>
                             )}
 
@@ -1117,7 +1122,8 @@ export const UserManagement: React.FC = () => {
                                     <h4 className="text-sm font-medium text-amber-600 dark:text-amber-400 mb-2">
                                         Skipped ({bulkDeleteResults.skipped.length})
                                     </h4>
-                                    <div className="max-h-32 overflow-y-auto rounded-md border border-amber-200 dark:border-amber-800 p-2">
+                                    <ScrollArea className="max-h-32 rounded-md border border-amber-200 dark:border-amber-800">
+                                        <div className="p-2">
                                         <ul className="space-y-1">
                                             {bulkDeleteResults.skipped.map((u) => (
                                                 <li key={u.id} className="text-sm flex items-start gap-2">
@@ -1130,7 +1136,8 @@ export const UserManagement: React.FC = () => {
                                                 </li>
                                             ))}
                                         </ul>
-                                    </div>
+                                        </div>
+                                    </ScrollArea>
                                 </div>
                             )}
                         </div>

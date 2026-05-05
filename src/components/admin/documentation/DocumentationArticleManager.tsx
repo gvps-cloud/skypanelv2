@@ -57,6 +57,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -622,14 +623,16 @@ export default function DocumentationArticleManager() {
           setPendingFiles([]);
         }
       }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Create Article</DialogTitle>
             <DialogDescription>
               Create a new documentation article.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={form.handleSubmit(handleCreate)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleCreate)} className="flex flex-col flex-1 min-h-0">
+            <ScrollArea className="flex-1">
+            <div className="space-y-4 px-1">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="category_id">Category</Label>
@@ -752,6 +755,8 @@ export default function DocumentationArticleManager() {
                 onCheckedChange={(checked) => form.setValue("is_active", checked)}
               />
             </div>
+            </div>
+            </ScrollArea>
             <DialogFooter>
               <Button
                 variant="outline"
@@ -788,14 +793,16 @@ export default function DocumentationArticleManager() {
           setPendingFiles([]);
         }
       }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Edit Article</DialogTitle>
             <DialogDescription>
               Update the article details.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={editForm.handleSubmit(handleEdit)} className="space-y-4">
+          <form onSubmit={editForm.handleSubmit(handleEdit)} className="flex flex-col flex-1 min-h-0">
+            <ScrollArea className="flex-1">
+            <div className="space-y-4 px-1">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-category_id">Category</Label>
@@ -949,6 +956,8 @@ export default function DocumentationArticleManager() {
                 onCheckedChange={(checked) => editForm.setValue("is_active", checked)}
               />
             </div>
+            </div>
+            </ScrollArea>
             <DialogFooter>
               <Button
                 variant="outline"

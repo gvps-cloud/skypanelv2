@@ -366,7 +366,7 @@ export function NotesBoard({
                           </p>
                         </div>
                         <div className="flex items-center justify-end">
-                          <DropdownMenu>
+                          <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
                                 <MoreHorizontal className="h-4 w-4" />
@@ -376,13 +376,20 @@ export function NotesBoard({
                             <DropdownMenuContent align="end">
                               {manageable ? (
                                 <>
-                                  <DropdownMenuItem onClick={() => openEditDialog(note)}>
+                                  <DropdownMenuItem
+                                    onSelect={(event) => {
+                                      event.preventDefault();
+                                      openEditDialog(note);
+                                    }}
+                                  >
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     className="text-destructive focus:text-destructive"
-                                    onClick={() => setDeleteTarget(note)}
+                                    onSelect={() => {
+                                      setDeleteTarget(note);
+                                    }}
                                   >
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Delete

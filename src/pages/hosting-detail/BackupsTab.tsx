@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Archive,
   Download,
@@ -572,7 +573,7 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
             <Button size="sm" onClick={() => setCreateOpen(true)} disabled={!backupsEnabled} title={disabledReason}>
               <Plus className="mr-1 h-4 w-4" />
               Backup Now
-            </Button>
+</Button>
           </div>
         </div>
       </div>
@@ -611,7 +612,7 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
             <p className="text-sm text-muted-foreground">No backups found.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollArea className="w-full whitespace-nowrap">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -688,7 +689,8 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
                 })}
               </TableBody>
             </Table>
-          </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         )}
       </div>
 
@@ -740,7 +742,8 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
               Choose what Enhance should restore from this backup. This can overwrite current website data.
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[65vh] space-y-5 overflow-y-auto py-2 pr-1">
+          <ScrollArea className="max-h-[65vh]">
+            <div className="space-y-5 py-2 pr-1">
             <div className="rounded-lg border p-3 text-sm">
               <div className="font-medium">{restoreBackup?.description || restoreBackup?.snapshotDirName || restoreBackup?.id}</div>
               <div className="text-xs text-muted-foreground">
@@ -810,10 +813,11 @@ export default function BackupsTab({ subscriptionId }: BackupsTabProps) {
                 )}
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setRestoreOpen(false)}>
-              Cancel
+</div>
+            </ScrollArea>
+           <DialogFooter>
+             <Button variant="outline" size="sm" onClick={() => setRestoreOpen(false)}>
+               Cancel
             </Button>
             <Button variant="destructive" size="sm" onClick={handleRestore} disabled={restoring}>
               {restoring && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}

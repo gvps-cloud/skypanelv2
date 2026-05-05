@@ -1200,7 +1200,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
           <CommandInput placeholder="type command | filter…" />
           <CommandList>
-            <CommandEmpty className="font-mono text-xs">no matches — exit 1</CommandEmpty>
+            <CommandEmpty className="font-mono text-xs">No matches</CommandEmpty>
             <CommandGroup heading="# navigation">
               {navigationItems.map((item) => {
                 const Icon = item.icon;

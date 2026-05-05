@@ -18,6 +18,7 @@ import {
 } from "@tanstack/react-table";
 
 import { cn } from "@/lib/utils";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -110,7 +111,7 @@ export function DataTable<TData, TValue>({
     <div className={cn("space-y-4", className)}>
       <div className="rounded-lg border border-border bg-card">
         {/* Mobile-friendly horizontal scroll wrapper */}
-        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+        <ScrollArea className="w-full whitespace-nowrap">
           <div className="min-w-full" style={{ touchAction: 'pan-x' }}>
             <Table>
               <TableHeader>
@@ -175,7 +176,8 @@ export function DataTable<TData, TValue>({
               </TableBody>
             </Table>
           </div>
-        </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </div>
       <DataTablePagination table={table} />
     </div>

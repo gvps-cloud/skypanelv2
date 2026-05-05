@@ -28,7 +28,6 @@ import Pagination from '../components/ui/Pagination';
 import {
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
   CardTitle,
   CardDescription,
@@ -858,14 +857,14 @@ const Billing: React.FC = () => {
       </div>
 
       {/* Add Funds and Egress Credits Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 items-stretch gap-4">
         {/* Add Funds to Wallet Card */}
-        <Card className="flex h-full flex-col border-primary/25">
+        <Card className="flex h-full min-h-0 flex-col border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg font-semibold tracking-tight">Add Funds to Wallet</CardTitle>
             <CardDescription>Top up your wallet balance using PayPal</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-4">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
             <div className="flex flex-wrap gap-2">
               {[10, 25, 50, 100, 250].map((amount) => (
                 <Button
@@ -900,27 +899,26 @@ const Billing: React.FC = () => {
                 />
               </InputGroup>
             </div>
-            <div className="mt-auto flex flex-col gap-3">
+            <div className="min-h-0 flex-1" aria-hidden />
+            <div className="flex shrink-0 flex-col gap-3">
               <Button type="button" className="w-full shrink-0" onClick={handleAddFunds}>
                 <Plus className="mr-2 size-4" />
                 Add Funds via PayPal
               </Button>
+              <p className="text-xs text-muted-foreground">
+                Funds will be added to your wallet after successful PayPal payment.
+              </p>
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col items-stretch border-t border-border pt-4">
-            <p className="text-xs text-muted-foreground">
-              Funds will be added to your wallet after successful PayPal payment.
-            </p>
-          </CardFooter>
         </Card>
 
         {hostingEnabled && (
-        <Card className="flex h-full flex-col border-primary/25">
+        <Card className="flex h-full min-h-0 flex-col border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg font-semibold tracking-tight">Fund Hosting Wallet</CardTitle>
             <CardDescription>Reserve credits for monthly Enhance hosting renewals</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-4">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="billing-hosting-transfer">Transfer from main wallet</Label>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -996,7 +994,9 @@ const Billing: React.FC = () => {
 
             <Separator />
 
-            <div className="mt-auto flex flex-col gap-2">
+            <div className="min-h-0 flex-1" aria-hidden />
+
+            <div className="flex shrink-0 flex-col gap-2">
               <Label htmlFor="billing-hosting-paypal">Fund directly via PayPal</Label>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <InputGroup className="min-w-0 flex-1">
@@ -1022,18 +1022,21 @@ const Billing: React.FC = () => {
                   PayPal
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                PayPal top-ups credit your hosting wallet after payment succeeds.
+              </p>
             </div>
           </CardContent>
         </Card>
         )}
 
         {/* Buy Egress Credits Card */}
-        <Card className="flex h-full flex-col border-primary/25">
+        <Card className="flex h-full min-h-0 flex-col border-primary/25">
           <CardHeader>
             <CardTitle className="text-lg font-semibold tracking-tight">Buy Egress Credits</CardTitle>
             <CardDescription>Purchase credits for VPS network transfer</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-4">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
             <Alert>
               <AlertTitle>How credits work</AlertTitle>
               <AlertDescription>
@@ -1041,7 +1044,8 @@ const Billing: React.FC = () => {
                 Credits are deducted hourly based on usage.
               </AlertDescription>
             </Alert>
-            <div className="mt-auto">
+            <div className="min-h-0 flex-1" aria-hidden />
+            <div className="flex shrink-0 flex-col gap-3">
               <Button
                 type="button"
                 className="w-full"
@@ -1050,6 +1054,9 @@ const Billing: React.FC = () => {
                 <Database className="mr-2 size-4" />
                 Browse Credit Packs
               </Button>
+              <p className="text-xs text-muted-foreground">
+                Credit packs and pricing are on the next page.
+              </p>
             </div>
           </CardContent>
         </Card>

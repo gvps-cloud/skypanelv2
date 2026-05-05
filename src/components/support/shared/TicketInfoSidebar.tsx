@@ -4,6 +4,7 @@ import {
   Copy,
   Clock, 
   CreditCard, 
+  Globe,
   Hash, 
   Info, 
   MapPin, 
@@ -22,6 +23,7 @@ import { toast } from "sonner";
 import { SupportTicket } from "@/types/support";
 import { TICKET_STATUS_META, TICKET_PRIORITY_META } from "./constants";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -111,8 +113,9 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
 
   return (
     <>
-      <div className={cn("w-80 border-l border-border bg-muted/10 flex flex-col h-full overflow-y-auto shrink-0", className)}>
-      <div className="p-4 space-y-6">
+      <div className={cn("w-80 border-l border-border bg-muted/10 flex flex-col h-full shrink-0", className)}>
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-6">
         {/* Client Info Section */}
         <div className="space-y-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -251,6 +254,51 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
           </div>
         )}
 
+        {ticket.hosting_subscription_id && (
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <Globe className="h-3.5 w-3.5" />
+              Related hosting
+            </h3>
+
+            <div className="bg-background rounded-lg border border-border p-3 space-y-3 shadow-sm">
+              <div className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                    <Globe className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium truncate">
+                      {[ticket.hosting_domain, ticket.hosting_plan_name]
+                        .filter((part) => Boolean(part && String(part).trim()))
+                        .join(" · ") || "Hosting subscription"}
+                    </div>
+                    <div className="text-xs text-muted-foreground font-mono truncate">
+                      ID: {ticket.hosting_subscription_id}
+                    </div>
+                  </div>
+                </div>
+
+                {ticket.hosting_domain && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{ticket.hosting_domain}</span>
+                  </div>
+                )}
+              </div>
+
+              {isAdmin && (
+                <Button variant="outline" size="sm" className="h-8 w-full" asChild>
+                  <Link to={`/hosting/${ticket.hosting_subscription_id}`}>
+                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                    View hosting
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Ticket Details Section */}
         <div className="space-y-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -327,7 +375,8 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </ScrollArea>
     </div>
 
     {/* SSH Console Dialog */}

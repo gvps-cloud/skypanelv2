@@ -46,11 +46,15 @@ router.get(
            u.email AS creator_email,
            org.name AS organization_name,
            org.slug AS organization_slug,
-           COALESCE(vi.label, st.vps_label_snapshot) as vps_label
+           COALESCE(vi.label, st.vps_label_snapshot) as vps_label,
+           COALESCE(st.hosting_domain_snapshot, hs.domain) AS hosting_domain,
+           COALESCE(st.hosting_plan_name_snapshot, hp.name) AS hosting_plan_name
           FROM support_tickets st
           LEFT JOIN users u ON u.id = st.created_by
           LEFT JOIN organizations org ON org.id = st.organization_id
           LEFT JOIN vps_instances vi ON st.vps_id = vi.id
+          LEFT JOIN hosting_subscriptions hs ON st.hosting_subscription_id = hs.id
+          LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
           ORDER BY st.created_at DESC`,
       );
 

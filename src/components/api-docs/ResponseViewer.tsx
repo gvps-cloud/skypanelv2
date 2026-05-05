@@ -104,7 +104,7 @@ export function ResponseViewer({
             Response Headers ({Object.keys(headers).length})
           </summary>
           <div className="mt-2 p-3 bg-muted/30 rounded-lg">
-            <pre className="text-xs font-mono overflow-x-auto">
+            <pre className="text-xs font-mono">
               {Object.entries(headers).map(([key, value]) => (
                 <div key={key}>
                   <span className="text-muted-foreground">{key}:</span> {value}
@@ -120,7 +120,7 @@ export function ResponseViewer({
         <div className="space-y-2">
           <p className="text-sm font-medium text-muted-foreground">Response Body</p>
           <ScrollArea className="h-[300px] rounded-lg border bg-muted/30">
-            <pre className="p-4 text-sm font-mono overflow-x-auto">
+            <pre className="p-4 text-sm font-mono">
               {formattedData}
             </pre>
           </ScrollArea>
