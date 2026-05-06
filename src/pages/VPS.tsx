@@ -37,7 +37,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TerminalPanel } from "@/components/terminal";
+import { TerminalPageHeader, TerminalPanel } from "@/components/terminal";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -2271,6 +2271,7 @@ const VPS: React.FC = () => {
 
       <TerminalPanel title="INSTANCES" bodyClassName="p-4 md:p-6">
     <div className="space-y-6 font-mono">
+      <TerminalPageHeader pathPrefix="~/vps" command="instances --list" />
       {/* Page Header */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="space-y-3">

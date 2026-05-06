@@ -30,8 +30,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast: isMobile
-            ? "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg mobile-toast"
-            : "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+            ? "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg mobile-toast font-mono text-sm rounded-sm border-l-2 border-l-primary/40"
+            : "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg font-mono text-sm rounded-sm border-l-2 border-l-primary/40",
           description: isMobile 
             ? "group-[.toast]:text-muted-foreground text-base leading-relaxed"
             : "group-[.toast]:text-muted-foreground",

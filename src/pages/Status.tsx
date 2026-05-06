@@ -35,6 +35,8 @@ import { Separator } from "@/components/ui/separator";
 import { Status as StatusDot } from "@/components/ui/status";
 import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
+import { StatusHeartbeat } from "@/components/fx/StatusHeartbeat";
+import { TerminalPageHeader } from "@/components/terminal";
 import { BRAND_NAME } from "@/lib/brand";
 import { VPSInfrastructureCard } from "@/components/VPSInfrastructureCard";
 
@@ -336,6 +338,7 @@ export default function Status() {
               transition={{ duration: 0.65 }}
               className="space-y-8"
             >
+              <TerminalPageHeader pathPrefix="~/www" command="status --live" className="max-w-2xl" />
               <div className="space-y-5">
                 <Badge
                   variant="outline"
@@ -780,10 +783,13 @@ export default function Status() {
               {/* Service Components */}
               <motion.div variants={revealItem}>
                 <section className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-semibold">
-                      Service components
-                    </h2>
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <h2 className="text-2xl font-semibold">Service components</h2>
+                      <div className="hidden h-8 w-44 sm:block md:w-56">
+                        <StatusHeartbeat height={32} className="h-8" />
+                      </div>
+                    </div>
                     <Badge variant="secondary">
                       Monitoring every 60 seconds
                     </Badge>

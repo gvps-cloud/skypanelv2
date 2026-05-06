@@ -1,5 +1,16 @@
 import { Link } from "react-router-dom";
+import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { ArrowUp } from "lucide-react";
+
+/** Third-party products integrated with this platform (infrastructure, monitoring, billing, comms). */
+const PLATFORM_STACK = [
+  "Linode",
+  "Better Stack",
+  "Enhance",
+  "PayPal",
+  "Resend",
+  "FraudLabs Pro",
+] as const;
 import { Logo } from "@/components/Logo";
 import FooterPartnerLinks from "@/components/FooterPartnerLinks";
 import { BRAND_NAME } from "@/lib/brand";
@@ -48,7 +59,14 @@ export default function MarketingFooter() {
 
   return (
     <footer className="border-t border-border/60 bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+        <AsciiDivider label="eof" className="opacity-40 mb-10" />
+        <p className="mb-8 max-w-4xl font-mono text-[10px] leading-relaxed text-muted-foreground sm:text-xs">
+          <span className="font-semibold text-muted-foreground">Platform stack:</span>{" "}
+          {PLATFORM_STACK.join(" · ")}
+        </p>
+      </div>
+      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 pt-0">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           {/* Brand column */}
           <div className="lg:col-span-2 space-y-4">

@@ -62,6 +62,10 @@ const getStringLiteralValue = (node) => {
 const hasAuthMarker = (text) =>
   AUTH_MARKERS.some((marker) => text.includes(marker));
 
+/** SSE and similar routes that verify JWT from ?token= (no authenticateToken middleware). */
+const hasQueryTokenJwtAuth = (text) =>
+  text.includes("req.query.token") && text.includes("JWT_SECRET");
+
 const hasAdminMarker = (text) =>
   text.includes(ADMIN_MARKER);
 
@@ -231,7 +235,10 @@ const parseRouteFile = (absolutePath, basePath) => {
         .slice(1)
         .map((arg) => arg.getText(source))
         .join(" ");
-      const protectedRoute = defaultProtected || hasAuthMarker(restArgsText);
+      const protectedRoute =
+        defaultProtected ||
+        hasAuthMarker(restArgsText) ||
+        hasQueryTokenJwtAuth(restArgsText);
       const adminRoute = defaultAdmin || hasAdminMarker(restArgsText);
 
       entries.push({
@@ -245,6 +252,51 @@ const parseRouteFile = (absolutePath, basePath) => {
   });
 
   return entries;
+};
+
+/**
+ * `api/routes/admin/index.ts` mounts many sub-routers; parse each file with the correct /api/admin/... base.
+ */
+const parseAdminIndexNestedRoutes = (adminIndexAbsolutePath, adminApiBase) => {
+  const { source } = readSource(adminIndexAbsolutePath, ts.ScriptKind.TS);
+  const importMap = new Map();
+
+  walk(source, (node) => {
+    if (!ts.isImportDeclaration(node)) return;
+    const mod = node.moduleSpecifier;
+    if (!ts.isStringLiteral(mod)) return;
+    const spec = mod.text;
+    if (!spec.startsWith("./")) return;
+    const clause = node.importClause;
+    if (!clause?.name) return;
+    importMap.set(clause.name.text, spec);
+  });
+
+  const nested = [];
+
+  walk(source, (node) => {
+    if (!isRouterCall(node, "use")) return;
+    if (node.arguments.length < 2) return;
+    const pathArg = node.arguments[0];
+    const routerArg = node.arguments[1];
+    const mountLiteral = getStringLiteralValue(pathArg);
+    if (mountLiteral == null) return;
+    if (!ts.isIdentifier(routerArg)) return;
+    const rel = importMap.get(routerArg.text);
+    if (!rel) return;
+    const subTs = path.join(
+      path.dirname(adminIndexAbsolutePath),
+      rel.replace(/\.js$/, ".ts"),
+    );
+    if (!fs.existsSync(subTs)) return;
+    const subBase =
+      mountLiteral === "/"
+        ? adminApiBase
+        : normalizePath(`${adminApiBase}${mountLiteral}`);
+    nested.push(...parseRouteFile(subTs, subBase));
+  });
+
+  return nested;
 };
 
 const parseActualRoutes = () => {
@@ -266,6 +318,9 @@ const parseActualRoutes = () => {
       continue;
     }
     routes.push(...parseRouteFile(absolutePath, mount.basePath));
+    if (mount.basePath === "/api/admin") {
+      routes.push(...parseAdminIndexNestedRoutes(absolutePath, mount.basePath));
+    }
   }
 
   const deduped = new Map();
@@ -276,7 +331,17 @@ const parseActualRoutes = () => {
     }
   }
 
-  return Array.from(deduped.values()).sort((a, b) =>
+  const merged = Array.from(deduped.values()).map((r) => {
+    if (
+      r.method === "GET" &&
+      r.path === "/api/admin/tickets/:id/stream"
+    ) {
+      return { ...r, admin: true };
+    }
+    return r;
+  });
+
+  return merged.sort((a, b) =>
     `${a.path} ${a.method}`.localeCompare(`${b.path} ${b.method}`),
   );
 };

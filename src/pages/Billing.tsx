@@ -41,7 +41,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from '@/components/ui/input-group';
-import { TerminalPanel } from '@/components/terminal';
+import { TerminalPageHeader, TerminalPanel } from '@/components/terminal';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import PayPalCheckoutDialog from '@/components/billing/PayPalCheckoutDialog';
@@ -716,6 +716,7 @@ const Billing: React.FC = () => {
 
   return (
     <div className="space-y-6 font-mono">
+      <TerminalPageHeader pathPrefix="~/billing" command="wallet --status" />
       <TerminalPanel title="BILLING" bodyClassName="p-0">
         <div className="space-y-2 p-4 md:p-6">
           <Badge variant="secondary" className="rounded-sm text-[10px] uppercase tracking-wider">

@@ -49,6 +49,7 @@ import {
 import type { Provider } from "@/types/provider";
 import { StatsGrid } from "@/components/layouts/StatsGrid";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TerminalPageHeader } from "@/components/terminal";
 import Pagination from "@/components/ui/Pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TeamSettings from "@/components/settings/TeamSettings";
@@ -507,7 +508,8 @@ const Organizations: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-mono">
+      <TerminalPageHeader pathPrefix="~/orgs" command="groups --list" />
       {viewMode.type === "all" ? (
         <>
           <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">

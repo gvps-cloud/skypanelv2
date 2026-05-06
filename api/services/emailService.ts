@@ -362,7 +362,7 @@ export async function sendHostingAdminActionEmail(options: {
   to: string;
   displayName?: string;
   domain: string;
-  action: "suspended" | "unsuspended";
+  action: "suspended" | "unsuspended" | "updated";
   reason?: string | null;
 }): Promise<void> {
   const companyName = config.COMPANY_BRAND_NAME;

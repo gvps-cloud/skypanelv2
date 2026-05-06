@@ -1,4 +1,5 @@
 @import "./styles/dashboard.css";
+@import "./styles/terminal-fx.css";
 
 @tailwind base;
 @tailwind components;

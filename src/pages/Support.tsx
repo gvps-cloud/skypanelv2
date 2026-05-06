@@ -8,6 +8,7 @@ import { Ticket } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { UserSupportView } from "@/components/support/UserSupportView";
+import { TerminalPageHeader } from "@/components/terminal";
 
 const Support: React.FC = () => {
   const { token } = useAuth();
@@ -86,7 +87,10 @@ const Support: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full font-mono">
+      <div className="px-6 pt-4">
+        <TerminalPageHeader pathPrefix="~/support" command="tickets --inbox" />
+      </div>
       <div className="px-6 py-4 border-b border-border">
         <h1 className="flex items-center gap-3 text-3xl font-bold text-foreground">
           <Ticket className="h-8 w-8" />

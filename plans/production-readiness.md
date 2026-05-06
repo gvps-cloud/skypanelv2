@@ -1,6 +1,6 @@
 # Production Readiness Plan v2 — SkyPanelV2
 
-Last audited: 2026-04-19. Reflects actual repository state after the current production-readiness remediation pass. Canonical spec: `repo-docs/specs/production-readiness-v2/`.
+Last audited: 2026-04-19. Reflects actual repository state after the current production-readiness remediation pass. Historical spec snapshots under `repo-docs/specs/production-readiness-v2/` were removed from the tree; this file is the surviving checklist.
 
 **Legend:** ✅ done · ⏳ partial · ⚫ deferred
 
@@ -198,9 +198,7 @@ Large dirty worktree remains. Commit in logical chunks per constraint 7.
 
 | File | Purpose |
 |---|---|
-| `repo-docs/specs/production-readiness-v2/requirements.md` | Canonical requirements |
-| `repo-docs/specs/production-readiness-v2/tasks.md` | Full task breakdown |
-| `repo-docs/specs/production-readiness-v2/design.md` | Technical design |
+| `plans/production-readiness.md` | This plan / checklist |
 | `docs/production-checklist.md` | Operator env/infra checklist |
 | `docs/infrastructure-verification.md` | Infrastructure setup docs |
 | `docs/pre-release-verification.md` | Pre-release command docs |

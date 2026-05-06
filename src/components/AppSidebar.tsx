@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { MatrixRain } from "@/components/fx/MatrixRain";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
@@ -392,17 +393,22 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           <NavSecondary items={navSecondaryItems} className="mt-auto" />
         ) : null}
       </SidebarContent>
-      <SidebarFooter>
-        {isImpersonating && impersonatedUser ? (
-          <ImpersonationSidebarPanel
-            impersonatedUser={impersonatedUser}
-            onExitImpersonation={exitImpersonation}
-            isExiting={isExiting}
-            collapsed={!isMobile && state === "collapsed"}
-            mobile={isMobile}
-          />
-        ) : null}
-        <NavUser user={userData} />
+      <SidebarFooter className="relative overflow-hidden border-t border-sidebar-border">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 opacity-[0.12]">
+          <MatrixRain density="subdued" />
+        </div>
+        <div className="relative z-[1] space-y-2">
+          {isImpersonating && impersonatedUser ? (
+            <ImpersonationSidebarPanel
+              impersonatedUser={impersonatedUser}
+              onExitImpersonation={exitImpersonation}
+              isExiting={isExiting}
+              collapsed={!isMobile && state === "collapsed"}
+              mobile={isMobile}
+            />
+          ) : null}
+          <NavUser user={userData} />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

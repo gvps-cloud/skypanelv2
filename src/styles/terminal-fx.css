@@ -1,0 +1,193 @@
+/* ================================================================================
+   TERMINAL / HACKER VISUAL EFFECTS — theme-token aware utilities
+   ================================================================================ */
+
+@keyframes fx-glitch-shift {
+  0% {
+    transform: translate(0);
+    clip-path: inset(0 0 0 0);
+  }
+  20% {
+    transform: translate(-2px, 1px);
+    clip-path: inset(10% 0 85% 0);
+  }
+  40% {
+    transform: translate(2px, -1px);
+    clip-path: inset(80% 0 5% 0);
+  }
+  60% {
+    transform: translate(-1px, -1px);
+    clip-path: inset(40% 0 40% 0);
+  }
+  80% {
+    transform: translate(1px, 1px);
+    clip-path: inset(0 0 0 0);
+  }
+  100% {
+    transform: translate(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes fx-caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-crt-flicker {
+  0% {
+    opacity: 0.97;
+  }
+  5% {
+    opacity: 0.99;
+  }
+  10% {
+    opacity: 0.96;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.98;
+  }
+}
+
+@keyframes fx-glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.15);
+  }
+  50% {
+    box-shadow: 0 0 12px 1px hsl(var(--primary) / 0.25);
+  }
+}
+
+@keyframes fx-data-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.fx-scanlines {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.04;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    hsl(var(--foreground) / 0.04) 2px,
+    hsl(var(--foreground) / 0.04) 3px
+  );
+}
+
+.dark .fx-scanlines {
+  opacity: 0.05;
+}
+
+.fx-scanlines--animated {
+  animation: terminal-scanline 30s linear infinite;
+}
+
+@keyframes terminal-scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.fx-flicker {
+  animation: fx-crt-flicker 4s ease-in-out infinite;
+}
+
+.fx-glow {
+  animation: fx-glow-pulse 3s ease-in-out infinite;
+}
+
+.fx-glitch-hover:hover {
+  animation: fx-glitch-shift 0.35s steps(2, end) 1;
+}
+
+.fx-glitch-continuous {
+  animation: fx-glitch-shift 0.55s steps(2, end) infinite;
+}
+
+.fx-text-noise {
+  text-shadow:
+    0.5px 0 0 hsl(var(--primary) / 0.35),
+    -0.5px 0 0 hsl(var(--muted-foreground) / 0.25);
+}
+
+.fx-crt {
+  position: relative;
+}
+
+.fx-crt::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 40px hsl(var(--background) / 0.35);
+  z-index: 2;
+}
+
+.fx-caret {
+  display: inline-block;
+  animation: fx-caret-blink 1s step-end infinite;
+  color: hsl(var(--primary));
+}
+
+.fx-data-flow-bg {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary) / 0.08),
+    hsl(var(--primary) / 0.02),
+    hsl(var(--primary) / 0.08)
+  );
+  background-size: 200% 100%;
+  animation: fx-data-flow 8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-scanlines--animated,
+  .fx-flicker,
+  .fx-glow,
+  .fx-glitch-hover:hover,
+  .fx-glitch-continuous,
+  .fx-caret,
+  .fx-data-flow-bg {
+    animation: none !important;
+  }
+
+  .fx-scanlines {
+    opacity: 0.02;
+  }
+
+  .fx-caret {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 767px) {
+  .fx-scanlines--animated {
+    animation: none;
+  }
+
+  .fx-scanlines {
+    opacity: 0.02;
+  }
+}

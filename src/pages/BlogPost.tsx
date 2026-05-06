@@ -4,6 +4,7 @@ import DOMPurify from "dompurify";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import PublicLayout from "@/components/PublicLayout";
+import { TerminalPageHeader } from "@/components/terminal";
 import { cn } from "@/lib/utils";
 import {
   Calendar,
@@ -242,16 +243,17 @@ export default function BlogPost() {
           <div className="grid min-w-0 gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] xl:grid-cols-[minmax(0,1fr)_20rem] lg:gap-12">
             {/* Main column */}
             <div className="min-w-0">
+              <TerminalPageHeader
+                pathPrefix="~/www/blog"
+                command={`pager --file ${post.slug}.md`}
+                className="mb-6"
+              />
               <header
                 className={cn(
                   "mb-8 border-b border-border pb-8",
                   "border-l-2 border-l-primary/50 pl-4 sm:pl-5",
                 )}
               >
-                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-primary/80">
-                  <span className="text-muted-foreground">$ </span>
-                  cat docs/{post.slug}.md
-                </p>
                 <div className="mb-4 flex flex-wrap items-center gap-2">
                   {post.category_name && (
                     <Badge variant="secondary" className="rounded-sm text-xs">

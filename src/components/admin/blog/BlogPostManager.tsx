@@ -166,6 +166,7 @@ export function BlogPostManager() {
     status: "draft" as "draft" | "published",
     meta_title: "",
     meta_description: "",
+    og_image_url: "",
     tag_ids: [] as string[],
   });
   const [newTagName, setNewTagName] = useState("");
@@ -199,7 +200,10 @@ export function BlogPostManager() {
         "/admin/blog/categories",
       );
       setCategories(res.categories || []);
-    } catch {}
+    } catch (err) {
+      console.error("Failed to fetch blog categories:", err);
+      toast.error("Failed to load categories");
+    }
   }, []);
 
   const fetchTags = useCallback(async () => {
@@ -208,7 +212,10 @@ export function BlogPostManager() {
         "/admin/blog/tags",
       );
       setAllTags(res.tags || []);
-    } catch {}
+    } catch (err) {
+      console.error("Failed to fetch blog tags:", err);
+      toast.error("Failed to load tags");
+    }
   }, []);
 
   useEffect(() => {
@@ -241,6 +248,7 @@ export function BlogPostManager() {
       status: "draft",
       meta_title: "",
       meta_description: "",
+      og_image_url: "",
       tag_ids: [],
     });
     setEditDialogOpen(true);
@@ -258,6 +266,7 @@ export function BlogPostManager() {
       status: post.status,
       meta_title: post.meta_title || "",
       meta_description: post.meta_description || "",
+      og_image_url: post.og_image_url || "",
       tag_ids: post.tags?.map((t) => t.id) || [],
     });
     setEditDialogOpen(true);
@@ -275,7 +284,7 @@ export function BlogPostManager() {
     }
     setSaving(true);
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         title: formData.title,
         slug: formData.slug || undefined,
         content: formData.content,
@@ -284,6 +293,7 @@ export function BlogPostManager() {
         status: formData.status,
         meta_title: formData.meta_title || null,
         meta_description: formData.meta_description || null,
+        og_image_url: formData.og_image_url.trim() || null,
         tag_ids: formData.tag_ids,
       };
 
@@ -878,6 +888,18 @@ export function BlogPostManager() {
                       }
                       placeholder="Description for search engines"
                       rows={2}
+                      className="rounded-sm border-primary/20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="og-image-url">Open Graph image URL</Label>
+                    <Input
+                      id="og-image-url"
+                      value={formData.og_image_url}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, og_image_url: e.target.value }))
+                      }
+                      placeholder="https://… (optional; falls back to cover image)"
                       className="rounded-sm border-primary/20"
                     />
                   </div>

@@ -395,7 +395,16 @@ const testimonials = [
   },
 ];
 
-const solutionCards = [
+type SolutionCard = {
+  icon: LucideIcon;
+  title: string;
+  detail: string;
+  bullets: string[];
+  detailNoHosting?: string;
+  bulletsNoHosting?: string[];
+};
+
+const solutionCards: SolutionCard[] = [
   {
     icon: Code2,
     title: "Developers & Builders",
@@ -528,8 +537,8 @@ export default function HomeRedesign() {
         .filter((card) => card.title !== "Web Hosting Customers")
         .map((card) => ({
           ...card,
-          detail: (card as any).detailNoHosting ?? card.detail,
-          bullets: (card as any).bulletsNoHosting ?? card.bullets,
+          detail: card.detailNoHosting ?? card.detail,
+          bullets: card.bulletsNoHosting ?? card.bullets,
         }));
 
   const visibleFaqs = hostingEnabled

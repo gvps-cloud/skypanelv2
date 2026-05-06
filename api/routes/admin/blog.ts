@@ -60,14 +60,19 @@ function generateSlug(text: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
-function ensureUniqueSlug(slug: string, excludeId?: string): Promise<string> {
+function ensureUniqueSlug(
+  slug: string,
+  publishedYear: number,
+  excludeId?: string,
+): Promise<string> {
   return (async () => {
     let candidate = slug;
     let suffix = 1;
+    const exclude = excludeId || '00000000-0000-0000-0000-000000000000';
     for (;;) {
       const clash = await query(
-        `SELECT id FROM blog_posts WHERE slug = $1 AND deleted_at IS NULL AND id != $2`,
-        [candidate, excludeId || '00000000-0000-0000-0000-000000000000'],
+        `SELECT id FROM blog_posts WHERE slug = $1 AND published_year = $2 AND deleted_at IS NULL AND id != $3`,
+        [candidate, publishedYear, exclude],
       );
       if (clash.rows.length === 0) return candidate;
       suffix++;
@@ -249,6 +254,7 @@ router.post(
     body('status').optional().isIn(['draft', 'published']),
     body('meta_title').optional({ nullable: true }).isString().trim().isLength({ max: 255 }),
     body('meta_description').optional({ nullable: true }).isString(),
+    body('og_image_url').optional({ nullable: true }).isString().trim().isLength({ max: 500 }),
     body('slug').optional().isString().trim(),
     body('tag_ids').optional().isArray(),
     body('tag_ids.*').optional().isUUID(),
@@ -263,20 +269,25 @@ router.post(
 
       const {
         title, content, excerpt, category_id,
-        status = 'draft', meta_title, meta_description,
+        status = 'draft', meta_title, meta_description, og_image_url,
         slug: customSlug, tag_ids = [],
       } = req.body;
 
-      const slug = await ensureUniqueSlug(customSlug || generateSlug(title));
-
       let publishedAt = null;
-      let publishedYear = new Date().getFullYear();
+      const publishedYear = new Date().getFullYear();
       if (status === 'published') publishedAt = new Date().toISOString();
 
+      const slug = await ensureUniqueSlug(customSlug || generateSlug(title), publishedYear);
+
+      const ogImageUrl =
+        typeof og_image_url === 'string' && og_image_url.trim().length > 0
+          ? og_image_url.trim()
+          : null;
+
       const result = await query(
-        `INSERT INTO blog_posts (title, slug, content, excerpt, category_id, status, author_id, meta_title, meta_description, published_at, published_year)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-        [title, slug, content || '', excerpt || null, category_id || null, status, req.user!.id, meta_title || null, meta_description || null, publishedAt, publishedYear],
+        `INSERT INTO blog_posts (title, slug, content, excerpt, category_id, status, author_id, meta_title, meta_description, og_image_url, published_at, published_year)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+        [title, slug, content || '', excerpt || null, category_id || null, status, req.user!.id, meta_title || null, meta_description || null, ogImageUrl, publishedAt, publishedYear],
       );
 
       const post = result.rows[0];
@@ -296,8 +307,10 @@ router.post(
           message: `Created blog post: ${post.title}`,
           status: 'success',
           metadata: { status, slug },
-        }, req as any);
-      } catch {}
+        }, req);
+      } catch (logErr) {
+        console.error('logActivity blog.post_created failed:', logErr);
+      }
 
       const tagsResult = await query(
         `SELECT bt.id, bt.name, bt.slug FROM blog_post_tags bpt JOIN blog_tags bt ON bpt.tag_id = bt.id WHERE bpt.post_id = $1`,
@@ -322,6 +335,7 @@ router.put(
     body('status').optional().isIn(['draft', 'published']),
     body('meta_title').optional({ nullable: true }).isString().trim().isLength({ max: 255 }),
     body('meta_description').optional({ nullable: true }).isString(),
+    body('og_image_url').optional({ nullable: true }).isString().trim().isLength({ max: 500 }),
     body('slug').optional().isString().trim(),
     body('tag_ids').optional().isArray(),
     body('tag_ids.*').optional().isUUID(),
@@ -349,10 +363,19 @@ router.put(
       const categoryId = 'category_id' in fields ? fields.category_id : current.category_id;
       const metaTitle = 'meta_title' in fields ? fields.meta_title : current.meta_title;
       const metaDescription = 'meta_description' in fields ? fields.meta_description : current.meta_description;
+      const ogImageUrl =
+        'og_image_url' in fields
+          ? typeof fields.og_image_url === 'string' && fields.og_image_url.trim().length > 0
+            ? fields.og_image_url.trim()
+            : null
+          : current.og_image_url;
 
       const newStatus = fields.status ?? current.status;
       let publishedAt = current.published_at;
-      let publishedYear = current.published_year;
+      let publishedYear = Number(current.published_year);
+      if (!Number.isFinite(publishedYear)) {
+        publishedYear = new Date().getFullYear();
+      }
       if (newStatus === 'published' && current.status !== 'published') {
         publishedAt = new Date().toISOString();
         publishedYear = new Date().getFullYear();
@@ -361,13 +384,13 @@ router.put(
       }
 
       const rawSlug = fields.slug ?? generateSlug(title);
-      const slug = await ensureUniqueSlug(rawSlug, req.params.id);
+      const slug = await ensureUniqueSlug(rawSlug, publishedYear, req.params.id);
 
       const result = await query(
         `UPDATE blog_posts SET title=$1, slug=$2, content=$3, excerpt=$4, category_id=$5,
-                status=$6, meta_title=$7, meta_description=$8, published_at=$9, published_year=$10, updated_at=NOW()
-         WHERE id=$11 RETURNING *`,
-        [title, slug, content, excerpt, categoryId, newStatus, metaTitle, metaDescription, publishedAt, publishedYear, req.params.id],
+                status=$6, meta_title=$7, meta_description=$8, og_image_url=$9, published_at=$10, published_year=$11, updated_at=NOW()
+         WHERE id=$12 RETURNING *`,
+        [title, slug, content, excerpt, categoryId, newStatus, metaTitle, metaDescription, ogImageUrl, publishedAt, publishedYear, req.params.id],
       );
 
       const post = result.rows[0];
@@ -390,8 +413,10 @@ router.put(
           message: `Updated blog post: ${post.title}`,
           status: 'success',
           metadata: { status: newStatus, slug: post.slug },
-        }, req as any);
-      } catch {}
+        }, req);
+      } catch (logErr) {
+        console.error('logActivity blog.post_updated failed:', logErr);
+      }
 
       const tagsResult = await query(
         `SELECT bt.id, bt.name, bt.slug FROM blog_post_tags bpt JOIN blog_tags bt ON bpt.tag_id = bt.id WHERE bpt.post_id = $1`,
@@ -427,8 +452,10 @@ router.delete(
           entityId: req.params.id,
           message: `Deleted blog post: ${existing.rows[0].title}`,
           status: 'success',
-        }, req as any);
-      } catch {}
+        }, req);
+      } catch (logErr) {
+        console.error('logActivity blog.post_deleted failed:', logErr);
+      }
 
       res.json({ success: true });
     } catch (error: any) {
@@ -491,8 +518,10 @@ router.post(
           entityId: result.rows[0].id,
           message: `Created blog category: ${name}`,
           status: 'success',
-        }, req as any);
-      } catch {}
+        }, req);
+      } catch (logErr) {
+        console.error('logActivity blog.category_created failed:', logErr);
+      }
 
       res.status(201).json({ success: true, category: result.rows[0] });
     } catch (error: any) {
@@ -547,8 +576,10 @@ router.put(
           entityId: req.params.id,
           message: `Updated blog category: ${name}`,
           status: 'success',
-        }, req as any);
-      } catch {}
+        }, req);
+      } catch (logErr) {
+        console.error('logActivity blog.category_updated failed:', logErr);
+      }
 
       res.json({ success: true, category: result.rows[0] });
     } catch (error: any) {
@@ -579,8 +610,10 @@ router.delete(
           entityId: req.params.id,
           message: `Deleted blog category: ${existing.rows[0].name}`,
           status: 'success',
-        }, req as any);
-      } catch {}
+        }, req);
+      } catch (logErr) {
+        console.error('logActivity blog.category_deleted failed:', logErr);
+      }
 
       res.json({ success: true });
     } catch (error: any) {

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { paymentService, type PaymentTransactionDetail } from '../services/paymentService';
 import { formatBillingAmount as formatCurrencyDisplay } from '@/lib/formatters';
+import { TerminalPageHeader } from '@/components/terminal';
 
 const TransactionDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -205,8 +206,9 @@ const TransactionDetail: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-mono">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <TerminalPageHeader pathPrefix="~/billing" command={`ledger --tx ${id ?? ""}`} />
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => navigate(fromPath)}

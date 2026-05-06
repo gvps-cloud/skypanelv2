@@ -16,6 +16,9 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import { ScanlineOverlay } from "@/components/fx/ScanlineOverlay";
+import { TypewriterText } from "@/components/fx/TypewriterText";
+import { usePrefersReducedMotion } from "@/components/fx/usePrefersReducedMotion";
 import { TerminalPanel } from "@/components/terminal";
 import {
   CommandDialog,
@@ -204,6 +207,7 @@ interface CommandNavigationItem {
 const BreadcrumbNavigation: React.FC = () => {
   const location = useLocation();
   const { dynamicOverrides } = useBreadcrumb();
+  const reducedMotion = usePrefersReducedMotion();
 
   // Generate breadcrumbs from current route with dynamic overrides
   const breadcrumbs = useMemo(
@@ -212,7 +216,6 @@ const BreadcrumbNavigation: React.FC = () => {
   );
 
   const isAdminRoute = location.pathname.startsWith("/admin");
-
   return (
     <div className="terminal-breadcrumb hidden md:flex md:items-center md:gap-1.5">
       <span
@@ -228,9 +231,16 @@ const BreadcrumbNavigation: React.FC = () => {
               {index > 0 && <BreadcrumbSeparator />}
               <BreadcrumbItem>
                 {crumb.isActive || !crumb.href ? (
-                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                  <BreadcrumbPage className="font-mono text-xs">
+                    {reducedMotion || index !== breadcrumbs.length - 1 ? (
+                      crumb.label
+                    ) : (
+                      <TypewriterText text={crumb.label} speedMs={16} showCursor />
+                    )}
+                  </BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink
+                    className="font-mono text-xs"
                     href={isAdminRoute && index === 0 ? "/admin" : crumb.href}
                   >
                     {crumb.label}
@@ -1070,8 +1080,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         className="md:peer-data-[variant=inset]:m-0 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-none md:peer-data-[variant=inset]:shadow-none"
       >
         {/* Two-Tier Navigation Header */}
-        <header className="sticky top-0 z-50 shrink-0 cyber-header">
-          <div className="flex h-12 sm:h-14 shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-0 font-mono">
+        <header className="sticky top-0 z-50 shrink-0 cyber-header relative overflow-hidden">
+          <ScanlineOverlay animated className="absolute left-0 right-0 bottom-0 top-auto h-6 z-[1] opacity-[0.06]" />
+          <div className="relative z-[2] flex h-12 sm:h-14 shrink-0 items-center justify-between gap-2 px-2 sm:px-4 py-0 font-mono">
             <div className="flex items-center gap-2">
               <SidebarTrigger
                 className={cn(isSidebarOpen ? "-ml-1" : "ml-2", "text-muted-foreground")}
@@ -1453,6 +1464,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             )}
 
             <CommandSeparator />
+            <div className="px-2 py-1.5 font-mono text-[10px] text-muted-foreground border-t border-border/60 bg-muted/20">
+              <span className="text-primary" aria-hidden="true">
+                $
+              </span>{" "}
+              boot: Alt+letter navigates · ⌘K palette · Ctrl+B sidebar
+            </div>
             <CommandGroup heading="# actions">
               {actionItems.map((item) => {
                 const Icon = item.icon;

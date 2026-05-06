@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatBillingAmount } from "@/lib/formatters";
 import Pagination from "@/components/ui/Pagination";
+import { TerminalPageHeader } from "@/components/terminal";
 
 interface HostingService {
   id: string;
@@ -151,7 +152,8 @@ export default function Hosting() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-8 space-y-6 font-mono">
+      <TerminalPageHeader pathPrefix="~/hosting" command="services --list" />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Web Hosting</h1>
         <div className="flex items-center gap-2">

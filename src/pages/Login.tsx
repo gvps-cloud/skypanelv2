@@ -10,7 +10,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DataStreamCanvas from "@/components/home/DataStreamCanvas";
+import { BootSequence } from "@/components/fx/BootSequence";
 import { Logo } from "@/components/Logo";
+import { TerminalPageHeader } from "@/components/terminal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteStatus } from "@/hooks/useSiteStatus";
 import { BRAND_NAME } from "@/lib/brand";
@@ -94,6 +96,12 @@ export default function Login() {
             </span>
             <span>{BRAND_NAME}</span>
           </Link>
+
+          <TerminalPageHeader
+            pathPrefix="~/auth"
+            command="login --interactive"
+            className="mb-1 border-border/60 pb-2"
+          />
 
           <div className="auth-card">
             <div className="auth-card__header">
@@ -247,6 +255,26 @@ export default function Login() {
           <div className="auth-split__visual-fade" />
         </div>
       </motion.div>
+
+      {loading ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-background/90 p-4 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-md rounded-sm border border-primary/30 bg-card p-4 font-mono shadow-xl sm:p-5">
+            <BootSequence
+              lineDelayMs={85}
+              lines={[
+                { text: "[auth] handoff: establishing secure session…", kind: "info" },
+                { text: "[auth] token exchange: verifying CSRF + cookies…", kind: "info" },
+                { text: "[auth] tenant: resolving default organization…", kind: "ok" },
+                { text: "[auth] redirect: preparing workspace…", kind: "ok" },
+              ]}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

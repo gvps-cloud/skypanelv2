@@ -59,7 +59,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { TerminalPanel } from "@/components/terminal";
+import { MatrixRain } from "@/components/fx/MatrixRain";
+import { StatusHeartbeat } from "@/components/fx/StatusHeartbeat";
+import { TerminalPanel, TerminalPageHeader } from "@/components/terminal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -280,6 +282,41 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "blog-categories"
 ];
 
+const ADMIN_SECTION_COMMANDS: Record<AdminSection, string> = {
+  dashboard: "overview --stats",
+  announcements: "comms --broadcast",
+  support: "tickets --queue",
+  "vps-plans": "catalog --vps",
+  "category-mappings": "catalog --map",
+  servers: "infra --servers",
+  providers: "infra --providers",
+  regions: "infra --regions",
+  stackscripts: "infra --stackscripts",
+  networking: "net --fabric",
+  theme: "brand --theme",
+  organizations: "orgs --list",
+  "user-management": "iam --users",
+  "ssh-keys": "iam --keys",
+  "rate-limiting": "sec --ratelimit",
+  "faq-management": "content --faq",
+  documentation: "content --docs",
+  platform: "ops --platform",
+  "egress-credits": "billing --egress",
+  "contact-management": "crm --contacts",
+  "volume-pricing": "billing --volume",
+  billing: "billing --ledger",
+  "email-templates": "comms --templates",
+  "activity-log": "audit --tail",
+  "enhance-hosting": "hosting --enhance",
+  "enhance-plans": "hosting --plans",
+  "enhance-subscriptions": "hosting --subs",
+  "fraud-protection": "risk --fraud",
+  refunds: "billing --refunds",
+  maintenance: "ops --maint",
+  "blog-management": "content --blog",
+  "blog-categories": "content --categories",
+};
+
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
 const DEFAULT_NETWORKING_TAB: AdminNetworkingTab = "rdns";
 const ADMIN_NETWORKING_TABS: AdminNetworkingTab[] = [
@@ -351,7 +388,7 @@ const SectionPanel: React.FC<SectionPanelProps> = ({
       aria-labelledby={`admin-section-${section}`}
       data-section={section}
       className={cn(
-        "space-y-6 rounded-xl border border-border/70 bg-card/20 p-5 sm:p-6 lg:p-7",
+        "space-y-6 rounded-xl border border-primary/20 bg-card/20 p-5 font-mono sm:p-6 lg:p-7",
         className,
       )}
     >
@@ -2248,6 +2285,9 @@ const Admin: React.FC = () => {
     <div className={isDashboardView ? "space-y-8" : "min-h-full"}>
       {isDashboardView ? (
         <>
+          <div className="relative hidden h-20 overflow-hidden rounded-lg border border-primary/25 md:block md:h-24">
+            <MatrixRain density="subdued" className="opacity-45" />
+          </div>
           <TerminalPanel title="ADMIN CONSOLE" bodyClassName="p-0" className="font-mono">
             <div className="space-y-3 p-5 sm:p-7 md:p-9">
               <Badge
@@ -2276,6 +2316,9 @@ const Admin: React.FC = () => {
                 <p className="text-xs text-muted-foreground">
                   {formatCountValue(urgentTickets)} urgent and {formatCountValue(inProgressTickets)} in progress
                 </p>
+                <div className="mt-3 h-9 w-full">
+                  <StatusHeartbeat className="h-9 w-full" height={36} />
+                </div>
               </CardContent>
             </Card>
             <Card className="overflow-hidden border-primary/25">
@@ -2380,6 +2423,9 @@ const Admin: React.FC = () => {
       <div
         className={isDashboardView ? "space-y-12" : "space-y-7 px-1 sm:px-0"}
       >
+        {!isDashboardView ? (
+          <TerminalPageHeader pathPrefix="~/admin" command={ADMIN_SECTION_COMMANDS[activeTab]} />
+        ) : null}
         <SectionPanel section="theme" activeSection={activeTab}>
           <AdminThemeSection
             themeConfigLoading={themeConfigLoading}
@@ -3626,15 +3672,17 @@ const Admin: React.FC = () => {
         </SectionPanel>
 
         <SectionPanel section="maintenance" activeSection={activeTab}>
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold">Maintenance & Access Control</h2>
-              <p className="text-sm text-muted-foreground">
-                Control public access to the platform and manage registration settings.
-              </p>
+          <TerminalPanel title="MAINTENANCE" tone="alert" traffic bodyClassName="p-0">
+            <div className="space-y-6 p-5 sm:p-6">
+              <div>
+                <h2 className="text-xl font-semibold">Maintenance & Access Control</h2>
+                <p className="text-sm text-muted-foreground">
+                  Control public access to the platform and manage registration settings.
+                </p>
+              </div>
+              <MaintenanceManager />
             </div>
-            <MaintenanceManager />
-          </div>
+          </TerminalPanel>
         </SectionPanel>
 
         <SectionPanel section="blog-management" activeSection={activeTab}>

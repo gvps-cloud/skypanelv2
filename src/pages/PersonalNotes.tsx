@@ -13,6 +13,7 @@ import {
   useUpdateOrganizationNote,
   useUpdatePersonalNote,
 } from "@/hooks/useNotes";
+import { TerminalPageHeader } from "@/components/terminal";
 
 export default function PersonalNotes() {
   const {
@@ -43,10 +44,11 @@ export default function PersonalNotes() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/30 p-6 md:p-8">
+    <div className="space-y-6 font-mono">
+      <TerminalPageHeader pathPrefix="~/notes" command="personal --workspace" />
+      <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-card via-card to-muted/30 p-6 md:p-8">
         <div className="relative z-10 max-w-3xl space-y-3">
-          <Badge variant="secondary">
+          <Badge variant="secondary" className="rounded-sm">
             <Lock className="mr-2 h-3 w-3" />
             Private Workspace
           </Badge>
@@ -58,7 +60,7 @@ export default function PersonalNotes() {
             separate from your shared organization records.
           </p>
         </div>
-        <PlusCircle className="absolute right-8 top-8 h-24 w-24 text-muted/30" />
+        <PlusCircle className="absolute right-8 top-8 h-24 w-24 text-muted/30" aria-hidden />
       </div>
 
       <NotesBoard

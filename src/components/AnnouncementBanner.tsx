@@ -143,8 +143,11 @@ export const AnnouncementBanner: React.FC<AnnouncementBannerProps> = ({
               TYPE_STYLES[announcement.type] || TYPE_STYLES.info
             )}
           >
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 font-mono text-xs sm:text-sm">
               <Icon className="h-4 w-4 shrink-0" />
+              <span className="text-white/90 shrink-0" aria-hidden="true">
+                [!]
+              </span>
               <span className="font-medium truncate">{announcement.title}</span>
               {announcement.message && (
                 <span className="hidden sm:inline truncate">

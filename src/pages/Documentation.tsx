@@ -42,6 +42,7 @@ import ApiReference from "@/components/docs/ApiReference";
 import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
 import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
+import { TerminalPageHeader } from "@/components/terminal";
 
 /* ─── Trust Items ────────────────────────────────────────────────── */
 
@@ -1277,7 +1278,10 @@ export default function Documentation() {
             </div>
 
             {/* Content */}
-            <div className="px-6 py-8 lg:px-10 lg:py-10">{content}</div>
+            <div className="px-6 py-8 lg:px-10 lg:py-10">
+              <TerminalPageHeader pathPrefix="~/docs" command="man --browse" />
+              {content}
+            </div>
           </div>
         </div>
       </div>

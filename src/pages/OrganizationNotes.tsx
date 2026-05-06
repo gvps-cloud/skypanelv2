@@ -18,6 +18,7 @@ import {
   useUpdateOrganizationNote,
 } from "@/hooks/useNotes";
 import type { Note } from "@/types/notes";
+import { TerminalPageHeader } from "@/components/terminal";
 
 export default function OrganizationNotes() {
   const [selectedOrganizationId, setSelectedOrganizationId] = useState("all");
@@ -63,10 +64,11 @@ export default function OrganizationNotes() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/30 p-6 md:p-8">
+    <div className="space-y-6 font-mono">
+      <TerminalPageHeader pathPrefix="~/notes" command="org --shared" />
+      <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-card via-card to-muted/30 p-6 md:p-8">
         <div className="relative z-10 max-w-3xl space-y-3">
-          <Badge variant="secondary">
+          <Badge variant="secondary" className="rounded-sm">
             <Users className="mr-2 h-3 w-3" />
             Shared Workspace
           </Badge>

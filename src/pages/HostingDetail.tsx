@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { TerminalPageHeader } from "@/components/terminal";
 import { Button } from "@/components/ui/button";
 import OverviewTab from "./hosting-detail/OverviewTab";
 import WebTab from "./hosting-detail/WebTab";
@@ -107,7 +108,8 @@ export default function HostingDetail() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 font-mono">
+      <TerminalPageHeader pathPrefix={`~/hosting/${id}`} command="subscription --manage" />
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg border bg-card text-card-foreground shadow-sm">
@@ -141,10 +143,10 @@ export default function HostingDetail() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-md transition-colors whitespace-nowrap",
+                    "flex items-center gap-3 border-l-2 border-transparent px-3 py-2.5 text-sm font-medium rounded-sm transition-colors whitespace-nowrap",
                     activeTab === tab.id
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground"
                   )}
                 >
                   <Icon className="h-4 w-4" />

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api";
+import { BootSequence } from "@/components/fx/BootSequence";
+import { TerminalPageHeader } from "@/components/terminal";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -47,6 +49,12 @@ export default function ForgotPassword() {
         <Link to="/" className="auth-back-link">
           ← Back to home
         </Link>
+
+        <TerminalPageHeader
+          pathPrefix="~/auth"
+          command="account --forgot-password"
+          className="mb-2 border-border/60"
+        />
 
         <div className="auth-card">
           <div className="auth-card__header">
@@ -134,6 +142,25 @@ export default function ForgotPassword() {
           </div>
         </div>
       </motion.div>
+
+      {loading ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-background/90 p-4 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-md rounded-sm border border-primary/30 bg-card p-4 font-mono shadow-xl sm:p-5">
+            <BootSequence
+              lineDelayMs={90}
+              lines={[
+                { text: "[mailer] queue: password reset job…", kind: "info" },
+                { text: "[auth] token: generating one-time reset material…", kind: "info" },
+                { text: "[mailer] dispatch: outbound message queued…", kind: "ok" },
+              ]}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

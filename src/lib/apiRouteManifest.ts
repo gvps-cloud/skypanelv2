@@ -67,10 +67,1282 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
+    "method": "GET",
+    "path": "/api/admin/activity",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/activity/export",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/activity/summary",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/announcements",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/announcements",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/announcements/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/announcements/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/announcements/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/billing/invoices",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/billing/invoices/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/billing/invoices/:id/download",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/billing/stats",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/billing/transactions",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/billing/transactions",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/billing/transactions/:transactionId/invoice",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/billing/users",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/blog/categories",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/blog/categories",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/blog/categories/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/blog/categories/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/blog/categories/reorder",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/blog/posts",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/blog/posts",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/blog/posts/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/blog/posts/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/blog/posts/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/blog/posts/:id/cover-image",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/blog/posts/:id/cover-image",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/blog/tags",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/blog/tags",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/blog/tags/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/category-mappings",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/category-mappings",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/category-mappings/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/category-mappings/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/category-mappings/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/category-mappings/enabled",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/category-mappings/reorder",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/category-mappings/sync",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/contact/categories",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/contact/categories",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/contact/categories/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/contact/categories/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/contact/categories/reorder",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/contact/methods",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/contact/methods/:method_type",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/contact/methods/:method_type",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/documentation/articles",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/documentation/articles",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/documentation/articles/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/documentation/articles/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/documentation/articles/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/documentation/articles/:id/files",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/documentation/articles/reorder",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/documentation/categories",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/documentation/categories",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/documentation/categories/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/documentation/categories/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/documentation/categories/reorder",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/documentation/files/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/egress/execute",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/egress/history",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/egress/live-usage",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/egress/pricing",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/egress/pricing/:regionId",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/egress/pricing/sync",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/email-templates",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/email-templates/:name",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/email-templates/:name",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/email-templates/preview",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/enhance/orgs/:orgId/sync-customer",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/enhance/plans",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/enhance/plans/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/enhance/plans/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/enhance/plans/purge-orphans",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/enhance/plans/sync",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/enhance/status",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/admin/enhance/status",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/enhance/status/test",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/enhance/subscriptions",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/enhance/subscriptions/:id/invoice",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/enhance/subscriptions/:id/refund",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/enhance/subscriptions/:id/retry-billing",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/enhance/subscriptions/:id/suspend",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/enhance/subscriptions/:id/unsuspend",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/faq/categories",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/faq/categories",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/faq/categories/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/faq/categories/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/faq/categories/reorder",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/faq/items",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/faq/items",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/faq/items/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/faq/items/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/faq/items/reorder",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/faq/updates",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/faq/updates",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/faq/updates/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/faq/updates/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/faq/updates/reorder",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/fraud-checks",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/fraud-checks/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/fraud-checks/:id/override",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/fraud-checks/stats/summary",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/github/commits",
+    "protected": true,
+    "admin": true
+  },
+  {
     "method": "POST",
     "path": "/api/admin/impersonation/exit",
     "protected": true,
     "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/firewall-settings",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/networking/firewall-settings",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/firewall-templates",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/firewall-templates/:slug",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/firewalls",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/networking/firewalls",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/networking/firewalls/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/firewalls/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/networking/firewalls/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/firewalls/:id/devices",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/networking/firewalls/:id/devices",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/networking/firewalls/:id/devices/:deviceId",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/firewalls/:id/history",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/firewalls/:id/rules",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/networking/firewalls/:id/rules",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/ips",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/networking/ips",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/ips/:address",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/networking/ips/:address/rdns",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/networking/ips/:instanceId/:address",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/networking/ips/assign",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/networking/ips/share",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/ipv6/pools",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/networking/ipv6/range-rdns",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/ipv6/range-rdns-records",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/ipv6/ranges",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/networking/ipv6/ranges",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/networking/ipv6/ranges/:range",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/rdns",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/networking/rdns",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/rdns-config",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/networking/rdns-config",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/networking/vlans",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/networking/vlans/:regionId/:label",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/organizations",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/organizations",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/organizations/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/organizations/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/organizations/:id/members",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/organizations/:id/members/:userId",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/organizations/:id/members/:userId",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/plans",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/plans",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/plans/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/plans/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/platform/availability",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/platform/availability",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/platform/maintenance",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/platform/maintenance",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/platform/maintenance/code",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/platform/region-labels",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/platform/region-labels/:regionId",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/platform/region-labels/:regionId",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/platform/region-labels/:regionId",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/platform/region-labels/bulk",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/providers",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/providers",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/providers/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/providers/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/providers/:id/regions",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/providers/:id/regions",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/providers/:id/validate",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/providers/reorder",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/rate-limits/overrides",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/rate-limits/overrides",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/rate-limits/overrides/:userId",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/refunds",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/refunds",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/refunds/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/refunds/:id/cancel",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/refunds/:id/process",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/servers",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/ssh-keys",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/ssh-keys",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/ssh-keys/:keyId",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/ssh-keys/:keyId",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/stackscripts/configs",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/stackscripts/configs",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/stackscripts/configs/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/stackscripts/configs/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/theme",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/theme",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tickets",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/tickets/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tickets/:id/replies",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tickets/:id/replies",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/admin/tickets/:id/status",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tickets/:id/stream",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/upstream/plans",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/upstream/regions",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/upstream/stackscripts",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/users",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/users/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/users/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/users/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/users/:id/detail",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/users/:id/impersonate",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/users/bulk-delete",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/users/impersonation/exit",
+    "protected": true,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/users/search",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/volume-billing/volume-types",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/volume-billing/volume-types",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/volume-billing/volume-types/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/volume-billing/volume-types/:id",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/volume-billing/volumes",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/volume-billing/volumes/:id/billing",
+    "protected": true,
+    "admin": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/volume-billing/volumes/overview",
+    "protected": true,
+    "admin": true
   },
   {
     "method": "GET",
@@ -1917,7 +3189,7 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   {
     "method": "GET",
     "path": "/api/support/tickets/:id/stream",
-    "protected": false,
+    "protected": true,
     "admin": false
   },
   {

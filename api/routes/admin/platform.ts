@@ -10,6 +10,8 @@ import { query } from '../../lib/database.js';
 import { logActivity } from '../../services/activityLogger.js';
 import { config } from '../../config/index.js';
 import { getPlatformSetting } from '../../services/platformSettingsService.js';
+import { AuthService } from '../../services/authService.js';
+import { maintenanceBypassCodeRevealRateLimiter } from '../../middleware/rateLimiting.js';
 
 const router = express.Router();
 
@@ -476,13 +478,13 @@ router.put(
       // Update maintenance_mode setting if provided
       if (typeof maintenanceMode === 'boolean') {
         const existing = await getPlatformSetting('maintenance_mode');
-        const updatedValue = {
-          ...(existing || {}),
+        const updatedValue: Record<string, unknown> = {
+          ...(typeof existing === 'object' && existing !== null ? existing : {}),
           enabled: maintenanceMode,
           updatedAt: now,
         };
         if (typeof maintenanceMessageHtml === 'string') {
-          (updatedValue as any).messageHtml = maintenanceMessageHtml;
+          updatedValue.messageHtml = maintenanceMessageHtml;
         }
 
         await query(
@@ -584,19 +586,63 @@ router.put(
 );
 
 /**
- * Get maintenance bypass code (admin only)
- * GET /api/admin/platform/maintenance/code
+ * Reveal maintenance bypass code (admin only, password re-auth + rate limit)
+ * POST /api/admin/platform/maintenance/code
  */
-router.get('/maintenance/code', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
-  try {
-    res.json({
-      configured: Boolean(config.MAINTENANCE_CODE && config.MAINTENANCE_CODE.length > 0),
-      code: config.MAINTENANCE_CODE || null,
-    });
-  } catch (err: any) {
-    console.error('Admin maintenance code fetch error:', err);
-    res.status(500).json({ error: err.message || 'Failed to fetch maintenance code' });
-  }
-});
+router.post(
+  '/maintenance/code',
+  authenticateToken,
+  requireAdmin,
+  maintenanceBypassCodeRevealRateLimiter,
+  body('password').isString().notEmpty().withMessage('Password is required'),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const password = String(req.body.password);
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const passwordOk = await AuthService.verifyPassword(userId, password);
+      if (!passwordOk) {
+        res.status(401).json({ error: 'Invalid password' });
+        return;
+      }
+
+      try {
+        await logActivity(
+          {
+            userId,
+            organizationId: req.user?.organizationId || null,
+            eventType: 'admin.maintenance_bypass_revealed',
+            entityType: 'platform',
+            entityId: 'maintenance',
+            message: 'Admin revealed maintenance bypass code (password verified)',
+            status: 'success',
+            metadata: {},
+          },
+          req,
+        );
+      } catch (logErr) {
+        console.error('logActivity admin.maintenance_bypass_revealed failed:', logErr);
+      }
+
+      res.json({
+        configured: Boolean(config.MAINTENANCE_CODE && config.MAINTENANCE_CODE.length > 0),
+        code: config.MAINTENANCE_CODE || null,
+      });
+    } catch (err: any) {
+      console.error('Admin maintenance code fetch error:', err);
+      res.status(500).json({ error: err.message || 'Failed to fetch maintenance code' });
+    }
+  },
+);
 
 export default router;

@@ -12,7 +12,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import PublicLayout from "@/components/PublicLayout";
+import { TerminalPageHeader } from "@/components/terminal";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Search, Calendar, User, ArrowRight, FileText, Tag } from "lucide-react";
 
 interface BlogTag {
@@ -108,7 +110,10 @@ export default function Blog() {
       if (!res.ok) return;
       const data = await res.json();
       setCategories(data.categories || []);
-    } catch {}
+    } catch (err) {
+      console.error("Failed to fetch blog categories:", err);
+      toast.error("Could not load categories");
+    }
   }, []);
 
   useEffect(() => {
@@ -135,6 +140,7 @@ export default function Blog() {
         <section className="relative overflow-hidden border-b border-border bg-background">
           <div className="pointer-events-none absolute inset-0 home-hero-grid-lines" aria-hidden />
           <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+            <TerminalPageHeader pathPrefix="~/www/blog" command="ls --articles" className="mx-auto max-w-2xl text-left sm:text-center" />
             <div className="text-center">
               <h1 className="text-4xl font-bold tracking-tight sm:text-5xl text-foreground">
                 Blog

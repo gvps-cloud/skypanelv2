@@ -10,6 +10,9 @@ const Card = React.forwardRef<
     ref={ref}
     className={cn(
       "rounded-sm border bg-card text-card-foreground shadow-none cyber-card cyber-card--hover",
+      "data-[terminal]:border-l-2 data-[terminal]:border-l-primary/45 data-[terminal]:relative",
+      "data-[terminal]:before:absolute data-[terminal]:before:left-2 data-[terminal]:before:top-2 data-[terminal]:before:size-2 data-[terminal]:before:border-l data-[terminal]:before:border-t data-[terminal]:before:border-primary/30 data-[terminal]:before:content-['']",
+      "data-[terminal]:after:absolute data-[terminal]:after:right-2 data-[terminal]:after:top-2 data-[terminal]:after:size-2 data-[terminal]:after:border-r data-[terminal]:after:border-t data-[terminal]:after:border-primary/30 data-[terminal]:after:content-['']",
       className
     )}
     {...props}

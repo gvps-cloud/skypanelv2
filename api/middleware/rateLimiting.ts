@@ -994,6 +994,13 @@ export const adminMutationRateLimiter = createCustomRateLimiter({
   userType: "admin",
 });
 
+/** Stricter limit for revealing MAINTENANCE_CODE (admin password re-auth). */
+export const maintenanceBypassCodeRevealRateLimiter = createCustomRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 20,
+  userType: "admin",
+});
+
 // Production rate limit warning
 if (process.env.NODE_ENV === "production") {
   const totalLimit =

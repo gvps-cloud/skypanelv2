@@ -36,7 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { TerminalPanel } from "@/components/terminal";
+import { TerminalPageHeader, TerminalPanel } from "@/components/terminal";
 import { Label } from "@/components/ui/label";
 import { TIMEZONE_OPTIONS } from "@/lib/timezones";
 import { BRAND_NAME } from "@/lib/brand";
@@ -368,6 +368,7 @@ const Settings: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <TerminalPageHeader pathPrefix="~/settings" command="config --edit" />
       <div className="mb-8 font-mono">
         <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
           Settings

@@ -96,6 +96,8 @@ const server = app.listen(PORT, async () => {
 /**
  * Start the hourly billing scheduler
  */
+const HOSTING_BALANCE_WARNING_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
 function startBillingScheduler() {
   console.log("🕐 Starting hourly VPS billing scheduler...");
 
@@ -108,6 +110,19 @@ function startBillingScheduler() {
       HostingBillingService.runMonthlyHostingBilling("initial"),
     ]);
   }, 5000); // Wait 5 seconds after server start
+
+  // Hosting low-balance warning emails (uses last_warning_sent_at); stagger from billing burst
+  setTimeout(() => {
+    HostingBillingService.checkHostingBalanceWarnings().catch((err) => {
+      console.error("❌ Initial hosting balance warnings check failed:", err);
+    });
+  }, 60 * 1000);
+
+  setInterval(() => {
+    HostingBillingService.checkHostingBalanceWarnings().catch((err) => {
+      console.error("❌ Scheduled hosting balance warnings check failed:", err);
+    });
+  }, HOSTING_BALANCE_WARNING_INTERVAL_MS);
 
   // Schedule hourly billing (every hour)
   setInterval(

@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`BootSequence > matches snapshot when reduced motion shows all lines 1`] = `
+<div
+  aria-live="polite"
+  class="font-mono text-[10px] sm:text-[11px] leading-relaxed space-y-0.5"
+  role="log"
+>
+  <div
+    class="whitespace-pre-wrap break-all text-muted-foreground"
+  >
+    [0.0] line a
+  </div>
+  <div
+    class="whitespace-pre-wrap break-all text-[hsl(var(--success))]"
+  >
+    [0.1] line b
+  </div>
+</div>
+`;

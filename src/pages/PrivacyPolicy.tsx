@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { BRAND_NAME, BRAND_DOMAIN } from "../lib/brand";
+import { TerminalPageHeader } from "@/components/terminal";
 
 const lastUpdated = "May 6, 2026";
 
@@ -223,7 +224,8 @@ const sections = [
 
 export default function PrivacyPolicy() {
   return (
-    <div className="container mx-auto max-w-6xl px-4 pb-12 pt-24">
+    <div className="container mx-auto max-w-6xl px-4 pb-12 pt-24 font-mono">
+      <TerminalPageHeader pathPrefix="~/legal" command="man privacy_policy" className="mb-8" />
       <div className="grid gap-10 lg:grid-cols-[2fr,1fr]">
         <div>
           <div className="space-y-4">

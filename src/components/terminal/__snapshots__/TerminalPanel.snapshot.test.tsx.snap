@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TerminalPanel > matches snapshot with tone and traffic 1`] = `
+<section
+  aria-labelledby="terminal-panel-test-panel"
+  class="flex flex-col border border-border bg-card text-card-foreground border-l-[hsl(var(--destructive)/0.65)] border-l-2 fx-glow shadow-[0_0_24px_-8px_hsl(var(--primary)/0.35)]"
+  role="region"
+>
+  <header
+    class="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-1.5 bg-destructive/10"
+  >
+    <h2
+      class="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground flex items-center gap-1 min-w-0"
+      id="terminal-panel-test-panel"
+    >
+      <span
+        aria-hidden="true"
+        class="text-primary shrink-0"
+      >
+        $
+      </span>
+      <span
+        aria-hidden="true"
+        class="text-primary shrink-0"
+      >
+        [
+      </span>
+      <span
+        class="px-1 text-foreground truncate"
+      >
+        TEST PANEL
+      </span>
+      <span
+        aria-hidden="true"
+        class="text-primary shrink-0"
+      >
+        ]
+      </span>
+    </h2>
+    <div
+      aria-hidden="true"
+      class="flex items-center gap-1 shrink-0"
+    >
+      <span
+        class="h-2 w-2 rounded-full bg-[hsl(var(--destructive))] opacity-90"
+      />
+      <span
+        class="h-2 w-2 rounded-full bg-[hsl(var(--warning))] opacity-90"
+      />
+      <span
+        class="h-2 w-2 rounded-full bg-[hsl(var(--success))] opacity-90"
+      />
+    </div>
+  </header>
+  <div
+    class="min-h-0 flex-1 p-4"
+  >
+    <p>
+      Body content
+    </p>
+  </div>
+</section>
+`;

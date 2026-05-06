@@ -1,7 +1,7 @@
-import React from 'react';
-import { Loader2, User, Shield } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import React, { useMemo } from 'react';
+import { BootSequence, type BootLine } from '@/components/fx/BootSequence';
+import { ScanlineOverlay } from '@/components/fx/ScanlineOverlay';
+import { cn } from '@/lib/utils';
 
 interface ImpersonationLoadingOverlayProps {
   targetUser: {
@@ -18,49 +18,40 @@ export const ImpersonationLoadingOverlay: React.FC<ImpersonationLoadingOverlayPr
   progress = 0,
   message = 'Initializing impersonation...',
 }) => {
+  const lines = useMemo<BootLine[]>(
+    () => [
+      { text: `[0.000000] audit: impersonation request — operator session OK`, kind: 'ok' },
+      { text: `[0.042891] target: ${targetUser.name} <${targetUser.email}>`, kind: 'info' },
+      {
+        text: `[0.120004] rbac: applying context (${targetUser.role})`,
+        kind: targetUser.role === 'admin' ? 'warn' : 'info',
+      },
+      { text: `[0.180112] bridge: ${message}`, kind: 'info' },
+      {
+        text: `[0.240000] progress: ${Math.round(Math.min(100, Math.max(0, progress)))}% — hold`,
+        kind: 'ok',
+      },
+      { text: `[0.300000] audit: all actions will be logged to activity stream`, kind: 'warn' },
+    ],
+    [targetUser.email, targetUser.name, targetUser.role, message, progress],
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <Card className="w-full max-w-md mx-4 animate-in zoom-in-95 duration-300 border-primary/25">
-        <CardContent className="p-6">
-          <div className="text-center space-y-4">
-            {/* Icon and Title */}
-            <div className="flex items-center justify-center space-x-2">
-              <div className="relative">
-                <User className="h-8 w-8 text-muted-foreground" />
-                <Shield className="h-4 w-4 text-amber-500 absolute -top-1 -right-1" />
-              </div>
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-            
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Starting Impersonation</h3>
-              <p className="text-sm text-muted-foreground">
-                Preparing to act as <span className="font-medium">{targetUser.name}</span>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {targetUser.email}
-                {targetUser.role === 'admin' && (
-                  <span className="ml-2 px-2 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded text-xs">
-                    Admin
-                  </span>
-                )}
-              </p>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="space-y-2">
-              <Progress value={progress} className="w-full" />
-              <p className="text-xs text-muted-foreground">{message}</p>
-            </div>
-
-            {/* Security Notice */}
-            <div className="text-xs text-muted-foreground bg-muted p-3 rounded-md">
-              <p className="font-medium mb-1">Security Notice:</p>
-              <p>All actions performed during impersonation will be logged for audit purposes.</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div
+      className={cn(
+        'fixed inset-0 z-50 flex items-center justify-center bg-background/85 backdrop-blur-sm',
+        'font-mono',
+      )}
+    >
+      <div className="relative mx-4 w-full max-w-lg overflow-hidden rounded-sm border border-primary/30 bg-card shadow-lg">
+        <ScanlineOverlay className="pointer-events-none opacity-35" />
+        <div className="relative z-[1] border-b border-border/80 bg-muted/30 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+          [ impersonation — secure channel ]
+        </div>
+        <div className="relative z-[1] p-5 sm:p-6">
+          <BootSequence lines={lines} lineDelayMs={95} />
+        </div>
+      </div>
     </div>
   );
 };

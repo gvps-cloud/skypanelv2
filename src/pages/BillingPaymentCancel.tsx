@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { TerminalPageHeader } from '@/components/terminal';
 
 const BillingPaymentCancel: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center px-4 font-mono">
       <Card className="max-w-lg w-full border-primary/25">
-        <CardContent className="p-8 text-center">
+        <CardContent className="p-8 text-center space-y-4">
+          <TerminalPageHeader pathPrefix="~/billing" command="paypal --abort" className="text-left border-0 pb-0 mb-0" />
           <div className="flex justify-center mb-4">
             <XCircle className="h-12 w-12 text-yellow-500" />
           </div>

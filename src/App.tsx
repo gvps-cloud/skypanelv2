@@ -72,6 +72,7 @@ import Hosting from "./pages/Hosting";
 import HostingStore from "./pages/HostingStore";
 import HostingDetail from "./pages/HostingDetail";
 import Maintenance from "./pages/Maintenance";
+import { TerminalErrorScreen } from "./components/terminal";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import { useHostingStatus } from "./hooks/useHosting";
@@ -551,7 +552,7 @@ function AppRoutes() {
         <Route path="/organizations/invitations/:token" element={<AcceptInvitation />} />
         <Route path="/organizations/invitations/:token/accept" element={<AcceptInvitation />} />
         <Route path="/organizations/invitations/:token/decline" element={<AcceptInvitation />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<TerminalErrorScreen code="404" title="NOT_FOUND" message="No route matched this path. Check the URL or return home." />} />
       </Routes>
       </MaintenanceGuard>
       </AnnouncementBannerWrapper>

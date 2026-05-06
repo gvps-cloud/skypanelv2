@@ -34,6 +34,8 @@ interface MaintenanceSettings {
   maintenanceMessageHtml: string;
   registrationDisabled: boolean;
   bypassCodeConfigured: boolean;
+  /** Present only after unlock; cleared when auto-hide runs */
+  code?: string | null;
 }
 
 export default function MaintenanceManager() {
@@ -117,8 +119,9 @@ export default function MaintenanceManager() {
     try {
       setUnlockLoading(true);
       await verifyPassword(unlockPassword);
-      const codeData = await apiClient.get<{ configured: boolean; code: string | null }>(
-        "/admin/platform/maintenance/code"
+      const codeData = await apiClient.post<{ configured: boolean; code: string | null }>(
+        "/admin/platform/maintenance/code",
+        { password: unlockPassword },
       );
       setSettings((prev) => ({
         ...prev,
@@ -143,7 +146,7 @@ export default function MaintenanceManager() {
   };
 
   const handleCopyCode = () => {
-    const code = settings.bypassCodeConfigured ? (settings as any).code : "";
+    const code = settings.bypassCodeConfigured ? settings.code || "" : "";
     if (!code) {
       toast.error("No code configured in environment");
       return;
@@ -263,7 +266,7 @@ export default function MaintenanceManager() {
           <div className="flex items-center gap-3">
             <div className="flex-1 rounded-md border bg-muted px-3 py-2 font-mono text-sm">
               {codeRevealed
-                ? ((settings as any).code || "Not configured")
+                ? settings.code || "Not configured"
                 : settings.bypassCodeConfigured
                   ? "••••••••••••••••"
                   : "Not configured"}

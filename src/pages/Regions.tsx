@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
+import { MatrixRain } from "@/components/fx/MatrixRain";
+import { TerminalPageHeader } from "@/components/terminal";
 import { BRAND_NAME } from "@/lib/brand";
 import { LeafletMap } from "@/components/regions";
 import { apiClient } from "@/lib/api";
@@ -261,6 +263,7 @@ export default function Regions() {
               transition={{ duration: 0.65 }}
               className="space-y-8"
             >
+              <TerminalPageHeader pathPrefix="~/www" command="regions --map" className="max-w-2xl" />
               <div className="space-y-5">
                 <Badge
                   variant="outline"
@@ -425,14 +428,19 @@ export default function Regions() {
                               </span>
                             </div>
                           </div>
-                          <div className="relative h-[520px] rounded-lg overflow-hidden border border-border/50">
-                            <LeafletMap
-                              regions={regions}
-                              latencyState={latencyState}
-                              selectedRegion={selectedRegion}
-                              onRegionClick={handleRegionClick}
-                              onRegionTest={testRegion}
-                            />
+                          <div className="relative h-[520px] overflow-hidden rounded-lg border border-border/50">
+                            <div className="pointer-events-none absolute inset-0 z-0 hidden opacity-30 md:block">
+                              <MatrixRain density="subdued" />
+                            </div>
+                            <div className="relative z-[1] h-full">
+                              <LeafletMap
+                                regions={regions}
+                                latencyState={latencyState}
+                                selectedRegion={selectedRegion}
+                                onRegionClick={handleRegionClick}
+                                onRegionTest={testRegion}
+                              />
+                            </div>
                           </div>
                           <p className="mt-3 text-xs text-muted-foreground">
                             Tip: Click a region marker to see details and run

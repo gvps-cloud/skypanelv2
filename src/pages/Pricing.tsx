@@ -37,6 +37,7 @@ import { useEnabledCategoryMappings } from '@/hooks/useCategoryMappings';
 import { BRAND_NAME } from '@/lib/brand';
 import MarketingNavbar from '@/components/MarketingNavbar';
 import MarketingFooter from '@/components/MarketingFooter';
+import { TerminalPageHeader } from '@/components/terminal';
 import { apiClient } from '@/lib/api';
 import { getHostingFeatureRows, getHostingFeatureSpecRows } from '@/lib/hostingPlanFeatures';
 import '@/styles/home.css';
@@ -447,6 +448,7 @@ const PricingPage: React.FC = () => {
               transition={{ duration: 0.65 }}
               className="space-y-8"
             >
+              <TerminalPageHeader pathPrefix="~/www" command="pricing --manifest" className="max-w-2xl" />
               <div className="space-y-5">
                 <Badge
                   variant="outline"

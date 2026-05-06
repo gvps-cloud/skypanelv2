@@ -49,7 +49,6 @@ skypanelv2/
 │   │   │   ├── billing.ts            # Admin billing management
 │   │   │   ├── categoryMappings.ts   # White-label category CRUD
 │   │   │   ├── contact.ts            # Contact message management
-│   │   │   ├── contact-enhanced.ts   # Enhanced contact operations
 │   │   │   ├── documentation.ts      # Admin docs CRUD
 │   │   │   ├── egress.ts             # Admin egress management
 │   │   │   ├── emailTemplates.ts     # Email template CRUD
@@ -455,7 +454,6 @@ skypanelv2/
 │   ├── linode-openapi.json           # Linode API spec
 │   ├── enhance-oas3-api.yaml         # Enhance API spec
 │   ├── shadcn-ui-docs/               # shadcn/ui reference docs
-│   └── specs/                        # Feature specifications
 ├── public/                           # Static assets (icons, logos)
 ├── data/                             # Static data files (audit reports)
 ├── docs/

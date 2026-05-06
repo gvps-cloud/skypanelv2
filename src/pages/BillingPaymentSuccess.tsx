@@ -4,6 +4,7 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { paymentService } from '../services/paymentService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { TerminalPageHeader } from '@/components/terminal';
 
 const BillingPaymentSuccess: React.FC = () => {
   const navigate = useNavigate();
@@ -46,9 +47,10 @@ const BillingPaymentSuccess: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center px-4 font-mono">
       <Card className="max-w-lg w-full border-primary/25">
-        <CardContent className="p-8 text-center">
+        <CardContent className="p-8 text-center space-y-4">
+          <TerminalPageHeader pathPrefix="~/billing" command="paypal --capture" className="text-left border-0 pb-0 mb-0" />
           <div className="flex justify-center mb-4">
             {status === 'processing' && <Loader2 className="h-12 w-12 text-foreground animate-spin" />}
             {status === 'success' && <CheckCircle className="h-12 w-12 text-green-500" />}

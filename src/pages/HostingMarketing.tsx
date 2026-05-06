@@ -15,6 +15,7 @@ import {
 import "@/styles/home.css";
 import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
+import { TerminalPageHeader } from "@/components/terminal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,6 +141,7 @@ const HostingHero = ({ enabled, plans, isLoading }: HostingCatalogState) => (
         transition={{ duration: 0.65 }}
         className="space-y-8"
       >
+        <TerminalPageHeader pathPrefix="~/www" command="hosting --overview" className="max-w-2xl" />
         <div className="space-y-5">
           <Badge
             variant="outline"

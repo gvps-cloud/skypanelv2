@@ -40,6 +40,7 @@ import NetworkingTab from "./VPSDetail/NetworkingTab";
 import ActivityTab from "./VPSDetail/ActivityTab";
 import FirewallTab from "./VPSDetail/FirewallTab";
 import { useBreadcrumb } from "../contexts/BreadcrumbContext";
+import { TerminalPageHeader } from "@/components/terminal";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1681,7 +1682,10 @@ const VPSDetail: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="max-w-full xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-10">
+      <div className="max-w-full xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8">
+        <TerminalPageHeader pathPrefix={`~/vps/${id ?? ""}`} command="inspect --live" />
+      </div>
+      <div className="max-w-full xl:max-w-[1600px] 2xl:max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-10 pt-0">
         <div className="mb-6 sm:mb-8 flex flex-col gap-3 sm:gap-4">
           <div>
             <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-primary dark:text-primary">

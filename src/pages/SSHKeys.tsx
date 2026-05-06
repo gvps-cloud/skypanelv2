@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { TerminalPageHeader } from '@/components/terminal';
 
 const SSHKeys: React.FC = () => {
   const location = useLocation();
@@ -207,7 +208,8 @@ const SSHKeys: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-mono">
+      <TerminalPageHeader pathPrefix="~/.ssh" command="authorized_keys" />
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
         <div className="relative z-10">

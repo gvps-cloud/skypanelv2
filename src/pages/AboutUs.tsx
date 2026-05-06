@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
+import { TerminalPageHeader } from "@/components/terminal";
 import { BRAND_NAME } from "@/lib/brand";
 import api from "@/lib/api";
 import { useHostingStatus } from "@/hooks/useHosting";
@@ -205,6 +206,7 @@ export default function AboutUs() {
               transition={{ duration: 0.65 }}
               className="space-y-8"
             >
+              <TerminalPageHeader pathPrefix="~/www" command="about --story" className="max-w-2xl" />
               <div className="space-y-5">
                 <Badge
                   variant="outline"

@@ -10,7 +10,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DataStreamCanvas from "@/components/home/DataStreamCanvas";
+import { BootSequence } from "@/components/fx/BootSequence";
 import { Logo } from "@/components/Logo";
+import { TerminalPageHeader } from "@/components/terminal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteStatus } from "@/hooks/useSiteStatus";
 import { BRAND_NAME } from "@/lib/brand";
@@ -102,6 +104,12 @@ export default function Register() {
               <span>{BRAND_NAME}</span>
             </Link>
 
+            <TerminalPageHeader
+              pathPrefix="~/auth"
+              command="register --locked"
+              className="mb-1 border-border/60 pb-2"
+            />
+
             <div className="auth-card">
               <div className="auth-card__header">
                 <div className="auth-card__icon-wrap">
@@ -153,6 +161,12 @@ export default function Register() {
             </span>
             <span>{BRAND_NAME}</span>
           </Link>
+
+          <TerminalPageHeader
+            pathPrefix="~/auth"
+            command="register --new-user"
+            className="mb-1 border-border/60 pb-2"
+          />
 
           <div className="auth-card">
             <div className="auth-card__header">
@@ -330,6 +344,26 @@ export default function Register() {
           <div className="auth-split__visual-fade" />
         </div>
       </motion.div>
+
+      {loading ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-background/90 p-4 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-md rounded-sm border border-primary/30 bg-card p-4 font-mono shadow-xl sm:p-5">
+            <BootSequence
+              lineDelayMs={85}
+              lines={[
+                { text: "[auth] provisioning: creating user record…", kind: "info" },
+                { text: "[auth] wallet: initializing account scope…", kind: "info" },
+                { text: "[auth] session: minting first login context…", kind: "ok" },
+                { text: "[auth] redirect: onboarding handshake…", kind: "ok" },
+              ]}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

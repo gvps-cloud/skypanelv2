@@ -40,6 +40,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
+import { TerminalPageHeader } from "@/components/terminal";
 import { BRAND_NAME } from "@/lib/brand";
 import type {
   ContactConfig,
@@ -331,6 +332,7 @@ export default function Contact() {
               transition={{ duration: 0.65 }}
               className="space-y-8"
             >
+              <TerminalPageHeader pathPrefix="~/www" command="contact --open-channel" className="max-w-2xl" />
               <div className="space-y-5">
                 <Badge
                   variant="outline"

@@ -424,6 +424,8 @@ node scripts/generate-encryption-key.js
 - `EMAIL_PROVIDER_PRIORITY` — email provider fallback order (`resend,smtp`)
 - `ENHANCE_API_URL`, `ENHANCE_API_KEY`, `ENHANCE_MASTER_ORG_ID`, `ENHANCE_DEFAULT_SERVER_GROUP_ID` — Enhance hosting
 - `CLIENT_URL` — PayPal return/cancel URLs (must match frontend origin)
+- `CORS_ORIGINS` — Comma-separated extra allowed origins for browser API access (see `api/config/index.ts` `parseCorsOrigins`)
+- `MAINTENANCE_CODE` — Optional bypass code required for admin login when `maintenance_mode` is enabled (see `api/routes/auth.ts`)
 
 **Config validation:** `api/app.ts` validates config on import and starts metrics/billing cron unless `STARTUP_SIDE_EFFECTS_ENABLED=false` is set.
 

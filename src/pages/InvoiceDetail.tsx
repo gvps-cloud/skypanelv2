@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
 import { injectInvoiceTheme } from "@/lib/invoiceTheme";
+import { TerminalPageHeader } from "@/components/terminal";
 
 interface Invoice {
   id: string;
@@ -141,8 +142,12 @@ const InvoiceDetail: React.FC = () => {
 
   return (
     <>
-      <div className="p-4 sm:p-8">
+      <div className="p-4 sm:p-8 font-mono">
         <div className="max-w-4xl mx-auto space-y-6">
+          <TerminalPageHeader
+            pathPrefix="~/billing"
+            command={`invoice --print ${invoice.invoiceNumber || id}`}
+          />
           {/* Header */}
           <div className="flex items-center justify-between">
             <Button variant="ghost" onClick={() => navigate("/billing")}>

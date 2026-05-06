@@ -18,6 +18,7 @@ import Pagination from '@/components/ui/Pagination';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { apiClient, buildApiUrl } from '@/lib/api';
 import { useHostingStatus } from '@/hooks/useHosting';
+import { TerminalPageHeader } from '@/components/terminal';
 
 interface ActivityRecord {
   id: string;
@@ -182,7 +183,8 @@ const ActivityPage: React.FC = () => {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
+      <div className="space-y-6 font-mono">
+        <TerminalPageHeader pathPrefix="~/activity" command="log --tail" />
         {/* Hero Section */}
         <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
           <div className="relative z-10">

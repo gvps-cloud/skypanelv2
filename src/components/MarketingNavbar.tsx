@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, Menu, X, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { MatrixRain } from "@/components/fx/MatrixRain";
 import { Logo } from "@/components/Logo";
 import { BRAND_NAME } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,7 @@ export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
   const renderNavLink = (link: NavLinkConfig) => {
     const resolvedHref = resolveHref(link);
     const baseClass =
-      "text-sm text-muted-foreground transition-colors hover:text-foreground";
+      "text-sm font-mono rounded-sm px-2 py-1 border border-transparent text-muted-foreground transition-colors hover:text-foreground hover:border-border/60";
 
     if (link.isAnchor && isHome) {
       return (
@@ -109,7 +110,7 @@ export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
         className="relative px-3 py-1.5"
       >
         <button
-          className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="flex items-center gap-1 text-sm font-mono rounded-sm px-2 py-1 border border-transparent text-muted-foreground transition-colors hover:text-foreground hover:border-border/60"
           onClick={() => setOpenDropdown(isOpen ? null : dropdown.label)}
           onMouseEnter={() => openDropdown && setOpenDropdown(dropdown.label)}
         >
@@ -164,7 +165,7 @@ export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
 
   return (
     <div className={`${sticky ? "fixed left-0 right-0 z-40" : ""} pointer-events-none mx-auto max-w-7xl px-4 pt-3 sm:px-6 lg:px-8`} style={sticky ? { top: 'var(--announcement-banner-height, 0px)' } : undefined}>
-      <div className="pointer-events-auto flex items-center justify-between rounded-2xl border border-border/50 bg-background/80 px-4 py-3 shadow-lg shadow-black/[0.03] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <div className="pointer-events-auto relative flex items-center justify-between overflow-hidden rounded-sm border border-border/60 bg-background/85 px-4 py-3 font-mono shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
         <Link
           to="/"
           className="flex items-center gap-2.5 text-lg font-semibold transition-transform hover:scale-[1.02]"
@@ -223,8 +224,11 @@ export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="pointer-events-auto overflow-hidden pt-2 lg:hidden"
           >
-            <div className="rounded-2xl border border-border/50 bg-background/95 px-4 pb-5 pt-3 backdrop-blur-xl">
-              <div className="flex flex-col gap-3 text-sm font-medium">
+            <div className="relative overflow-hidden rounded-sm border border-border/60 bg-background/95 px-4 pb-5 pt-3 backdrop-blur-xl">
+              <div className="pointer-events-none absolute inset-0 opacity-[0.07]">
+                <MatrixRain density="subdued" />
+              </div>
+              <div className="relative z-[1] flex flex-col gap-3 text-sm font-mono font-medium">
                 {navDropdowns.map((dropdown) =>
                   dropdown.items.map((item) => (
                     <Link

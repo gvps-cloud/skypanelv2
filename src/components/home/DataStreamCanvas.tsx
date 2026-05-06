@@ -149,6 +149,8 @@ interface DataStreamCanvasProps {
   /** When set, overrides CSS `--primary` hue for glyph colours */
   hue?: number
   reducedMotion?: boolean
+  /** Pause animation when the canvas scrolls off-screen (saves CPU). */
+  pauseWhenOffscreen?: boolean
   frames?: FrameDef[]
 }
 
@@ -157,8 +159,11 @@ export default function DataStreamCanvas({
   cellSize = 14,
   hue: hueProp,
   reducedMotion = false,
+  pauseWhenOffscreen = false,
   frames = FRAMES,
 }: DataStreamCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const offscreenVisibleRef = useRef(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef<number>(0)
   const dimsRef = useRef({ cols: 0, rows: 0, w: 0, h: 0 })
@@ -354,10 +359,17 @@ export default function DataStreamCanvas({
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
+    const root = pauseWhenOffscreen ? containerRef.current : null
+
     let lastTime = 0
     let accumulatedTime = 0
 
     const draw = (timestamp: number) => {
+      if (pauseWhenOffscreen && !offscreenVisibleRef.current) {
+        rafRef.current = 0
+        return
+      }
+
       const delta = timestamp - lastTime
       lastTime = timestamp
       accumulatedTime += delta
@@ -493,15 +505,33 @@ export default function DataStreamCanvas({
       rafRef.current = requestAnimationFrame(draw)
     }
 
+    let io: IntersectionObserver | undefined
+    if (root) {
+      io = new IntersectionObserver(
+        (entries) => {
+          const hit = entries[0]
+          offscreenVisibleRef.current = hit ? hit.isIntersecting : true
+          if (offscreenVisibleRef.current && rafRef.current === 0) {
+            lastTime = 0
+            rafRef.current = requestAnimationFrame(draw)
+          }
+        },
+        { threshold: 0, rootMargin: "80px" },
+      )
+      io.observe(root)
+    }
+
     rafRef.current = requestAnimationFrame(draw)
 
     return () => {
+      io?.disconnect()
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      rafRef.current = 0
     }
-  }, [reducedMotion, cellSize, resolveHue])
+  }, [reducedMotion, cellSize, resolveHue, pauseWhenOffscreen])
 
   return (
-    <div className={`relative w-full h-full overflow-hidden ${className}`}>
+    <div ref={containerRef} className={`relative w-full h-full overflow-hidden ${className}`}>
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full"

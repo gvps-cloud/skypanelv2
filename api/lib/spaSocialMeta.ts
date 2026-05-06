@@ -14,23 +14,9 @@ export type SpaSocialMeta = {
   imageUrl: string | null;
 };
 
-function readEnvString(...values: Array<string | undefined>): string {
-  for (const value of values) {
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (trimmed.length > 0) {
-        return trimmed;
-      }
-    }
-  }
-  return "";
-}
-
 export function getSpaCompanyName(): string {
-  return (
-    readEnvString(process.env.COMPANY_NAME, process.env.VITE_COMPANY_NAME) ||
-    "GVPSCloud"
-  );
+  const name = typeof config.COMPANY_NAME === "string" ? config.COMPANY_NAME.trim() : "";
+  return name.length > 0 ? name : "SkyPanelV2";
 }
 
 function defaultTitle(company: string): string {
@@ -139,7 +125,7 @@ export function resolvePublicOrigin(req: Request): string {
     const u = new URL(config.CLIENT_URL);
     return u.origin;
   } catch {
-    return "http://localhost:5173";
+    return "";
   }
 }
 

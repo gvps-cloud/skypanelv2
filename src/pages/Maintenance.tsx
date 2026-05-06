@@ -13,6 +13,8 @@ import { Logo } from "@/components/Logo";
 import { useSiteStatus } from "@/hooks/useSiteStatus";
 import { useAuth } from "@/contexts/AuthContext";
 import { BRAND_NAME } from "@/lib/brand";
+import { BootSequence } from "@/components/fx/BootSequence";
+import { TerminalPageHeader } from "@/components/terminal";
 import "@/styles/auth.css";
 
 const MAINTENANCE_FRAMES: FrameDef[] = [
@@ -105,6 +107,12 @@ export default function Maintenance() {
             <span>{BRAND_NAME}</span>
           </Link>
 
+          <TerminalPageHeader
+            pathPrefix="~/status"
+            command="maint --broadcast"
+            className="mb-1 border-border/60 pb-2"
+          />
+
           <div className="auth-card">
             <div className="auth-card__header">
               <div className="auth-card__icon-wrap !flex">
@@ -116,7 +124,18 @@ export default function Maintenance() {
               </p>
             </div>
 
-            <div className="auth-card__body">
+            <div className="auth-card__body space-y-4">
+              <div className="rounded-sm border border-primary/25 bg-muted/20 p-3 font-mono">
+                <BootSequence
+                  lineDelayMs={110}
+                  lines={[
+                    { text: "[maint] scheduler: planned work in progress", kind: "warn" },
+                    { text: "[maint] edge: draining active sessions (non-admin)", kind: "info" },
+                    { text: "[maint] data plane: read-only where required", kind: "info" },
+                    { text: "[maint] eta: see operator message below", kind: "ok" },
+                  ]}
+                />
+              </div>
               <div
                 className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground"
                 dangerouslySetInnerHTML={{ __html: messageHtml }}

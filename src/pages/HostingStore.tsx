@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatBillingAmount } from "@/lib/formatters";
+import { TerminalPageHeader } from "@/components/terminal";
 
 const formatResource = (value: number | null | undefined) => {
   if (value === null || value === undefined || value === -1) return "∞";
@@ -111,7 +112,8 @@ export default function HostingStore() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-8 space-y-6 font-mono">
+      <TerminalPageHeader pathPrefix="~/hosting" command="store --catalog" />
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={() => navigate("/hosting")}>
           <ArrowLeft className="w-4 h-4 mr-1" />

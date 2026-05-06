@@ -191,6 +191,10 @@ router.post(
 
         const loginResult = result as { user: any; token: string };
 
+        // Credentials verified — reset brute-force counters before maintenance gating
+        // so valid users are not locked out by repeated maintenance/bypass 403s.
+        await bruteForceProtectionService.resetAttempts(clientIP, email);
+
         // Check maintenance mode
         const maintenanceSetting = await getPlatformSetting("maintenance_mode");
         if (maintenanceSetting?.enabled === true) {
@@ -212,9 +216,6 @@ router.post(
             return;
           }
         }
-
-        // Reset failed attempts on successful login
-        await bruteForceProtectionService.resetAttempts(clientIP, email);
 
         // Log successful login
         try {

@@ -241,8 +241,8 @@ router.post(
     if (vpsId) {
       try {
         const vpsRes = await query(
-          "SELECT label, ip_address FROM vps_instances WHERE id = $1",
-          [vpsId],
+          "SELECT label, ip_address FROM vps_instances WHERE id = $1 AND organization_id = $2",
+          [vpsId, organizationId],
         );
         if (vpsRes.rows.length > 0) {
           vpsLabelSnapshot = vpsRes.rows[0].label;

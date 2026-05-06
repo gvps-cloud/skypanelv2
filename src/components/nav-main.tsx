@@ -135,11 +135,13 @@ React.useEffect(() => {
     <SidebarGroup>
       <SidebarGroupLabel>{label}</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => {
+        {items.map((item, itemIndex) => {
           const hasActiveChild = item.items?.some((sub) => sub.isActive || sub.items?.some((nested) => nested.isActive)) ?? false
           const isExactActive = Boolean(item.isActive)
           const isItemActive = isExactActive || hasActiveChild
           const itemKey = item.url || item.title
+          const isLastTop = itemIndex === items.length - 1
+          const treeTop = isLastTop ? "└─" : "├─"
 const persistedState = openGroups[itemKey]
 const openValue = persistedState ?? (isItemActive ? true : false)
 
@@ -153,8 +155,14 @@ const openValue = persistedState ?? (isItemActive ? true : false)
                       <SidebarMenuButton
                         tooltip={item.title}
                         isActive={isExactActive}
-                        className={cn(hasActiveChild && !isExactActive ? "bg-sidebar-accent/50 text-sidebar-accent-foreground" : "")}
+                        className={cn(
+                          hasActiveChild && !isExactActive ? "bg-sidebar-accent/50 text-sidebar-accent-foreground" : "",
+                          isExactActive && "shadow-[inset_2px_0_0_hsl(var(--primary))]",
+                        )}
                       >
+                        <span className="font-mono text-[10px] text-muted-foreground w-5 shrink-0 select-none" aria-hidden="true">
+                          {treeTop}
+                        </span>
                         <item.icon />
                         <span>{item.title}</span>
                       </SidebarMenuButton>
@@ -212,8 +220,14 @@ const openValue = persistedState ?? (isItemActive ? true : false)
                         <SidebarMenuButton
                           tooltip={item.title}
                           isActive={isExactActive}
-                          className={cn(hasActiveChild && !isExactActive ? "bg-sidebar-accent/50 text-sidebar-accent-foreground" : "")}
+                          className={cn(
+                            hasActiveChild && !isExactActive ? "bg-sidebar-accent/50 text-sidebar-accent-foreground" : "",
+                            isExactActive && "shadow-[inset_2px_0_0_hsl(var(--primary))]",
+                          )}
                         >
+                          <span className="font-mono text-[10px] text-muted-foreground w-5 shrink-0 select-none" aria-hidden="true">
+                            {treeTop}
+                          </span>
                           <item.icon />
                           <span>{item.title}</span>
                         </SidebarMenuButton>
@@ -226,13 +240,16 @@ const openValue = persistedState ?? (isItemActive ? true : false)
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <SidebarMenuSub>
-                          {item.items?.map((subItem) => (
+                          {item.items?.map((subItem, subIndex, subArr) => (
                             <SidebarMenuSubItem key={subItem.title}>
                               {subItem.items?.length ? (
                                 <Collapsible asChild defaultOpen={subItem.isActive}>
                                   <>
                                     <CollapsibleTrigger asChild>
                                       <SidebarMenuSubButton isActive={subItem.isActive}>
+                                        <span className="font-mono text-[10px] text-muted-foreground shrink-0 select-none" aria-hidden="true">
+                                          {subIndex === subArr.length - 1 ? "└─" : "├─"}
+                                        </span>
                                         <span>{subItem.title}</span>
                                       </SidebarMenuSubButton>
                                     </CollapsibleTrigger>
@@ -254,6 +271,9 @@ const openValue = persistedState ?? (isItemActive ? true : false)
                               ) : (
                                 <SidebarMenuSubButton asChild isActive={subItem.isActive}>
                                   <Link to={subItem.url}>
+                                    <span className="font-mono text-[10px] text-muted-foreground shrink-0 select-none" aria-hidden="true">
+                                      {subIndex === subArr.length - 1 ? "└─" : "├─"}
+                                    </span>
                                     <span>{subItem.title}</span>
                                   </Link>
                                 </SidebarMenuSubButton>
@@ -268,6 +288,9 @@ const openValue = persistedState ?? (isItemActive ? true : false)
               ) : (
                 <SidebarMenuButton asChild tooltip={item.title} isActive={isItemActive}>
                   <Link to={item.url}>
+                    <span className="font-mono text-[10px] text-muted-foreground w-5 shrink-0 select-none" aria-hidden="true">
+                      {isItemActive ? ">" : treeTop}
+                    </span>
                     <item.icon />
                     <span>{item.title}</span>
                   </Link>

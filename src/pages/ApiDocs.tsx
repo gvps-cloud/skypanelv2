@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BRAND_NAME } from "@/lib/brand";
+import { TerminalPageHeader } from "@/components/terminal";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/api";
 import {
@@ -288,6 +289,9 @@ export default function ApiDocs() {
 
   return (
     <div className="relative bg-background min-h-screen">
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+        <TerminalPageHeader pathPrefix="~/api" command="reference --rest" />
+      </div>
       {/* ═══════════════════════════ HERO ═══════════════════════════ */}
       <section className="relative overflow-hidden border-b border-border/40">
         <div className="home-orb home-orb--1" aria-hidden="true" />

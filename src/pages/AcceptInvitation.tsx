@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { BRAND_NAME } from "@/lib/brand";
+import { TerminalPageHeader } from "@/components/terminal";
 
 interface InvitationDetails {
   id: string;
@@ -260,7 +261,8 @@ export default function AcceptInvitation() {
   if (showLoginForm) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/40 px-4 py-12">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md font-mono space-y-2">
+          <TerminalPageHeader pathPrefix="~/invite" command="session --login" />
           <div className="mb-4 text-sm">
             <Button
               variant="ghost"
@@ -348,7 +350,8 @@ export default function AcceptInvitation() {
   if (showSignupForm) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/40 px-4 py-12">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md font-mono space-y-2">
+          <TerminalPageHeader pathPrefix="~/invite" command="account --register" />
           <div className="mb-4 text-sm">
             <Button
               variant="ghost"
@@ -438,7 +441,8 @@ export default function AcceptInvitation() {
     const errorContent = getErrorContent();
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/40 px-4 py-12">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md font-mono space-y-2">
+          <TerminalPageHeader pathPrefix="~/invite" command="validate --token" />
           <div className="mb-4 text-sm">
             <Link to="/" className="text-muted-foreground hover:text-primary/80">
               ← Back to home
@@ -501,7 +505,8 @@ export default function AcceptInvitation() {
 
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/40 px-4 py-12">
-        <div className="w-full max-w-lg">
+        <div className="w-full max-w-lg font-mono space-y-2">
+          <TerminalPageHeader pathPrefix="~/invite" command="org --accept" />
           <div className="mb-4 text-sm">
             <Link to="/" className="text-muted-foreground hover:text-primary/80">
               ← Back to home

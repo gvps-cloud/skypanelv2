@@ -28,6 +28,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import MarketingNavbar from "@/components/MarketingNavbar";
 import MarketingFooter from "@/components/MarketingFooter";
+import { TerminalPageHeader } from "@/components/terminal";
 import { BRAND_NAME } from "@/lib/brand";
 import { apiClient } from "@/lib/api";
 import type { FAQCategoriesResponse, FAQUpdatesResponse, FAQCategoryWithItems, FAQUpdate } from "@/types/faq";
@@ -163,6 +164,7 @@ export default function FAQ() {
               transition={{ duration: 0.65 }}
               className="space-y-6"
             >
+              <TerminalPageHeader pathPrefix="~/www" command="faq --browse" className="max-w-2xl" />
               <div className="space-y-5">
                 <Badge
                   variant="outline"

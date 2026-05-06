@@ -29,7 +29,9 @@ import { MonthlyResetIndicator } from "@/components/Dashboard/MonthlyResetIndica
 import { formatBillingAmount } from "@/lib/formatters";
 import { apiClient } from "@/lib/api";
 import { useHostingStatus } from "@/hooks/useHosting";
-import { TerminalPanel } from "@/components/terminal";
+import { MatrixRain } from "@/components/fx/MatrixRain";
+import { StatusHeartbeat } from "@/components/fx/StatusHeartbeat";
+import { TerminalPageHeader, TerminalPanel } from "@/components/terminal";
 import { cn } from "@/lib/utils";
 
 interface MetricSummary {
@@ -465,6 +467,15 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 font-mono">
+      <TerminalPageHeader command="dashboard --watch" />
+      <div className="relative hidden md:block h-24 rounded-sm border border-border overflow-hidden">
+        <MatrixRain density="subdued" className="h-full min-h-[6rem]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/92 via-background/35 to-transparent pointer-events-none" />
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-[2] max-w-[60%]">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">workspace</p>
+          <p className="text-sm font-semibold text-foreground">command center · live</p>
+        </div>
+      </div>
       {/* Main Content Area */}
       <div className="space-y-6">
         {/* Status Overview — log line */}
@@ -512,11 +523,16 @@ const Dashboard: React.FC = () => {
             )}
           </div>
 
-          <MonthlyResetIndicator
-            monthlySpend={monthlySpend}
-            showAnimation={false}
-            className="ml-auto sm:ml-auto sm:items-center sm:text-left"
-          />
+          <div className="ml-auto flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+            <div className="hidden sm:block w-[140px] shrink-0 border border-border/50 rounded-sm bg-card/30 p-1">
+              <StatusHeartbeat height={32} />
+            </div>
+            <MonthlyResetIndicator
+              monthlySpend={monthlySpend}
+              showAnimation={false}
+              className="sm:items-center sm:text-left"
+            />
+          </div>
         </div>
 
         {/* Quick Actions — command list */}

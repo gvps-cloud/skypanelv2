@@ -20,7 +20,11 @@ type TableCaptionProps = React.HTMLAttributes<HTMLTableCaptionElement>;
 
 const Table = React.forwardRef<HTMLTableElement, TableProps>(({ className, ...props }, ref) => (
   <div className="w-full overflow-auto">
-    <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
+    <table
+      ref={ref}
+      className={cn("w-full caption-bottom text-sm font-mono tabular-nums", className)}
+      {...props}
+    />
   </div>
 ));
 Table.displayName = "Table";
@@ -44,7 +48,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(({ classNa
   <tr
     ref={ref}
     className={cn(
-      "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      "border-b transition-colors hover:bg-muted/50 hover:[&>td]:relative data-[state=selected]:bg-muted",
       className
     )}
     {...props}

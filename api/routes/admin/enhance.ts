@@ -8,8 +8,42 @@ import { logActivity } from "../../services/activityLogger.js";
 import { config } from "../../config/index.js";
 import { HostingBillingService } from "../../services/hostingBillingService.js";
 import { RefundService } from "../../services/refundService.js";
+import { sendHostingAdminActionEmail } from "../../services/emailService.js";
 
 const router = express.Router();
+
+async function notifySubscriptionOwnerOfAdminAction(
+  subscriptionId: string,
+  action: "suspended" | "unsuspended" | "updated",
+  reason?: string | null,
+): Promise<void> {
+  const sub = await getHostingSubscriptionById(subscriptionId);
+  if (!sub?.created_by) return;
+
+  const userRes = await query(`SELECT email, name FROM users WHERE id = $1`, [
+    sub.created_by,
+  ]);
+  const row = userRes.rows[0];
+  const email = typeof row?.email === "string" ? row.email.trim() : "";
+  if (!email) return;
+
+  const displayName =
+    typeof row?.name === "string" && row.name.trim().length > 0
+      ? row.name.trim()
+      : undefined;
+  const domain =
+    typeof sub.domain === "string" && sub.domain.trim().length > 0
+      ? sub.domain.trim()
+      : "your site";
+
+  await sendHostingAdminActionEmail({
+    to: email,
+    displayName,
+    domain,
+    action,
+    reason: reason ?? null,
+  });
+}
 
 router.use(authenticateToken, requireAdmin);
 
@@ -439,6 +473,14 @@ router.post("/subscriptions/:id/retry-billing", async (req: Request, res: Respon
     }
 
     res.json({ success: true, invoiceId: result.invoiceId ?? null });
+
+    notifySubscriptionOwnerOfAdminAction(
+      id,
+      "updated",
+      "An administrator manually retried billing for your hosting subscription.",
+    ).catch((err) =>
+      console.error("Failed to send hosting admin action email (retry billing):", err),
+    );
   } catch (error: any) {
     console.error("Failed to retry hosting billing:", error);
     res.status(500).json({ error: error?.message || "Failed to retry hosting billing" });
@@ -529,6 +571,14 @@ router.post("/subscriptions/:id/refund", async (req: Request, res: Response) => 
     }
 
     res.status(201).json({ success: true, refundId });
+
+    notifySubscriptionOwnerOfAdminAction(
+      id,
+      "updated",
+      `An administrator issued a hosting wallet credit refund of ${amount.toFixed(2)} USD. ${reason}`,
+    ).catch((err) =>
+      console.error("Failed to send hosting admin action email (refund):", err),
+    );
   } catch (error: any) {
     console.error("Failed to create hosting refund:", error);
     res.status(500).json({ error: error?.message || "Failed to create hosting refund" });
@@ -622,6 +672,10 @@ router.post("/subscriptions/:id/suspend", async (req: Request, res: Response) =>
     });
 
     res.json({ success: true });
+
+    notifySubscriptionOwnerOfAdminAction(id, "suspended").catch((err) =>
+      console.error("Failed to send hosting admin action email (suspend):", err),
+    );
   } catch (error: any) {
     console.error("Failed to suspend subscription:", error);
     res.status(500).json({ error: error?.message || "Failed to suspend subscription" });
@@ -661,6 +715,10 @@ router.post("/subscriptions/:id/unsuspend", async (req: Request, res: Response) 
     });
 
     res.json({ success: true });
+
+    notifySubscriptionOwnerOfAdminAction(id, "unsuspended").catch((err) =>
+      console.error("Failed to send hosting admin action email (unsuspend):", err),
+    );
   } catch (error: any) {
     console.error("Failed to unsuspend subscription:", error);
     res.status(500).json({ error: error?.message || "Failed to unsuspend subscription" });

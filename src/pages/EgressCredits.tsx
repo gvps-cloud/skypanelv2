@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { TerminalPageHeader } from '@/components/terminal';
 import {
   Table,
   TableBody,
@@ -294,7 +295,8 @@ const EgressCredits: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-8 max-w-6xl font-mono">
+      <TerminalPageHeader pathPrefix="~/billing" command="egress --credits" />
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
