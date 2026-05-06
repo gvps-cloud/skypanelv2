@@ -3817,7 +3817,7 @@ const Admin: React.FC = () => {
                         className="rounded-lg border border-border bg-muted/40 p-4"
                       >
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-                          <div className="flex items-start gap-3 lg:col-span-2">
+                          <div className="flex items-start gap-3 lg:col-span-2 min-w-0">
                             <Checkbox
                               id={`stackscript-${script.id}`}
                               checked={draft.is_enabled}
@@ -3832,20 +3832,13 @@ const Admin: React.FC = () => {
                                 }));
                               }}
                             />
-                            <div className="space-y-2">
+                            <div className="min-w-0">
                               <Label
                                 htmlFor={`stackscript-${script.id}`}
-                                className="text-sm font-medium text-foreground"
+                                className="text-sm font-medium text-foreground break-words"
                               >
                                 {script.label}
                               </Label>
-                              <Badge
-                                variant={
-                                  draft.is_enabled ? "default" : "secondary"
-                                }
-                              >
-                                {draft.is_enabled ? "Enabled" : "Hidden"}
-                              </Badge>
                             </div>
                           </div>
                           <div className="space-y-3 lg:col-span-7">
@@ -3900,6 +3893,18 @@ const Admin: React.FC = () => {
                             </p>
                           </div>
                           <div className="flex flex-col gap-3 lg:col-span-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                                Status
+                              </span>
+                              <Badge
+                                variant={
+                                  draft.is_enabled ? "default" : "secondary"
+                                }
+                              >
+                                {draft.is_enabled ? "Enabled" : "Hidden"}
+                              </Badge>
+                            </div>
                             <div className="grid gap-2">
                               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                 Display order
