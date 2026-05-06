@@ -217,6 +217,31 @@ Run `pnpm -C lib/api-spec codegen` to regenerate clients from the OpenAPI spec.
 | [src/contexts/ThemeContext.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/contexts/ThemeContext.tsx) | Theme preset application + remote config fetch |
 | [src/theme/presets.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/theme/presets.ts) | Preset definitions and typing |
 
+**Public Pages:**
+| File | Purpose |
+|---|---|
+| [src/pages/Blog.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/pages/Blog.tsx) | Public blog listing page |
+| [src/pages/BlogPost.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/pages/BlogPost.tsx) | Individual blog post page |
+| [src/pages/Support.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/pages/Support.tsx) | Support ticket portal |
+| [src/pages/HostingMarketing.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/pages/HostingMarketing.tsx) | Hosting marketing/landing page |
+| [src/pages/Maintenance.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/pages/Maintenance.tsx) | Maintenance mode splash page |
+
+**Marketing Components:**
+| File | Purpose |
+|---|---|
+| [src/components/fx/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/fx/) | Decorative terminal effects for marketing pages |
+| [src/components/terminal/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/terminal/) | Terminal UI components |
+| [src/components/marketing/MarketingHero.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/marketing/MarketingHero.tsx) | Hero section for marketing pages |
+| [src/components/MarketingPageShell.tsx](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/MarketingPageShell.tsx) | Page shell for public marketing pages |
+| [src/components/home/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/home/) | Home page components: DataStreamCanvas, ParticleGlobe, SkyPanelPreview, GlobeRegionPanel |
+
+**Admin CMS Components:**
+| File | Purpose |
+|---|---|
+| [src/components/admin/blog/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/admin/blog/) | BlogCategoryManager, BlogPostManager |
+| [src/components/admin/email/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/admin/email/) | EmailTemplateEditor, EmailTemplateList, EmailTemplatesManager |
+| [src/components/admin/documentation/](file:///c:/Users/moran/emdash/repositories/skypanelv2/src/components/admin/documentation/) | DocumentationArticleManager, DocumentationCategoryManager, DocumentationManager |
+
 **Hosting:**
 | File | Purpose |
 |---|---|
@@ -268,6 +293,8 @@ Run `pnpm -C lib/api-spec codegen` to regenerate clients from the OpenAPI spec.
 | SSH Keys | [routes/sshKeys.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/sshKeys.ts) |
 | Notes | [routes/notes.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/notes.ts) |
 | API Keys | [routes/apiKeys/](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/apiKeys/index.ts) |
+| Blog (public) | [routes/blog.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/blog.ts) — public blog API |
+| Blog (admin) | [routes/admin/blog.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/admin/blog.ts) — admin blog CMS API |
 
 **Services (api/services/):**
 
@@ -298,6 +325,14 @@ Run `pnpm -C lib/api-spec codegen` to regenerate clients from the OpenAPI spec.
 | [bunnyCdnService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/bunnyCdnService.ts) | Bunny CDN edge server IP detection |
 | [ticketNotificationService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/ticketNotificationService.ts) | Support ticket email/real-time notifications |
 | [bruteForceProtectionService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/bruteForceProtectionService.ts) | Brute force lockout |
+| [platformStatsService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/platformStatsService.ts) | Platform-wide statistics aggregation |
+| [activityEmailService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/activityEmailService.ts) | Activity-triggered email notifications |
+| [activityFeed.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/activityFeed.ts) | Activity feed aggregation and querying |
+| [emailTemplateService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/emailTemplateService.ts) | Email template CRUD and rendering |
+| [platformSettingsService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/platformSettingsService.ts) | Platform-wide settings management |
+| [rateLimitConfigValidator.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/rateLimitConfigValidator.ts) | Rate limit configuration validation |
+| [rateLimitMetrics.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/rateLimitMetrics.ts) | Rate limit usage metrics collection |
+| [rateLimitOverrideService.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/services/rateLimitOverrideService.ts) | Per-user/per-org rate limit overrides |
 
 **Provider Layer (api/services/providers/):**
 
@@ -524,6 +559,40 @@ Provider interface and implementations live in [api/services/providers](file:///
 
 **Backend:**
 - Theme routes in [api/routes/theme.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/theme.ts) coordinate preset configuration and admin management
+
+### Support Ticket System
+
+**Route:** [api/routes/support.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/support.ts)
+
+**Ticket lifecycle:**
+1. **Create** — Authenticated user opens a ticket with a subject, description, and optional priority. Backend inserts into `support_tickets` scoped to the user's organization.
+2. **Reply** — Both the ticket owner and admin users can add replies stored in `support_ticket_replies`. Replies support markdown content and optional file attachments.
+3. **Status transitions** — Tickets progress through `open` → `in_progress` → `resolved` → `closed`. Admins can transition freely; customers can only reopen resolved tickets by adding a new reply.
+4. **Admin management** — Admin routes under `/api/admin/support` allow listing all tickets across organizations, assigning tickets, changing priority, and force-closing. `ticketNotificationService` sends email and real-time SSE notifications on status changes and new replies.
+
+### Blog System
+
+**Routes:** Public API at [api/routes/blog.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/blog.ts), admin CMS at [api/routes/admin/blog.ts](file:///c:/Users/moran/emdash/repositories/skypanelv2/api/routes/admin/blog.ts)
+
+**Flow:**
+1. **Public browsing** — Anonymous visitors browse paginated blog posts at `/blog` and individual posts at `/blog/:slug`. Posts are served from `blog_posts` with published status and future `published_at` dates filtered out.
+2. **Admin CMS** — Admin dashboard provides `BlogPostManager` for creating/editing posts (title, slug, body via rich text editor, cover image upload, category assignment, SEO metadata) and `BlogCategoryManager` for managing categories. Draft/published status is controlled by the admin.
+3. **Cover images** — Uploaded via `multer`, stored on disk or CDN, referenced by path in the post record.
+4. **SEO** — Each post carries `meta_title`, `meta_description`, and `og_image` fields surfaced in the frontend `<head>` via React Helmet or the server-rendered index HTML injection.
+
+### Platform Maintenance Mode
+
+**Admin toggle:**
+1. Admin enables maintenance mode via platform settings (`/api/admin/settings`) — sets `maintenance_mode = true` in `platform_settings` and optionally configures a `MAINTENANCE_CODE` env var for bypass.
+2. `platformSettingsService` caches the maintenance flag and exposes it to middleware.
+
+**Guard behavior:**
+1. A maintenance check middleware (wired in `api/app.ts`) intercepts all non-admin, non-health-check requests when `maintenance_mode` is active.
+2. Authenticated admin users with a valid bypass code in the request (or session) are allowed through. All other users receive a `503 Service Unavailable` response.
+3. Frontend detects the 503 + maintenance payload and renders the `Maintenance.tsx` splash page with a branded maintenance message and estimated restoration time.
+
+**Bypass code:**
+- `MAINTENANCE_CODE` env var is checked during admin login when maintenance mode is active. Admin must supply the code to authenticate. This prevents accidental lockout when the platform is in maintenance.
 
 ---
 

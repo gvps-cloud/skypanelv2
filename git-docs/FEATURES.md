@@ -28,6 +28,9 @@ Complete feature inventory for SkyPanelV2 — VPS management, web hosting, billi
 - **Application Hosting** — PHP (LSAPI), Node.js persistent apps, and WordPress installations
 - **Monthly Recurring Billing** — Automated wallet debit with remote suspension on insufficient balance
 - **Automatic Rollback** — Compensating wallet credit on provisioning failure
+- **Durable Billing Cycles** — Each hosting billing event is persisted in `hosting_billing_cycles` with status tracking (pending/paid/failed/refunded/cancelled) and linked invoices
+- **SSO Integration** — Single sign-on between SkyPanelV2 and the Enhance control panel for seamless customer access
+- **Hosting Email Templates** — Lifecycle email templates: credentials, welcome, suspended, recovered, cancelled, renewal, suspension warning, admin action
 
 ---
 
@@ -37,9 +40,12 @@ Complete feature inventory for SkyPanelV2 — VPS management, web hosting, billi
 - **Automated Hourly Billing** — Cron scheduler runs every 60 minutes, deducting `(base_price + markup + backup_cost) / 730` per hour
 - **Network Transfer Billing** — Tracks outbound transfer usage against pool quotas with overage cost projection
 - **PayPal Integration** — Create order → user approval → capture flow with webhook support
-- **Invoice Generation** — Automatic invoice creation linked to billing cycles
+- **Invoice Generation** — Automatic invoice creation linked to billing cycles; HTML invoice downloads with theme-aware styling
 - **Billing Summary** — Real-time dashboard showing monthly spend, all-time spend, active VPS count, monthly estimate, and transfer usage
 - **Low Balance Alerts** — Daily cron checks for wallets below $5 with active services
+- **Hosting Wallets** — Dedicated wallets per organization for hosting billing, separate from VPS wallets, with low-balance alerts and suspension warnings
+- **Egress Credit Refunds** — Customers can sell unused egress credits back to their main wallet
+- **Hosting Wallet Withdrawal** — Transfer funds from hosting wallet back to main wallet
 
 ---
 
@@ -123,6 +129,38 @@ Complete feature inventory for SkyPanelV2 — VPS management, web hosting, billi
 
 ---
 
+## Blog & Content Publishing
+
+- **Public Blog** — Blog listing page with category filtering and individual post pages at `/blog/:year/:slug`
+- **Admin CMS** — Full blog post management with category and tag management via admin dashboard
+- **Rich Editing** — TipTap-based rich text editor for post content with cover images and excerpts
+- **SEO Support** — Meta title, meta description, and Open Graph image per post
+- **Soft Delete** — Posts are soft-deleted with `deleted_at` timestamp, preserving URL integrity
+
+---
+
+## Support Ticket System
+
+- **Ticket Lifecycle** — Create, view, reply, close, and reopen tickets with status tracking (open/in_progress/resolved/closed)
+- **Priority & Category** — Tickets have priority levels (low/medium/high/urgent) and categories
+- **Role-Based Access** — Access controlled by `tickets_view`, `tickets_create`, and `tickets_manage` permissions
+- **Admin Ticket Management** — Dedicated admin view for managing all tickets across organizations with staff reply tracking
+- **Hosting Context** — Tickets linked to hosting subscriptions capture domain and plan name snapshots at creation time
+- **VPS Context** — Tickets can reference VPS instances for infrastructure support
+- **Real-Time Updates** — New replies and status changes propagate via PG LISTEN/NOTIFY
+
+---
+
+## Platform Maintenance Mode
+
+- **Maintenance Toggle** — Admin can enable/disable maintenance mode from the platform settings
+- **Maintenance Code** — Optional bypass code allowing non-admin users to access the platform during maintenance
+- **Page Guard** — `MaintenanceGuard` redirects non-admin users to `/maintenance` page; admins always bypass
+- **Selective Access** — Blog and login pages remain accessible during maintenance (with code)
+- **Public API** — `/api/site-status` provides public maintenance status without authentication
+
+---
+
 ## Organizations & Multi-Tenancy
 
 - **Organization-Based Isolation** — All resources (VPS, wallets, tickets, SSH keys, invoices) are scoped to organizations
@@ -183,7 +221,7 @@ Seven predefined roles control access across 19 granular permissions. Orgs can a
 
 ## Real-Time Features
 
-- **PostgreSQL LISTEN/NOTIFY** — Database triggers fire notifications for user-relevant events
+- **PostgreSQL LISTEN/NOTIFY** — Database triggers fire notifications for user-relevant events, with heartbeat and reconnect guards for connection stability
 - **Server-Sent Events (SSE)** — Push notifications to connected browser clients
 - **WebSocket SSH Bridge** — Real-time bidirectional terminal I/O
 - **Live Ticket Updates** — Real-time message delivery via PG notify channels per ticket/org
@@ -202,27 +240,39 @@ Seven predefined roles control access across 19 granular permissions. Orgs can a
 
 - **User Management** — Search, view, edit, impersonate, promote users
 - **Platform Settings** — Global configuration (branding, contact info, availability hours)
+- **Platform Maintenance** — Toggle maintenance mode with optional bypass code
 - **Provider Configuration** — Manage Linode API tokens, allowed regions, display order
 - **VPS Plan Wizard** — Map Linode plan IDs to retail pricing with markup and backup upcharges
-- **Email Templates** — Handlebars-based email template CRUD
+- **Email Templates** — Handlebars-based email template CRUD including hosting lifecycle templates
 - **FAQ & Contact Management** — Admin-editable FAQ categories/items and contact methods
 - **Category Mappings** — White-label plan category names
 - **Rate Limit Monitoring** — View and configure rate limit metrics and per-user overrides
 - **GitHub Integration** — Optional GitHub token for update checking
 - **Billing Administration** — View all billing cycles, failed charges, wallet balances
-- **Fraud Protection** — Review flagged transactions with manual allow/block override
+- **Fraud Protection** — Review flagged transactions with stats, filters, and detail view; manual allow/block override
 - **Refund Management** — Create and process refunds via PayPal
 - **Web Hosting** — Enhance integration status, plan sync, subscription oversight
 - **Announcements** — Platform-wide announcement management
 - **Documentation** — Knowledge base article CRUD
+- **Blog CMS** — Post and category management with cover image upload and tag system
+- **Support Tickets** — Cross-organization ticket management with staff reply tracking and status transitions
+- **Networking** — IP allocation, rDNS editing, IPv6 range management, firewall configuration, VLAN management
+- **Server Management** — Server list and configuration
+- **Volume Pricing** — Volume type and billing configuration
+- **Theme Management** — Theme preset configuration and preview
 
 ---
 
 ## UI/UX
 
 - **Responsive Design** — Mobile-first with dedicated mobile hooks (`use-mobile.tsx`, `use-orientation.tsx`, `use-virtual-keyboard.tsx`)
-- **Theme System** — Backend-stored theme presets with dark/light mode support
+- **Theme System** — Backend-stored theme presets with dark/light mode support, applied to invoices and exports
 - **Command Palette** — Ctrl/Cmd + K for quick navigation via `cmdk`
 - **Accessibility** — ARIA-compliant Radix UI primitives throughout
 - **Loading States** — Skeleton loaders, progress indicators, optimistic updates
 - **Error Boundaries** — Graceful error handling with fallback UI
+- **Marketing Pages** — Redesigned homepage with hero section, particle globe, console showcase, and data stream canvas
+- **Terminal FX** — Decorative terminal components (boot sequence, ASCII art, glitch text, matrix rain, scanline overlay) for marketing pages
+- **Dashboard Preview** — Interactive dashboard preview component on marketing pages
+- **ScrollArea Components** — Consistent scroll behavior across all panels via shadcn/ui ScrollArea
+- **Floating Dashboard Footer** — Animated footer with offset calculation for main content

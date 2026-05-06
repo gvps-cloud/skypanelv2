@@ -48,12 +48,13 @@ Configuration lives in `vitest.config.ts`.
 | `src/**/*.test.{ts,tsx}`                | Frontend unit/hook tests     | `hooks/use-mobile.test.tsx`, `lib/vpsStepConfiguration.test.ts`                                                                                                                     |
 | `src/contexts/*.test.tsx`               | Context provider tests       | `AuthContext.impersonation.test.tsx`, `AuthContext.logout.test.tsx`                                                                                                                 |
 | `src/components/**/*.test.{ts,tsx}`     | Component-level tests        | `notes/NotesBoard.test.tsx`, `ImpersonationSidebarPanel.test.tsx`                                                                                                                   |
-| `src/pages/**/*.test.{ts,tsx}`          | Page-level tests             | `SSHKeys.test.tsx`, `hosting-detail/*.test.tsx`                                                                                                                                     |
+| `src/pages/**/*.test.{ts,tsx}`          | Page-level tests             | `SSHKeys.test.tsx`, `hosting-detail/BackupsTab.test.tsx`, `hosting-detail/EmailTab.test.tsx`, `hosting-detail/FtpTab.test.tsx`, `hosting-detail/JoomlaTab.test.tsx`, `hosting-detail/MysqlTab.test.tsx`, `hosting-detail/OverviewTab.test.tsx`, `hosting-detail/RuntimeTab.test.tsx`, `hosting-detail/WebTab.test.tsx`, `hosting-detail/WordPressTab.test.tsx` |
 | `api/services/*.test.ts`                | Backend service tests        | `authService.impersonation.test.ts`, `egressBillingService.test.ts`, `enhanceService.test.ts`, `hostingBillingService.test.ts`, `invoiceService.test.ts`, `fraudLabsProService.test.ts`, `roles.test.ts` |
 | `api/lib/*.test.ts`                     | Backend utility tests        | `crypto.test.ts`, `validation.test.ts`, `errorHandling.test.ts`, `providerRegions.test.ts`                                                                                         |
-| `api/routes/__tests__/*.test.ts`        | Backend route tests          | `hosting-store.test.ts`, `hosting-detail-fixes.test.ts`, `hosting-backups.test.ts`, `vps-instances.test.ts`, `vps-disks.test.ts`, `billing-egress.test.ts`, `notifications.test.ts`, `organizations-resources.test.ts`, `admin-enhance-status.test.ts`, `admin-volume-pricing.test.ts` |
+| `api/routes/__tests__/*.test.ts`        | Backend route tests          | `hosting-store.test.ts`, `hosting-detail-fixes.test.ts`, `hosting-backups.test.ts`, `vps-instances.test.ts`, `vps-disks.test.ts`, `billing-egress.test.ts`, `notifications.test.ts`, `organizations-resources.test.ts`, `admin-enhance-status.test.ts`, `admin-volume-pricing.test.ts`, `support-ticket-vps-org-scope.test.ts` |
+| `api/routes/__tests__/admin/*.test.ts`  | Admin route tests            | `admin-tickets-transitions.test.ts`, `platform-maintenance-*.test.ts` |
 | `api/tests/*.test.ts`                   | Backend integration tests    | `hosting-purchase-saga.test.ts`, `egress-wallet-purchase.test.ts`                                                                                                                   |
-| `tests/security/*.test.ts`              | Security test suite (19 files) | `auth.test.ts`, `xss.test.ts`, `payment-isolation.test.ts`, `apiKeys.test.ts`, `hosting-org-isolation.test.ts`, `notes.test.ts`, `ssh-keys-isolation.test.ts`, …                   |
+| `tests/security/*.test.ts`              | Security test suite (19 files) | `auth.test.ts`, `xss.test.ts`, `payment-isolation.test.ts`, `apiKeys.test.ts`, `hosting-org-isolation.test.ts`, `notes.test.ts`, `ssh-keys-isolation.test.ts`, `blog-public.test.ts`, …                   |
 | `tests/e2e/*.spec.ts`                   | Playwright E2E tests         | `smoke.spec.ts`                                                                                                                                                                     |
 
 ---
@@ -97,6 +98,12 @@ npx vitest run api/routes/__tests__/
 
 # Security tests
 npx vitest run tests/security/
+
+# Blog security
+npx vitest run tests/security/blog-public.test.ts
+
+# Support/API work
+npx vitest run api/routes/__tests__/support-ticket-vps-org-scope.test.ts
 
 # Specific service
 npx vitest run api/services/enhanceService.test.ts

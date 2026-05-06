@@ -357,4 +357,75 @@ Organization Notes:
   • Permission-gated: requires notes_view / notes_manage
 ```
 
+### Support Ticket System Flow
+
+```text
+SUPPORT TICKET SYSTEM
+-----------------------------------------------------------------------------
+Customer:
+  1. User → Frontend /support: view/create tickets
+  2. Frontend → API /api/support (POST): { subject, message, priority, category, vps_id?, hosting_subscription_id? }
+  3. API → DB: INSERT support_tickets with hosting/VPS snapshot fields
+  4. API → ticketNotificationService: email staff on new ticket
+  5. User → API /api/support/:id/replies (POST): add message
+  6. PG LISTEN/NOTIFY pushes updates to connected clients
+
+Admin:
+  1. Admin → /api/admin/tickets: list all tickets with filters
+  2. Admin → /api/admin/tickets/:id/replies (POST): staff reply (sets has_staff_reply flag)
+  3. Admin → /api/admin/tickets/:id/status (PATCH): transition status
+  4. Permission-gated: tickets_view, tickets_create, tickets_manage
+```
+
+### Blog System Flow
+
+```text
+BLOG SYSTEM
+-----------------------------------------------------------------------------
+Public:
+  1. Visitor → Frontend /blog: browse published posts with category filtering
+  2. Visitor → Frontend /blog/:year/:slug: view individual post
+  3. Frontend → API /api/blog/posts: fetch published posts (status = 'published', deleted_at IS NULL)
+  4. Frontend → API /api/blog/posts/:year/:slug: fetch single post by slug + year
+
+Admin CMS:
+  1. Admin → /api/admin/blog/posts: CRUD blog posts (draft/published)
+  2. Admin → /api/admin/blog/categories: manage categories
+  3. Admin → /api/admin/blog/tags: manage tags
+  4. Cover image upload via multer, OG image generation from title
+```
+
+### Platform Maintenance Mode Flow
+
+```text
+PLATFORM MAINTENANCE MODE
+-----------------------------------------------------------------------------
+Enable:
+  1. Admin → API /api/admin/platform (PATCH): { maintenance_mode: true, maintenance_code?: "..." }
+  2. API → DB: UPDATE platform_settings SET maintenance_mode = true
+
+Guard Behavior (frontend MaintenanceGuard):
+  • Non-admin users → redirected to /maintenance
+  • Admin users → always bypass (full access)
+  • /blog, /login routes → accessible with maintenance code
+  • /api/site-status → public endpoint returns { maintenance_mode: true }
+
+Disable:
+  1. Admin → API /api/admin/platform (PATCH): { maintenance_mode: false }
+  2. All users regain normal access
+```
+
+### Egress Credit Refund Flow
+
+```text
+EGRESS CREDIT REFUND
+-----------------------------------------------------------------------------
+1. User → Frontend /egress-credits: click "Refund Credits"
+2. Frontend → API /api/egress/refund (POST): { amount }
+3. API → DB: verify egress pack balance ≥ requested amount
+4. API → DB: INSERT egress_credit_packs (adjustment_type = 'customer_refund', negative amount)
+5. API → DB: increment main wallet balance by refund amount
+6. API → Frontend: return updated balances
+```
+
 > **Back to**: [README](../README.md)

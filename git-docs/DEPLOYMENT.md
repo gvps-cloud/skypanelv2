@@ -75,6 +75,13 @@ If using FraudLabsPro anti-fraud screening:
 3. Adjust `FRAUDLABSPRO_REJECT_SCORE` threshold (default: 80)
 4. Configure VPN/proxy/TOR blocking as needed
 
+### Production Considerations
+
+- **Blog media uploads** require persistent storage for cover images — ensure the volume/path configured via `UPLOAD_PATH` is persisted across deployments and not inside ephemeral containers.
+- **Hosting email templates** are seeded via migration `069_*`; verify the templates exist in the database after deployment by checking the `email_templates` table.
+- **Hosting billing cycles** require `billingCronService` to be running — confirm the cron is active for monthly hosting billing to process on schedule.
+- **PG LISTEN connections** use heartbeat keepalive for real-time notifications; ensure PostgreSQL `tcp_keepalives_idle` is set appropriately (e.g., `60s`) to avoid stale connections dropping silently.
+
 ### Encryption Key Generation
 
 ```bash

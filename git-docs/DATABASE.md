@@ -49,6 +49,7 @@ payment_transactions (PK uuid)
 
 support_tickets / support_ticket_replies
   ticket fields (subject, message, status, priority, category, has_staff_reply),
+  hosting_subscription_id (FK), hosting_domain_snapshot, hosting_plan_name_snapshot,
   replies reference ticket_id + user_id with is_staff_reply flag
 
 service_providers (PK uuid)
@@ -74,13 +75,23 @@ hosting_plans (PK uuid)
 hosting_subscriptions (PK uuid)
   organization_id, plan_id (FK, ON DELETE SET NULL), enhance_customer_org_id,
   enhance_website_id, primary_domain, status, billing_amount,
-  next_billing_date, cancelled_at, created_by
+  next_billing_date, cancelled_at, last_warning_sent_at, created_by
 
 platform_integrations (PK uuid)
   type, configuration JSONB, is_active, display_name
 
 hosting_wallets (PK uuid)
   organization_id, balance, currency, low_balance_alert_threshold, last_alert_at
+
+hosting_billing_cycles (PK uuid)
+  organization_id, hosting_subscription_id, plan_id, plan_name, domain,
+  cycle_type (initial/renewal/manual), period_start, period_end, amount,
+  status (pending/paid/failed/refunded/cancelled), failure_reason,
+  payment_transaction_id, invoice_id, refunded_amount, metadata JSONB
+
+billing_invoices (PK uuid)
+  organization_id, invoice_number, html_content, data JSONB,
+  total_amount, currency
 
 fraud_checks (PK uuid)
   transaction_id, user_id, organization_id, screening_type, provider,
@@ -89,7 +100,8 @@ fraud_checks (PK uuid)
 
 refunds (PK uuid)
   organization_id, payment_transaction_id, vps_billing_cycle_id,
-  hosting_subscription_id, amount, currency, reason, status,
+  hosting_subscription_id, original_hosting_billing_cycle_id,
+  amount, currency, reason, status,
   paypal_capture_id, paypal_refund_id, processed_by
 
 announcements (PK uuid)
@@ -98,6 +110,21 @@ announcements (PK uuid)
 documentation_categories / documentation_articles
   Categories: slug, name, description, display_order, is_active
   Articles: category_id (FK), slug, title, content TEXT, is_published, author_id, display_order
+
+blog_categories (PK uuid)
+  name, slug (unique), description, display_order
+
+blog_posts (PK uuid)
+  title, slug, content, excerpt, cover_image_url, category_id (FK),
+  status (draft/published), author_id (FK), meta_title, meta_description,
+  og_image_url, published_year, published_at, deleted_at
+  Unique constraint: (slug, published_year)
+
+blog_tags (PK uuid)
+  name (unique), slug (unique)
+
+blog_post_tags
+  post_id (FK), tag_id (FK) — junction table
 
 notes (PK uuid)
   organization_id (nullable for personal), user_id, title, content,
@@ -115,9 +142,11 @@ Relationship highlights
   • vps_plans define vps_instances; service_providers supply plans and host instances
   • tickets have many replies; users create activity_logs and user_api_keys
   • hosting_plans define hosting_subscriptions; organizations link to hosting_subscriptions and hosting_wallets
+  • hosting_billing_cycles track each billing event for a hosting subscription, linked to billing_invoices
   • fraud_checks link to transactions, users, and organizations
-  • refunds link to payment_transactions, vps_billing_cycles, and hosting_subscriptions
+  • refunds link to payment_transactions, vps_billing_cycles, hosting_billing_cycles, and hosting_subscriptions
   • documentation_categories contain documentation_articles
+  • blog_categories contain blog_posts; blog_posts link to blog_tags via blog_post_tags
   • notes are scoped to organizations (org notes) or users (personal notes)
 ```
 
@@ -125,7 +154,7 @@ Relationship highlights
 
 ## Migration History
 
-The database schema is managed through **65 sequential SQL migrations** in the `migrations/` directory:
+The database schema is managed through **71 sequential SQL migrations** in the `migrations/` directory:
 
 | Migration | Description |
 | --------- | ----------- |
@@ -166,3 +195,9 @@ The database schema is managed through **65 sequential SQL migrations** in the `
 | `063` | Add updated_at column to fraud_checks (fix admin override endpoint) |
 | `064` | Dedicated hosting wallets — hosting_wallets table, RLS, seed functions, balance alerts |
 | `065` | Enhance hosting FAQ and documentation content |
+| `066` | Hosting billing cycles — billing_invoices table, hosting_billing_cycles table with status enum, invoice linkage, hosting billing refund FK on refunds |
+| `067` | Customer egress credit refunds — add `customer_refund` adjustment type to egress_credit_packs |
+| `068` | Support tickets hosting snapshots — hosting_domain_snapshot and hosting_plan_name_snapshot columns on support_tickets |
+| `069` | Hosting email templates — seed templates for credentials, welcome, suspended, recovered, cancelled, renewal, suspension warning, admin action |
+| `070` | Hosting subscription last warning — last_warning_sent_at column on hosting_subscriptions for balance warning deduplication |
+| `071` | Blog system — blog_categories, blog_posts (with slug+year unique, soft delete), blog_tags, blog_post_tags junction table |

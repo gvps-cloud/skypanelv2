@@ -6,8 +6,8 @@ It is a monolithic repository containing both the frontend client and the backen
 
 **Tech Stack:**
 - **Language:** TypeScript
-- **Frontend:** React, Vite, Tailwind CSS, shadcn/ui (Radix UI), React Router, React Query
-- **Backend:** Node.js, Express, PostgreSQL (with `pg`), ioredis for caching/rate-limiting
+- **Frontend:** React 18, Vite, Tailwind CSS, shadcn/ui (Radix UI), React Router v7, TanStack Query
+- **Backend:** Node.js 22, Express 4, PostgreSQL (with `pg`), ioredis for caching/rate-limiting
 - **Testing:** Vitest (Unit/Integration), Playwright (E2E)
 
 ## Building and Running
@@ -15,7 +15,7 @@ It is a monolithic repository containing both the frontend client and the backen
 ### Development
 The project uses `concurrently` to run both the frontend and backend in development mode.
 - **Start both (Frontend :5173, Backend :3001):** `npm run dev`
-- **PREFERED METHOD - Kill ports and start:** `npm run dev-up`
+- **PREFERRED METHOD - Kill ports and start:** `npm run dev-up`
 - **Start frontend only:** `npm run client:dev`
 - **Start backend only:** `npm run server:dev`
 
@@ -37,7 +37,7 @@ The project uses `concurrently` to run both the frontend and backend in developm
 - **Coverage:** `npm run test:coverage`
 
 ## Development Conventions
-- **Code Quality:** The project enforces TypeScript strict checking (`npm run check`) and ESLint (`npm run lint`).
+- **Code Quality:** The project uses TypeScript type checking (`npm run check`, strict mode is off) and ESLint (`npm run lint`, warnings allowed).
 - **Monorepo Structure:** 
   - `api/` contains the Express backend and backend specific configurations.
   - `src/` contains the React frontend.

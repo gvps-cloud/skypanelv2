@@ -100,19 +100,28 @@ QueryClientProvider (TanStack Query)
 | `src/components/admin/`         | Admin dashboard panels (UserManagement, VPSPlanWizard, CategoryManager, RateLimitMonitoring, etc.) |
 | `src/components/VPS/`           | VPS creation wizard steps, SSH terminal, provider/region selectors, backup config                  |
 | `src/components/billing/`       | Payment forms, transaction history, invoice views, PurchaseEgressCreditsDialog                     |
-| `src/components/support/`       | Ticket creation, conversation threads, status management                                           |
-| `src/components/organizations/` | Org management, member lists, invitation flows                                                     |
-| `src/components/settings/`      | User profile, 2FA setup, API key management                                                        |
-| `src/components/Dashboard/`     | Dashboard widgets, stats cards, activity summaries                                                 |
-| `src/components/layouts/`       | Page layout wrappers                                                                               |
-| `src/components/api-docs/`      | API documentation explorer — SwaggerExplorer, RequestBuilder, ResponseViewer, ApiKeyInput          |
-| `src/components/docs/`          | Documentation article viewer — ApiReference component                                              |
-| `src/components/home/`          | Landing page sections and marketing components                                                     |
-| `src/components/icons/`         | Custom SVG icon components                                                                         |
-| `src/components/notes/`         | Notes board — NotesBoard (kanban-style), OrganizationNotesSection                                  |
-| `src/components/regions/`       | Interactive region map — LeafletMap, RegionInfoCard, RegionMarker, RegionPopup, country flags      |
-| `src/components/data-table/`    | Reusable data table with sorting, filtering, pagination                                            |
-| `src/components/SSHKeys/`       | SSH key management, Linode sync                                                                    |
+| `src/components/support/`       | Ticket creation, conversation threads, status/priority badges, admin ticket view   |
+| `src/components/organizations/` | Org management, member lists, resource tables, invitation flows                    |
+| `src/components/settings/`      | User profile, 2FA setup, API key management, role wizard, team settings            |
+| `src/components/Dashboard/`     | Dashboard widgets, stats cards, activity summaries, monthly reset indicator         |
+| `src/components/layouts/`       | Page layout wrappers — ContentCard, PageHeader, StatsGrid                          |
+| `src/components/api-docs/`      | API documentation explorer — SwaggerExplorer, RequestBuilder, ResponseViewer, ApiKeyInput |
+| `src/components/docs/`          | Documentation article viewer — ApiReference component                              |
+| `src/components/home/`          | Landing page sections — ParticleGlobe, DataStreamCanvas, SkyPanelPreview, GlobeRegionPanel |
+| `src/components/marketing/`     | Marketing page components — MarketingHero                                          |
+| `src/components/fx/`            | Terminal FX effects — BootSequence, AsciiArt, GlitchText, MatrixRain, ScanlineOverlay, TypewriterText, StatusHeartbeat |
+| `src/components/terminal/`      | Terminal workspace — TerminalPanel, TerminalEmptyState, TerminalErrorScreen, TerminalLoadingScreen, TerminalPageHeader |
+| `src/components/icons/`         | Custom SVG icon components                                                         |
+| `src/components/notes/`         | Notes board — NotesBoard (kanban-style), OrganizationNotesSection                  |
+| `src/components/regions/`       | Interactive region map — LeafletMap, RegionInfoCard, RegionMarker, RegionPopup, country flags |
+| `src/components/data-table/`    | Reusable data table with sorting, filtering, pagination                            |
+| `src/components/SSHKeys/`       | SSH key management, Linode sync                                                    |
+| `src/components/admin/blog/`    | Blog admin CMS — BlogCategoryManager, BlogPostManager                              |
+| `src/components/admin/billing/` | Admin billing panels — BillingDashboard, BillingOverview, BillingInvoices, BillingTransactions, EgressBilling, VolumePricing |
+| `src/components/admin/email/`   | Email template management — EmailTemplateEditor, EmailTemplateList, EmailTemplatesManager |
+| `src/components/admin/documentation/` | Documentation admin — DocumentationArticleManager, DocumentationCategoryManager, DocumentationManager |
+| `src/components/admin/networking/` | Networking admin — FirewallManager, IPAddressTable, IPAssignPanel, IPSharePanel, VLANTable, IPv6RangeRdnsEditor |
+| `src/components/admin/rate-limit-monitoring/` | Rate limit admin — OverviewTab, OverridesTab, ConfigurationTab, ViolationsTab, UserTypesTab |
 
 ---
 
@@ -134,6 +143,7 @@ QueryClientProvider (TanStack Query)
 | `useHosting.ts`               | Hosting subscription hooks               |
 | `useNotes.ts`                 | Personal/org notes hooks                 |
 | `useTheme.ts`                 | Theme preference hooks                   |
+| `useSiteStatus.ts`            | Site status and maintenance mode hooks   |
 
 ---
 

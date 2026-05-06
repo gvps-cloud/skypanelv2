@@ -94,6 +94,11 @@ FRAUDLABSPRO_REJECT_PROXY=true
 FRAUDLABSPRO_REJECT_TOR=true
 FRAUDLABSPRO_REJECT_DISPOSABLE_EMAIL=true
 
+# Registration (optional, defaults to true)
+# REGISTRATION_ENABLED=false
+
+# Maintenance mode is managed via platform settings API, not env vars
+
 # Branding
 VITE_COMPANY_NAME=YourBrand
 COMPANY_NAME=YourBrand

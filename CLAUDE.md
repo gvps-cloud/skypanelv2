@@ -8,9 +8,9 @@ Primary repository guidance lives in `AGENTS.md`. Use `AGENTS.md` as the source 
 
 Three distinct product surfaces share the same codebase:
 
-- **Public marketing pages** — static-ish pages with fixed `MarketingNavbar` (offset by `--announcement-banner-height`), shared `src/styles/home.css`
-- **Customer portal** — dashboard, VPS management, billing, SSH console (`xterm.js`), support tickets
-- **Admin dashboard** — org management, user impersonation, platform controls
+- **Public marketing pages** — static-ish pages with fixed `MarketingNavbar` (offset by `--announcement-banner-height`), shared `src/styles/home.css`, redesigned homepage with hero section and interactive elements
+- **Customer portal** — dashboard, VPS management, billing, SSH console (`xterm.js`), support tickets, blog, hosting management
+- **Admin dashboard** — org management, user impersonation, platform controls, blog CMS, ticket management, maintenance mode
 
 The frontend is React 18 + Vite at root level. The backend is Express 4 + TypeScript in `api/`. Three workspace packages under `lib/` are managed by pnpm but the root app itself uses npm + `package-lock.json`.
 
@@ -47,6 +47,9 @@ npm run docs:api:sync  # Sync API docs manifest → src/lib/apiRouteManifest.ts
 - **Route registration and middleware order** — `api/app.ts` is the central bottleneck. Hosting sub-routes (web, node, email, dns, wordpress, joomla, mysql, ftp, ssl, apps, backups, cron, ssh) are individually imported and mounted there.
 - **Auth context** — `api/middleware/auth.ts` handles JWT verification, org context, and impersonation. Admin routes require `user.role === 'admin'`.
 - **Hosting purchase flow** — `api/routes/hosting/store.ts` → `enhanceOnboardingService.ts` → `enhanceService.ts`. Customer websites use the customer Enhance org id, not the master org.
+- **Support tickets** — `api/routes/support.ts` (customer) and `api/routes/admin/tickets.ts` (admin). Role-based access via `tickets_view`/`tickets_create`/`tickets_manage` permissions.
+- **Blog** — `api/routes/blog.ts` (public) and `api/routes/admin/blog.ts` (admin CMS). Public routes must stay before `notesRoutes` in `api/app.ts`.
+- **Platform maintenance** — `api/routes/admin/platform.ts` toggles maintenance mode; `MaintenanceGuard` in `src/App.tsx` redirects non-admins.
 - **Billing** — hourly VPS billing via cron in `api/services/`, monthly hosting billing in `hostingBillingService.ts`, egress prepaid billing in `egressHourlyBillingService.ts`.
 - **Multi-tenant scope** — resource queries must be scoped by `organization_id`. Many tables are multi-tenant; never fetch by resource id alone.
 - **Theme** — dual-path: frontend `src/contexts/ThemeContext.tsx` and API route `api/routes/theme.ts`.
@@ -63,4 +66,4 @@ Root uses **Zod 4** (`"zod": "4.1.12"`); the pnpm catalog (for `lib/*` workspace
 
 - Never add sensitive-looking defaults (example emails, passwords, API tokens) in `src/` files expecting them to ship — the Vite build strips these from production bundles via `removeMockData` plugin.
 - SSH credentials and provider API tokens are encrypted via `SSH_CRED_SECRET` and `PROVIDER_TOKEN_SECRET` respectively, with rotation support via `*_PREVIOUS` env vars.
-- Route order in `api/app.ts` matters: public `/api/hosting` status routes must stay before `notesRoutes` because `notesRoutes` applies global auth at `/api`.
+- Route order in `api/app.ts` matters: public `/api/hosting` status routes and `/api/blog` must stay before `notesRoutes` because `notesRoutes` applies global auth at `/api`.

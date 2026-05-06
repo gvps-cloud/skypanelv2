@@ -18,7 +18,8 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 - `migrations/` — Numbered SQL migrations (zero-padded `NNN_*.sql`); see Database section.
 - `git-docs/` — Prose documentation; prefer root configs/scripts when docs disagree.
 - Package manager split is intentional: root app scripts and `package-lock.json` use npm; `pnpm-workspace.yaml`/`pnpm-lock.yaml` are for `lib/*` workspace packages and catalog deps. Do not infer root React/Vite/Zod versions from the pnpm catalog — root is React 18 / Zod 4, catalog targets React 19 / Zod 3 for lib packages.
-- Three product surfaces: public marketing pages, customer portal (dashboard/VPS/billing), admin dashboard.
+- Three product surfaces: public marketing pages, customer portal (dashboard/VPS/billing/support), admin dashboard.
+- Key feature areas: VPS management, web hosting (Enhance), support tickets, blog/CMS, billing, organizations, activity logging, platform maintenance mode.
 
 ## Commands
 
@@ -61,10 +62,10 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 - `api/server.ts` is the listening entrypoint; `api/app.ts` builds middleware/routes and also serves `dist/` if it exists, regardless of `NODE_ENV`.
 - Route/service files should import `config` from `api/config/index.ts`; do not read `process.env` directly except in config/bootstrap code.
 - Apply auth/organization middleware at router level (`router.use(...)`) where possible. `/api` gets CSRF, API-key auth, smart rate limits, and rate-limit headers in `api/app.ts`.
-- Route order in `api/app.ts` matters: public `/api/hosting` status routes must stay before `notesRoutes`, because `notesRoutes` is mounted at `/api` and applies global auth.
+- Route order in `api/app.ts` matters: public `/api/hosting` status routes and `/api/blog` must stay before `notesRoutes`, because `notesRoutes` is mounted at `/api` and applies global auth.
 - Business errors usually return `{ error: "message" }`; provider/Linode errors should use `handleProviderError()` from `api/lib/errorHandling.ts`.
 - Log meaningful successful mutations with `logActivity()` from `api/services/activityLogger.ts`.
-- Common activity action types: `vps.created`, `vps.deleted`, `vps.rebuilt`, `vps.power_on`, `vps.power_off`, `ssh.session_started`, `billing.credited`. Use existing types; do not invent ad-hoc strings.
+- Common activity action types: `vps.created`, `vps.deleted`, `vps.rebuilt`, `vps.power_on`, `vps.power_off`, `ssh.session_started`, `billing.credited`, `support.ticket_created`, `support.ticket_replied`, `blog.post_created`, `blog.post_updated`. Use existing types; do not invent ad-hoc strings.
 - Scope resource queries by `organization_id`. Many tables are multi-tenant; do not fetch by resource id alone.
 
 ## Frontend Rules
@@ -76,7 +77,7 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 - Use `cn()` from `@/lib/utils` for conditional/composed Tailwind classes.
 - Public marketing pages share `@/styles/home.css`; `MarketingNavbar` is fixed and offset by `--announcement-banner-height` from `AnnouncementBanner`.
 - Logo source of truth is `public/favicon.svg`; `Logo` renders it as an image.
-- Route guards in `src/App.tsx`: `<ProtectedRoute>` renders `AppLayout`; `<AdminRoute>` requires `user.role === 'admin'` and blocks impersonation; `<HostingEnabledRoute>` gates hosting pages.
+- Route guards in `src/App.tsx`: `<ProtectedRoute>` renders `AppLayout`; `<AdminRoute>` requires `user.role === 'admin'` and blocks impersonation; `<HostingEnabledRoute>` gates hosting pages; `<HostingMarketingGate>` redirects to `/` if hosting disabled; `<MaintenanceGuard>` redirects non-admins to `/maintenance`; `<RegistrationEnabledRoute>` redirects to `/login` if registration disabled.
 - Vite build includes a `removeMockData` plugin that strips example emails, passwords, and API tokens from production bundles. Do not add sensitive-looking defaults to `src/` files expecting them to ship.
 
 ## Database & Migrations
@@ -105,6 +106,9 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 ## Architecture Hotspots
 
 - Route registration and middleware order: `api/app.ts`. Hosting sub-routes (web, node, email, dns, wordpress, joomla, mysql, ftp, ssl, apps, backups, cron, ssh) are individually imported and mounted.
+- Blog public and admin routes: `api/routes/blog.ts` (public), `api/routes/admin/blog.ts` (admin CMS).
+- Support tickets: `api/routes/support.ts` (customer), `api/routes/admin/tickets.ts` (admin).
+- Platform maintenance: `api/routes/admin/platform.ts`, `api/routes/siteStatus.ts`.
 - Auth, org context, impersonation: `api/middleware/auth.ts` and organization routes.
 - Hosting purchase/onboarding: `api/routes/hosting/store.ts`, `api/services/enhanceOnboardingService.ts`, `api/services/enhanceService.ts`.
 - Hosting billing: `api/services/hostingBillingService.ts` — monthly recurring billing.

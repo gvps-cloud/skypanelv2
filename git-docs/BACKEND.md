@@ -36,7 +36,7 @@ API ROUTE MAP (grouped)
 Core
   /api/auth, /api/vps, /api/payments, /api/organizations,
   /api/support, /api/ssh-keys, /api/invoices, /api/egress, /api/api-keys,
-  /api/notes
+  /api/notes, /api/blog
 
 Hosting (Enhance Integration)
   /api/hosting/status (public), /api/hosting/plans, /api/hosting/regions,
@@ -52,7 +52,8 @@ Activity & Notifications
 
 Content & Configuration
   /api/faq, /api/contact, /api/theme, /api/pricing, /api/health,
-  /api/documentation, /api/announcements, /api/notes, /api/egress
+  /api/documentation, /api/announcements, /api/notes, /api/egress,
+  /api/blog, /api/site-status
 
 Admin Surface
   /api/admin/theme, /api/admin/rate-limits, /api/admin/tickets,
@@ -63,7 +64,8 @@ Admin Surface
   /api/admin/contact, /api/admin/activity, /api/admin/announcements,
   /api/admin/ssh-keys, /api/admin/category-mappings, /api/admin/platform,
   /api/admin/faq, /api/admin/documentation, /api/admin/github,
-  /api/admin/enhance, /api/admin/fraud-checks, /api/admin/refunds
+  /api/admin/enhance, /api/admin/fraud-checks, /api/admin/refunds,
+  /api/admin/blog
 ```
 
 **Core Routes:**
@@ -78,6 +80,8 @@ Admin Surface
 - `/api/notes` — personal and organization notes
 - `/api/egress` — egress credit management
 - `/api/api-keys` — User API key CRUD
+- `/api/blog` — public blog posts, categories, tags (must be before notesRoutes)
+- `/api/site-status` — public site status and maintenance mode
 
 **Activity & Notifications:**
 
@@ -121,8 +125,9 @@ Admin Surface
 - `/api/admin/networking` — rDNS and IPv6 networking config
 - `/api/admin/announcements` — platform announcements
 - `/api/admin/enhance` — Enhance hosting integration status, plan sync, subscription oversight
-- `/api/admin/fraud-checks` — fraud screening review queue with manual allow/block override
+- `/api/admin/fraud-checks` — fraud screening review queue with stats, filters, detail view, and manual allow/block override
 - `/api/admin/refunds` — refund creation and management
+- `/api/admin/blog` — blog post and category management (CRUD, cover images, tags)
 
 ---
 
@@ -148,6 +153,9 @@ Key middleware files in `api/middleware/`:
 - `auth.ts` — JWT verification, role/permission checks, impersonation
 - `hosting.ts` — feature gate for hosting routes (checks Enhance integration enabled)
 - `csrfProtection.ts` — CSRF token validation for mutating requests
+- `permissions.ts` — Organization-based RBAC permission checks
+- `rateLimiting.ts` — Smart rate limiting with per-user overrides
+- `security.ts` — Helmet-based security headers, CSP, nonce
 - `requireHttps.ts` — HTTPS enforcement in production
 
 ---
@@ -189,6 +197,17 @@ Service Layer depends on:
 | `ticketNotificationService.ts` | Support ticket email/real-time notifications |
 | `notes.ts` | Personal and organization notes |
 | `tokenBlacklistService.ts` | JWT token blacklist management |
+| `bruteForceProtectionService.ts` | Login brute-force protection |
+| `emailTemplateService.ts` | Handlebars email template rendering |
+| `platformSettingsService.ts` | Platform-wide settings management |
+| `platformStatsService.ts` | Platform statistics aggregation |
+| `activityFeed.ts` | Activity feed query/aggregation |
+| `activityEmailService.ts` | Activity event email notifications |
+| `providerResourceCache.ts` | In-memory caching for provider API responses |
+| `invitations.ts` | Organization invitation management |
+| `ipService.ts` | IP address management |
+| `roles.ts` | Organization role and permission management |
+| `billingCronService.ts` | Billing cron scheduler orchestration |
 
 ---
 
@@ -253,5 +272,7 @@ Billing Flow
 | `hostingBackups.ts` | Backup management helpers |
 | `hostingEnhanceOrg.ts` | Enhance org resolution |
 | `hostingRouteHelpers.ts` | Shared route handler utilities |
+| `activityFilters.ts` | Activity log filtering logic |
+| `diagnostics.ts` | System diagnostics utilities |
 
 > **Back to**: [README](../README.md)

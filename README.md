@@ -30,7 +30,7 @@
 
 ## Open-Source VPS Management Platform
 
-**SkyPanelV2** is an open-source full-stack VPS management and billing platform built for Linode-based hosting businesses and self-hosted deployments. It provides a complete customer portal, admin dashboard, automated hourly billing, real-time SSH console access, multi-tenant organization management, integrated support ticketing, Enhance web hosting integration, fraud protection, refund management, and API key authentication — all in a single deployable application.
+**SkyPanelV2** is an open-source full-stack VPS management and billing platform built for Linode-based hosting businesses and self-hosted deployments. It provides a complete customer portal, admin dashboard, automated hourly billing, real-time SSH console access, multi-tenant organization management, integrated support ticketing, blog/CMS, Enhance web hosting integration, fraud protection, refund management, and API key authentication — all in a single deployable application.
 
 > **Open source**: Anyone can clone, self-host, adapt, and extend this project under the terms of the included [MIT License](./LICENSE).
 
@@ -47,7 +47,7 @@ Detailed documentation is organized in the [`git-docs/`](./git-docs/) directory:
 | [Architecture](./git-docs/ARCHITECTURE.md) | System overview, high-level architecture, application flow diagrams (auth, provisioning, billing, SSH, notifications, payments) |
 | [Frontend](./git-docs/FRONTEND.md) | React tech stack, route map, context providers, key components |
 | [Backend](./git-docs/BACKEND.md) | Express tech stack, API route inventory, middleware pipeline, service layer, provider architecture |
-| [Database](./git-docs/DATABASE.md) | Entity relationships, table definitions, migration history (001–065) |
+| [Database](./git-docs/DATABASE.md) | Entity relationships, table definitions, migration history (001–071) |
 | [Features](./git-docs/FEATURES.md) | Core features — VPS, hosting, billing, fraud, refunds, orgs, auth, real-time, admin, UI/UX |
 | [Security](./git-docs/SECURITY.md) | Encryption, access control, rate limiting tiers |
 | [Development](./git-docs/DEVELOPMENT.md) | Prerequisites, quick start, environment variables, icons/logo, dev commands |
@@ -61,6 +61,7 @@ Detailed documentation is organized in the [`git-docs/`](./git-docs/) directory:
 |---|---|
 | [`AGENTS.md`](./AGENTS.md) | Coding agent guidelines — current app state, structure, patterns, and practical guidance |
 | [`CLAUDE.md`](./CLAUDE.md) | Claude Code development reference |
+| [`GEMINI.md`](./GEMINI.md) | Gemini coding agent development reference |
 | [`repo-docs/ENVIRONMENT_VARIABLES.md`](./repo-docs/ENVIRONMENT_VARIABLES.md) | Complete environment variable reference |
 | [`repo-docs/ADMIN_COMPONENTS.md`](./repo-docs/ADMIN_COMPONENTS.md) | Admin dashboard component reference |
 | [`repo-docs/ADMIN_TROUBLESHOOTING.md`](./repo-docs/ADMIN_TROUBLESHOOTING.md) | Admin troubleshooting guide |

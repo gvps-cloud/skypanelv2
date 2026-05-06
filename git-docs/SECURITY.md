@@ -163,6 +163,31 @@ ORGANIZATION ISOLATION
 
 ---
 
+## Access Control Details
+
+```text
+ACCESS CONTROL DETAILS
+-----------------------------------------------------------------------------
+Support Ticket Access
+  • tickets_view, tickets_create, tickets_manage permissions gate ticket operations
+  • Org-scoped queries ensure users only see tickets for their organization
+
+Blog Authorization
+  • Blog admin routes require user.role === 'admin'
+  • Public blog routes are unauthenticated but filtered to published posts only
+
+Platform Maintenance Auth
+  • Maintenance mode toggle requires admin role
+  • MaintenanceGuard frontend component blocks non-admins
+  • Optional bypass code allows access to blog and login pages during maintenance
+
+Egress Credit Refunds
+  • Users can only refund credits belonging to their own organization
+  • Org-scoped validation before any refund operation
+```
+
+---
+
 ## Hosting Security
 
 ```text

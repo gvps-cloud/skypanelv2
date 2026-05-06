@@ -1,6 +1,6 @@
 # Security Testing Suite for SkyPanelV2
 
-This directory contains comprehensive security tests for SkyPanelV2, covering authentication security, XSS protection, and API key management.
+This directory contains comprehensive security tests for SkyPanelV2, covering authentication security, XSS protection, API key management, organization isolation, and resource access control.
 
 ## Test Files
 
@@ -9,83 +9,163 @@ This directory contains comprehensive security tests for SkyPanelV2, covering au
 Tests JWT token security, brute force protection, and password reset token strength.
 
 **Coverage:**
-- ✅ Token blacklist functionality (logout and rejection)
-- ✅ Brute force protection (lockout after 5 failed attempts)
-- ✅ Password reset token strength (32-byte crypto random)
-- ✅ Enhanced password requirements validation
+- Token blacklist functionality (logout and rejection)
+- Brute force protection (lockout after 5 failed attempts)
+- Password reset token strength (32-byte crypto random)
+- Enhanced password requirements validation
 
 ### 2. `xss.test.ts` - Cross-Site Scripting Protection Tests
 
 Tests XSS prevention through content sanitization and security headers.
 
 **Coverage:**
-- ✅ DOMPurify sanitization of malicious HTML
-- ✅ Content Security Policy (CSP) header presence
-- ✅ HTTP Strict Transport Security (HSTS) header
-- ✅ XSS protection headers
+- DOMPurify sanitization of malicious HTML
+- Content Security Policy (CSP) header presence
+- HTTP Strict Transport Security (HSTS) header
+- XSS protection headers
 
 ### 3. `apiKeys.test.ts` - API Key Security Tests
 
 Tests API key generation, storage, and PostgreSQL Row-Level Security.
 
 **Coverage:**
-- ✅ API key generation using `crypto.randomBytes` (not `Math.random`)
-- ✅ API key uniqueness guarantees
-- ✅ Secure hashing before storage
-- ✅ X-API-Key header authentication
-- ✅ PostgreSQL Row-Level Security (RLS) for `user_api_keys` table
+- API key generation using `crypto.randomBytes` (not `Math.random`)
+- API key uniqueness guarantees
+- Secure hashing before storage
+- X-API-Key header authentication
+- PostgreSQL Row-Level Security (RLS) for `user_api_keys` table
 
 ### 4. `admin-networking.test.ts` - Admin Networking Security Tests
 
 Tests security of admin networking routes (rDNS, IPv6, IP management).
 
 **Coverage:**
-- ✅ Admin-only access enforcement on networking endpoints
-- ✅ Input validation and SQL injection prevention for IP/rDNS fields
-- ✅ Organization isolation for IP records
+- Admin-only access enforcement on networking endpoints
+- Input validation and SQL injection prevention for IP/rDNS fields
+- Organization isolation for IP records
 
 ### 5. `animalSuffix.test.ts` - Random Label Generation Tests
 
 Tests the `animalSuffix` utility used for generating random VPS/resource labels.
 
 **Coverage:**
-- ✅ Output entropy and uniqueness
-- ✅ No predictable patterns
+- Output entropy and uniqueness
+- No predictable patterns
 
 ### 6. `api-hardening.test.ts` - General API Hardening Tests
 
 Tests broad API security hardening measures.
 
 **Coverage:**
-- ✅ Rate limiting header presence
-- ✅ Security headers (Helmet, CORS)
-- ✅ CSRF token enforcement on mutating endpoints
-- ✅ JSON body size limits
+- Rate limiting header presence
+- Security headers (Helmet, CORS)
+- CSRF token enforcement on mutating endpoints
+- JSON body size limits
 
 ### 7. `linode-provider-networking.test.ts` - Provider Networking Security Tests
 
 Tests security of provider-facing networking calls.
 
 **Coverage:**
-- ✅ Provider token isolation
-- ✅ rDNS update authorization
-- ✅ IPv6 range boundary validation
+- Provider token isolation
+- rDNS update authorization
+- IPv6 range boundary validation
 
 ### 8. `ssh-keys-isolation.test.ts` - SSH Key Isolation Tests
 
 Tests organization-scoped isolation for SSH key management.
 
 **Coverage:**
-- ✅ Users cannot access SSH keys from other organizations
-- ✅ Linode sync is scoped to the requesting org's provider
+- Users cannot access SSH keys from other organizations
+- Linode sync is scoped to the requesting org's provider
 
 ### 9. `whitelabel-provider.test.ts` - White-Label Provider Tests
 
 Tests white-label category mapping and provider abstraction security.
 
 **Coverage:**
-- ✅ Category mappings cannot leak across organizations
-- ✅ Provider type is constrained to `linode`
+- Category mappings cannot leak across organizations
+- Provider type is constrained to `linode`
+
+### 10. `blog-public.test.ts` - Blog Public Access Security Tests
+
+Tests security of public blog endpoints.
+
+**Coverage:**
+- Only published posts are returned from public endpoints
+- Draft posts are not accessible to non-admin users
+- Soft-deleted posts are excluded from public queries
+
+### 11. `payments-org-guard.test.ts` - Payment Organization Guard Tests
+
+Tests that payment endpoints enforce organization-scoped access.
+
+**Coverage:**
+- Payment operations are scoped to the authenticated user's organization
+- Cross-org payment access is blocked
+
+### 12. `disks-isolation.test.ts` - VPS Disk Isolation Tests
+
+Tests organization-scoped isolation for VPS disk management.
+
+**Coverage:**
+- Users cannot access VPS disks belonging to other organizations
+
+### 13. `hosting-org-isolation.test.ts` - Hosting Organization Isolation Tests
+
+Tests organization-scoped isolation for hosting resources.
+
+**Coverage:**
+- Hosting subscriptions, websites, and related resources are org-scoped
+- Cross-org hosting access is blocked
+
+### 14. `member-role-permissions.test.ts` - Member Role Permission Tests
+
+Tests that organization member roles enforce correct permission boundaries.
+
+**Coverage:**
+- Role-based permission enforcement across all permission types
+- Custom roles respect defined permission sets
+
+### 15. `notes.test.ts` - Notes Security Tests
+
+Tests security of personal and organization notes.
+
+**Coverage:**
+- Personal notes are only accessible by the owning user
+- Organization notes respect `notes_view`/`notes_manage` permissions
+
+### 16. `notifications-isolation.test.ts` - Notification Isolation Tests
+
+Tests organization-scoped isolation for notifications.
+
+**Coverage:**
+- Users only see notifications for their organizations
+- Cross-org notification access is blocked
+
+### 17. `payment-isolation.test.ts` - Payment Isolation Tests
+
+Tests organization-scoped isolation for billing and payment resources.
+
+**Coverage:**
+- Wallet and transaction access is org-scoped
+- Cross-org payment data is inaccessible
+
+### 18. `volume-isolation.test.ts` - Volume Isolation Tests
+
+Tests organization-scoped isolation for volume pricing and billing.
+
+**Coverage:**
+- Volume records are org-scoped
+- Cross-org volume access is blocked
+
+### 19. `admin-auth-coverage.test.ts` - Admin Auth Coverage Tests
+
+Tests admin-only endpoint authorization coverage.
+
+**Coverage:**
+- Admin endpoints require `user.role === 'admin'`
+- Non-admin users are blocked from admin routes
 
 ## Running Security Tests
 

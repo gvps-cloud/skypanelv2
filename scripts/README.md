@@ -104,6 +104,83 @@ node scripts/generate-encryption-key.js
 
 ## Common Development Workflows
 
+### Diagnostic & Verification Scripts
+
+```bash
+# Verify environment configuration
+node scripts/verify-env.js
+
+# Check migration status
+node scripts/check-migration.js
+
+# Check admin user status
+node scripts/check-admin-users.js
+
+# Verify admin status
+node scripts/verify-admin-status.js
+
+# Check platform settings
+node scripts/check-platform-settings.js
+
+# Check contact methods status
+node scripts/check-contact-methods-status.js
+
+# Check VPS plans configuration
+node scripts/check-vps-plans.js
+
+# Check users schema
+node scripts/check-users-schema.js
+
+# Verify active org column migration
+node scripts/verify-active-org-column.js
+
+# Debug admin login issues
+node scripts/debug-admin-login.js
+```
+
+### API Documentation Scripts
+
+```bash
+# Audit API documentation coverage
+node scripts/audit-api-docs.mjs
+
+# Check route registration
+node scripts/check-routes.mjs
+
+# Fix API documentation issues
+node scripts/fix-api-docs.mjs
+```
+
+### Utility Scripts
+
+```bash
+# Generate PWA icons from source
+npm run pwa:icons
+# or
+node scripts/generate-pwa-icons.js
+
+# Re-seed FAQ data
+node scripts/reseed-faq.js
+
+# Update theme to mono preset
+node scripts/update-theme-to-mono.js
+
+# Fix provider encryption (re-encrypt tokens)
+node scripts/fix-provider-encryption.js
+
+# Fix duplicate records
+node scripts/fix-duplicates.js
+
+# Clean migration state
+node scripts/clean-migration.js
+
+# Ensure admin user exists (idempotent)
+node scripts/ensure-admin-user.js
+
+# Run Semgrep security scan
+node scripts/run-semgrep.js
+```
+
 ### Fresh Database Setup
 
 When starting fresh or after pulling major database changes:
