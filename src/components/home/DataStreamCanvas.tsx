@@ -36,7 +36,7 @@ type FrameDef =
   | { kind: "svg"; svg: string; scale: number; invertMask?: boolean }
 
 const FRAMES: FrameDef[] = [
-  { kind: "url", src: "/favicon.svg", scale: 0.78, invertMask: true },
+  { kind: "url", src: "/favicon.svg", scale: 0.78 },
   { kind: "svg", svg: wrapLucideSvg(LUCIDE_SERVER), scale: 0.7 },
   { kind: "svg", svg: wrapLucideSvg(LUCIDE_PANELS_TOP_LEFT), scale: 0.7 },
   { kind: "svg", svg: wrapLucideSvg(LUCIDE_EARTH), scale: 0.7 },
