@@ -49,7 +49,8 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 ## Environment
 
 - Copy `.env.example` to `.env`; backend loads `.env` in `api/app.ts` unless `IN_DOCKER` is set.
-- Required core vars: `DATABASE_URL`, `JWT_SECRET`, `SSH_CRED_SECRET`, `ENCRYPTION_KEY`. Generate secrets with `node scripts/generate-ssh-secret.js` and `node scripts/generate-encryption-key.js`.
+- Required core vars: `DATABASE_URL`, `JWT_SECRET`, `SSH_CRED_SECRET`. Generate secrets with `node scripts/generate-ssh-secret.js`.
+- Encryption keys: `SSH_CRED_SECRET` encrypts SSH credentials; `PROVIDER_TOKEN_SECRET` encrypts provider API tokens (falls back to `SSH_CRED_SECRET` if unset). Both support rotation via `*_PREVIOUS` env vars. `node scripts/generate-encryption-key.js` generates an `ENCRYPTION_KEY` env var referenced in docs and `scripts/verify-env.js` but not read by any runtime code.
 - Linode/VPS uses `LINODE_API_TOKEN`; PayPal uses `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_MODE`; email falls back by `EMAIL_PROVIDER_PRIORITY` (`resend,smtp`).
 - Enhance hosting config is optional but exact: `ENHANCE_API_URL` is panel origin only, no `/api`; `ENHANCE_API_KEY` is raw token, no `Bearer`; `ENHANCE_MASTER_ORG_ID` and `ENHANCE_DEFAULT_SERVER_GROUP_ID` are used by hosting flows.
 - `CLIENT_URL` drives PayPal return/cancel URLs and must match the frontend origin.
@@ -84,7 +85,7 @@ Compact guidance for coding agents in `skypanelv2`. `CLAUDE.md` delegates here; 
 - `@workspace/db` exports `./src/index.ts` (query helpers) and `./schema` (Drizzle schema definitions).
 - Migrations are zero-padded SQL files in `migrations/`. Never modify an existing migration; add the next numbered `NNN_short_description.sql`.
 - Apply pending migrations with `node scripts/run-migration.js`. Do not run `db:reset`, `db:reset:confirm`, or `db:fresh` unless explicitly requested; they destroy data.
-- Migration runner validates SHA256 checksums, so editing applied migrations will break future runs.
+- Migration runner validates SHA256 checksums; if a previously-applied migration has a changed checksum, it logs a warning and skips that file (does not error out).
 - Schema conventions: UUID PKs (`gen_random_uuid()`), `TIMESTAMPTZ` timestamps, `deleted_at` for soft deletes, `JSONB DEFAULT '{}'` for config/metadata, explicit `ON DELETE CASCADE` or `ON DELETE SET NULL` on all foreign keys.
 
 ## Testing Notes

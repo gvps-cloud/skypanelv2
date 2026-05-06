@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { BRAND_NAME, BRAND_DOMAIN } from "../lib/brand";
 
-const lastUpdated = "October 20, 2025";
+const lastUpdated = "May 6, 2026";
 
 const sections = [
   {
@@ -18,7 +18,7 @@ const sections = [
     content: (
       <>
         <p>
-          {BRAND_NAME} ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard information when you use our cloud infrastructure platform.
+          {BRAND_NAME} ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard information when you use our cloud infrastructure and web hosting platform.
         </p>
         <p>
           By accessing the Service, you consent to the practices described here. If you disagree with any part of this policy, please discontinue use of the Service.
@@ -31,10 +31,12 @@ const sections = [
     title: "2. Information We Collect",
     content: (
       <>
-        <p><strong>2.1 Personal information:</strong> When you create an account we collect details such as your name, email address, and billing information (processed through PayPal).</p>
+        <p><strong>2.1 Personal information:</strong> When you create an account we collect details such as your name, email address, phone number, timezone, and billing information (processed through PayPal).</p>
         <p><strong>2.2 Technical information:</strong> We gather IP address, device details, operating system, browser type, and logs such as access times and pages viewed. Cookies and similar technologies help us personalize sessions.</p>
         <p><strong>2.3 Usage information:</strong> Resource metrics (CPU, memory, bandwidth), API requests, feature usage patterns, and support interactions help us improve the platform.</p>
         <p><strong>2.4 Customer data:</strong> Content you store or process using the Service remains yours. We access it only to provide the Service or comply with legal obligations.</p>
+        <p><strong>2.5 Hosting data:</strong> Domain names, website storage and bandwidth usage, email mailbox metadata (not email content), database metadata, and hosting subscription details.</p>
+        <p><strong>2.6 Fraud prevention data:</strong> IP address analysis, VPN/proxy/Tor detection results, and fraud risk scores used for account and transaction screening.</p>
       </>
     ),
   },
@@ -46,10 +48,12 @@ const sections = [
         <p>We use collected information to:</p>
         <ul className="space-y-2 pl-6">
           <li>Provide, maintain, and enhance the Service</li>
+          <li>Provision and manage web hosting services (websites, email, DNS, SSL, databases)</li>
           <li>Process transactions and manage your account</li>
           <li>Send technical notices, security alerts, and administrative messages</li>
           <li>Respond to support requests and improve customer experience</li>
-          <li>Monitor usage trends and safeguard against abuse or fraud</li>
+          <li>Monitor usage trends, resource consumption, and enforce plan limits</li>
+          <li>Detect and prevent fraud and unauthorized access</li>
           <li>Comply with legal requirements and enforce our Terms of Service</li>
           <li>Send marketing communications with your explicit consent</li>
         </ul>
@@ -62,8 +66,8 @@ const sections = [
     content: (
       <>
         <p>We share data only when necessary:</p>
-        <p><strong>4.1 Service providers:</strong> Infrastructure partners (such as Linode/Akamai), payment processors (PayPal), email delivery services, and analytics vendors operate on our behalf under strict agreements.</p>
-        <p><strong>4.2 Legal obligations:</strong> We may disclose information to comply with laws, regulations, or lawful requests by public authorities.</p>
+        <p><strong>4.1 Service providers:</strong> Infrastructure providers, web hosting control panel software providers, payment processors, email delivery services, fraud prevention services, monitoring services, and analytics vendors operate on our behalf under strict data processing agreements.</p>
+        <p><strong>4.2 Legal obligations:</strong> We may disclose information to comply with laws, regulations, or lawful requests by public authorities, including DMCA takedown notices.</p>
         <p><strong>4.3 Business transfers:</strong> If we merge, acquire, or sell assets, data may be transferred subject to this policy.</p>
         <p><strong>4.4 With consent:</strong> We share information for other purposes only when you explicitly authorize it.</p>
       </>
@@ -77,6 +81,9 @@ const sections = [
         <p>We implement technical and organizational safeguards such as:</p>
         <ul className="space-y-2 pl-6">
           <li>TLS encryption for data in transit and encryption for sensitive data at rest</li>
+          <li>Per-website containerization for hosting isolation</li>
+          <li>Web Application Firewall (ModSecurity with OWASP ruleset) for hosted websites</li>
+          <li>Automated brute force protection and rate limiting on authentication endpoints</li>
           <li>Role-based access controls and multi-factor authentication for internal tools</li>
           <li>Regular penetration tests, vulnerability scanning, and third-party audits</li>
           <li>Security training for employees handling customer data</li>
@@ -86,19 +93,33 @@ const sections = [
     ),
   },
   {
+    value: "hosting-data",
+    title: "6. Hosting Data Processing",
+    content: (
+      <>
+        <p><strong>6.1 Data ownership:</strong> You retain full ownership and control of all website content, email messages, database data, and files uploaded to the hosting platform.</p>
+        <p><strong>6.2 Controller and processor:</strong> {BRAND_NAME} acts as data controller. Hosting infrastructure sub-processors (including control panel software providers) process customer data solely to deliver the Service under data processing agreements.</p>
+        <p><strong>6.3 Data access:</strong> We do not access, read, or analyze hosted website content, email messages, or database data except: (a) to deliver or improve the Service, (b) to comply with legal obligations or court orders, or (c) to investigate suspected abuse or policy violations.</p>
+        <p><strong>6.4 Data portability:</strong> You may export all hosted data (files, databases, email) at any time through the control panel or by contacting support.</p>
+        <p><strong>6.5 Sub-processors:</strong> A current list of hosting sub-processors is available upon request by contacting privacy@{BRAND_DOMAIN}.</p>
+      </>
+    ),
+  },
+  {
     value: "retention",
-    title: "6. Data Retention",
+    title: "7. Data Retention",
     content: (
       <>
         <p>
           We retain personal data for as long as necessary to deliver the Service and fulfill the purposes described in this policy. When you close your account, we delete associated data within 30 days unless retention is required for legal, tax, or accounting reasons.
         </p>
+        <p>Hosting data (website files, email, databases) is retained for the duration of an active subscription and deleted within 30 days after cancellation. Activity and audit logs are retained for 12 months. Fraud screening records are retained for 24 months.</p>
       </>
     ),
   },
   {
     value: "rights",
-    title: "7. Your Rights and Choices",
+    title: "8. Your Rights and Choices",
     content: (
       <>
         <p>You may exercise the following rights:</p>
@@ -106,9 +127,11 @@ const sections = [
           <li><strong>Access:</strong> Request a copy of personal data we hold.</li>
           <li><strong>Correction:</strong> Update inaccurate or incomplete data.</li>
           <li><strong>Deletion:</strong> Request deletion of your account and associated data.</li>
+          <li><strong>Export:</strong> Download all hosted website data, email, and databases before account closure.</li>
           <li><strong>Portability:</strong> Receive data in a portable format.</li>
           <li><strong>Opt-out:</strong> Unsubscribe from marketing communications.</li>
           <li><strong>Objection:</strong> Object to certain processing activities.</li>
+          <li><strong>Hosted content deletion:</strong> Request immediate removal of specific hosted content and receive confirmation.</li>
         </ul>
         <p>Email privacy@{BRAND_DOMAIN} to submit a request. We respond within 30 days.</p>
       </>
@@ -116,18 +139,21 @@ const sections = [
   },
   {
     value: "cookies",
-    title: "8. Cookies and Tracking Technologies",
+    title: "9. Cookies and Tracking Technologies",
     content: (
       <>
-        <p>Cookies and similar technologies help us authenticate sessions, remember preferences, and analyze usage.</p>
-        <p>You can adjust browser settings to refuse cookies. Some features may not function properly if cookies are disabled.</p>
-        <p>We use session cookies, preference cookies, and analytics cookies from trusted providers.</p>
+        <p>We use the following categories of cookies and tracking technologies:</p>
+        <p><strong>Essential cookies:</strong> Required for session authentication, CSRF protection, and user preferences. These cannot be disabled without losing core functionality.</p>
+        <p><strong>Analytics and error tracking:</strong> We use analytics services to understand usage patterns, identify errors, and improve platform performance. This includes page views, device information, and anonymized usage statistics.</p>
+        <p><strong>Session replay:</strong> Our analytics provider may record user sessions — including clicks, page navigation, and text input — to help us diagnose issues and improve user experience. Session replay data is encrypted, access-restricted to authorized personnel, and retained for a limited period.</p>
+        <p><strong>Preference cookies:</strong> Remember your settings and customizations across sessions.</p>
+        <p>You may opt out of analytics, error tracking, and session replay by contacting privacy@{BRAND_DOMAIN} or by configuring your browser to block non-essential cookies. Disabling tracking may affect some platform features.</p>
       </>
     ),
   },
   {
     value: "third-parties",
-    title: "9. Third-Party Links",
+    title: "10. Third-Party Links",
     content: (
       <>
         <p>Links to external sites or services are provided for convenience. We are not responsible for their privacy practices and encourage you to review the policies of any third party you interact with.</p>
@@ -136,7 +162,7 @@ const sections = [
   },
   {
     value: "children",
-    title: "10. Children’s Privacy",
+    title: "11. Children's Privacy",
     content: (
       <>
         <p>The Service is not directed at individuals under 18. We do not knowingly collect personal data from children. If you believe a child has provided information, contact us immediately so we can remove it.</p>
@@ -145,7 +171,7 @@ const sections = [
   },
   {
     value: "transfers",
-    title: "11. International Data Transfers",
+    title: "12. International Data Transfers",
     content: (
       <>
         <p>Your data may be transferred to and stored in countries where {BRAND_NAME} or its service providers operate. We ensure appropriate safeguards consistent with applicable data protection laws.</p>
@@ -154,7 +180,7 @@ const sections = [
   },
   {
     value: "changes",
-    title: "12. Changes to This Policy",
+    title: "13. Changes to This Policy",
     content: (
       <>
         <p>We may update this policy periodically. We will post updates on this page and revise the "Last updated" date. Material changes may include email or in-app notice.</p>
@@ -163,7 +189,7 @@ const sections = [
   },
   {
     value: "contact",
-    title: "13. Contact Us",
+    title: "14. Contact Us",
     content: (
       <>
         <p>Questions or concerns? Reach out to our privacy team:</p>
@@ -177,7 +203,7 @@ const sections = [
   },
   {
     value: "gdpr",
-    title: "14. GDPR Rights (EU/EEA)",
+    title: "15. GDPR Rights (EU/EEA)",
     content: (
       <>
         <p>Residents of the European Economic Area have additional rights, including restriction of processing and the right to lodge complaints with supervisory authorities. We honor these rights in accordance with GDPR.</p>
@@ -186,7 +212,7 @@ const sections = [
   },
   {
     value: "ccpa",
-    title: "15. CCPA Rights (California)",
+    title: "16. CCPA Rights (California)",
     content: (
       <>
         <p>California residents may request disclosure of personal information categories we collect, request deletion, and opt out of certain sharing. Submit requests via privacy@{BRAND_DOMAIN}.</p>
