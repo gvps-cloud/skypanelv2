@@ -35,13 +35,13 @@ import {
 import type { VPSPlan } from '@/types/vps';
 import { useEnabledCategoryMappings } from '@/hooks/useCategoryMappings';
 import { BRAND_NAME } from '@/lib/brand';
-import MarketingNavbar from '@/components/MarketingNavbar';
-import MarketingFooter from '@/components/MarketingFooter';
-import { TerminalPageHeader } from '@/components/terminal';
+import MarketingPageShell from '@/components/MarketingPageShell';
+import { MarketingHero } from '@/components/marketing/MarketingHero';
+import { AsciiBox } from '@/components/fx/AsciiBox';
 import { apiClient } from '@/lib/api';
 import { getHostingFeatureRows, getHostingFeatureSpecRows } from '@/lib/hostingPlanFeatures';
-import '@/styles/home.css';
 import type { HostingPlan } from '@/hooks/useHosting';
+import { cn } from '@/lib/utils';
 
 /* â”€â”€â”€ Animation Variants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
@@ -415,25 +415,21 @@ const PricingPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
-        <MarketingNavbar />
+      <MarketingPageShell>
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex min-h-[400px] items-center justify-center">
             <div className="flex items-center gap-2">
               <Loader2 className="h-6 w-6 animate-spin" />
               <span>Loading pricing information...</span>
             </div>
           </div>
         </div>
-      </div>
+      </MarketingPageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <MarketingNavbar />
-
-      <main>
+    <MarketingPageShell>
         {/* â”€â”€â”€ HERO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <section className="relative overflow-hidden border-b border-border/40">
           <div className="home-orb home-orb--1" aria-hidden="true" />
@@ -448,48 +444,45 @@ const PricingPage: React.FC = () => {
               transition={{ duration: 0.65 }}
               className="space-y-8"
             >
-              <TerminalPageHeader pathPrefix="~/www" command="pricing --manifest" className="max-w-2xl" />
-              <div className="space-y-5">
-                <Badge
-                  variant="outline"
-                  className="home-shimmer-badge w-fit rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
-                >
-                  <Sparkles className="mr-2 h-3.5 w-3.5" />
-                  Transparent Pricing
-                </Badge>
+              <MarketingHero
+                pathPrefix="~/www"
+                command="pricing --manifest"
+                eyebrow={
+                  <Badge
+                    variant="outline"
+                    className="home-shimmer-badge w-fit rounded-full border-primary/30 bg-primary/5 px-4 py-1.5 text-primary"
+                  >
+                    <Sparkles className="mr-2 h-3.5 w-3.5" />
+                    Transparent pricing
+                  </Badge>
+                }
+                title="Simple, predictable pricing"
+                subtitle="Choose from our VPS instances. Pay only for what you use with transparent hourly and monthly billing."
+                actions={
+                  <>
+                    <Button size="lg" className="h-12 px-7 home-btn-glow group" asChild>
+                      <Link to="/register">
+                        Get Started
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </Link>
+                    </Button>
+                    <Button size="lg" variant="outline" className="h-12 px-7" asChild>
+                      <Link to="/contact">Contact Sales</Link>
+                    </Button>
+                  </>
+                }
+              />
 
-                <h1 className="text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl 2xl:text-7xl">
-                  Simple, Predictable
-                  <span className="block font-bold bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text text-transparent">
-                    Pricing
-                  </span>
-                </h1>
-
-                <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-                  Choose from our VPS instances. Pay only for what you use with transparent hourly and monthly billing.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button
-                  size="lg"
-                  className="h-12 px-7 home-btn-glow group"
-                  asChild
-                >
-                  <Link to="/register">
-                    Get Started
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 px-7"
-                  asChild
-                >
-                  <Link to="/contact">Contact Sales</Link>
-                </Button>
-              </div>
+              <AsciiBox title="signals" className="max-w-4xl opacity-95">
+                <div className="flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-muted-foreground sm:text-xs">
+                  {trustItems.map(({ icon: Icon, label }) => (
+                    <span key={label} className="inline-flex items-center gap-1.5">
+                      <Icon className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </AsciiBox>
             </motion.div>
           </div>
         </section>
@@ -607,7 +600,7 @@ const PricingPage: React.FC = () => {
                 viewport={{ once: true }}
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               >
-                {filteredPlans.map((plan) => {
+                {filteredPlans.map((plan, planIndex) => {
                   const basePrice = Number(plan.base_price) || 0;
                   const markupPrice = Number(plan.markup_price) || 0;
                   const totalMonthly = basePrice + markupPrice;
@@ -617,7 +610,12 @@ const PricingPage: React.FC = () => {
 
                   return (
                     <motion.div key={plan.id} variants={revealItem}>
-                      <Card className="home-gradient-border-top home-animated-border home-feature-card flex flex-col h-full border-primary/25">
+                      <Card
+                        className={cn(
+                          'home-gradient-border-top home-animated-border home-feature-card flex h-full flex-col border-primary/25',
+                          planIndex === 0 && 'fx-glow ring-1 ring-primary/25',
+                        )}
+                      >
                         <CardHeader>
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-xl">{plan.name}</CardTitle>
@@ -816,10 +814,7 @@ const PricingPage: React.FC = () => {
             </div>
           </div>
         </div>
-      </main>
-
-      <MarketingFooter />
-    </div>
+    </MarketingPageShell>
   );
 };
 

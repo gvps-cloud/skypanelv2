@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, type Variants } from "framer-motion";
 import {
@@ -14,14 +14,13 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-import "@/styles/home.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import MarketingNavbar from "@/components/MarketingNavbar";
-import MarketingFooter from "@/components/MarketingFooter";
-import { TerminalPageHeader } from "@/components/terminal";
+import MarketingPageShell from "@/components/MarketingPageShell";
+import { MarketingHero } from "@/components/marketing/MarketingHero";
+import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { BRAND_NAME } from "@/lib/brand";
 import api from "@/lib/api";
 import { useHostingStatus } from "@/hooks/useHosting";
@@ -137,18 +136,6 @@ export default function AboutUs() {
     return () => { mounted = false; };
   }, []);
 
-  const trustItems = useMemo(
-    () => [
-      { icon: Shield, label: "99.99% Uptime SLA" },
-      { icon: Zap, label: "45-Second Deploys" },
-      { icon: Globe, label: `${regionCount}+ Global Regions` },
-      { icon: Award, label: "Transparent Billing" },
-      { icon: Users, label: "Team Workspaces" },
-      { icon: Target, label: "Security by Design" },
-    ],
-    [regionCount],
-  );
-
   const { data: stats, isLoading, isError } = useQuery<PlatformStats>({
     queryKey: ["platform-stats"],
     queryFn: async () => {
@@ -187,13 +174,8 @@ export default function AboutUs() {
       ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <MarketingNavbar />
-
-      <main>
-        {/* ═══════════════════════════ HERO ═══════════════════════════ */}
+    <MarketingPageShell>
         <section className="relative overflow-hidden border-b border-border/40">
-          {/* Floating orbs */}
           <div className="home-orb home-orb--1" aria-hidden="true" />
           <div className="home-orb home-orb--2" aria-hidden="true" />
           <div className="home-orb home-orb--3" aria-hidden="true" />
@@ -206,52 +188,34 @@ export default function AboutUs() {
               transition={{ duration: 0.65 }}
               className="space-y-8"
             >
-              <TerminalPageHeader pathPrefix="~/www" command="about --story" className="max-w-2xl" />
-              <div className="space-y-5">
-                <Badge
-                  variant="outline"
-                  className="home-shimmer-badge w-fit rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
-                >
-                  <Sparkles className="mr-2 h-3.5 w-3.5" />
-                  About {BRAND_NAME}
-                </Badge>
-
-                <h1 className="text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl 2xl:text-7xl">
-                  Infrastructure{" "}
-                  <br className="hidden sm:block" />
-                  without{" "}
-                  <span className="block font-bold bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text text-transparent">
-                    friction
-                  </span>
-                </h1>
-
-                <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-                  {BRAND_NAME} is built for teams who need cloud speed with trusted
-                  governance. Provision VPS, manage egress, and trace spend from one
-                  dashboard.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button
-                  size="lg"
-                  className="h-12 px-7 home-btn-glow group"
-                  asChild
-                >
-                  <Link to="/register">
-                    Get started
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 px-7"
-                  asChild
-                >
-                  <Link to="/contact">Talk to sales</Link>
-                </Button>
-              </div>
+              <MarketingHero
+                pathPrefix="~/www"
+                command="about --story"
+                eyebrow={
+                  <Badge
+                    variant="outline"
+                    className="home-shimmer-badge w-fit rounded-full border-primary/30 bg-primary/5 px-4 py-1.5 text-primary"
+                  >
+                    <Sparkles className="mr-2 h-3.5 w-3.5" />
+                    About {BRAND_NAME}
+                  </Badge>
+                }
+                title="Infrastructure without friction"
+                subtitle={`${BRAND_NAME} is built for teams who need cloud speed with trusted governance. Provision VPS, manage egress, and trace spend from one dashboard.`}
+                actions={
+                  <>
+                    <Button size="lg" className="h-12 px-7 home-btn-glow group" asChild>
+                      <Link to="/register">
+                        Get started
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </Link>
+                    </Button>
+                    <Button size="lg" variant="outline" className="h-12 px-7" asChild>
+                      <Link to="/contact">Talk to sales</Link>
+                    </Button>
+                  </>
+                }
+              />
             </motion.div>
 
             {/* Mission + Metrics row */}
@@ -324,7 +288,10 @@ export default function AboutUs() {
           </div>
         </section>
 
-        {/* ═══════════════════ WHAT DRIVES US ══════════════════════════ */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <AsciiDivider label="values" className="opacity-45 py-2" />
+        </div>
+
         <section className="py-24 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <motion.div
@@ -374,10 +341,6 @@ export default function AboutUs() {
             </motion.div>
           </div>
         </section>
-
-        </main>
-
-      <MarketingFooter />
-    </div>
+    </MarketingPageShell>
   );
 }

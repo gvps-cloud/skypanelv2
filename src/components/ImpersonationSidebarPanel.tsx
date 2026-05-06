@@ -110,7 +110,7 @@ export function ImpersonationSidebarPanel({
                 className="border border-amber-500/20 bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 hover:text-amber-800 dark:text-amber-100 dark:hover:text-amber-50"
               >
                 <AlertTriangle />
-                <span>Impersonation active</span>
+                <span className="group-data-[collapsible=icon]:hidden">Impersonation active</span>
               </SidebarMenuButton>
             </PopoverTrigger>
             <PopoverContent

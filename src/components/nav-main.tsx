@@ -160,11 +160,14 @@ const openValue = persistedState ?? (isItemActive ? true : false)
                           isExactActive && "shadow-[inset_2px_0_0_hsl(var(--primary))]",
                         )}
                       >
-                        <span className="font-mono text-[10px] text-muted-foreground w-5 shrink-0 select-none" aria-hidden="true">
+                        <span
+                          className="font-mono text-[10px] text-muted-foreground w-5 shrink-0 select-none group-data-[collapsible=icon]:hidden"
+                          aria-hidden="true"
+                        >
                           {treeTop}
                         </span>
                         <item.icon />
-                        <span>{item.title}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                       </SidebarMenuButton>
                     </PopoverTrigger>
                     <PopoverContent side="right" align="start" className="w-48 p-2">
@@ -225,11 +228,14 @@ const openValue = persistedState ?? (isItemActive ? true : false)
                             isExactActive && "shadow-[inset_2px_0_0_hsl(var(--primary))]",
                           )}
                         >
-                          <span className="font-mono text-[10px] text-muted-foreground w-5 shrink-0 select-none" aria-hidden="true">
+                          <span
+                            className="font-mono text-[10px] text-muted-foreground w-5 shrink-0 select-none group-data-[collapsible=icon]:hidden"
+                            aria-hidden="true"
+                          >
                             {treeTop}
                           </span>
                           <item.icon />
-                          <span>{item.title}</span>
+                          <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleTrigger asChild>
@@ -247,7 +253,10 @@ const openValue = persistedState ?? (isItemActive ? true : false)
                                   <>
                                     <CollapsibleTrigger asChild>
                                       <SidebarMenuSubButton isActive={subItem.isActive}>
-                                        <span className="font-mono text-[10px] text-muted-foreground shrink-0 select-none" aria-hidden="true">
+                                        <span
+                                          className="font-mono text-[10px] text-muted-foreground shrink-0 select-none group-data-[collapsible=icon]:hidden"
+                                          aria-hidden="true"
+                                        >
                                           {subIndex === subArr.length - 1 ? "└─" : "├─"}
                                         </span>
                                         <span>{subItem.title}</span>
@@ -271,7 +280,10 @@ const openValue = persistedState ?? (isItemActive ? true : false)
                               ) : (
                                 <SidebarMenuSubButton asChild isActive={subItem.isActive}>
                                   <Link to={subItem.url}>
-                                    <span className="font-mono text-[10px] text-muted-foreground shrink-0 select-none" aria-hidden="true">
+                                    <span
+                                      className="font-mono text-[10px] text-muted-foreground shrink-0 select-none group-data-[collapsible=icon]:hidden"
+                                      aria-hidden="true"
+                                    >
                                       {subIndex === subArr.length - 1 ? "└─" : "├─"}
                                     </span>
                                     <span>{subItem.title}</span>
@@ -288,11 +300,14 @@ const openValue = persistedState ?? (isItemActive ? true : false)
               ) : (
                 <SidebarMenuButton asChild tooltip={item.title} isActive={isItemActive}>
                   <Link to={item.url}>
-                    <span className="font-mono text-[10px] text-muted-foreground w-5 shrink-0 select-none" aria-hidden="true">
+                    <span
+                      className="font-mono text-[10px] text-muted-foreground w-5 shrink-0 select-none group-data-[collapsible=icon]:hidden"
+                      aria-hidden="true"
+                    >
                       {isItemActive ? ">" : treeTop}
                     </span>
                     <item.icon />
-                    <span>{item.title}</span>
+                    <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               )}

@@ -12,17 +12,17 @@ import {
   Shield,
   Clock,
   Server,
-  CheckCircle2,
 } from "lucide-react";
 
-import "@/styles/home.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import MarketingNavbar from "@/components/MarketingNavbar";
-import MarketingFooter from "@/components/MarketingFooter";
+import MarketingPageShell from "@/components/MarketingPageShell";
+import { MarketingHero } from "@/components/marketing/MarketingHero";
+import DataStreamCanvas from "@/components/home/DataStreamCanvas";
+import { usePrefersReducedMotion } from "@/components/fx/usePrefersReducedMotion";
 import { MatrixRain } from "@/components/fx/MatrixRain";
-import { TerminalPageHeader } from "@/components/terminal";
+import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { BRAND_NAME } from "@/lib/brand";
 import { LeafletMap } from "@/components/regions";
 import { apiClient } from "@/lib/api";
@@ -70,19 +70,6 @@ const revealItem: Variants = {
   },
 };
 
-/* ─── Trust Marquee Items ────────────────────────────────────────── */
-
-const trustItems = [
-  { icon: Globe, label: "Global Infrastructure" },
-  { icon: Zap, label: "Low Latency" },
-  { icon: Shield, label: "DDoS Protected" },
-  { icon: Clock, label: "99.9% Uptime SLA" },
-  { icon: Server, label: "NVMe Storage" },
-  { icon: CheckCircle2, label: "24/7 Monitoring" },
-  { icon: MapPin, label: "Multi-Region" },
-  { icon: Wifi, label: "Live Latency Tests" },
-];
-
 /* ─── Component ──────────────────────────────────────────────────── */
 
 export default function Regions() {
@@ -96,6 +83,7 @@ export default function Regions() {
   const [resultPage, setResultPage] = useState(0);
   const currentPageRef = useRef(0);
   const RESULTS_PER_PAGE = 10;
+  const heroReducedMotion = usePrefersReducedMotion();
 
   const measureLatency = useCallback(
     async (speedTestUrl: string): Promise<number | null> => {
@@ -244,71 +232,57 @@ export default function Regions() {
   /* ─── Render ─────────────────────────────────────────────────── */
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <MarketingNavbar />
-
-      <main>
-        {/* ═══════════════════════════ HERO ═══════════════════════════ */}
+    <MarketingPageShell>
+        {/* HERO */}
         <section className="relative overflow-hidden border-b border-border/40">
-          {/* Floating orbs */}
+          <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+            <DataStreamCanvas
+              className="h-full w-full opacity-[0.3]"
+              reducedMotion={heroReducedMotion}
+              pauseWhenOffscreen
+            />
+          </div>
           <div className="home-orb home-orb--1" aria-hidden="true" />
           <div className="home-orb home-orb--2" aria-hidden="true" />
           <div className="home-orb home-orb--3" aria-hidden="true" />
-          <div className="home-grid-mask absolute inset-0" aria-hidden="true" />
+          <div className="home-grid-mask absolute inset-0 z-[1]" aria-hidden="true" />
 
-          <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-24 sm:px-6 lg:px-8 lg:pb-24 lg:pt-28">
+          <div className="relative z-[2] mx-auto max-w-7xl px-4 pb-20 pt-24 sm:px-6 lg:px-8 lg:pb-24 lg:pt-28">
             <motion.div
               initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65 }}
               className="space-y-8"
             >
-              <TerminalPageHeader pathPrefix="~/www" command="regions --map" className="max-w-2xl" />
-              <div className="space-y-5">
-                <Badge
-                  variant="outline"
-                  className="home-shimmer-badge w-fit rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
-                >
-                  <Sparkles className="mr-2 h-3.5 w-3.5" />
-                  Global Infrastructure
-                </Badge>
+              <MarketingHero
+                pathPrefix="~/www"
+                command="regions --map"
+                eyebrow={
+                  <Badge
+                    variant="outline"
+                    className="home-shimmer-badge w-fit rounded-full border-primary/30 bg-primary/5 px-4 py-1.5 text-primary"
+                  >
+                    <Sparkles className="mr-2 h-3.5 w-3.5" />
+                    Global infrastructure
+                  </Badge>
+                }
+                title="Deploy close to your users"
+                subtitle={`${BRAND_NAME} has a global infrastructure footprint. Test live latency from your location and find the best region for your workloads.`}
+                actions={
+                  <>
+                    <Button size="lg" className="h-12 px-7 home-btn-glow group" asChild>
+                      <Link to="/register">
+                        Get started
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </Link>
+                    </Button>
+                    <Button size="lg" variant="outline" className="h-12 px-7" asChild>
+                      <Link to="/pricing">View pricing</Link>
+                    </Button>
+                  </>
+                }
+              />
 
-                <h1 className="text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl 2xl:text-7xl">
-                  Deploy{" "}
-                  <span className="block font-bold bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text text-transparent">
-                    close to your users
-                  </span>
-                </h1>
-
-                <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-                  {BRAND_NAME} has a global infrastructure footprint. Test live
-                  latency from your location and find the best region for your
-                  workloads.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button
-                  size="lg"
-                  className="h-12 px-7 home-btn-glow group"
-                  asChild
-                >
-                  <Link to="/register">
-                    Get started
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 px-7"
-                  asChild
-                >
-                  <Link to="/pricing">View pricing</Link>
-                </Button>
-              </div>
-
-              {/* Quick stats */}
               <div className="flex flex-wrap items-center gap-6 pt-2 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-2">
                   <Globe className="h-4 w-4 text-primary/70" />
@@ -325,7 +299,10 @@ export default function Regions() {
           </div>
         </section>
 
-        {/* ═══════════════════════ MAIN CONTENT ═════════════════════════ */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <AsciiDivider label="atlas" className="opacity-45 py-2" />
+        </div>
+
         <section className="py-24 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             {isLoading ? (
@@ -742,9 +719,6 @@ export default function Regions() {
             )}
           </div>
         </section>
-      </main>
-
-      <MarketingFooter />
-    </div>
+    </MarketingPageShell>
   );
 }

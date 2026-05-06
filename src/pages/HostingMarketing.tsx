@@ -12,10 +12,10 @@ import {
   Wallet,
 } from "lucide-react";
 
-import "@/styles/home.css";
-import MarketingNavbar from "@/components/MarketingNavbar";
-import MarketingFooter from "@/components/MarketingFooter";
-import { TerminalPageHeader } from "@/components/terminal";
+import MarketingPageShell from "@/components/MarketingPageShell";
+import { MarketingHero } from "@/components/marketing/MarketingHero";
+import { TerminalPanel } from "@/components/terminal/TerminalPanel";
+import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -141,42 +141,34 @@ const HostingHero = ({ enabled, plans, isLoading }: HostingCatalogState) => (
         transition={{ duration: 0.65 }}
         className="space-y-8"
       >
-        <TerminalPageHeader pathPrefix="~/www" command="hosting --overview" className="max-w-2xl" />
-        <div className="space-y-5">
-          <Badge
-            variant="outline"
-            className="home-shimmer-badge w-fit rounded-full border-primary/30 bg-primary/5 px-4 py-1.5 text-primary"
-          >
-            <Globe className="mr-2 h-3.5 w-3.5" />
-            Enhance Web Hosting
-          </Badge>
-
-          <h1 className="text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-            Website hosting managed from the same{" "}
-            <span className="bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text font-bold text-transparent">
-              {BRAND_NAME}
-            </span>{" "}
-            console.
-          </h1>
-
-          <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            Offer and manage Enhance-backed websites, domains, email, SSL,
-            databases, billing, and support without separating hosting from
-            the rest of your cloud workflow.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Button size="lg" className="h-12 px-7 home-btn-glow group" asChild>
-            <Link to="/register">
-              Create Account
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-          </Button>
-          <Button size="lg" variant="outline" className="h-12 px-7" asChild>
-            <Link to="/pricing">View Hosting Pricing</Link>
-          </Button>
-        </div>
+        <MarketingHero
+          pathPrefix="~/www"
+          command="hosting --overview"
+          eyebrow={
+            <Badge
+              variant="outline"
+              className="home-shimmer-badge w-fit rounded-full border-primary/30 bg-primary/5 px-4 py-1.5 text-primary"
+            >
+              <Globe className="mr-2 h-3.5 w-3.5" />
+              Enhance web hosting
+            </Badge>
+          }
+          title={`Website hosting in the ${BRAND_NAME} console`}
+          subtitle="Offer and manage Enhance-backed websites, domains, email, SSL, databases, billing, and support without separating hosting from the rest of your cloud workflow."
+          actions={
+            <>
+              <Button size="lg" className="h-12 px-7 home-btn-glow group" asChild>
+                <Link to="/register">
+                  Create Account
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" className="h-12 px-7" asChild>
+                <Link to="/pricing">View Hosting Pricing</Link>
+              </Button>
+            </>
+          }
+        />
       </motion.div>
 
       <motion.div
@@ -184,24 +176,30 @@ const HostingHero = ({ enabled, plans, isLoading }: HostingCatalogState) => (
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, delay: 0.15 }}
       >
-        <Card className="home-glass-panel home-animated-border border-primary/25">
-          <CardContent className="space-y-5 p-6">
-            {[
-              ["Hosting catalog", enabled ? "Enabled" : "Available when configured"],
-              ["Active plans", isLoading ? "Loading" : String(plans.length)],
-              ["Billing model", "Dedicated wallet"],
-              ["Management", "Panel SSO"],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between rounded-sm border border-border/50 bg-card p-4"
-              >
-                <span className="text-sm text-muted-foreground">{label}</span>
-                <span className="font-semibold">{value}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        <TerminalPanel
+          title="hosting.status"
+          traffic
+          glow
+          tone="success"
+          prompt="$"
+          bodyClassName="space-y-3 p-4 font-mono text-sm"
+          className="home-glass-panel home-animated-border border-primary/25"
+        >
+          {[
+            ["Hosting catalog", enabled ? "Enabled" : "Available when configured"],
+            ["Active plans", isLoading ? "Loading" : String(plans.length)],
+            ["Billing model", "Dedicated wallet"],
+            ["Management", "Panel SSO"],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="flex items-center justify-between rounded-sm border border-border/50 bg-card/80 px-3 py-2.5"
+            >
+              <span className="text-muted-foreground">{label}</span>
+              <span className="font-semibold text-foreground">{value}</span>
+            </div>
+          ))}
+        </TerminalPanel>
       </motion.div>
     </div>
   </section>
@@ -210,6 +208,7 @@ const HostingHero = ({ enabled, plans, isLoading }: HostingCatalogState) => (
 const CapabilityGrid = () => (
   <section className="py-24 sm:py-28">
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <AsciiDivider label="capabilities" className="mb-10 opacity-45" />
       <motion.div
         variants={revealContainer}
         initial="hidden"
@@ -325,16 +324,10 @@ export default function HostingMarketing() {
   const catalog = useHostingCatalog();
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <MarketingNavbar />
-
-      <main>
-        <HostingHero {...catalog} />
-        <CapabilityGrid />
-        <HostingCatalogSection enabled={catalog.enabled} plans={catalog.plans} />
-      </main>
-
-      <MarketingFooter />
-    </div>
+    <MarketingPageShell>
+      <HostingHero {...catalog} />
+      <CapabilityGrid />
+      <HostingCatalogSection enabled={catalog.enabled} plans={catalog.plans} />
+    </MarketingPageShell>
   );
 }

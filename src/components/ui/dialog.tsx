@@ -1,6 +1,5 @@
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -49,10 +48,21 @@ const DialogContent = React.forwardRef<
     >
       {children}
       {!hideCloseButton && (
-        <DialogPrimitive.Close className="absolute right-3 top-3 rounded-sm px-1.5 py-0.5 font-mono text-xs text-muted-foreground opacity-90 ring-offset-background transition-opacity hover:opacity-100 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground border border-transparent hover:border-border">
-          <span aria-hidden="true">[×]</span>
-          <X className="h-4 w-4 sr-only" />
-          <span className="sr-only">Close</span>
+        <DialogPrimitive.Close
+          className={cn(
+            "absolute right-2 top-2 z-10 inline-flex h-8 items-center justify-center rounded-sm border px-2",
+            "border-border/80 bg-muted/35 text-muted-foreground",
+            "font-mono text-[11px] font-semibold leading-none tracking-tight",
+            "shadow-none transition-[color,background-color,border-color,box-shadow]",
+            "hover:border-primary/45 hover:bg-muted/55 hover:text-foreground",
+            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/70",
+            "active:bg-muted/70 disabled:pointer-events-none disabled:opacity-40",
+          )}
+        >
+          <span className="select-none" aria-hidden="true">
+            [×]
+          </span>
+          <span className="sr-only">Close dialog</span>
         </DialogPrimitive.Close>
       )}
     </DialogPrimitive.Content>

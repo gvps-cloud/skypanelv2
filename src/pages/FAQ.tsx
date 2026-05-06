@@ -17,7 +17,6 @@ import {
   FileText,
 } from "lucide-react";
 
-import "@/styles/home.css";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,9 +25,9 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import MarketingNavbar from "@/components/MarketingNavbar";
-import MarketingFooter from "@/components/MarketingFooter";
-import { TerminalPageHeader } from "@/components/terminal";
+import MarketingPageShell from "@/components/MarketingPageShell";
+import { MarketingHero } from "@/components/marketing/MarketingHero";
+import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { BRAND_NAME } from "@/lib/brand";
 import { apiClient } from "@/lib/api";
 import type { FAQCategoriesResponse, FAQUpdatesResponse, FAQCategoryWithItems, FAQUpdate } from "@/types/faq";
@@ -73,15 +72,6 @@ const quickLinks = [
   { label: "Open a support ticket", href: "/support", icon: LifeBuoy },
   { label: "View platform status", href: "/status", icon: ArrowUpRight },
   { label: "Browse API docs", href: "/api-docs", icon: BookOpen },
-];
-
-const trustItems = [
-  { icon: MessageCircle, label: "24/7 Support" },
-  { icon: Clock, label: "Response in 1 Business Day" },
-  { icon: Shield, label: "Secure Infrastructure" },
-  { icon: Globe, label: "Global Regions" },
-  { icon: Zap, label: "Instant Provisioning" },
-  { icon: Users, label: "Team Workspaces" },
 ];
 
 const toSlug = (value: string) =>
@@ -145,13 +135,8 @@ export default function FAQ() {
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <MarketingNavbar />
-
-      <main>
-        {/* ═══════════════════════════ HERO ═══════════════════════════ */}
+    <MarketingPageShell>
         <section className="relative overflow-hidden border-b border-border/40">
-          {/* Floating orbs */}
           <div className="home-orb home-orb--1" aria-hidden="true" />
           <div className="home-orb home-orb--2" aria-hidden="true" />
           <div className="home-orb home-orb--3" aria-hidden="true" />
@@ -164,29 +149,21 @@ export default function FAQ() {
               transition={{ duration: 0.65 }}
               className="space-y-6"
             >
-              <TerminalPageHeader pathPrefix="~/www" command="faq --browse" className="max-w-2xl" />
-              <div className="space-y-5">
-                <Badge
-                  variant="outline"
-                  className="home-shimmer-badge w-fit rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
-                >
-                  <Sparkles className="mr-2 h-3.5 w-3.5" />
-                  Support & Help Center
-                </Badge>
-
-                <h1 className="text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl 2xl:text-7xl">
-                  Frequently Asked
-                  <br className="hidden sm:block" />
-                  <span className="block font-bold bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text text-transparent">
-                    Questions
-                  </span>
-                </h1>
-
-                <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-                  Find answers to the most common questions about {BRAND_NAME}.{" "}
-                  Still stuck? Our support team is just a message away.
-                </p>
-              </div>
+              <MarketingHero
+                pathPrefix="~/www"
+                command="faq --browse"
+                eyebrow={
+                  <Badge
+                    variant="outline"
+                    className="home-shimmer-badge w-fit rounded-full border-primary/30 bg-primary/5 px-4 py-1.5 text-primary"
+                  >
+                    <Sparkles className="mr-2 h-3.5 w-3.5" />
+                    Support &amp; help center
+                  </Badge>
+                }
+                title="Frequently asked questions"
+                subtitle={`Find answers to the most common questions about ${BRAND_NAME}. Still stuck? Our support team is just a message away.`}
+              />
 
               {/* Search Card */}
               <Card className="home-feature-card border-border/50 bg-card/60 max-w-2xl border-primary/25">
@@ -220,7 +197,10 @@ export default function FAQ() {
           </div>
         </section>
 
-        {/* ═══════════════════════ FAQ CONTENT ═══════════════════════ */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <AsciiDivider label="knowledge-base" className="opacity-45 py-2" />
+        </div>
+
         <section className="py-14 sm:py-18">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-10 lg:grid-cols-[1fr_340px]">
@@ -497,9 +477,6 @@ export default function FAQ() {
             </div>
           </div>
         </section>
-      </main>
-
-      <MarketingFooter />
-    </div>
+    </MarketingPageShell>
   );
 }

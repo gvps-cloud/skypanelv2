@@ -20,7 +20,6 @@ import {
   Zap,
 } from "lucide-react";
 
-import "@/styles/home.css";
 import { apiClient } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,19 +32,14 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Status as StatusDot } from "@/components/ui/status";
-import MarketingNavbar from "@/components/MarketingNavbar";
-import MarketingFooter from "@/components/MarketingFooter";
+import MarketingPageShell from "@/components/MarketingPageShell";
+import { MarketingHero } from "@/components/marketing/MarketingHero";
 import { StatusHeartbeat } from "@/components/fx/StatusHeartbeat";
-import { TerminalPageHeader } from "@/components/terminal";
+import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { BRAND_NAME } from "@/lib/brand";
 import { VPSInfrastructureCard } from "@/components/VPSInfrastructureCard";
 
 /* ─── Animation Variants ─────────────────────────────────────────── */
-
-const revealContainer: Variants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-};
 
 const revealItem: Variants = {
   hidden: { opacity: 0, y: 22 },
@@ -55,19 +49,6 @@ const revealItem: Variants = {
     transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
   },
 };
-
-/* ─── Trust Items ────────────────────────────────────────────────── */
-
-const trustItems = [
-  { icon: Zap, label: "99.9% Uptime SLA" },
-  { icon: Network, label: "Multi-Region Monitoring" },
-  { icon: ActivitySquare, label: "Real-time Alerts" },
-  { icon: ServerCog, label: "60s Polling" },
-  { icon: Shield, label: "DDoS Protection" },
-  { icon: Server, label: "Global Backbone" },
-  { icon: Headphones, label: "Incident Response" },
-  { icon: CheckCircle2, label: "SLA Guarantees" },
-];
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 
@@ -306,26 +287,9 @@ export default function Status() {
     }
   };
 
-  const getServiceIcon = (name: string) => {
-    const n = name.toLowerCase();
-    if (n.includes("api") || n.includes("rest") || n.includes("http"))
-      return Network;
-    if (n.includes("database") || n.includes("db") || n.includes("sql"))
-      return ServerCog;
-    if (n.includes("dns")) return ActivitySquare;
-    if (n.includes("email") || n.includes("mail") || n.includes("smtp"))
-      return Headphones;
-    return Shield;
-  };
-
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <MarketingNavbar />
-
-      <main>
-        {/* ═══════════════════════════ HERO ═══════════════════════════ */}
+    <MarketingPageShell>
         <section className="relative overflow-hidden border-b border-border/40">
-          {/* Floating orbs */}
           <div className="home-orb home-orb--1" aria-hidden="true" />
           <div className="home-orb home-orb--2" aria-hidden="true" />
           <div className="home-orb home-orb--3" aria-hidden="true" />
@@ -338,31 +302,24 @@ export default function Status() {
               transition={{ duration: 0.65 }}
               className="space-y-8"
             >
-              <TerminalPageHeader pathPrefix="~/www" command="status --live" className="max-w-2xl" />
-              <div className="space-y-5">
-                <Badge
-                  variant="outline"
-                  className="home-shimmer-badge w-fit rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
-                >
-                  <Sparkles className="mr-2 h-3.5 w-3.5" />
-                  Live Platform Health
-                </Badge>
+              <MarketingHero
+                pathPrefix="~/www"
+                command="status --live"
+                eyebrow={
+                  <Badge
+                    variant="outline"
+                    className="home-shimmer-badge w-fit rounded-full border-emerald-500/35 bg-emerald-500/10 px-4 py-1.5 text-emerald-700 dark:text-emerald-400"
+                  >
+                    <Sparkles className="mr-2 h-3.5 w-3.5" />
+                    Live platform health
+                  </Badge>
+                }
+                title={`${BRAND_NAME} status`}
+                subtitle="Real-time availability for VPS, networking, and supporting systems. Data refreshes automatically every few minutes and whenever you request an update."
+              />
 
-                <h1 className="text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl 2xl:text-7xl">
-                  <span className="block font-bold bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text text-transparent">
-                    {BRAND_NAME} Status
-                  </span>
-                </h1>
-
-                <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-                  Real-time availability for VPS, networking, and supporting
-                  systems. Data refreshes automatically every few minutes and
-                  whenever you request an update.
-                </p>
-              </div>
-
-              {/* Status pill */}
               <div className="flex flex-wrap items-center gap-4">
+                <StatusHeartbeat className="hidden w-44 shrink-0 sm:block" height={34} />
                 <div
                   className={`inline-flex items-center gap-2.5 rounded-full border px-5 py-2.5 text-sm font-medium ${
                     allOperational
@@ -416,7 +373,10 @@ export default function Status() {
           </div>
         </section>
 
-        {/* ═══════════════════════ MAIN CONTENT ═════════════════════════ */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <AsciiDivider label="telemetry" className="opacity-45 py-2" />
+        </div>
+
         <section className="py-24 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="space-y-16">
@@ -983,9 +943,6 @@ export default function Status() {
             </div>
           </div>
         </section>
-      </main>
-
-      <MarketingFooter />
-    </div>
+    </MarketingPageShell>
   );
 }

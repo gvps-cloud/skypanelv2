@@ -24,7 +24,6 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-import "@/styles/home.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,8 +39,7 @@ import type {
 } from "@/types/documentation";
 import ApiReference from "@/components/docs/ApiReference";
 import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
-import MarketingNavbar from "@/components/MarketingNavbar";
-import MarketingFooter from "@/components/MarketingFooter";
+import MarketingPageShell from "@/components/MarketingPageShell";
 import { TerminalPageHeader } from "@/components/terminal";
 
 /* ─── Trust Items ────────────────────────────────────────────────── */
@@ -1229,10 +1227,7 @@ export default function Documentation() {
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <MarketingNavbar />
-
-      {/* Single landmark; no nested <main> */}
+    <MarketingPageShell density="calm" showScanlines={false}>
       <div className="pt-20 lg:pt-24">
         {/* Content area */}
         <div className="flex min-h-[calc(100vh-4rem)]">
@@ -1285,8 +1280,6 @@ export default function Documentation() {
           </div>
         </div>
       </div>
-
-      <MarketingFooter />
-    </div>
+    </MarketingPageShell>
   );
 }

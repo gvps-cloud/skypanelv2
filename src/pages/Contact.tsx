@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, type Variants } from "framer-motion";
 import {
@@ -16,14 +16,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import "@/styles/home.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -38,9 +36,9 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import MarketingNavbar from "@/components/MarketingNavbar";
-import MarketingFooter from "@/components/MarketingFooter";
-import { TerminalPageHeader } from "@/components/terminal";
+import MarketingPageShell from "@/components/MarketingPageShell";
+import { MarketingHero } from "@/components/marketing/MarketingHero";
+import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { BRAND_NAME } from "@/lib/brand";
 import type {
   ContactConfig,
@@ -158,19 +156,6 @@ const DEFAULT_AVAILABILITY = [
 
 const DEFAULT_EMERGENCY_TEXT =
   "Available 24/7 for customers with enterprise SLAs. Call the hotline in your runbook for immediate response.";
-
-/* ─── Trust Items ────────────────────────────────────────────────── */
-
-const trustItems = [
-  { icon: Clock, label: "1 hr Avg. Response" },
-  { icon: MessageSquare, label: "Real Engineers" },
-  { icon: Shield, label: "Enterprise SLA" },
-  { icon: Globe, label: "Global Coverage" },
-  { icon: Zap, label: "Priority Routing" },
-  { icon: Phone, label: "Phone Support" },
-  { icon: Mail, label: "Email & Tickets" },
-  { icon: MapPin, label: "Headquarters" },
-];
 
 /* ─── Component ──────────────────────────────────────────────────── */
 
@@ -297,29 +282,20 @@ export default function Contact() {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
-        <MarketingNavbar />
-        <main className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-            <p className="text-muted-foreground">
-              Loading contact information...
-            </p>
+      <MarketingPageShell>
+        <div className="flex min-h-[60vh] items-center justify-center px-4">
+          <div className="space-y-4 text-center">
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading contact information...</p>
           </div>
-        </main>
-        <MarketingFooter />
-      </div>
+        </div>
+      </MarketingPageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <MarketingNavbar />
-
-      <main>
-        {/* ═══════════════════════════ HERO ═══════════════════════════ */}
+    <MarketingPageShell>
         <section className="relative overflow-hidden border-b border-border/40">
-          {/* Floating orbs */}
           <div className="home-orb home-orb--1" aria-hidden="true" />
           <div className="home-orb home-orb--2" aria-hidden="true" />
           <div className="home-orb home-orb--3" aria-hidden="true" />
@@ -332,52 +308,35 @@ export default function Contact() {
               transition={{ duration: 0.65 }}
               className="space-y-8"
             >
-              <TerminalPageHeader pathPrefix="~/www" command="contact --open-channel" className="max-w-2xl" />
-              <div className="space-y-5">
-                <Badge
-                  variant="outline"
-                  className="home-shimmer-badge w-fit rounded-full px-4 py-1.5 border-primary/30 bg-primary/5 text-primary"
-                >
-                  <Sparkles className="mr-2 h-3.5 w-3.5" />
-                  Contact {BRAND_NAME}
-                </Badge>
+              <MarketingHero
+                pathPrefix="~/www"
+                command="contact --open-channel"
+                eyebrow={
+                  <Badge
+                    variant="outline"
+                    className="home-shimmer-badge w-fit rounded-full border-primary/30 bg-primary/5 px-4 py-1.5 text-primary"
+                  >
+                    <Sparkles className="mr-2 h-3.5 w-3.5" />
+                    Contact {BRAND_NAME}
+                  </Badge>
+                }
+                title={`Talk with the ${BRAND_NAME} team`}
+                subtitle="Whether you're evaluating our platform, planning a migration, or need help with an existing deployment, we respond fast—and with real engineers."
+                actions={
+                  <>
+                    <Button size="lg" className="h-12 px-7 home-btn-glow group" asChild>
+                      <Link to="/support">
+                        Open a ticket
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </Link>
+                    </Button>
+                    <Button size="lg" variant="outline" className="h-12 px-7" asChild>
+                      <Link to="/contact">Talk to sales</Link>
+                    </Button>
+                  </>
+                }
+              />
 
-                <h1 className="text-balance text-4xl font-medium leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl 2xl:text-7xl">
-                  Talk with the{" "}
-                  <span className="block font-bold bg-gradient-to-r from-primary via-primary to-primary/50 bg-clip-text text-transparent">
-                    {BRAND_NAME} team
-                  </span>
-                </h1>
-
-                <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-                  Whether you&apos;re evaluating our platform, planning a migration,
-                  or need help with an existing deployment, we respond fast—and
-                  with real engineers.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button
-                  size="lg"
-                  className="h-12 px-7 home-btn-glow group"
-                  asChild
-                >
-                  <Link to="/support">
-                    Open a ticket
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 px-7"
-                  asChild
-                >
-                  <Link to="/contact">Talk to sales</Link>
-                </Button>
-              </div>
-
-              {/* Quick stats */}
               <div className="flex flex-wrap items-center gap-6 pt-2 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-2">
                   <Clock className="h-4 w-4 text-primary/70" />
@@ -392,7 +351,10 @@ export default function Contact() {
           </div>
         </section>
 
-        {/* ═══════════════════ CONTACT CONTENT ══════════════════════════ */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <AsciiDivider label="channels" className="opacity-45 py-2" />
+        </div>
+
         <section className="py-24 sm:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-8 lg:grid-cols-[1fr_1.6fr]">
@@ -805,9 +767,6 @@ export default function Contact() {
             </div>
           </div>
         </section>
-      </main>
-
-      <MarketingFooter />
-    </div>
+    </MarketingPageShell>
   );
 }
