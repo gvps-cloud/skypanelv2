@@ -707,3 +707,16 @@ bile Toast Styles */
   height: calc(100svh - var(--announcement-banner-height, 0px)) !important;
   max-height: calc(100svh - var(--announcement-banner-height, 0px)) !important;
 }
+
+/* Belt-and-suspenders: when the authenticated shell is mounted, keep wheel/trackpad scroll on
+   .terminal-main-scroll only, not on the document (pairs with overscroll-behavior on that region). */
+html:has(.dashboard-app-shell),
+body:has(.dashboard-app-shell) {
+  height: 100%;
+  overflow: hidden;
+}
+
+body:has(.dashboard-app-shell) #root {
+  height: 100%;
+  min-height: 0;
+}

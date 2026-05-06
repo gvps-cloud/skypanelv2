@@ -46,6 +46,7 @@ import SkyPanelPreview from "@/components/home/SkyPanelPreview";
 import { TerminalPanel } from "@/components/terminal/TerminalPanel";
 import { getHostingFeatureSpecRows } from "@/lib/hostingPlanFeatures";
 import { useEnabledCategoryMappings } from "@/hooks/useCategoryMappings";
+import { cn } from "@/lib/utils";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 
@@ -545,6 +546,9 @@ export default function HomeRedesign() {
         !test.quote.toLowerCase().includes("application hosting")
       );
 
+  const showHostingPricingCard =
+    hostingEnabled && hostingLowestPrice !== null && hostingCheapestPlan != null;
+
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     const sync = () => setHeroReducedMotion(mq.matches);
@@ -756,7 +760,7 @@ export default function HomeRedesign() {
 
             <motion.div
               {...staggerContainer}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4"
             >
               {visibleCapabilityCards.map((card) => (
                 <motion.div key={card.label} {...staggerItem}>
@@ -806,7 +810,7 @@ export default function HomeRedesign() {
 
             <motion.div
               {...staggerContainer}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4"
             >
               {visiblePlatformCards.map((card) => (
                 <motion.div key={card.title} {...staggerItem}>
@@ -844,7 +848,7 @@ export default function HomeRedesign() {
 
             <motion.div
               {...staggerContainer}
-              className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4"
             >
               {visibleSolutionCards.map((item, idx) => (
                 <motion.div key={idx} {...staggerItem}>
@@ -936,7 +940,7 @@ export default function HomeRedesign() {
               </h2>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
               {visibleTestimonials.map((test, i) => (
                 <motion.div
                   key={i}
@@ -995,7 +999,10 @@ export default function HomeRedesign() {
             <motion.div
               {...fadeInUp}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="mx-auto max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6"
+              className={cn(
+                "mx-auto grid grid-cols-1 gap-6",
+                showHostingPricingCard ? "max-w-4xl md:grid-cols-2" : "max-w-md",
+              )}
             >
               {vpsCheapestPlan ? (
                 <Card className="border border-border/50 bg-card rounded-sm flex flex-col">
@@ -1081,7 +1088,7 @@ export default function HomeRedesign() {
                 </Card>
               )}
 
-              {hostingEnabled && hostingLowestPrice !== null && hostingCheapestPlan && (
+              {showHostingPricingCard && (
                 <Card className="border border-border/50 bg-card rounded-sm flex flex-col">
                   <CardHeader className="pb-2">
                     <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">

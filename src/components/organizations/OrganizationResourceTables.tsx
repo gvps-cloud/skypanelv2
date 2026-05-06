@@ -172,7 +172,11 @@ export function OrganizationResourceTables({
   });
 
   return (
-    <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ResourceTabKey)}>
+    <Tabs
+      value={activeTab}
+      onValueChange={(value) => setActiveTab(value as ResourceTabKey)}
+      activationMode="manual"
+    >
       <TabsList className="grid h-auto w-full grid-cols-1 gap-1 sm:grid-cols-4">
         <TabsTrigger value="vps">VPS Instances ({resources.vps_instances.length})</TabsTrigger>
         <TabsTrigger value="sshKeys">SSH Keys ({resources.ssh_keys.length})</TabsTrigger>

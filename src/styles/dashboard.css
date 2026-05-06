@@ -323,6 +323,7 @@ section.cyber-card {
 /* Main scroll region: subtle grid, optional CRT scanline (dark only) */
 .dashboard-app-shell .terminal-main-scroll {
   position: relative;
+  overscroll-behavior: contain;
   background-color: hsl(var(--background));
   background-image:
     linear-gradient(to right, hsl(var(--border) / 0.22) 1px, transparent 1px),
