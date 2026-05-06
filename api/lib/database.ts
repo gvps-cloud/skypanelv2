@@ -57,6 +57,7 @@ export function getLongLivedPgClientConfig(connectionString: string): ClientConf
     connectionString,
     ssl: getDatabaseSslConfig(connectionString),
     keepAlive: true,
+    keepAliveInitialDelayMillis: 15_000,
   };
 }
 
