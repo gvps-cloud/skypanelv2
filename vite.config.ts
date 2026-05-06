@@ -39,6 +39,22 @@ function removeMockData(): Plugin {
   };
 }
 
+/** Keep in sync with DEFAULT_DESCRIPTION in api/lib/spaSocialMeta.ts */
+const SHELL_META_DESCRIPTION =
+  "Cloud VPS and hosting with a modern control panel, transparent pricing, and reliable infrastructure.";
+
+function htmlShellDefaults(companyName: string): Plugin {
+  const shellTitle = `${companyName} | Cloud`;
+  return {
+    name: "html-shell-defaults",
+    transformIndexHtml(html) {
+      return html
+        .replace("__SHELL_PAGE_TITLE__", shellTitle)
+        .replace("__SHELL_META_DESCRIPTION__", SHELL_META_DESCRIPTION);
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -53,10 +69,11 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tsconfigPaths(),
+      htmlShellDefaults(companyName),
       removeMockData(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg', 'logo.svg'],
+        includeAssets: ['favicon.svg', 'logo.svg', 'og-default.png'],
         manifest: {
           name: `${companyName} Cloud Panel`,
           short_name: companyName,

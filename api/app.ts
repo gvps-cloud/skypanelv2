@@ -73,6 +73,12 @@ import {
 } from "./services/rateLimitMetrics.js";
 import { BillingCronService } from "./services/billingCronService.js";
 import { sendSafeErrorResponse } from "./lib/errorHandling.js";
+import {
+  resolveSpaSocialMeta,
+  resolvePublicOrigin,
+  defaultOgImageUrl,
+  type SpaSocialMeta,
+} from "./lib/spaSocialMeta.js";
 
 // for esm mode
 
@@ -171,11 +177,22 @@ function readEnvBoolean(value: string | undefined, fallback: boolean): boolean {
   return fallback;
 }
 
-function buildRuntimeHeadMarkup(nonce: string): string {
-  const companyName =
-    readEnvString(process.env.COMPANY_NAME, process.env.VITE_COMPANY_NAME) ||
-    "GVPSCloud";
+function buildSocialHeadMarkup(seo: SpaSocialMeta, ogImageAbs: string): string {
+  return [
+    `<link rel="canonical" href="${escapeHtml(seo.canonicalUrl)}" />`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:title" content="${escapeHtml(seo.title)}" />`,
+    `<meta property="og:description" content="${escapeHtml(seo.description)}" />`,
+    `<meta property="og:url" content="${escapeHtml(seo.canonicalUrl)}" />`,
+    `<meta property="og:image" content="${escapeHtml(ogImageAbs)}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:title" content="${escapeHtml(seo.title)}" />`,
+    `<meta name="twitter:description" content="${escapeHtml(seo.description)}" />`,
+    `<meta name="twitter:image" content="${escapeHtml(ogImageAbs)}" />`,
+  ].join("\n    ");
+}
 
+function buildRuntimeHeadMarkup(nonce: string, pageTitle: string): string {
   const scriptSrc = readEnvString(
     process.env.VITE_RYBBIT_SCRIPT_URL,
     process.env.VITE_TRACKING_SCRIPT_URL,
@@ -203,7 +220,7 @@ function buildRuntimeHeadMarkup(nonce: string): string {
   };
 
   const headParts = [
-    `<script nonce="${nonce}">document.title = ${JSON.stringify(`${companyName} | Cloud`)};</script>`,
+    `<script nonce="${nonce}">document.title = ${JSON.stringify(pageTitle)};</script>`,
     `<script nonce="${nonce}">window.__APP_RUNTIME_CONFIG__ = ${JSON.stringify(runtimeConfig)};</script>`,
   ];
 
@@ -246,13 +263,31 @@ function getClientIndexTemplate(): string {
   return cachedClientIndexTemplate;
 }
 
-function renderClientIndexHtml(nonce: string): string {
-  const template = getClientIndexTemplate();
-  return (
-    template
-      .replace("<!-- APP_RUNTIME_HEAD -->", buildRuntimeHeadMarkup(nonce))
-      // Add nonce to all inline <script> tags in the template (those without src attribute)
-      .replace(/(<script(?![^>]*\bsrc=)[^>]*)(>)/g, `$1 nonce="${nonce}"$2`)
+async function renderClientIndexHtml(
+  req: Request,
+  nonce: string,
+): Promise<string> {
+  const seo = await resolveSpaSocialMeta(req);
+  const origin = resolvePublicOrigin(req);
+  const ogImageAbs = seo.imageUrl || defaultOgImageUrl(origin);
+
+  let html = getClientIndexTemplate();
+  html = html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(seo.title)}</title>`);
+  html = html.replace(
+    /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i,
+    `<meta name="description" content="${escapeHtml(seo.description)}" />`,
+  );
+  html = html.replace(
+    "<!-- APP_SOCIAL_HEAD -->",
+    `    ${buildSocialHeadMarkup(seo, ogImageAbs)}`,
+  );
+  html = html.replace(
+    "<!-- APP_RUNTIME_HEAD -->",
+    buildRuntimeHeadMarkup(nonce, seo.title),
+  );
+  return html.replace(
+    /(<script(?![^>]*\bsrc=)[^>]*)(>)/g,
+    `$1 nonce="${nonce}"$2`,
   );
 }
 
@@ -404,7 +439,7 @@ if (distExists) {
     }),
   );
 
-  app.get("*", (req: Request, res: Response, next: NextFunction) => {
+  app.get("*", async (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api/")) {
       return next();
     }
@@ -418,7 +453,8 @@ if (distExists) {
 
     try {
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      res.type("html").send(renderClientIndexHtml(res.locals.cspNonce ?? ""));
+      const html = await renderClientIndexHtml(req, res.locals.cspNonce ?? "");
+      res.type("html").send(html);
     } catch (err) {
       next(err);
     }
