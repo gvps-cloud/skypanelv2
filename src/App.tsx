@@ -72,6 +72,8 @@ import Hosting from "./pages/Hosting";
 import HostingStore from "./pages/HostingStore";
 import HostingDetail from "./pages/HostingDetail";
 import Maintenance from "./pages/Maintenance";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import { useHostingStatus } from "./hooks/useHosting";
 
 // Component to handle impersonation banner display
@@ -288,6 +290,11 @@ function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  // Allow blog pages during maintenance
+  if (path === "/blog" || path.startsWith("/blog/")) {
+    return <>{children}</>;
+  }
+
   // Redirect everything else to maintenance
   return <Navigate to="/maintenance" replace />;
 }
@@ -302,6 +309,8 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/maintenance" element={<Maintenance />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:year/:slug" element={<BlogPost />} />
         <Route
           path="/login"
           element={

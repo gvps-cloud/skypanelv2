@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   AlertTriangle,
+  BookOpen,
   Building2,
   Calendar,
   CheckCircle,
@@ -191,6 +192,14 @@ const VolumePricing = lazy(async () => {
 const MaintenanceManager = lazy(
   () => import("@/components/admin/MaintenanceManager"),
 );
+const BlogPostManager = lazy(async () => {
+  const mod = await import("@/components/admin/blog/BlogPostManager");
+  return { default: mod.BlogPostManager };
+});
+const BlogCategoryManager = lazy(async () => {
+  const mod = await import("@/components/admin/blog/BlogCategoryManager");
+  return { default: mod.BlogCategoryManager };
+});
 
 type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
@@ -224,7 +233,9 @@ type AdminSection =
   | "enhance-subscriptions"
   | "fraud-protection"
   | "refunds"
-  | "maintenance";
+  | "maintenance"
+  | "blog-management"
+  | "blog-categories";
 
 type AdminNetworkingTab =
   | "rdns"
@@ -264,7 +275,9 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "enhance-subscriptions",
   "fraud-protection",
   "refunds",
-  "maintenance"
+  "maintenance",
+  "blog-management",
+  "blog-categories"
 ];
 
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
@@ -3649,6 +3662,37 @@ const Admin: React.FC = () => {
               </p>
             </div>
             <MaintenanceManager />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="blog-management" activeSection={activeTab}>
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Blog Posts
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Create and manage blog posts for the public-facing blog.
+              </p>
+            </div>
+            <Suspense fallback={<AdminSectionFallback />}>
+              <BlogPostManager />
+            </Suspense>
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="blog-categories" activeSection={activeTab}>
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold">Blog Categories</h2>
+              <p className="text-sm text-muted-foreground">
+                Organize blog posts into categories.
+              </p>
+            </div>
+            <Suspense fallback={<AdminSectionFallback />}>
+              <BlogCategoryManager />
+            </Suspense>
           </div>
         </SectionPanel>
 

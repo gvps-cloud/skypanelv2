@@ -2,6 +2,7 @@ import * as React from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Activity,
+  BookOpen,
   Building2,
   CreditCard,
   FileText,
@@ -178,6 +179,16 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             ],
           },
           {
+            title: "Content",
+            icon: BookOpen,
+            url: `/admin#blog-management`,
+            isActive: ["blog-management", "blog-categories"].includes(activeAnchor),
+            items: [
+              { title: "Blog Posts", url: `/admin#blog-management`, isActive: activeAnchor === "blog-management" },
+              { title: "Blog Categories", url: `/admin#blog-categories`, isActive: activeAnchor === "blog-categories" },
+            ],
+          },
+          {
             title: "Platform & Audit",
             icon: ShieldCheck,
             url: `/admin#platform`,
@@ -206,12 +217,35 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
         return adminGroups;
       }
 
+      // Dashboard stays first; remaining items follow label length (long → short) for a cleaner visual taper.
       const userNavItems = [
         {
           title: "Dashboard",
           url: "/dashboard",
           icon: LayoutDashboard,
           isActive: isDashboardActive,
+        },
+        {
+          title: "Organizations",
+          url: "/organizations",
+          icon: Building2,
+          isActive: pathname.startsWith("/organizations"),
+        },
+        ...(hostingStatus?.enabled
+          ? [
+              {
+                title: "Web Hosting",
+                url: "/hosting",
+                icon: Globe,
+                isActive: isHostingActive,
+              },
+            ]
+          : []),
+        {
+          title: "Activity",
+          url: "/activity",
+          icon: Activity,
+          isActive: isActivityActive,
         },
         {
           title: "Compute",
@@ -231,21 +265,11 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             },
           ],
         },
-        ...(hostingStatus?.enabled
-          ? [
-              {
-                title: "Web Hosting",
-                url: "/hosting",
-                icon: Globe,
-                isActive: isHostingActive,
-              },
-            ]
-          : []),
         {
-          title: "Organizations",
-          url: "/organizations",
-          icon: Building2,
-          isActive: pathname.startsWith("/organizations"),
+          title: "Billing",
+          url: "/billing",
+          icon: CreditCard,
+          isActive: isBillingActive,
         },
         {
           title: "Notes",
@@ -266,16 +290,10 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
           ],
         },
         {
-          title: "Activity",
-          url: "/activity",
-          icon: Activity,
-          isActive: isActivityActive,
-        },
-        {
-          title: "Billing",
-          url: "/billing",
-          icon: CreditCard,
-          isActive: isBillingActive,
+          title: "Blog",
+          url: "/blog",
+          icon: BookOpen,
+          isActive: pathname.startsWith("/blog"),
         },
       ];
 

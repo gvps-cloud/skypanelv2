@@ -189,6 +189,8 @@ export default function RichTextEditor({
     extensions: [
       StarterKit.configure({
         codeBlock: false, // replaced by CodeBlockLowlight
+        link: false,
+        underline: false,
       }),
       CodeBlockLowlight.configure({ lowlight }),
       Link.configure({

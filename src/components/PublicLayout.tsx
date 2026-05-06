@@ -1,4 +1,5 @@
 import React from 'react';
+import '@/styles/home.css';
 import MarketingNavbar from '@/components/MarketingNavbar';
 import MarketingFooter from '@/components/MarketingFooter';
 

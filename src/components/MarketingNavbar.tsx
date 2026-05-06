@@ -35,6 +35,7 @@ const navLinks: NavLinkConfig[] = [
   { label: "Regions", href: "/regions" },
   { label: "Status", href: "/status" },
   { label: "Docs", href: "/docs" },
+  { label: "Blog", href: "/blog" },
 ];
 
 export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {

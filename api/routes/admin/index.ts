@@ -30,6 +30,7 @@ import githubRouter from "./github.js";
 import enhanceAdminRouter from "./enhance.js";
 import refundsRouter from "./refunds.js";
 import fraudRouter from "./fraud.js";
+import blogRouter from "./blog.js";
 
 const router = express.Router();
 
@@ -71,5 +72,6 @@ router.use("/github", githubRouter);
 router.use("/enhance", enhanceAdminRouter);
 router.use("/refunds", refundsRouter);
 router.use("/fraud-checks", fraudRouter);
+router.use("/blog", blogRouter);
 
 export default router;

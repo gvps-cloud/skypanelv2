@@ -45,11 +45,15 @@ const FRAMES: FrameDef[] = [
   { kind: "svg", svg: wrapLucideSvg(LUCIDE_ACTIVITY), scale: 0.7 },
 ]
 
-function parsePrimaryHueFromCss(): number {
+function parsePrimaryFromCss(): { hue: number; saturation: number } {
   const raw = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim()
-  const first = raw.split(/\s+/)[0] ?? ""
-  const h = Number.parseFloat(first)
-  return Number.isFinite(h) ? h : 160
+  const parts = raw.split(/\s+/)
+  const h = Number.parseFloat(parts[0] ?? "")
+  const s = Number.parseFloat(parts[1] ?? "")
+  return {
+    hue: Number.isFinite(h) ? h : 160,
+    saturation: Number.isFinite(s) ? s : 50,
+  }
 }
 
 function loadImageFromUrl(url: string): Promise<HTMLImageElement> {
@@ -167,7 +171,14 @@ export default function DataStreamCanvas({
   const framesRef = useRef(frames)
   framesRef.current = frames
 
-  const cssHueRef = useRef(parsePrimaryHueFromCss())
+  const cssHueRef = useRef((() => {
+    const { hue } = parsePrimaryFromCss()
+    return hue
+  })())
+  const cssSaturationRef = useRef((() => {
+    const { saturation } = parsePrimaryFromCss()
+    return saturation
+  })())
   const seqRef = useRef({
     phase: "hold" as "hold" | "fade",
     phaseStart: 0,
@@ -180,6 +191,11 @@ export default function DataStreamCanvas({
   const resolveHue = useCallback(() => {
     if (typeof hueProp === "number" && Number.isFinite(hueProp)) return hueProp
     return cssHueRef.current
+  }, [hueProp])
+
+  const resolveSaturation = useCallback(() => {
+    if (typeof hueProp === "number" && Number.isFinite(hueProp)) return 50
+    return cssSaturationRef.current
   }, [hueProp])
 
   const initCellChars = useCallback((cols: number, rows: number) => {
@@ -240,6 +256,7 @@ export default function DataStreamCanvas({
           rows,
           staticCellSize,
           resolveHue(),
+          resolveSaturation(),
         )
       }
     },
@@ -282,14 +299,18 @@ export default function DataStreamCanvas({
   }, [bakeAllMasks, cellSize, initCellChars])
 
   useEffect(() => {
-    cssHueRef.current = parsePrimaryHueFromCss()
+    const { hue, saturation } = parsePrimaryFromCss()
+    cssHueRef.current = hue
+    cssSaturationRef.current = saturation
   }, [])
 
   useEffect(() => {
     if (typeof hueProp === "number" && Number.isFinite(hueProp)) return
     const el = document.documentElement
     const obs = new MutationObserver(() => {
-      cssHueRef.current = parsePrimaryHueFromCss()
+      const { hue, saturation } = parsePrimaryFromCss()
+      cssHueRef.current = hue
+      cssSaturationRef.current = saturation
     })
     obs.observe(el, { attributes: true, attributeFilter: ["class"] })
     return () => obs.disconnect()
@@ -317,13 +338,13 @@ export default function DataStreamCanvas({
     const { cols, rows } = dimsRef.current
     const mask = masksRef.current[0]
     if (cols > 0 && rows > 0 && mask && mask.length === cols * rows) {
-      drawStaticLogo(canvas, ctx, mask, cols, rows, cellSize, resolveHue())
+      drawStaticLogo(canvas, ctx, mask, cols, rows, cellSize, resolveHue(), resolveSaturation())
     }
 
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
-  }, [reducedMotion, resize, resolveHue, cellSize])
+  }, [reducedMotion, resize, resolveHue, resolveSaturation, cellSize])
 
   useEffect(() => {
     if (reducedMotion) return
@@ -412,6 +433,7 @@ export default function DataStreamCanvas({
 
       const isDark = document.documentElement.classList.contains("dark")
       const hue = resolveHue()
+      const saturation = resolveSaturation()
 
       ctx.font = GLYPH_FONT(cellSize)
       ctx.clearRect(0, 0, w, h)
@@ -457,10 +479,11 @@ export default function DataStreamCanvas({
           const lightnessDark = 50 + 25 * m
           const lightnessLight = 30 + 15 * m
 
+          const saturation = hueProp != null ? 50 : resolveSaturation()
           if (isDark) {
-            ctx.fillStyle = `hsla(${hue}, 75%, ${lightnessDark}%, ${alpha})`
+            ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightnessDark}%, ${alpha})`
           } else {
-            ctx.fillStyle = `hsla(${hue}, 60%, ${lightnessLight}%, ${alpha})`
+            ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightnessLight}%, ${alpha})`
           }
           ctx.fillText(CHARS[chars[i]! % CHAR_POOL_SIZE]!, c * cellSize, y)
           i++
@@ -504,6 +527,7 @@ function drawStaticLogo(
   rows: number,
   cellSize: number,
   hue: number,
+  saturation: number,
 ): void {
   const { width, height } = canvas
   const dpr = window.devicePixelRatio || 1
@@ -526,9 +550,9 @@ function drawStaticLogo(
       const lightnessDark = 50 + 25 * m
       const lightnessLight = 30 + 15 * m
       if (isDark) {
-        ctx.fillStyle = `hsla(${hue}, 75%, ${lightnessDark}%, ${alpha})`
+        ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightnessDark}%, ${alpha})`
       } else {
-        ctx.fillStyle = `hsla(${hue}, 60%, ${lightnessLight}%, ${alpha})`
+        ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightnessLight}%, ${alpha})`
       }
       ctx.fillText(ch, c * cellSize, y)
       i++

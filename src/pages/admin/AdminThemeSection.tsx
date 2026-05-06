@@ -21,7 +21,7 @@ const QUICK_COLORS = [
   { label: "Emerald", hex: "#10b981" },
   { label: "Rose", hex: "#f43f5e" },
   { label: "Amber", hex: "#f59e0b" },
-  { label: "Cyan", hex: "#06b6d4" },
+  { label: "Lagoon", hex: "#1388c3" },
   { label: "Violet", hex: "#8b5cf6" },
   { label: "Pink", hex: "#ec4899" },
   { label: "Sky", hex: "#0ea5e9" },
@@ -290,8 +290,12 @@ export const AdminThemeSection: React.FC<AdminThemeSectionProps> = ({
             {/* Visual Picker */}
             {activePickerTab === "picker" && (
               <div className="flex flex-col items-center gap-3">
-                <div className="[&_.react-colorful]:!w-full [&_.react-colorful]:!h-48 [&_.react-colorful]:rounded-lg [&_.react-colorful]:border [&_.react-colorful]:border-border/60">
-                  <HexColorPicker color={customColor} onChange={(c) => { setCustomColor(c); setCustomError(null); }} />
+                <div className="relative w-full rounded-lg border border-border/60 overflow-hidden" style={{ height: "12rem" }}>
+                  <HexColorPicker
+                    color={customColor}
+                    onChange={(c) => { setCustomColor(c); setCustomError(null); }}
+                    style={{ width: "100%", height: "100%" }}
+                  />
                 </div>
                 <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-1.5">
                   <span className="text-xs text-muted-foreground">#</span>

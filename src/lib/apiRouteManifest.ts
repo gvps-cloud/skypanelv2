@@ -199,6 +199,36 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
     "admin": false
   },
   {
+    "method": "GET",
+    "path": "/api/blog/categories",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/blog/images/:filename",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/blog/posts",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/blog/posts/:year/:slug",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/blog/tags",
+    "protected": false,
+    "admin": false
+  },
+  {
     "method": "POST",
     "path": "/api/contact",
     "protected": false,

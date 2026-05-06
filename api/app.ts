@@ -50,6 +50,7 @@ import apiKeysRoutes from "./routes/apiKeys/index.js";
 import { authenticateApiKey } from "./routes/apiKeys/middleware.js";
 import documentationRoutes from "./routes/documentation.js";
 import announcementsRoutes from "./routes/announcements.js";
+import blogPublicRoutes from "./routes/blog.js";
 import notesRoutes from "./routes/notes.js";
 import hostingPublicRoutes from "./routes/hosting/public.js";
 import hostingAuthenticatedRoutes from "./routes/hosting/store.js";
@@ -329,6 +330,9 @@ app.use("/api/announcements", announcementsRoutes);
 
 // Hosting public status route MUST mount before notesRoutes (which has global authenticateToken)
 app.use("/api/hosting", hostingPublicRoutes);
+
+// Public blog routes MUST mount before notesRoutes (no auth required, accessible during maintenance)
+app.use("/api/blog", blogPublicRoutes);
 
 app.use("/api", notesRoutes);
 
