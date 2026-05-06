@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import DataStreamCanvas from "@/components/home/DataStreamCanvas";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteStatus } from "@/hooks/useSiteStatus";
 import { BRAND_NAME } from "@/lib/brand";
 
 export default function Register() {
@@ -29,6 +30,8 @@ export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const prefersReducedMotion = useReducedMotion();
+  const { data: siteStatus } = useSiteStatus();
+  const isRegDisabled = siteStatus?.registrationDisabled === true;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -75,6 +78,60 @@ export default function Register() {
       setLoading(false);
     }
   };
+
+  // If registration is disabled, show a gated message
+  if (isRegDisabled) {
+    return (
+      <div className="auth-page auth-page--split">
+        <div className="auth-page__grid" />
+        <div className="auth-page__orb-left" />
+        <div className="auth-page__orb-right" />
+        <div className="auth-page__orb-bottom" />
+
+        <motion.div
+          className="auth-split"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
+        >
+          <div className="auth-split__form">
+            <Link to="/" className="auth-brand-link" aria-label={`${BRAND_NAME} home`}>
+              <span className="auth-brand-link__mark">
+                <Logo size="sm" />
+              </span>
+              <span>{BRAND_NAME}</span>
+            </Link>
+
+            <div className="auth-card">
+              <div className="auth-card__header">
+                <div className="auth-card__icon-wrap">
+                  <UserPlus className="h-5 w-5" />
+                </div>
+                <h1 className="auth-card__title">Registration Closed</h1>
+                <p className="auth-card__subtitle">
+                  New account registration is currently disabled by the site administrator.
+                </p>
+              </div>
+
+              <div className="auth-card__body">
+                <div className="auth-footer">
+                  Already have an account?{" "}
+                  <Link to="/login" className="auth-footer__link">
+                    Sign in
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="auth-split__visual" aria-hidden="true">
+            <DataStreamCanvas className="absolute inset-0" reducedMotion={Boolean(prefersReducedMotion)} />
+            <div className="auth-split__visual-fade" />
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-page auth-page--split">

@@ -210,6 +210,25 @@ function HostingMarketingGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Registration Guard: redirects to login when registrations are disabled
+function RegistrationEnabledRoute({ children }: { children: React.ReactNode }) {
+  const { data: siteStatus, isLoading } = useSiteStatus();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (siteStatus?.registrationDisabled) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 // Component to setup auto-logout inside Router context
 function AutoLogoutSetup() {
   const { logout } = useAuth();
@@ -294,9 +313,11 @@ function AppRoutes() {
         <Route
           path="/register"
           element={
-            <PublicRoute>
-              <Register />
-            </PublicRoute>
+            <RegistrationEnabledRoute>
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            </RegistrationEnabledRoute>
           }
         />
         <Route

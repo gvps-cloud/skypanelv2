@@ -1284,7 +1284,11 @@ const Admin: React.FC = () => {
         setSavingPresetId(preset.id);
         setTheme(preset.id);
 
-        const payload = await apiClient.put<{ theme?: { updatedAt?: string } }>('/admin/theme', { presetId: preset.id });
+        const body: Record<string, unknown> = { presetId: preset.id };
+        if (preset.id === "custom") {
+          body.customPreset = { light: preset.light, dark: preset.dark };
+        }
+        const payload = await apiClient.put<{ theme?: { updatedAt?: string } }>('/admin/theme', body);
         const theme = payload?.theme as { updatedAt?: string } | undefined;
         setThemeUpdatedAt(
           typeof theme?.updatedAt === "string" ? theme.updatedAt : null,
@@ -3535,121 +3539,6 @@ const Admin: React.FC = () => {
                 <RegionLabelManager />
               </TabsContent>
 
-              <TabsContent value="theme">
-                <div className="bg-card shadow sm:rounded-lg">
-                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <Palette className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <h2 className="text-lg font-medium text-foreground">
-                          Theme Manager
-                        </h2>
-                        <p className="text-sm text-muted-foreground">
-                          Choose a theme preset. Updates roll out to every user
-                          instantly.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {themeConfigLoading
-                        ? "Syncing..."
-                        : `Last updated: ${formattedThemeUpdatedAt}`}
-                    </div>
-                  </div>
-                  <div className="space-y-10 px-6 py-6">
-                    <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Presets
-                      </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Choose a built-in palette. Applying a preset changes the
-                        experience for every organization member.
-                      </p>
-                      <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                        {orderedThemes.map((preset) => {
-                          const isActive = preset.id === themeId;
-                          const isDefault = preset.id === DEFAULT_THEME_ID;
-                          const isSaving = savingPresetId === preset.id;
-                          const disabled =
-                            (savingPresetId !== null &&
-                              savingPresetId !== preset.id) ||
-                            themeConfigLoading;
-
-                          return (
-                            <button
-                              key={preset.id}
-                              type="button"
-                              onClick={() => handlePresetSelection(preset)}
-                              disabled={disabled}
-                              className={`relative w-full rounded-lg border p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                                isActive
-                                  ? "border-primary ring-2 ring-primary ring-opacity-20"
-                                  : "border-border hover:border-primary"
-                              } ${
-                                disabled ? "cursor-not-allowed opacity-60" : ""
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-4">
-                                <div>
-                                  <h3 className="text-base font-semibold text-foreground">
-                                    {preset.label}
-                                  </h3>
-                                  <p className="mt-1 text-sm text-muted-foreground">
-                                    {preset.description}
-                                  </p>
-                                </div>
-                                <div className="flex flex-col items-end gap-2">
-                                  {isDefault && (
-                                    <Badge variant="secondary">Default</Badge>
-                                  )}
-                                  <Badge
-                                    variant={isActive ? "default" : "outline"}
-                                  >
-                                    {isSaving
-                                      ? "Saving..."
-                                      : isActive
-                                        ? "Active"
-                                        : "Preview"}
-                                  </Badge>
-                                </div>
-                              </div>
-                              <div className="mt-4 flex gap-4">
-                                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                                  <span>Primary</span>
-                                  <span
-                                    className="h-10 w-10 rounded-md border shadow-sm"
-                                    style={{
-                                      backgroundColor: `hsl(${preset.light.primary})`,
-                                    }}
-                                  />
-                                </div>
-                                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                                  <span>Surface</span>
-                                  <span
-                                    className="h-10 w-10 rounded-md border shadow-sm"
-                                    style={{
-                                      backgroundColor: `hsl(${preset.light.background})`,
-                                    }}
-                                  />
-                                </div>
-                                <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                                  <span>Dark Primary</span>
-                                  <span
-                                    className="h-10 w-10 rounded-md border shadow-sm"
-                                    style={{
-                                      backgroundColor: `hsl(${preset.dark.primary})`,
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
             </Tabs>
           </div>
         </SectionPanel>

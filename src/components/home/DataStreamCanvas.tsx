@@ -32,11 +32,11 @@ function wrapLucideSvg(inner: string): string {
 }
 
 type FrameDef =
-  | { kind: "url"; src: string; scale: number }
-  | { kind: "svg"; svg: string; scale: number }
+  | { kind: "url"; src: string; scale: number; invertMask?: boolean }
+  | { kind: "svg"; svg: string; scale: number; invertMask?: boolean }
 
 const FRAMES: FrameDef[] = [
-  { kind: "url", src: "/favicon.svg", scale: 0.78 },
+  { kind: "url", src: "/favicon.svg", scale: 0.78, invertMask: true },
   { kind: "svg", svg: wrapLucideSvg(LUCIDE_SERVER), scale: 0.7 },
   { kind: "svg", svg: wrapLucideSvg(LUCIDE_PANELS_TOP_LEFT), scale: 0.7 },
   { kind: "svg", svg: wrapLucideSvg(LUCIDE_EARTH), scale: 0.7 },
@@ -91,8 +91,9 @@ function drawImageToMaskContext(
   cols: number,
   rows: number,
   scale: number,
+  invert: boolean,
 ): void {
-  ctx.fillStyle = "#000000"
+  ctx.fillStyle = invert ? "#ffffff" : "#000000"
   ctx.fillRect(0, 0, cols, rows)
   const iw = img.naturalWidth || img.width
   const ih = img.naturalHeight || img.height
@@ -112,7 +113,7 @@ function drawImageToMaskContext(
   ctx.drawImage(img, 0, 0, iw, ih, ox, oy, dw, dh)
 }
 
-function sampleLuminanceMask(ctx: CanvasRenderingContext2D, cols: number, rows: number): Uint8Array {
+function sampleLuminanceMask(ctx: CanvasRenderingContext2D, cols: number, rows: number, invert: boolean): Uint8Array {
   const { data } = ctx.getImageData(0, 0, cols, rows)
   const mask = new Uint8Array(cols * rows)
   for (let i = 0; i < cols * rows; i++) {
@@ -122,7 +123,12 @@ function sampleLuminanceMask(ctx: CanvasRenderingContext2D, cols: number, rows: 
     const b = data[o + 2] ?? 0
     const a = (data[o + 3] ?? 0) / 255
     const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-    mask[i] = Math.min(255, Math.round(255 * lum * a))
+    if (invert) {
+      // Measure deviation from white: dark content on white bg → high mask value
+      mask[i] = Math.min(255, Math.round(255 * (1 - lum) * a))
+    } else {
+      mask[i] = Math.min(255, Math.round(255 * lum * a))
+    }
   }
   return mask
 }
@@ -202,8 +208,9 @@ export default function DataStreamCanvas({
           const frame = currentFrames[f]!
           const img = await loadFrameImage(frame)
           if (generation !== bakeGenerationRef.current) return
-          drawImageToMaskContext(wctx, img, cols, rows, frame.scale)
-          results.push(sampleLuminanceMask(wctx, cols, rows))
+          const invert = frame.invertMask === true
+          drawImageToMaskContext(wctx, img, cols, rows, frame.scale, invert)
+          results.push(sampleLuminanceMask(wctx, cols, rows, invert))
         }
       } catch {
         if (generation !== bakeGenerationRef.current) return
