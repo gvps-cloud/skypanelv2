@@ -14,6 +14,12 @@ export type ThemeId =
   | "aurora"
   | "midnight"
   | "sage"
+  | "cyan"
+  | "purple"
+  | "pink"
+  | "yellow"
+  | "brown"
+  | "hacker"
   | "custom";
 
 export interface ThemePreset {
@@ -982,6 +988,384 @@ const rawThemePresets: ThemePreset[] = [
       "sidebar-ring": "152 38% 48%",
     }),
   },
+  {
+    id: "cyan",
+    label: "Cyan",
+    description: "Bright cyan with crisp, modern energy.",
+    light: withShared({
+      background: "0 0% 100%",
+      foreground: "195 55% 15%",
+      muted: "190 40% 96%",
+      "muted-foreground": "192 30% 40%",
+      popover: "0 0% 100%",
+      "popover-foreground": "195 55% 15%",
+      card: "0 0% 100%",
+      "card-foreground": "195 55% 15%",
+      border: "190 38% 84%",
+      input: "190 38% 84%",
+      primary: "190 90% 45%",
+      "primary-foreground": "195 55% 10%",
+      secondary: "190 38% 92%",
+      "secondary-foreground": "192 48% 22%",
+      accent: "190 45% 90%",
+      "accent-foreground": "192 48% 22%",
+      destructive: "0 72% 51%",
+      "destructive-foreground": "0 0% 100%",
+      ring: "190 90% 45%",
+      "sidebar-background": "190 42% 97%",
+      "sidebar-foreground": "192 38% 28%",
+      "sidebar-primary": "190 90% 45%",
+      "sidebar-primary-foreground": "195 55% 10%",
+      "sidebar-accent": "190 45% 90%",
+      "sidebar-accent-foreground": "192 48% 22%",
+      "sidebar-border": "190 38% 84%",
+      "sidebar-ring": "190 90% 45%",
+    }),
+    dark: withShared({
+      background: "195 55% 8%",
+      foreground: "190 80% 92%",
+      muted: "192 40% 18%",
+      "muted-foreground": "192 28% 68%",
+      popover: "195 55% 8%",
+      "popover-foreground": "190 80% 92%",
+      card: "192 50% 10%",
+      "card-foreground": "190 80% 92%",
+      border: "192 38% 24%",
+      input: "192 38% 24%",
+      primary: "190 88% 55%",
+      "primary-foreground": "195 100% 8%",
+      secondary: "192 38% 22%",
+      "secondary-foreground": "190 80% 92%",
+      accent: "192 35% 26%",
+      "accent-foreground": "190 75% 88%",
+      destructive: "0 62.8% 30.6%",
+      "destructive-foreground": "0 85.7% 97.3%",
+      ring: "190 88% 55%",
+      "sidebar-background": "192 48% 10%",
+      "sidebar-foreground": "190 75% 88%",
+      "sidebar-primary": "190 88% 55%",
+      "sidebar-primary-foreground": "195 100% 8%",
+      "sidebar-accent": "192 35% 26%",
+      "sidebar-accent-foreground": "190 75% 88%",
+      "sidebar-border": "192 38% 24%",
+      "sidebar-ring": "190 88% 55%",
+    }),
+  },
+  {
+    id: "purple",
+    label: "Purple",
+    description: "Rich purple with regal depth and warmth.",
+    light: withShared({
+      background: "0 0% 100%",
+      foreground: "270 50% 15%",
+      muted: "270 35% 95%",
+      "muted-foreground": "275 28% 42%",
+      popover: "0 0% 100%",
+      "popover-foreground": "270 50% 15%",
+      card: "0 0% 100%",
+      "card-foreground": "270 50% 15%",
+      border: "275 30% 86%",
+      input: "275 30% 86%",
+      primary: "275 75% 55%",
+      "primary-foreground": "0 0% 100%",
+      secondary: "270 35% 93%",
+      "secondary-foreground": "272 50% 24%",
+      accent: "275 35% 90%",
+      "accent-foreground": "272 50% 24%",
+      destructive: "0 72% 51%",
+      "destructive-foreground": "0 0% 100%",
+      ring: "275 75% 55%",
+      "sidebar-background": "272 38% 97%",
+      "sidebar-foreground": "272 38% 28%",
+      "sidebar-primary": "275 75% 55%",
+      "sidebar-primary-foreground": "0 0% 100%",
+      "sidebar-accent": "275 35% 90%",
+      "sidebar-accent-foreground": "272 50% 24%",
+      "sidebar-border": "275 30% 86%",
+      "sidebar-ring": "275 75% 55%",
+    }),
+    dark: withShared({
+      background: "275 45% 8%",
+      foreground: "270 60% 96%",
+      muted: "272 38% 18%",
+      "muted-foreground": "275 30% 68%",
+      popover: "275 45% 8%",
+      "popover-foreground": "270 60% 96%",
+      card: "274 42% 11%",
+      "card-foreground": "270 60% 96%",
+      border: "272 38% 24%",
+      input: "272 38% 24%",
+      primary: "272 75% 65%",
+      "primary-foreground": "275 100% 8%",
+      secondary: "272 38% 24%",
+      "secondary-foreground": "270 60% 96%",
+      accent: "272 35% 26%",
+      "accent-foreground": "270 55% 90%",
+      destructive: "0 62.8% 30.6%",
+      "destructive-foreground": "0 85.7% 97.3%",
+      ring: "272 75% 65%",
+      "sidebar-background": "274 40% 12%",
+      "sidebar-foreground": "270 55% 90%",
+      "sidebar-primary": "272 75% 65%",
+      "sidebar-primary-foreground": "275 100% 8%",
+      "sidebar-accent": "272 35% 26%",
+      "sidebar-accent-foreground": "270 55% 90%",
+      "sidebar-border": "272 38% 24%",
+      "sidebar-ring": "272 75% 65%",
+    }),
+  },
+  {
+    id: "pink",
+    label: "Pink",
+    description: "Playful pink with vibrant modern energy.",
+    light: withShared({
+      background: "0 0% 100%",
+      foreground: "340 50% 15%",
+      muted: "340 35% 95%",
+      "muted-foreground": "340 25% 42%",
+      popover: "0 0% 100%",
+      "popover-foreground": "340 50% 15%",
+      card: "0 0% 100%",
+      "card-foreground": "340 50% 15%",
+      border: "340 30% 86%",
+      input: "340 30% 86%",
+      primary: "340 80% 55%",
+      "primary-foreground": "345 100% 98%",
+      secondary: "340 35% 93%",
+      "secondary-foreground": "340 50% 24%",
+      accent: "340 40% 90%",
+      "accent-foreground": "340 50% 24%",
+      destructive: "0 72% 51%",
+      "destructive-foreground": "0 0% 100%",
+      ring: "340 80% 55%",
+      "sidebar-background": "340 40% 97%",
+      "sidebar-foreground": "340 38% 28%",
+      "sidebar-primary": "340 80% 55%",
+      "sidebar-primary-foreground": "345 100% 98%",
+      "sidebar-accent": "340 40% 90%",
+      "sidebar-accent-foreground": "340 50% 24%",
+      "sidebar-border": "340 30% 86%",
+      "sidebar-ring": "340 80% 55%",
+    }),
+    dark: withShared({
+      background: "340 40% 8%",
+      foreground: "340 70% 96%",
+      muted: "342 35% 18%",
+      "muted-foreground": "342 25% 68%",
+      popover: "340 40% 8%",
+      "popover-foreground": "340 70% 96%",
+      card: "342 38% 11%",
+      "card-foreground": "340 70% 96%",
+      border: "342 35% 24%",
+      input: "342 35% 24%",
+      primary: "338 80% 62%",
+      "primary-foreground": "340 100% 10%",
+      secondary: "342 35% 24%",
+      "secondary-foreground": "340 70% 96%",
+      accent: "342 32% 26%",
+      "accent-foreground": "338 65% 90%",
+      destructive: "0 62.8% 30.6%",
+      "destructive-foreground": "0 85.7% 97.3%",
+      ring: "338 80% 62%",
+      "sidebar-background": "342 38% 12%",
+      "sidebar-foreground": "338 65% 90%",
+      "sidebar-primary": "338 80% 62%",
+      "sidebar-primary-foreground": "340 100% 10%",
+      "sidebar-accent": "342 32% 26%",
+      "sidebar-accent-foreground": "338 65% 90%",
+      "sidebar-border": "342 35% 24%",
+      "sidebar-ring": "338 80% 62%",
+    }),
+  },
+  {
+    id: "yellow",
+    label: "Yellow",
+    description: "Sunny yellow with warm, optimistic glow.",
+    light: withShared({
+      background: "0 0% 100%",
+      foreground: "45 80% 12%",
+      muted: "48 65% 95%",
+      "muted-foreground": "42 25% 44%",
+      popover: "0 0% 100%",
+      "popover-foreground": "45 80% 12%",
+      card: "0 0% 100%",
+      "card-foreground": "45 80% 12%",
+      border: "46 50% 86%",
+      input: "46 50% 86%",
+      primary: "45 95% 52%",
+      "primary-foreground": "45 100% 6%",
+      secondary: "48 60% 93%",
+      "secondary-foreground": "42 55% 20%",
+      accent: "46 65% 90%",
+      "accent-foreground": "42 55% 20%",
+      destructive: "0 72% 51%",
+      "destructive-foreground": "0 0% 100%",
+      ring: "45 95% 52%",
+      "sidebar-background": "48 65% 97%",
+      "sidebar-foreground": "44 55% 22%",
+      "sidebar-primary": "45 95% 52%",
+      "sidebar-primary-foreground": "45 100% 6%",
+      "sidebar-accent": "46 65% 90%",
+      "sidebar-accent-foreground": "42 55% 20%",
+      "sidebar-border": "46 50% 86%",
+      "sidebar-ring": "45 95% 52%",
+    }),
+    dark: withShared({
+      background: "42 35% 8%",
+      foreground: "48 90% 96%",
+      muted: "40 30% 18%",
+      "muted-foreground": "42 22% 68%",
+      popover: "42 35% 8%",
+      "popover-foreground": "48 90% 96%",
+      card: "44 30% 10%",
+      "card-foreground": "48 90% 96%",
+      border: "40 32% 22%",
+      input: "40 32% 22%",
+      primary: "45 95% 58%",
+      "primary-foreground": "42 100% 8%",
+      secondary: "40 32% 22%",
+      "secondary-foreground": "48 90% 96%",
+      accent: "40 28% 24%",
+      "accent-foreground": "48 85% 92%",
+      destructive: "0 62.8% 30.6%",
+      "destructive-foreground": "0 85.7% 97.3%",
+      ring: "45 95% 58%",
+      "sidebar-background": "42 30% 10%",
+      "sidebar-foreground": "48 85% 92%",
+      "sidebar-primary": "45 95% 58%",
+      "sidebar-primary-foreground": "42 100% 8%",
+      "sidebar-accent": "40 28% 24%",
+      "sidebar-accent-foreground": "48 85% 92%",
+      "sidebar-border": "40 32% 22%",
+      "sidebar-ring": "45 95% 58%",
+    }),
+  },
+  {
+    id: "brown",
+    label: "Brown",
+    description: "Earthy brown with organic, grounded warmth.",
+    light: withShared({
+      background: "0 0% 100%",
+      foreground: "25 35% 14%",
+      muted: "30 25% 94%",
+      "muted-foreground": "25 18% 40%",
+      popover: "0 0% 100%",
+      "popover-foreground": "25 35% 14%",
+      card: "0 0% 100%",
+      "card-foreground": "25 35% 14%",
+      border: "28 25% 84%",
+      input: "28 25% 84%",
+      primary: "25 60% 38%",
+      "primary-foreground": "30 100% 98%",
+      secondary: "30 25% 92%",
+      "secondary-foreground": "25 35% 22%",
+      accent: "28 30% 90%",
+      "accent-foreground": "25 35% 22%",
+      destructive: "0 72% 51%",
+      "destructive-foreground": "0 0% 100%",
+      ring: "25 60% 38%",
+      "sidebar-background": "28 28% 96%",
+      "sidebar-foreground": "25 32% 24%",
+      "sidebar-primary": "25 60% 38%",
+      "sidebar-primary-foreground": "30 100% 98%",
+      "sidebar-accent": "28 30% 90%",
+      "sidebar-accent-foreground": "25 35% 22%",
+      "sidebar-border": "28 25% 84%",
+      "sidebar-ring": "25 60% 38%",
+    }),
+    dark: withShared({
+      background: "25 30% 8%",
+      foreground: "30 65% 94%",
+      muted: "24 22% 18%",
+      "muted-foreground": "26 18% 68%",
+      popover: "25 30% 8%",
+      "popover-foreground": "30 65% 94%",
+      card: "24 28% 10%",
+      "card-foreground": "30 65% 94%",
+      border: "24 22% 22%",
+      input: "24 22% 22%",
+      primary: "25 65% 48%",
+      "primary-foreground": "28 100% 6%",
+      secondary: "24 22% 22%",
+      "secondary-foreground": "30 65% 94%",
+      accent: "24 20% 24%",
+      "accent-foreground": "28 55% 88%",
+      destructive: "0 62.8% 30.6%",
+      "destructive-foreground": "0 85.7% 97.3%",
+      ring: "25 65% 48%",
+      "sidebar-background": "24 26% 10%",
+      "sidebar-foreground": "28 55% 88%",
+      "sidebar-primary": "25 65% 48%",
+      "sidebar-primary-foreground": "28 100% 6%",
+      "sidebar-accent": "24 20% 24%",
+      "sidebar-accent-foreground": "28 55% 88%",
+      "sidebar-border": "24 22% 22%",
+      "sidebar-ring": "25 65% 48%",
+    }),
+  },
+  {
+    id: "hacker",
+    label: "Hacker",
+    description: "Terminal green on black — classic matrix aesthetic.",
+    light: withShared({
+      background: "120 20% 97%",
+      foreground: "120 60% 12%",
+      muted: "120 15% 90%",
+      "muted-foreground": "120 20% 38%",
+      popover: "0 0% 100%",
+      "popover-foreground": "120 60% 12%",
+      card: "0 0% 100%",
+      "card-foreground": "120 60% 12%",
+      border: "120 20% 82%",
+      input: "120 20% 82%",
+      primary: "120 70% 38%",
+      "primary-foreground": "120 20% 98%",
+      secondary: "120 18% 92%",
+      "secondary-foreground": "120 55% 18%",
+      accent: "120 22% 88%",
+      "accent-foreground": "120 55% 18%",
+      destructive: "0 72% 51%",
+      "destructive-foreground": "0 0% 100%",
+      ring: "120 70% 38%",
+      "sidebar-background": "120 22% 96%",
+      "sidebar-foreground": "120 55% 18%",
+      "sidebar-primary": "120 70% 38%",
+      "sidebar-primary-foreground": "120 20% 98%",
+      "sidebar-accent": "120 22% 88%",
+      "sidebar-accent-foreground": "120 55% 18%",
+      "sidebar-border": "120 20% 82%",
+      "sidebar-ring": "120 70% 38%",
+    }),
+    dark: withShared({
+      background: "120 15% 4%",
+      foreground: "120 80% 60%",
+      muted: "120 12% 12%",
+      "muted-foreground": "120 25% 50%",
+      popover: "120 15% 6%",
+      "popover-foreground": "120 80% 60%",
+      card: "120 14% 8%",
+      "card-foreground": "120 80% 60%",
+      border: "120 15% 18%",
+      input: "120 15% 18%",
+      primary: "120 75% 50%",
+      "primary-foreground": "120 100% 4%",
+      secondary: "120 14% 14%",
+      "secondary-foreground": "120 70% 55%",
+      accent: "120 18% 16%",
+      "accent-foreground": "120 80% 65%",
+      destructive: "0 62.8% 30.6%",
+      "destructive-foreground": "0 85.7% 97.3%",
+      ring: "120 75% 50%",
+      "sidebar-background": "120 15% 6%",
+      "sidebar-foreground": "120 75% 55%",
+      "sidebar-primary": "120 75% 50%",
+      "sidebar-primary-foreground": "120 100% 4%",
+      "sidebar-accent": "120 18% 16%",
+      "sidebar-accent-foreground": "120 80% 65%",
+      "sidebar-border": "120 15% 18%",
+      "sidebar-ring": "120 75% 50%",
+    }),
+  },
 ];
 
 const SURFACE_TOKEN_KEYS = [
@@ -1031,3 +1415,111 @@ export const themePresets: ThemePreset[] = rawThemePresets.map((preset) => {
 });
 
 export const DEFAULT_THEME_ID: ThemeId = "mono";
+
+/**
+ * Convert a hex color string to HSL object.
+ */
+const hexToHsl = (
+  hex: string,
+): { h: number; s: number; l: number } | null => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return null;
+  const r = parseInt(result[1], 16) / 255;
+  const g = parseInt(result[2], 16) / 255;
+  const b = parseInt(result[3], 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+        break;
+      case g:
+        h = ((b - r) / d + 2) / 6;
+        break;
+      case b:
+        h = ((r - g) / d + 4) / 6;
+        break;
+    }
+  }
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  };
+};
+
+/**
+ * Given a hue/saturation/lightness, pick a readable foreground (white or dark).
+ */
+const contrastingForeground = (h: number, s: number, l: number): string => {
+  // If lightness is below 40% or saturation is low, use white; otherwise dark
+  const useWhite = l < 45 || (s < 20 && l < 55);
+  if (useWhite) {
+    return "0 0% 100%";
+  }
+  return "20 14.3% 4.1%";
+};
+
+/**
+ * Given a primary HSL, generate the dark-mode primary (brighter, more saturated).
+ */
+const darkPrimary = (h: number, s: number): { h: number; s: number; l: number } => ({
+  h,
+  s: Math.min(s + 5, 100),
+  l: 55,
+});
+
+/**
+ * Generate a full custom ThemePreset from a primary hex color.
+ * All surface tokens use the mono baseline so only the accent colors vary.
+ */
+export const generateCustomTheme = (primaryHex: string): ThemePreset | null => {
+  const hsl = hexToHsl(primaryHex);
+  if (!hsl) return null;
+  const { h, s, l } = hsl;
+
+  const fgLight = contrastingForeground(h, s, l);
+  const darkPrim = darkPrimary(h, s);
+
+  const primaryHsl = `${h} ${s}% ${l}%`;
+  const primaryFgLight = fgLight;
+  const darkPrimaryHsl = `${darkPrim.h} ${darkPrim.s}% ${darkPrim.l}%`;
+  const darkPrimaryFg = contrastingForeground(darkPrim.h, darkPrim.s, darkPrim.l);
+
+  // Mono baseline light surface tokens
+  const monoLight = monoBaselinePreset.light;
+  // Mono baseline dark surface tokens
+  const monoDark = monoBaselinePreset.dark;
+
+  const light: ThemeVariables = withShared({
+    ...monoLight,
+    primary: primaryHsl,
+    "primary-foreground": primaryFgLight,
+    ring: primaryHsl,
+    "sidebar-primary": primaryHsl,
+    "sidebar-primary-foreground": primaryFgLight,
+  });
+
+  const dark: ThemeVariables = withShared({
+    ...monoDark,
+    primary: darkPrimaryHsl,
+    "primary-foreground": darkPrimaryFg,
+    ring: darkPrimaryHsl,
+    "sidebar-primary": darkPrimaryHsl,
+    "sidebar-primary-foreground": darkPrimaryFg,
+  });
+
+  return {
+    id: "custom",
+    label: "Custom",
+    description: "Admin-defined custom palette.",
+    light,
+    dark,
+  };
+};

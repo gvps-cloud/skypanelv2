@@ -27,6 +27,12 @@ const allowedThemePresetIds = new Set([
   "aurora",
   "midnight",
   "sage",
+  "cyan",
+  "purple",
+  "pink",
+  "yellow",
+  "brown",
+  "hacker",
   "custom",
 ]);
 

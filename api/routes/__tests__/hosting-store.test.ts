@@ -58,6 +58,8 @@ vi.mock('../../services/enhanceOnboardingService.js', () => ({
 
 vi.mock('../../services/emailService.js', () => ({
   sendEnhanceCredentialsEmail: (...args: any[]) => mockSendEnhanceCredentialsEmail(...args),
+  sendHostingWelcomeEmail: vi.fn(),
+  sendHostingCancelledEmail: vi.fn(),
 }));
 
 vi.mock('../../services/enhanceToggle.js', () => ({

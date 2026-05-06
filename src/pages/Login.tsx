@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn, AlertTriangle } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 
 import "@/styles/auth.css";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import DataStreamCanvas from "@/components/home/DataStreamCanvas";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteStatus } from "@/hooks/useSiteStatus";
 import { BRAND_NAME } from "@/lib/brand";
 
 export default function Login() {
@@ -25,13 +26,30 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const prefersReducedMotion = useReducedMotion();
+  const [searchParams] = useSearchParams();
+  const { data: siteStatus } = useSiteStatus();
+
+  // Reconstruct code from search + hash because # in the code is parsed as URL fragment
+  const url = new URL(window.location.href);
+  const codeFromSearch = url.searchParams.get("code") || "";
+  const codeFromHash = url.hash ? url.hash.slice(1) : "";
+  const maintenanceCode = codeFromSearch
+    ? codeFromSearch + (codeFromHash ? "#" + codeFromHash : "")
+    : undefined;
+  const isMaintenance = siteStatus?.maintenanceMode === true;
+  const isRegDisabled = siteStatus?.registrationDisabled === true;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const result = await login(email, password, show2FA ? twoFactorCode : undefined);
+      const result = await login(
+        email,
+        password,
+        show2FA ? twoFactorCode : undefined,
+        maintenanceCode
+      );
 
       if (result && result.require2fa) {
         setShow2FA(true);
@@ -86,6 +104,18 @@ export default function Login() {
               <p className="auth-card__subtitle">
                 Enter your email below to login to your account
               </p>
+              {isMaintenance && (
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>Site is under maintenance. Admin access only.</span>
+                </div>
+              )}
+              {isRegDisabled && !isMaintenance && (
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-600">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>New registrations are currently disabled.</span>
+                </div>
+              )}
             </div>
 
             <div className="auth-card__body">
@@ -200,12 +230,14 @@ export default function Login() {
                 </Button>
               </form>
 
-              <div className="auth-footer">
-                Don&apos;t have an account?{" "}
-                <Link to="/register" className="auth-footer__link">
-                  Sign up
-                </Link>
-              </div>
+              {!isMaintenance && !isRegDisabled && (
+                <div className="auth-footer">
+                  Don&apos;t have an account?{" "}
+                  <Link to="/register" className="auth-footer__link">
+                    Sign up
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>

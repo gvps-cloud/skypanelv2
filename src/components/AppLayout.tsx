@@ -61,6 +61,7 @@ import {
   Users,
   BookOpen,
   Globe,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { generateBreadcrumbs } from "@/lib/breadcrumbs";
@@ -868,6 +869,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         href: "/admin#category-mappings",
         shortcut: isMac ? "⌥Y" : "Alt+Y",
         shortcutKey: "y",
+        requiresShift: false,
+        requiresAlt: true,
+      },
+      {
+        icon: Wrench,
+        label: "Maintenance",
+        href: "/admin#maintenance",
+        shortcut: isMac ? "⌥M" : "Alt+M",
+        shortcutKey: "m",
         requiresShift: false,
         requiresAlt: true,
       },

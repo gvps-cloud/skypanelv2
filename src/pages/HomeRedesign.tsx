@@ -760,7 +760,10 @@ export default function HomeRedesign() {
 
             <motion.div
               {...staggerContainer}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4"
+              className={cn(
+                "grid grid-cols-1 sm:grid-cols-2 gap-4",
+                hostingEnabled ? "lg:grid-cols-4" : "lg:grid-cols-3",
+              )}
             >
               {visibleCapabilityCards.map((card) => (
                 <motion.div key={card.label} {...staggerItem}>
@@ -848,7 +851,10 @@ export default function HomeRedesign() {
 
             <motion.div
               {...staggerContainer}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4"
+              className={cn(
+                "grid grid-cols-1 md:grid-cols-2 gap-4",
+                hostingEnabled ? "lg:grid-cols-4" : "lg:grid-cols-3",
+              )}
             >
               {visibleSolutionCards.map((item, idx) => (
                 <motion.div key={idx} {...staggerItem}>

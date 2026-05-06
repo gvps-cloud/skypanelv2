@@ -30,7 +30,7 @@ export interface AuthContextType {
   token: string | null;
   loading: boolean;
   isImpersonating: boolean;
-  login: (email: string, password: string, code?: string) => Promise<any>;
+  login: (email: string, password: string, code?: string, maintenanceCode?: string) => Promise<any>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
@@ -210,13 +210,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = async (email: string, password: string, code?: string) => {
+  const login = async (email: string, password: string, code?: string, maintenanceCode?: string) => {
     try {
       const data = await apiClient.post<{
         require2fa?: boolean;
         user?: User;
         token?: string;
-      }>("/auth/login", { email, password, code });
+      }>("/auth/login", { email, password, code, maintenanceCode });
 
       if (data.require2fa) {
         return { require2fa: true };

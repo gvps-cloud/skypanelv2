@@ -6,7 +6,11 @@ import { query, transaction } from "../../lib/database.js";
 import { EnhanceApiError, EnhanceService } from "../../services/enhanceService.js";
 import { logActivity } from "../../services/activityLogger.js";
 import { config } from "../../config/index.js";
-import { sendEnhanceCredentialsEmail } from "../../services/emailService.js";
+import {
+  sendEnhanceCredentialsEmail,
+  sendHostingWelcomeEmail,
+  sendHostingCancelledEmail,
+} from "../../services/emailService.js";
 import { EnhanceOnboardingService } from "../../services/enhanceOnboardingService.js";
 import { RefundService } from "../../services/refundService.js";
 import { HostingBillingService } from "../../services/hostingBillingService.js";
@@ -692,6 +696,20 @@ router.post("/purchase", requireOrgPermission("hosting_manage"), async (req: Req
       },
     });
 
+    try {
+      const authUser = (req as AuthenticatedRequest).user;
+      await sendHostingWelcomeEmail({
+        to: authUser.email,
+        displayName: authUser.name,
+        domain: resolvedDomain,
+        planName: plan.name,
+        primaryIp,
+        panelUrl: config.ENHANCE_API_URL,
+      });
+    } catch (emailError) {
+      console.error("Failed to send hosting welcome email:", emailError);
+    }
+
     res.status(201).json({
       subscription: { ...subscription, status: "active", domain: resolvedDomain },
       invoiceId,
@@ -921,6 +939,31 @@ router.post("/services/:id/cancel", requireOrgPermission("hosting_manage"), asyn
       status: "success",
       metadata: { refund_id: refundId },
     });
+
+    try {
+      let refundAmount: number | null = null;
+      let refundCurrency = "USD";
+      if (refundId) {
+        const refundResult = await query(
+          `SELECT amount, currency FROM refunds WHERE id = $1`,
+          [refundId]
+        );
+        if (refundResult.rows.length > 0) {
+          refundAmount = refundResult.rows[0].amount;
+          refundCurrency = refundResult.rows[0].currency || "USD";
+        }
+      }
+      const authUser = (req as AuthenticatedRequest).user;
+      await sendHostingCancelledEmail({
+        to: authUser.email,
+        displayName: authUser.name,
+        domain: sub.domain,
+        refundAmount,
+        refundCurrency,
+      });
+    } catch (emailError) {
+      console.error("Failed to send hosting cancellation email:", emailError);
+    }
 
     res.json({ success: true, refund_id: refundId });
   } catch (error: any) {

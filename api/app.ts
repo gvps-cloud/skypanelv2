@@ -38,6 +38,7 @@ import invoicesRouter from "./routes/invoices.js";
 import notificationsRouter from "./routes/notifications.js";
 import themeRoutes from "./routes/theme.js";
 import healthRoutes from "./routes/health.js";
+import siteStatusRoutes from "./routes/siteStatus.js";
 import contactRouter from "./routes/contact.js";
 import faqRoutes from "./routes/faq.js";
 import sshKeysRoutes from "./routes/sshKeys.js";
@@ -304,6 +305,7 @@ if (config.STARTUP_SIDE_EFFECTS_ENABLED) {
 app.use("/api", authenticateApiKey);
 
 // Routes
+app.use("/api/site-status", siteStatusRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);

@@ -14,6 +14,7 @@ import {
   Tags,
   Users,
   Globe,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -180,12 +181,13 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             title: "Platform & Audit",
             icon: ShieldCheck,
             url: `/admin#platform`,
-            isActive: ["platform", "rate-limiting", "activity-log", "fraud-protection"].includes(activeAnchor),
+            isActive: ["platform", "rate-limiting", "activity-log", "fraud-protection", "maintenance"].includes(activeAnchor),
             items: [
               { title: "Platform Controls", url: `/admin#platform`, isActive: activeAnchor === "platform" },
               { title: "Rate Limiting", url: `/admin#rate-limiting`, isActive: activeAnchor === "rate-limiting" },
               { title: "Activity Log", url: `/admin#activity-log`, isActive: activeAnchor === "activity-log" },
               { title: "Fraud Protection", url: `/admin#fraud-protection`, isActive: activeAnchor === "fraud-protection" },
+              { title: "Maintenance", url: `/admin#maintenance`, isActive: activeAnchor === "maintenance" },
             ],
           },
           {

@@ -1,7 +1,8 @@
 import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
 import { Resend } from "resend";
 import { config, type EmailProvider } from "../config/index.js";
-import { renderAdHocTemplate, renderTemplate } from "./emailTemplateService.js";
+import { query } from "../lib/database.js";
+import { renderTemplate } from "./emailTemplateService.js";
 
 let transporter: Transporter | null = null;
 
@@ -211,38 +212,168 @@ export async function sendEnhanceCredentialsEmail(input: {
   const companyName = config.COMPANY_BRAND_NAME;
   const panelUrl = (input.panelUrl || config.ENHANCE_API_URL || "").replace(/\/$/, "");
 
-  const { subject, html, text } = await renderAdHocTemplate({
-    subject: "Your {{companyName}} Hosting Panel Access",
-    html: `
-      <p>Hi {{displayName}},</p>
-      <p>Your hosting panel account for <strong>{{organizationName}}</strong> is ready.</p>
-      <p><strong>Panel URL:</strong> <a href="{{panelUrl}}">{{panelUrl}}</a><br /><strong>Email:</strong> {{to}}<br /><strong>Temporary password:</strong> {{password}}</p>
-      <p>Please sign in as soon as possible and change this password. If you cannot find this email later, use the password reset flow on the hosting panel sign-in page.</p>
-      <p>Thanks,<br />The {{companyName}} Team</p>
-    `,
-    text: `Hi {{displayName}},
-
-Your hosting panel account for {{organizationName}} is ready.
-
-Panel URL: {{panelUrl}}
-Email: {{to}}
-Temporary password: {{password}}
-
-Please sign in as soon as possible and change this password. If you cannot find this email later, use the password reset flow on the hosting panel sign-in page.
-
-Thanks,
-The {{companyName}} Team`,
-    data: {
-      companyName,
-      displayName,
-      organizationName: input.organizationName,
-      panelUrl,
-      to: input.to,
-      password: input.password,
-    },
+  await sendTemplate("hosting_credentials", input.to, {
+    companyName,
+    displayName,
+    organizationName: input.organizationName,
+    panelUrl,
+    to: input.to,
+    password: input.password,
   });
+}
 
-  await sendEmail({ to: input.to, subject, html, text });
+export async function resolveUserEmailAndName(
+  userId: string,
+): Promise<{ email: string; displayName: string } | null> {
+  const result = await query("SELECT email, name FROM users WHERE id = $1 LIMIT 1", [userId]);
+  if (result.rows.length === 0) {
+    return null;
+  }
+  const user = result.rows[0];
+  const email = typeof user.email === "string" ? user.email.trim() : "";
+  if (!email) {
+    return null;
+  }
+  const displayName =
+    typeof user.name === "string" && user.name.trim().length > 0
+      ? user.name.trim()
+      : "there";
+  return { email, displayName };
+}
+
+export async function sendHostingWelcomeEmail(options: {
+  to: string;
+  displayName?: string;
+  domain: string;
+  planName: string;
+  primaryIp?: string | null;
+  panelUrl?: string;
+}): Promise<void> {
+  const companyName = config.COMPANY_BRAND_NAME;
+  const panelUrl = (options.panelUrl || config.ENHANCE_API_URL || "").replace(/\/$/, "");
+
+  await sendTemplate("hosting_welcome", options.to, {
+    companyName,
+    displayName: options.displayName || "there",
+    domain: options.domain,
+    planName: options.planName,
+    primaryIp: options.primaryIp || null,
+    panelUrl,
+  });
+}
+
+export async function sendHostingSuspendedEmail(options: {
+  to: string;
+  displayName?: string;
+  domain: string;
+  planName?: string;
+  reason: string;
+}): Promise<void> {
+  const companyName = config.COMPANY_BRAND_NAME;
+
+  await sendTemplate("hosting_suspended", options.to, {
+    companyName,
+    displayName: options.displayName || "there",
+    domain: options.domain,
+    planName: options.planName || "your plan",
+    reason: options.reason,
+  });
+}
+
+export async function sendHostingRecoveryEmail(options: {
+  to: string;
+  displayName?: string;
+  domain: string;
+  planName?: string;
+}): Promise<void> {
+  const companyName = config.COMPANY_BRAND_NAME;
+
+  await sendTemplate("hosting_recovered", options.to, {
+    companyName,
+    displayName: options.displayName || "there",
+    domain: options.domain,
+    planName: options.planName || "your plan",
+  });
+}
+
+export async function sendHostingCancelledEmail(options: {
+  to: string;
+  displayName?: string;
+  domain: string;
+  refundAmount?: number | null;
+  refundCurrency?: string;
+}): Promise<void> {
+  const companyName = config.COMPANY_BRAND_NAME;
+
+  await sendTemplate("hosting_cancelled", options.to, {
+    companyName,
+    displayName: options.displayName || "there",
+    domain: options.domain,
+    refundAmount: options.refundAmount ?? null,
+    refundCurrency: options.refundCurrency || "USD",
+  });
+}
+
+export async function sendHostingRenewalEmail(options: {
+  to: string;
+  displayName?: string;
+  domain: string;
+  amount: number;
+  currency: string;
+  nextBillingDate: string;
+  invoiceId?: string | null;
+}): Promise<void> {
+  const companyName = config.COMPANY_BRAND_NAME;
+
+  await sendTemplate("hosting_renewal", options.to, {
+    companyName,
+    displayName: options.displayName || "there",
+    domain: options.domain,
+    amount: options.amount,
+    currency: options.currency,
+    nextBillingDate: options.nextBillingDate,
+    invoiceId: options.invoiceId || null,
+  });
+}
+
+export async function sendHostingSuspensionWarningEmail(options: {
+  to: string;
+  displayName?: string;
+  domain: string;
+  currentBalance: number;
+  requiredAmount: number;
+  currency: string;
+  nextBillingDate: string;
+}): Promise<void> {
+  const companyName = config.COMPANY_BRAND_NAME;
+
+  await sendTemplate("hosting_suspension_warning", options.to, {
+    companyName,
+    displayName: options.displayName || "there",
+    domain: options.domain,
+    currentBalance: options.currentBalance,
+    requiredAmount: options.requiredAmount,
+    currency: options.currency,
+    nextBillingDate: options.nextBillingDate,
+  });
+}
+
+export async function sendHostingAdminActionEmail(options: {
+  to: string;
+  displayName?: string;
+  domain: string;
+  action: "suspended" | "unsuspended";
+  reason?: string | null;
+}): Promise<void> {
+  const companyName = config.COMPANY_BRAND_NAME;
+
+  await sendTemplate("hosting_admin_action", options.to, {
+    companyName,
+    displayName: options.displayName || "there",
+    domain: options.domain,
+    action: options.action,
+    reason: options.reason || null,
+  });
 }
 
 export async function sendTemplate(

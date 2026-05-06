@@ -139,6 +139,7 @@ interface DataStreamCanvasProps {
   /** When set, overrides CSS `--primary` hue for glyph colours */
   hue?: number
   reducedMotion?: boolean
+  frames?: FrameDef[]
 }
 
 export default function DataStreamCanvas({
@@ -146,23 +147,26 @@ export default function DataStreamCanvas({
   cellSize = 14,
   hue: hueProp,
   reducedMotion = false,
+  frames = FRAMES,
 }: DataStreamCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef<number>(0)
   const dimsRef = useRef({ cols: 0, rows: 0, w: 0, h: 0 })
   const cellCharsRef = useRef<Uint8Array>(new Uint8Array(0))
   const flipMapRef = useRef<Uint8Array>(new Uint8Array(0))
-  const masksRef = useRef<(Uint8Array | null)[]>(FRAMES.map(() => null))
+  const masksRef = useRef<(Uint8Array | null)[]>(frames.map(() => null))
   const bakeGenerationRef = useRef(0)
   const reducedMotionRef = useRef(reducedMotion)
   reducedMotionRef.current = reducedMotion
+  const framesRef = useRef(frames)
+  framesRef.current = frames
 
   const cssHueRef = useRef(parsePrimaryHueFromCss())
   const seqRef = useRef({
     phase: "hold" as "hold" | "fade",
     phaseStart: 0,
     currentIdx: 0,
-    nextIdx: 1 % FRAMES.length,
+    nextIdx: 1 % framesRef.current.length,
   })
 
   const allMasksLoadedRef = useRef(false)
@@ -190,11 +194,12 @@ export default function DataStreamCanvas({
       const wctx = work.getContext("2d", { willReadFrequently: true })
       if (!wctx) return
 
+      const currentFrames = framesRef.current
       const results: Uint8Array[] = []
       try {
-        for (let f = 0; f < FRAMES.length; f++) {
+        for (let f = 0; f < currentFrames.length; f++) {
           if (generation !== bakeGenerationRef.current) return
-          const frame = FRAMES[f]!
+          const frame = currentFrames[f]!
           const img = await loadFrameImage(frame)
           if (generation !== bakeGenerationRef.current) return
           drawImageToMaskContext(wctx, img, cols, rows, frame.scale)
@@ -212,7 +217,7 @@ export default function DataStreamCanvas({
         phase: "hold",
         phaseStart: performance.now(),
         currentIdx: 0,
-        nextIdx: 1 % FRAMES.length,
+        nextIdx: 1 % currentFrames.length,
       }
 
       if (reducedMotionRef.current) {
@@ -262,7 +267,7 @@ export default function DataStreamCanvas({
     initCellChars(cols, rows)
     flipMapRef.current = new Uint8Array(cols * rows)
     regenerateFlipMap(flipMapRef.current)
-    masksRef.current = FRAMES.map(() => null)
+    masksRef.current = new Array(framesRef.current.length).fill(null)
     allMasksLoadedRef.current = false
     bakeGenerationRef.current += 1
     const gen = bakeGenerationRef.current
@@ -373,7 +378,7 @@ export default function DataStreamCanvas({
         if (ft >= 1) {
           if (nextMaskReady) {
             seq.currentIdx = seq.nextIdx
-            seq.nextIdx = (seq.currentIdx + 1) % FRAMES.length
+            seq.nextIdx = (seq.currentIdx + 1) % framesRef.current.length
           }
           seq.phase = "hold"
           seq.phaseStart = now
@@ -480,6 +485,9 @@ export default function DataStreamCanvas({
     </div>
   )
 }
+
+export type { FrameDef }
+export { wrapLucideSvg }
 
 function drawStaticLogo(
   canvas: HTMLCanvasElement,

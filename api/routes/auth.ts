@@ -4,6 +4,7 @@
  */
 import { Router, type CookieOptions, type Request, type Response } from "express";
 import { body, validationResult } from "express-validator";
+import crypto from "crypto";
 import { AuthService } from "../services/authService.js";
 import { authenticateToken, AuthenticatedRequest } from "../middleware/auth.js";
 import { logActivity } from "../services/activityLogger.js";
@@ -21,9 +22,25 @@ import { generateApiKey, hashApiKey } from "../lib/secureRandom.js";
 import { toSafeErrorMessage } from "../lib/errorHandling.js";
 import { config } from "../config/index.js";
 import { FraudLabsProService } from "../services/fraudLabsProService.js";
+import { getPlatformSetting } from "../services/platformSettingsService.js";
 
 const router = Router();
 const AUTH_COOKIE_NAME = "auth_token";
+
+function constantTimeCompare(a: string, b: string): boolean {
+  try {
+    const bufA = Buffer.from(a, "utf8");
+    const bufB = Buffer.from(b, "utf8");
+    if (bufA.length !== bufB.length) {
+      // Prevent timing attack on length: still do a comparison against a dummy
+      crypto.timingSafeEqual(bufA, bufA);
+      return false;
+    }
+    return crypto.timingSafeEqual(bufA, bufB);
+  } catch {
+    return false;
+  }
+}
 
 function getAuthCookieOptions(): CookieOptions {
   const isProduction = config.NODE_ENV === "production";
@@ -73,6 +90,13 @@ router.post(
       }
 
       const { email, password, firstName, lastName } = req.body;
+
+      // Check if registrations are disabled
+      const regSetting = await getPlatformSetting("registration_disabled");
+      if (regSetting?.enabled === true) {
+        res.status(400).json({ error: "Registration is currently disabled." });
+        return;
+      }
 
       // FraudLabsPro screening on registration
       const clientIP = getClientIP(req);
@@ -166,6 +190,28 @@ router.post(
         }
 
         const loginResult = result as { user: any; token: string };
+
+        // Check maintenance mode
+        const maintenanceSetting = await getPlatformSetting("maintenance_mode");
+        if (maintenanceSetting?.enabled === true) {
+          const isAdmin = loginResult.user?.role === "admin";
+          if (!isAdmin) {
+            res.status(403).json({
+              error: "Site is under maintenance. Admin access only.",
+            });
+            return;
+          }
+
+          // Admin requires bypass code during maintenance (only if one is configured)
+          const providedCode = req.body.maintenanceCode;
+          const expectedCode = config.MAINTENANCE_CODE;
+          if (expectedCode && (!providedCode || !constantTimeCompare(providedCode, expectedCode))) {
+            res.status(403).json({
+              error: "Admin bypass code required.",
+            });
+            return;
+          }
+        }
 
         // Reset failed attempts on successful login
         await bruteForceProtectionService.resetAttempts(clientIP, email);

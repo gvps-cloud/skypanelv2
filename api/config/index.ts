@@ -106,6 +106,8 @@ export interface Config {
   FRAUDLABSPRO_REJECT_PROXY: boolean;
   FRAUDLABSPRO_REJECT_TOR: boolean;
   FRAUDLABSPRO_REJECT_DISPOSABLE_EMAIL: boolean;
+  // Maintenance mode admin bypass code
+  MAINTENANCE_CODE?: string;
 }
 
 /**
@@ -171,7 +173,15 @@ function parseEmailProviderPriority(value?: string): EmailProvider[] {
   return deduped.length > 0 ? deduped : defaultOrder;
 }
 
-function parseCorsOrigins(value?: string): string[] {
+function normalizeOrigin(url: string): string {
+  // Strip trailing slashes so https://example.com/ matches the Origin header https://example.com
+  return url.trim().replace(/\/+$/, "");
+}
+
+function parseCorsOrigins(
+  corsOriginsValue?: string,
+  clientUrlValue?: string,
+): string[] {
   const localDevOrigins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -183,12 +193,21 @@ function parseCorsOrigins(value?: string): string[] {
     "https://127.0.0.1:3001",
   ];
 
-  const parsed = (value || localDevOrigins.join(","))
+  // CORS_ORIGINS takes precedence; falls back to CLIENT_URL
+  const rawOrigins = corsOriginsValue || clientUrlValue || localDevOrigins.join(",");
+
+  const parsed = rawOrigins
     .split(",")
-    .map((url) => url.trim())
+    .map((url) => normalizeOrigin(url))
     .filter((url) => url.length > 0);
 
   const deduped = new Set(parsed);
+
+  // Always ensure CLIENT_URL itself is allowed even when CORS_ORIGINS is customized
+  const normalizedClientUrl = clientUrlValue ? normalizeOrigin(clientUrlValue) : "";
+  if (normalizedClientUrl) {
+    deduped.add(normalizedClientUrl);
+  }
 
   // In development, always include common local origins to prevent accidental lockouts
   // when CLIENT_URL is set to a remote/prod URL.
@@ -390,7 +409,10 @@ function getConfig(): Config {
     RDNS_BASE_DOMAIN:
       process.env.RDNS_BASE_DOMAIN?.trim() || "ip.rev.example.com",
     VPS_TAG: process.env.VPS_TAG?.trim() || "skypanelv2",
-    corsOrigins: parseCorsOrigins(process.env.CLIENT_URL),
+    corsOrigins: parseCorsOrigins(
+      process.env.CORS_ORIGINS,
+      process.env.CLIENT_URL,
+    ),
     UPLOAD_PATH: process.env.UPLOAD_PATH?.trim() || "./uploads",
     MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE || "10485760", 10),
     // Better Stack / Better Uptime (optional)
@@ -424,6 +446,7 @@ function getConfig(): Config {
     FRAUDLABSPRO_REJECT_PROXY: parseBoolean(process.env.FRAUDLABSPRO_REJECT_PROXY, true),
     FRAUDLABSPRO_REJECT_TOR: parseBoolean(process.env.FRAUDLABSPRO_REJECT_TOR, true),
     FRAUDLABSPRO_REJECT_DISPOSABLE_EMAIL: parseBoolean(process.env.FRAUDLABSPRO_REJECT_DISPOSABLE_EMAIL, true),
+    MAINTENANCE_CODE: process.env.MAINTENANCE_CODE?.trim() || undefined,
   };
 
   return config;

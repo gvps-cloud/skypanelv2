@@ -3,6 +3,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
@@ -16,6 +17,7 @@ import { ImpersonationLoadingOverlay } from "./components/admin/ImpersonationLoa
 import { setupAutoLogout } from "@/lib/api";
 import { useEffect } from "react";
 import { AnnouncementBanner } from "./components/AnnouncementBanner";
+import { useSiteStatus } from "./hooks/useSiteStatus";
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -69,6 +71,7 @@ import AcceptInvitation from "./pages/AcceptInvitation";
 import Hosting from "./pages/Hosting";
 import HostingStore from "./pages/HostingStore";
 import HostingDetail from "./pages/HostingDetail";
+import Maintenance from "./pages/Maintenance";
 import { useHostingStatus } from "./hooks/useHosting";
 
 // Component to handle impersonation banner display
@@ -229,14 +232,57 @@ function AnnouncementBannerWrapper({ children }: { children: React.ReactNode }) 
   );
 }
 
+// Maintenance Guard: redirects non-admin users to maintenance page when enabled
+function MaintenanceGuard({ children }: { children: React.ReactNode }) {
+  const { data: siteStatus, isLoading: siteStatusLoading } = useSiteStatus();
+  const { user, loading: authLoading } = useAuth();
+  const location = useLocation();
+
+  if (siteStatusLoading || authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!siteStatus?.maintenanceMode) {
+    return <>{children}</>;
+  }
+
+  const isAdmin = user?.role === "admin";
+  if (isAdmin) {
+    return <>{children}</>;
+  }
+
+  const path = location.pathname;
+  const search = location.search;
+  const hasCode = new URLSearchParams(search).get("code");
+
+  // Always allow maintenance page
+  if (path === "/maintenance") {
+    return <>{children}</>;
+  }
+
+  // Allow login page with bypass code
+  if (path === "/login" && hasCode) {
+    return <>{children}</>;
+  }
+
+  // Redirect everything else to maintenance
+  return <Navigate to="/maintenance" replace />;
+}
+
 function AppRoutes() {
   return (
     <>
       <ScrollToTop />
       <AutoLogoutSetup />
       <AnnouncementBannerWrapper>
+      <MaintenanceGuard>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/maintenance" element={<Maintenance />} />
         <Route
           path="/login"
           element={
@@ -477,6 +523,7 @@ function AppRoutes() {
         <Route path="/organizations/invitations/:token/decline" element={<AcceptInvitation />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </MaintenanceGuard>
       </AnnouncementBannerWrapper>
     </>
   );

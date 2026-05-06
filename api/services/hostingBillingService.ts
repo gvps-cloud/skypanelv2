@@ -6,6 +6,13 @@ import { EnhanceToggleService } from './enhanceToggle.js';
 import { InvoiceService } from './invoiceService.js';
 import { logActivity } from './activityLogger.js';
 import { themeService, resolveThemePalette } from './themeService.js';
+import {
+  sendHostingSuspendedEmail,
+  sendHostingRecoveryEmail,
+  sendHostingRenewalEmail,
+  sendHostingSuspensionWarningEmail,
+  resolveUserEmailAndName,
+} from './emailService.js';
 
 class HostingBillingPaymentError extends Error {
   constructor(message: string) {
@@ -428,12 +435,12 @@ export class HostingBillingService {
   private static async billSubscription(
     sub: HostingSubscriptionForBilling,
     options: { cycleType: HostingBillingCycleType }
-  ): Promise<{ billingCycleId: string; paymentTransactionId: string; invoiceId: string | null }> {
+  ): Promise<{ billingCycleId: string; paymentTransactionId: string; invoiceId: string | null; amount: number; planName: string; periodEnd: string }> {
     const billingResult = await transaction(async (client) => {
       await client.query(
         `INSERT INTO hosting_wallets (organization_id, balance, currency)
-         VALUES ($1, 0, 'USD')
-         ON CONFLICT (organization_id) DO NOTHING`,
+          VALUES ($1, 0, 'USD')
+          ON CONFLICT (organization_id) DO NOTHING`,
         [sub.organization_id]
       );
 
@@ -465,11 +472,11 @@ export class HostingBillingService {
 
       const cycleResult = await client.query(
         `INSERT INTO hosting_billing_cycles (
-           organization_id, hosting_subscription_id, plan_id, plan_name, domain,
-           cycle_type, period_start, period_end, amount, currency, status
-         )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'USD', 'pending')
-         RETURNING id`,
+            organization_id, hosting_subscription_id, plan_id, plan_name, domain,
+            cycle_type, period_start, period_end, amount, currency, status
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'USD', 'pending')
+          RETURNING id`,
         [
           sub.organization_id,
           sub.id,
@@ -487,10 +494,10 @@ export class HostingBillingService {
       if (balanceBefore < amount) {
         await client.query(
           `UPDATE hosting_billing_cycles
-           SET status = 'failed',
-               failure_reason = $1,
-               updated_at = now()
-           WHERE id = $2`,
+            SET status = 'failed',
+                failure_reason = $1,
+                updated_at = now()
+            WHERE id = $2`,
           ['Insufficient hosting wallet balance', billingCycleId]
         );
         throw new HostingBillingPaymentError('Insufficient hosting wallet balance');
@@ -504,11 +511,11 @@ export class HostingBillingService {
 
       const transactionResult = await client.query(
         `INSERT INTO payment_transactions (
-           organization_id, amount, currency, payment_method, payment_provider,
-           status, description, metadata
-         )
-         VALUES ($1, $2, 'USD', 'wallet_debit', 'internal', 'completed', $3, $4)
-         RETURNING id`,
+            organization_id, amount, currency, payment_method, payment_provider,
+            status, description, metadata
+          )
+          VALUES ($1, $2, 'USD', 'wallet_debit', 'internal', 'completed', $3, $4)
+          RETURNING id`,
         [
           sub.organization_id,
           -amount,
@@ -529,24 +536,24 @@ export class HostingBillingService {
 
       await client.query(
         `UPDATE hosting_billing_cycles
-         SET status = 'paid',
-             payment_transaction_id = $1,
-             updated_at = now()
-         WHERE id = $2`,
+          SET status = 'paid',
+              payment_transaction_id = $1,
+              updated_at = now()
+          WHERE id = $2`,
         [paymentTransactionId, billingCycleId]
       );
 
       await client.query(
         `UPDATE hosting_subscriptions
-         SET last_billed_at = $2,
-             next_billing_at = $3,
-             status = 'active',
-             updated_at = now()
-         WHERE id = $1`,
+          SET last_billed_at = $2,
+              next_billing_at = $3,
+              status = 'active',
+              updated_at = now()
+          WHERE id = $1`,
         [sub.id, periodStart, periodEnd]
       );
 
-      return { billingCycleId, paymentTransactionId };
+      return { billingCycleId, paymentTransactionId, amount, planName: plan.name, periodEnd: periodEnd.toISOString() };
     });
 
     let invoiceId: string | null = null;
@@ -570,6 +577,23 @@ export class HostingBillingService {
         invoice_id: invoiceId,
       },
     });
+
+    try {
+      const userInfo = await resolveUserEmailAndName(sub.created_by);
+      if (userInfo) {
+        await sendHostingRenewalEmail({
+          to: userInfo.email,
+          displayName: userInfo.displayName,
+          domain: sub.domain,
+          amount: billingResult.amount,
+          currency: 'USD',
+          nextBillingDate: billingResult.periodEnd,
+          invoiceId,
+        });
+      }
+    } catch (emailError) {
+      console.error(`Failed to send hosting renewal email for ${sub.domain}:`, emailError);
+    }
 
     return { ...billingResult, invoiceId };
   }
@@ -599,6 +623,28 @@ export class HostingBillingService {
         message: `Hosting subscription suspended due to insufficient balance: ${reason}`,
         status: 'warning',
       });
+
+      try {
+        let planName: string | undefined;
+        if (sub.plan_id) {
+          const planResult = await query(`SELECT name FROM hosting_plans WHERE id = $1`, [sub.plan_id]);
+          if (planResult.rows.length > 0) {
+            planName = planResult.rows[0].name;
+          }
+        }
+        const userInfo = await resolveUserEmailAndName(sub.created_by);
+        if (userInfo) {
+          await sendHostingSuspendedEmail({
+            to: userInfo.email,
+            displayName: userInfo.displayName,
+            domain: sub.domain,
+            planName,
+            reason: `Insufficient hosting wallet balance`,
+          });
+        }
+      } catch (emailError) {
+        console.error(`Failed to send hosting suspension email for ${sub.domain}:`, emailError);
+      }
     } catch (error) {
       console.error(`Failed to suspend hosting subscription ${sub.id}:`, error);
     }
@@ -690,6 +736,66 @@ export class HostingBillingService {
     return result.rows.length > 0;
   }
 
+  static async checkHostingBalanceWarnings(): Promise<void> {
+    const enabled = await EnhanceToggleService.isEffectivelyEnabled();
+    if (!enabled) {
+      return;
+    }
+
+    try {
+      await this.ensureHostingBillingTables();
+
+      const result = await query(
+        `SELECT hs.id, hs.organization_id, hs.plan_id, hs.domain, hs.next_billing_at, hs.created_by,
+                hw.balance, hw.currency, hp.price_monthly, hp.name as plan_name,
+                u.email, u.name as user_name
+         FROM hosting_subscriptions hs
+         JOIN hosting_wallets hw ON hw.organization_id = hs.organization_id
+         LEFT JOIN hosting_plans hp ON hp.id = hs.plan_id
+         LEFT JOIN users u ON u.id = hs.created_by
+         WHERE hs.status = 'active'
+           AND hs.next_billing_at <= now() + interval '3 days'
+           AND (hs.last_warning_sent_at IS NULL OR hs.last_warning_sent_at < now() - interval '24 hours')`
+      );
+
+      for (const sub of result.rows) {
+        const requiredAmount = toCurrencyNumber(sub.price_monthly);
+        const currentBalance = toCurrencyNumber(sub.balance);
+
+        if (currentBalance < requiredAmount) {
+          const email = typeof sub.email === 'string' ? sub.email.trim() : '';
+          if (!email) continue;
+
+          const displayName =
+            typeof sub.user_name === 'string' && sub.user_name.trim().length > 0
+              ? sub.user_name.trim()
+              : 'there';
+
+          try {
+            await sendHostingSuspensionWarningEmail({
+              to: email,
+              displayName,
+              domain: sub.domain,
+              currentBalance,
+              requiredAmount,
+              currency: sub.currency || 'USD',
+              nextBillingDate: new Date(sub.next_billing_at).toLocaleDateString(),
+            });
+
+            await query(
+              `UPDATE hosting_subscriptions SET last_warning_sent_at = now() WHERE id = $1`,
+              [sub.id]
+            );
+          } catch (emailError) {
+            console.error(`Failed to send hosting warning email for ${sub.domain}:`, emailError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error checking hosting balance warnings:', error);
+    }
+  }
+
   private static async unsuspendAfterRecovery(
     sub: HostingSubscriptionForBilling,
     actorUserId?: string | null
@@ -717,5 +823,26 @@ export class HostingBillingService {
       message: `Hosting subscription recovered after overdue billing payment for ${sub.domain}`,
       status: 'success',
     });
+
+    try {
+      let planName: string | undefined;
+      if (sub.plan_id) {
+        const planResult = await query(`SELECT name FROM hosting_plans WHERE id = $1`, [sub.plan_id]);
+        if (planResult.rows.length > 0) {
+          planName = planResult.rows[0].name;
+        }
+      }
+      const userInfo = await resolveUserEmailAndName(sub.created_by);
+      if (userInfo) {
+        await sendHostingRecoveryEmail({
+          to: userInfo.email,
+          displayName: userInfo.displayName,
+          domain: sub.domain,
+          planName,
+        });
+      }
+    } catch (emailError) {
+      console.error(`Failed to send hosting recovery email for ${sub.domain}:`, emailError);
+    }
   }
 }

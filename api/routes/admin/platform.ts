@@ -8,6 +8,8 @@ import { authenticateToken, requireAdmin } from '../../middleware/auth.js';
 import type { AuthenticatedRequest } from '../../middleware/auth.js';
 import { query } from '../../lib/database.js';
 import { logActivity } from '../../services/activityLogger.js';
+import { config } from '../../config/index.js';
+import { getPlatformSetting } from '../../services/platformSettingsService.js';
 
 const router = express.Router();
 
@@ -415,5 +417,186 @@ router.post(
     }
   }
 );
+
+// ============================================================================
+// MAINTENANCE MODE & REGISTRATION SETTINGS ROUTES
+// ============================================================================
+
+/**
+ * Get maintenance and registration settings
+ * GET /api/admin/platform/maintenance
+ */
+router.get('/maintenance', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const maintenanceValue = await getPlatformSetting('maintenance_mode');
+    const registrationValue = await getPlatformSetting('registration_disabled');
+
+    res.json({
+      maintenanceMode: Boolean(maintenanceValue?.enabled),
+      maintenanceMessageHtml: typeof maintenanceValue?.messageHtml === 'string' ? maintenanceValue.messageHtml : '',
+      registrationDisabled: Boolean(registrationValue?.enabled),
+      // Expose whether a bypass code is configured, but never the code itself
+      bypassCodeConfigured: Boolean(config.MAINTENANCE_CODE && config.MAINTENANCE_CODE.length > 0),
+    });
+  } catch (err: any) {
+    console.error('Admin maintenance settings fetch error:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch maintenance settings' });
+  }
+});
+
+/**
+ * Update maintenance and registration settings
+ * PUT /api/admin/platform/maintenance
+ */
+router.put(
+  '/maintenance',
+  authenticateToken,
+  requireAdmin,
+  [
+    body('maintenanceMode').optional().isBoolean().withMessage('maintenanceMode must be a boolean'),
+    body('maintenanceMessageHtml').optional().isString().withMessage('maintenanceMessageHtml must be a string'),
+    body('registrationDisabled').optional().isBoolean().withMessage('registrationDisabled must be a boolean'),
+  ],
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { maintenanceMode, maintenanceMessageHtml, registrationDisabled } = req.body as {
+        maintenanceMode?: boolean;
+        maintenanceMessageHtml?: string;
+        registrationDisabled?: boolean;
+      };
+
+      const now = new Date().toISOString();
+
+      // Update maintenance_mode setting if provided
+      if (typeof maintenanceMode === 'boolean') {
+        const existing = await getPlatformSetting('maintenance_mode');
+        const updatedValue = {
+          ...(existing || {}),
+          enabled: maintenanceMode,
+          updatedAt: now,
+        };
+        if (typeof maintenanceMessageHtml === 'string') {
+          (updatedValue as any).messageHtml = maintenanceMessageHtml;
+        }
+
+        await query(
+          `INSERT INTO platform_settings (key, value)
+           VALUES ($1, $2)
+           ON CONFLICT (key)
+           DO UPDATE SET value = $2, updated_at = NOW()`,
+          ['maintenance_mode', JSON.stringify(updatedValue)]
+        );
+
+        if (req.user?.id) {
+          await logActivity({
+            userId: req.user.id,
+            organizationId: req.user.organizationId ?? null,
+            eventType: 'platform_settings.update',
+            entityType: 'platform_settings',
+            entityId: 'maintenance_mode',
+            message: maintenanceMode ? 'Enabled maintenance mode' : 'Disabled maintenance mode',
+            status: 'success',
+            metadata: { enabled: maintenanceMode },
+          }, req);
+        }
+      } else if (typeof maintenanceMessageHtml === 'string' && typeof maintenanceMode !== 'boolean') {
+        // Only message updated
+        const existing = await getPlatformSetting('maintenance_mode') || { enabled: false };
+        const updatedValue = {
+          ...existing,
+          messageHtml: maintenanceMessageHtml,
+          updatedAt: now,
+        };
+
+        await query(
+          `INSERT INTO platform_settings (key, value)
+           VALUES ($1, $2)
+           ON CONFLICT (key)
+           DO UPDATE SET value = $2, updated_at = NOW()`,
+          ['maintenance_mode', JSON.stringify(updatedValue)]
+        );
+
+        if (req.user?.id) {
+          await logActivity({
+            userId: req.user.id,
+            organizationId: req.user.organizationId ?? null,
+            eventType: 'platform_settings.update',
+            entityType: 'platform_settings',
+            entityId: 'maintenance_mode',
+            message: 'Updated maintenance message',
+            status: 'success',
+          }, req);
+        }
+      }
+
+      // Update registration_disabled setting if provided
+      if (typeof registrationDisabled === 'boolean') {
+        const existing = await getPlatformSetting('registration_disabled');
+        const updatedValue = {
+          ...(existing || {}),
+          enabled: registrationDisabled,
+          updatedAt: now,
+        };
+
+        await query(
+          `INSERT INTO platform_settings (key, value)
+           VALUES ($1, $2)
+           ON CONFLICT (key)
+           DO UPDATE SET value = $2, updated_at = NOW()`,
+          ['registration_disabled', JSON.stringify(updatedValue)]
+        );
+
+        if (req.user?.id) {
+          await logActivity({
+            userId: req.user.id,
+            organizationId: req.user.organizationId ?? null,
+            eventType: 'platform_settings.update',
+            entityType: 'platform_settings',
+            entityId: 'registration_disabled',
+            message: registrationDisabled ? 'Disabled user registrations' : 'Enabled user registrations',
+            status: 'success',
+            metadata: { enabled: registrationDisabled },
+          }, req);
+        }
+      }
+
+      // Return updated settings
+      const maintenanceValue = await getPlatformSetting('maintenance_mode');
+      const registrationValue = await getPlatformSetting('registration_disabled');
+
+      res.json({
+        maintenanceMode: Boolean(maintenanceValue?.enabled),
+        maintenanceMessageHtml: typeof maintenanceValue?.messageHtml === 'string' ? maintenanceValue.messageHtml : '',
+        registrationDisabled: Boolean(registrationValue?.enabled),
+        bypassCodeConfigured: Boolean(config.MAINTENANCE_CODE && config.MAINTENANCE_CODE.length > 0),
+      });
+    } catch (err: any) {
+      console.error('Admin maintenance settings update error:', err);
+      res.status(500).json({ error: err.message || 'Failed to update maintenance settings' });
+    }
+  }
+);
+
+/**
+ * Get maintenance bypass code (admin only)
+ * GET /api/admin/platform/maintenance/code
+ */
+router.get('/maintenance/code', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    res.json({
+      configured: Boolean(config.MAINTENANCE_CODE && config.MAINTENANCE_CODE.length > 0),
+      code: config.MAINTENANCE_CODE || null,
+    });
+  } catch (err: any) {
+    console.error('Admin maintenance code fetch error:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch maintenance code' });
+  }
+});
 
 export default router;

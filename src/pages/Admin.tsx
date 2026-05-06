@@ -31,6 +31,7 @@ import {
   Tags,
   Mail,
   Database,
+  Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -187,6 +188,9 @@ const VolumePricing = lazy(async () => {
   const mod = await import("@/components/admin/billing/VolumePricing");
   return { default: mod.VolumePricing };
 });
+const MaintenanceManager = lazy(
+  () => import("@/components/admin/MaintenanceManager"),
+);
 
 type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
 type TicketPriority = "low" | "medium" | "high" | "urgent";
@@ -219,7 +223,8 @@ type AdminSection =
   | "enhance-plans"
   | "enhance-subscriptions"
   | "fraud-protection"
-  | "refunds";
+  | "refunds"
+  | "maintenance";
 
 type AdminNetworkingTab =
   | "rdns"
@@ -258,7 +263,8 @@ const ADMIN_SECTIONS: AdminSection[] = [
   "enhance-plans",
   "enhance-subscriptions",
   "fraud-protection",
-  "refunds"
+  "refunds",
+  "maintenance"
 ];
 
 const DEFAULT_ADMIN_SECTION: AdminSection = "dashboard";
@@ -2203,6 +2209,18 @@ const Admin: React.FC = () => {
         ],
         actionLabel: "Manage announcements",
       },
+      {
+        id: "maintenance",
+        title: "Maintenance & Access",
+        description: "Control public access, disable registrations, and manage downtime messaging.",
+        icon: Wrench,
+        accent: "text-amber-600",
+        summary: [
+          { label: "Mode", value: "Maintenance" },
+          { label: "Access", value: "Control" },
+        ],
+        actionLabel: "Manage access",
+      },
     ];
   }, [
     activePlanCount,
@@ -2229,6 +2247,7 @@ const Admin: React.FC = () => {
     { label: "User Management", section: "user-management" },
     { label: "Organizations", section: "organizations" },
     { label: "Activity Log", section: "activity-log" },
+    { label: "Maintenance", section: "maintenance" },
   ];
   const sectionGroups: Array<{ title: string; ids: AdminSection[] }> = [
     { title: "Support & Intake", ids: ["support"] },
@@ -2237,6 +2256,7 @@ const Admin: React.FC = () => {
     { title: "Billing", ids: ["billing", "egress-credits"] },
     { title: "Users & Organizations", ids: ["user-management", "organizations"] },
     { title: "Brand & Communications", ids: ["announcements", "email-templates"] },
+    { title: "Platform & Audit", ids: ["platform", "rate-limiting", "activity-log", "fraud-protection", "maintenance"] },
   ];
 
   return (
@@ -3728,6 +3748,18 @@ const Admin: React.FC = () => {
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Refund Management</h2>
             <RefundList />
+          </div>
+        </SectionPanel>
+
+        <SectionPanel section="maintenance" activeSection={activeTab}>
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold">Maintenance & Access Control</h2>
+              <p className="text-sm text-muted-foreground">
+                Control public access to the platform and manage registration settings.
+              </p>
+            </div>
+            <MaintenanceManager />
           </div>
         </SectionPanel>
 

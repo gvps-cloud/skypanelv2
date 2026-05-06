@@ -1,9 +1,18 @@
-import React from "react";
-import { Palette } from "lucide-react";
+import React, { useState } from "react";
+import { Palette, Plus } from "lucide-react";
+import { HexColorPicker } from "react-colorful";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import type { ThemePreset } from "@/theme/presets";
-import { DEFAULT_THEME_ID } from "@/theme/presets";
+import { DEFAULT_THEME_ID, generateCustomTheme } from "@/theme/presets";
 
 interface AdminThemeSectionProps {
   themeConfigLoading: boolean;
@@ -22,6 +31,28 @@ export const AdminThemeSection: React.FC<AdminThemeSectionProps> = ({
   savingPresetId,
   onSelectPreset,
 }) => {
+  const [customPickerOpen, setCustomPickerOpen] = useState(false);
+  const [customColor, setCustomColor] = useState("#6366f1");
+  const [customError, setCustomError] = useState<string | null>(null);
+
+  const isCustomActive = themeId === "custom";
+
+  const handleOpenCustomPicker = () => {
+    setCustomColor("#6366f1");
+    setCustomError(null);
+    setCustomPickerOpen(true);
+  };
+
+  const handleConfirmCustom = () => {
+    const preset = generateCustomTheme(customColor);
+    if (!preset) {
+      setCustomError("Invalid color. Please enter a valid hex color.");
+      return;
+    }
+    setCustomPickerOpen(false);
+    onSelectPreset(preset);
+  };
+
   return (
     <>
       <div className="relative mb-6 overflow-hidden rounded-xl border bg-gradient-to-br from-card via-card to-muted/20 p-6 md:p-8">
@@ -128,10 +159,107 @@ export const AdminThemeSection: React.FC<AdminThemeSectionProps> = ({
                   </button>
                 );
               })}
+              {/* Custom theme card */}
+              <button
+                type="button"
+                onClick={handleOpenCustomPicker}
+                disabled={savingPresetId !== null || themeConfigLoading}
+                className={`relative w-full rounded-lg border-2 border-dashed p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-40 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  isCustomActive
+                    ? "border-primary ring-2 ring-primary ring-opacity-20"
+                    : "border-border hover:border-primary"
+                } ${savingPresetId !== null || themeConfigLoading ? "cursor-not-allowed opacity-60" : ""}`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground">
+                      Custom
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Define your own brand palette
+                    </p>
+                  </div>
+                  <Badge variant={isCustomActive ? "default" : "outline"}>
+                    {savingPresetId === "custom" ? "Saving..." : isCustomActive ? "Active" : "Create"}
+                  </Badge>
+                </div>
+                <div className="mt-4 flex items-center gap-3">
+                  <div
+                    className="h-10 w-10 rounded-md border-2 border-dashed border-border"
+                    style={{ backgroundColor: customColor }}
+                  />
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {customColor}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs text-primary">
+                  <Plus className="h-3 w-3" />
+                  <span>Choose color</span>
+                </div>
+              </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Custom color picker dialog */}
+      <Dialog open={customPickerOpen} onOpenChange={setCustomPickerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Custom Theme</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Pick a primary brand color. Surface colors will use the default
+              neutral palette so only accents change.
+            </p>
+            <div className="flex flex-col items-center gap-4">
+              <HexColorPicker color={customColor} onChange={setCustomColor} />
+              <div className="flex items-center gap-2">
+                <Input
+                  value={customColor}
+                  onChange={(e) => {
+                    setCustomColor(e.target.value);
+                    setCustomError(null);
+                  }}
+                  className={`font-mono ${customError ? "border-destructive" : ""}`}
+                  placeholder="#000000"
+                  maxLength={7}
+                />
+              </div>
+              {customError && (
+                <p className="text-xs text-destructive">{customError}</p>
+              )}
+            </div>
+            {/* Preview swatches */}
+            <div className="flex gap-3 justify-center">
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs text-muted-foreground">Light</span>
+                <div
+                  className="h-10 w-16 rounded-md border border-border shadow-sm"
+                  style={{ backgroundColor: `hsl(${generateCustomTheme(customColor)?.light.primary ?? "0 0 50%"})` }}
+                />
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs text-muted-foreground">Dark</span>
+                <div
+                  className="h-10 w-16 rounded-md border border-border shadow-sm"
+                  style={{ backgroundColor: `hsl(${generateCustomTheme(customColor)?.dark.primary ?? "0 0 50%"})` }}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCustomPickerOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmCustom}>Apply Custom Theme</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

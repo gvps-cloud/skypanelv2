@@ -1796,6 +1796,12 @@ export const ACTIVE_API_ROUTE_MANIFEST: ActiveApiRoute[] = [
   },
   {
     "method": "GET",
+    "path": "/api/site-status",
+    "protected": false,
+    "admin": false
+  },
+  {
+    "method": "GET",
     "path": "/api/ssh-keys",
     "protected": true,
     "admin": false
