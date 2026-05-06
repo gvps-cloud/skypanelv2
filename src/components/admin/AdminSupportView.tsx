@@ -39,8 +39,11 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { buildApiUrl } from "@/lib/api";
-import { apiClient } from "@/lib/api";
+import { buildApiUrl, apiClient } from "@/lib/api";
+import {
+  mapAdminReplyRows,
+  normalizeAdminListTicket,
+} from "@/lib/supportAdminTickets";
 import {
   SupportTicket,
   TicketMessage,
@@ -50,6 +53,11 @@ import { TicketList } from "../support/shared/TicketList";
 import { TicketDetailHeader } from "../support/shared/TicketDetailHeader";
 import { MessageBubble } from "../support/shared/MessageBubble";
 import { TicketInfoSidebar } from "../support/shared/TicketInfoSidebar";
+
+const ADMIN_TOOLBAR_OUTLINE =
+  "h-8 border-border/70 bg-background text-xs text-foreground shadow-none hover:bg-muted/50 hover:text-foreground";
+
+const ADMIN_TOOLBAR_PRIMARY = "h-8 text-xs shadow-none";
 
 const ADMIN_TICKET_STATUS_ACTIONS: Record<
   TicketStatus,
@@ -123,7 +131,9 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
     setLoading(true);
     try {
       const data = await apiClient.get<{ tickets: SupportTicket[] }>("/admin/tickets");
-      setTickets(data.tickets || []);
+      setTickets(
+        (data.tickets || []).map((ticket) => normalizeAdminListTicket(ticket)),
+      );
     } catch (error: any) {
       toast.error(error.message || "Failed to load tickets");
     } finally {
@@ -257,18 +267,11 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
       }
 
       try {
-        const data = await apiClient.get<{ replies: any[] }>(
-          `/admin/tickets/${ticket.id}/replies`
+        const data = await apiClient.get<{ replies: unknown[] }>(
+          `/admin/tickets/${ticket.id}/replies`,
         );
 
-        const msgs: TicketMessage[] = (data.replies || []).map((m: any) => ({
-          id: m.id,
-          ticket_id: m.ticket_id,
-          sender_type: m.sender_type,
-          sender_name: m.sender_name,
-          message: m.message,
-          created_at: m.created_at,
-        }));
+        const msgs = mapAdminReplyRows(data.replies);
         
         setSelectedTicket((prev) =>
           prev ? { ...prev, messages: msgs } : prev
@@ -375,14 +378,19 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
     }
   }, [deleteTicketId, selectedTicket, fetchTickets]);
 
+  const inboxShellClass =
+    "flex h-[calc(100svh-var(--announcement-banner-height,0px)-10.5rem)] max-h-[calc(100svh-var(--announcement-banner-height,0px)-10.5rem)] min-h-[280px] w-full overflow-hidden rounded-lg border border-border bg-background shadow-sm";
+
   return (
     <>
-      <div className="flex h-[calc(100vh-12rem)] overflow-hidden rounded-xl border border-border bg-background shadow-sm">
+      <div className={inboxShellClass}>
         {/* Sidebar - Ticket List */}
         <div
           className={cn(
-            "flex flex-col border-r border-border bg-muted/10 shrink-0 transition-all duration-300 ease-in-out",
-            selectedTicket ? "hidden md:flex md:w-80 lg:w-96" : "flex w-full md:w-80 lg:w-96"
+            "flex min-w-0 shrink-0 flex-col border-r border-border bg-muted/10 transition-all duration-300 ease-in-out",
+            selectedTicket
+              ? "hidden md:flex md:w-72 2xl:w-80"
+              : "flex w-full md:w-72 2xl:w-80",
           )}
         >
           <TicketList
@@ -391,14 +399,15 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
             onSelectTicket={openTicket}
             isLoading={loading}
             isAdmin={true}
+            className="min-w-0"
           />
         </div>
 
         {/* Main Content - Ticket Detail */}
         <div
           className={cn(
-            "flex flex-1 flex-col bg-background transition-all duration-300 ease-in-out overflow-hidden",
-            !selectedTicket ? "hidden md:flex" : "flex"
+            "flex min-w-0 flex-1 flex-col overflow-hidden bg-background transition-all duration-300 ease-in-out",
+            !selectedTicket ? "hidden md:flex" : "flex",
           )}
         >
           {!selectedTicket ? (
@@ -414,78 +423,87 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
               </div>
             </div>
           ) : (
-            <div className="flex flex-1 h-full overflow-hidden">
+            <div className="flex flex-1 h-full min-w-0 overflow-hidden">
               <div className="flex flex-col flex-1 min-w-0 h-full">
                 {/* Ticket Header */}
                 <TicketDetailHeader
                   ticket={selectedTicket}
                   onBack={() => setSelectedTicket(null)}
                   showCustomer={true}
-              >
-                {/* Action buttons - responsive layout */}
-                <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
-                  {/* Info button for mobile only */}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="lg:hidden h-8 border-dashed border-primary/20 text-primary hover:bg-primary/5" 
-                    onClick={() => setIsInfoOpen(true)}
-                  >
-                    <Info className="mr-1.5 h-3.5 w-3.5" />
-                    Info
-                  </Button>
-
-                  {/* View Customer button */}
-                  {selectedTicket.creator?.id && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8"
-                      onClick={() =>
-                        navigate(`/admin/user/${selectedTicket.creator?.id}`)
-                      }
-                    >
-                      <User className="mr-1.5 h-3.5 w-3.5" />
-                      View Customer
-                    </Button>
-                  )}
-                  
-                  {/* Status action buttons */}
-                  {ADMIN_TICKET_STATUS_ACTIONS[selectedTicket.status].map(
-                    (action) => {
-                      const ActionIcon = action.icon;
-                      return (
+                  relocateMetaToSidebar={true}
+                >
+                  <div className="rounded-lg border border-border/60 bg-muted/10 p-2 sm:p-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <Button
-                          key={`${selectedTicket.status}-${action.status}`}
+                          variant="outline"
                           size="sm"
-                          variant={action.primary ? "default" : "outline"}
-                          className="h-8"
-                          onClick={() =>
-                            updateTicketStatus(
-                              selectedTicket.id,
-                              action.status,
-                            )
-                          }
+                          className={cn(ADMIN_TOOLBAR_OUTLINE, "lg:hidden")}
+                          onClick={() => setIsInfoOpen(true)}
                         >
-                          <ActionIcon className="mr-1.5 h-3.5 w-3.5" />
-                          {action.label}
+                          <Info className="mr-1.5 h-3.5 w-3.5" />
+                          Details
                         </Button>
-                      );
-                    }
-                  )}
-                  
-                  {/* Delete button */}
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="h-8"
-                    onClick={() => setDeleteTicketId(selectedTicket.id)}
-                  >
-                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                    Delete
-                  </Button>
-                </div>
-              </TicketDetailHeader>
+
+                        {selectedTicket.creator?.id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={ADMIN_TOOLBAR_OUTLINE}
+                            onClick={() =>
+                              navigate(
+                                `/admin/user/${selectedTicket.creator?.id}`,
+                              )
+                            }
+                          >
+                            <User className="mr-1.5 h-3.5 w-3.5" />
+                            View Customer
+                          </Button>
+                        )}
+
+                        {ADMIN_TICKET_STATUS_ACTIONS[selectedTicket.status].map(
+                          (action) => {
+                            const ActionIcon = action.icon;
+                            return (
+                              <Button
+                                key={`${selectedTicket.status}-${action.status}`}
+                                size="sm"
+                                variant={
+                                  action.primary ? "default" : "outline"
+                                }
+                                className={
+                                  action.primary
+                                    ? ADMIN_TOOLBAR_PRIMARY
+                                    : ADMIN_TOOLBAR_OUTLINE
+                                }
+                                onClick={() =>
+                                  updateTicketStatus(
+                                    selectedTicket.id,
+                                    action.status,
+                                  )
+                                }
+                              >
+                                <ActionIcon className="h-3.5 w-3.5 shrink-0" />
+                                {action.label}
+                              </Button>
+                            );
+                          },
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-8 shrink-0 text-xs shadow-none"
+                        onClick={() =>
+                          setDeleteTicketId(selectedTicket.id)
+                        }
+                      >
+                        <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </TicketDetailHeader>
 
               {/* Messages */}
               <ScrollArea className="flex-1 p-6 bg-muted/5">
@@ -586,13 +604,13 @@ export const AdminSupportView: React.FC<AdminSupportViewProps> = ({
                 </div>
               </div>
               </div>
-              <TicketInfoSidebar 
+              <TicketInfoSidebar
                 ticket={selectedTicket}
                 walletBalance={clientBalance}
                 isAdmin={true}
                 clientName={selectedTicket.creator?.displayName}
                 clientEmail={selectedTicket.creator?.email || undefined}
-                className="hidden lg:flex w-80 shrink-0"
+                className="hidden min-h-0 w-[18rem] shrink-0 overflow-hidden lg:flex xl:w-80"
               />
 
               <Sheet open={isInfoOpen} onOpenChange={setIsInfoOpen}>

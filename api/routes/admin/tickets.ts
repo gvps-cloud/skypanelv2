@@ -47,6 +47,8 @@ router.get(
            org.name AS organization_name,
            org.slug AS organization_slug,
            COALESCE(vi.label, st.vps_label_snapshot) as vps_label,
+           COALESCE(hs.status = 'active', false) AS hosting_subscription_is_active,
+           COALESCE(hp.is_active, false) AS hosting_plan_is_active,
            COALESCE(st.hosting_domain_snapshot, hs.domain) AS hosting_domain,
            COALESCE(st.hosting_plan_name_snapshot, hp.name) AS hosting_plan_name
           FROM support_tickets st

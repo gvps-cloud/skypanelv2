@@ -202,6 +202,20 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
         has_staff_reply: t.has_staff_reply || false,
         vps_id: t.vps_id,
         vps_label: t.vps_label,
+        vps_ip_snapshot: t.vps_ip_snapshot ?? null,
+        hosting_subscription_id: t.hosting_subscription_id,
+        hosting_subscription_is_active:
+          typeof t.hosting_subscription_is_active === "boolean"
+            ? t.hosting_subscription_is_active
+            : false,
+        hosting_plan_is_active:
+          typeof t.hosting_plan_is_active === "boolean"
+            ? t.hosting_plan_is_active
+            : false,
+        hosting_domain_snapshot: t.hosting_domain_snapshot ?? null,
+        hosting_plan_name_snapshot: t.hosting_plan_name_snapshot ?? null,
+        hosting_domain: t.hosting_domain ?? null,
+        hosting_plan_name: t.hosting_plan_name ?? null,
         organization_id: t.organization_id,
         organization_name: t.organization_name,
         organization_slug: t.organization_slug,
@@ -508,14 +522,18 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
   const handleCreateTicket = async (data: CreateTicketData) => {
     try {
       const payload: Record<string, unknown> = {
-        subject: data.subject,
-        message: data.description,
+        subject: data.subject.trim(),
+        message: data.description.trim(),
         priority: data.priority,
         category: data.category,
-        vpsId: data.vpsId,
       };
-      const hostingSubscriptionId =
-        data.hostingSubscriptionId ?? prefilledTicket?.hostingSubscriptionId;
+      const vpsId = data.vpsId?.trim();
+      if (vpsId) {
+        payload.vpsId = vpsId;
+      }
+      const hostingSubscriptionId = (
+        data.hostingSubscriptionId ?? prefilledTicket?.hostingSubscriptionId
+      )?.trim();
       if (hostingSubscriptionId) {
         payload.hostingSubscriptionId = hostingSubscriptionId;
       }
@@ -532,12 +550,12 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
 
   return (
     <>
-      <div className="flex h-[calc(100vh-12rem)] overflow-hidden rounded-xl border border-border bg-background shadow-sm">
+      <div className="flex h-[calc(100svh-var(--announcement-banner-height,0px)-10.5rem)] max-h-[calc(100svh-var(--announcement-banner-height,0px)-10.5rem)] min-h-[280px] w-full overflow-hidden rounded-lg border border-border bg-background shadow-sm">
         {/* Sidebar - Ticket List */}
         <div
           className={cn(
-            "flex flex-col border-r border-border bg-muted/10 w-full md:w-80 lg:w-96 shrink-0 transition-all duration-300 ease-in-out",
-            selectedTicket ? "hidden md:flex" : "flex"
+            "flex min-w-0 shrink-0 flex-col border-r border-border bg-muted/10 transition-all duration-300 ease-in-out md:w-72 xl:w-80",
+            selectedTicket ? "hidden md:flex" : "flex w-full",
           )}
         >
           <TicketList
@@ -548,14 +566,15 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
             isLoading={loading}
             showCustomer={true}
             title="Support Tickets"
+            className="min-w-0"
           />
         </div>
 
         {/* Main Content - Ticket Detail */}
         <div
           className={cn(
-            "flex flex-1 flex-col bg-background transition-all duration-300 ease-in-out",
-            !selectedTicket ? "hidden md:flex" : "flex"
+            "flex min-w-0 flex-1 flex-col overflow-hidden bg-background transition-all duration-300 ease-in-out",
+            !selectedTicket ? "hidden md:flex" : "flex",
           )}
         >
           {!selectedTicket ? (
@@ -575,7 +594,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
               </Button>
             </div>
           ) : (
-            <div className="flex flex-1 h-full overflow-hidden">
+            <div className="flex flex-1 h-full min-w-0 overflow-hidden">
               <div className="flex flex-col flex-1 min-w-0 h-full">
                 {/* Ticket Header */}
                 <TicketDetailHeader
@@ -736,7 +755,7 @@ export const UserSupportView: React.FC<UserSupportViewProps> = ({
                 showRequester={true}
                 clientName={selectedTicket.creator?.displayName}
                 clientEmail={selectedTicket.creator?.email || undefined}
-                className="hidden lg:flex w-80 shrink-0"
+                className="hidden lg:flex lg:w-[18rem] xl:w-80 shrink-0"
               />
 
               <Sheet open={isInfoOpen} onOpenChange={setIsInfoOpen}>

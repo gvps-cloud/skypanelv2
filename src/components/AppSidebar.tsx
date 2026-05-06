@@ -71,14 +71,15 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       if (isAdminRoute) {
         const activeAnchor = currentHash || "dashboard";
 
-        // Organize admin sections by domain instead of one overloaded ops bucket.
-        const adminGroups = [
-          {
-            title: "Dashboard",
-            icon: LayoutDashboard,
-            url: `/admin`,
-            isActive: activeAnchor === "dashboard" || !currentHash,
-          },
+        // Dashboard first; remaining sections by label length (long → short), like the customer nav taper.
+        const adminDashboard = {
+          title: "Dashboard",
+          icon: LayoutDashboard,
+          url: `/admin`,
+          isActive: activeAnchor === "dashboard" || !currentHash,
+        };
+
+        const adminOtherGroups = [
           {
             title: "Support & Intake",
             icon: LifeBuoy,
@@ -212,9 +213,12 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
               { title: "Subscriptions", url: `/admin#enhance-subscriptions`, isActive: activeAnchor === "enhance-subscriptions" },
             ],
           },
-        ];
+        ].sort((a, b) => {
+          const byLen = b.title.length - a.title.length;
+          return byLen !== 0 ? byLen : a.title.localeCompare(b.title);
+        });
 
-        return adminGroups;
+        return [adminDashboard, ...adminOtherGroups];
       }
 
       // Dashboard stays first; remaining items follow label length (long → short) for a cleaner visual taper.

@@ -13,6 +13,7 @@ import {
 import { SupportTicket, TicketStatus } from "@/types/support";
 import { TicketListItem } from "./TicketListItem";
 import { TICKET_STATUS_META } from "./constants";
+import { cn } from "@/lib/utils";
 
 interface TicketListProps {
   tickets: SupportTicket[];
@@ -23,6 +24,7 @@ interface TicketListProps {
   isAdmin?: boolean;
   showCustomer?: boolean;
   title?: string;
+  className?: string;
 }
 
 export const TicketList: React.FC<TicketListProps> = ({
@@ -34,6 +36,7 @@ export const TicketList: React.FC<TicketListProps> = ({
   isAdmin = false,
   showCustomer = false,
   title,
+  className,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | TicketStatus>("all");
@@ -74,7 +77,12 @@ export const TicketList: React.FC<TicketListProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full border-r border-border bg-muted/10 w-full md:w-80 lg:w-96 shrink-0">
+    <div
+      className={cn(
+        "flex h-full min-w-0 w-full shrink-0 flex-col bg-muted/10",
+        className,
+      )}
+    >
       {/* Header */}
       <div className="p-4 border-b border-border bg-background/50 backdrop-blur-sm sticky top-0 z-10 space-y-3">
         <div className="flex items-center justify-between">
@@ -133,7 +141,7 @@ export const TicketList: React.FC<TicketListProps> = ({
       </div>
 
       {/* List */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 min-w-0 flex-1">
         {isLoading ? (
           <div className="p-4 space-y-4">
             {[1, 2, 3].map((i) => (
@@ -163,7 +171,7 @@ export const TicketList: React.FC<TicketListProps> = ({
             )}
           </div>
         ) : (
-          <div className="flex flex-col">
+          <div className="flex min-w-0 w-full flex-col">
             {filteredTickets.map((ticket) => (
               <TicketListItem
                 key={ticket.id}

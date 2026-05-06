@@ -111,6 +111,8 @@ import { buildApiUrl } from "@/lib/api";
 import { BRAND_NAME } from "@/lib/brand";
 import { formatCurrency as formatCurrencyDisplay } from "@/lib/formatters";
 import { DEFAULT_THEME_ID, type ThemePreset } from "@/theme/presets";
+import type { SupportTicket } from "@/types/support";
+import { normalizeAdminListTicket } from "@/lib/supportAdminTickets";
 import { AdminContactManagementSection } from "@/pages/admin/AdminContactManagementSection";
 import { AdminNetworkingSection } from "@/pages/admin/AdminNetworkingSection";
 import { AdminProvidersSection } from "@/pages/admin/AdminProvidersSection";
@@ -201,8 +203,6 @@ const BlogCategoryManager = lazy(async () => {
   return { default: mod.BlogCategoryManager };
 });
 
-type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
-type TicketPriority = "low" | "medium" | "high" | "urgent";
 type AdminSection =
   | "dashboard"
   | "announcements"
@@ -359,28 +359,6 @@ const SectionPanel: React.FC<SectionPanelProps> = ({
     </section>
   );
 };
-
-interface TicketMessage {
-  id: string;
-  ticket_id: string;
-  sender_type: "user" | "admin";
-  sender_name: string;
-  message: string;
-  created_at: string;
-}
-
-interface SupportTicket {
-  id: string;
-  created_by: string;
-  subject: string;
-  message: string;
-  status: TicketStatus;
-  priority: TicketPriority;
-  category: string;
-  created_at: string;
-  updated_at: string;
-  messages: TicketMessage[];
-}
 
 type ProviderType = "linode";
 
@@ -1338,7 +1316,6 @@ const Admin: React.FC = () => {
         fetchProviders();
         break;
       case "support":
-        fetchTickets();
         break;
       case "vps-plans":
         fetchPlans();
@@ -1401,18 +1378,9 @@ const Admin: React.FC = () => {
     setLoading(true);
     try {
       const data = await apiClient.get<{ tickets: SupportTicket[] }>('/admin/tickets');
-      const mapped: SupportTicket[] = (data.tickets || []).map((t: any) => ({
-        id: t.id,
-        created_by: t.created_by,
-        subject: t.subject,
-        message: t.message,
-        status: t.status,
-        priority: t.priority,
-        category: t.category,
-        created_at: t.created_at,
-        updated_at: t.updated_at,
-        messages: [],
-      }));
+      const mapped = (data.tickets || []).map((t) =>
+        normalizeAdminListTicket({ ...t, messages: t.messages ?? [] }),
+      );
       setTickets(mapped);
     } catch (e: any) {
       toast.error(e.message);
@@ -2423,7 +2391,11 @@ const Admin: React.FC = () => {
           />
         </SectionPanel>
 
-        <SectionPanel section="support" activeSection={activeTab}>
+        <SectionPanel
+          section="support"
+          activeSection={activeTab}
+          className="flex min-h-0 flex-1 flex-col space-y-0 border-0 bg-transparent p-4 sm:p-5 lg:p-6 shadow-none"
+        >
           <AdminSupportView
             token={token!}
             pendingFocusTicketId={pendingFocusTicketId}

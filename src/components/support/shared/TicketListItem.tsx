@@ -30,20 +30,20 @@ export const TicketListItem: React.FC<TicketListItemProps> = ({
     <button
       onClick={onClick}
       className={cn(
-        "flex w-full flex-col gap-3 p-4 text-left transition-all hover:bg-muted/50 border-b border-border last:border-0",
-        isSelected && "bg-primary/5 border-l-4 border-l-primary pl-3"
+        "flex w-full min-w-0 max-w-full flex-col gap-2 border-b border-border p-3 text-left transition-colors last:border-0 hover:bg-muted/40 sm:gap-2.5 sm:p-3.5",
+        isSelected && "border-l-4 border-l-primary bg-primary/5 pl-2.5 sm:pl-3",
       )}
     >
-      <div className="flex items-start justify-between gap-2 w-full">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+      <div className="flex w-full min-w-0 items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
           <StatusIcon 
             className={cn(
-              "h-4 w-4 flex-shrink-0",
+              "mt-0.5 h-4 w-4 flex-shrink-0",
               isSelected ? "text-primary" : "text-muted-foreground"
             )} 
           />
           <span className={cn(
-            "font-medium text-sm truncate",
+            "min-w-0 flex-1 break-words text-sm font-medium leading-snug line-clamp-2",
             isSelected ? "text-primary" : "text-foreground"
           )}>
             {ticket.subject}
@@ -64,20 +64,24 @@ export const TicketListItem: React.FC<TicketListItemProps> = ({
         </span>
       </div>
 
-      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+      <p className="min-w-0 break-words line-clamp-2 text-left text-xs leading-relaxed text-muted-foreground">
         {description}
       </p>
       
       {showCustomer && (
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-foreground/80 line-clamp-1">
+        <div className="min-w-0 space-y-0.5">
+          <p className="min-w-0 break-words line-clamp-2 text-xs font-medium text-foreground/90">
             {getCreatorDisplay(ticket)}
-            {ticket.creator?.email && <span className="text-muted-foreground font-normal ml-1">({ticket.creator.email})</span>}
+            {ticket.creator?.email && (
+              <span className="ml-1 font-normal text-muted-foreground">
+                ({ticket.creator.email})
+              </span>
+            )}
           </p>
           {(ticket.organization_name || ticket.organization_slug) && (
-            <p className="flex items-center gap-1 text-[11px] text-muted-foreground line-clamp-1">
+            <p className="flex items-center gap-1 line-clamp-1 text-[11px] text-muted-foreground">
               <Shield className="h-3 w-3 shrink-0" />
-              <span>
+              <span className="min-w-0 truncate">
                 {ticket.organization_name || ticket.organization_slug}
                 {ticket.organization_name && ticket.organization_slug && (
                   <span className="opacity-70"> · @{ticket.organization_slug}</span>
@@ -88,11 +92,11 @@ export const TicketListItem: React.FC<TicketListItemProps> = ({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         <Badge
           variant="outline"
           className={cn(
-            "text-[10px] h-5 px-1.5 font-normal",
+            "h-[22px] px-1.5 text-[10px] font-normal leading-none",
             TICKET_STATUS_META[ticket.status].className
           )}
         >
@@ -102,7 +106,7 @@ export const TicketListItem: React.FC<TicketListItemProps> = ({
         <Badge
           variant="outline"
           className={cn(
-            "text-[10px] h-5 px-1.5 font-normal",
+            "h-[22px] px-1.5 text-[10px] font-normal leading-none",
             TICKET_PRIORITY_META[ticket.priority].className
           )}
         >
@@ -112,13 +116,13 @@ export const TicketListItem: React.FC<TicketListItemProps> = ({
         {ticket.vps_label && (
           <Badge
             variant="secondary"
-            className="text-[10px] h-5 px-1.5 font-normal bg-muted text-muted-foreground max-w-[100px] truncate"
+            className="h-[22px] max-w-[min(11rem,100%)] truncate bg-muted px-1.5 text-[10px] font-normal leading-none text-muted-foreground"
           >
             {ticket.vps_label}
           </Badge>
         )}
         
-        <span className="text-[10px] capitalize opacity-70">
+        <span className="min-w-0 max-w-full break-words text-[10px] capitalize text-muted-foreground/90">
           {ticket.category.replace("_", " ")}
         </span>
       </div>

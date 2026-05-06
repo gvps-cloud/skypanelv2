@@ -31,6 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SSHTerminal } from "@/components/VPS/SSHTerminal";
+import { formatTicketDateTimeLabel } from "@/lib/supportTicketDisplay";
 
 interface TicketInfoSidebarProps {
   ticket: SupportTicket;
@@ -56,13 +57,18 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
   const requesterName = clientName || ticket.creator?.displayName || ticket.created_by || "Unknown User";
   const requesterEmail = clientEmail || ticket.creator?.email || undefined;
   const organizationLabel = ticket.organization_name || ticket.organization_slug || "Organization";
+  const canViewHosting =
+    isAdmin === true &&
+    Boolean(ticket.hosting_subscription_id) &&
+    ticket.hosting_subscription_is_active === true &&
+    ticket.hosting_plan_is_active === true;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-      minimumFractionDigits: 6,
-      maximumFractionDigits: 6,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -113,25 +119,30 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
 
   return (
     <>
-      <div className={cn("w-80 border-l border-border bg-muted/10 flex flex-col h-full shrink-0", className)}>
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-6">
+      <div
+        className={cn(
+          "flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-l border-border bg-muted/10",
+          className,
+        )}
+      >
+      <ScrollArea className="min-h-0 min-w-0 flex-1">
+        <div className="box-border min-w-0 max-w-full space-y-6 p-4">
         {/* Client Info Section */}
-        <div className="space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-            <User className="h-3.5 w-3.5" />
+        <div className="min-w-0 space-y-3">
+          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <User className="h-3.5 w-3.5 shrink-0" />
             {isAdmin ? "Client Information" : shouldShowRequester ? "Requester & Account" : "My Account"}
           </h3>
           
-          <div className="bg-background rounded-lg border border-border p-3 space-y-3 shadow-sm">
+          <div className="min-w-0 space-y-3 rounded-lg border border-border bg-background p-3 shadow-sm">
             {shouldShowRequester && (requesterName || requesterEmail) && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <User className="h-4 w-4 text-primary/70" />
-                  <span className="truncate">{requesterName}</span>
+              <div className="min-w-0 space-y-1">
+                <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                  <User className="h-4 w-4 shrink-0 text-primary/70" />
+                  <span className="min-w-0 break-words">{requesterName}</span>
                 </div>
                 {requesterEmail && (
-                  <div className="text-xs text-muted-foreground pl-6 truncate" title={requesterEmail}>
+                  <div className="min-w-0 break-all pl-6 text-xs text-muted-foreground" title={requesterEmail}>
                     {requesterEmail}
                   </div>
                 )}
@@ -140,21 +151,21 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
             )}
 
             {shouldShowRequester && (ticket.organization_id || ticket.organization_name || ticket.organization_slug) && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Shield className="h-4 w-4 text-primary/70" />
-                  <span className="truncate">
+              <div className="min-w-0 space-y-1">
+                <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                  <Shield className="h-4 w-4 shrink-0 text-primary/70" />
+                  <span className="min-w-0 break-words">
                     {organizationLabel}
                   </span>
                 </div>
                 {ticket.organization_id && (
-                  <div className="pl-6 space-y-1">
-                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground block">
+                  <div className="min-w-0 space-y-1 pl-6">
+                    <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
                       Organization ID
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
                       <div
-                        className="font-mono text-xs bg-muted/50 p-1.5 rounded truncate select-all flex-1 min-w-0"
+                        className="min-w-0 flex-1 break-all rounded bg-muted/50 p-1.5 font-mono text-xs select-all"
                         title={ticket.organization_id}
                       >
                         {ticket.organization_id}
@@ -196,56 +207,56 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
 
         {/* Related Service Section */}
         {ticket.vps_id && (
-          <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <Server className="h-3.5 w-3.5" />
+          <div className="min-w-0 space-y-3">
+            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Server className="h-3.5 w-3.5 shrink-0" />
               Related Service
             </h3>
             
-            <div className="bg-background rounded-lg border border-border p-3 space-y-3 shadow-sm">
-              <div className="space-y-2">
-                <div className="flex items-start gap-2">
-                  <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
+            <div className="min-w-0 space-y-3 rounded-lg border border-border bg-background p-3 shadow-sm">
+              <div className="min-w-0 space-y-2">
+                <div className="flex min-w-0 items-start gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-primary/10">
                     <Server className="h-4 w-4 text-primary" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium truncate">
+                    <div className="break-words text-sm font-medium leading-snug line-clamp-2">
                       {ticket.vps_label || "Unknown VPS"}
                     </div>
-                    <div className="text-xs text-muted-foreground font-mono truncate">
+                    <div className="break-all font-mono text-xs text-muted-foreground">
                       ID: {ticket.vps_id}
                     </div>
                   </div>
                 </div>
                 
                 {ticket.vps_label && (
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                    <MapPin className="h-3 w-3" />
-                    <span className="truncate">{ticket.vps_label}</span>
+                  <div className="flex min-w-0 items-center gap-1.5 rounded bg-muted/50 px-2 py-1 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span className="min-w-0 break-words">{ticket.vps_label}</span>
                   </div>
                 )}
               </div>
 
               {isAdmin && (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 w-full"
+                    className="h-8 w-full min-w-0 justify-center"
                     asChild
                   >
                     <Link to={`/vps/${ticket.vps_id}`}>
-                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      <ExternalLink className="mr-1.5 h-3.5 w-3.5 shrink-0" />
                       View
                     </Link>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 w-full"
+                    className="h-8 w-full min-w-0 justify-center"
                     onClick={handleSSHClick}
                   >
-                    <Terminal className="h-3.5 w-3.5 mr-1.5" />
+                    <Terminal className="mr-1.5 h-3.5 w-3.5 shrink-0" />
                     SSH
                   </Button>
                 </div>
@@ -255,42 +266,42 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
         )}
 
         {ticket.hosting_subscription_id && (
-          <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <Globe className="h-3.5 w-3.5" />
+          <div className="min-w-0 space-y-3">
+            <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Globe className="h-3.5 w-3.5 shrink-0" />
               Related hosting
             </h3>
 
-            <div className="bg-background rounded-lg border border-border p-3 space-y-3 shadow-sm">
-              <div className="space-y-2">
-                <div className="flex items-start gap-2">
-                  <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
+            <div className="min-w-0 space-y-3 rounded-lg border border-border bg-background p-3 shadow-sm">
+              <div className="min-w-0 space-y-2">
+                <div className="flex min-w-0 items-start gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-primary/10">
                     <Globe className="h-4 w-4 text-primary" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium truncate">
+                    <div className="break-words text-sm font-medium leading-snug line-clamp-3">
                       {[ticket.hosting_domain, ticket.hosting_plan_name]
                         .filter((part) => Boolean(part && String(part).trim()))
                         .join(" · ") || "Hosting subscription"}
                     </div>
-                    <div className="text-xs text-muted-foreground font-mono truncate">
+                    <div className="break-all font-mono text-xs text-muted-foreground">
                       ID: {ticket.hosting_subscription_id}
                     </div>
                   </div>
                 </div>
 
                 {ticket.hosting_domain && (
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                  <div className="flex min-w-0 items-center gap-1.5 rounded bg-muted/50 px-2 py-1 text-xs text-muted-foreground">
                     <MapPin className="h-3 w-3 shrink-0" />
-                    <span className="truncate">{ticket.hosting_domain}</span>
+                    <span className="min-w-0 break-words">{ticket.hosting_domain}</span>
                   </div>
                 )}
               </div>
 
-              {isAdmin && (
-                <Button variant="outline" size="sm" className="h-8 w-full" asChild>
+              {canViewHosting && (
+                <Button variant="outline" size="sm" className="h-8 w-full min-w-0 justify-center" asChild>
                   <Link to={`/hosting/${ticket.hosting_subscription_id}`}>
-                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                    <ExternalLink className="mr-1.5 h-3.5 w-3.5 shrink-0" />
                     View hosting
                   </Link>
                 </Button>
@@ -300,19 +311,19 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
         )}
 
         {/* Ticket Details Section */}
-        <div className="space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-            <Info className="h-3.5 w-3.5" />
+        <div className="min-w-0 space-y-3">
+          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Info className="h-3.5 w-3.5 shrink-0" />
             Ticket Details
           </h3>
           
-          <div className="bg-background rounded-lg border border-border p-3 space-y-3 shadow-sm text-sm">
-            <div className="grid grid-cols-2 gap-y-3 gap-x-2">
-              <div className="col-span-2 space-y-1">
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Hash className="h-3 w-3" /> Ticket ID
+          <div className="min-w-0 space-y-3 rounded-lg border border-border bg-background p-3 text-sm shadow-sm">
+            <div className="grid min-w-0 grid-cols-2 gap-x-2 gap-y-3">
+              <div className="col-span-2 min-w-0 space-y-1">
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Hash className="h-3 w-3 shrink-0" /> Ticket ID
                 </span>
-                <div className="font-mono text-xs bg-muted/50 p-1.5 rounded truncate select-all">
+                <div className="select-all break-all rounded bg-muted/50 p-1.5 font-mono text-xs">
                   {ticket.id}
                 </div>
               </div>
@@ -343,11 +354,11 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
                 </Badge>
               </div>
               
-              <div className="col-span-2 space-y-1">
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Tag className="h-3 w-3" /> Category
+              <div className="col-span-2 min-w-0 space-y-1">
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Tag className="h-3 w-3 shrink-0" /> Category
                 </span>
-                <div className="capitalize font-medium">
+                <div className="break-words font-medium capitalize">
                   {ticket.category.replace("_", " ")}
                 </div>
               </div>
@@ -355,21 +366,21 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
 
             <Separator />
 
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Calendar className="h-3 w-3" /> Created
+            <div className="grid gap-2 text-xs">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
+                <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                  <Calendar className="h-3 w-3 shrink-0" /> Created
                 </span>
-                <span className="tabular-nums">
-                  {new Date(ticket.created_at).toLocaleDateString()}
+                <span className="shrink-0 text-right font-medium tabular-nums text-foreground">
+                  {formatTicketDateTimeLabel(ticket.created_at)}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Clock className="h-3 w-3" /> Last Updated
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
+                <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                  <Clock className="h-3 w-3 shrink-0" /> Last updated
                 </span>
-                <span className="tabular-nums">
-                  {new Date(ticket.updated_at).toLocaleDateString()}
+                <span className="shrink-0 text-right font-medium tabular-nums text-foreground">
+                  {formatTicketDateTimeLabel(ticket.updated_at)}
                 </span>
               </div>
             </div>

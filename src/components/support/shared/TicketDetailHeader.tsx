@@ -9,6 +9,8 @@ interface TicketDetailHeaderProps {
   ticket: SupportTicket;
   onBack: () => void;
   showCustomer?: boolean;
+  /** When true, priority/category badges hide from lg breakpoint (e.g. shown in right rail). */
+  relocateMetaToSidebar?: boolean;
   children?: React.ReactNode;
 }
 
@@ -16,6 +18,7 @@ export const TicketDetailHeader: React.FC<TicketDetailHeaderProps> = ({
   ticket,
   onBack,
   showCustomer = false,
+  relocateMetaToSidebar = false,
   children,
 }) => {
   const getCreatorDisplay = (ticket: SupportTicket): string => {
@@ -24,7 +27,7 @@ export const TicketDetailHeader: React.FC<TicketDetailHeaderProps> = ({
   };
 
   return (
-    <div className="flex flex-col border-b border-border bg-background p-6 gap-4">
+    <div className="flex flex-col gap-4 border-b border-border bg-background p-4 sm:p-5 md:p-6">
       <div className="flex items-center gap-2 md:hidden">
         <button
           onClick={onBack}
@@ -36,14 +39,14 @@ export const TicketDetailHeader: React.FC<TicketDetailHeaderProps> = ({
       </div>
 
       <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold leading-tight text-foreground">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <h2 className="min-w-0 flex-1 break-words text-xl font-semibold leading-tight text-foreground">
             {ticket.subject}
           </h2>
           <Badge
             variant="outline"
             className={cn(
-              "ml-auto text-xs h-6 px-2.5 font-medium",
+              "ml-auto h-6 shrink-0 px-2.5 text-xs font-medium",
               TICKET_STATUS_META[ticket.status].className
             )}
           >
@@ -52,26 +55,30 @@ export const TicketDetailHeader: React.FC<TicketDetailHeaderProps> = ({
         </div>
         
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mt-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 items-center gap-1.5">
             <User className="h-3.5 w-3.5 opacity-70" />
-            <span className="font-medium text-foreground">
+            <span className="min-w-0 truncate font-medium text-foreground">
               {showCustomer ? getCreatorDisplay(ticket) : "You"}
             </span>
             {showCustomer && ticket.creator?.email && (
-              <span className="opacity-70">({ticket.creator.email})</span>
+              <span className="truncate opacity-70" title={ticket.creator.email}>
+                ({ticket.creator.email})
+              </span>
             )}
           </div>
 
           {showCustomer && (ticket.organization_name || ticket.organization_slug) && (
             <>
               <div className="h-1 w-1 rounded-full bg-border" />
-              <div className="flex items-center gap-1.5">
+              <div className="flex min-w-0 items-center gap-1.5">
                 <Shield className="h-3.5 w-3.5 opacity-70" />
-                <span className="font-medium text-foreground">
+                <span className="min-w-0 truncate font-medium text-foreground">
                   {ticket.organization_name || ticket.organization_slug}
                 </span>
                 {ticket.organization_name && ticket.organization_slug && (
-                  <span className="opacity-70">@{ticket.organization_slug}</span>
+                  <span className="truncate opacity-70" title={ticket.organization_slug}>
+                    @{ticket.organization_slug}
+                  </span>
                 )}
               </div>
             </>
@@ -92,9 +99,11 @@ export const TicketDetailHeader: React.FC<TicketDetailHeaderProps> = ({
           {ticket.vps_label && (
             <>
               <div className="h-1 w-1 rounded-full bg-border" />
-              <div className="flex items-center gap-1.5">
+              <div className="flex min-w-0 items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 opacity-70" />
-                <span className="font-medium text-foreground">{ticket.vps_label}</span>
+                <span className="min-w-0 truncate font-medium text-foreground" title={ticket.vps_label}>
+                  {ticket.vps_label}
+                </span>
               </div>
             </>
           )}
@@ -115,24 +124,29 @@ export const TicketDetailHeader: React.FC<TicketDetailHeaderProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 mt-2">
+      <div className="mt-2 flex flex-col gap-3">
         {children}
-        <div className="flex flex-wrap gap-2">
-          <Badge
-            variant="secondary"
+        <div
           className={cn(
-            "text-xs font-normal border bg-transparent",
-            TICKET_PRIORITY_META[ticket.priority].className
+            "flex flex-wrap gap-2",
+            relocateMetaToSidebar && "lg:hidden",
           )}
         >
-          Priority: {TICKET_PRIORITY_META[ticket.priority].label}
-        </Badge>
-        
-        <Badge variant="outline" className="text-xs font-normal capitalize">
-          Category: {ticket.category.replace("_", " ")}
-        </Badge>
+          <Badge
+            variant="secondary"
+            className={cn(
+              "border bg-transparent text-xs font-normal",
+              TICKET_PRIORITY_META[ticket.priority].className,
+            )}
+          >
+            Priority: {TICKET_PRIORITY_META[ticket.priority].label}
+          </Badge>
+
+          <Badge variant="outline" className="text-xs font-normal capitalize">
+            Category: {ticket.category.replace("_", " ")}
+          </Badge>
+        </div>
       </div>
     </div>
-  </div>
   );
 };

@@ -32,7 +32,13 @@ export interface SupportTicket {
   has_staff_reply?: boolean;
   vps_id?: string;
   vps_label?: string;
+  /** Snapshot from ticket creation (may be null for older rows) */
+  vps_ip_snapshot?: string | null;
   hosting_subscription_id?: string;
+  /** Whether the linked hosting subscription is currently active */
+  hosting_subscription_is_active?: boolean;
+  /** Whether the linked hosting plan is currently active */
+  hosting_plan_is_active?: boolean;
   hosting_domain_snapshot?: string | null;
   hosting_plan_name_snapshot?: string | null;
   /** Display domain: snapshot first, then live subscription */

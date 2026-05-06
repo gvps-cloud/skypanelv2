@@ -125,6 +125,8 @@ router.get("/tickets", authenticateToken, requireOrganization, async (req: Reque
            org.name AS organization_name,
            org.slug AS organization_slug,
            COALESCE(vi.label, st.vps_label_snapshot) as vps_label,
+           COALESCE(hs.status = 'active', false) AS hosting_subscription_is_active,
+           COALESCE(hp.is_active, false) AS hosting_plan_is_active,
            COALESCE(st.hosting_domain_snapshot, hs.domain) AS hosting_domain,
            COALESCE(st.hosting_plan_name_snapshot, hp.name) AS hosting_plan_name
          FROM support_tickets st
@@ -148,6 +150,8 @@ router.get("/tickets", authenticateToken, requireOrganization, async (req: Reque
            org.name AS organization_name,
            org.slug AS organization_slug,
            COALESCE(vi.label, st.vps_label_snapshot) as vps_label,
+           COALESCE(hs.status = 'active', false) AS hosting_subscription_is_active,
+           COALESCE(hp.is_active, false) AS hosting_plan_is_active,
            COALESCE(st.hosting_domain_snapshot, hs.domain) AS hosting_domain,
            COALESCE(st.hosting_plan_name_snapshot, hp.name) AS hosting_plan_name
          FROM support_tickets st
@@ -181,9 +185,18 @@ router.post(
       .isIn(["low", "medium", "high", "urgent"])
       .withMessage("Invalid priority"),
     body("category").isLength({ min: 2 }).withMessage("Category is required"),
-    body("vpsId").optional().isUUID().withMessage("Invalid VPS ID"),
-    body("organizationId").optional().isUUID().withMessage("Invalid Organization ID"),
-    body("hostingSubscriptionId").optional().isUUID().withMessage("Invalid hosting subscription ID"),
+    body("vpsId")
+      .optional({ values: "falsy" })
+      .isUUID()
+      .withMessage("Invalid VPS ID"),
+    body("organizationId")
+      .optional({ values: "falsy" })
+      .isUUID()
+      .withMessage("Invalid Organization ID"),
+    body("hostingSubscriptionId")
+      .optional({ values: "falsy" })
+      .isUUID()
+      .withMessage("Invalid hosting subscription ID"),
   ],
   async (req: Request, res: Response) => {
     try {

@@ -88,6 +88,19 @@ const PRIORITY_OPTIONS: Array<{ value: TicketPriority; label: string; descriptio
 
 const SERVICES_PER_PAGE = 8;
 
+/** Must match `api/routes/support.ts` POST /tickets validators */
+const MIN_SUBJECT_LENGTH = 3;
+const MIN_DESCRIPTION_LENGTH = 10;
+
+/** Popover / Select content is portaled under `body`, so Dialog treats it as "outside" unless we opt out. */
+function isRadixPortaledPickerTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(
+    target.closest("[data-radix-popper-content-wrapper]") ||
+      target.closest("[data-radix-select-content]"),
+  );
+}
+
 export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
   open,
   onOpenChange,
@@ -115,8 +128,8 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
   const [hostingPage, setHostingPage] = useState(1);
 
   const busy = isLoading || submitting;
-  const subjectReady = data.subject.trim().length > 0;
-  const descriptionReady = data.description.trim().length > 0;
+  const subjectReady = data.subject.trim().length >= MIN_SUBJECT_LENGTH;
+  const descriptionReady = data.description.trim().length >= MIN_DESCRIPTION_LENGTH;
 
   const filteredServices = useMemo(() => {
     const query = serviceSearch.trim().toLowerCase();
@@ -223,7 +236,24 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
-      <DialogContent className="overflow-hidden border-border/60 bg-background p-0 shadow-2xl sm:max-w-3xl">
+      <DialogContent
+        className="overflow-hidden border-border/60 bg-background p-0 shadow-2xl sm:max-w-3xl"
+        onPointerDownOutside={(event) => {
+          if (isRadixPortaledPickerTarget(event.target)) {
+            event.preventDefault();
+          }
+        }}
+        onInteractOutside={(event) => {
+          if (isRadixPortaledPickerTarget(event.target)) {
+            event.preventDefault();
+          }
+        }}
+        onFocusOutside={(event) => {
+          if (isRadixPortaledPickerTarget(event.target)) {
+            event.preventDefault();
+          }
+        }}
+      >
         <div className="relative">
           <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-primary/10 to-transparent" />
 
@@ -295,7 +325,11 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                         placeholder="Brief summary of the issue"
                         className="h-11"
                         disabled={busy}
+                        minLength={MIN_SUBJECT_LENGTH}
                       />
+                      <p className="text-xs text-muted-foreground">
+                        At least {MIN_SUBJECT_LENGTH} characters (required by support).
+                      </p>
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -407,7 +441,11 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
 
                   {vpsInstances.length > 0 ? (
                     <div className="space-y-4">
-                      <Popover open={servicePickerOpen} onOpenChange={setServicePickerOpen}>
+                      <Popover
+                        modal={false}
+                        open={servicePickerOpen}
+                        onOpenChange={setServicePickerOpen}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             type="button"
@@ -434,6 +472,11 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                               <CommandGroup heading="Selection">
                                 <CommandItem
                                   value="none"
+                                  className="!pointer-events-auto"
+                                  onPointerDown={(event) => {
+                                    // cmdk + Radix Dialog: avoid focus/pointer churn that leaves items non-interactive
+                                    event.preventDefault();
+                                  }}
                                   onSelect={() => {
                                     setData((current) => ({ ...current, vpsId: undefined }));
                                     setServicePickerOpen(false);
@@ -457,6 +500,10 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                                     <CommandItem
                                       key={service.id}
                                       value={service.id}
+                                      className="!pointer-events-auto"
+                                      onPointerDown={(event) => {
+                                        event.preventDefault();
+                                      }}
                                       onSelect={() => {
                                         setData((current) => ({ ...current, vpsId: service.id }));
                                         setServicePickerOpen(false);
@@ -520,7 +567,11 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
 
                   {hostingServices.length > 0 ? (
                     <div className="space-y-4">
-                      <Popover open={hostingPickerOpen} onOpenChange={setHostingPickerOpen}>
+                      <Popover
+                        modal={false}
+                        open={hostingPickerOpen}
+                        onOpenChange={setHostingPickerOpen}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             type="button"
@@ -548,6 +599,10 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                               <CommandGroup heading="Selection">
                                 <CommandItem
                                   value="none-hosting"
+                                  className="!pointer-events-auto"
+                                  onPointerDown={(event) => {
+                                    event.preventDefault();
+                                  }}
                                   onSelect={() => {
                                     setData((current) => ({
                                       ...current,
@@ -576,6 +631,10 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                                     <CommandItem
                                       key={svc.id}
                                       value={svc.id}
+                                      className="!pointer-events-auto"
+                                      onPointerDown={(event) => {
+                                        event.preventDefault();
+                                      }}
                                       onSelect={() => {
                                         setData((current) => ({
                                           ...current,
@@ -654,7 +713,7 @@ export const CreateTicketDialog: React.FC<CreateTicketDialogProps> = ({
                     />
                     <p className="text-xs text-muted-foreground">
                       Include steps to reproduce, relevant errors, or timing details to help the
-                      support team respond faster.
+                      support team respond faster. Minimum {MIN_DESCRIPTION_LENGTH} characters.
                     </p>
                   </div>
 

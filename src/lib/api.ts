@@ -130,7 +130,21 @@ class ApiClient {
         const errorData = JSON.parse(errorText) as Record<string, unknown>;
         apiErrorString =
           typeof errorData.error === "string" ? errorData.error : undefined;
+
+        const validationMsgs = Array.isArray(errorData.errors)
+          ? (errorData.errors as unknown[])
+              .map((entry) =>
+                entry &&
+                typeof entry === "object" &&
+                typeof (entry as { msg?: string }).msg === "string"
+                  ? (entry as { msg: string }).msg
+                  : "",
+              )
+              .filter(Boolean)
+          : [];
+
         const nestedMessage =
+          (validationMsgs.length > 0 ? validationMsgs.join(" ") : "") ||
           (typeof errorData.message === "string" && errorData.message) ||
           apiErrorString ||
           (typeof errorData.error === "object" &&
