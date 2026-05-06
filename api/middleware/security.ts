@@ -34,6 +34,19 @@ import { config } from "../config/index.js";
 const isProduction = config.NODE_ENV === "production";
 
 const buildCspDirectives = () => {
+  // Derive WS/WSS origins from configured CORS origins so production
+  // domains defined via CLIENT_URL/CORS_ORIGINS can open SSH WebSockets.
+  const wsOrigins = config.corsOrigins.flatMap((origin) => {
+    try {
+      const url = new URL(origin);
+      return url.protocol === "https:"
+        ? [`wss://${url.host}`]
+        : [`ws://${url.host}`];
+    } catch {
+      return [];
+    }
+  });
+
   const connectSrc = [
     "'self'",
     "https://api.paypal.com",
@@ -42,6 +55,8 @@ const buildCspDirectives = () => {
     "https://*.linode.com",
     "https://api.linode.com",
     "https://*.sslip.io",
+    "https://*.nip.io",
+    ...wsOrigins,
     ...(isProduction ? [] : ["ws://localhost:*", "wss://localhost:*"]),
   ];
   const imgSrc = [
