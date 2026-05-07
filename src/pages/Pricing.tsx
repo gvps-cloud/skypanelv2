@@ -430,7 +430,7 @@ const PricingPage: React.FC = () => {
 
   if (loading) {
     return (
-      <MarketingPageShell>
+      <MarketingPageShell background="aurora">
         <div className="container mx-auto px-4 py-8">
           <div className="flex min-h-[400px] items-center justify-center">
             <div className="flex items-center gap-2">
@@ -444,7 +444,7 @@ const PricingPage: React.FC = () => {
   }
 
   return (
-    <MarketingPageShell>
+    <MarketingPageShell background="aurora">
         {/* â”€â”€â”€ HERO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <section className="relative overflow-hidden border-b border-border/40">
           <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>

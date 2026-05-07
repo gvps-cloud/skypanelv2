@@ -14,6 +14,7 @@ export interface MarketingPageShellProps {
    */
   showScanlines?: boolean;
   density?: "default" | "calm";
+  background?: "grid" | "aurora";
   /** Rendered below the navbar inside main (e.g. session divider). */
   topChrome?: ReactNode;
   className?: string;
@@ -26,6 +27,7 @@ export default function MarketingPageShell({
   children,
   showScanlines,
   density = "default",
+  background = "grid",
   topChrome,
   className,
 }: MarketingPageShellProps) {
@@ -40,13 +42,19 @@ export default function MarketingPageShell({
       )}
     >
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_70%_at_50%_-15%,hsl(var(--primary)/0.16),transparent_52%)]" />
-        <div
-          className={cn(
-            "absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.4)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.4)_1px,transparent_1px)] [background-size:32px_32px]",
-            calm && "opacity-[0.22] [background-size:48px_48px]",
-          )}
-        />
+        {background === "aurora" ? (
+          <div className="absolute inset-0 home-aurora" />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_70%_at_50%_-15%,hsl(var(--primary)/0.16),transparent_52%)]" />
+            <div
+              className={cn(
+                "absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.4)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.4)_1px,transparent_1px)] [background-size:32px_32px]",
+                calm && "opacity-[0.22] [background-size:48px_48px]",
+              )}
+            />
+          </>
+        )}
       </div>
 
       {scanOn ? (

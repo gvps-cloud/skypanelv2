@@ -27,6 +27,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import MarketingPageShell from "@/components/MarketingPageShell";
 import { MarketingHero } from "@/components/marketing/MarketingHero";
+import DataStreamCanvas from "@/components/home/DataStreamCanvas";
+import { usePrefersReducedMotion } from "@/components/fx/usePrefersReducedMotion";
 import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { BRAND_NAME } from "@/lib/brand";
 import { apiClient } from "@/lib/api";
@@ -83,6 +85,7 @@ export default function FAQ() {
   const [updates, setUpdates] = useState<FAQUpdate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const heroReducedMotion = usePrefersReducedMotion();
 
   // Fetch FAQ data from API
   useEffect(() => {
@@ -135,14 +138,21 @@ export default function FAQ() {
   );
 
   return (
-    <MarketingPageShell>
+    <MarketingPageShell background="aurora">
         <section className="relative overflow-hidden border-b border-border/40">
+          <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+            <DataStreamCanvas
+              className="h-full w-full opacity-[0.3]"
+              reducedMotion={heroReducedMotion}
+              pauseWhenOffscreen
+            />
+          </div>
           <div className="home-orb home-orb--1" aria-hidden="true" />
           <div className="home-orb home-orb--2" aria-hidden="true" />
           <div className="home-orb home-orb--3" aria-hidden="true" />
-          <div className="home-grid-mask absolute inset-0" aria-hidden="true" />
+          <div className="home-grid-mask absolute inset-0 z-[1]" aria-hidden="true" />
 
-          <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 lg:px-8 lg:pb-20 lg:pt-24">
+          <div className="relative z-[2] mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 lg:px-8 lg:pb-20 lg:pt-24">
             <motion.div
               initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
@@ -197,12 +207,9 @@ export default function FAQ() {
           </div>
         </section>
 
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <AsciiDivider label="knowledge-base" className="opacity-45 py-2" />
-        </div>
-
-        <section className="py-14 sm:py-18">
+        <section className="py-12 sm:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <AsciiDivider label="knowledge-base" className="opacity-45 pb-3 pt-1" />
             <div className="grid gap-10 lg:grid-cols-[1fr_340px]">
               {/* ── Main Column ── */}
               <div className="space-y-6">

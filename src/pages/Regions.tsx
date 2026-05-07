@@ -232,7 +232,7 @@ export default function Regions() {
   /* ─── Render ─────────────────────────────────────────────────── */
 
   return (
-    <MarketingPageShell>
+    <MarketingPageShell background="aurora">
         {/* HERO */}
         <section className="relative overflow-hidden border-b border-border/40">
           <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
@@ -299,11 +299,7 @@ export default function Regions() {
           </div>
         </section>
 
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <AsciiDivider label="atlas" className="opacity-45 py-2" />
-        </div>
-
-        <section className="py-24 sm:py-28">
+        <section className="py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             {isLoading ? (
               <div className="flex justify-center py-24">
@@ -331,16 +327,16 @@ export default function Regions() {
                 </Card>
               </motion.div>
             ) : (
-              <motion.div
-                variants={revealContainer}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true }}
-                className="space-y-16"
-              >
-                {/* Controls bar */}
-                <motion.div variants={revealItem}>
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                <motion.div
+                  variants={revealContainer}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true }}
+                  className="space-y-16"
+                >
+                  {/* Controls bar */}
+                  <motion.div variants={revealItem}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                     <Badge variant="secondary" className="text-sm">
                       {regions.length} regions
                     </Badge>
@@ -378,6 +374,8 @@ export default function Regions() {
                     </div>
                   </div>
                 </motion.div>
+
+                <AsciiDivider label="atlas" className="opacity-45 mt-2 pb-1 pt-0" />
 
                 {/* Map + Details grid */}
                 {showMapView && (
