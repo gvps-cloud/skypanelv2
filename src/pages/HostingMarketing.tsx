@@ -14,11 +14,16 @@ import {
 
 import MarketingPageShell from "@/components/MarketingPageShell";
 import { MarketingHero } from "@/components/marketing/MarketingHero";
-import { TerminalPanel } from "@/components/terminal/TerminalPanel";
 import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
 import { BRAND_NAME } from "@/lib/brand";
 import { getHostingFeatureSpecRows } from "@/lib/hostingPlanFeatures";
@@ -85,6 +90,20 @@ const normalizePrice = (amount: number | string | null | undefined): number => {
 const formatMonthly = (amount: number | string | null | undefined): string =>
   currencyFormatter.format(normalizePrice(amount));
 
+const getFeaturedHostingPlan = (plans: HostingPlan[]): HostingPlan | null => {
+  if (plans.length === 0) return null;
+
+  const sorted = plans
+    .map((plan) => ({
+      plan,
+      price: normalizePrice(plan.price_monthly),
+    }))
+    .filter(({ price }) => Number.isFinite(price) && price > 0)
+    .sort((a, b) => a.price - b.price);
+
+  return sorted[0]?.plan ?? plans[0] ?? null;
+};
+
 interface HostingCatalogState {
   enabled: boolean;
   plans: HostingPlan[];
@@ -128,13 +147,19 @@ const useHostingCatalog = (): HostingCatalogState => {
   return { enabled, plans, isLoading };
 };
 
-const HostingHero = ({ enabled, plans, isLoading }: HostingCatalogState) => (
-  <section className="relative overflow-hidden border-b border-border/40">
-    <div className="home-orb home-orb--1" aria-hidden />
-    <div className="home-orb home-orb--2" aria-hidden />
-    <div className="home-grid-mask absolute inset-0" aria-hidden />
+const HostingHero = ({ enabled, plans, isLoading }: HostingCatalogState) => {
+  const featuredPlan = getFeaturedHostingPlan(plans);
+  const specRows = featuredPlan
+    ? getHostingFeatureSpecRows(featuredPlan, 5, { zeroMeansUnlimited: true })
+    : [];
 
-    <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-20 pt-24 sm:px-6 lg:grid-cols-[1fr_0.9fr] lg:px-8 lg:pb-24 lg:pt-28">
+  return (
+    <section className="relative overflow-hidden border-b border-border/40">
+      <div className="home-orb home-orb--1" aria-hidden />
+      <div className="home-orb home-orb--2" aria-hidden />
+      <div className="home-grid-mask absolute inset-0" aria-hidden />
+
+      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-20 pt-24 sm:px-6 lg:grid-cols-[1fr_0.9fr] lg:px-8 lg:pb-24 lg:pt-28">
       <motion.div
         initial={{ opacity: 0, y: 28 }}
         animate={{ opacity: 1, y: 0 }}
@@ -176,34 +201,77 @@ const HostingHero = ({ enabled, plans, isLoading }: HostingCatalogState) => (
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, delay: 0.15 }}
       >
-        <TerminalPanel
-          title="hosting.status"
-          traffic
-          glow
-          tone="success"
-          prompt="$"
-          bodyClassName="space-y-3 p-4 font-mono text-sm"
-          className="home-glass-panel home-animated-border border-primary/25"
-        >
-          {[
-            ["Hosting catalog", enabled ? "Enabled" : "Available when configured"],
-            ["Active plans", isLoading ? "Loading" : String(plans.length)],
-            ["Billing model", "Dedicated wallet"],
-            ["Management", "Panel SSO"],
-          ].map(([label, value]) => (
-            <div
-              key={label}
-              className="flex items-center justify-between rounded-sm border border-border/50 bg-card/80 px-3 py-2.5"
-            >
-              <span className="text-muted-foreground">{label}</span>
-              <span className="font-semibold text-foreground">{value}</span>
-            </div>
-          ))}
-        </TerminalPanel>
+        {featuredPlan ? (
+          <Card className="home-glass-panel home-animated-border overflow-hidden border-primary/25">
+            <CardHeader className="pb-3">
+              <p className="text-xs uppercase tracking-[0.3em] text-primary">
+                Featured hosting plan
+              </p>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <CardTitle className="text-lg">{featuredPlan.name}</CardTitle>
+                <Badge variant="secondary" className="text-xs capitalize">
+                  {featuredPlan.service_type}
+                </Badge>
+              </div>
+              {featuredPlan.description ? (
+                <p className="text-sm text-muted-foreground">
+                  {featuredPlan.description}
+                </p>
+              ) : null}
+              <div className="pt-3">
+                <span className="text-4xl font-bold tracking-tight text-foreground">
+                  {formatMonthly(featuredPlan.price_monthly)}
+                </span>
+                <span className="text-base font-normal text-muted-foreground">
+                  /month
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2.5">
+              {specRows.map((feature) => (
+                <div key={feature.key} className="flex items-center gap-2.5">
+                  <feature.icon className="h-4 w-4 shrink-0 text-primary/70" />
+                  <span className="text-sm">{feature.label}</span>
+                </div>
+              ))}
+            </CardContent>
+            <CardFooter>
+              <Button asChild className="w-full rounded-sm" size="lg">
+                <Link to="/pricing">
+                  View Hosting Pricing
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardFooter>
+          </Card>
+        ) : (
+          <Card className="home-glass-panel home-animated-border border-primary/25">
+            <CardContent className="space-y-3 p-6">
+              <p className="text-xs uppercase tracking-[0.3em] text-primary">
+                Featured hosting plan
+              </p>
+              <h3 className="text-lg font-semibold">
+                {isLoading
+                  ? "Loading live hosting catalog"
+                  : enabled
+                    ? "No active plans yet"
+                    : "Hosting catalog not configured"}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {isLoading
+                  ? "Fetching the latest Enhance-backed plans from the API."
+                  : enabled
+                    ? "The Enhance integration is enabled, but no active plans are available yet."
+                    : "Enable the Enhance integration to surface live hosting plans here."}
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </motion.div>
     </div>
-  </section>
-);
+    </section>
+  );
+};
 
 const CapabilityGrid = () => (
   <section className="py-24 sm:py-28">
@@ -324,7 +392,7 @@ export default function HostingMarketing() {
   const catalog = useHostingCatalog();
 
   return (
-    <MarketingPageShell>
+    <MarketingPageShell background="aurora">
       <HostingHero {...catalog} />
       <CapabilityGrid />
       <HostingCatalogSection enabled={catalog.enabled} plans={catalog.plans} />

@@ -38,6 +38,8 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import MarketingPageShell from "@/components/MarketingPageShell";
 import { MarketingHero } from "@/components/marketing/MarketingHero";
+import DataStreamCanvas from "@/components/home/DataStreamCanvas";
+import { usePrefersReducedMotion } from "@/components/fx/usePrefersReducedMotion";
 import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { BRAND_NAME } from "@/lib/brand";
 import type {
@@ -172,6 +174,7 @@ export default function Contact() {
     null,
   );
   const [isLoading, setIsLoading] = useState(true);
+  const heroReducedMotion = usePrefersReducedMotion();
 
   // Fetch contact configuration on mount
   useEffect(() => {
@@ -282,7 +285,7 @@ export default function Contact() {
   // Show loading state
   if (isLoading) {
     return (
-      <MarketingPageShell>
+      <MarketingPageShell background="aurora">
         <div className="flex min-h-[60vh] items-center justify-center px-4">
           <div className="space-y-4 text-center">
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
@@ -294,14 +297,21 @@ export default function Contact() {
   }
 
   return (
-    <MarketingPageShell>
+    <MarketingPageShell background="aurora">
         <section className="relative overflow-hidden border-b border-border/40">
+          <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+            <DataStreamCanvas
+              className="h-full w-full opacity-[0.3]"
+              reducedMotion={heroReducedMotion}
+              pauseWhenOffscreen
+            />
+          </div>
           <div className="home-orb home-orb--1" aria-hidden="true" />
           <div className="home-orb home-orb--2" aria-hidden="true" />
           <div className="home-orb home-orb--3" aria-hidden="true" />
-          <div className="home-grid-mask absolute inset-0" aria-hidden="true" />
+          <div className="home-grid-mask absolute inset-0 z-[1]" aria-hidden="true" />
 
-          <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-24 sm:px-6 lg:px-8 lg:pb-24 lg:pt-28">
+          <div className="relative z-[2] mx-auto max-w-7xl px-4 pb-20 pt-24 sm:px-6 lg:px-8 lg:pb-24 lg:pt-28">
             <motion.div
               initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
@@ -351,12 +361,9 @@ export default function Contact() {
           </div>
         </section>
 
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <AsciiDivider label="channels" className="opacity-45 py-2" />
-        </div>
-
-        <section className="py-24 sm:py-28">
+        <section className="py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <AsciiDivider label="channels" className="opacity-45 pb-3 pt-1" />
             <div className="grid gap-8 lg:grid-cols-[1fr_1.6fr]">
               {/* Left column — Contact method cards */}
               <motion.div

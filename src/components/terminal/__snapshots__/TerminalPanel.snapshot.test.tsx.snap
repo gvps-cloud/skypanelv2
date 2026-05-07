@@ -48,7 +48,7 @@ exports[`TerminalPanel > matches snapshot with tone and traffic 1`] = `
         class="h-2 w-2 rounded-full bg-[hsl(var(--warning))] opacity-90"
       />
       <span
-        class="h-2 w-2 rounded-full bg-[hsl(var(--success))] opacity-90"
+        class="h-2 w-2 rounded-full bg-primary opacity-90"
       />
     </div>
   </header>

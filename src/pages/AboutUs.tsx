@@ -20,6 +20,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import MarketingPageShell from "@/components/MarketingPageShell";
 import { MarketingHero } from "@/components/marketing/MarketingHero";
+import DataStreamCanvas from "@/components/home/DataStreamCanvas";
+import { usePrefersReducedMotion } from "@/components/fx/usePrefersReducedMotion";
 import { AsciiDivider } from "@/components/fx/AsciiDivider";
 import { BRAND_NAME } from "@/lib/brand";
 import api from "@/lib/api";
@@ -110,6 +112,7 @@ const parseNumber = (v: unknown): number | null => {
 
 export default function AboutUs() {
   const [regionCount, setRegionCount] = useState(10);
+  const heroReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     let mounted = true;
@@ -174,14 +177,21 @@ export default function AboutUs() {
       ];
 
   return (
-    <MarketingPageShell>
+    <MarketingPageShell background="aurora">
         <section className="relative overflow-hidden border-b border-border/40">
+          <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+            <DataStreamCanvas
+              className="h-full w-full opacity-[0.25]"
+              reducedMotion={heroReducedMotion}
+              pauseWhenOffscreen
+            />
+          </div>
           <div className="home-orb home-orb--1" aria-hidden="true" />
           <div className="home-orb home-orb--2" aria-hidden="true" />
           <div className="home-orb home-orb--3" aria-hidden="true" />
-          <div className="home-grid-mask absolute inset-0" aria-hidden="true" />
+          <div className="home-grid-mask absolute inset-0 z-[1]" aria-hidden="true" />
 
-          <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-24 sm:px-6 lg:px-8 lg:pb-24 lg:pt-28">
+          <div className="relative z-[2] mx-auto max-w-7xl px-4 pb-20 pt-24 sm:px-6 lg:px-8 lg:pb-24 lg:pt-28">
             <motion.div
               initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
@@ -217,9 +227,13 @@ export default function AboutUs() {
                 }
               />
             </motion.div>
+          </div>
+        </section>
 
+        <section className="py-12 sm:py-16">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             {/* Mission + Metrics row */}
-            <div className="mt-16 grid gap-6 lg:grid-cols-[1fr_380px]">
+            <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
               {/* Mission card */}
               <motion.div
                 initial={{ opacity: 0, y: 24 }}

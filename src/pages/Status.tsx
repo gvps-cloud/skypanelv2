@@ -289,7 +289,7 @@ export default function Status() {
   };
 
   return (
-    <MarketingPageShell>
+    <MarketingPageShell background="aurora">
         <section className="relative overflow-hidden border-b border-border/40">
           <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
             <DataStreamCanvas
@@ -381,12 +381,9 @@ export default function Status() {
           </div>
         </section>
 
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <AsciiDivider label="telemetry" className="opacity-45 py-2" />
-        </div>
-
-        <section className="py-24 sm:py-28">
+        <section className="py-20 sm:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <AsciiDivider label="telemetry" className="opacity-45 pb-3 pt-1" />
             <div className="space-y-16">
               {/* Error Banner */}
               {error && (
