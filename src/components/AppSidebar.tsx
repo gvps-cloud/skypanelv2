@@ -87,12 +87,12 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             url: `/admin#support`,
             isActive: ["support", "contact-management"].includes(activeAnchor),
             items: [
-              { title: "Tickets", url: `/admin#support`, isActive: activeAnchor === "support" },
               {
                 title: "Contact Management",
                 url: `/admin#contact-management`,
                 isActive: activeAnchor === "contact-management",
               },
+              { title: "Tickets", url: `/admin#support`, isActive: activeAnchor === "support" },
             ],
           },
           {
@@ -115,9 +115,9 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             url: `/admin#vps-plans`,
             isActive: ["vps-plans", "volume-pricing", "category-mappings"].includes(activeAnchor),
             items: [
-              { title: "VPS Plans", url: `/admin#vps-plans`, isActive: activeAnchor === "vps-plans" },
-              { title: "Volume Pricing", url: `/admin#volume-pricing`, isActive: activeAnchor === "volume-pricing" },
               { title: "Category Mappings", url: `/admin#category-mappings`, isActive: activeAnchor === "category-mappings" },
+              { title: "Volume Pricing", url: `/admin#volume-pricing`, isActive: activeAnchor === "volume-pricing" },
+              { title: "VPS Plans", url: `/admin#vps-plans`, isActive: activeAnchor === "vps-plans" },
             ],
           },
           {
@@ -144,25 +144,25 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             ],
           },
           {
-            title: "Users & Organizations",
+            title: "Users & Orgs",
             icon: Users,
             url: `/admin#user-management`,
             isActive: ["user-management", "organizations"].includes(activeAnchor),
             items: [
               {
-                title: "Users",
-                url: `/admin#user-management`,
-                isActive: activeAnchor === "user-management",
-              },
-              {
                 title: "Organizations",
                 url: `/admin#organizations`,
                 isActive: activeAnchor === "organizations",
               },
+              {
+                title: "Users",
+                url: `/admin#user-management`,
+                isActive: activeAnchor === "user-management",
+              },
             ],
           },
           {
-            title: "Brand & Communications",
+            title: "Brand & Comms",
             icon: Palette,
             url: `/admin#theme`,
             isActive: [
@@ -209,9 +209,9 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
             url: `/admin#enhance-hosting`,
             isActive: ["enhance-hosting", "enhance-plans", "enhance-subscriptions"].includes(activeAnchor),
             items: [
+              { title: "Subscriptions", url: `/admin#enhance-subscriptions`, isActive: activeAnchor === "enhance-subscriptions" },
               { title: "Integration", url: `/admin#enhance-hosting`, isActive: activeAnchor === "enhance-hosting" },
               { title: "Plans", url: `/admin#enhance-plans`, isActive: activeAnchor === "enhance-plans" },
-              { title: "Subscriptions", url: `/admin#enhance-subscriptions`, isActive: activeAnchor === "enhance-subscriptions" },
             ],
           },
         ].sort((a, b) => {
