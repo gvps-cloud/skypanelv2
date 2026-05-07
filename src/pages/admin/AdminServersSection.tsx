@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -434,6 +435,9 @@ export const AdminServersSection: React.FC<AdminServersSectionProps> = ({
               <Terminal className="h-4 w-4" />
               SSH Console {selectedSshServerId && <span className="opacity-50">:: {selectedSshServerId}</span>}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Browser-based SSH terminal for the selected VPS instance.
+            </DialogDescription>
           </DialogHeader>
           <div className="relative flex-1 overflow-hidden bg-background">
             {selectedSshServerId && (

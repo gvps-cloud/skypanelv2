@@ -3311,6 +3311,9 @@ const VPSDetail: React.FC = () => {
                 <span className="opacity-50">:: {detail?.label || detail?.id}</span>
               )}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Browser-based SSH terminal for this VPS instance.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-hidden relative bg-background">
             {sshModalOpen && detail?.id && (

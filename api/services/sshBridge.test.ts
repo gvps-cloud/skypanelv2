@@ -85,4 +85,38 @@ describe("initSSHBridge", () => {
     expect(result.opened).toBe(true);
     expect(messages.some((message) => message.includes("Unauthorized"))).toBe(true);
   });
+
+  it("rejects non-SSH websocket upgrades without reaching app routes", async () => {
+    const server = http.createServer((_req, res) => {
+      res.writeHead(200);
+      res.end("app route");
+    });
+    initSSHBridge(server);
+
+    const port = await listen(server);
+
+    const result = await new Promise<{ opened: boolean; errorMessage: string }>((resolve) => {
+      const ws = new WsClient(`ws://127.0.0.1:${port}/api/notifications/stream`);
+      let settled = false;
+      const finish = (opened: boolean, errorMessage = "") => {
+        if (settled) return;
+        settled = true;
+        resolve({ opened, errorMessage });
+      };
+
+      ws.on("open", () => {
+        finish(true);
+        ws.close();
+      });
+      ws.on("error", (error) => {
+        finish(false, error.message);
+      });
+      ws.on("close", () => {
+        finish(false);
+      });
+    });
+
+    expect(result.opened).toBe(false);
+    expect(result.errorMessage).toContain("Unexpected server response: 404");
+  });
 });

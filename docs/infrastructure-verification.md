@@ -53,13 +53,8 @@ curl -s https://api.resend.com/domains \
 
 ```Caddyfile
 yourdomain.com {
-    reverse_proxy localhost:3001
-
-    # SSE endpoint support
-    reverse_proxy /api/notifications/stream localhost:3001 {
-        header_up Connection {>Connection}
-        header_up Upgrade {>Upgrade}
-    }
+    # Express on :3001 serves the built SPA, REST API, SSE, and SSH WebSockets.
+    reverse_proxy 127.0.0.1:3001
 
     # Static asset caching
     @static path /assets/*
@@ -83,11 +78,17 @@ server {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 
-    location / {
+    # SSH browser terminal WebSocket
+    location ~ ^/api/vps/[^/]+/ssh$ {
         proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 1h;
+        proxy_send_timeout 1h;
     }
 
-    # SSE endpoint — disable buffering
+    # SSE endpoint - disable buffering
     location /api/notifications/stream {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
@@ -103,10 +104,34 @@ server {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
+
+    # Express serves the built SPA and all remaining API routes on :3001.
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+    }
 }
 ```
 
 ### Verification
+
+The production process must be the Node server on `:3001` after a build:
+
+```bash
+npm run build
+npm run start
+```
+
+Non-upgrade hits to the SSH endpoint should return `426`:
+
+```bash
+curl -i https://gvps.cloud/api/vps/<id>/ssh
+```
+
+Raw unauthenticated WebSocket probes should open, receive `Unauthorized`, then close. If this never opens, the reverse proxy is still blocking the WebSocket upgrade before it reaches Node:
+
+```bash
+node --input-type=module -e "import { WebSocket } from 'ws'; const ws = new WebSocket('wss://gvps.cloud/api/vps/<id>/ssh'); ws.on('open', () => console.log('opened')); ws.on('message', (m) => console.log(String(m))); ws.on('close', (code, reason) => { console.log('closed', code, reason.toString()); process.exit(0); }); ws.on('error', (err) => { console.error(err.message); process.exit(1); });"
+```
 
 ```bash
 # HTTPS is working
@@ -133,7 +158,7 @@ npm run pm2:start
 
 # Verify processes are running
 npm run pm2:list
-# Expected: "online" status for all processes
+# Expected: "online" status for skypanelv2-api
 
 # Test graceful reload
 npm run pm2:reload
@@ -147,7 +172,6 @@ For local validation-only boots, avoid the default production ports and disable 
 ```bash
 $env:STARTUP_SIDE_EFFECTS_ENABLED="false"
 $env:PORT="3101"
-$env:UI_PORT="4173"
 npx pm2 start ecosystem.config.cjs --env production
 ```
 

@@ -64,7 +64,8 @@ Pre-deployment verification checklist for SkyPanelV2. Complete every item before
   - HTTPS termination
   - Proxy headers (`X-Forwarded-For`, `X-Forwarded-Proto`)
   - SSE support for `/api/notifications/stream`
-  - Frontend traffic routed to the PM2-managed Vite preview service on `:5173`
+  - All frontend, API, SSE, and SSH WebSocket traffic routed to Express on `:3001`
+  - WebSocket upgrade support for `/api/vps/:id/ssh`
 - [ ] Process manager (PM2) configured: `npm run pm2:start`
 - [ ] `ecosystem.config.cjs` reviewed for correct settings
 - [ ] If doing a local validation-only PM2 boot, use `STARTUP_SIDE_EFFECTS_ENABLED=false` with alternate ports to avoid touching live schedulers/services

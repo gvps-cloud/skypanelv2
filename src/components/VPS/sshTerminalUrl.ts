@@ -8,28 +8,38 @@ function getDefaultRuntimeConfig(): AppRuntimeConfig | undefined {
   return typeof window === "undefined" ? undefined : window.__APP_RUNTIME_CONFIG__;
 }
 
-function getDefaultLocationOrigin(): string {
-  return typeof window === "undefined" ? "http://localhost" : window.location.origin;
+function getDefaultLocationOrigin(): string | undefined {
+  return typeof window === "undefined" ? undefined : window.location.origin;
 }
 
 function getDefaultLocationProtocol(): string {
   return typeof window === "undefined" ? "http:" : window.location.protocol;
 }
 
-function getRuntimePublicOrigin(options: BuildSshWebSocketUrlOptions = {}): string {
-  const runtimeConfig = options.runtimeConfig ?? getDefaultRuntimeConfig();
-  const configuredOrigin = runtimeConfig?.PUBLIC_ORIGIN || runtimeConfig?.CLIENT_URL;
-  const fallbackOrigin = options.locationOrigin ?? getDefaultLocationOrigin();
+function normalizeOrigin(origin: string | undefined): string | null {
+  if (!origin) return null;
 
-  if (configuredOrigin) {
-    try {
-      return new URL(configuredOrigin).origin;
-    } catch (err) {
-      console.warn("Ignoring invalid runtime public origin:", err);
-    }
+  try {
+    return new URL(origin).origin;
+  } catch (err) {
+    console.warn("Ignoring invalid SSH websocket origin:", err);
+    return null;
   }
+}
 
-  return fallbackOrigin;
+function getSshHttpOrigin(options: BuildSshWebSocketUrlOptions = {}): string {
+  const browserOrigin = normalizeOrigin(
+    options.locationOrigin ?? getDefaultLocationOrigin(),
+  );
+  if (browserOrigin) return browserOrigin;
+
+  const runtimeConfig = options.runtimeConfig ?? getDefaultRuntimeConfig();
+  const configuredOrigin = normalizeOrigin(
+    runtimeConfig?.PUBLIC_ORIGIN || runtimeConfig?.CLIENT_URL,
+  );
+  if (configuredOrigin) return configuredOrigin;
+
+  return "http://localhost";
 }
 
 export function buildSshWebSocketUrl(
@@ -40,7 +50,7 @@ export function buildSshWebSocketUrl(
 ): string {
   const url = new URL(
     `/api/vps/${encodeURIComponent(instanceId)}/ssh`,
-    getRuntimePublicOrigin(options),
+    getSshHttpOrigin(options),
   );
   const locationProtocol = options.locationProtocol ?? getDefaultLocationProtocol();
   const isHttps = url.protocol === "https:" || locationProtocol === "https:";

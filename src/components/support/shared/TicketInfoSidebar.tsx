@@ -27,6 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -401,6 +402,9 @@ export const TicketInfoSidebar: React.FC<TicketInfoSidebarProps> = ({
               <span className="opacity-50">:: {ticket.vps_id}</span>
             )}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Browser-based SSH terminal for the VPS linked to this support ticket.
+          </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-hidden relative bg-background">
           {isSSHOpen && ticket.vps_id && (

@@ -27,7 +27,7 @@
     "start": "cross-env NODE_ENV=production node --import tsx api/server.ts",
     "pm2:start": "npm run kill-ports && npm run build && pm2 start ecosystem.config.cjs --env production",
     "pm2:reload": "pm2 reload ecosystem.config.cjs --env production",
-    "pm2:stop": "pm2 stop skypanelv2-api skypanelv2-ui && pm2 delete skypanelv2-api skypanelv2-ui",
+    "pm2:stop": "pm2 stop skypanelv2-api && pm2 delete skypanelv2-api",
     "pm2:list": "pm2 ls",
     "seed:admin": "node scripts/ensure-admin-user.js",
     "db:reset": "node scripts/reset-database.js",

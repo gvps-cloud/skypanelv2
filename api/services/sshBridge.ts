@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import type { Server } from 'http';
-import type { IncomingMessage } from 'http';
+import type { Server, IncomingMessage } from 'http';
+import type { Duplex } from 'stream';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
 import { query } from '../lib/database.js';
@@ -22,18 +22,82 @@ interface WSMessage {
   cols?: number;
 }
 
-function parsePath(url: string | undefined): { instanceId: string | null } {
-  if (!url) return { instanceId: null };
+interface SshIncomingMessage extends IncomingMessage {
+  sshRequestId?: string;
+  sshInstanceId?: string;
+}
+
+interface SshPathMatch {
+  isSshPath: boolean;
+  instanceId: string | null;
+  pathname: string;
+}
+
+type LogContext = Record<string, string | number | boolean | null | undefined>;
+
+function safeErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function compactContext(context: LogContext = {}): LogContext {
+  return Object.fromEntries(
+    Object.entries(context).filter(([, value]) => value !== undefined),
+  ) as LogContext;
+}
+
+function logInfo(message: string, context?: LogContext) {
+  console.log(`[ssh-bridge] ${message}`, compactContext(context));
+}
+
+function logWarn(message: string, context?: LogContext) {
+  console.warn(`[ssh-bridge] ${message}`, compactContext(context));
+}
+
+function makeRequestId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function parsePath(url: string | undefined): SshPathMatch {
+  if (!url) return { isSshPath: false, instanceId: null, pathname: '' };
   try {
     const u = new URL(url, 'http://localhost');
     const segments = u.pathname.split('/').filter(Boolean);
-    if (segments.length >= 3 && segments[0] === 'api' && segments[1] === 'vps' && segments[3] === 'ssh') {
-      return { instanceId: segments[2] };
+    if (segments.length === 4 && segments[0] === 'api' && segments[1] === 'vps' && segments[3] === 'ssh') {
+      let instanceId = segments[2];
+      try {
+        instanceId = decodeURIComponent(instanceId);
+      } catch {
+        // Keep the encoded segment; the downstream lookup will fail safely.
+      }
+
+      return { isSshPath: true, instanceId, pathname: u.pathname };
     }
   } catch {
     // ignore
   }
-  return { instanceId: null };
+  return { isSshPath: false, instanceId: null, pathname: url };
+}
+
+function rejectUpgrade(socket: Duplex, statusCode: number, reasonPhrase: string) {
+  if (socket.destroyed) return;
+
+  try {
+    socket.write(
+      `HTTP/1.1 ${statusCode} ${reasonPhrase}\r\n` +
+        'Connection: close\r\n' +
+        'Content-Length: 0\r\n' +
+        '\r\n',
+    );
+  } catch {
+    // ignore write failures while rejecting the upgrade
+  } finally {
+    socket.destroy();
+  }
+}
+
+function closeReasonText(reason: Buffer): string | undefined {
+  const text = reason.toString('utf8').trim();
+  return text || undefined;
 }
 
 function parseCookies(cookieHeader: string | undefined): Record<string, string> {
@@ -105,7 +169,7 @@ async function authenticate(token: string | null): Promise<AuthUser | null> {
 
     return { id: user.id, email: user.email, role: user.role, organizationId };
   } catch (err) {
-    console.warn('WS auth failed:', err);
+    logWarn('WS auth failed', { error: safeErrorMessage(err) });
     return null;
   }
 }
@@ -118,38 +182,98 @@ function send(ws: WebSocket, payload: any) {
   }
 }
 
-export function initSSHBridge(server: Server) {
-  const wss = new WebSocketServer({ server });
-  console.log('WebSocket SSH bridge initialized');
+async function handleSshConnection(ws: WebSocket, req: SshIncomingMessage) {
+  const url = req.url;
+  const parsedPath = parsePath(url);
+  const instanceId = req.sshInstanceId || parsedPath.instanceId;
+  const requestId = req.sshRequestId || makeRequestId();
+  const remoteAddress = req.socket.remoteAddress;
+  let ssh: SSHClient | null = null;
+  let shellStream: any = null;
+  let resourcesClosed = false;
 
-  wss.on('connection', async (ws, req) => {
-    const url = req.url;
-    const { instanceId } = parsePath(url);
-    const token = getTokenFromRequest(req);
+  const closeResources = () => {
+    if (resourcesClosed) return;
+    resourcesClosed = true;
+    try { shellStream?.end(); } catch {}
+    try { ssh?.end(); } catch {}
+  };
 
+  const closeAll = (code = 1000, reason = 'Session closed') => {
+    closeResources();
+    if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+      try { ws.close(code, reason); } catch {}
+    }
+  };
+
+  ws.on('close', (code, reason) => {
+    logInfo('SSH websocket closed', {
+      requestId,
+      instanceId,
+      closeCode: code,
+      closeReason: closeReasonText(reason),
+    });
+    closeResources();
+  });
+
+  ws.on('error', (err) => {
+    logWarn('SSH websocket error', {
+      requestId,
+      instanceId,
+      error: safeErrorMessage(err),
+    });
+    closeAll(1011, 'ws-error');
+  });
+
+  try {
     if (!instanceId) {
+      logWarn('SSH websocket missing instance id', { requestId, remoteAddress });
       send(ws, { type: 'error', message: 'Invalid SSH path' });
-      ws.close();
+      closeAll(1008, 'invalid-ssh-path');
       return;
     }
 
+    logInfo('SSH websocket connection accepted', {
+      requestId,
+      instanceId,
+      remoteAddress,
+      host: req.headers.host,
+      origin: req.headers.origin,
+    });
+
+    const token = getTokenFromRequest(req);
     const user = await authenticate(token);
     if (!user || !user.organizationId) {
+      logWarn('SSH websocket auth rejected', { requestId, instanceId, remoteAddress });
       send(ws, { type: 'error', message: 'Unauthorized' });
-      ws.close();
+      closeAll(1008, 'unauthorized');
       return;
     }
 
-    const instRes =
-      user.role === "admin"
-        ? await query("SELECT * FROM vps_instances WHERE id = $1", [instanceId])
-        : await query(
-            "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
-            [instanceId, user.organizationId],
-          );
+    let instRes;
+    try {
+      instRes =
+        user.role === "admin"
+          ? await query("SELECT * FROM vps_instances WHERE id = $1", [instanceId])
+          : await query(
+              "SELECT * FROM vps_instances WHERE id = $1 AND organization_id = $2",
+              [instanceId, user.organizationId],
+            );
+    } catch (err) {
+      logWarn('SSH instance lookup failed', {
+        requestId,
+        instanceId,
+        error: safeErrorMessage(err),
+      });
+      send(ws, { type: 'error', message: 'Instance lookup failed' });
+      closeAll(1011, 'instance-lookup-error');
+      return;
+    }
+
     if (instRes.rows.length === 0) {
+      logWarn('SSH instance not found or not authorized', { requestId, instanceId });
       send(ws, { type: 'error', message: 'Instance not found' });
-      ws.close();
+      closeAll(1008, 'instance-not-found');
       return;
     }
     const instanceRow = instRes.rows[0];
@@ -164,12 +288,17 @@ export function initSSHBridge(server: Server) {
           ip = Array.isArray(detail.ipv4) && detail.ipv4.length > 0 ? detail.ipv4[0] : null;
         }
       } catch (err) {
-        console.warn('Failed to resolve IP for SSH:', err);
+        logWarn('Failed to resolve IP for SSH', {
+          requestId,
+          instanceId,
+          error: safeErrorMessage(err),
+        });
       }
     }
     if (!ip) {
+      logWarn('SSH instance has no reachable IP address', { requestId, instanceId });
       send(ws, { type: 'error', message: 'IP address unavailable' });
-      ws.close();
+      closeAll(1011, 'ip-unavailable');
       return;
     }
 
@@ -192,34 +321,36 @@ export function initSSHBridge(server: Server) {
       try {
         password = decryptSecret(String(authCfg.password_enc));
       } catch (err) {
-        console.warn('Failed to decrypt stored password:', err);
+        logWarn('Failed to decrypt stored SSH password', {
+          requestId,
+          instanceId,
+          error: safeErrorMessage(err),
+        });
       }
     }
 
-    const ssh = new SSHClient();
-    let shellStream: any = null;
-    let closed = false;
-
-    const closeAll = (code?: number, reason?: string) => {
-      if (closed) return;
-      closed = true;
-      try { shellStream?.end(); } catch {}
-      try { ssh.end(); } catch {}
-      try { ws.close(code || 1000, reason || 'Session closed'); } catch {}
-    };
+    ssh = new SSHClient();
 
     ssh.on('ready', () => {
+      logInfo('SSH client ready', { requestId, instanceId });
       send(ws, { type: 'status', message: 'ssh-ready' });
-      ssh.shell({ term: 'xterm-256color', rows: initialRows, cols: initialCols }, (err, stream) => {
+      ssh?.shell({ term: 'xterm-256color', rows: initialRows, cols: initialCols }, (err, stream) => {
         if (err) {
+          logWarn('SSH shell failed to start', {
+            requestId,
+            instanceId,
+            error: safeErrorMessage(err),
+          });
           send(ws, { type: 'error', message: 'Failed to start shell: ' + (err as Error).message });
           closeAll(1011, 'shell-error');
           return;
         }
         shellStream = stream;
+        logInfo('SSH shell started', { requestId, instanceId });
         send(ws, { type: 'connected' });
 
         stream.on('close', () => {
+          logInfo('SSH shell closed', { requestId, instanceId });
           send(ws, { type: 'close', message: 'Shell closed' });
           closeAll(1000, 'shell-closed');
         });
@@ -231,14 +362,21 @@ export function initSSHBridge(server: Server) {
         });
       });
     }).on('error', (err) => {
+      logWarn('SSH client error', {
+        requestId,
+        instanceId,
+        error: safeErrorMessage(err),
+      });
       send(ws, { type: 'error', message: 'SSH error: ' + (err as Error).message });
       closeAll(1011, 'ssh-error');
     }).on('end', () => {
+      logInfo('SSH client ended', { requestId, instanceId });
       send(ws, { type: 'close', message: 'SSH ended' });
       closeAll(1000, 'ssh-ended');
     });
 
     try {
+      logInfo('Connecting SSH client', { requestId, instanceId, host: ip, username });
       ssh.connect({
         host: ip,
         port: 22,
@@ -249,6 +387,11 @@ export function initSSHBridge(server: Server) {
         keepaliveCountMax: 6,
       });
     } catch (err) {
+      logWarn('SSH connect threw synchronously', {
+        requestId,
+        instanceId,
+        error: safeErrorMessage(err),
+      });
       send(ws, { type: 'error', message: 'SSH connect failed: ' + (err as Error).message });
       closeAll(1011, 'connect-failed');
       return;
@@ -271,12 +414,58 @@ export function initSSHBridge(server: Server) {
         try { shellStream?.setWindow(rows, cols, 0, 0); } catch {}
       }
     });
+  } catch (err) {
+    logWarn('SSH websocket setup failed', {
+      requestId,
+      instanceId,
+      error: safeErrorMessage(err),
+    });
+    send(ws, { type: 'error', message: 'SSH websocket setup failed' });
+    closeAll(1011, 'setup-error');
+  }
+}
 
-    ws.on('close', () => {
-      closeAll(1000, 'client-closed');
+export function initSSHBridge(server: Server) {
+  const wss = new WebSocketServer({ noServer: true });
+  console.log('[ssh-bridge] WebSocket SSH bridge initialized');
+
+  server.on('upgrade', (req: SshIncomingMessage, socket, head) => {
+    const parsedPath = parsePath(req.url);
+
+    if (!parsedPath.isSshPath || !parsedPath.instanceId) {
+      logWarn('Rejected non-SSH websocket upgrade', {
+        pathname: parsedPath.pathname,
+        remoteAddress: req.socket.remoteAddress,
+      });
+      rejectUpgrade(socket, 404, 'Not Found');
+      return;
+    }
+
+    req.sshRequestId = makeRequestId();
+    req.sshInstanceId = parsedPath.instanceId;
+    logInfo('SSH upgrade received', {
+      requestId: req.sshRequestId,
+      instanceId: req.sshInstanceId,
+      remoteAddress: req.socket.remoteAddress,
+      host: req.headers.host,
+      origin: req.headers.origin,
     });
-    ws.on('error', () => {
-      closeAll(1011, 'ws-error');
-    });
+
+    try {
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit('connection', ws, req);
+      });
+    } catch (err) {
+      logWarn('SSH upgrade failed', {
+        requestId: req.sshRequestId,
+        instanceId: req.sshInstanceId,
+        error: safeErrorMessage(err),
+      });
+      rejectUpgrade(socket, 500, 'Internal Server Error');
+    }
+  });
+
+  wss.on('connection', (ws, req) => {
+    void handleSshConnection(ws, req as SshIncomingMessage);
   });
 }

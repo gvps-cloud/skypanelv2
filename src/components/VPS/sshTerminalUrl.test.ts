@@ -3,13 +3,13 @@ import { describe, expect, it } from "vitest";
 import { buildSshWebSocketUrl } from "./sshTerminalUrl";
 
 describe("buildSshWebSocketUrl", () => {
-  it("uses the runtime CLIENT_URL as the websocket origin", () => {
+  it("uses the current browser origin before runtime CLIENT_URL", () => {
     expect(
       buildSshWebSocketUrl("778ac928-acc1-4178-b1ac-6b541f663567", 27, 156, {
         runtimeConfig: {
-          CLIENT_URL: "https://panel.example.test",
+          CLIENT_URL: "https://configured.example.test",
         },
-        locationOrigin: "https://fallback.example.test",
+        locationOrigin: "https://panel.example.test",
         locationProtocol: "https:",
       }),
     ).toBe(
@@ -26,7 +26,18 @@ describe("buildSshWebSocketUrl", () => {
     ).toBe("ws://localhost:5173/api/vps/instance%20id/ssh?rows=30&cols=120");
   });
 
-  it("forces wss when the current page is https", () => {
+  it("uses runtime config only when browser origin is unavailable", () => {
+    expect(
+      buildSshWebSocketUrl("abc", 1, 2, {
+        runtimeConfig: {
+          CLIENT_URL: "https://configured.example.test",
+        },
+        locationOrigin: "",
+      }),
+    ).toBe("wss://configured.example.test/api/vps/abc/ssh?rows=1&cols=2");
+  });
+
+  it("uses wss when the current page is https", () => {
     expect(
       buildSshWebSocketUrl("abc", 1, 2, {
         runtimeConfig: {
@@ -35,6 +46,6 @@ describe("buildSshWebSocketUrl", () => {
         locationOrigin: "https://panel.example.test",
         locationProtocol: "https:",
       }),
-    ).toBe("wss://internal.example.test/api/vps/abc/ssh?rows=1&cols=2");
+    ).toBe("wss://panel.example.test/api/vps/abc/ssh?rows=1&cols=2");
   });
 });

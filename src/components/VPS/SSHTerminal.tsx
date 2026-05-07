@@ -98,6 +98,8 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const inputDisposableRef = useRef<{ dispose: () => void } | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [status, setStatus] = useState<WSStatus>('disconnected');
   const [fontSize, setFontSize] = useState<number>(INITIAL_FONT_SIZE);
@@ -111,6 +113,7 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const reconnectAttemptsRef = useRef(reconnectAttempts);
   const [lastActivity, setLastActivity] = useState(Date.now());
 
   const rowsRef = useRef(rows);
@@ -123,6 +126,10 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
   useEffect(() => {
     colsRef.current = cols;
   }, [cols]);
+
+  useEffect(() => {
+    reconnectAttemptsRef.current = reconnectAttempts;
+  }, [reconnectAttempts]);
 
   // Initialize the terminal
   useEffect(() => {
@@ -225,13 +232,21 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
 
   const connect = useCallback((isReconnect = false) => {
     if (status === 'connecting' || status === 'connected') return;
+    if (!isReconnect) {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      reconnectAttemptsRef.current = 0;
+      setReconnectAttempts(0);
+    }
 
     let wsUrl: string;
     try {
       wsUrl = buildSshWebSocketUrl(instanceId, rows, cols);
     } catch (err) {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      wsUrl = `${protocol}//${window.location.host}/api/vps/${instanceId}/ssh?rows=${rows}&cols=${cols}`;
+      wsUrl = `${protocol}//${window.location.host}/api/vps/${encodeURIComponent(instanceId)}/ssh?rows=${rows}&cols=${cols}`;
       console.warn('Falling back to window-based WebSocket URL due to error constructing URL:', err);
     }
 
@@ -240,9 +255,14 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
       setStatus('connecting');
+      let opened = false;
+      let sawError = false;
+      let receivedServerError = false;
 
       ws.onopen = () => {
+        opened = true;
         setStatus('connected');
+        reconnectAttemptsRef.current = 0;
         setReconnectAttempts(0);
         setLastActivity(Date.now());
         write(`\r\nConnected as ${connectedUser}@${instanceId}\r\n`);
@@ -258,6 +278,8 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
             write(payload.data);
             setLastActivity(Date.now());
           } else if (payload.type === 'error') {
+            receivedServerError = true;
+            setStatus('error');
             write(`\r\n\x1b[31mError:\x1b[0m ${payload.message}\r\n`);
           } else if (payload.type === 'status') {
             write(`\r\n[${payload.message}]\r\n`);
@@ -272,37 +294,70 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
         }
       };
       ws.onclose = (event) => {
-        setStatus('disconnected');
+        const reason = event.reason || (event.code ? `code ${event.code}` : 'connection closed');
+        const currentReconnectAttempts = reconnectAttemptsRef.current;
+        const shouldAutoReconnect = opened && !event.wasClean && currentReconnectAttempts < 5;
+
+        setStatus(shouldAutoReconnect ? 'connecting' : event.wasClean ? 'disconnected' : 'error');
         wsRef.current = null;
+
+        try {
+          inputDisposableRef.current?.dispose();
+        } catch {}
+        inputDisposableRef.current = null;
+
+        if (!opened) {
+          write(
+            `\r\n\x1b[31mWebSocket handshake failed\x1b[0m (${reason}). Verify the reverse proxy forwards Upgrade requests to the Node server on port 3001.\r\n`,
+          );
+          return;
+        }
+
+        if (!event.wasClean || sawError || event.code !== 1000) {
+          if (receivedServerError) {
+            write(`\r\n[WebSocket closed: ${reason}]\r\n`);
+          } else {
+            write(`\r\n\x1b[31mWebSocket closed\x1b[0m (${reason}).\r\n`);
+          }
+        }
         
-        // Auto-reconnect logic
-        if (!event.wasClean && reconnectAttempts < 5) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-          setTimeout(() => {
-            setReconnectAttempts(prev => prev + 1);
+        if (shouldAutoReconnect) {
+          const nextAttempt = currentReconnectAttempts + 1;
+          const delay = Math.min(1000 * Math.pow(2, currentReconnectAttempts), 30000);
+          reconnectTimerRef.current = setTimeout(() => {
+            reconnectTimerRef.current = null;
+            reconnectAttemptsRef.current = nextAttempt;
+            setReconnectAttempts(nextAttempt);
             connect(true);
           }, delay);
         }
       };
       ws.onerror = (error) => {
+        sawError = true;
         console.error('WebSocket error:', error);
         setStatus('error');
-        write('\r\n\x1b[31mWebSocket connection error\x1b[0m\r\n');
       };
 
       // Pipe terminal input to WS
-      termRef.current?.onData((data) => {
+      try {
+        inputDisposableRef.current?.dispose();
+      } catch {}
+      inputDisposableRef.current = termRef.current?.onData((data) => {
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({ type: 'input', data }));
         }
-      });
+      }) ?? null;
     } catch (err) {
       setStatus('error');
       write(`\r\n\x1b[31mFailed to connect:\x1b[0m ${(err as Error).message}\r\n`);
     }
-  }, [instanceId, rows, cols, connectedUser, status, write, reconnectAttempts]);
+  }, [instanceId, rows, cols, connectedUser, status, write]);
 
   const disconnect = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
     try { wsRef.current?.close(); } catch {}
     wsRef.current = null;
     setStatus('disconnected');
@@ -311,6 +366,20 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      try {
+        if (reconnectTimerRef.current) {
+          clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = null;
+        }
+      } catch (err) {
+        // ignore
+      }
+      try {
+        inputDisposableRef.current?.dispose();
+        inputDisposableRef.current = null;
+      } catch (err) {
+        // ignore
+      }
       try {
         if (wsRef.current) {
           // Send a clean close if still connected
@@ -414,9 +483,11 @@ export const SSHTerminal: React.FC<SSHTerminalProps> = ({ instanceId, isFullScre
     ? `Connected as ${connectedUser}`
     : status === 'connecting'
       ? 'Connecting...'
-      : reconnectAttempts > 0
-        ? `Reconnecting... (${reconnectAttempts}/5)`
-        : status.charAt(0).toUpperCase() + status.slice(1);
+      : status === 'error'
+        ? 'Connection error'
+        : reconnectAttempts > 0
+          ? `Reconnecting... (${reconnectAttempts}/5)`
+          : status.charAt(0).toUpperCase() + status.slice(1);
 
   const statusBadgeClass = cn(
     'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide',

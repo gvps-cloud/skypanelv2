@@ -12,8 +12,7 @@ Production architecture, deployment checklists, PM2 workflow, and maintenance.
 PRODUCTION ARCHITECTURE
 -----------------------------------------------------------------------------
 Internet → HTTPS (port 443) → reverse proxy
-  • Proxy forwards API traffic to `skypanelv2-api` on port 3001
-  • Proxy forwards frontend traffic to `skypanelv2-ui` on port 5173
+  • Proxy forwards all frontend, API, SSE, and SSH WebSocket traffic to `skypanelv2-api` on port 3001
 
 Backend integrations from skypanelv2-api:
   • PostgreSQL database
@@ -113,7 +112,6 @@ npm run pm2:start
 # Monitor
 pm2 monit
 pm2 logs skypanelv2-api
-pm2 logs skypanelv2-ui
 ```
 
 ---
