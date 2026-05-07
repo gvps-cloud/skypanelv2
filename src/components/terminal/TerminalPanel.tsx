@@ -94,7 +94,7 @@ export const TerminalPanel = React.forwardRef<HTMLDivElement, TerminalPanelProps
             <div className="flex items-center gap-1 shrink-0" aria-hidden="true">
               <span className="h-2 w-2 rounded-full bg-[hsl(var(--destructive))] opacity-90" />
               <span className="h-2 w-2 rounded-full bg-[hsl(var(--warning))] opacity-90" />
-              <span className="h-2 w-2 rounded-full bg-[hsl(var(--success))] opacity-90" />
+              <span className="h-2 w-2 rounded-full bg-primary opacity-90" />
             </div>
           ) : null}
         </header>

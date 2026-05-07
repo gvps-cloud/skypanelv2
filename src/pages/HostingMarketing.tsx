@@ -180,7 +180,6 @@ const HostingHero = ({ enabled, plans, isLoading }: HostingCatalogState) => (
           title="hosting.status"
           traffic
           glow
-          tone="success"
           prompt="$"
           bodyClassName="space-y-3 p-4 font-mono text-sm"
           className="home-glass-panel home-animated-border border-primary/25"
