@@ -24,10 +24,10 @@ Command.displayName = CommandPrimitive.displayName
 const CommandDialog = ({ children, ...props }: DialogProps) => {
   return (
     <Dialog {...props}>
-      <DialogContent className="terminal-command-dialog overflow-hidden p-0 w-[calc(100vw-2rem)] max-w-[480px] sm:max-w-[640px] h-[85vh] sm:h-auto rounded-sm border-2 border-border bg-popover shadow-none sm:h-auto">
-        <DialogHeader>
-          <DialogTitle className="sr-only">Command shell</DialogTitle>
-          <DialogDescription className="sr-only">
+      <DialogContent hideCloseButton className="terminal-command-dialog overflow-hidden p-0 w-[calc(100vw-2rem)] max-w-[480px] sm:max-w-[640px] h-[85vh] sm:h-auto rounded-sm border-2 border-border bg-popover shadow-none sm:h-auto">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Command shell</DialogTitle>
+          <DialogDescription>
             Search and navigate using the command shell
           </DialogDescription>
         </DialogHeader>
@@ -44,7 +44,7 @@ const CommandInput = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, ...props }, ref) => (
   <div
-    className="flex items-center border-b border-border bg-muted/20 px-0"
+    className="flex items-center border-b border-border bg-muted/20 px-0 pr-2"
     cmdk-input-wrapper=""
   >
     <span

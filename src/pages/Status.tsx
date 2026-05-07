@@ -19,6 +19,7 @@ import {
   Headphones,
   Zap,
 } from "lucide-react";
+import DataStreamCanvas from "@/components/home/DataStreamCanvas";
 
 import { apiClient } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -290,17 +291,24 @@ export default function Status() {
   return (
     <MarketingPageShell>
         <section className="relative overflow-hidden border-b border-border/40">
+          <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+            <DataStreamCanvas
+              className="h-full w-full opacity-[0.25]"
+              reducedMotion={false}
+              pauseWhenOffscreen
+            />
+          </div>
           <div className="home-orb home-orb--1" aria-hidden="true" />
           <div className="home-orb home-orb--2" aria-hidden="true" />
           <div className="home-orb home-orb--3" aria-hidden="true" />
           <div className="home-grid-mask absolute inset-0" aria-hidden="true" />
 
-          <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-24 sm:px-6 lg:px-8 lg:pb-24 lg:pt-28">
+          <div className="relative z-[2] mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8 lg:pb-20 lg:pt-28">
             <motion.div
               initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65 }}
-              className="space-y-8"
+              className="space-y-6"
             >
               <MarketingHero
                 pathPrefix="~/www"

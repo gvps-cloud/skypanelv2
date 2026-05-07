@@ -125,7 +125,7 @@ export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.15 }}
-              className="absolute left-0 top-full mt-1 min-w-[140px] rounded-lg border border-border/50 bg-background/95 p-1.5 shadow-lg shadow-black/[0.05] backdrop-blur-xl"
+              className="absolute left-0 top-full z-50 mt-1 min-w-[140px] rounded-lg border border-border/50 bg-background/95 p-1.5 shadow-lg shadow-black/[0.05] backdrop-blur-xl"
             >
               {dropdown.items.map((item) => (
                 <Link
@@ -186,13 +186,13 @@ export function MarketingNavbar({ sticky = true }: { sticky?: boolean }) {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden min-w-0 items-center gap-2 lg:flex">
           <Button variant="ghost" size="sm" asChild>
             <Link to="/login" onClick={closeMobileMenu}>
               Log in
             </Link>
           </Button>
-          <Button size="sm" className="home-btn-glow" asChild>
+          <Button size="sm" className="home-btn-glow shrink-0 whitespace-nowrap" asChild>
             <Link to="/register" onClick={closeMobileMenu}>
               Launch console
               <ArrowRight className="ml-1.5 h-3.5 w-3.5" />

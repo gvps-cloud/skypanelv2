@@ -678,21 +678,27 @@ const Dashboard: React.FC = () => {
 
                     <div className="space-y-3">
                     {vpsInstances.length === 0 ? (
-                      <div className="flex min-h-[250px] flex-col items-center justify-center rounded-sm border border-dashed border-border p-16 text-center">
-                        <div className="rounded-sm border border-border bg-muted p-4">
-                          <Server className="h-8 w-8 text-muted-foreground" />
+                      <div className="relative min-h-[250px] overflow-hidden rounded-sm border border-dashed border-border">
+                        <div className="pointer-events-none absolute inset-0 z-0 opacity-30">
+                          <MatrixRain density="subdued" />
                         </div>
-                        <h3 className="mt-6 text-base font-semibold">
-                          No instances yet
-                        </h3>
-                        <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                          Deploy your first VPS to attach live metrics to this pane.
-                        </p>
-                        <div className="mt-6 flex flex-wrap gap-3">
-                          <Button size="lg" onClick={() => navigate('/vps')}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Deploy VPS
-                          </Button>
+                        <div className="absolute inset-0 bg-gradient-to-br from-background/80 via-background/60 to-background/40 pointer-events-none" />
+                        <div className="relative z-[1] flex flex-col items-center justify-center p-16 text-center">
+                          <div className="rounded-sm border border-border bg-muted p-4">
+                            <Server className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                          <h3 className="mt-6 text-base font-semibold">
+                            No instances yet
+                          </h3>
+                          <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                            Deploy your first VPS to attach live metrics to this pane.
+                          </p>
+                          <div className="mt-6 flex flex-wrap gap-3">
+                            <Button size="lg" onClick={() => navigate('/vps')}>
+                              <Plus className="mr-2 h-4 w-4" />
+                              Deploy VPS
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ) : (
@@ -950,21 +956,27 @@ const Dashboard: React.FC = () => {
 
                 <div className="space-y-3">
                 {vpsInstances.length === 0 ? (
-                  <div className="flex min-h-[250px] flex-col items-center justify-center rounded-sm border border-dashed border-border p-16 text-center">
-                    <div className="rounded-sm border border-border bg-muted p-4">
-                      <Server className="h-8 w-8 text-muted-foreground" />
+                  <div className="relative min-h-[250px] overflow-hidden rounded-sm border border-dashed border-border">
+                    <div className="pointer-events-none absolute inset-0 z-0 opacity-30">
+                      <MatrixRain density="subdued" />
                     </div>
-                    <h3 className="mt-6 text-base font-semibold">
-                      No instances yet
-                    </h3>
-                    <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                      Deploy your first VPS to attach live metrics to this pane.
-                    </p>
-                    <div className="mt-6 flex flex-wrap gap-3">
-                      <Button size="lg" className="rounded-sm shadow-none" onClick={() => navigate('/vps')}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Deploy VPS
-                      </Button>
+                    <div className="absolute inset-0 bg-gradient-to-br from-background/80 via-background/60 to-background/40 pointer-events-none" />
+                    <div className="relative z-[1] flex flex-col items-center justify-center p-16 text-center">
+                      <div className="rounded-sm border border-border bg-muted p-4">
+                        <Server className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <h3 className="mt-6 text-base font-semibold">
+                        No instances yet
+                      </h3>
+                      <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                        Deploy your first VPS to attach live metrics to this pane.
+                      </p>
+                      <div className="mt-6 flex flex-wrap gap-3">
+                        <Button size="lg" className="rounded-sm shadow-none" onClick={() => navigate('/vps')}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Deploy VPS
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ) : (

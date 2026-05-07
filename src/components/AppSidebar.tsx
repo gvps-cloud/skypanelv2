@@ -16,11 +16,13 @@ import {
   Users,
   Globe,
   Wrench,
+  ChevronDown,
+  Check,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { MatrixRain } from "@/components/fx/MatrixRain";
-
+import { apiClient } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useImpersonation } from "@/contexts/ImpersonationContext";
 import { useHostingStatus } from "@/hooks/useHosting";
@@ -31,6 +33,12 @@ import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -48,10 +56,52 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 
 export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
   const location = useLocation();
-  const { user, isImpersonating: authIsImpersonating } = useAuth();
+  const { user, isImpersonating: authIsImpersonating, switchOrganization } = useAuth();
   const { state, isMobile } = useSidebar();
   const { isImpersonating, impersonatedUser, exitImpersonation, isExiting } = useImpersonation();
   const { data: hostingStatus } = useHostingStatus();
+
+  // Organization switcher state
+  const [accessibleOrgs, setAccessibleOrgs] = React.useState<
+    { organization_id: string; organization_name: string }[]
+  >([]);
+  const [orgsLoading, setOrgsLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!user?.organizationId) return;
+    let cancelled = false;
+    setOrgsLoading(true);
+    apiClient
+      .get<{ resources: { organization_id: string; organization_name: string }[] }>(
+        "/organizations/resources",
+      )
+      .then((data) => {
+        if (cancelled) return;
+        setAccessibleOrgs(data.resources || []);
+      })
+      .catch(() => {
+        // silently fail
+      })
+      .finally(() => {
+        if (!cancelled) setOrgsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.organizationId]);
+
+  const handleOrgSwitch = React.useCallback(
+    async (orgId: string) => {
+      if (orgId === user?.organizationId) return;
+      try {
+        await switchOrganization(orgId);
+        window.location.reload();
+      } catch (err) {
+        console.error("Failed to switch org:", err);
+      }
+    },
+    [user?.organizationId, switchOrganization],
+  );
 
   // Main navigation items
   const pathname = location.pathname;
@@ -351,24 +401,63 @@ export function AppSidebar({ onOpenCommand, ...props }: AppSidebarProps) {
       <SidebarHeader className="cyber-glass pointer-events-none gap-2 border-b border-sidebar-border p-3 font-mono group-data-[state=collapsed]:px-2">
         <SidebarMenu className="pointer-events-auto">
           <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              tooltip={BRAND_NAME}
-              className="group-data-[state=collapsed]:justify-center"
-              asChild
-            >
-              <Link to="/dashboard">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-primary/25 bg-primary/10">
-                  <Logo size="sm" />
-                </div>
-                <div className="grid flex-1 text-left text-xs leading-tight group-data-[state=collapsed]:hidden">
-                  <span className="truncate font-semibold tracking-tight">{BRAND_NAME}</span>
-                  <span className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
-                    panel
-                  </span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
+            {accessibleOrgs.length > 1 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    tooltip={accessibleOrgs.find(o => o.organization_id === user?.organizationId)?.organization_name || BRAND_NAME}
+                    className="group-data-[state=collapsed]:justify-center"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-primary/25 bg-primary/10">
+                      <Logo size="sm" />
+                    </div>
+                    <div className="grid flex-1 text-left text-xs leading-tight group-data-[state=collapsed]:hidden">
+                      <span className="truncate font-semibold tracking-tight">
+                        {accessibleOrgs.find(o => o.organization_id === user?.organizationId)?.organization_name || BRAND_NAME}
+                      </span>
+                      <span className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
+                        org
+                      </span>
+                    </div>
+                    <ChevronDown className="ml-1 h-3 w-3 shrink-0 text-muted-foreground group-data-[state=collapsed]:hidden" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="right" align="start" className="font-mono">
+                  {accessibleOrgs.map((org) => (
+                    <DropdownMenuItem
+                      key={org.organization_id}
+                      onClick={() => handleOrgSwitch(org.organization_id)}
+                      className="text-xs"
+                    >
+                      {org.organization_name}
+                      {org.organization_id === user?.organizationId && (
+                        <Check className="ml-auto h-3 w-3" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <SidebarMenuButton
+                size="lg"
+                tooltip={BRAND_NAME}
+                className="group-data-[state=collapsed]:justify-center"
+                asChild
+              >
+                <Link to="/dashboard">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-primary/25 bg-primary/10">
+                    <Logo size="sm" />
+                  </div>
+                  <div className="grid flex-1 text-left text-xs leading-tight group-data-[state=collapsed]:hidden">
+                    <span className="truncate font-semibold tracking-tight">{BRAND_NAME}</span>
+                    <span className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
+                      panel
+                    </span>
+                  </div>
+                </Link>
+              </SidebarMenuButton>
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

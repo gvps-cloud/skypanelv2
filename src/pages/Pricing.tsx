@@ -37,6 +37,8 @@ import { useEnabledCategoryMappings } from '@/hooks/useCategoryMappings';
 import { BRAND_NAME } from '@/lib/brand';
 import MarketingPageShell from '@/components/MarketingPageShell';
 import { MarketingHero } from '@/components/marketing/MarketingHero';
+import DataStreamCanvas from '@/components/home/DataStreamCanvas';
+import { usePrefersReducedMotion } from '@/components/fx/usePrefersReducedMotion';
 import { AsciiBox } from '@/components/fx/AsciiBox';
 import { apiClient } from '@/lib/api';
 import { getHostingFeatureRows, getHostingFeatureSpecRows } from '@/lib/hostingPlanFeatures';
@@ -269,6 +271,7 @@ const PricingPage: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [activeProduct, setActiveProduct] = useState<'vps' | 'hosting'>('vps');
   const { data: enabledCategoryMappings = [] } = useEnabledCategoryMappings();
+  const heroReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     if (!hostingEnabled && activeProduct === 'hosting') {
@@ -432,17 +435,24 @@ const PricingPage: React.FC = () => {
     <MarketingPageShell>
         {/* â”€â”€â”€ HERO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <section className="relative overflow-hidden border-b border-border/40">
+          <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+            <DataStreamCanvas
+              className="h-full w-full opacity-[0.25]"
+              reducedMotion={heroReducedMotion}
+              pauseWhenOffscreen
+            />
+          </div>
           <div className="home-orb home-orb--1" aria-hidden="true" />
           <div className="home-orb home-orb--2" aria-hidden="true" />
           <div className="home-orb home-orb--3" aria-hidden="true" />
           <div className="home-grid-mask absolute inset-0" aria-hidden="true" />
 
-          <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-24 sm:px-6 lg:px-8 lg:pb-24 lg:pt-28">
+          <div className="relative z-[2] mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8 lg:pb-20 lg:pt-28">
             <motion.div
               initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65 }}
-              className="space-y-8"
+              className="space-y-6"
             >
               <MarketingHero
                 pathPrefix="~/www"
@@ -473,16 +483,18 @@ const PricingPage: React.FC = () => {
                 }
               />
 
-              <AsciiBox title="signals" className="max-w-4xl opacity-95">
-                <div className="flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-muted-foreground sm:text-xs">
+              <div className="relative z-10">
+              <div className="max-w-4xl overflow-hidden rounded-sm border border-border/60 bg-background/80 px-4 py-3 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
+                <div className="flex min-w-0 flex-wrap gap-x-5 gap-y-2 text-[11px] sm:text-xs text-muted-foreground">
                   {trustItems.map(({ icon: Icon, label }) => (
-                    <span key={label} className="inline-flex items-center gap-1.5">
+                    <span key={label} className="inline-flex shrink-0 items-center gap-1.5">
                       <Icon className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
                       {label}
                     </span>
                   ))}
                 </div>
-              </AsciiBox>
+              </div>
+              </div>
             </motion.div>
           </div>
         </section>
