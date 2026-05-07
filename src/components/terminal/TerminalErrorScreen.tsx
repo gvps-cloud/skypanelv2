@@ -36,7 +36,10 @@ export function TerminalErrorScreen({
       <ScanlineOverlay animated className="z-[1]" />
       <div className="relative z-[2] max-w-lg w-full border border-border bg-card/90 p-6 rounded-sm fx-crt">
         <p className="font-mono text-[10px] text-destructive mb-2">KERNEL PANIC: {code}</p>
-        <AsciiArt art={ASCII_404} className="text-muted-foreground mb-4 hidden sm:block" />
+        <AsciiArt
+          art={ASCII_404}
+          className="text-muted-foreground mb-4 hidden sm:block w-fit mx-auto pt-1 text-[0.62rem] sm:text-[0.74rem] leading-[1.05]"
+        />
         <GlitchText as="h1" className="text-lg font-bold text-foreground mb-2">
           {title}
         </GlitchText>
